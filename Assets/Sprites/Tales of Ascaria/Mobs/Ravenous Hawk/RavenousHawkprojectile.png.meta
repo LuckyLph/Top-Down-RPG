@@ -1,0 +1,728 @@
+fileFormatVersion: 2
+guid: 1bf3fabdaa724c847945e863076630a1
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 9016614443156948791
+    second: RavenousHawkprojectile_0
+  - first:
+      213: 1340426428766515357
+    second: RavenousHawkprojectile_1
+  - first:
+      213: -8581052215543712718
+    second: RavenousHawkprojectile_2
+  - first:
+      213: -5835323739316210474
+    second: RavenousHawkprojectile_3
+  - first:
+      213: 1043322094862636552
+    second: RavenousHawkprojectile_4
+  - first:
+      213: 4181210201105904476
+    second: RavenousHawkprojectile_5
+  - first:
+      213: 5321331684882408995
+    second: RavenousHawkprojectile_6
+  - first:
+      213: -2874716792883838965
+    second: RavenousHawkprojectile_7
+  - first:
+      213: -6919932390805149762
+    second: RavenousHawkprojectile_8
+  - first:
+      213: -2374638001697281216
+    second: RavenousHawkprojectile_9
+  - first:
+      213: -6646559371853641911
+    second: RavenousHawkprojectile_10
+  - first:
+      213: -7596736658759985984
+    second: RavenousHawkprojectile_11
+  - first:
+      213: -7305007047736372691
+    second: RavenousHawkprojectile_12
+  - first:
+      213: -7138268654700307929
+    second: RavenousHawkprojectile_13
+  - first:
+      213: -7631052192843268613
+    second: RavenousHawkprojectile_14
+  - first:
+      213: -112870489785074932
+    second: RavenousHawkprojectile_15
+  - first:
+      213: -4469103150332463746
+    second: RavenousHawkprojectile_16
+  - first:
+      213: -1903263102329208693
+    second: RavenousHawkprojectile_17
+  - first:
+      213: -3731311952905106618
+    second: RavenousHawkprojectile_18
+  - first:
+      213: -4549711779539862462
+    second: RavenousHawkprojectile_19
+  - first:
+      213: 8453127109580414721
+    second: RavenousHawkprojectile_20
+  - first:
+      213: -7364006902020803941
+    second: RavenousHawkprojectile_21
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_0
+      rect:
+        serializedVersion: 2
+        x: 41
+        y: 296
+        width: 141
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 737c6016013712d70800000000000000
+      internalID: 9016614443156948791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_1
+      rect:
+        serializedVersion: 2
+        x: 131
+        y: 293
+        width: 26
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d907c2e2cb62a9210800000000000000
+      internalID: 1340426428766515357
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_2
+      rect:
+        serializedVersion: 2
+        x: 298
+        y: 281
+        width: 131
+        height: 211
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 234307d697af9e880800000000000000
+      internalID: -8581052215543712718
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_3
+      rect:
+        serializedVersion: 2
+        x: 553
+        y: 283
+        width: 111
+        height: 209
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d437a8d9f3c40fa0800000000000000
+      internalID: -5835323739316210474
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_4
+      rect:
+        serializedVersion: 2
+        x: 808
+        y: 293
+        width: 119
+        height: 196
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8069a92eaef9a7e00800000000000000
+      internalID: 1043322094862636552
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_5
+      rect:
+        serializedVersion: 2
+        x: 116
+        y: 268
+        width: 13
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c5338206684a60a30800000000000000
+      internalID: 4181210201105904476
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_6
+      rect:
+        serializedVersion: 2
+        x: 588
+        y: 261
+        width: 19
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 326627949fa29d940800000000000000
+      internalID: 5321331684882408995
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_7
+      rect:
+        serializedVersion: 2
+        x: 633
+        y: 256
+        width: 16
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b000f4ace44fa18d0800000000000000
+      internalID: -2874716792883838965
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_8
+      rect:
+        serializedVersion: 2
+        x: 856
+        y: 276
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb7e658672677ff90800000000000000
+      internalID: -6919932390805149762
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_9
+      rect:
+        serializedVersion: 2
+        x: 93
+        y: 253
+        width: 16
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 04ba0be91579b0fd0800000000000000
+      internalID: -2374638001697281216
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_10
+      rect:
+        serializedVersion: 2
+        x: 846
+        y: 256
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 947ce1e577da2c3a0800000000000000
+      internalID: -6646559371853641911
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_11
+      rect:
+        serializedVersion: 2
+        x: 881
+        y: 256
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0c45c621248f29690800000000000000
+      internalID: -7596736658759985984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_12
+      rect:
+        serializedVersion: 2
+        x: 46
+        y: 61
+        width: 133
+        height: 178
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d22d2fd2bc66f9a90800000000000000
+      internalID: -7305007047736372691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_13
+      rect:
+        serializedVersion: 2
+        x: 298
+        y: 36
+        width: 131
+        height: 201
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72a584d8a76cfec90800000000000000
+      internalID: -7138268654700307929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_14
+      rect:
+        serializedVersion: 2
+        x: 548
+        y: 53
+        width: 134
+        height: 184
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bfd7c1f267e091690800000000000000
+      internalID: -7631052192843268613
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_15
+      rect:
+        serializedVersion: 2
+        x: 801
+        y: 56
+        width: 133
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c0b7cb633e00f6ef0800000000000000
+      internalID: -112870489785074932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_16
+      rect:
+        serializedVersion: 2
+        x: 111
+        y: 11
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e75bad3fc5e8af1c0800000000000000
+      internalID: -4469103150332463746
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_17
+      rect:
+        serializedVersion: 2
+        x: 588
+        y: 21
+        width: 31
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b804f87da404695e0800000000000000
+      internalID: -1903263102329208693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_18
+      rect:
+        serializedVersion: 2
+        x: 843
+        y: 13
+        width: 26
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64b0ce45c87b73cc0800000000000000
+      internalID: -3731311952905106618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_19
+      rect:
+        serializedVersion: 2
+        x: 101
+        y: 1
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24cbd1eed3d2cd0c0800000000000000
+      internalID: -4549711779539862462
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_20
+      rect:
+        serializedVersion: 2
+        x: 126
+        y: 0
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10fd3cfc15a8f4570800000000000000
+      internalID: 8453127109580414721
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RavenousHawkprojectile_21
+      rect:
+        serializedVersion: 2
+        x: 363
+        y: 1
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b9276812dbacdc990800000000000000
+      internalID: -7364006902020803941
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      RavenousHawkprojectile_0: 9016614443156948791
+      RavenousHawkprojectile_1: 1340426428766515357
+      RavenousHawkprojectile_10: -6646559371853641911
+      RavenousHawkprojectile_11: -7596736658759985984
+      RavenousHawkprojectile_12: -7305007047736372691
+      RavenousHawkprojectile_13: -7138268654700307929
+      RavenousHawkprojectile_14: -7631052192843268613
+      RavenousHawkprojectile_15: -112870489785074932
+      RavenousHawkprojectile_16: -4469103150332463746
+      RavenousHawkprojectile_17: -1903263102329208693
+      RavenousHawkprojectile_18: -3731311952905106618
+      RavenousHawkprojectile_19: -4549711779539862462
+      RavenousHawkprojectile_2: -8581052215543712718
+      RavenousHawkprojectile_20: 8453127109580414721
+      RavenousHawkprojectile_21: -7364006902020803941
+      RavenousHawkprojectile_3: -5835323739316210474
+      RavenousHawkprojectile_4: 1043322094862636552
+      RavenousHawkprojectile_5: 4181210201105904476
+      RavenousHawkprojectile_6: 5321331684882408995
+      RavenousHawkprojectile_7: -2874716792883838965
+      RavenousHawkprojectile_8: -6919932390805149762
+      RavenousHawkprojectile_9: -2374638001697281216
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

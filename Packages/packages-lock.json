@@ -10,6 +10,16 @@
       },
       "hash": "73eb27aeccfa8e0676eaf3304136e9b85953d913"
     },
+    "com.skner.dualgrid": {
+      "version": "https://github.com/skner-dev/DualGrid.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.2d.tilemap.extras": "3.1.2",
+        "com.unity.2d.tilemap": "1.0.0"
+      },
+      "hash": "493500b6ac59f5713b7d9d9bdff6d6a37016da78"
+    },
     "com.unity.2d.animation": {
       "version": "14.0.3",
       "depth": 0,

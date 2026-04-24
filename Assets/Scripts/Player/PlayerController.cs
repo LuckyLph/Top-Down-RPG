@@ -2,11 +2,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(Animator))]
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField, Min(0.1f)] private float walkAnimationSpeed = 0.85f;
+    [SerializeField] private Animator animator;
 
     private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
     private static readonly int MoveXHash = Animator.StringToHash("MoveX");
@@ -17,14 +17,13 @@ public class PlayerController : MonoBehaviour
     private readonly InputAction moveAction = new("Move");
 
     private Rigidbody2D rb;
-    private Animator animator;
     private Vector2 moveInput;
     private Vector2 lastMoveDirection = Vector2.down;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
+        ResolveAnimator();
 
         rb.gravityScale = 0f;
         rb.freezeRotation = true;
@@ -43,6 +42,11 @@ public class PlayerController : MonoBehaviour
             .With("Right", "<Keyboard>/rightArrow");
 
         moveAction.AddBinding("<Gamepad>/leftStick");
+    }
+
+    private void OnValidate()
+    {
+        ResolveAnimator();
     }
 
     private void OnEnable()
@@ -67,16 +71,27 @@ public class PlayerController : MonoBehaviour
 
         Vector2 animationDirection = isMoving ? moveInput : lastMoveDirection;
 
-        animator.SetBool(IsMovingHash, isMoving);
-        animator.SetFloat(MoveXHash, animationDirection.x);
-        animator.SetFloat(MoveYHash, animationDirection.y);
-        animator.SetFloat(LastMoveXHash, lastMoveDirection.x);
-        animator.SetFloat(LastMoveYHash, lastMoveDirection.y);
-        animator.speed = isMoving ? walkAnimationSpeed : 1f;
+        if (animator != null)
+        {
+            animator.SetBool(IsMovingHash, isMoving);
+            animator.SetFloat(MoveXHash, animationDirection.x);
+            animator.SetFloat(MoveYHash, animationDirection.y);
+            animator.SetFloat(LastMoveXHash, lastMoveDirection.x);
+            animator.SetFloat(LastMoveYHash, lastMoveDirection.y);
+            animator.speed = isMoving ? walkAnimationSpeed : 1f;
+        }
     }
 
     private void FixedUpdate()
     {
         rb.linearVelocity = moveInput * moveSpeed;
+    }
+
+    private void ResolveAnimator()
+    {
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>(true);
+        }
     }
 }

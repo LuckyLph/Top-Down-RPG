@@ -1,43 +1,49 @@
 fileFormatVersion: 2
-guid: eda38caffd54eea429e35f7160ef2cb5
+guid: 91682e858a683a44082d578547521b8c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2971653748508199937
-    second: mage_0
+      213: -446140185052492750
+    second: Weasel Bandit_0
   - first:
-      213: -1182937539813507409
-    second: mage_1
+      213: -4876033943191000023
+    second: Weasel Bandit_1
   - first:
-      213: 7310728498343965544
-    second: mage_2
+      213: -8992004306837022242
+    second: Weasel Bandit_2
   - first:
-      213: -7672788158911853900
-    second: mage_3
+      213: -1722194936769117375
+    second: Weasel Bandit_3
   - first:
-      213: 8619904004745130942
-    second: mage_4
+      213: -2050498131611478376
+    second: Weasel Bandit_4
   - first:
-      213: -6014854275350682528
-    second: mage_5
+      213: -8142331993761858724
+    second: Weasel Bandit_5
   - first:
-      213: 5179906125871286598
-    second: mage_6
+      213: 5140506159753441632
+    second: Weasel Bandit_6
   - first:
-      213: -1308827184595644429
-    second: mage_7
+      213: 5310910678404003205
+    second: Weasel Bandit_7
   - first:
-      213: 2640012314773392344
-    second: mage_8
+      213: -2854007888697236777
+    second: Weasel Bandit_8
   - first:
-      213: -2056482287553655689
-    second: mage_9
+      213: -6415462939889612021
+    second: Weasel Bandit_9
   - first:
-      213: -8995485352130813372
-    second: mage_10
+      213: -4401042123219629513
+    second: Weasel Bandit_10
   - first:
-      213: 8886161708615391911
-    second: mage_11
+      213: -6298707301415609195
+    second: Weasel Bandit_11
+  - first:
+      213: 6288313912699191780
+    second: Weasel Bandit_12
+  - first:
+      213: 5436172987185905318
+    second: Weasel Bandit_13
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -172,255 +178,321 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Player_0
+      name: Weasel Bandit_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 144
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 23c4bed8dddfec9f0800000000000000
+      internalID: -446140185052492750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_1
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 144
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92c6a5786f8d45cb0800000000000000
+      internalID: -4876033943191000023
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 144
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ed9523089bbf53380800000000000000
+      internalID: -8992004306837022242
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_3
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 144
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14386ef54d88918e0800000000000000
+      internalID: -1722194936769117375
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_4
       rect:
         serializedVersion: 2
         x: 0
         y: 96
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 8006bc2686fa0e1468fe1f16607f42c5
-      internalID: 1730461896
+      spriteID: 89612b430da2b83e0800000000000000
+      internalID: -2050498131611478376
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_1
+      name: Weasel Bandit_5
       rect:
         serializedVersion: 2
-        x: 24
+        x: 32
         y: 96
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 80c035ce06e48b94da3b927b6830a3e6
-      internalID: 1590502663
+      spriteID: c5bb68c0130a00f80800000000000000
+      internalID: -8142331993761858724
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_2
+      name: Weasel Bandit_6
       rect:
         serializedVersion: 2
-        x: 48
+        x: 64
         y: 96
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: c1e1dc4c6cddd1a48b441a666190b6d3
-      internalID: -207041980
+      spriteID: 061bfc1ed1fb65740800000000000000
+      internalID: 5140506159753441632
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_3
+      name: Weasel Bandit_7
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 96
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5857914af1524b940800000000000000
+      internalID: 5310910678404003205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_8
       rect:
         serializedVersion: 2
         x: 0
-        y: 64
-        width: 24
-        height: 32
+        y: 48
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: ac56c73001e42fa4788daf9d9b2d0654
-      internalID: -1066960400
+      spriteID: 7d2e90842f68468d0800000000000000
+      internalID: -2854007888697236777
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_4
+      name: Weasel Bandit_9
       rect:
         serializedVersion: 2
-        x: 24
-        y: 64
-        width: 24
-        height: 32
+        x: 32
+        y: 48
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 042e80ee7a555fe46a4395971d91e9fd
-      internalID: -1638515544
+      spriteID: b0b423e5272b7f6a0800000000000000
+      internalID: -6415462939889612021
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_5
+      name: Weasel Bandit_10
       rect:
         serializedVersion: 2
-        x: 48
-        y: 64
-        width: 24
-        height: 32
+        x: 64
+        y: 48
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 04c732d8fffd9d040b228daa0a86a20e
-      internalID: 266999175
+      spriteID: 73a86f3b18b5ce2c0800000000000000
+      internalID: -4401042123219629513
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_6
+      name: Weasel Bandit_11
       rect:
         serializedVersion: 2
-        x: 0
-        y: 32
-        width: 24
-        height: 32
+        x: 96
+        y: 48
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 5150d24f01125a944bd876f592595b03
-      internalID: -1956558132
+      spriteID: 59c96f2d41f7698a0800000000000000
+      internalID: -6298707301415609195
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_7
-      rect:
-        serializedVersion: 2
-        x: 24
-        y: 32
-        width: 24
-        height: 32
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e2430ae2ccbdde440a75cd66a57f21ab
-      internalID: 643060368
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Player_8
-      rect:
-        serializedVersion: 2
-        x: 48
-        y: 32
-        width: 24
-        height: 32
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e19aff5998d46ca459ed29d27d2b115d
-      internalID: 757166089
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Player_9
+      name: Weasel Bandit_12
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 50532fe0921957e4a9225067f85218a7
-      internalID: -1625923419
+      spriteID: 4e1059acf24944750800000000000000
+      internalID: 6288313912699191780
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_10
+      name: Weasel Bandit_13
       rect:
         serializedVersion: 2
-        x: 24
+        x: 32
         y: 0
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 722851b51b6867c4b8e629d13f3a7441
-      internalID: -1884614330
+      spriteID: 6ae3ace978a217b40800000000000000
+      internalID: 5436172987185905318
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Player_11
+      name: Weasel Bandit_14
       rect:
         serializedVersion: 2
-        x: 48
+        x: 64
         y: 0
-        width: 24
-        height: 32
+        width: 32
+        height: 48
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -429,8 +501,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7f15ae4a58121e340b6f10d593c08b99
-      internalID: -978715913
+      spriteID: 3fe45586082619e49ab306c03e429963
+      internalID: -38727751
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Weasel Bandit_15
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b27e4fd80c2056d4bba76880470d8ee9
+      internalID: 114482380
       vertices: []
       indices: 
       edges: []
@@ -439,7 +533,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 3e1310508d209ca4fab61010f1a576fe
     internalID: 0
     vertices: []
     indices: 
@@ -449,20 +543,24 @@ TextureImporter:
     spriteCustomMetadata:
       entries:
       - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":3.0,"y":4.0},"gridSpriteSize":{"x":24.0,"y":32.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":true,"isAlternate":false}'
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":4.0,"y":4.0},"gridSpriteSize":{"x":32.0,"y":48.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":true,"isAlternate":false}'
     nameFileIdTable:
-      Player_0: 1730461896
-      Player_1: 1590502663
-      Player_10: -1884614330
-      Player_11: -978715913
-      Player_2: -207041980
-      Player_3: -1066960400
-      Player_4: -1638515544
-      Player_5: 266999175
-      Player_6: -1956558132
-      Player_7: 643060368
-      Player_8: 757166089
-      Player_9: -1625923419
+      Weasel Bandit_0: -446140185052492750
+      Weasel Bandit_1: -4876033943191000023
+      Weasel Bandit_10: -4401042123219629513
+      Weasel Bandit_11: -6298707301415609195
+      Weasel Bandit_12: 6288313912699191780
+      Weasel Bandit_13: 5436172987185905318
+      Weasel Bandit_14: -38727751
+      Weasel Bandit_15: 114482380
+      Weasel Bandit_2: -8992004306837022242
+      Weasel Bandit_3: -1722194936769117375
+      Weasel Bandit_4: -2050498131611478376
+      Weasel Bandit_5: -8142331993761858724
+      Weasel Bandit_6: 5140506159753441632
+      Weasel Bandit_7: 5310910678404003205
+      Weasel Bandit_8: -2854007888697236777
+      Weasel Bandit_9: -6415462939889612021
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

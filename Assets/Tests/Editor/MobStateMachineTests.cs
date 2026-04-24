@@ -68,6 +68,33 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    [Test]
+    public void ChaseState_DoesNotSteerBackToCurrentCellCenter_WhenRepathingToMovingTarget()
+    {
+        SetupWorld();
+
+        Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
+        rb.position = new Vector2(0.8f, 0.5f);
+        brain.transform.position = rb.position;
+
+        player.position = new Vector3(4.5f, 0.5f, 0f);
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f));
+
+        rb.position = new Vector2(0.8f, 0.5f);
+        brain.transform.position = rb.position;
+        rb.linearVelocity = Vector2.zero;
+
+        player.position = new Vector3(5.5f, 0.5f, 0f);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f));
+    }
+
     private void SetupWorld(Vector3? spawnPosition = null)
     {
         root = new GameObject("MobStateMachineTestRoot");

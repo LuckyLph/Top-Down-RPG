@@ -81,9 +81,28 @@ public class MobPathAgent2D : MonoBehaviour
 
         waypoints.Clear();
         IReadOnlyList<Vector3Int> smoothedCells = SmoothPathCells(result.Cells);
-        foreach (Vector3Int cell in smoothedCells)
+        int firstCellIndex = 0;
+        if (smoothedCells.Count > 1 && smoothedCells[0] == startCell)
         {
-            waypoints.Add(navigationGrid.CellToWorldCenter(cell));
+            // Repathing should continue forward from the current cell instead of
+            // steering back to its center, which causes visible left/right jitter.
+            firstCellIndex = 1;
+        }
+
+        for (int i = firstCellIndex; i < smoothedCells.Count; i++)
+        {
+            bool isFinalCell = i == smoothedCells.Count - 1;
+            Vector2 waypoint = isFinalCell && !result.IsPartial
+                ? worldGoal
+                : navigationGrid.CellToWorldCenter(smoothedCells[i]);
+
+            waypoints.Add(waypoint);
+        }
+
+        if (waypoints.Count == 0 && !result.IsPartial && Vector2.Distance(motor.Position, worldGoal) > config.arrivalDistance)
+        {
+            // Targets inside the same walkable cell still need direct pursuit.
+            waypoints.Add(worldGoal);
         }
 
         // Drop the first waypoint if we are already standing on it.

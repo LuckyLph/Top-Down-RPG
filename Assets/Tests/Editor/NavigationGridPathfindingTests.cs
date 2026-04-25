@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -9,6 +10,10 @@ public class NavigationGridPathfindingTests
     private NavigationGrid2D navigationGrid;
     private Tile fillTile;
     private Tile blockTile;
+    private TerrainType2D groundTerrain;
+    private TerrainType2D waterTerrain;
+    private TerrainMovementProfile2D landProfile;
+    private TerrainMovementProfile2D amphibiousProfile;
 
     [TearDown]
     public void TearDown()
@@ -26,6 +31,26 @@ public class NavigationGridPathfindingTests
         if (blockTile != null)
         {
             Object.DestroyImmediate(blockTile);
+        }
+
+        if (groundTerrain != null)
+        {
+            Object.DestroyImmediate(groundTerrain);
+        }
+
+        if (waterTerrain != null)
+        {
+            Object.DestroyImmediate(waterTerrain);
+        }
+
+        if (landProfile != null)
+        {
+            Object.DestroyImmediate(landProfile);
+        }
+
+        if (amphibiousProfile != null)
+        {
+            Object.DestroyImmediate(amphibiousProfile);
         }
     }
 
@@ -57,28 +82,37 @@ public class NavigationGridPathfindingTests
 
         Assert.That(partialResult.Success, Is.True);
         Assert.That(partialResult.IsPartial, Is.True);
+        Assert.That(partialResult.ReachedResolvedGoal, Is.False);
         Assert.That(partialResult.Cells.Count, Is.GreaterThan(0));
         Assert.That(partialResult.Cells[^1].x, Is.LessThanOrEqualTo(1));
     }
 
     [Test]
+    public void AStar_ReturnsPartial_WhenGoalIsOutsideWalkableGrid_AndPartialAllowed()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+
+        PathRequest request = new(new Vector3Int(0, 0, 0), new Vector3Int(8, 8, 0), allowPartial: true);
+        PathResult result = navigationGrid.Pathfinder.FindPath(request);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.IsPartial, Is.True);
+        Assert.That(result.GoalWasAdjusted, Is.True);
+        Assert.That(result.ReachedResolvedGoal, Is.True);
+        Assert.That(navigationGrid.IsCellWalkable(result.Cells[^1]), Is.True);
+    }
+
+    [Test]
     public void AStar_DoesNotCutCorners_OnDiagonal()
     {
-        root = new GameObject("NavGridCornerTestRoot");
-        root.AddComponent<Grid>();
+        root = CreateGridRoot("NavGridCornerTestRoot");
 
-        GameObject dataObject = new("DataTilemap");
-        dataObject.transform.SetParent(root.transform);
-        Tilemap dataTilemap = dataObject.AddComponent<Tilemap>();
-        dataObject.AddComponent<TilemapRenderer>();
-
-        GameObject collisionObject = new("CollisionTilemap");
-        collisionObject.transform.SetParent(root.transform);
-        Tilemap collisionTilemap = collisionObject.AddComponent<Tilemap>();
-        collisionObject.AddComponent<TilemapRenderer>();
+        Tilemap dataTilemap = CreateTilemapObject("GroundData");
+        Tilemap collisionTilemap = CreateTilemapObject("GroundCollision");
 
         fillTile = ScriptableObject.CreateInstance<Tile>();
         blockTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
 
         dataTilemap.SetTile(new Vector3Int(0, 0, 0), fillTile);
         dataTilemap.SetTile(new Vector3Int(1, 0, 0), fillTile);
@@ -88,8 +122,8 @@ public class NavigationGridPathfindingTests
         collisionTilemap.SetTile(new Vector3Int(1, 0, 0), blockTile);
         collisionTilemap.SetTile(new Vector3Int(0, 1, 0), blockTile);
 
+        AttachTerrainSource(dataTilemap, collisionTilemap, null, groundTerrain);
         navigationGrid = root.AddComponent<NavigationGrid2D>();
-        navigationGrid.Configure(dataTilemap, collisionTilemap);
         navigationGrid.BuildGrid();
 
         PathRequest request = new(new Vector3Int(0, 0, 0), new Vector3Int(1, 1, 0), allowPartial: false);
@@ -98,23 +132,125 @@ public class NavigationGridPathfindingTests
         Assert.That(result.Success, Is.False);
     }
 
+    [Test]
+    public void TerrainProfiles_CanAllowAndBlockSameCellDifferently()
+    {
+        root = CreateGridRoot("TerrainAccessRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(defaultWalkable: false);
+        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        amphibiousProfile = CreateProfile(defaultWalkable: false);
+        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
+        amphibiousProfile.SetTerrainRule(waterTerrain, true, 16);
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+        groundMap.SetTile(new Vector3Int(0, 0, 0), fillTile);
+        waterMap.SetTile(new Vector3Int(1, 0, 0), fillTile);
+
+        AttachTerrainSource(groundMap, null, null, groundTerrain);
+        AttachTerrainSource(waterMap, null, null, waterTerrain);
+
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 0, 0), amphibiousProfile), Is.True);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 0, 0), landProfile), Is.False);
+
+        PathResult allowedPath = navigationGrid.Pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0), false, amphibiousProfile));
+        PathResult blockedPath = navigationGrid.Pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0), false, landProfile));
+
+        Assert.That(allowedPath.Success, Is.True);
+        Assert.That(blockedPath.Success, Is.False);
+    }
+
+    [Test]
+    public void AStar_PrefersCheaperTerrain_WhenMultipleRoutesExist()
+    {
+        root = CreateGridRoot("TerrainCostRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(defaultWalkable: false);
+        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        landProfile.SetTerrainRule(waterTerrain, true, 45);
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+
+        for (int x = 0; x <= 4; x++)
+        {
+            for (int y = 0; y <= 2; y++)
+            {
+                groundMap.SetTile(new Vector3Int(x, y, 0), fillTile);
+            }
+        }
+
+        for (int x = 1; x <= 3; x++)
+        {
+            waterMap.SetTile(new Vector3Int(x, 1, 0), fillTile);
+        }
+
+        AttachTerrainSource(groundMap, null, null, groundTerrain);
+        AttachTerrainSource(waterMap, null, null, waterTerrain);
+
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        PathResult result = navigationGrid.Pathfinder.FindPath(new PathRequest(new Vector3Int(0, 1, 0), new Vector3Int(4, 1, 0), false, landProfile));
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.Cells.Any(cell => cell.y != 1), Is.True, "Expected the cheaper route to detour around costly water cells.");
+        Assert.That(result.Cells.Any(cell => cell.y == 1 && cell.x > 0 && cell.x < 4), Is.False, "Expected the chosen path to avoid the expensive water corridor.");
+    }
+
+    [Test]
+    public void Overlap_UsesMostRestrictiveAccessAndHighestCost()
+    {
+        root = CreateGridRoot("TerrainOverlapRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(defaultWalkable: false);
+        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        landProfile.SetTerrainRule(waterTerrain, false, 25);
+        amphibiousProfile = CreateProfile(defaultWalkable: false);
+        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
+        amphibiousProfile.SetTerrainRule(waterTerrain, true, 35);
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+        groundMap.SetTile(new Vector3Int(0, 0, 0), fillTile);
+        groundMap.SetTile(new Vector3Int(1, 0, 0), fillTile);
+        waterMap.SetTile(new Vector3Int(1, 0, 0), fillTile);
+
+        AttachTerrainSource(groundMap, null, null, groundTerrain);
+        AttachTerrainSource(waterMap, null, null, waterTerrain);
+
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Vector3Int overlappedCell = new(1, 0, 0);
+        Assert.That(navigationGrid.IsCellWalkable(overlappedCell, landProfile), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(overlappedCell, amphibiousProfile), Is.True);
+        Assert.That(navigationGrid.MovementCost(Vector3Int.zero, overlappedCell, amphibiousProfile), Is.EqualTo(35));
+    }
+
     private void SetupNavigationGrid(bool addGapInBarrier)
     {
-        root = new GameObject("NavGridTestRoot");
-        root.AddComponent<Grid>();
+        root = CreateGridRoot("NavGridTestRoot");
 
-        GameObject dataObject = new("DataTilemap");
-        dataObject.transform.SetParent(root.transform);
-        Tilemap dataTilemap = dataObject.AddComponent<Tilemap>();
-        dataObject.AddComponent<TilemapRenderer>();
-
-        GameObject collisionObject = new("CollisionTilemap");
-        collisionObject.transform.SetParent(root.transform);
-        Tilemap collisionTilemap = collisionObject.AddComponent<Tilemap>();
-        collisionObject.AddComponent<TilemapRenderer>();
+        Tilemap dataTilemap = CreateTilemapObject("DataTilemap");
+        Tilemap collisionTilemap = CreateTilemapObject("CollisionTilemap");
 
         fillTile = ScriptableObject.CreateInstance<Tile>();
         blockTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
 
         for (int x = 0; x < 5; x++)
         {
@@ -134,8 +270,45 @@ public class NavigationGridPathfindingTests
             collisionTilemap.SetTile(new Vector3Int(2, y, 0), blockTile);
         }
 
+        AttachTerrainSource(dataTilemap, collisionTilemap, null, groundTerrain);
         navigationGrid = root.AddComponent<NavigationGrid2D>();
-        navigationGrid.Configure(dataTilemap, collisionTilemap);
         navigationGrid.BuildGrid();
+    }
+
+    private GameObject CreateGridRoot(string name)
+    {
+        root = new GameObject(name);
+        root.AddComponent<Grid>();
+        return root;
+    }
+
+    private Tilemap CreateTilemapObject(string name)
+    {
+        GameObject tilemapObject = new(name);
+        tilemapObject.transform.SetParent(root.transform);
+        Tilemap tilemap = tilemapObject.AddComponent<Tilemap>();
+        tilemapObject.AddComponent<TilemapRenderer>();
+        return tilemap;
+    }
+
+    private NavigationTerrainSource2D AttachTerrainSource(Tilemap dataTilemap, Tilemap collisionTilemap, Tilemap renderTilemap, TerrainType2D terrainType)
+    {
+        NavigationTerrainSource2D source = dataTilemap.gameObject.AddComponent<NavigationTerrainSource2D>();
+        source.Configure(dataTilemap, collisionTilemap, renderTilemap, terrainType);
+        return source;
+    }
+
+    private static TerrainType2D CreateTerrain(string id)
+    {
+        TerrainType2D terrain = ScriptableObject.CreateInstance<TerrainType2D>();
+        terrain.Configure(id);
+        return terrain;
+    }
+
+    private static TerrainMovementProfile2D CreateProfile(bool defaultWalkable, int defaultCost = 10)
+    {
+        TerrainMovementProfile2D profile = ScriptableObject.CreateInstance<TerrainMovementProfile2D>();
+        profile.Configure(defaultWalkable, defaultCost);
+        return profile;
     }
 }

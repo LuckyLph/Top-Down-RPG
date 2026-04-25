@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class MobPatrolRoam : MonoBehaviour
+public class MobPatrolAnchor : MonoBehaviour
 {
     [Header("Debug")]
     [SerializeField] private bool drawPatrolGizmos = true;
@@ -46,13 +46,13 @@ public class MobPatrolRoam : MonoBehaviour
             Vector2 candidateWorld = spawnPosition + offset;
             Vector3Int candidateCell = navigationGrid.WorldToCell(candidateWorld);
 
-            if (navigationGrid.IsCellWalkable(candidateCell))
+            if (navigationGrid.IsCellWalkable(candidateCell, config.MovementProfile))
             {
                 destination = navigationGrid.CellToWorldCenter(candidateCell);
                 return true;
             }
 
-            if (navigationGrid.TryGetNearestWalkableCell(candidateCell, out Vector3Int nearest, config.nearestCellSearchRadius))
+            if (navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out Vector3Int nearest, config.nearestCellSearchRadius))
             {
                 destination = navigationGrid.CellToWorldCenter(nearest);
                 return true;

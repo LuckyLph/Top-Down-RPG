@@ -17,6 +17,8 @@ public class MobPathAgent2D : MonoBehaviour
     private bool hasPath;
     private bool reachedDestination = true;
     private bool isPartialPath;
+    private bool reachedResolvedGoal;
+    private bool goalWasAdjusted;
     private Vector3Int lastGoalCell;
     private bool hasGoalCell;
 
@@ -24,6 +26,8 @@ public class MobPathAgent2D : MonoBehaviour
     public bool HasPath => hasPath;
     public bool ReachedDestination => reachedDestination;
     public bool IsPartialPath => isPartialPath;
+    public bool ReachedResolvedGoal => reachedResolvedGoal;
+    public bool GoalWasAdjusted => goalWasAdjusted;
     public bool HasGoalCell => hasGoalCell;
     public Vector3Int LastGoalCell => lastGoalCell;
 
@@ -67,7 +71,7 @@ public class MobPathAgent2D : MonoBehaviour
             return true;
         }
 
-        PathRequest request = new(startCell, goalCell, allowPartial);
+        PathRequest request = new(startCell, goalCell, allowPartial, config.MovementProfile);
         PathResult result = navigationGrid.Pathfinder.FindPath(request);
 
         hasGoalCell = true;
@@ -115,6 +119,8 @@ public class MobPathAgent2D : MonoBehaviour
         hasPath = waypoints.Count > 0;
         reachedDestination = !hasPath;
         isPartialPath = result.IsPartial;
+        reachedResolvedGoal = result.ReachedResolvedGoal;
+        goalWasAdjusted = result.GoalWasAdjusted;
 
         if (!hasPath)
         {
@@ -122,6 +128,20 @@ public class MobPathAgent2D : MonoBehaviour
         }
 
         return true;
+    }
+
+    public bool CanReachWorldTarget(Vector2 worldGoal)
+    {
+        if (navigationGrid == null || navigationGrid.Pathfinder == null || motor == null || config == null)
+        {
+            return false;
+        }
+
+        Vector3Int startCell = navigationGrid.WorldToCell(motor.Position);
+        Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
+        PathRequest request = new(startCell, goalCell, allowPartial: true, config.MovementProfile);
+        PathResult result = navigationGrid.Pathfinder.FindPath(request);
+        return result.Success && result.ReachedResolvedGoal && !result.GoalWasAdjusted;
     }
 
     private IReadOnlyList<Vector3Int> SmoothPathCells(IReadOnlyList<Vector3Int> sourceCells)
@@ -139,7 +159,7 @@ public class MobPathAgent2D : MonoBehaviour
             int furthestVisible = anchorIndex + 1;
             for (int i = anchorIndex + 2; i < sourceCells.Count; i++)
             {
-                if (navigationGrid.HasLineOfSightCells(sourceCells[anchorIndex], sourceCells[i]))
+                if (navigationGrid.HasLineOfSightCells(sourceCells[anchorIndex], sourceCells[i], config != null ? config.MovementProfile : null))
                 {
                     furthestVisible = i;
                 }
@@ -203,6 +223,8 @@ public class MobPathAgent2D : MonoBehaviour
         hasPath = false;
         reachedDestination = true;
         isPartialPath = false;
+        reachedResolvedGoal = false;
+        goalWasAdjusted = false;
         hasGoalCell = false;
 
         if (motor != null)

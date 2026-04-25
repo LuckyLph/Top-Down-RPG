@@ -12,7 +12,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
         yield return null;
 
-        MobBrain brain = Object.FindFirstObjectByType<MobBrain>();
+        MobController brain = Object.FindFirstObjectByType<MobController>();
         Assert.That(brain, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -45,7 +45,7 @@ public class MobPlayModeBehaviorTests
         yield return null;
 
         NavigationGrid2D navGrid = Object.FindFirstObjectByType<NavigationGrid2D>();
-        MobBrain firstMob = Object.FindFirstObjectByType<MobBrain>();
+        MobController firstMob = Object.FindFirstObjectByType<MobController>();
 
         Assert.That(navGrid, Is.Not.Null, "SampleScene should contain a NavigationGrid2D.");
         Assert.That(firstMob, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
@@ -54,7 +54,7 @@ public class MobPlayModeBehaviorTests
         GameObject clone = Object.Instantiate(firstMob.gameObject, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
         yield return null;
 
-        MobBrain secondMob = clone.GetComponent<MobBrain>();
+        MobController secondMob = clone.GetComponent<MobController>();
         Assert.That(secondMob, Is.Not.Null);
         Assert.That(secondMob.NavigationGrid, Is.SameAs(navGrid));
 

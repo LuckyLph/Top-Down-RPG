@@ -7,9 +7,11 @@ public class MobStateMachineTests
     private GameObject root;
     private MobConfig config;
     private Tile walkTile;
-    private MobBrain brain;
+    private Tile blockTile;
+    private MobController brain;
     private Transform player;
     private NavigationGrid2D navGrid;
+    private TerrainType2D groundTerrain;
 
     [TearDown]
     public void TearDown()
@@ -27,6 +29,16 @@ public class MobStateMachineTests
         if (walkTile != null)
         {
             Object.DestroyImmediate(walkTile);
+        }
+
+        if (blockTile != null)
+        {
+            Object.DestroyImmediate(blockTile);
+        }
+
+        if (groundTerrain != null)
+        {
+            Object.DestroyImmediate(groundTerrain);
         }
     }
 
@@ -95,7 +107,67 @@ public class MobStateMachineTests
         Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f));
     }
 
-    private void SetupWorld(Vector3? spawnPosition = null)
+    [Test]
+    public void ChaseState_TransitionsToReturn_WhenTargetHasNoReachablePath()
+    {
+        SetupWorld(addHorizontalBarrier: true);
+
+        player.position = new Vector3(0f, 3f, 0f);
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
+    public void ReturnState_DoesNotSwitchBackToChase_WhenDetectedTargetIsUnreachable()
+    {
+        SetupWorld(addHorizontalBarrier: true);
+
+        player.position = new Vector3(0f, 3f, 0f);
+        brain.ChangeState(MobStateId.Return);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
+    public void ReturnState_DoesNotSwitchBackToChase_WhenDetectedTargetIsOffGrid()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(100f, 0f, 0f);
+        brain.ChangeState(MobStateId.Return);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
+    public void IdleState_DoesNotEnterChase_WhenDetectedTargetIsUnreachable()
+    {
+        SetupWorld(addHorizontalBarrier: true);
+
+        player.position = new Vector3(0f, 3f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    [Test]
+    public void IdleState_DoesNotEnterChase_WhenDetectedTargetIsOffGrid()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(100f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false)
     {
         root = new GameObject("MobStateMachineTestRoot");
         Grid grid = root.AddComponent<Grid>();
@@ -104,8 +176,17 @@ public class MobStateMachineTests
         dataObject.transform.SetParent(root.transform);
         Tilemap dataTilemap = dataObject.AddComponent<Tilemap>();
         dataObject.AddComponent<TilemapRenderer>();
+        NavigationTerrainSource2D terrainSource = dataObject.AddComponent<NavigationTerrainSource2D>();
+
+        GameObject collisionObject = new("CollisionTilemap");
+        collisionObject.transform.SetParent(root.transform);
+        Tilemap collisionTilemap = collisionObject.AddComponent<Tilemap>();
+        collisionObject.AddComponent<TilemapRenderer>();
 
         walkTile = ScriptableObject.CreateInstance<Tile>();
+        blockTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = ScriptableObject.CreateInstance<TerrainType2D>();
+        groundTerrain.Configure("ground");
         for (int x = -10; x <= 10; x++)
         {
             for (int y = -10; y <= 10; y++)
@@ -114,8 +195,16 @@ public class MobStateMachineTests
             }
         }
 
+        if (addHorizontalBarrier)
+        {
+            for (int x = -10; x <= 10; x++)
+            {
+                collisionTilemap.SetTile(new Vector3Int(x, 1, 0), blockTile);
+            }
+        }
+
+        terrainSource.Configure(dataTilemap, collisionTilemap, null, groundTerrain);
         navGrid = root.AddComponent<NavigationGrid2D>();
-        navGrid.Configure(dataTilemap, null);
         navGrid.BuildGrid();
 
         GameObject providerObject = new("MobTargetProvider");
@@ -147,8 +236,8 @@ public class MobStateMachineTests
         mob.AddComponent<MobMotor2D>();
         mob.AddComponent<MobPerception2D>();
         mob.AddComponent<MobPathAgent2D>();
-        mob.AddComponent<MobPatrolRoam>();
-        brain = mob.AddComponent<MobBrain>();
+        mob.AddComponent<MobPatrolAnchor>();
+        brain = mob.AddComponent<MobController>();
 
         brain.Configure(config, navGrid, provider);
     }

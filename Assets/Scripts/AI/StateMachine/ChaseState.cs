@@ -4,7 +4,7 @@ public class ChaseState : MobStateBase
 {
     private float repathTimer;
 
-    public ChaseState(MobBrain brain) : base(brain) { }
+    public ChaseState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Chase;
 
@@ -42,7 +42,7 @@ public class ChaseState : MobStateBase
             bool pathFound = PathAgent.BuildPathToWorld(targetPosition, allowPartial: true);
             repathTimer = Config.repathInterval;
 
-            if (!pathFound)
+            if (!pathFound || !PathAgent.ReachedResolvedGoal || PathAgent.GoalWasAdjusted)
             {
                 Brain.ChangeState(MobStateId.Return);
             }

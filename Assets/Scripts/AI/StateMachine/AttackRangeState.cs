@@ -1,6 +1,6 @@
 public class AttackRangeState : MobStateBase
 {
-    public AttackRangeState(MobBrain brain) : base(brain) { }
+    public AttackRangeState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.AttackRange;
 

@@ -6,7 +6,7 @@ public class ReturnToSpawnState : MobStateBase
     private Vector3Int returnCell;
     private bool hasReturnDestination;
 
-    public ReturnToSpawnState(MobBrain brain) : base(brain) { }
+    public ReturnToSpawnState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Return;
 
@@ -35,7 +35,7 @@ public class ReturnToSpawnState : MobStateBase
 
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget)
+        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
         {
             Brain.ChangeState(MobStateId.Chase);
             return;
@@ -72,14 +72,15 @@ public class ReturnToSpawnState : MobStateBase
             return true;
         }
 
+        TerrainMovementProfile2D movementProfile = Config != null ? Config.MovementProfile : null;
         Vector3Int spawnCell = PathAgent.NavigationGrid.WorldToCell(Patrol.SpawnPosition);
-        if (PathAgent.NavigationGrid.IsCellWalkable(spawnCell))
+        if (PathAgent.NavigationGrid.IsCellWalkable(spawnCell, movementProfile))
         {
             destination = PathAgent.NavigationGrid.CellToWorldCenter(spawnCell);
             return true;
         }
 
-        if (PathAgent.NavigationGrid.TryGetNearestWalkableCell(spawnCell, out Vector3Int nearest, Config.nearestCellSearchRadius))
+        if (PathAgent.NavigationGrid.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.nearestCellSearchRadius))
         {
             destination = PathAgent.NavigationGrid.CellToWorldCenter(nearest);
             return true;

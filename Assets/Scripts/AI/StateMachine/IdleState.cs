@@ -2,7 +2,7 @@ public class IdleState : MobStateBase
 {
     private float idleTimer;
 
-    public IdleState(MobBrain brain) : base(brain) { }
+    public IdleState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Idle;
 
@@ -15,7 +15,7 @@ public class IdleState : MobStateBase
 
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget)
+        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
         {
             Brain.ChangeState(MobStateId.Chase);
             return;

@@ -41,6 +41,12 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Terrain
+    uniqueID: 2106159255
+    locked: 0
+  - name: Entities
+    uniqueID: 771016619
+    locked: 0
   m_RenderingLayers:
   - Default
   - Terrain

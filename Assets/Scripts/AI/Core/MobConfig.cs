@@ -27,6 +27,9 @@ public class MobConfig : ScriptableObject
     [Header("Navigation")]
     [Min(0.01f)] public float repathInterval = 0.25f;
     [Min(1)] public int nearestCellSearchRadius = 8;
+    public TerrainMovementProfile2D movementProfile;
+
+    public TerrainMovementProfile2D MovementProfile => movementProfile;
 
     public float NextIdleDuration()
     {

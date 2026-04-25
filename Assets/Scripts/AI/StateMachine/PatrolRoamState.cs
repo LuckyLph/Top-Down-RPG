@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PatrolRoamState : MobStateBase
 {
-    public PatrolRoamState(MobBrain brain) : base(brain) { }
+    public PatrolRoamState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Patrol;
 
@@ -23,7 +23,7 @@ public class PatrolRoamState : MobStateBase
 
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget)
+        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
         {
             Brain.ChangeState(MobStateId.Chase);
             return;

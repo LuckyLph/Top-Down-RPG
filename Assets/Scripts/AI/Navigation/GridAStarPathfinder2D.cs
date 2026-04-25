@@ -17,23 +17,28 @@ public class GridAStarPathfinder2D : IPathfinder2D
             return PathResult.Failure;
         }
 
-        if (!navigationGrid.TryGetNearestWalkableCell(request.StartCell, out Vector3Int start))
+        TerrainMovementProfile2D movementProfile = request.MovementProfile;
+
+        if (!navigationGrid.TryGetNearestWalkableCell(request.StartCell, movementProfile, out Vector3Int start))
         {
             return PathResult.Failure;
         }
 
         Vector3Int goal = request.GoalCell;
-        if (!navigationGrid.IsCellWalkable(goal))
+        bool adjustedGoalToNearestWalkable = false;
+        if (!navigationGrid.IsCellWalkable(goal, movementProfile))
         {
             if (!request.AllowPartial)
             {
                 return PathResult.Failure;
             }
 
-            if (!navigationGrid.TryGetNearestWalkableCell(goal, out goal))
+            if (!navigationGrid.TryGetNearestWalkableCell(goal, movementProfile, out goal))
             {
                 return PathResult.Failure;
             }
+
+            adjustedGoalToNearestWalkable = true;
         }
 
         List<Vector3Int> openList = new() { start };
@@ -41,43 +46,48 @@ public class GridAStarPathfinder2D : IPathfinder2D
         HashSet<Vector3Int> closedSet = new();
         Dictionary<Vector3Int, Vector3Int> cameFrom = new();
         Dictionary<Vector3Int, int> gScore = new() { [start] = 0 };
-        Dictionary<Vector3Int, int> fScore = new() { [start] = navigationGrid.HeuristicCost(start, goal) };
+        Dictionary<Vector3Int, int> fScore = new() { [start] = navigationGrid.HeuristicCost(start, goal, movementProfile) };
 
         Vector3Int closestToGoal = start;
-        int closestHeuristic = navigationGrid.HeuristicCost(start, goal);
+        int closestHeuristic = navigationGrid.HeuristicCost(start, goal, movementProfile);
 
         while (openList.Count > 0)
         {
             Vector3Int current = GetNodeWithLowestF(openList, fScore);
             if (current == goal)
             {
-                return new PathResult(true, false, ReconstructPath(cameFrom, current));
+                return new PathResult(
+                    success: true,
+                    isPartial: adjustedGoalToNearestWalkable,
+                    goalWasAdjusted: adjustedGoalToNearestWalkable,
+                    reachedResolvedGoal: true,
+                    cells: ReconstructPath(cameFrom, current));
             }
 
             openList.Remove(current);
             openSet.Remove(current);
             closedSet.Add(current);
 
-            int heuristic = navigationGrid.HeuristicCost(current, goal);
+            int heuristic = navigationGrid.HeuristicCost(current, goal, movementProfile);
             if (heuristic < closestHeuristic)
             {
                 closestHeuristic = heuristic;
                 closestToGoal = current;
             }
 
-            foreach (Vector3Int neighbor in navigationGrid.GetNeighbors8(current))
+            foreach (Vector3Int neighbor in navigationGrid.GetNeighbors8(current, movementProfile))
             {
                 if (closedSet.Contains(neighbor))
                 {
                     continue;
                 }
 
-                int tentativeG = gScore[current] + navigationGrid.MovementCost(current, neighbor);
+                int tentativeG = gScore[current] + navigationGrid.MovementCost(current, neighbor, movementProfile);
                 if (!gScore.TryGetValue(neighbor, out int neighborG) || tentativeG < neighborG)
                 {
                     cameFrom[neighbor] = current;
                     gScore[neighbor] = tentativeG;
-                    fScore[neighbor] = tentativeG + navigationGrid.HeuristicCost(neighbor, goal);
+                    fScore[neighbor] = tentativeG + navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
 
                     if (!openSet.Contains(neighbor))
                     {
@@ -93,7 +103,12 @@ public class GridAStarPathfinder2D : IPathfinder2D
             return PathResult.Failure;
         }
 
-        return new PathResult(true, true, ReconstructPath(cameFrom, closestToGoal));
+        return new PathResult(
+            success: true,
+            isPartial: true,
+            goalWasAdjusted: adjustedGoalToNearestWalkable,
+            reachedResolvedGoal: false,
+            cells: ReconstructPath(cameFrom, closestToGoal));
     }
 
     private static Vector3Int GetNodeWithLowestF(List<Vector3Int> openList, Dictionary<Vector3Int, int> fScore)

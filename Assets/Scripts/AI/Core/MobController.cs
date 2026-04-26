@@ -11,6 +11,7 @@ using UnityEditor;
 [RequireComponent(typeof(MobPerception2D))]
 [RequireComponent(typeof(MobPathAgent2D))]
 [RequireComponent(typeof(MobPatrolAnchor))]
+[RequireComponent(typeof(MeleeDamageDealer))]
 public class MobController : MonoBehaviour
 {
     [SerializeField] private MobConfig config;
@@ -33,6 +34,7 @@ public class MobController : MonoBehaviour
     private MobPerception2D perception;
     private MobPathAgent2D pathAgent;
     private MobPatrolAnchor patrol;
+    private MeleeDamageDealer damageDealer;
     private Collider2D selfCollider;
     private IMobState currentState;
     private bool initialized;
@@ -45,6 +47,7 @@ public class MobController : MonoBehaviour
     public MobPerception2D Perception => perception;
     public MobPathAgent2D PathAgent => pathAgent;
     public MobPatrolAnchor Patrol => patrol;
+    public MeleeDamageDealer DamageDealer => damageDealer;
     public MobStateId CurrentStateId => currentState != null ? currentState.StateId : MobStateId.Idle;
     public float DeltaTime => deltaTime;
 
@@ -163,6 +166,7 @@ public class MobController : MonoBehaviour
         pathAgent.Initialize(navigationGrid, motor, config);
         perception.Initialize(targetProvider, config);
         patrol.Initialize(navigationGrid, config);
+        damageDealer.Initialize(config);
 
         RegisterStates();
         initialized = true;
@@ -190,6 +194,11 @@ public class MobController : MonoBehaviour
             patrol = GetComponent<MobPatrolAnchor>();
         }
 
+        if (damageDealer == null)
+        {
+            damageDealer = GetComponent<MeleeDamageDealer>();
+        }
+
         if (selfCollider == null)
         {
             selfCollider = GetComponent<Collider2D>();
@@ -200,12 +209,12 @@ public class MobController : MonoBehaviour
     {
         if (navigationGrid == null)
         {
-            navigationGrid = FindFirstObjectByType<NavigationGrid2D>();
+            navigationGrid = FindAnyObjectByType<NavigationGrid2D>();
         }
 
         if (targetProvider == null)
         {
-            targetProvider = FindFirstObjectByType<MobTargetProvider>();
+            targetProvider = FindAnyObjectByType<MobTargetProvider>();
         }
     }
 

@@ -12,7 +12,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
         yield return null;
 
-        MobController brain = Object.FindFirstObjectByType<MobController>();
+        MobController brain = Object.FindAnyObjectByType<MobController>();
         Assert.That(brain, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -44,8 +44,8 @@ public class MobPlayModeBehaviorTests
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
         yield return null;
 
-        NavigationGrid2D navGrid = Object.FindFirstObjectByType<NavigationGrid2D>();
-        MobController firstMob = Object.FindFirstObjectByType<MobController>();
+        NavigationGrid2D navGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
+        MobController firstMob = Object.FindAnyObjectByType<MobController>();
 
         Assert.That(navGrid, Is.Not.Null, "SampleScene should contain a NavigationGrid2D.");
         Assert.That(firstMob, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
@@ -61,9 +61,107 @@ public class MobPlayModeBehaviorTests
         Object.Destroy(clone);
     }
 
+    [UnityTest]
+    public IEnumerator MobInSampleScene_AttackDamagesPlayerAndPopupFadesOut()
+    {
+        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return null;
+
+        MobController brain = Object.FindAnyObjectByType<MobController>();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+
+        Assert.That(brain, Is.Not.Null);
+        Assert.That(health, Is.Not.Null, "Player should have Health wired in SampleScene.");
+
+        Vector3 originalPlayerPosition = player.transform.position;
+        int startingHealth = health.CurrentHealth;
+
+        player.transform.position = brain.transform.position + Vector3.right * 0.1f;
+        yield return WaitForHealthChange(health, startingHealth - 1, 30);
+
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1));
+
+        FloatingDamageText popup = Object.FindAnyObjectByType<FloatingDamageText>();
+        Assert.That(popup, Is.Not.Null, "A floating damage popup should be spawned when damage is applied.");
+
+        player.transform.position = originalPlayerPosition;
+        yield return new WaitForSeconds(1.2f);
+
+        Assert.That(Object.FindAnyObjectByType<FloatingDamageText>(), Is.Null, "Damage popup should clean itself up after fading out.");
+    }
+
+    [UnityTest]
+    public IEnumerator MobInSampleScene_AttackRespectsConfiguredInterval()
+    {
+        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return null;
+
+        MobController brain = Object.FindAnyObjectByType<MobController>();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+
+        Assert.That(brain, Is.Not.Null);
+        Assert.That(health, Is.Not.Null);
+
+        Vector3 originalPlayerPosition = player.transform.position;
+        int startingHealth = health.CurrentHealth;
+
+        player.transform.position = brain.transform.position + Vector3.right * 0.1f;
+        yield return WaitForHealthChange(health, startingHealth - 1, 30);
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1));
+
+        yield return new WaitForSeconds(0.2f);
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1), "Health should not drop again before the attack interval elapses.");
+
+        yield return new WaitForSeconds(0.7f);
+        Assert.That(health.CurrentHealth, Is.LessThanOrEqualTo(startingHealth - 2), "Health should drop again after the configured attack interval.");
+
+        player.transform.position = originalPlayerPosition;
+    }
+
+    [UnityTest]
+    public IEnumerator DamageReceiver_DisablesSceneActorOnDeathButKeepsVisualsActive()
+    {
+        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return null;
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        DamageReceiver receiver = player.GetComponent<DamageReceiver>();
+        Health health = player.GetComponent<Health>();
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+        BoxCollider2D collider = player.GetComponent<BoxCollider2D>();
+        PlayerController controller = player.GetComponent<PlayerController>();
+        Transform visuals = player.transform.Find("Visuals");
+
+        Assert.That(receiver, Is.Not.Null);
+        Assert.That(health, Is.Not.Null);
+        Assert.That(rb, Is.Not.Null);
+        Assert.That(collider, Is.Not.Null);
+        Assert.That(controller, Is.Not.Null);
+        Assert.That(visuals, Is.Not.Null);
+
+        receiver.ReceiveDamage(health.CurrentHealth);
+        yield return null;
+
+        Assert.That(health.IsDead, Is.True);
+        Assert.That(controller.enabled, Is.False);
+        Assert.That(collider.enabled, Is.False);
+        Assert.That(rb.simulated, Is.False);
+        Assert.That(visuals.gameObject.activeInHierarchy, Is.True);
+    }
+
     private static IEnumerator WaitFrames(int frameCount)
     {
         for (int i = 0; i < frameCount; i++)
+        {
+            yield return null;
+        }
+    }
+
+    private static IEnumerator WaitForHealthChange(Health health, int expectedHealth, int maxFrames)
+    {
+        for (int i = 0; i < maxFrames && health.CurrentHealth > expectedHealth; i++)
         {
             yield return null;
         }

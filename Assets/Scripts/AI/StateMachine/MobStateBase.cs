@@ -14,6 +14,7 @@ public abstract class MobStateBase : IMobState
     protected MobPathAgent2D PathAgent => Brain.PathAgent;
     protected MobMotor2D Motor => Brain.Motor;
     protected MobPatrolAnchor Patrol => Brain.Patrol;
+    protected MeleeDamageDealer DamageDealer => Brain.DamageDealer;
     protected Transform Transform => Brain.transform;
 
     public abstract MobStateId StateId { get; }

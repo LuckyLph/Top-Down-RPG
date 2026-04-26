@@ -297,6 +297,8 @@ MonoBehaviour:
   includeChildRenderers: 1
   sortingOrderMultiplier: 100
   sortingOrderOffset: 0
+  useSortingReferenceY: 0
+  sortingReferenceY: 0
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -3685,6 +3687,9 @@ GameObject:
   - component: {fileID: 600139530}
   - component: {fileID: 600139529}
   - component: {fileID: 600139534}
+  - component: {fileID: 600139537}
+  - component: {fileID: 600139536}
+  - component: {fileID: 600139535}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -3796,6 +3801,44 @@ MonoBehaviour:
   moveSpeed: 5
   walkAnimationSpeed: 0.85
   animator: {fileID: 416386271}
+--- !u!114 &600139535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600139528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae8f55efcd7c0094f9bd93240086d2bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::DisableOnDeath
+--- !u!114 &600139536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600139528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd3c4c24e61eb8f47ab84147146e653b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::DamageReceiver
+  floatingTextOffset: {x: 0, y: 1.75, z: 0}
+--- !u!114 &600139537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600139528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 635defc0facf5fc4e9210377ae6a1f79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::Health
+  maxHealth: 10
 --- !u!1 &705165041
 GameObject:
   m_ObjectHideFlags: 0
@@ -3813,6 +3856,10 @@ GameObject:
   - component: {fileID: 705165043}
   - component: {fileID: 705165042}
   - component: {fileID: 705165052}
+  - component: {fileID: 705165056}
+  - component: {fileID: 705165055}
+  - component: {fileID: 705165054}
+  - component: {fileID: 705165053}
   m_Layer: 0
   m_Name: Weasel
   m_TagString: Untagged
@@ -4019,6 +4066,58 @@ MonoBehaviour:
   targetTag: Player
   resolveOnEnable: 1
   target: {fileID: 600139533}
+--- !u!114 &705165053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 705165041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e0c998316335914f8c8d42b226df58a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::MeleeDamageDealer
+  damageAmount: 1
+  attackInterval: 0.75
+--- !u!114 &705165054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 705165041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae8f55efcd7c0094f9bd93240086d2bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::DisableOnDeath
+--- !u!114 &705165055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 705165041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd3c4c24e61eb8f47ab84147146e653b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::DamageReceiver
+  floatingTextOffset: {x: 0, y: 1.1, z: 0}
+--- !u!114 &705165056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 705165041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 635defc0facf5fc4e9210377ae6a1f79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::Health
+  maxHealth: 10
 --- !u!1 &1315498081
 GameObject:
   m_ObjectHideFlags: 0
@@ -6874,6 +6973,8 @@ MonoBehaviour:
   includeChildRenderers: 1
   sortingOrderMultiplier: 100
   sortingOrderOffset: 0
+  useSortingReferenceY: 0
+  sortingReferenceY: 0
 --- !u!1 &1745421280
 GameObject:
   m_ObjectHideFlags: 0

@@ -18,6 +18,8 @@ public class MobConfig : ScriptableObject
     [Header("Combat")]
     [Min(0f)] public float attackStopDistance = 1.25f;
     [Min(0f)] public float attackExitBuffer = 0.25f;
+    [Min(0)] public int attackDamage = 1;
+    [Min(0f)] public float attackInterval = 0.75f;
 
     [Header("Patrol")]
     [Min(0f)] public float patrolRoamRadius = 4f;

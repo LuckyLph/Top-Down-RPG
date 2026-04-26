@@ -1,7 +1,8 @@
 {
   "name": "TopDownRPG.Gameplay",
   "references": [
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

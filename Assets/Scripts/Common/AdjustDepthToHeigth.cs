@@ -10,6 +10,8 @@ public class AdjustDepthToHeigth : MonoBehaviour
     [SerializeField] private bool includeChildRenderers = true;
     [SerializeField, Min(1)] private int sortingOrderMultiplier = 100;
     [SerializeField] private int sortingOrderOffset;
+    [SerializeField] private bool useSortingReferenceY;
+    [SerializeField] private float sortingReferenceY;
 
     private Renderer[] cachedRenderers = Array.Empty<Renderer>();
     private int[] cachedOrderOffsets = Array.Empty<int>();
@@ -34,6 +36,25 @@ public class AdjustDepthToHeigth : MonoBehaviour
 
     private void LateUpdate()
     {
+        ApplySortingOrder();
+    }
+
+    public void SetSortingOrderOffset(int offset)
+    {
+        sortingOrderOffset = offset;
+        ApplySortingOrder();
+    }
+
+    public void SetSortingReferenceY(float referenceY)
+    {
+        useSortingReferenceY = true;
+        sortingReferenceY = referenceY;
+        ApplySortingOrder();
+    }
+
+    public void ClearSortingReferenceY()
+    {
+        useSortingReferenceY = false;
         ApplySortingOrder();
     }
 
@@ -67,7 +88,8 @@ public class AdjustDepthToHeigth : MonoBehaviour
 
     private void ApplySortingOrder()
     {
-        int targetOrder = sortingOrderOffset - Mathf.RoundToInt(transform.position.y * sortingOrderMultiplier);
+        float sourceY = useSortingReferenceY ? sortingReferenceY : transform.position.y;
+        int targetOrder = sortingOrderOffset - Mathf.RoundToInt(sourceY * sortingOrderMultiplier);
         if (targetOrder == lastAppliedOrder)
         {
             return;

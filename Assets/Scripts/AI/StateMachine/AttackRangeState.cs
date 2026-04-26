@@ -6,10 +6,16 @@ public class AttackRangeState : MobStateBase
 
     public override void Enter()
     {
-        // Dummy attack state for now: stop movement and hold orientation toward target.
         PathAgent.ClearPath();
         Motor.Stop();
+        DamageDealer.ResetCooldown();
         Brain.InvokeAttackRangeEntered();
+
+        if (Perception.CurrentTarget != null)
+        {
+            Motor.FaceTowards(Perception.CurrentTarget.position);
+            DamageDealer.TryDealDamage(Perception.CurrentTarget);
+        }
     }
 
     public override void Tick()
@@ -25,7 +31,10 @@ public class AttackRangeState : MobStateBase
         if (Brain.ShouldExitAttackRange())
         {
             Brain.ChangeState(MobStateId.Chase);
+            return;
         }
+
+        DamageDealer.TryDealDamage(Perception.CurrentTarget);
     }
 
     public override void FixedTick()

@@ -24,6 +24,8 @@ MonoBehaviour:
     m_Bits: 256
   attackStopDistance: 0.375
   attackExitBuffer: 0.25
+  attackDamage: 1
+  attackInterval: 0.75
   patrolRoamRadius: 12
   patrolSampleAttempts: 12
   idleDurationRange: {x: 0.5, y: 1.5}

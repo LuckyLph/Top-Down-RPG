@@ -10,6 +10,7 @@ public class MobStateMachineTests
     private Tile blockTile;
     private MobController brain;
     private Transform player;
+    private Health playerHealth;
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
 
@@ -120,7 +121,7 @@ public class MobStateMachineTests
     }
 
     [Test]
-    public void ReturnState_DoesNotSwitchBackToChase_WhenDetectedTargetIsUnreachable()
+    public void ReturnState_GoesIdle_WhenDetectedTargetIsUnreachableButMobIsAlreadyAtSpawn()
     {
         SetupWorld(addHorizontalBarrier: true);
 
@@ -128,11 +129,11 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Return);
         brain.TickStateMachine(0.1f);
 
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
     [Test]
-    public void ReturnState_DoesNotSwitchBackToChase_WhenDetectedTargetIsOffGrid()
+    public void ReturnState_GoesIdle_WhenDetectedTargetIsOffGridButMobIsAlreadyAtSpawn()
     {
         SetupWorld();
 
@@ -140,7 +141,7 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Return);
         brain.TickStateMachine(0.1f);
 
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
     [Test]
@@ -153,6 +154,21 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    [Test]
+    public void AttackRangeState_DoesNotApplyDamageEveryTick_WhileOnCooldown()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        int healthAfterEnter = playerHealth.CurrentHealth;
+
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(healthAfterEnter, Is.EqualTo(9));
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterEnter));
     }
 
     [Test]
@@ -215,6 +231,9 @@ public class MobStateMachineTests
         playerObject.tag = "Player";
         playerObject.transform.position = new Vector3(100f, 0f, 0f);
         player = playerObject.transform;
+        playerHealth = playerObject.AddComponent<Health>();
+        playerObject.AddComponent<DamageReceiver>();
+        playerObject.AddComponent<DisableOnDeath>();
         provider.SetTarget(player);
 
         config = ScriptableObject.CreateInstance<MobConfig>();
@@ -223,6 +242,8 @@ public class MobStateMachineTests
         config.loseTargetDistance = 10f;
         config.attackStopDistance = 1f;
         config.attackExitBuffer = 0.25f;
+        config.attackDamage = 1;
+        config.attackInterval = 0.75f;
         config.repathInterval = 0.1f;
         config.patrolRoamRadius = 2f;
 
@@ -233,6 +254,10 @@ public class MobStateMachineTests
         mob.AddComponent<BoxCollider2D>();
         mob.AddComponent<SpriteRenderer>();
         mob.AddComponent<Animator>();
+        mob.AddComponent<Health>();
+        mob.AddComponent<DamageReceiver>();
+        mob.AddComponent<DisableOnDeath>();
+        mob.AddComponent<MeleeDamageDealer>();
         mob.AddComponent<MobMotor2D>();
         mob.AddComponent<MobPerception2D>();
         mob.AddComponent<MobPathAgent2D>();

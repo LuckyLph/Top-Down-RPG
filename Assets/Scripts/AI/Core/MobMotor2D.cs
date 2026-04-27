@@ -9,16 +9,21 @@ public class MobMotor2D : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField, Min(0.1f)] private float walkAnimationSpeed = 0.85f;
     [SerializeField] private bool useHorizontalFlip = false;
+    [SerializeField, Min(0.01f)] private float attackAnimationDuration = 0.18f;
 
     private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
     private static readonly int MoveXHash = Animator.StringToHash("MoveX");
     private static readonly int MoveYHash = Animator.StringToHash("MoveY");
     private static readonly int LastMoveXHash = Animator.StringToHash("LastMoveX");
     private static readonly int LastMoveYHash = Animator.StringToHash("LastMoveY");
+    private static readonly int IsAttackingHash = Animator.StringToHash("IsAttacking");
 
     private Rigidbody2D rb;
     private Vector2 desiredVelocity;
     private Vector2 lastMoveDirection = Vector2.down;
+    private bool isAttackAnimationActive;
+    private float attackAnimationEndTime;
+    private bool supportsAttackAnimation;
 
     public Vector2 Position => rb != null ? rb.position : (Vector2)transform.position;
     public float MoveSpeed => moveSpeed;
@@ -34,6 +39,11 @@ public class MobMotor2D : MonoBehaviour
     {
         ResolveSpriteRenderer();
         ResolveAnimator();
+    }
+
+    private void Update()
+    {
+        UpdateAttackAnimation();
     }
 
     public void Initialize(MobConfig config)
@@ -69,16 +79,40 @@ public class MobMotor2D : MonoBehaviour
 
     public void FaceTowards(Vector2 worldPosition)
     {
-        if (!useHorizontalFlip || spriteRenderer == null)
+        Vector2 direction = worldPosition - Position;
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            lastMoveDirection = direction.normalized;
+        }
+
+        if (!useHorizontalFlip || spriteRenderer == null || isAttackAnimationActive)
         {
             return;
         }
 
-        float deltaX = worldPosition.x - Position.x;
-        if (Mathf.Abs(deltaX) > 0.01f)
+        if (Mathf.Abs(direction.x) > 0.01f)
         {
-            spriteRenderer.flipX = deltaX < 0f;
+            spriteRenderer.flipX = direction.x < 0f;
         }
+    }
+
+    public void PlayAttackAnimation(Vector2 direction)
+    {
+        ResolveAnimator();
+
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            lastMoveDirection = direction.normalized;
+        }
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        attackAnimationEndTime = Time.time + attackAnimationDuration;
+        isAttackAnimationActive = true;
+        ApplyAttackAnimation(direction);
     }
 
     public void FixedTick()
@@ -112,29 +146,25 @@ public class MobMotor2D : MonoBehaviour
         {
             animator = GetComponentInChildren<Animator>(true);
         }
+
+        supportsAttackAnimation = CanDriveAnimator() && AnimatorHasBoolParameter(IsAttackingHash);
     }
 
     private void UpdateAnimator(Vector2 velocity)
     {
-        if (animator == null)
-        {
-            return;
-        }
-
         bool isMoving = velocity.sqrMagnitude > 0.0001f;
         if (isMoving)
         {
             lastMoveDirection = velocity.normalized;
         }
 
-        Vector2 animationDirection = isMoving ? velocity.normalized : lastMoveDirection;
+        if (!CanDriveAnimator())
+        {
+            return;
+        }
 
-        animator.SetBool(IsMovingHash, isMoving);
-        animator.SetFloat(MoveXHash, animationDirection.x);
-        animator.SetFloat(MoveYHash, animationDirection.y);
-        animator.SetFloat(LastMoveXHash, lastMoveDirection.x);
-        animator.SetFloat(LastMoveYHash, lastMoveDirection.y);
-        animator.speed = isMoving ? walkAnimationSpeed : 1f;
+        Vector2 animationDirection = isMoving ? velocity.normalized : lastMoveDirection;
+        ApplyAnimatorMovement(isMoving, animationDirection);
     }
 
     private void ResolveSpriteRenderer()
@@ -144,5 +174,88 @@ public class MobMotor2D : MonoBehaviour
             spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
         }
     }
-}
 
+    private void UpdateAttackAnimation()
+    {
+        if (!isAttackAnimationActive)
+        {
+            return;
+        }
+
+        if (Time.time >= attackAnimationEndTime)
+        {
+            EndAttackAnimation();
+            return;
+        }
+
+        ApplyAttackAnimation(lastMoveDirection);
+    }
+
+    private void ApplyAttackAnimation(Vector2 direction)
+    {
+        if (!CanDriveAnimator())
+        {
+            return;
+        }
+
+        Vector2 resolvedDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : lastMoveDirection;
+        lastMoveDirection = resolvedDirection;
+
+        ApplyAnimatorMovement(false, resolvedDirection);
+
+        if (supportsAttackAnimation)
+        {
+            animator.SetBool(IsAttackingHash, true);
+        }
+    }
+
+    private void EndAttackAnimation()
+    {
+        isAttackAnimationActive = false;
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (supportsAttackAnimation)
+        {
+            animator.SetBool(IsAttackingHash, false);
+        }
+
+        UpdateAnimator(rb != null ? rb.linearVelocity : desiredVelocity);
+    }
+
+    private void ApplyAnimatorMovement(bool isMoving, Vector2 animationDirection)
+    {
+        animator.SetBool(IsMovingHash, isMoving);
+        animator.SetFloat(MoveXHash, animationDirection.x);
+        animator.SetFloat(MoveYHash, animationDirection.y);
+        animator.SetFloat(LastMoveXHash, lastMoveDirection.x);
+        animator.SetFloat(LastMoveYHash, lastMoveDirection.y);
+        animator.speed = isAttackAnimationActive ? 1f : (isMoving ? walkAnimationSpeed : 1f);
+    }
+
+    private bool AnimatorHasBoolParameter(int nameHash)
+    {
+        if (animator == null)
+        {
+            return false;
+        }
+
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+        {
+            if (parameter.type == AnimatorControllerParameterType.Bool && parameter.nameHash == nameHash)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CanDriveAnimator()
+    {
+        return animator != null && animator.runtimeAnimatorController != null;
+    }
+}

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class AttackRangeState : MobStateBase
 {
     public AttackRangeState(MobController brain) : base(brain) { }
@@ -10,12 +12,7 @@ public class AttackRangeState : MobStateBase
         Motor.Stop();
         DamageDealer.ResetCooldown();
         Brain.InvokeAttackRangeEntered();
-
-        if (Perception.CurrentTarget != null)
-        {
-            Motor.FaceTowards(Perception.CurrentTarget.position);
-            DamageDealer.TryDealDamage(Perception.CurrentTarget);
-        }
+        TryAttackCurrentTarget();
     }
 
     public override void Tick()
@@ -26,19 +23,33 @@ public class AttackRangeState : MobStateBase
             return;
         }
 
-        Motor.FaceTowards(Perception.CurrentTarget.position);
-
         if (Brain.ShouldExitAttackRange())
         {
             Brain.ChangeState(MobStateId.Chase);
             return;
         }
 
-        DamageDealer.TryDealDamage(Perception.CurrentTarget);
+        TryAttackCurrentTarget();
     }
 
     public override void FixedTick()
     {
         Motor.Stop();
+    }
+
+    private void TryAttackCurrentTarget()
+    {
+        if (Perception.CurrentTarget == null)
+        {
+            return;
+        }
+
+        Motor.FaceTowards(Perception.CurrentTarget.position);
+
+        Vector2 attackDirection = Perception.CurrentTarget.position - Brain.transform.position;
+        if (DamageDealer.TryDealDamage(Perception.CurrentTarget))
+        {
+            Motor.PlayAttackAnimation(attackDirection);
+        }
     }
 }

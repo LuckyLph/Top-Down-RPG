@@ -121,34 +121,30 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator DamageReceiver_DisablesSceneActorOnDeathButKeepsVisualsActive()
+    public IEnumerator MobInSampleScene_DeathSpawnsAnimationAndDestroysMob()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
         yield return null;
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        DamageReceiver receiver = player.GetComponent<DamageReceiver>();
-        Health health = player.GetComponent<Health>();
-        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
-        BoxCollider2D collider = player.GetComponent<BoxCollider2D>();
-        PlayerController controller = player.GetComponent<PlayerController>();
-        Transform visuals = player.transform.Find("Visuals");
+        MobController mob = Object.FindAnyObjectByType<MobController>();
+        Assert.That(mob, Is.Not.Null);
 
+        DamageReceiver receiver = mob.GetComponent<DamageReceiver>();
+        Health health = mob.GetComponent<Health>();
         Assert.That(receiver, Is.Not.Null);
         Assert.That(health, Is.Not.Null);
-        Assert.That(rb, Is.Not.Null);
-        Assert.That(collider, Is.Not.Null);
-        Assert.That(controller, Is.Not.Null);
-        Assert.That(visuals, Is.Not.Null);
 
         receiver.ReceiveDamage(health.CurrentHealth);
         yield return null;
 
         Assert.That(health.IsDead, Is.True);
-        Assert.That(controller.enabled, Is.False);
-        Assert.That(collider.enabled, Is.False);
-        Assert.That(rb.simulated, Is.False);
-        Assert.That(visuals.gameObject.activeInHierarchy, Is.True);
+        Assert.That(mob == null, Is.True, "Mob root should be destroyed after death.");
+
+        MobDeathAnimation deathAnimation = Object.FindAnyObjectByType<MobDeathAnimation>();
+        Assert.That(deathAnimation, Is.Not.Null, "A death animation object should be spawned when the mob dies.");
+
+        yield return new WaitForSeconds(1.5f);
+        Assert.That(Object.FindAnyObjectByType<MobDeathAnimation>(), Is.Null, "Death animation object should clean itself up after playback.");
     }
 
     private static IEnumerator WaitFrames(int frameCount)

@@ -1,7 +1,8 @@
 {
   "name": "TopDownRPG.PlayModeTests",
   "references": [
-    "TopDownRPG.Gameplay"
+    "TopDownRPG.Gameplay",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

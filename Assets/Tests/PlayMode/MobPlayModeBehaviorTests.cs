@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -147,6 +149,46 @@ public class MobPlayModeBehaviorTests
         Assert.That(Object.FindAnyObjectByType<MobDeathAnimation>(), Is.Null, "Death animation object should clean itself up after playback.");
     }
 
+    [UnityTest]
+    public IEnumerator PlayerInSampleScene_SwordHudAndSlashDamageMob()
+    {
+        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return null;
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        MobController mob = Object.FindAnyObjectByType<MobController>();
+
+        Assert.That(player, Is.Not.Null);
+        Assert.That(mob, Is.Not.Null);
+
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
+        Health mobHealth = mob.GetComponent<Health>();
+        TextMeshProUGUI[] labels = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        Assert.That(playerController, Is.Not.Null);
+        Assert.That(weaponController, Is.Not.Null);
+        Assert.That(mobHealth, Is.Not.Null);
+        Assert.That(weaponController.CurrentWeaponName, Is.EqualTo("Sword"));
+        Assert.That(System.Array.Exists(labels, label => label != null && label.text == "Sword"), Is.True, "SampleScene should display the equipped weapon name.");
+
+        Vector3 originalPlayerPosition = player.transform.position;
+        Vector3 originalMobPosition = mob.transform.position;
+        int startingHealth = mobHealth.CurrentHealth;
+
+        player.transform.position = mob.transform.position + Vector3.left * 0.45f;
+        SetPrivateField(playerController, "lastMoveDirection", Vector2.right);
+
+        weaponController.TryAttack();
+        yield return null;
+
+        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth - 1));
+        Assert.That(Object.FindAnyObjectByType<PlayerSlashAttack>(), Is.Not.Null);
+
+        player.transform.position = originalPlayerPosition;
+        mob.transform.position = originalMobPosition;
+    }
+
     private static IEnumerator WaitFrames(int frameCount)
     {
         for (int i = 0; i < frameCount; i++)
@@ -161,5 +203,12 @@ public class MobPlayModeBehaviorTests
         {
             yield return null;
         }
+    }
+
+    private static void SetPrivateField<T>(Object target, string fieldName, T value)
+    {
+        FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(field, Is.Not.Null, $"Expected field '{fieldName}' to exist on {target.GetType().Name}.");
+        field.SetValue(target, value);
     }
 }

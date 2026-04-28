@@ -1,7 +1,9 @@
 {
   "name": "TopDownRPG.EditModeTests",
   "references": [
-    "TopDownRPG.Gameplay"
+    "TopDownRPG.Gameplay",
+    "Unity.InputSystem",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"

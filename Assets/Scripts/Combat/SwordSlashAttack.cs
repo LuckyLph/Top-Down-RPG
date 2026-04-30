@@ -23,6 +23,7 @@ public class PlayerSlashAttack : MonoBehaviour
     private Vector2 direction = Vector2.down;
     private Vector2 spawnOffset;
     private float spawnDistance;
+    private float northWestEastSpawnOffsetPercent;
     private float elapsedTime;
     private PlayableGraph animationGraph;
 
@@ -97,6 +98,7 @@ public class PlayerSlashAttack : MonoBehaviour
         slashAnimation = weapon != null ? weapon.SlashAnimation : null;
         spawnOffset = weapon != null ? weapon.SlashSpawnOffset : Vector2.zero;
         spawnDistance = weapon != null ? weapon.SlashSpawnDistance : 0f;
+        northWestEastSpawnOffsetPercent = weapon != null ? weapon.SlashNorthWestEastSpawnOffsetPercent : 0f;
         ownerAnchor = ResolveOwnerAnchor(owner, ownerSpriteRenderer);
 
         if (slashAnimation != null && slashAnimation.length > 0f)
@@ -130,9 +132,7 @@ public class PlayerSlashAttack : MonoBehaviour
 
         if (ownerRoot != null)
         {
-            Transform otherRoot = other.transform.root;
-            Transform ownerTransformRoot = ownerRoot.root;
-            if (other.transform == ownerRoot || other.transform.IsChildOf(ownerRoot) || otherRoot == ownerTransformRoot)
+            if (other.transform == ownerRoot || other.transform.IsChildOf(ownerRoot))
             {
                 return false;
             }
@@ -227,8 +227,19 @@ public class PlayerSlashAttack : MonoBehaviour
     private void UpdateFollowPosition()
     {
         Vector3 origin = ownerAnchor != null ? ownerAnchor.position : (ownerRoot != null ? ownerRoot.position : transform.position);
+        Vector2 directionalOffset = direction * spawnDistance;
+        if (ShouldApplyNorthWestEastSpawnOffset(direction))
+        {
+            directionalOffset += direction * spawnDistance * northWestEastSpawnOffsetPercent;
+        }
+
         Vector2 rotatedOffset = transform.rotation * spawnOffset;
-        transform.position = origin + (Vector3)(direction * spawnDistance + rotatedOffset);
+        transform.position = origin + (Vector3)(directionalOffset + rotatedOffset);
+    }
+
+    private static bool ShouldApplyNorthWestEastSpawnOffset(Vector2 attackDirection)
+    {
+        return Mathf.Abs(attackDirection.x) > Mathf.Abs(attackDirection.y) || attackDirection.y > 0f;
     }
 
     private static Transform ResolveOwnerAnchor(Transform owner, SpriteRenderer ownerSpriteRenderer)
@@ -279,6 +290,7 @@ public class PlayerSlashAttack : MonoBehaviour
             return;
         }
 
+        Physics2D.SyncTransforms();
         Vector2 worldCenter = (Vector2)transform.position + (Vector2)(transform.rotation * hitbox.offset);
         Collider2D[] overlaps = Physics2D.OverlapBoxAll(worldCenter, hitbox.size, transform.eulerAngles.z);
         for (int i = 0; i < overlaps.Length; i++)

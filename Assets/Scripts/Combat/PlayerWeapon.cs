@@ -8,6 +8,7 @@ public sealed class PlayerWeapon : ScriptableObject
     [SerializeField, Min(0.01f)] private float attackCooldown = 0.35f;
     [SerializeField, Min(0.01f)] private float slashDuration = 0.18f;
     [SerializeField, Min(0f)] private float slashSpawnDistance = 0.55f;
+    [SerializeField, Min(0f)] private float slashNorthWestEastSpawnOffsetPercent;
     [SerializeField] private Vector2 slashSpawnOffset = Vector2.zero;
     [SerializeField] private PlayerSlashAttack slashPrefab;
     [SerializeField] private AnimationClip slashAnimation;
@@ -17,6 +18,7 @@ public sealed class PlayerWeapon : ScriptableObject
     public float AttackCooldown => Mathf.Max(0.01f, attackCooldown);
     public float SlashDuration => Mathf.Max(0.01f, slashDuration);
     public float SlashSpawnDistance => Mathf.Max(0f, slashSpawnDistance);
+    public float SlashNorthWestEastSpawnOffsetPercent => Mathf.Max(0f, slashNorthWestEastSpawnOffsetPercent);
     public Vector2 SlashSpawnOffset => slashSpawnOffset;
     public PlayerSlashAttack SlashPrefab => slashPrefab;
     public AnimationClip SlashAnimation => slashAnimation;
@@ -29,7 +31,8 @@ public sealed class PlayerWeapon : ScriptableObject
         float spawnDistance,
         Vector2 spawnOffset,
         PlayerSlashAttack prefab = null,
-        AnimationClip animation = null)
+        AnimationClip animation = null,
+        float northWestEastSpawnOffsetPercent = 0f)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
@@ -37,6 +40,7 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.attackCooldown = cooldown;
         weapon.slashDuration = duration;
         weapon.slashSpawnDistance = spawnDistance;
+        weapon.slashNorthWestEastSpawnOffsetPercent = northWestEastSpawnOffsetPercent;
         weapon.slashSpawnOffset = spawnOffset;
         weapon.slashPrefab = prefab;
         weapon.slashAnimation = animation;

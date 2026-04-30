@@ -145,6 +145,25 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void PlayerSlashAttack_OffsetsNorthWestAndEastSpawnDistance()
+    {
+        root = new GameObject("CombatRoot");
+
+        GameObject owner = new("Owner");
+        owner.transform.SetParent(root.transform);
+        owner.AddComponent<BoxCollider2D>();
+        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+
+        const float spawnDistance = 1f;
+        PlayerWeapon weapon = CreateTestWeapon("Sword", spawnDistance: spawnDistance, northWestEastSpawnOffsetPercent: 0.3f);
+
+        AssertSpawnPosition(owner.transform, weapon, Vector2.up, new Vector3(0f, 1.3f, 0f));
+        AssertSpawnPosition(owner.transform, weapon, Vector2.left, new Vector3(-1.3f, 0f, 0f));
+        AssertSpawnPosition(owner.transform, weapon, Vector2.right, new Vector3(1.3f, 0f, 0f));
+        AssertSpawnPosition(owner.transform, weapon, Vector2.down, new Vector3(0f, -1f, 0f));
+    }
+
+    [Test]
     public void PlayerSlashAttack_AppliesOpeningSpriteFromAnimationClip()
     {
         root = new GameObject("CombatRoot");
@@ -176,7 +195,8 @@ public class PlayerWeaponSystemTests
         int damage = 1,
         float cooldown = 0.35f,
         float spawnDistance = 0.55f,
-        Vector2? hitboxSize = null)
+        Vector2? hitboxSize = null,
+        float northWestEastSpawnOffsetPercent = 0f)
     {
         AnimationClip slashAnimation = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/Weapons/Slash.anim");
         Assert.That(slashAnimation, Is.Not.Null);
@@ -189,7 +209,15 @@ public class PlayerWeaponSystemTests
             spawnDistance,
             Vector2.zero,
             CreateTestSlashPrefab(hitboxSize ?? new Vector2(0.9f, 0.9f)),
-            slashAnimation);
+            slashAnimation,
+            northWestEastSpawnOffsetPercent);
+    }
+
+    private static void AssertSpawnPosition(Transform owner, PlayerWeapon weapon, Vector2 direction, Vector3 expectedPosition)
+    {
+        PlayerSlashAttack slashAttack = PlayerSlashAttack.Spawn(owner, weapon, direction);
+        Assert.That(Vector3.Distance(slashAttack.transform.position, expectedPosition), Is.LessThan(0.001f));
+        Object.DestroyImmediate(slashAttack.gameObject);
     }
 
     private static PlayerSlashAttack CreateTestSlashPrefab(Vector2 hitboxSize)
@@ -220,7 +248,7 @@ public class PlayerWeaponSystemTests
         target.transform.position = position;
         target.AddComponent<BoxCollider2D>();
         target.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        target.AddComponent<Health>();
+        target.AddComponent<Health>().ApplyDamage(0);
         target.AddComponent<DamageReceiver>();
         return target;
     }

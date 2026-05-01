@@ -61,7 +61,7 @@ public class PlayerWeaponController : MonoBehaviour
             attackDirection = Vector2.down;
         }
 
-        PlayerSlashAttack.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer);
+        SwordSlashAttack.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer);
         nextAttackTime = Time.time + currentWeapon.AttackCooldown;
         return true;
     }

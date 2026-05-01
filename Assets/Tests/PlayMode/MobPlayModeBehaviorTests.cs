@@ -175,6 +175,7 @@ public class MobPlayModeBehaviorTests
         Vector3 originalPlayerPosition = player.transform.position;
         Vector3 originalMobPosition = mob.transform.position;
         int startingHealth = mobHealth.CurrentHealth;
+        int expectedDamage = weaponController.CurrentWeapon != null ? weaponController.CurrentWeapon.Damage : 1;
 
         player.transform.position = mob.transform.position + Vector3.left * 0.45f;
         SetPrivateField(playerController, "lastMoveDirection", Vector2.right);
@@ -182,8 +183,8 @@ public class MobPlayModeBehaviorTests
         weaponController.TryAttack();
         yield return null;
 
-        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth - 1));
-        Assert.That(Object.FindAnyObjectByType<PlayerSlashAttack>(), Is.Not.Null);
+        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth - expectedDamage));
+        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Not.Null);
 
         player.transform.position = originalPlayerPosition;
         mob.transform.position = originalMobPosition;

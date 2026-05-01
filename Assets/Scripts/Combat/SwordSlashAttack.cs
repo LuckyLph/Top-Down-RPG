@@ -5,7 +5,7 @@ using UnityEngine.Playables;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
-public class PlayerSlashAttack : MonoBehaviour
+public class SwordSlashAttack : MonoBehaviour
 {
     [SerializeField] private Transform visualRoot;
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -23,8 +23,9 @@ public class PlayerSlashAttack : MonoBehaviour
     private Vector2 direction = Vector2.down;
     private Vector2 spawnOffset;
     private float spawnDistance;
-    private float northWestEastSpawnOffsetPercent;
+    private float activeLifetime;
     private float elapsedTime;
+    private Vector3 rootBaseScale = Vector3.one;
     private PlayableGraph animationGraph;
 
     public Transform OwnerRoot => ownerRoot;
@@ -36,11 +37,14 @@ public class PlayerSlashAttack : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+        CacheRootBaseScale();
+        activeLifetime = ResolveLifetime();
     }
 
     private void OnValidate()
     {
         ResolveReferences();
+        CacheRootBaseScale();
 
         if (hitbox != null)
         {
@@ -50,7 +54,7 @@ public class PlayerSlashAttack : MonoBehaviour
 
     private void Update()
     {
-        if (lifetime <= 0f)
+        if (activeLifetime <= 0f)
         {
             Destroy(gameObject);
             return;
@@ -59,7 +63,7 @@ public class PlayerSlashAttack : MonoBehaviour
         elapsedTime += Time.deltaTime;
         UpdateFollowPosition();
 
-        if (elapsedTime >= lifetime)
+        if (elapsedTime >= activeLifetime)
         {
             Destroy(gameObject);
         }
@@ -70,20 +74,25 @@ public class PlayerSlashAttack : MonoBehaviour
         TryDamageCollider(other);
     }
 
-    public static PlayerSlashAttack Spawn(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, SpriteRenderer ownerSpriteRenderer = null)
+    public static SwordSlashAttack Spawn(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, SpriteRenderer ownerSpriteRenderer = null)
     {
-        PlayerSlashAttack slashAttack = CreateSlashInstance(weapon);
+        SwordSlashAttack slashAttack = CreateSlashInstance(weapon);
         slashAttack.gameObject.name = $"{(weapon != null ? weapon.DisplayName : "Player")}Slash";
         slashAttack.Initialize(owner, weapon, attackDirection, ownerSpriteRenderer);
         return slashAttack;
     }
 
-    public void ConfigureReferences(Transform visualTransform, SpriteRenderer renderer, BoxCollider2D boxCollider, Animator runtimeAnimator)
+    public void ConfigureReferences(Transform visualTransform, SpriteRenderer renderer, BoxCollider2D boxCollider, Animator runtimeAnimator, AnimationClip animationClip = null)
     {
         visualRoot = visualTransform;
         spriteRenderer = renderer;
         hitbox = boxCollider;
         animator = runtimeAnimator;
+        CacheRootBaseScale();
+        if (animationClip != null)
+        {
+            slashAnimation = animationClip;
+        }
     }
 
     public void Initialize(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, SpriteRenderer ownerSpriteRenderer = null)
@@ -94,20 +103,14 @@ public class PlayerSlashAttack : MonoBehaviour
         damageSource = owner != null ? owner.gameObject : gameObject;
         direction = attackDirection.sqrMagnitude > 0.0001f ? attackDirection.normalized : Vector2.down;
         damageAmount = weapon != null ? weapon.Damage : damageAmount;
-        lifetime = weapon != null ? weapon.SlashDuration : lifetime;
-        slashAnimation = weapon != null ? weapon.SlashAnimation : null;
-        spawnOffset = weapon != null ? weapon.SlashSpawnOffset : Vector2.zero;
+        activeLifetime = ResolveLifetime();
+        spawnOffset = weapon != null ? weapon.GetSlashSpawnOffset(direction) : Vector2.zero;
         spawnDistance = weapon != null ? weapon.SlashSpawnDistance : 0f;
-        northWestEastSpawnOffsetPercent = weapon != null ? weapon.SlashNorthWestEastSpawnOffsetPercent : 0f;
         ownerAnchor = ResolveOwnerAnchor(owner, ownerSpriteRenderer);
-
-        if (slashAnimation != null && slashAnimation.length > 0f)
-        {
-            lifetime = slashAnimation.length;
-        }
 
         Quaternion rotation = Quaternion.Euler(0f, 0f, Vector2.SignedAngle(Vector2.up, direction));
         transform.rotation = rotation;
+        ApplyDirectionalRootMirror();
         UpdateFollowPosition();
 
         if (hitbox != null)
@@ -181,19 +184,38 @@ public class PlayerSlashAttack : MonoBehaviour
         }
     }
 
-    private static PlayerSlashAttack CreateSlashInstance(PlayerWeapon weapon)
+    private void CacheRootBaseScale()
+    {
+        rootBaseScale = transform.localScale;
+        rootBaseScale.x = Mathf.Abs(rootBaseScale.x);
+    }
+
+    private static SwordSlashAttack CreateSlashInstance(PlayerWeapon weapon)
     {
         if (weapon != null && weapon.SlashPrefab != null)
         {
-            PlayerSlashAttack slashAttack = Instantiate(weapon.SlashPrefab);
-            slashAttack.gameObject.SetActive(true);
-            return slashAttack;
+            GameObject slashObject = Instantiate(weapon.SlashPrefab);
+            slashObject.SetActive(true);
+
+            SwordSlashAttack slashAttack = slashObject.GetComponent<SwordSlashAttack>();
+            if (slashAttack != null)
+            {
+                return slashAttack;
+            }
+
+            slashAttack = slashObject.GetComponentInChildren<SwordSlashAttack>(true);
+            if (slashAttack != null)
+            {
+                return slashAttack;
+            }
+
+            Destroy(slashObject);
         }
 
         return CreateFallbackSlashInstance(weapon);
     }
 
-    private static PlayerSlashAttack CreateFallbackSlashInstance(PlayerWeapon weapon)
+    private static SwordSlashAttack CreateFallbackSlashInstance(PlayerWeapon weapon)
     {
         GameObject root = new($"{(weapon != null ? weapon.DisplayName : "Player")}Slash");
         BoxCollider2D boxCollider = root.AddComponent<BoxCollider2D>();
@@ -202,7 +224,7 @@ public class PlayerSlashAttack : MonoBehaviour
         boxCollider.size = new Vector2(0.9f, 0.9f);
 
         Animator runtimeAnimator = root.AddComponent<Animator>();
-        PlayerSlashAttack slashAttack = root.AddComponent<PlayerSlashAttack>();
+        SwordSlashAttack slashAttack = root.AddComponent<SwordSlashAttack>();
 
         GameObject visualObject = new("Visual");
         visualObject.transform.SetParent(root.transform, false);
@@ -228,18 +250,34 @@ public class PlayerSlashAttack : MonoBehaviour
     {
         Vector3 origin = ownerAnchor != null ? ownerAnchor.position : (ownerRoot != null ? ownerRoot.position : transform.position);
         Vector2 directionalOffset = direction * spawnDistance;
-        if (ShouldApplyNorthWestEastSpawnOffset(direction))
-        {
-            directionalOffset += direction * spawnDistance * northWestEastSpawnOffsetPercent;
-        }
-
-        Vector2 rotatedOffset = transform.rotation * spawnOffset;
-        transform.position = origin + (Vector3)(directionalOffset + rotatedOffset);
+        transform.position = origin + (Vector3)(directionalOffset + spawnOffset);
     }
 
-    private static bool ShouldApplyNorthWestEastSpawnOffset(Vector2 attackDirection)
+    private float ResolveLifetime()
     {
-        return Mathf.Abs(attackDirection.x) > Mathf.Abs(attackDirection.y) || attackDirection.y > 0f;
+        if (slashAnimation != null && slashAnimation.length > 0f)
+        {
+            return slashAnimation.length;
+        }
+
+        return Mathf.Max(0.01f, lifetime);
+    }
+
+    private void ApplyDirectionalRootMirror()
+    {
+        CacheRootBaseScale();
+        Vector3 scale = rootBaseScale;
+        if (IsEastDirection(direction))
+        {
+            scale.x = -scale.x;
+        }
+
+        transform.localScale = scale;
+    }
+
+    private static bool IsEastDirection(Vector2 attackDirection)
+    {
+        return attackDirection.x > 0f && Mathf.Abs(attackDirection.x) > Mathf.Abs(attackDirection.y);
     }
 
     private static Transform ResolveOwnerAnchor(Transform owner, SpriteRenderer ownerSpriteRenderer)

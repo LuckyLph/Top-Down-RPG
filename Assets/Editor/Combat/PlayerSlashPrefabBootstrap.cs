@@ -5,8 +5,9 @@ using UnityEngine;
 [InitializeOnLoad]
 public static class PlayerSlashPrefabBootstrap
 {
-    private const string PrefabPath = "Assets/Prefabs/Combat/PlayerSlash.prefab";
+    private const string PrefabPath = "Assets/Prefabs/Combat/SwordSlash.prefab";
     private const string SwordAssetPath = "Assets/Data/Weapons/Sword.asset";
+    private const string SlashAnimationPath = "Assets/Animations/Weapons/Slash.anim";
 
     static PlayerSlashPrefabBootstrap()
     {
@@ -16,7 +17,7 @@ public static class PlayerSlashPrefabBootstrap
     [MenuItem("Tools/TopDownRPG/Rebuild Player Slash Prefab")]
     public static void RebuildPrefab()
     {
-        PlayerSlashAttack slashPrefab = CreateOrUpdatePrefab();
+        GameObject slashPrefab = CreateOrUpdatePrefab();
         LinkSwordWeapon(slashPrefab);
     }
 
@@ -28,16 +29,15 @@ public static class PlayerSlashPrefabBootstrap
         }
 
         GameObject prefabRoot = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-        PlayerSlashAttack slashPrefab = prefabRoot != null ? prefabRoot.GetComponent<PlayerSlashAttack>() : null;
-        if (slashPrefab == null)
+        if (prefabRoot == null || prefabRoot.GetComponent<SwordSlashAttack>() == null)
         {
-            slashPrefab = CreateOrUpdatePrefab();
+            prefabRoot = CreateOrUpdatePrefab();
         }
 
-        LinkSwordWeapon(slashPrefab);
+        LinkSwordWeapon(prefabRoot);
     }
 
-    private static PlayerSlashAttack CreateOrUpdatePrefab()
+    private static GameObject CreateOrUpdatePrefab()
     {
         string directoryPath = Path.Combine(Application.dataPath, "Prefabs", "Combat");
         if (!Directory.Exists(directoryPath))
@@ -49,30 +49,32 @@ public static class PlayerSlashPrefabBootstrap
         GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         Object.DestroyImmediate(root);
         AssetDatabase.SaveAssets();
-        return prefabAsset != null ? prefabAsset.GetComponent<PlayerSlashAttack>() : null;
+        return prefabAsset;
     }
 
     private static GameObject BuildPrefabRoot()
     {
-        GameObject root = new("PlayerSlash");
-        root.AddComponent<Animator>();
+        GameObject root = new("SwordSlash");
+        Animator animator = root.AddComponent<Animator>();
 
         BoxCollider2D hitbox = root.AddComponent<BoxCollider2D>();
         hitbox.isTrigger = true;
         hitbox.offset = new Vector2(0f, 0.1f);
         hitbox.size = new Vector2(0.9f, 0.9f);
 
-        root.AddComponent<PlayerSlashAttack>();
-
         GameObject visual = new("Visual");
         visual.transform.SetParent(root.transform, false);
         visual.transform.localScale = Vector3.one * 0.14f;
-        visual.AddComponent<SpriteRenderer>();
+        SpriteRenderer spriteRenderer = visual.AddComponent<SpriteRenderer>();
+
+        SwordSlashAttack slashAttack = root.AddComponent<SwordSlashAttack>();
+        AnimationClip slashAnimation = AssetDatabase.LoadAssetAtPath<AnimationClip>(SlashAnimationPath);
+        slashAttack.ConfigureReferences(visual.transform, spriteRenderer, hitbox, animator, slashAnimation);
 
         return root;
     }
 
-    private static void LinkSwordWeapon(PlayerSlashAttack slashPrefab)
+    private static void LinkSwordWeapon(GameObject slashPrefab)
     {
         if (slashPrefab == null)
         {

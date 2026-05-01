@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 [DisallowMultipleComponent]
 [ExecuteAlways]
-public class AdjustDepthToHeigth : MonoBehaviour
+public class YPositionSorter : MonoBehaviour
 {
     [SerializeField] private SortingGroup sortingGroup;
     [SerializeField] private bool includeChildRenderers = true;

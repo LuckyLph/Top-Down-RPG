@@ -15,9 +15,10 @@ MonoBehaviour:
   displayName: Sword
   damage: 2
   attackCooldown: 0.35
-  slashDuration: 0.18
   slashSpawnDistance: 0.55
-  slashNorthWestEastSpawnOffsetPercent: 0
-  slashSpawnOffset: {x: 0, y: 0}
-  slashPrefab: {fileID: 8143539127426111667, guid: bc12614b91a38ce46a5fa27b4244753d, type: 3}
-  slashAnimation: {fileID: 7400000, guid: 0bc3827ced7b4f69a0e16f5a3d4dc3be, type: 2}
+  slashSpawnOffsets:
+  - {x: 0, y: -0.1}
+  - {x: 0, y: 0}
+  - {x: -0.1, y: 0}
+  - {x: 0.1, y: 0}
+  slashPrefab: {fileID: 2237708894164175470, guid: 009c5117978435b41a3efd90ce168f55, type: 3}

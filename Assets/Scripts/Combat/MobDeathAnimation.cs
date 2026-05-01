@@ -1,15 +1,19 @@
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
+[RequireComponent(typeof(Animator))]
 public class MobDeathAnimation : MonoBehaviour
 {
-    [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private AdjustDepthToHeigth depthAdjuster;
-    [SerializeField] private Sprite[] frames;
-    [SerializeField, Min(0.01f)] private float framesPerSecond = 12f;
+    [SerializeField] private AnimationClip deathAnimation;
     [SerializeField, Min(0.01f)] private float fallbackLifetime = 1f;
 
+    private SpriteRenderer spriteRenderer;
+    private Animator animator;
+    private YPositionSorter yPositionSorter;
+    private PlayableGraph animationGraph;
     private float lifetime = 1f;
     private float elapsedTime;
     private bool initialized;
@@ -30,9 +34,14 @@ public class MobDeathAnimation : MonoBehaviour
         {
             return;
         }
-        
+
         elapsedTime = 0f;
-        ApplyFrame(0);
+        StartDeathAnimation();
+    }
+
+    private void OnDisable()
+    {
+        StopDeathAnimation();
     }
 
     public void InitializeFrom(SpriteRenderer sourceRenderer)
@@ -43,6 +52,7 @@ public class MobDeathAnimation : MonoBehaviour
         {
             initialized = true;
             lifetime = ResolveLifetime();
+            elapsedTime = 0f;
             return;
         }
 
@@ -56,7 +66,7 @@ public class MobDeathAnimation : MonoBehaviour
         spriteRenderer.maskInteraction = sourceRenderer.maskInteraction;
         spriteRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
 
-        if (depthAdjuster == null)
+        if (yPositionSorter == null)
         {
             spriteRenderer.sortingOrder = sourceRenderer.sortingOrder;
         }
@@ -67,12 +77,18 @@ public class MobDeathAnimation : MonoBehaviour
             if (spriteHeight > 0.0001f)
             {
                 float targetScale = sourceRenderer.bounds.size.y / spriteHeight;
-                transform.localScale = new Vector3(1.2f, 1.2f, 1) * targetScale;
+                transform.localScale = new Vector3(1.2f, 1.2f, 1f) * targetScale;
             }
         }
 
         initialized = true;
         lifetime = ResolveLifetime();
+        elapsedTime = 0f;
+
+        if (isActiveAndEnabled)
+        {
+            StartDeathAnimation();
+        }
     }
 
     private void Update()
@@ -83,7 +99,6 @@ public class MobDeathAnimation : MonoBehaviour
         }
 
         elapsedTime += Time.deltaTime;
-        ApplyFrame(Mathf.FloorToInt(elapsedTime * framesPerSecond));
 
         if (elapsedTime >= lifetime)
         {
@@ -93,12 +108,12 @@ public class MobDeathAnimation : MonoBehaviour
 
     private float ResolveLifetime()
     {
-        if (frames == null || frames.Length == 0 || framesPerSecond <= 0f)
+        if (deathAnimation != null && deathAnimation.length > 0f)
         {
-            return fallbackLifetime;
+            return deathAnimation.length;
         }
 
-        return frames.Length / framesPerSecond;
+        return fallbackLifetime;
     }
 
     private void ResolveReferences()
@@ -108,23 +123,48 @@ public class MobDeathAnimation : MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
-        if (depthAdjuster == null)
+        if (animator == null)
         {
-            depthAdjuster = GetComponent<AdjustDepthToHeigth>();
+            animator = GetComponent<Animator>();
+        }
+
+        if (yPositionSorter == null)
+        {
+            yPositionSorter = GetComponent<YPositionSorter>();
         }
     }
 
-    private void ApplyFrame(int frameIndex)
+    private void StartDeathAnimation()
     {
-        if (spriteRenderer == null || frames == null || frames.Length == 0)
+        StopDeathAnimation();
+
+        if (deathAnimation == null || animator == null)
         {
             return;
         }
 
-        int clampedIndex = Mathf.Clamp(frameIndex, 0, frames.Length - 1);
-        if (frames[clampedIndex] != null)
+        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        animator.updateMode = AnimatorUpdateMode.Normal;
+
+        animationGraph = PlayableGraph.Create($"{name}_DeathAnimation");
+        AnimationPlayableOutput output = AnimationPlayableOutput.Create(animationGraph, "Death", animator);
+        AnimationClipPlayable playable = AnimationClipPlayable.Create(animationGraph, deathAnimation);
+        playable.SetApplyFootIK(false);
+        output.SetSourcePlayable(playable);
+        animationGraph.Play();
+        animationGraph.Evaluate(0f);
+    }
+
+    private void OnDestroy()
+    {
+        StopDeathAnimation();
+    }
+
+    private void StopDeathAnimation()
+    {
+        if (animationGraph.IsValid())
         {
-            spriteRenderer.sprite = frames[clampedIndex];
+            animationGraph.Destroy();
         }
     }
 }

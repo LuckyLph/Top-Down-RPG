@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
@@ -10,10 +11,13 @@ using UnityEngine.UI;
 public class PlayerWeaponSystemTests
 {
     private GameObject root;
+    private readonly List<GameObject> retaggedPlayers = new();
 
     [TearDown]
     public void TearDown()
     {
+        RestoreRetaggedPlayers();
+
         foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             Object.DestroyImmediate(slashAttack.gameObject);
@@ -21,7 +25,7 @@ public class PlayerWeaponSystemTests
 
         foreach (Canvas canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (canvas != null && canvas.name == "WeaponHudCanvas")
+            if (canvas != null && (canvas.name == "WeaponHudCanvas" || canvas.name == "PlayerHudCanvas"))
             {
                 Object.DestroyImmediate(canvas.gameObject);
             }
@@ -34,19 +38,41 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
-    public void Equip_UpdatesEquippedWeaponLabel()
+    public void Equip_UpdatesEquippedWeaponIcon()
     {
         root = new GameObject("PlayerRoot");
+        root.tag = "Player";
+        ReservePlayerTagFor(root);
         root.AddComponent<Rigidbody2D>();
         root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
-        TextMeshProUGUI label = CreateWeaponHudLabel();
+        Image iconImage = CreatePlayerHudCanvas();
+        Sprite iconSprite = LoadWeaponHudIconSprite();
 
-        weaponController.Equip(CreateTestWeapon("Sword"));
+        weaponController.Equip(CreateTestWeapon("Sword", icon: iconSprite));
 
         Assert.That(weaponController.CurrentWeaponName, Is.EqualTo("Sword"));
-        Assert.That(label.text, Is.EqualTo("Sword"));
+        Assert.That(iconImage.sprite, Is.SameAs(iconSprite));
+        Assert.That(iconImage.color.a, Is.EqualTo(1f).Within(0.001f));
+    }
+
+    [Test]
+    public void Equip_WithoutIcon_UsesHudFallbackTintAndClearsSprite()
+    {
+        root = new GameObject("PlayerRoot");
+        root.tag = "Player";
+        ReservePlayerTagFor(root);
+        root.AddComponent<Rigidbody2D>();
+        root.AddComponent<PlayerController>();
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+
+        Image iconImage = CreatePlayerHudCanvas();
+
+        weaponController.Equip(CreateTestWeapon("Training Sword", icon: null));
+
+        Assert.That(iconImage.sprite, Is.Null);
+        Assert.That(iconImage.color.a, Is.EqualTo(0.25f).Within(0.001f));
     }
 
     [Test]
@@ -222,7 +248,8 @@ public class PlayerWeaponSystemTests
         float cooldown = 0.35f,
         float spawnDistance = 0.55f,
         Vector2? hitboxSize = null,
-        Vector2[] spawnOffsets = null)
+        Vector2[] spawnOffsets = null,
+        Sprite icon = null)
     {
         AnimationClip slashAnimation = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/Weapons/Slash.anim");
         Assert.That(slashAnimation, Is.Not.Null);
@@ -233,7 +260,8 @@ public class PlayerWeaponSystemTests
             cooldown,
             spawnDistance,
             spawnOffsets ?? new Vector2[4],
-            CreateTestSlashPrefab(hitboxSize ?? new Vector2(0.9f, 0.9f), slashAnimation));
+            CreateTestSlashPrefab(hitboxSize ?? new Vector2(0.9f, 0.9f), slashAnimation),
+            icon);
     }
 
     private static void AssertSpawnPosition(Transform owner, PlayerWeapon weapon, Vector2 direction, Vector3 expectedPosition)
@@ -277,24 +305,88 @@ public class PlayerWeaponSystemTests
         return target;
     }
 
-    private static TextMeshProUGUI CreateWeaponHudLabel()
+    private static Image CreatePlayerHudCanvas()
     {
-        GameObject canvasObject = new("WeaponHudCanvas");
+        GameObject canvasObject = new("PlayerHudCanvas");
         canvasObject.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         canvasObject.AddComponent<CanvasScaler>();
+        canvasObject.AddComponent<GraphicRaycaster>();
 
-        GameObject labelObject = new("WeaponHudLabel");
-        labelObject.transform.SetParent(canvasObject.transform, false);
+        GameObject healthPanel = new("HealthPanel");
+        healthPanel.transform.SetParent(canvasObject.transform, false);
 
-        RectTransform rectTransform = labelObject.AddComponent<RectTransform>();
-        rectTransform.sizeDelta = new Vector2(240f, 48f);
-        labelObject.AddComponent<CanvasRenderer>();
+        GameObject healthFillObject = new("HealthFill");
+        healthFillObject.transform.SetParent(healthPanel.transform, false);
+        healthFillObject.AddComponent<CanvasRenderer>();
+        Image healthFill = healthFillObject.AddComponent<Image>();
+        healthFill.type = Image.Type.Filled;
+        healthFill.fillMethod = Image.FillMethod.Horizontal;
 
-        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
-        labelObject.AddComponent<PlayerWeaponHud>();
-        label.fontSize = 28f;
-        label.alignment = TextAlignmentOptions.Center;
-        return label;
+        GameObject healthTextObject = new("HealthText");
+        healthTextObject.transform.SetParent(healthPanel.transform, false);
+        healthTextObject.AddComponent<CanvasRenderer>();
+        TextMeshProUGUI healthText = healthTextObject.AddComponent<TextMeshProUGUI>();
+        healthText.text = "HP --";
+        healthText.alignment = TextAlignmentOptions.Center;
+
+        GameObject weaponSlotObject = new("WeaponSlot");
+        weaponSlotObject.transform.SetParent(canvasObject.transform, false);
+
+        GameObject weaponIconObject = new("WeaponIcon");
+        weaponIconObject.transform.SetParent(weaponSlotObject.transform, false);
+        weaponIconObject.AddComponent<CanvasRenderer>();
+        Image weaponIcon = weaponIconObject.AddComponent<Image>();
+        weaponIcon.preserveAspect = true;
+
+        PlayerHudController hudController = canvasObject.AddComponent<PlayerHudController>();
+        InvokePrivateMethod(hudController, "OnEnable");
+        return weaponIcon;
+    }
+
+    private static Sprite LoadWeaponHudIconSprite()
+    {
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Weapons/StaticSlash.png");
+        foreach (Object asset in assets)
+        {
+            if (asset is Sprite sprite)
+            {
+                return sprite;
+            }
+        }
+
+        Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
+        return null;
+    }
+
+    private void ReservePlayerTagFor(GameObject preferredPlayer)
+    {
+        retaggedPlayers.Clear();
+        GameObject[] taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+        for (int i = 0; i < taggedPlayers.Length; i++)
+        {
+            GameObject taggedPlayer = taggedPlayers[i];
+            if (taggedPlayer == null || taggedPlayer == preferredPlayer)
+            {
+                continue;
+            }
+
+            retaggedPlayers.Add(taggedPlayer);
+            taggedPlayer.tag = "Untagged";
+        }
+    }
+
+    private void RestoreRetaggedPlayers()
+    {
+        for (int i = 0; i < retaggedPlayers.Count; i++)
+        {
+            GameObject taggedPlayer = retaggedPlayers[i];
+            if (taggedPlayer != null)
+            {
+                taggedPlayer.tag = "Player";
+            }
+        }
+
+        retaggedPlayers.Clear();
     }
 
     private static void SetPrivateField<T>(Object target, string fieldName, T value)

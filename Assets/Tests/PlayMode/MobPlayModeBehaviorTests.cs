@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 public class MobPlayModeBehaviorTests
 {
@@ -150,27 +151,53 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator PlayerInSampleScene_SwordHudAndSlashDamageMob()
+    public IEnumerator PlayerInSampleScene_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
         yield return null;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         MobController mob = Object.FindAnyObjectByType<MobController>();
+        PlayerHudController hud = Object.FindAnyObjectByType<PlayerHudController>();
 
         Assert.That(player, Is.Not.Null);
         Assert.That(mob, Is.Not.Null);
+        Assert.That(hud, Is.Not.Null, "SampleScene should contain the reusable PlayerHudController.");
 
         PlayerController playerController = player.GetComponent<PlayerController>();
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
+        Health playerHealth = player.GetComponent<Health>();
         Health mobHealth = mob.GetComponent<Health>();
-        TextMeshProUGUI[] labels = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        TextMeshProUGUI healthText = FindTextByName("HealthText");
+        Image healthFill = FindImageByName("HealthFill");
+        Image weaponIcon = FindImageByName("WeaponIcon");
 
         Assert.That(playerController, Is.Not.Null);
         Assert.That(weaponController, Is.Not.Null);
+        Assert.That(playerHealth, Is.Not.Null);
         Assert.That(mobHealth, Is.Not.Null);
-        Assert.That(weaponController.CurrentWeaponName, Is.EqualTo("Sword"));
-        Assert.That(System.Array.Exists(labels, label => label != null && label.text == "Sword"), Is.True, "SampleScene should display the equipped weapon name.");
+        Assert.That(weaponController.CurrentWeapon, Is.Not.Null);
+        Assert.That(weaponController.CurrentWeapon.HudIcon, Is.Not.Null, "Default weapon should provide a HUD icon.");
+        Assert.That(healthText, Is.Not.Null);
+        Assert.That(healthFill, Is.Not.Null);
+        Assert.That(weaponIcon, Is.Not.Null);
+
+        yield return null;
+
+        Assert.That(healthText.text, Is.EqualTo($"HP {playerHealth.CurrentHealth}"));
+        float initialExpectedFill = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
+        Assert.That(healthFill.fillAmount, Is.EqualTo(initialExpectedFill).Within(0.001f));
+        Assert.That(weaponIcon.sprite, Is.SameAs(weaponController.CurrentWeapon.HudIcon), "HUD should show the equipped weapon icon.");
+
+        float initialFillAmount = healthFill.fillAmount;
+        int initialPlayerHealth = playerHealth.CurrentHealth;
+        playerHealth.ApplyDamage(1);
+        yield return null;
+        Assert.That(healthText.text, Is.EqualTo($"HP {playerHealth.CurrentHealth}"));
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(initialPlayerHealth - 1));
+        float expectedFillAfterDamage = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
+        Assert.That(healthFill.fillAmount, Is.EqualTo(expectedFillAfterDamage).Within(0.001f));
+        Assert.That(healthFill.fillAmount, Is.LessThan(initialFillAmount));
 
         Vector3 originalPlayerPosition = player.transform.position;
         Vector3 originalMobPosition = mob.transform.position;
@@ -188,6 +215,34 @@ public class MobPlayModeBehaviorTests
 
         player.transform.position = originalPlayerPosition;
         mob.transform.position = originalMobPosition;
+    }
+
+    private static Image FindImageByName(string objectName)
+    {
+        Image[] images = Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < images.Length; i++)
+        {
+            if (images[i] != null && images[i].name == objectName)
+            {
+                return images[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static TextMeshProUGUI FindTextByName(string objectName)
+    {
+        TextMeshProUGUI[] texts = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i] != null && texts[i].name == objectName)
+            {
+                return texts[i];
+            }
+        }
+
+        return null;
     }
 
     private static IEnumerator WaitFrames(int frameCount)

@@ -22,3 +22,4 @@ MonoBehaviour:
   - {x: -0.1, y: 0}
   - {x: 0.1, y: 0}
   slashPrefab: {fileID: 2237708894164175470, guid: 009c5117978435b41a3efd90ce168f55, type: 3}
+  hudIcon: {fileID: 5154499244127856136, guid: ebbeb1c067ea7ad46bcd2727188da217, type: 3}

@@ -12,12 +12,14 @@ public sealed class PlayerWeapon : ScriptableObject
     [SerializeField, Tooltip("World-space directional offsets ordered Down, Up, Left, Right.")]
     private Vector2[] slashSpawnOffsets = new Vector2[DirectionalSpawnOffsetCount];
     [SerializeField] private GameObject slashPrefab;
+    [SerializeField] private Sprite hudIcon;
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
     public float AttackCooldown => Mathf.Max(0.01f, attackCooldown);
     public float SlashSpawnDistance => Mathf.Max(0f, slashSpawnDistance);
     public GameObject SlashPrefab => slashPrefab;
+    public Sprite HudIcon => hudIcon;
 
     private void OnValidate()
     {
@@ -36,7 +38,8 @@ public sealed class PlayerWeapon : ScriptableObject
         float cooldown,
         float spawnDistance,
         Vector2[] spawnOffsets,
-        GameObject prefab = null)
+        GameObject prefab = null,
+        Sprite icon = null)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
@@ -45,6 +48,7 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.slashSpawnDistance = spawnDistance;
         weapon.slashSpawnOffsets = NormalizeDirectionalSpawnOffsets(spawnOffsets);
         weapon.slashPrefab = prefab;
+        weapon.hudIcon = icon;
         weapon.hideFlags = HideFlags.HideAndDontSave;
         return weapon;
     }

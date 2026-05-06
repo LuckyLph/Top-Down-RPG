@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -7,9 +8,10 @@ public class PlayerWeaponController : MonoBehaviour
     [SerializeField] private PlayerWeapon startingWeapon;
 
     private PlayerWeapon currentWeapon;
-    private PlayerWeaponHud hud;
     private SpriteRenderer ownerSpriteRenderer;
     private float nextAttackTime;
+
+    public event Action<PlayerWeapon> EquippedWeaponChanged;
 
     public PlayerWeapon CurrentWeapon => currentWeapon;
     public string CurrentWeaponName
@@ -36,14 +38,13 @@ public class PlayerWeaponController : MonoBehaviour
     private void OnValidate()
     {
         ResolveReferences();
-        UpdateWeaponNameLabel();
     }
 
     public void Equip(PlayerWeapon weapon)
     {
         ResolveReferences();
         currentWeapon = weapon;
-        UpdateWeaponNameLabel();
+        EquippedWeaponChanged?.Invoke(currentWeapon);
     }
 
     public bool TryAttack()
@@ -72,20 +73,5 @@ public class PlayerWeaponController : MonoBehaviour
         {
             playerController = GetComponent<PlayerController>();
         }
-
-        if (hud == null)
-        {
-            hud = FindAnyObjectByType<PlayerWeaponHud>(FindObjectsInactive.Include);
-        }
-    }
-
-    private void UpdateWeaponNameLabel()
-    {
-        if (hud == null)
-        {
-            return;
-        }
-
-        hud.SetWeaponName(CurrentWeaponName);
     }
 }

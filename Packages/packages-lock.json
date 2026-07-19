@@ -21,11 +21,11 @@
       "hash": "493500b6ac59f5713b7d9d9bdff6d6a37016da78"
     },
     "com.unity.2d.animation": {
-      "version": "14.0.3",
+      "version": "14.0.4",
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.unity.2d.common": "13.0.1",
+        "com.unity.2d.common": "13.0.2",
         "com.unity.2d.sprite": "1.0.0",
         "com.unity.collections": "2.4.3",
         "com.unity.modules.animation": "1.0.0",
@@ -47,7 +47,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.2d.common": {
-      "version": "13.0.1",
+      "version": "13.0.2",
       "depth": 1,
       "source": "registry",
       "dependencies": {

@@ -77,29 +77,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUNTIME-01 | Unmapped | Pending |
-| RUNTIME-02 | Unmapped | Pending |
-| RUNTIME-03 | Unmapped | Pending |
-| RUNTIME-04 | Unmapped | Pending |
-| COMBAT-01 | Unmapped | Pending |
-| COMBAT-02 | Unmapped | Pending |
-| COMBAT-03 | Unmapped | Pending |
-| ENEMY-01 | Unmapped | Pending |
-| ENEMY-02 | Unmapped | Pending |
-| VFX-01 | Unmapped | Pending |
-| VFX-02 | Unmapped | Pending |
-| VFX-03 | Unmapped | Pending |
-| JOURNEY-01 | Unmapped | Pending |
-| JOURNEY-02 | Unmapped | Pending |
-| TOWN-01 | Unmapped | Pending |
-| TOWN-02 | Unmapped | Pending |
-| TOWN-03 | Unmapped | Pending |
+| RUNTIME-01 | Phase 1 | Pending |
+| RUNTIME-02 | Phase 2 | Pending |
+| RUNTIME-03 | Phase 2 | Pending |
+| RUNTIME-04 | Phase 1 | Pending |
+| COMBAT-01 | Phase 3 | Pending |
+| COMBAT-02 | Phase 3 | Pending |
+| COMBAT-03 | Phase 3 | Pending |
+| ENEMY-01 | Phase 4 | Pending |
+| ENEMY-02 | Phase 4 | Pending |
+| VFX-01 | Phase 5 | Pending |
+| VFX-02 | Phase 5 | Pending |
+| VFX-03 | Phase 5 | Pending |
+| JOURNEY-01 | Phase 6 | Pending |
+| JOURNEY-02 | Phase 6 | Pending |
+| TOWN-01 | Phase 7 | Pending |
+| TOWN-02 | Phase 7 | Pending |
+| TOWN-03 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-19*
-*Last updated: 2026-07-19 after initial definition*
+*Last updated: 2026-07-19 after roadmap creation*

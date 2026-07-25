@@ -65,3 +65,6 @@ ServerData/
 
 # Play mode test generated scenes
 [Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Local verification evidence
+TestResults/

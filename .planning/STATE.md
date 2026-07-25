@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: Top-Down-RPG
 current_phase: 1
 current_phase_name: Runtime Composition & Guardrails
-status: planning
+status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-07-25T02:31:22.469Z"
-last_activity: 2026-07-24
+last_updated: "2026-07-25T15:18:52.884Z"
+last_activity: 2026-07-25
+last_activity_desc: Phase 01 planning complete
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-last_activity_desc: Initial seven-phase MVP roadmap created with all v1 requirements mapped.
 ---
 
 # Project State
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 1 of 7 (Runtime Composition & Guardrails)
-Plan: Not yet planned
-Status: Ready to plan
-Last activity: 2026-07-24
+Plan: 5 plans ready
+Status: Ready to execute
+Last activity: 2026-07-25 — Phase 01 planning complete
 
 Progress: [----------] 0%
 
@@ -61,6 +61,10 @@ Progress: [----------] 0%
 - Dynamic scene relationships use a scene-owned composition root, runtime injection, owner-local helpers, or ownership-based lookup. Serialized fields remain for configuration, assets, and intentional overrides.
 - Every phase is an MVP vertical, demonstrable slice. Automated verification protects contracts; target-camera playable review decides combat feel, readability, and visual quality.
 - v1 is one local clearing-to-town run only. Multiplayer, persistence, broad inventory/economy systems, full-game content, and copied reference-game content remain out of scope.
+
+### Planning Overrides
+
+- 2026-07-25: The developer accepted Phase 1 plans after the three-iteration plan-check limit. `01-RESEARCH.md` retains its Open Questions wording even though `01-01-PLAN.md` makes the EditMode/PlayMode XML proof and console/log smoke presentation executable gates. The stricter decision-coverage checker did not recognize D-02 and D-14 citations, while the post-planning gap analysis confirmed all 19 requirements and decisions are covered. Revisit this wording during Phase 1 verification if it obscures evidence.
 
 ### Pending Todos
 

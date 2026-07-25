@@ -29,7 +29,14 @@ This MVP turns the existing Unity component foundation into one replayable, loca
   1. Developer can start the slice in the editor or a local Development Build and see its player, navigation, HUD/camera context, encounter context, and town context initialize without manually connecting dynamic scene components in the Inspector.
   2. Player can use the configured Input System controls in the local Development Build with the same intended movement and action behavior used for slice verification.
   3. Developer can run focused EditMode and PlayMode foundation checks and reproduce a local Development Build smoke check with a clear pass/fail result rather than relying on editor-only input fallbacks.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — establish the local Unity verification wrapper and Wave 0 report path.
+- [ ] 01-02-PLAN.md — prove the player-owned Input System contract without fallback actions.
+- [ ] 01-03-PLAN.md — implement fail-closed core composition and optional-context seams.
+- [ ] 01-04-PLAN.md — bind HUD/camera and author the single-scene runtime subtree.
+- [ ] 01-05-PLAN.md — complete Development Build input smoke evidence and aggregate verification.
 
 ### Phase 2: Data Authoring & Slice Diagnostics
 **Goal**: Developer can author the slice as validated gameplay data and inspect or reset its live state for rapid, reliable iteration.

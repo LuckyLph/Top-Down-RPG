@@ -185,7 +185,6 @@ function Invoke-UnityTestChannel
     $arguments = @(
         '-batchmode',
         '-nographics',
-        '-quit',
         '-projectPath', (ConvertTo-QuotedArgument $ProjectRoot),
         '-runTests',
         '-testPlatform', $Platform,

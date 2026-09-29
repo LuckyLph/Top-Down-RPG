@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3812718684653368127}
   - component: {fileID: 4059769949860889493}
   - component: {fileID: 8984248577405446426}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Visuals
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -154,7 +154,7 @@ GameObject:
   - component: {fileID: 2450481122165686430}
   - component: {fileID: 6297355658967816007}
   - component: {fileID: 5288173083386989732}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Weasel
   m_TagString: Untagged
   m_Icon: {fileID: 0}

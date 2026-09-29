@@ -3,23 +3,22 @@ using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
 public class MobPlayModeBehaviorTests
 {
     [UnityTest]
-    public IEnumerator MobInSampleScene_DetectsAndLosesTarget()
+    public IEnumerator MobInClearing_DetectsAndLosesTarget()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         MobController brain = Object.FindAnyObjectByType<MobController>();
-        Assert.That(brain, Is.Not.Null, "SampleScene should contain at least one MobController.");
+        Assert.That(brain, Is.Not.Null, "The clearing slice should contain at least one MobController.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
-        Assert.That(player, Is.Not.Null, "SampleScene should contain a Player tag target.");
+        Assert.That(player, Is.Not.Null, "The clearing slice should contain a Player tag target.");
 
         Vector3 originalPlayerPosition = player.transform.position;
         Vector3 mobPosition = brain.transform.position;
@@ -44,14 +43,14 @@ public class MobPlayModeBehaviorTests
     [UnityTest]
     public IEnumerator MultipleMobs_ShareSameNavigationGrid()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         NavigationGrid2D navGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
         MobController firstMob = Object.FindAnyObjectByType<MobController>();
 
-        Assert.That(navGrid, Is.Not.Null, "SampleScene should contain a NavigationGrid2D.");
-        Assert.That(firstMob, Is.Not.Null, "SampleScene should contain at least one MobController.");
+        Assert.That(navGrid, Is.Not.Null, "The clearing slice should contain a NavigationGrid2D.");
+        Assert.That(firstMob, Is.Not.Null, "The clearing slice should contain at least one MobController.");
         Assert.That(firstMob.NavigationGrid, Is.SameAs(navGrid));
 
         GameObject clone = Object.Instantiate(firstMob.gameObject, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
@@ -65,9 +64,9 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator MobInSampleScene_AttackDamagesPlayerAndPopupFadesOut()
+    public IEnumerator MobInClearing_AttackDamagesPlayerAndPopupFadesOut()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         MobController brain = Object.FindAnyObjectByType<MobController>();
@@ -75,7 +74,7 @@ public class MobPlayModeBehaviorTests
         Health health = player.GetComponent<Health>();
 
         Assert.That(brain, Is.Not.Null);
-        Assert.That(health, Is.Not.Null, "Player should have Health wired in SampleScene.");
+        Assert.That(health, Is.Not.Null, "Player should have Health wired in the Gameplay scene.");
 
         Vector3 originalPlayerPosition = player.transform.position;
         int startingHealth = health.CurrentHealth;
@@ -95,9 +94,9 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator MobInSampleScene_AttackRespectsConfiguredInterval()
+    public IEnumerator MobInClearing_AttackRespectsConfiguredInterval()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         MobController brain = Object.FindAnyObjectByType<MobController>();
@@ -124,9 +123,9 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator PlayerInSampleScene_DeathDisablesControlsAndMobDisengages()
+    public IEnumerator PlayerInClearing_DeathDisablesControlsAndMobDisengages()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         MobController brain = Object.FindAnyObjectByType<MobController>();
@@ -153,9 +152,9 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator MobInSampleScene_DeathSpawnsAnimationAndDestroysMob()
+    public IEnumerator MobInClearing_DeathSpawnsAnimationAndDestroysMob()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         MobController mob = Object.FindAnyObjectByType<MobController>();
@@ -180,9 +179,9 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator PlayerInSampleScene_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
+    public IEnumerator PlayerInClearing_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
     {
-        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -191,7 +190,7 @@ public class MobPlayModeBehaviorTests
 
         Assert.That(player, Is.Not.Null);
         Assert.That(mob, Is.Not.Null);
-        Assert.That(hud, Is.Not.Null, "SampleScene should contain the reusable PlayerHudController.");
+        Assert.That(hud, Is.Not.Null, "The clearing slice should contain the reusable PlayerHudController.");
 
         PlayerController playerController = player.GetComponent<PlayerController>();
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();

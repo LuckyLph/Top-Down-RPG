@@ -1,11 +1,11 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using VContainer;
 
 [DisallowMultipleComponent]
 public class PlayerHudController : MonoBehaviour
 {
-    private const string PlayerTag = "Player";
     private const string HealthFillName = "HealthFill";
     private const string HealthTextName = "HealthText";
     private const string WeaponIconName = "WeaponIcon";
@@ -21,7 +21,6 @@ public class PlayerHudController : MonoBehaviour
     private PlayerWeaponController playerWeaponController;
     private bool subscribedToPlayer;
     private bool warnedMissingUiReferences;
-    private bool warnedMissingPlayer;
 
     private void Awake()
     {
@@ -31,27 +30,26 @@ public class PlayerHudController : MonoBehaviour
     private void OnEnable()
     {
         ResolveLocalUiReferences();
-        BindToPlayerIfAvailable();
+        SubscribeToPlayerEvents();
         UpdateAllDisplay();
     }
 
-    private void Start()
+    // Injected by the Gameplay LifetimeScope with the session's player.
+    [Inject]
+    public void Construct(PlayerController player)
     {
-        BindToPlayerIfAvailable();
-        UpdateAllDisplay();
+        Bind(
+            player != null ? player.GetComponent<Health>() : null,
+            player != null ? player.GetComponent<PlayerWeaponController>() : null);
     }
 
-    private void Update()
+    public void Bind(Health health, PlayerWeaponController weaponController)
     {
-        if (HasPlayerReferences())
-        {
-            return;
-        }
-
-        if (BindToPlayerIfAvailable())
-        {
-            UpdateAllDisplay();
-        }
+        UnsubscribeFromPlayerEvents();
+        playerHealth = health;
+        playerWeaponController = weaponController;
+        SubscribeToPlayerEvents();
+        UpdateAllDisplay();
     }
 
     private void OnDisable()
@@ -79,47 +77,13 @@ public class PlayerHudController : MonoBehaviour
         UpdateWeaponDisplay(weapon);
     }
 
-    private bool BindToPlayerIfAvailable()
-    {
-        GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
-        if (playerObject == null)
-        {
-            if (!warnedMissingPlayer)
-            {
-                Debug.LogWarning($"PlayerHudController could not find a GameObject tagged '{PlayerTag}'.");
-                warnedMissingPlayer = true;
-            }
-
-            return false;
-        }
-
-        warnedMissingPlayer = false;
-
-        Health resolvedHealth = playerObject.GetComponent<Health>();
-        PlayerWeaponController resolvedWeaponController = playerObject.GetComponent<PlayerWeaponController>();
-        bool referencesChanged =
-            resolvedHealth != playerHealth ||
-            resolvedWeaponController != playerWeaponController;
-
-        if (!referencesChanged && subscribedToPlayer)
-        {
-            return true;
-        }
-
-        UnsubscribeFromPlayerEvents();
-        playerHealth = resolvedHealth;
-        playerWeaponController = resolvedWeaponController;
-        SubscribeToPlayerEvents();
-        return HasPlayerReferences();
-    }
-
-    private bool HasPlayerReferences()
-    {
-        return playerHealth != null || playerWeaponController != null;
-    }
-
     private void SubscribeToPlayerEvents()
     {
+        if (subscribedToPlayer)
+        {
+            return;
+        }
+
         if (playerHealth != null)
         {
             playerHealth.Damaged += HandlePlayerDamaged;

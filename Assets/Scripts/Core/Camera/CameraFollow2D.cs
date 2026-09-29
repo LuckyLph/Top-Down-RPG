@@ -13,9 +13,10 @@ public class CameraFollow2D : MonoBehaviour
     private Vector3 velocity;
     private Rigidbody2D targetRigidbody;
 
+    public Transform Target => target;
+
     private void OnEnable()
     {
-        TryAssignTarget();
         velocity = Vector3.zero;
     }
 
@@ -26,14 +27,7 @@ public class CameraFollow2D : MonoBehaviour
             return;
         }
 
-        Vector3 targetPosition = targetRigidbody != null
-            ? new Vector3(targetRigidbody.position.x, targetRigidbody.position.y, target.position.z)
-            : target.position;
-
-        Vector3 desiredPosition = new(
-            targetPosition.x + offset.x,
-            targetPosition.y + offset.y,
-            transform.position.z);
+        Vector3 desiredPosition = GetDesiredPosition();
 
         bool isIdle = targetRigidbody != null && targetRigidbody.linearVelocity.sqrMagnitude <= idleVelocityThreshold * idleVelocityThreshold;
         float smoothTime = isIdle ? smoothTimeIdle : smoothTimeMoving;
@@ -42,14 +36,7 @@ public class CameraFollow2D : MonoBehaviour
             ? desiredPosition
             : Vector3.SmoothDamp(transform.position, desiredPosition, ref velocity, smoothTime);
 
-        if (snapToPixelGrid)
-        {
-            float step = 1f / pixelsPerUnit;
-            nextPosition.x = Mathf.Round(nextPosition.x / step) * step;
-            nextPosition.y = Mathf.Round(nextPosition.y / step) * step;
-        }
-
-        transform.position = nextPosition;
+        transform.position = SnapToPixelGrid(nextPosition);
     }
 
     public void SetTarget(Transform newTarget)
@@ -59,13 +46,40 @@ public class CameraFollow2D : MonoBehaviour
         velocity = Vector3.zero;
     }
 
-    private void TryAssignTarget()
+    // Jumps straight to the target, e.g. after a teleport, instead of smoothing across the map.
+    public void SnapToTarget()
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
+        if (target == null)
         {
-            target = player.transform;
-            targetRigidbody = target.GetComponent<Rigidbody2D>();
+            return;
         }
+
+        velocity = Vector3.zero;
+        transform.position = SnapToPixelGrid(GetDesiredPosition());
+    }
+
+    private Vector3 GetDesiredPosition()
+    {
+        Vector3 targetPosition = targetRigidbody != null
+            ? new Vector3(targetRigidbody.position.x, targetRigidbody.position.y, target.position.z)
+            : target.position;
+
+        return new Vector3(
+            targetPosition.x + offset.x,
+            targetPosition.y + offset.y,
+            transform.position.z);
+    }
+
+    private Vector3 SnapToPixelGrid(Vector3 position)
+    {
+        if (!snapToPixelGrid)
+        {
+            return position;
+        }
+
+        float step = 1f / pixelsPerUnit;
+        position.x = Mathf.Round(position.x / step) * step;
+        position.y = Mathf.Round(position.y / step) * step;
+        return position;
     }
 }

@@ -1,0 +1,46 @@
+using UnityEngine;
+using VContainer;
+using VContainer.Unity;
+
+// Scope of one area scene (tilemaps, navigation, mobs, spawn points). Parented to the Gameplay
+// scope so area objects can resolve the session's player.
+public class AreaLifetimeScope : LifetimeScope
+{
+    protected override LifetimeScope FindParent()
+    {
+        return Find<GameplayLifetimeScope>();
+    }
+
+    protected override void Configure(IContainerBuilder builder)
+    {
+        if (Parent == null)
+        {
+            Debug.LogError(
+                $"{name}: area scenes must be loaded by GameFlow under a Gameplay scene. " +
+                "Press Play with 'Tools/TopDownRPG/Boot From Main' enabled.",
+                this);
+            return;
+        }
+
+        NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
+        if (navigationGrid != null)
+        {
+            builder.RegisterComponent(navigationGrid);
+        }
+
+        builder.Register<AreaEntry>(Lifetime.Singleton)
+            .As<IAreaEntry>()
+            .WithParameter(SceneQuery.FindAll<SpawnPoint>(gameObject.scene));
+
+        builder.RegisterBuildCallback(InjectSceneMobs);
+    }
+
+    // Mobs authored in the scene; mobs spawned at runtime must use IObjectResolver.Instantiate.
+    private void InjectSceneMobs(IObjectResolver resolver)
+    {
+        foreach (MobController mob in SceneQuery.FindAll<MobController>(gameObject.scene))
+        {
+            resolver.InjectGameObject(mob.gameObject);
+        }
+    }
+}

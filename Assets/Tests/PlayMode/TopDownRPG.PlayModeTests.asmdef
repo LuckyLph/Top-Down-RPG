@@ -2,6 +2,8 @@
   "name": "TopDownRPG.PlayModeTests",
   "references": [
     "TopDownRPG.Gameplay",
+    "VContainer",
+    "TopDownRPG.Core",
     "Unity.TextMeshPro"
   ],
   "includePlatforms": [],

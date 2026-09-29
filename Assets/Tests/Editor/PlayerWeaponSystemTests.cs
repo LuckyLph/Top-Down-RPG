@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Reflection;
-using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
@@ -11,13 +10,10 @@ using UnityEngine.UI;
 public class PlayerWeaponSystemTests
 {
     private GameObject root;
-    private readonly List<GameObject> retaggedPlayers = new();
 
     [TearDown]
     public void TearDown()
     {
-        RestoreRetaggedPlayers();
-
         foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             Object.DestroyImmediate(slashAttack.gameObject);
@@ -41,13 +37,11 @@ public class PlayerWeaponSystemTests
     public void Equip_UpdatesEquippedWeaponIcon()
     {
         root = new GameObject("PlayerRoot");
-        root.tag = "Player";
-        ReservePlayerTagFor(root);
         root.AddComponent<Rigidbody2D>();
         root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
-        Image iconImage = CreatePlayerHudCanvas();
+        Image iconImage = CreatePlayerHudCanvas(weaponController);
         Sprite iconSprite = LoadWeaponHudIconSprite();
 
         weaponController.Equip(CreateTestWeapon("Sword", icon: iconSprite));
@@ -61,13 +55,11 @@ public class PlayerWeaponSystemTests
     public void Equip_WithoutIcon_UsesHudFallbackTintAndClearsSprite()
     {
         root = new GameObject("PlayerRoot");
-        root.tag = "Player";
-        ReservePlayerTagFor(root);
         root.AddComponent<Rigidbody2D>();
         root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
-        Image iconImage = CreatePlayerHudCanvas();
+        Image iconImage = CreatePlayerHudCanvas(weaponController);
 
         weaponController.Equip(CreateTestWeapon("Training Sword", icon: null));
 
@@ -343,7 +335,7 @@ public class PlayerWeaponSystemTests
         return target;
     }
 
-    private static Image CreatePlayerHudCanvas()
+    private static Image CreatePlayerHudCanvas(PlayerWeaponController weaponController)
     {
         GameObject canvasObject = new("PlayerHudCanvas");
         canvasObject.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
@@ -378,6 +370,7 @@ public class PlayerWeaponSystemTests
 
         PlayerHudController hudController = canvasObject.AddComponent<PlayerHudController>();
         InvokePrivateMethod(hudController, "OnEnable");
+        hudController.Bind(weaponController.GetComponent<Health>(), weaponController);
         return weaponIcon;
     }
 
@@ -394,37 +387,6 @@ public class PlayerWeaponSystemTests
 
         Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
         return null;
-    }
-
-    private void ReservePlayerTagFor(GameObject preferredPlayer)
-    {
-        retaggedPlayers.Clear();
-        GameObject[] taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
-        for (int i = 0; i < taggedPlayers.Length; i++)
-        {
-            GameObject taggedPlayer = taggedPlayers[i];
-            if (taggedPlayer == null || taggedPlayer == preferredPlayer)
-            {
-                continue;
-            }
-
-            retaggedPlayers.Add(taggedPlayer);
-            taggedPlayer.tag = "Untagged";
-        }
-    }
-
-    private void RestoreRetaggedPlayers()
-    {
-        for (int i = 0; i < retaggedPlayers.Count; i++)
-        {
-            GameObject taggedPlayer = retaggedPlayers[i];
-            if (taggedPlayer != null)
-            {
-                taggedPlayer.tag = "Player";
-            }
-        }
-
-        retaggedPlayers.Clear();
     }
 
     private static void SetPrivateField<T>(Object target, string fieldName, T value)

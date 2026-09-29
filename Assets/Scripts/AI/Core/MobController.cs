@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using VContainer;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -75,6 +76,18 @@ public class MobController : MonoBehaviour
     private void FixedUpdate()
     {
         FixedTickStateMachine();
+    }
+
+    // Injected by the area's LifetimeScope so the mob always uses its own area's grid.
+    [Inject]
+    public void Construct(NavigationGrid2D navGrid)
+    {
+        navigationGrid = navGrid;
+        if (initialized)
+        {
+            initialized = false;
+            EnsureInitialized();
+        }
     }
 
     public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, MobTargetProvider provider)
@@ -208,14 +221,9 @@ public class MobController : MonoBehaviour
 
     private void ResolveDependencies()
     {
-        if (navigationGrid == null)
-        {
-            navigationGrid = FindAnyObjectByType<NavigationGrid2D>();
-        }
-
         if (targetProvider == null)
         {
-            targetProvider = FindAnyObjectByType<MobTargetProvider>();
+            targetProvider = GetComponent<MobTargetProvider>();
         }
     }
 

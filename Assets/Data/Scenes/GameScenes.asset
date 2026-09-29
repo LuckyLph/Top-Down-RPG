@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1652d9a22aa213f4a97031ee63d430fd, type: 3}
+  m_Name: GameScenes
+  m_EditorClassIdentifier: TopDownRPG.Core::GameScenes
+  mainMenu: {fileID: 11400000, guid: 06482ad2efb38274e94b312d9e9a56d7, type: 2}
+  gameplay: {fileID: 11400000, guid: 6369c5fd92cf4c74fa255d72905e3742, type: 2}
+  startingArea: {fileID: 11400000, guid: 1d086e110f27b644ca75fd1509664a6b, type: 2}
+  startingSpawnId: start
+  areas:
+  - {fileID: 11400000, guid: 1d086e110f27b644ca75fd1509664a6b, type: 2}

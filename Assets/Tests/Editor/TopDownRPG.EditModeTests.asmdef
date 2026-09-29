@@ -2,6 +2,7 @@
   "name": "TopDownRPG.EditModeTests",
   "references": [
     "TopDownRPG.Gameplay",
+    "TopDownRPG.Core",
     "Unity.InputSystem",
     "Unity.TextMeshPro"
   ],

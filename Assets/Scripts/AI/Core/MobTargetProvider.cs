@@ -1,31 +1,18 @@
 using UnityEngine;
+using VContainer;
 
 public class MobTargetProvider : MonoBehaviour
 {
-    [SerializeField] private string targetTag = "Player";
-    [SerializeField] private bool resolveOnEnable = true;
     [SerializeField] private Transform target;
 
     public Transform Target => target;
     public bool HasTarget => target != null;
 
-    private void OnEnable()
+    // Injected by the area's LifetimeScope with the session's player from the Gameplay scope.
+    [Inject]
+    public void Construct(PlayerController player)
     {
-        if (resolveOnEnable)
-        {
-            ResolveTarget();
-        }
-    }
-
-    public void ResolveTarget()
-    {
-        if (string.IsNullOrWhiteSpace(targetTag))
-        {
-            return;
-        }
-
-        GameObject found = GameObject.FindGameObjectWithTag(targetTag);
-        target = found != null ? found.transform : null;
+        SetTarget(player != null ? player.transform : null);
     }
 
     public void SetTarget(Transform newTarget)

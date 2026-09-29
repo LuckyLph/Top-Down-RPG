@@ -25,8 +25,10 @@ public class PlayerController : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 lastMoveDirection = Vector2.down;
     private bool usingFallbackActions;
+    private bool inputEnabled = true;
 
     public Vector2 FacingDirection => lastMoveDirection;
+    public bool InputEnabled => inputEnabled;
 
     private void Awake()
     {
@@ -66,7 +68,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        moveInput = moveAction != null ? moveAction.ReadValue<Vector2>().normalized : Vector2.zero;
+        moveInput = inputEnabled && moveAction != null ? moveAction.ReadValue<Vector2>().normalized : Vector2.zero;
 
         bool isMoving = moveInput.sqrMagnitude > 0.0001f;
         if (isMoving)
@@ -74,7 +76,7 @@ public class PlayerController : MonoBehaviour
             lastMoveDirection = moveInput;
         }
 
-        if (attackAction != null && attackAction.WasPressedThisFrame())
+        if (inputEnabled && attackAction != null && attackAction.WasPressedThisFrame())
         {
             weaponController?.TryAttack();
         }
@@ -95,6 +97,28 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         rb.linearVelocity = moveInput * moveSpeed;
+    }
+
+    public void SetInputEnabled(bool enabled)
+    {
+        inputEnabled = enabled;
+        if (!enabled)
+        {
+            moveInput = Vector2.zero;
+        }
+    }
+
+    public void Teleport(Vector2 position)
+    {
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody2D>();
+        }
+
+        // Physics2D auto-sync is off, so move both the body and the transform.
+        rb.position = position;
+        rb.linearVelocity = Vector2.zero;
+        transform.position = new Vector3(position.x, position.y, transform.position.z);
     }
 
     private void ResolveAnimator()

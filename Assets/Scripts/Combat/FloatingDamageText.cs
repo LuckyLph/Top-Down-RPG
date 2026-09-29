@@ -29,6 +29,15 @@ public class FloatingDamageText : MonoBehaviour
     private Vector3 worldPosition;
     private float elapsed;
 
+    // Domain reload is disabled, so statics would otherwise survive between play sessions.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        popupCanvas = null;
+        popupCanvasRect = null;
+        popupFont = null;
+    }
+
     private void Awake()
     {
         ResolveReferences();

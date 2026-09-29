@@ -358,8 +358,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ea5dcdd735b9544eb98d6ab17656b4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobTargetProvider
-  targetTag: Player
-  resolveOnEnable: 1
   target: {fileID: 0}
 --- !u!114 &96597474463099594
 MonoBehaviour:

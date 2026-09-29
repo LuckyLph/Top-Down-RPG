@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 349a7a7f4c98ddc4ca08ffbe82d4e183, type: 3}
+  m_Name: Scene_Area_Clearing
+  m_EditorClassIdentifier: TopDownRPG.Core::SceneDefinition
+  sceneGuid: 8c9cfa26abfee488c85f1582747f6a02
+  scenePath: Assets/Scenes/Areas/Area_Clearing.unity

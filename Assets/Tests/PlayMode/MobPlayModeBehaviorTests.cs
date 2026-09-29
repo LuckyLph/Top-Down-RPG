@@ -16,7 +16,7 @@ public class MobPlayModeBehaviorTests
         yield return null;
 
         MobController brain = Object.FindAnyObjectByType<MobController>();
-        Assert.That(brain, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
+        Assert.That(brain, Is.Not.Null, "SampleScene should contain at least one MobController.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         Assert.That(player, Is.Not.Null, "SampleScene should contain a Player tag target.");
@@ -51,7 +51,7 @@ public class MobPlayModeBehaviorTests
         MobController firstMob = Object.FindAnyObjectByType<MobController>();
 
         Assert.That(navGrid, Is.Not.Null, "SampleScene should contain a NavigationGrid2D.");
-        Assert.That(firstMob, Is.Not.Null, "SampleScene should contain at least one MobBrain.");
+        Assert.That(firstMob, Is.Not.Null, "SampleScene should contain at least one MobController.");
         Assert.That(firstMob.NavigationGrid, Is.SameAs(navGrid));
 
         GameObject clone = Object.Instantiate(firstMob.gameObject, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);

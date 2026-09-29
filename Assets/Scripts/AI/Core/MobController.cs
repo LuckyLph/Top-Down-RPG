@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.InputSystem;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -111,7 +110,7 @@ public class MobController : MonoBehaviour
 
         if (!states.TryGetValue(nextStateId, out IMobState nextState))
         {
-            Debug.LogError($"MobBrain is missing state '{nextStateId}'.", this);
+            Debug.LogError($"MobController is missing state '{nextStateId}'.", this);
             return;
         }
 

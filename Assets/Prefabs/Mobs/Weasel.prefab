@@ -331,7 +331,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b2dc70c2b4231f14b84f917b2ca5ac8e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::MobBrain
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::MobController
   config: {fileID: 11400000, guid: 4cdad9c996ec4c742b6bd28d36ae4121, type: 2}
   navigationGrid: {fileID: 0}
   targetProvider: {fileID: 0}

@@ -1,10 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
 {
@@ -124,10 +120,9 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        InputActionAsset resolvedAsset = inputActionsAsset != null ? inputActionsAsset : LoadDefaultInputActionsAsset();
-        if (resolvedAsset != null)
+        if (inputActionsAsset != null)
         {
-            InputActionMap playerMap = resolvedAsset.FindActionMap(playerActionMapName, false);
+            InputActionMap playerMap = inputActionsAsset.FindActionMap(playerActionMapName, false);
             moveAction = playerMap?.FindAction(moveActionName, false);
             attackAction = playerMap?.FindAction(attackActionName, false);
 
@@ -136,6 +131,10 @@ public class PlayerController : MonoBehaviour
                 usingFallbackActions = false;
                 return;
             }
+
+            // Never mix asset-owned and fallback actions: fallbacks are disposed on destroy.
+            moveAction = null;
+            attackAction = null;
         }
 
         CreateFallbackActions();
@@ -143,6 +142,12 @@ public class PlayerController : MonoBehaviour
 
     private void CreateFallbackActions()
     {
+        // Editor and builds resolve input identically: an unassigned or incomplete asset uses these
+        // hardcoded bindings everywhere, so rebinding in the asset has no effect until it is assigned.
+        Debug.LogWarning(
+            $"{nameof(PlayerController)} on '{name}' has no usable '{playerActionMapName}' map with '{moveActionName}' and '{attackActionName}' actions; using hardcoded fallback bindings.",
+            this);
+
         if (moveAction == null)
         {
             moveAction = new InputAction(moveActionName);
@@ -184,14 +189,5 @@ public class PlayerController : MonoBehaviour
         moveAction = null;
         attackAction = null;
         usingFallbackActions = false;
-    }
-
-    private static InputActionAsset LoadDefaultInputActionsAsset()
-    {
-#if UNITY_EDITOR
-        return AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
-#else
-        return null;
-#endif
     }
 }

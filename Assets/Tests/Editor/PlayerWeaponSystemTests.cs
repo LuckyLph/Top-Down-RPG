@@ -124,6 +124,29 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void PlayerSlashAttack_HittingWallDoesNotDamageUnrelatedReceiverUnderSameRoot()
+    {
+        root = new GameObject("LevelRoot");
+
+        // The enemy is the first receiver under the shared root, which is what a root-wide search would find.
+        GameObject distantEnemy = CreateDamageable("DistantEnemy", Vector2.right * 20f, root.transform);
+        GameObject owner = CreateDamageable("Owner", Vector2.zero, root.transform);
+        GameObject wall = new("Wall");
+        wall.transform.SetParent(root.transform);
+        wall.transform.position = Vector2.left * 20f;
+        BoxCollider2D wallCollider = wall.AddComponent<BoxCollider2D>();
+
+        Health enemyHealth = distantEnemy.GetComponent<Health>();
+        Health ownerHealth = owner.GetComponent<Health>();
+        PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2);
+        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
+
+        Assert.That(slashAttack.TryDamageCollider(wallCollider), Is.False);
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
+        Assert.That(ownerHealth.CurrentHealth, Is.EqualTo(ownerHealth.MaxHealth));
+    }
+
+    [Test]
     public void PlayerSlashAttack_CanDamageMultipleTargetsOnceEach()
     {
         root = new GameObject("CombatRoot");
@@ -242,6 +265,21 @@ public class PlayerWeaponSystemTests
         Assert.That(attackAction.bindings.Any(binding => binding.path == "<Keyboard>/space"), Is.True);
     }
 
+    [Test]
+    public void PlayerPrefab_AssignsProjectInputActionAsset()
+    {
+        GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
+        InputActionAsset actionsAsset = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
+        Assert.That(playerPrefab, Is.Not.Null);
+        Assert.That(actionsAsset, Is.Not.Null);
+
+        PlayerController playerController = playerPrefab.GetComponent<PlayerController>();
+        Assert.That(playerController, Is.Not.Null);
+
+        SerializedProperty assetProperty = new SerializedObject(playerController).FindProperty("inputActionsAsset");
+        Assert.That(assetProperty.objectReferenceValue, Is.SameAs(actionsAsset), "Builds only use the asset assigned on the prefab.");
+    }
+
     private static PlayerWeapon CreateTestWeapon(
         string name,
         int damage = 1,
@@ -300,7 +338,7 @@ public class PlayerWeaponSystemTests
         target.transform.position = position;
         target.AddComponent<BoxCollider2D>();
         target.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        target.AddComponent<Health>().ApplyDamage(0);
+        target.AddComponent<Health>();
         target.AddComponent<DamageReceiver>();
         return target;
     }

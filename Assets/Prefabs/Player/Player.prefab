@@ -260,7 +260,7 @@ MonoBehaviour:
   moveSpeed: 5
   walkAnimationSpeed: 0.85
   animator: {fileID: 1571185521030094183}
-  inputActionsAsset: {fileID: 0}
+  inputActionsAsset: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   weaponController: {fileID: 7019887641318625157}
   playerActionMapName: Player
   moveActionName: Move

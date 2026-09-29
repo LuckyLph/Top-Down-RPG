@@ -36,8 +36,7 @@ public class DisableOnDeath : MonoBehaviour
         handledDeath = true;
 
         DisableGameplayBehaviours();
-        DisableColliders();
-        DisableRigidbody();
+        DeathPhysics.Disable(gameObject);
     }
 
     private void DisableGameplayBehaviours()
@@ -56,30 +55,6 @@ public class DisableOnDeath : MonoBehaviour
 
             behaviour.enabled = false;
         }
-    }
-
-    private void DisableColliders()
-    {
-        Collider2D[] colliders = GetComponents<Collider2D>();
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            if (colliders[i] != null)
-            {
-                colliders[i].enabled = false;
-            }
-        }
-    }
-
-    private void DisableRigidbody()
-    {
-        if (!TryGetComponent(out Rigidbody2D rb))
-        {
-            return;
-        }
-
-        rb.linearVelocity = Vector2.zero;
-        rb.angularVelocity = 0f;
-        rb.simulated = false;
     }
 
     private void ResolveHealth()

@@ -102,6 +102,38 @@ public class CombatComponentTests
     }
 
     [Test]
+    public void Health_ReportsFullHealth_BeforeAwakeOrDamage()
+    {
+        root = new GameObject("FreshHealth");
+        Health health = root.AddComponent<Health>();
+
+        Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
+        Assert.That(health.IsDead, Is.False);
+    }
+
+    [Test]
+    public void MeleeDamageDealer_DoesNotDamageSiblingReceiver_WhenTargetHasNoReceiver()
+    {
+        root = new GameObject("LevelRoot");
+        GameObject attacker = new("Attacker");
+        attacker.transform.SetParent(root.transform);
+        MeleeDamageDealer dealer = attacker.AddComponent<MeleeDamageDealer>();
+
+        GameObject enemy = new("Enemy");
+        enemy.transform.SetParent(root.transform);
+        Health enemyHealth = enemy.AddComponent<Health>();
+        enemy.AddComponent<DamageReceiver>();
+
+        GameObject wall = new("Wall");
+        wall.transform.SetParent(root.transform);
+
+        dealer.ResetCooldown();
+
+        Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
+    }
+
+    [Test]
     public void FloatingDamageText_SpawnsUnderOverlayCanvasAndProjectsWorldPosition()
     {
         GameObject cameraObject = new("Main Camera");

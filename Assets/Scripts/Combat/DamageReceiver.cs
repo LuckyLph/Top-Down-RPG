@@ -22,6 +22,13 @@ public class DamageReceiver : MonoBehaviour
         ResolveHealth();
     }
 
+    // Only the hit object and its ancestors are searched, so hitting an unrelated collider (a wall
+    // sharing a level root with enemies) can never damage some other receiver in that hierarchy.
+    public static DamageReceiver FindFor(Transform hitTransform)
+    {
+        return hitTransform != null ? hitTransform.GetComponentInParent<DamageReceiver>() : null;
+    }
+
     public int ReceiveDamage(int amount, GameObject source = null)
     {
         ResolveHealth();

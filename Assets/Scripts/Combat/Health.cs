@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 public class Health : MonoBehaviour
@@ -33,8 +32,18 @@ public class Health : MonoBehaviour
     public event Action<Health> Died;
 
     public int MaxHealth => maxHealth;
-    public int CurrentHealth => currentHealth;
-    public bool IsDead => initialized && currentHealth <= 0;
+
+    // Lazily initialized so health reads correctly before Awake (e.g. components added in edit mode).
+    public int CurrentHealth
+    {
+        get
+        {
+            InitializeIfNeeded();
+            return currentHealth;
+        }
+    }
+
+    public bool IsDead => CurrentHealth <= 0;
 
     private void Awake()
     {

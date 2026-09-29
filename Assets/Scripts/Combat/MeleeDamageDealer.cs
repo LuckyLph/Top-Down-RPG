@@ -35,7 +35,7 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
-        DamageReceiver receiver = ResolveReceiver(target);
+        DamageReceiver receiver = DamageReceiver.FindFor(target);
         if (receiver == null)
         {
             return false;
@@ -49,22 +49,5 @@ public class MeleeDamageDealer : MonoBehaviour
 
         nextAttackTime = Time.time + attackInterval;
         return true;
-    }
-
-    private static DamageReceiver ResolveReceiver(Transform target)
-    {
-        if (target.TryGetComponent(out DamageReceiver receiver))
-        {
-            return receiver;
-        }
-
-        receiver = target.GetComponentInParent<DamageReceiver>();
-        if (receiver != null)
-        {
-            return receiver;
-        }
-
-        Transform root = target.root;
-        return root != null ? root.GetComponentInChildren<DamageReceiver>(true) : null;
     }
 }

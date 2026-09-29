@@ -141,7 +141,7 @@ public class SwordSlashAttack : MonoBehaviour
             }
         }
 
-        DamageReceiver receiver = ResolveReceiver(other.transform);
+        DamageReceiver receiver = DamageReceiver.FindFor(other.transform);
         if (receiver == null || hitReceivers.Contains(receiver))
         {
             return false;
@@ -369,27 +369,5 @@ public class SwordSlashAttack : MonoBehaviour
         {
             animationGraph.Destroy();
         }
-    }
-
-    private static DamageReceiver ResolveReceiver(Transform target)
-    {
-        if (target == null)
-        {
-            return null;
-        }
-
-        if (target.TryGetComponent(out DamageReceiver receiver))
-        {
-            return receiver;
-        }
-
-        receiver = target.GetComponentInParent<DamageReceiver>();
-        if (receiver != null)
-        {
-            return receiver;
-        }
-
-        Transform root = target.root;
-        return root != null ? root.GetComponentInChildren<DamageReceiver>(true) : null;
     }
 }

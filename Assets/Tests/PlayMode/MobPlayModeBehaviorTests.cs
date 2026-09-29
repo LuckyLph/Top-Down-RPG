@@ -124,6 +124,35 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
+    public IEnumerator PlayerInSampleScene_DeathDisablesControlsAndMobDisengages()
+    {
+        yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+        yield return null;
+
+        MobController brain = Object.FindAnyObjectByType<MobController>();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
+
+        Assert.That(brain, Is.Not.Null);
+        Assert.That(health, Is.Not.Null);
+
+        player.transform.position = brain.transform.position + Vector3.right * 0.1f;
+        yield return WaitForHealthChange(health, health.CurrentHealth - 1, 30);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange));
+
+        health.ApplyDamage(health.CurrentHealth);
+        yield return WaitFrames(2);
+
+        Assert.That(health.IsDead, Is.True);
+        Assert.That(playerController.enabled, Is.False, "Player movement should stop on death.");
+        Assert.That(weaponController.enabled, Is.False, "Player attacks should stop on death.");
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.AttackRange), "Mob should stop attacking a dead player.");
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Chase), "Mob should not chase a dead player.");
+    }
+
+    [UnityTest]
     public IEnumerator MobInSampleScene_DeathSpawnsAnimationAndDestroysMob()
     {
         yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);

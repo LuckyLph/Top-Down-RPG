@@ -130,18 +130,26 @@ public class MobPathAgent2D : MonoBehaviour
         return true;
     }
 
+    // Called every frame by idle/patrol/return states, so this uses the grid's cached connectivity
+    // instead of running A*. Mirrors the pathfinder: the start snaps to the nearest walkable cell,
+    // while an unwalkable goal counts as unreachable.
     public bool CanReachWorldTarget(Vector2 worldGoal)
     {
-        if (navigationGrid == null || navigationGrid.Pathfinder == null || motor == null || config == null)
+        if (navigationGrid == null || !navigationGrid.IsBuilt || motor == null || config == null)
+        {
+            return false;
+        }
+
+        TerrainMovementProfile2D movementProfile = config.MovementProfile;
+        Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
+        if (!navigationGrid.IsCellWalkable(goalCell, movementProfile))
         {
             return false;
         }
 
         Vector3Int startCell = navigationGrid.WorldToCell(motor.Position);
-        Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
-        PathRequest request = new(startCell, goalCell, allowPartial: true, config.MovementProfile);
-        PathResult result = navigationGrid.Pathfinder.FindPath(request);
-        return result.Success && result.ReachedResolvedGoal && !result.GoalWasAdjusted;
+        return navigationGrid.TryGetNearestWalkableCell(startCell, movementProfile, out Vector3Int start)
+            && navigationGrid.AreCellsConnected(start, goalCell, movementProfile);
     }
 
     private IReadOnlyList<Vector3Int> SmoothPathCells(IReadOnlyList<Vector3Int> sourceCells)

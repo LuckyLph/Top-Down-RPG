@@ -18,7 +18,10 @@ public class TerrainMovementProfile2D : ScriptableObject
     [SerializeField] private List<TerrainRule> terrainRules = new();
 
     private Dictionary<TerrainType2D, TerrainRule> ruleLookup;
+    private int version;
 
+    // Incremented whenever walkability or costs change so cached navigation data can be invalidated.
+    public int Version => version;
     public bool DefaultIsWalkable => defaultIsWalkable;
     public int DefaultTraversalCost => Mathf.Max(1, defaultTraversalCost);
     public IReadOnlyList<TerrainRule> TerrainRules => terrainRules;
@@ -27,7 +30,7 @@ public class TerrainMovementProfile2D : ScriptableObject
     {
         defaultIsWalkable = isWalkableByDefault;
         defaultTraversalCost = Mathf.Max(1, traversalCostByDefault);
-        ruleLookup = null;
+        InvalidateRules();
     }
 
     public void SetTerrainRule(TerrainType2D terrainType, bool isWalkable, int traversalCost)
@@ -46,7 +49,7 @@ public class TerrainMovementProfile2D : ScriptableObject
 
         rule.isWalkable = isWalkable;
         rule.traversalCost = Mathf.Max(1, traversalCost);
-        ruleLookup = null;
+        InvalidateRules();
     }
 
     public bool TryGetTraversal(TerrainType2D terrainType, out bool isWalkable, out int traversalCost)
@@ -125,6 +128,12 @@ public class TerrainMovementProfile2D : ScriptableObject
         }
     }
 
+    private void InvalidateRules()
+    {
+        ruleLookup = null;
+        version++;
+    }
+
     private void OnEnable()
     {
         ruleLookup = null;
@@ -145,7 +154,7 @@ public class TerrainMovementProfile2D : ScriptableObject
             rule.traversalCost = Mathf.Max(1, rule.traversalCost);
         }
 
-        ruleLookup = null;
+        InvalidateRules();
     }
 #endif
 }

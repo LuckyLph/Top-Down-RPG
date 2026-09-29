@@ -172,6 +172,55 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void AttackRangeState_DoesNotResetCooldown_WhenTargetLeavesAndReentersRange()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        int healthAfterFirstHit = playerHealth.CurrentHealth;
+        Assert.That(healthAfterFirstHit, Is.EqualTo(9));
+
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange));
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterFirstHit), "Re-entering range must not bypass the attack interval.");
+    }
+
+    [Test]
+    public void AttackRangeState_StopsAttacking_WhenTargetDies()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        playerHealth.ApplyDamage(playerHealth.MaxHealth);
+
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(playerHealth.IsDead, Is.True);
+        Assert.That(brain.Perception.HasDetectedTarget, Is.False);
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.AttackRange));
+    }
+
+    [Test]
+    public void IdleState_DoesNotEnterChase_WhenTargetIsDead()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(3f, 0f, 0f);
+        playerHealth.ApplyDamage(playerHealth.MaxHealth);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    [Test]
     public void IdleState_DoesNotEnterChase_WhenDetectedTargetIsOffGrid()
     {
         SetupWorld();

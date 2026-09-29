@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 1071056690780457742}
   - component: {fileID: 774503414558232581}
   - component: {fileID: 7019887641318625157}
+  - component: {fileID: 932742323194821630}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -304,3 +305,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerController: {fileID: 1451667930681185956}
   startingWeapon: {fileID: 11400000, guid: 5e8290d96f4c4814a5d633d9cb244fc6, type: 2}
+--- !u!114 &932742323194821630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae8f55efcd7c0094f9bd93240086d2bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::DisableOnDeath

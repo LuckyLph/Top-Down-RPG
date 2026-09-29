@@ -20,6 +20,8 @@ public class MobPerception2D : MonoBehaviour
     private Vector2 lastLinecastOrigin;
     private Vector2 lastLinecastTarget;
     private bool lastLineOfSightBlocked;
+    private Transform cachedHealthOwner;
+    private Health cachedTargetHealth;
 
     public Transform CurrentTarget => targetProvider != null ? targetProvider.Target : null;
     public bool HasDetectedTarget => hasDetectedTarget;
@@ -49,7 +51,7 @@ public class MobPerception2D : MonoBehaviour
         }
 
         Transform target = CurrentTarget;
-        if (target == null)
+        if (target == null || IsTargetDead(target))
         {
             ResetPerception();
             return;
@@ -97,6 +99,17 @@ public class MobPerception2D : MonoBehaviour
         RaycastHit2D hit = Physics2D.Linecast(origin, targetPosition, config.obstacleLayerMask);
         lastLineOfSightBlocked = hit.collider != null;
         return !lastLineOfSightBlocked;
+    }
+
+    private bool IsTargetDead(Transform target)
+    {
+        if (target != cachedHealthOwner)
+        {
+            cachedHealthOwner = target;
+            cachedTargetHealth = target.GetComponent<Health>();
+        }
+
+        return cachedTargetHealth != null && cachedTargetHealth.IsDead;
     }
 
     private void ResetPerception()

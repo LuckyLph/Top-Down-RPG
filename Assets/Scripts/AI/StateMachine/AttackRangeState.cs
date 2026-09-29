@@ -10,7 +10,6 @@ public class AttackRangeState : MobStateBase
     {
         PathAgent.ClearPath();
         Motor.Stop();
-        DamageDealer.ResetCooldown();
         Brain.InvokeAttackRangeEntered();
         TryAttackCurrentTarget();
     }

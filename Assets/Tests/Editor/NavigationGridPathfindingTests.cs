@@ -241,6 +241,112 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.MovementCost(Vector3Int.zero, overlappedCell, amphibiousProfile), Is.EqualTo(35));
     }
 
+    [Test]
+    public void AreCellsConnected_FollowsBarrierLayout()
+    {
+        SetupNavigationGrid(addGapInBarrier: false);
+
+        Assert.That(navigationGrid.AreCellsConnected(new Vector3Int(0, 0, 0), new Vector3Int(1, 4, 0), null), Is.True);
+        Assert.That(navigationGrid.AreCellsConnected(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), null), Is.False);
+        Assert.That(navigationGrid.AreCellsConnected(new Vector3Int(0, 0, 0), new Vector3Int(2, 0, 0), null), Is.False, "Blocked cells belong to no region.");
+
+        TearDown();
+        SetupNavigationGrid(addGapInBarrier: true);
+
+        Assert.That(navigationGrid.AreCellsConnected(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), null), Is.True);
+    }
+
+    [Test]
+    public void AreCellsConnected_RespectsProfileRulesAndRuleChanges()
+    {
+        root = CreateGridRoot("ConnectivityProfileRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(defaultWalkable: false);
+        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        amphibiousProfile = CreateProfile(defaultWalkable: false);
+        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
+        amphibiousProfile.SetTerrainRule(waterTerrain, true, 16);
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+        groundMap.SetTile(new Vector3Int(0, 0, 0), fillTile);
+        waterMap.SetTile(new Vector3Int(1, 0, 0), fillTile);
+        groundMap.SetTile(new Vector3Int(2, 0, 0), fillTile);
+
+        AttachTerrainSource(groundMap, null, null, groundTerrain);
+        AttachTerrainSource(waterMap, null, null, waterTerrain);
+
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Vector3Int west = new(0, 0, 0);
+        Vector3Int east = new(2, 0, 0);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.False);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, amphibiousProfile), Is.True);
+
+        landProfile.SetTerrainRule(waterTerrain, true, 20);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.True, "Cached regions must refresh when profile rules change.");
+    }
+
+    [Test]
+    public void AreCellsConnected_AgreesWithAStar_OnRandomGrid()
+    {
+        root = CreateGridRoot("ConnectivityRandomRoot");
+        Tilemap dataTilemap = CreateTilemapObject("DataTilemap");
+        Tilemap collisionTilemap = CreateTilemapObject("CollisionTilemap");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        blockTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+
+        const int size = 12;
+        System.Random random = new(1234);
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                dataTilemap.SetTile(new Vector3Int(x, y, 0), fillTile);
+                if (random.NextDouble() < 0.35)
+                {
+                    collisionTilemap.SetTile(new Vector3Int(x, y, 0), blockTile);
+                }
+            }
+        }
+
+        AttachTerrainSource(dataTilemap, collisionTilemap, null, groundTerrain);
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        int reachablePairs = 0;
+        int unreachablePairs = 0;
+        for (int i = 0; i < 300; i++)
+        {
+            Vector3Int from = new(random.Next(size), random.Next(size), 0);
+            Vector3Int to = new(random.Next(size), random.Next(size), 0);
+            if (!navigationGrid.IsCellWalkable(from) || !navigationGrid.IsCellWalkable(to))
+            {
+                continue;
+            }
+
+            bool aStarReaches = navigationGrid.Pathfinder.FindPath(new PathRequest(from, to, allowPartial: false)).Success;
+            Assert.That(navigationGrid.AreCellsConnected(from, to, null), Is.EqualTo(aStarReaches), $"Mismatch between {from} and {to}.");
+
+            if (aStarReaches)
+            {
+                reachablePairs++;
+            }
+            else
+            {
+                unreachablePairs++;
+            }
+        }
+
+        Assert.That(reachablePairs, Is.GreaterThan(0));
+        Assert.That(unreachablePairs, Is.GreaterThan(0), "Seeded grid should contain disconnected regions to make this test meaningful.");
+    }
+
     private void SetupNavigationGrid(bool addGapInBarrier)
     {
         root = CreateGridRoot("NavGridTestRoot");

@@ -32,6 +32,13 @@ public class NavigationGrid2D : MonoBehaviour
         public readonly List<TerrainType2D> TerrainTypes = new();
     }
 
+    private sealed class RegionMap
+    {
+        public readonly Dictionary<Vector3Int, int> RegionByCell = new();
+        public bool IsLabeled;
+        public int ProfileVersion;
+    }
+
     [SerializeField] private List<NavigationTerrainSource2D> terrainSources = new();
     [SerializeField] private bool discoverSourcesInChildren = true;
     [SerializeField] private int nearestCellSearchRadius = 8;
@@ -44,6 +51,8 @@ public class NavigationGrid2D : MonoBehaviour
 
     private readonly Dictionary<Vector3Int, CellData> cellsByPosition = new();
     private readonly List<NavigationTerrainSource2D> resolvedSources = new();
+    private readonly Dictionary<TerrainMovementProfile2D, RegionMap> regionsByProfile = new();
+    private RegionMap defaultRegions;
     private GridAStarPathfinder2D pathfinder;
     private BoundsInt walkableBounds;
     private Tilemap referenceTilemap;
@@ -80,6 +89,8 @@ public class NavigationGrid2D : MonoBehaviour
     {
         cellsByPosition.Clear();
         resolvedSources.Clear();
+        regionsByProfile.Clear();
+        defaultRegions = null;
         pathfinder = null;
         walkableBounds = default;
         referenceTilemap = null;
@@ -310,6 +321,19 @@ public class NavigationGrid2D : MonoBehaviour
         return (diagonalCost * diagonal) + (baseTraversalCost * straight);
     }
 
+    public bool AreCellsConnected(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile)
+    {
+        if (!IsBuilt)
+        {
+            return false;
+        }
+
+        RegionMap regions = GetRegionMap(movementProfile);
+        return regions.RegionByCell.TryGetValue(from, out int fromRegion)
+            && regions.RegionByCell.TryGetValue(to, out int toRegion)
+            && fromRegion == toRegion;
+    }
+
     public bool HasLineOfSightCells(Vector3Int from, Vector3Int to)
     {
         return HasLineOfSightCells(from, to, null);
@@ -417,6 +441,67 @@ public class NavigationGrid2D : MonoBehaviour
 
         traversalCost = highestCost > 0 ? highestCost : movementProfile.DefaultTraversalCost;
         return true;
+    }
+
+    private RegionMap GetRegionMap(TerrainMovementProfile2D movementProfile)
+    {
+        int profileVersion = movementProfile != null ? movementProfile.Version : 0;
+        RegionMap regions;
+        if (movementProfile == null)
+        {
+            regions = defaultRegions ??= new RegionMap();
+        }
+        else if (!regionsByProfile.TryGetValue(movementProfile, out regions))
+        {
+            regions = new RegionMap();
+            regionsByProfile[movementProfile] = regions;
+        }
+
+        if (regions.IsLabeled && regions.ProfileVersion == profileVersion)
+        {
+            return regions;
+        }
+
+        LabelRegions(regions, movementProfile);
+        regions.IsLabeled = true;
+        regions.ProfileVersion = profileVersion;
+        return regions;
+    }
+
+    // Flood-fills walkable cells into connected regions. Orthogonal adjacency is sufficient because
+    // diagonal moves are only allowed when both orthogonal cells are walkable (no corner cutting).
+    private void LabelRegions(RegionMap regions, TerrainMovementProfile2D movementProfile)
+    {
+        regions.RegionByCell.Clear();
+        Queue<Vector3Int> frontier = new();
+        int nextRegion = 0;
+
+        foreach (Vector3Int seed in cellsByPosition.Keys)
+        {
+            if (regions.RegionByCell.ContainsKey(seed) || !IsCellWalkable(seed, movementProfile))
+            {
+                continue;
+            }
+
+            regions.RegionByCell[seed] = nextRegion;
+            frontier.Enqueue(seed);
+
+            while (frontier.Count > 0)
+            {
+                Vector3Int current = frontier.Dequeue();
+                for (int i = 0; i < NeighborOffsets4.Length; i++)
+                {
+                    Vector3Int neighbor = current + NeighborOffsets4[i];
+                    if (!regions.RegionByCell.ContainsKey(neighbor) && IsCellWalkable(neighbor, movementProfile))
+                    {
+                        regions.RegionByCell[neighbor] = nextRegion;
+                        frontier.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            nextRegion++;
+        }
     }
 
     private BoundsInt CalculateBounds()

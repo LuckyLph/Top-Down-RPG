@@ -341,6 +341,13 @@ public class NavigationGrid2D : MonoBehaviour
 
     public bool HasLineOfSightCells(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile)
     {
+        return TryGetLineCost(from, to, movementProfile, out _);
+    }
+
+    // Walks the straight cell line between two cells, summing movement costs. Fails if any step is not traversable.
+    public bool TryGetLineCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile, out int cost)
+    {
+        cost = 0;
         if (!IsCellWalkable(from, movementProfile) || !IsCellWalkable(to, movementProfile))
         {
             return false;
@@ -378,6 +385,7 @@ public class NavigationGrid2D : MonoBehaviour
                 return false;
             }
 
+            cost += MovementCost(previous, current, movementProfile);
             previous = current;
         }
 

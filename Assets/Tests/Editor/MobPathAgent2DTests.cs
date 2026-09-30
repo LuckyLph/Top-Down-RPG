@@ -73,6 +73,47 @@ public class MobPathAgent2DTests
     }
 
     [Test]
+    public void BuildPathToWorld_DoesNotSmoothAcrossTerrainThePathfinderAvoided()
+    {
+        CreateGridRoot();
+        TerrainType2D ground = CreateTerrain("ground");
+        TerrainType2D water = CreateTerrain("water");
+        List<Vector3Int> waterCells = Rect(1, 1, 3, 1);
+        AddTerrainLayer("Ground", ground, Rect(0, 0, 4, 2));
+        AddTerrainLayer("Water", water, waterCells);
+
+        TerrainMovementProfile2D wadingProfile = CreateProfile();
+        wadingProfile.SetTerrainRule(ground, true, 10);
+        wadingProfile.SetTerrainRule(water, true, 45);
+        BuildGridAndAgent(wadingProfile);
+
+        Vector3Int startCell = new(0, 1, 0);
+        Vector3Int goalCell = new(4, 1, 0);
+        PathResult optimal = navigationGrid.Pathfinder.FindPath(new PathRequest(startCell, goalCell, false, wadingProfile));
+        int optimalCost = 0;
+        for (int i = 1; i < optimal.Cells.Count; i++)
+        {
+            optimalCost += navigationGrid.MovementCost(optimal.Cells[i - 1], optimal.Cells[i], wadingProfile);
+        }
+
+        PlaceMob(navigationGrid.CellToWorldCenter(startCell));
+        Assert.That(pathAgent.BuildPathToWorld(navigationGrid.CellToWorldCenter(goalCell), allowPartial: false), Is.True);
+
+        int smoothedCost = 0;
+        Vector3Int previous = startCell;
+        foreach (Vector2 waypoint in pathAgent.Waypoints)
+        {
+            Vector3Int cell = navigationGrid.WorldToCell(waypoint);
+            Assert.That(waterCells, Has.No.Member(cell));
+            Assert.That(navigationGrid.TryGetLineCost(previous, cell, wadingProfile, out int segmentCost), Is.True);
+            smoothedCost += segmentCost;
+            previous = cell;
+        }
+
+        Assert.That(smoothedCost, Is.EqualTo(optimalCost), "Smoothing must not route through the costly water corridor.");
+    }
+
+    [Test]
     public void StalledTime_Accumulates_WhileFollowingPathWithoutMoving_AndResetsOnProgress()
     {
         CreateGridRoot();
@@ -147,6 +188,13 @@ public class MobPathAgent2DTests
         TerrainType2D terrain = Track(ScriptableObject.CreateInstance<TerrainType2D>());
         terrain.Configure(id);
         return terrain;
+    }
+
+    private TerrainMovementProfile2D CreateProfile()
+    {
+        TerrainMovementProfile2D profile = Track(ScriptableObject.CreateInstance<TerrainMovementProfile2D>());
+        profile.Configure(isWalkableByDefault: false, traversalCostByDefault: 10);
+        return profile;
     }
 
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)

@@ -170,6 +170,15 @@ public class MobPathAgent2D : MonoBehaviour
             return sourceCells;
         }
 
+        TerrainMovementProfile2D movementProfile = config != null ? config.MovementProfile : null;
+
+        // routeCost[i] is the cost of following the A* path from its start to cell i.
+        int[] routeCost = new int[sourceCells.Count];
+        for (int i = 1; i < sourceCells.Count; i++)
+        {
+            routeCost[i] = routeCost[i - 1] + navigationGrid.MovementCost(sourceCells[i - 1], sourceCells[i], movementProfile);
+        }
+
         List<Vector3Int> smoothed = new() { sourceCells[0] };
         int anchorIndex = 0;
 
@@ -178,7 +187,10 @@ public class MobPathAgent2D : MonoBehaviour
             int furthestVisible = anchorIndex + 1;
             for (int i = anchorIndex + 2; i < sourceCells.Count; i++)
             {
-                if (navigationGrid.HasLineOfSightCells(sourceCells[anchorIndex], sourceCells[i], config != null ? config.MovementProfile : null))
+                // Only shortcut when the straight line costs no more than the route it replaces, so
+                // smoothing never drags the mob through terrain the pathfinder chose to avoid.
+                if (navigationGrid.TryGetLineCost(sourceCells[anchorIndex], sourceCells[i], movementProfile, out int lineCost)
+                    && lineCost <= routeCost[i] - routeCost[anchorIndex])
                 {
                     furthestVisible = i;
                 }

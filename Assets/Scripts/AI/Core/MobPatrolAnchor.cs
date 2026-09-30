@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class MobPatrolAnchor : MonoBehaviour
 {
@@ -30,7 +32,9 @@ public class MobPatrolAnchor : MonoBehaviour
         return config != null ? config.NextIdleDuration() : Random.Range(0.5f, 1.5f);
     }
 
-    public bool TryGetRoamDestination(out Vector2 destination)
+    // Samples a walkable cell around spawn. Candidates the mob cannot reach are rejected so it never
+    // plans a partial path toward a cell on the far side of a wall.
+    public bool TryGetRoamDestination(Func<Vector2, bool> isReachable, out Vector2 destination)
     {
         destination = spawnPosition;
 
@@ -46,15 +50,16 @@ public class MobPatrolAnchor : MonoBehaviour
             Vector2 candidateWorld = spawnPosition + offset;
             Vector3Int candidateCell = navigationGrid.WorldToCell(candidateWorld);
 
-            if (navigationGrid.IsCellWalkable(candidateCell, config.MovementProfile))
+            if (!navigationGrid.IsCellWalkable(candidateCell, config.MovementProfile)
+                && !navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.nearestCellSearchRadius))
             {
-                destination = navigationGrid.CellToWorldCenter(candidateCell);
-                return true;
+                continue;
             }
 
-            if (navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out Vector3Int nearest, config.nearestCellSearchRadius))
+            Vector2 candidate = navigationGrid.CellToWorldCenter(candidateCell);
+            if (isReachable == null || isReachable(candidate))
             {
-                destination = navigationGrid.CellToWorldCenter(nearest);
+                destination = candidate;
                 return true;
             }
         }

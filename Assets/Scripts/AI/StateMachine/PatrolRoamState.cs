@@ -8,7 +8,7 @@ public class PatrolRoamState : MobStateBase
 
     public override void Enter()
     {
-        if (!Patrol.TryGetRoamDestination(out Vector2 destination))
+        if (!Patrol.TryGetRoamDestination(PathAgent.CanReachWorldTarget, out Vector2 destination))
         {
             Brain.ChangeState(MobStateId.Idle);
             return;

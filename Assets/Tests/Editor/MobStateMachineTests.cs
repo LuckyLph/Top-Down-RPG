@@ -263,6 +263,31 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    [Test]
+    public void PatrolState_OnlyRoamsToReachableCells_WhenRoamRadiusSpansAWall()
+    {
+        SetupWorld(addHorizontalBarrier: true);
+        // The barrier row sits one cell north of spawn, so a large share of samples land on or past it.
+        config.patrolRoamRadius = 4f;
+
+        int patrols = 0;
+        for (int seed = 0; seed < 30; seed++)
+        {
+            Random.InitState(seed);
+            brain.ChangeState(MobStateId.Idle);
+            brain.ChangeState(MobStateId.Patrol);
+            if (brain.CurrentStateId != MobStateId.Patrol)
+            {
+                continue;
+            }
+
+            patrols++;
+            Assert.That(brain.PathAgent.IsPartialPath, Is.False, $"Seed {seed} picked a roam destination across the wall.");
+        }
+
+        Assert.That(patrols, Is.GreaterThan(0));
+    }
+
     private void TickBlockedPastStuckTimeout()
     {
         int fixedTicks = Mathf.CeilToInt(config.stuckTimeout / Time.fixedDeltaTime) + 1;

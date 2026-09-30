@@ -11,6 +11,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/Architecture.md` is the code map (assemblies, boot/scene flow, DI scopes, one section per system, configs, events, tests, known gaps). Read it to orient before working on an unfamiliar system. Keep it current: any change that adds, removes, renames or rewires a type, system, scope registration, event, config asset or test suite must update the matching section in the same commit. Fixing an item listed under "Known gaps and oddities" means removing it from that list.
 
+`Docs/Multiplayer.md` is the plan for online co-op (host-and-play, 2–4 players). Follow its "Rules for new code" in all new work, and tick off its phase checklist as steps land.
+
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 
 ## Unity good practices

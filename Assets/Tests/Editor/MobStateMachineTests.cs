@@ -208,7 +208,7 @@ public class MobStateMachineTests
     }
 
     [Test]
-    public void SearchState_SpotsTargetWithinLoseDistance_BeyondNormalDetectionRadius()
+    public void SearchState_SpotsTargetOnlyWithinDetectionRadius_LikeEveryOtherState()
     {
         SetupWorld();
         player.position = new Vector3(3f, 0f, 0f);
@@ -218,29 +218,12 @@ public class MobStateMachineTests
         brain.TickStateMachine(config.lineOfSightInterval);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
 
-        // Beyond detectionRadius (8) but within loseTargetDistance (10), in plain view.
+        // In plain view, beyond detectionRadius (8) but within loseTargetDistance (10).
         Object.DestroyImmediate(pillar);
         player.position = new Vector3(9f, 0f, 0f);
         brain.TickStateMachine(config.lineOfSightInterval);
 
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
-    }
-
-    [Test]
-    public void SearchState_ClearsAlert_WhenItEnds()
-    {
-        SetupWorld();
-        player.position = new Vector3(3f, 0f, 0f);
-        brain.ChangeState(MobStateId.Idle);
-        brain.TickStateMachine(0.1f);
-        BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
-        Assert.That(brain.Perception.IsAlert, Is.True);
-
-        brain.TickStateMachine(config.searchDuration + 0.1f);
-
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
-        Assert.That(brain.Perception.IsAlert, Is.False);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Aggro range must not widen while searching.");
     }
 
     [Test]

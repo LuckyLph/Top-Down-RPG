@@ -316,11 +316,11 @@
       "url": "https://packages.unity.com"
     },
     "jp.hadashikick.vcontainer": {
-      "version": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer#1.19.0",
+      "version": "1.19.0",
       "depth": 0,
-      "source": "git",
+      "source": "registry",
       "dependencies": {},
-      "hash": "5401e5a7ebc4980a2b82141ffc26391a6547edd7"
+      "url": "https://package.openupm.com"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",

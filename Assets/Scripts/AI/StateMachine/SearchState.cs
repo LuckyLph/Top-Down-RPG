@@ -1,6 +1,6 @@
 // Entered when a chased target slips out of sight without leaving range (e.g. around a wall): walk to
-// where it was last seen and wait there, resuming the chase if it comes back into view, and give up
-// once searchDuration runs out.
+// where it was last seen and wait there, resuming the chase if it comes back into view anywhere within
+// loseTargetDistance, and give up once searchDuration runs out.
 public class SearchState : MobStateBase
 {
     private float searchTimer;
@@ -12,6 +12,7 @@ public class SearchState : MobStateBase
     public override void Enter()
     {
         searchTimer = Config.searchDuration;
+        Perception.IsAlert = true;
         if (!PathAgent.BuildPathToWorld(Perception.LastKnownTargetPosition, allowPartial: false))
         {
             Brain.ChangeState(MobStateId.Return);
@@ -31,6 +32,11 @@ public class SearchState : MobStateBase
         {
             Brain.ChangeState(MobStateId.Return);
         }
+    }
+
+    public override void Exit()
+    {
+        Perception.IsAlert = false;
     }
 
     public override void FixedTick()

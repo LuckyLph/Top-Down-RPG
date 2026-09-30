@@ -208,6 +208,42 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void SearchState_SpotsTargetWithinLoseDistance_BeyondNormalDetectionRadius()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        GameObject pillar = BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+
+        // Beyond detectionRadius (8) but within loseTargetDistance (10), in plain view.
+        Object.DestroyImmediate(pillar);
+        player.position = new Vector3(9f, 0f, 0f);
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    [Test]
+    public void SearchState_ClearsAlert_WhenItEnds()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+        Assert.That(brain.Perception.IsAlert, Is.True);
+
+        brain.TickStateMachine(config.searchDuration + 0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+        Assert.That(brain.Perception.IsAlert, Is.False);
+    }
+
+    [Test]
     public void SearchState_GivesUpAndReturns_AfterSearchDuration()
     {
         SetupWorld();

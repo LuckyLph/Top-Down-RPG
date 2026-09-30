@@ -20,12 +20,21 @@ public class MobPerception2D : MonoBehaviour
     private Vector2 lastLinecastOrigin;
     private Vector2 lastLinecastTarget;
     private bool lastLineOfSightBlocked;
+    private bool isAlert;
 
     public Transform CurrentTarget => player?.Transform;
     public bool HasDetectedTarget => hasDetectedTarget;
     public bool HasLineOfSight => hasLineOfSight;
     public float DistanceToTarget => distanceToTarget;
     public Vector2 LastKnownTargetPosition => lastKnownTargetPosition;
+
+    // An alert mob (e.g. searching for a target it just lost) spots it anywhere within
+    // loseTargetDistance, not only within the shorter detectionRadius.
+    public bool IsAlert
+    {
+        get => isAlert;
+        set => isAlert = value;
+    }
     // The target is alive and within losing range but out of sight (e.g. behind a wall), as opposed to
     // having escaped or died. Distance is reset to infinity when the target is gone.
     public bool IsTargetHiddenInRange => config != null && !hasLineOfSight && distanceToTarget <= config.loseTargetDistance;
@@ -35,6 +44,7 @@ public class MobPerception2D : MonoBehaviour
         player = playerLocator;
         config = mobConfig;
         losTimer = 0f;
+        isAlert = false;
         hasDetectedTarget = false;
         hasLineOfSight = false;
         distanceToTarget = float.PositiveInfinity;
@@ -62,7 +72,7 @@ public class MobPerception2D : MonoBehaviour
         Vector2 targetPosition = target.position;
         distanceToTarget = Vector2.Distance(origin, targetPosition);
 
-        float range = hasDetectedTarget ? config.loseTargetDistance : config.detectionRadius;
+        float range = hasDetectedTarget || isAlert ? config.loseTargetDistance : config.detectionRadius;
         bool inRange = distanceToTarget <= range;
 
         if (!inRange)

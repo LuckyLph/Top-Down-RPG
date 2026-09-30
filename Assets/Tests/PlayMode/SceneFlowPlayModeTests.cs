@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
+using VContainer.Unity;
 
 public class SceneFlowPlayModeTests
 {
@@ -24,6 +26,14 @@ public class SceneFlowPlayModeTests
         Assert.That(player, Is.Not.Null);
         Assert.That(SceneBootTestHelper.ResolveFromMain<IPlayerInput>().GameplayEnabled, Is.True, "Input should be unlocked once the transition finished.");
         Assert.That(cameraFollow.Target, Is.SameAs(player.transform));
+
+        LifetimeScope mainScope = Object.FindAnyObjectByType<MainLifetimeScope>();
+        LifetimeScope gameplayScope = Object.FindAnyObjectByType<GameplayLifetimeScope>();
+        LifetimeScope areaScope = LifetimeScope.Find<LifetimeScope>(gameFlow.AreaScene);
+        Assert.That(mainScope.Parent, Is.Null, "Main should be the root scope.");
+        Assert.That(gameplayScope.Parent, Is.SameAs(mainScope), "GameFlow should parent the Gameplay scope to Main.");
+        Assert.That(areaScope, Is.InstanceOf<AreaLifetimeScope>());
+        Assert.That(areaScope.Parent, Is.SameAs(gameplayScope), "GameFlow should parent the area scope to Gameplay.");
     }
 
     [UnityTest]
@@ -54,6 +64,14 @@ public class SceneFlowPlayModeTests
         Assert.That(mob, Is.Not.Null);
         Assert.That(mob.Perception.CurrentTarget, Is.SameAs(player.transform), "Area mobs should be injected with the session player.");
         Assert.That(mob.NavigationGrid.gameObject.scene, Is.EqualTo(SceneManager.GetActiveScene()));
+
+        LifetimeScope gameplayScope = Object.FindAnyObjectByType<GameplayLifetimeScope>();
+        LifetimeScope areaScope = LifetimeScope.Find<LifetimeScope>(gameFlow.AreaScene);
+        Assert.That(areaScope.Parent, Is.SameAs(gameplayScope), "The reloaded area should parent to the running Gameplay scope.");
+        AreaEntryRequest entryRequest = areaScope.Container.Resolve<AreaEntryRequest>();
+        Assert.That(entryRequest.SpawnId, Is.EqualTo(spawnId));
+        Assert.That(entryRequest.Area, Is.SameAs(gameFlow.Scenes.StartingArea));
+        Assert.That(gameplayScope.Container.TryResolve(out AreaEntryRequest _), Is.False, "The entry request should only reach the area's container.");
     }
 
     [UnityTest]
@@ -117,6 +135,10 @@ public class SceneFlowPlayModeTests
         yield return SceneBootTestHelper.BootIntoMainMenu();
 
         Assert.That(Object.FindAnyObjectByType<MainMenuController>(), Is.Not.Null);
+        Assert.That(
+            Object.FindAnyObjectByType<MenuLifetimeScope>().Parent,
+            Is.SameAs(Object.FindAnyObjectByType<MainLifetimeScope>()),
+            "GameFlow should parent the menu scope to Main.");
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.Not.Null, "Menu should focus a button for keyboard/gamepad.");
     }
 }

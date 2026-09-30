@@ -3,20 +3,25 @@ using VContainer;
 using VContainer.Unity;
 
 // Scope of the Gameplay scene (player, HUD, combat presentation), alive for one play session.
-// Parent of area scopes, so area objects resolve the session's player and combat services from here.
+// GameFlow parents it to the Main scope, and area scopes to it, so area objects resolve the
+// session's player and combat services from here.
 public class GameplayLifetimeScope : LifetimeScope
 {
     [SerializeField] private PlayerController player;
     [SerializeField] private DamagePopupLayer damagePopupLayer;
     [SerializeField] private GameplaySettings settings;
 
-    protected override LifetimeScope FindParent()
-    {
-        return Find<MainLifetimeScope>();
-    }
-
     protected override void Configure(IContainerBuilder builder)
     {
+        if (Parent == null)
+        {
+            Debug.LogError(
+                $"{name}: the Gameplay scene must be loaded by GameFlow from the Main scene. " +
+                "Press Play with 'Tools/TopDownRPG/Boot From Main' enabled.",
+                this);
+            return;
+        }
+
         builder.RegisterInstance(player);
         builder.RegisterInstance(player.GetComponent<PlayerWeaponController>());
         builder.RegisterInstance<IPlayerLocator>(new PlayerLocator(player.transform, player.GetComponent<Health>()));

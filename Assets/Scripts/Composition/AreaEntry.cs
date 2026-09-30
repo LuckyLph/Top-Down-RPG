@@ -1,21 +1,28 @@
 using UnityEngine;
 
+// Places the session player at the SpawnPoint named by this load's AreaEntryRequest.
 public sealed class AreaEntry : IAreaEntry
 {
+    private readonly AreaEntryRequest request;
     private readonly SpawnPoint[] spawnPoints;
     private readonly PlayerController player;
     private readonly CameraFollow2D cameraFollow;
 
-    public AreaEntry(SpawnPoint[] spawnPoints, PlayerController player, CameraFollow2D cameraFollow)
+    public AreaEntry(
+        AreaEntryRequest request,
+        SpawnPoint[] spawnPoints,
+        PlayerController player,
+        CameraFollow2D cameraFollow)
     {
+        this.request = request;
         this.spawnPoints = spawnPoints;
         this.player = player;
         this.cameraFollow = cameraFollow;
     }
 
-    public void Enter(string spawnId)
+    public void Enter()
     {
-        SpawnPoint spawnPoint = FindSpawnPoint(spawnId);
+        SpawnPoint spawnPoint = FindSpawnPoint(request.SpawnId);
         if (spawnPoint == null)
         {
             Debug.LogWarning($"Area has no SpawnPoint; the player stays at {player.transform.position}.");

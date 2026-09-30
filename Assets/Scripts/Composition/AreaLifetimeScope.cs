@@ -2,15 +2,11 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-// Scope of one area scene (tilemaps, navigation, mobs, spawn points). Parented to the Gameplay
-// scope so area objects can resolve the session's player.
+// Scope of one area scene (tilemaps, navigation, mobs, spawn points). GameFlow parents it to the
+// Gameplay scope, so area objects can resolve the session's player, and enqueues the
+// AreaEntryRequest for this load into it.
 public class AreaLifetimeScope : LifetimeScope
 {
-    protected override LifetimeScope FindParent()
-    {
-        return Find<GameplayLifetimeScope>();
-    }
-
     protected override void Configure(IContainerBuilder builder)
     {
         if (Parent == null)

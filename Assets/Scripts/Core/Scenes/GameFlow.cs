@@ -7,21 +7,25 @@ using VContainer.Unity;
 
 // Orchestrates which additive scenes are loaded under the persistent Main scene:
 // MainMenu, or Gameplay (one per session) plus exactly one Area at a time.
+// It also decides each loaded scene's parent scope (Main for MainMenu/Gameplay, Gameplay for areas).
 public sealed class GameFlow
 {
     private readonly SceneLoader sceneLoader;
     private readonly ScreenFader screenFader;
     private readonly GameScenes gameScenes;
+    private readonly LifetimeScope mainScope;
 
     private Scene menuScene;
     private Scene gameplayScene;
     private Scene areaScene;
+    private LifetimeScope gameplayScope;
 
-    public GameFlow(SceneLoader sceneLoader, ScreenFader screenFader, GameScenes gameScenes)
+    public GameFlow(SceneLoader sceneLoader, ScreenFader screenFader, GameScenes gameScenes, LifetimeScope mainScope)
     {
         this.sceneLoader = sceneLoader;
         this.screenFader = screenFader;
         this.gameScenes = gameScenes;
+        this.mainScope = mainScope;
     }
 
     public event Action TransitionStarted;
@@ -105,7 +109,7 @@ public sealed class GameFlow
 
         if (!IsLoaded(menuScene))
         {
-            menuScene = await sceneLoader.LoadAdditiveAsync(gameScenes.MainMenu, cancellation);
+            menuScene = await LoadUnderScopeAsync(gameScenes.MainMenu, mainScope, cancellation);
         }
 
         SceneManager.SetActiveScene(menuScene);
@@ -122,7 +126,8 @@ public sealed class GameFlow
         // A new game always starts from a fresh Gameplay scene so player state resets.
         await UnloadAreaAsync(cancellation);
         await UnloadGameplayAsync(cancellation);
-        gameplayScene = await sceneLoader.LoadAdditiveAsync(gameScenes.Gameplay, cancellation);
+        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
+        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
 
         await LoadAreaCoreAsync(area, spawnId, cancellation);
     }
@@ -133,13 +138,32 @@ public sealed class GameFlow
         await UnloadAreaAsync(cancellation);
         await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
 
-        areaScene = await sceneLoader.LoadAdditiveAsync(area, cancellation);
+        AreaEntryRequest entryRequest = new AreaEntryRequest(area, spawnId);
+        using (LifetimeScope.Enqueue(builder => builder.RegisterInstance(entryRequest)))
+        {
+            areaScene = await LoadUnderScopeAsync(area, gameplayScope, cancellation);
+        }
+
         CurrentArea = area;
 
         // The active scene receives runtime Instantiate calls (popups, VFX, drops) and supplies
         // render settings, so transient objects are cleaned up with the area.
         SceneManager.SetActiveScene(areaScene);
-        EnterArea(areaScene, spawnId);
+        EnterArea(areaScene);
+    }
+
+    // The scene's LifetimeScope builds in Awake, which runs while the load is awaited, so the parent
+    // (and any Enqueue around this call) must stay pushed until the load completes. Transitions never
+    // overlap, so the loading scene's scope is the only one that awakes in that window.
+    private async Awaitable<Scene> LoadUnderScopeAsync(
+        SceneDefinition definition,
+        LifetimeScope parent,
+        CancellationToken cancellation)
+    {
+        using (LifetimeScope.EnqueueParent(parent))
+        {
+            return await sceneLoader.LoadAdditiveAsync(definition, cancellation);
+        }
     }
 
     private async Awaitable UnloadAreaAsync(CancellationToken cancellation)
@@ -164,10 +188,11 @@ public sealed class GameFlow
 
         Scene scene = gameplayScene;
         gameplayScene = default;
+        gameplayScope = null;
         await sceneLoader.UnloadAsync(scene, cancellation);
     }
 
-    private static void EnterArea(Scene scene, string spawnId)
+    private static void EnterArea(Scene scene)
     {
         LifetimeScope scope = LifetimeScope.Find<LifetimeScope>(scene);
         if (scope == null || scope.Container == null || !scope.Container.TryResolve(out IAreaEntry areaEntry))
@@ -177,7 +202,7 @@ public sealed class GameFlow
             return;
         }
 
-        areaEntry.Enter(spawnId);
+        areaEntry.Enter();
     }
 
     private static bool IsLoaded(Scene scene)

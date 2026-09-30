@@ -3,8 +3,8 @@ using UnityEngine.InputSystem;
 using VContainer;
 using VContainer.Unity;
 
-// Root composition scope, living in the persistent Main scene. Every other scene's scope
-// parents to this one, directly (MainMenu, Gameplay) or through Gameplay (areas).
+// Root composition scope, living in the persistent Main scene. GameFlow parents every other
+// scene's scope to this one, directly (MainMenu, Gameplay) or through Gameplay (areas).
 public class MainLifetimeScope : LifetimeScope
 {
     [SerializeField] private GameScenes gameScenes;
@@ -22,7 +22,10 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterInstance<IClock>(UnityClock.Shared);
 
         builder.Register<SceneLoader>(Lifetime.Singleton);
-        builder.Register<GameFlow>(Lifetime.Singleton);
+        // GameFlow parents scene scopes to this one. Passed as a parameter rather than registered so
+        // child containers never see it (VContainer already resolves LifetimeScope to each scope itself).
+        builder.Register<GameFlow>(Lifetime.Singleton)
+            .WithParameter<LifetimeScope>(this);
 
         builder.Register<PlayerInputService>(Lifetime.Singleton)
             .WithParameter(inputActions)

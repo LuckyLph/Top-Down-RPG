@@ -37,6 +37,8 @@ public class MobController : MonoBehaviour
     private MobPatrolAnchor patrol;
     private MeleeDamageDealer damageDealer;
     private Collider2D selfCollider;
+    private Transform cachedTarget;
+    private Collider2D cachedTargetCollider;
     private IMobState currentState;
     private bool initialized;
     private float deltaTime;
@@ -251,10 +253,17 @@ public class MobController : MonoBehaviour
         }
 
         Transform target = perception.CurrentTarget;
-        if (selfCollider != null && target.TryGetComponent(out Collider2D targetCollider))
+        if (target != cachedTarget)
+        {
+            // Queried every frame while chasing or attacking, so the lookup is done once per target.
+            cachedTarget = target;
+            target.TryGetComponent(out cachedTargetCollider);
+        }
+
+        if (selfCollider != null && cachedTargetCollider != null)
         {
             // Edge-to-edge distance avoids scale/collider-size issues from center-distance checks.
-            ColliderDistance2D colliderDistance = selfCollider.Distance(targetCollider);
+            ColliderDistance2D colliderDistance = selfCollider.Distance(cachedTargetCollider);
             distance = Mathf.Max(0f, colliderDistance.distance);
             return true;
         }

@@ -24,6 +24,10 @@ public class MobMotor2D : MonoBehaviour
     private bool isAttackAnimationActive;
     private float attackAnimationEndTime;
     private bool supportsAttackAnimation;
+    // The animator and controller supportsAttackAnimation was computed for; reading
+    // Animator.parameters allocates, so it is only re-checked when either changes.
+    private Animator resolvedAnimator;
+    private RuntimeAnimatorController resolvedController;
 
     public Vector2 Position => rb != null ? rb.position : (Vector2)transform.position;
     public float MoveSpeed => moveSpeed;
@@ -151,6 +155,14 @@ public class MobMotor2D : MonoBehaviour
             animator = GetComponentInChildren<Animator>(true);
         }
 
+        RuntimeAnimatorController controller = animator != null ? animator.runtimeAnimatorController : null;
+        if (animator == resolvedAnimator && controller == resolvedController)
+        {
+            return;
+        }
+
+        resolvedAnimator = animator;
+        resolvedController = controller;
         supportsAttackAnimation = CanDriveAnimator() && AnimatorHasBoolParameter(IsAttackingHash);
     }
 

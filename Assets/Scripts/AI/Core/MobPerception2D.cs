@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class MobPerception2D : MonoBehaviour
 {
-    [SerializeField] private MobTargetProvider targetProvider;
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
     [SerializeField] private Color detectionRangeColor = new(0.25f, 0.8f, 1f, 0.7f);
@@ -11,6 +10,7 @@ public class MobPerception2D : MonoBehaviour
     [SerializeField] private Color lineOfSightBlockedColor = new(1f, 0.2f, 0.2f, 0.9f);
     [SerializeField] private Color lastKnownTargetColor = new(1f, 1f, 0.3f, 0.75f);
 
+    private IPlayerLocator player;
     private MobConfig config;
     private float losTimer;
     private bool hasDetectedTarget;
@@ -20,18 +20,16 @@ public class MobPerception2D : MonoBehaviour
     private Vector2 lastLinecastOrigin;
     private Vector2 lastLinecastTarget;
     private bool lastLineOfSightBlocked;
-    private Transform cachedHealthOwner;
-    private Health cachedTargetHealth;
 
-    public Transform CurrentTarget => targetProvider != null ? targetProvider.Target : null;
+    public Transform CurrentTarget => player?.Transform;
     public bool HasDetectedTarget => hasDetectedTarget;
     public bool HasLineOfSight => hasLineOfSight;
     public float DistanceToTarget => distanceToTarget;
     public Vector2 LastKnownTargetPosition => lastKnownTargetPosition;
 
-    public void Initialize(MobTargetProvider provider, MobConfig mobConfig)
+    public void Initialize(IPlayerLocator playerLocator, MobConfig mobConfig)
     {
-        targetProvider = provider;
+        player = playerLocator;
         config = mobConfig;
         losTimer = 0f;
         hasDetectedTarget = false;
@@ -51,7 +49,7 @@ public class MobPerception2D : MonoBehaviour
         }
 
         Transform target = CurrentTarget;
-        if (target == null || IsTargetDead(target))
+        if (target == null || !player.IsAlive)
         {
             ResetPerception();
             return;
@@ -99,17 +97,6 @@ public class MobPerception2D : MonoBehaviour
         RaycastHit2D hit = Physics2D.Linecast(origin, targetPosition, config.obstacleLayerMask);
         lastLineOfSightBlocked = hit.collider != null;
         return !lastLineOfSightBlocked;
-    }
-
-    private bool IsTargetDead(Transform target)
-    {
-        if (target != cachedHealthOwner)
-        {
-            cachedHealthOwner = target;
-            cachedTargetHealth = target.GetComponent<Health>();
-        }
-
-        return cachedTargetHealth != null && cachedTargetHealth.IsDead;
     }
 
     private void ResetPerception()

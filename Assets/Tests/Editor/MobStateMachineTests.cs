@@ -272,10 +272,6 @@ public class MobStateMachineTests
         navGrid = root.AddComponent<NavigationGrid2D>();
         navGrid.BuildGrid();
 
-        GameObject providerObject = new("MobTargetProvider");
-        providerObject.transform.SetParent(root.transform);
-        MobTargetProvider provider = providerObject.AddComponent<MobTargetProvider>();
-
         GameObject playerObject = new("Player");
         playerObject.tag = "Player";
         playerObject.transform.position = new Vector3(100f, 0f, 0f);
@@ -283,7 +279,6 @@ public class MobStateMachineTests
         playerHealth = playerObject.AddComponent<Health>();
         playerObject.AddComponent<DamageReceiver>();
         playerObject.AddComponent<DisableOnDeath>();
-        provider.SetTarget(player);
 
         config = ScriptableObject.CreateInstance<MobConfig>();
         config.idleDurationRange = new Vector2(10f, 10f);
@@ -313,6 +308,6 @@ public class MobStateMachineTests
         mob.AddComponent<MobPatrolAnchor>();
         brain = mob.AddComponent<MobController>();
 
-        brain.Configure(config, navGrid, provider);
+        brain.Configure(config, navGrid, new PlayerLocator(player, playerHealth));
     }
 }

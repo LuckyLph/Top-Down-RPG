@@ -52,7 +52,7 @@ public class SceneFlowPlayModeTests
 
         MobController mob = Object.FindAnyObjectByType<MobController>();
         Assert.That(mob, Is.Not.Null);
-        Assert.That(mob.TargetProvider.Target, Is.SameAs(player.transform), "Area mobs should be injected with the session player.");
+        Assert.That(mob.Perception.CurrentTarget, Is.SameAs(player.transform), "Area mobs should be injected with the session player.");
         Assert.That(mob.NavigationGrid.gameObject.scene, Is.EqualTo(SceneManager.GetActiveScene()));
     }
 

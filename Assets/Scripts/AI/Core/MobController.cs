@@ -17,9 +17,6 @@ using UnityEditor;
 public class MobController : MonoBehaviour
 {
     [SerializeField] private MobConfig config;
-    [SerializeField] private NavigationGrid2D navigationGrid;
-    [SerializeField] private MobTargetProvider targetProvider;
-    [SerializeField] private bool autoResolveDependencies = true;
     [SerializeField] private UnityEvent onAttackRangeEntered;
     [Header("Debug")]
     [SerializeField] private bool drawBrainGizmos = true;
@@ -32,6 +29,8 @@ public class MobController : MonoBehaviour
 
     private readonly Dictionary<MobStateId, IMobState> states = new();
 
+    private NavigationGrid2D navigationGrid;
+    private IPlayerLocator player;
     private MobMotor2D motor;
     private MobPerception2D perception;
     private MobPathAgent2D pathAgent;
@@ -44,7 +43,7 @@ public class MobController : MonoBehaviour
 
     public MobConfig Config => config;
     public NavigationGrid2D NavigationGrid => navigationGrid;
-    public MobTargetProvider TargetProvider => targetProvider;
+    public IPlayerLocator Player => player;
     public MobMotor2D Motor => motor;
     public MobPerception2D Perception => perception;
     public MobPathAgent2D PathAgent => pathAgent;
@@ -78,25 +77,36 @@ public class MobController : MonoBehaviour
         FixedTickStateMachine();
     }
 
-    // Injected by the area's LifetimeScope so the mob always uses its own area's grid.
+    // Injected by the area's LifetimeScope: its own area's grid and the session's player.
     [Inject]
-    public void Construct(NavigationGrid2D navGrid)
+    public void Construct(NavigationGrid2D navGrid, IPlayerLocator playerLocator)
     {
         navigationGrid = navGrid;
-        if (initialized)
-        {
-            initialized = false;
-            EnsureInitialized();
-        }
+        player = playerLocator;
+        Reinitialize();
     }
 
-    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, MobTargetProvider provider)
+    // For mobs built outside a container (tests, tools); runtime spawns use IObjectResolver.Instantiate.
+    // Initializes immediately so the brain's components are ready to drive by hand.
+    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerLocator playerLocator)
     {
         config = mobConfig;
         navigationGrid = navGrid;
-        targetProvider = provider;
-        autoResolveDependencies = false;
+        player = playerLocator;
         initialized = false;
+        currentState = null;
+        EnsureInitialized();
+    }
+
+    private void Reinitialize()
+    {
+        if (!initialized)
+        {
+            return;
+        }
+
+        initialized = false;
+        currentState = null;
         EnsureInitialized();
     }
 
@@ -161,11 +171,6 @@ public class MobController : MonoBehaviour
 
         CacheComponents();
 
-        if (autoResolveDependencies)
-        {
-            ResolveDependencies();
-        }
-
         if (config == null)
         {
             Debug.LogError($"{name} has no {nameof(MobConfig)} assigned; disabling its brain.", this);
@@ -180,7 +185,7 @@ public class MobController : MonoBehaviour
 
         motor.Initialize(config);
         pathAgent.Initialize(navigationGrid, motor, config);
-        perception.Initialize(targetProvider, config);
+        perception.Initialize(player, config);
         patrol.Initialize(navigationGrid, config);
         damageDealer.Initialize(config);
 
@@ -218,14 +223,6 @@ public class MobController : MonoBehaviour
         if (selfCollider == null)
         {
             selfCollider = GetComponent<Collider2D>();
-        }
-    }
-
-    private void ResolveDependencies()
-    {
-        if (targetProvider == null)
-        {
-            targetProvider = GetComponent<MobTargetProvider>();
         }
     }
 

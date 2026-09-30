@@ -4,6 +4,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using VContainer;
+using VContainer.Unity;
 
 public class MobPlayModeBehaviorTests
 {
@@ -40,7 +42,7 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
-    public IEnumerator MultipleMobs_ShareSameNavigationGrid()
+    public IEnumerator MobsSpawnedThroughAreaScope_ShareGridAndPlayer()
     {
         yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
@@ -52,14 +54,16 @@ public class MobPlayModeBehaviorTests
         Assert.That(firstMob, Is.Not.Null, "The clearing slice should contain at least one MobController.");
         Assert.That(firstMob.NavigationGrid, Is.SameAs(navGrid));
 
-        GameObject clone = Object.Instantiate(firstMob.gameObject, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
+        // Runtime spawns go through the area's container so they receive the same dependencies.
+        IObjectResolver areaResolver = LifetimeScope.Find<AreaLifetimeScope>(navGrid.gameObject.scene).Container;
+        MobController secondMob = areaResolver.Instantiate(firstMob, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
         yield return null;
 
-        MobController secondMob = clone.GetComponent<MobController>();
-        Assert.That(secondMob, Is.Not.Null);
         Assert.That(secondMob.NavigationGrid, Is.SameAs(navGrid));
+        Assert.That(secondMob.Player, Is.SameAs(firstMob.Player));
+        Assert.That(secondMob.gameObject.scene, Is.EqualTo(navGrid.gameObject.scene));
 
-        Object.Destroy(clone);
+        Object.Destroy(secondMob.gameObject);
     }
 
     [UnityTest]

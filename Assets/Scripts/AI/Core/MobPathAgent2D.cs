@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class MobPathAgent2D : MonoBehaviour
 {
-    [SerializeField] private NavigationGrid2D navigationGrid;
     [Header("Debug")]
     [SerializeField] private bool drawPathGizmos = true;
     [SerializeField] private Color pathColor = new(1f, 1f, 0f, 0.9f);
@@ -11,6 +10,7 @@ public class MobPathAgent2D : MonoBehaviour
     [SerializeField] private Color goalColor = new(0.2f, 1f, 0.2f, 0.9f);
 
     private readonly List<Vector2> waypoints = new();
+    private NavigationGrid2D navigationGrid;
     private MobConfig config;
     private MobMotor2D motor;
     private int waypointIndex;

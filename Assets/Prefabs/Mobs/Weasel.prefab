@@ -149,7 +149,6 @@ GameObject:
   - component: {fileID: 7770643495330833897}
   - component: {fileID: 5695236964154659696}
   - component: {fileID: 9074636745028169715}
-  - component: {fileID: 5100462655454951225}
   - component: {fileID: 96597474463099594}
   - component: {fileID: 2450481122165686430}
   - component: {fileID: 6297355658967816007}
@@ -281,7 +280,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc473898ab0953f49ba9697e3c5eed6e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobPerception2D
-  targetProvider: {fileID: 0}
   drawGizmos: 1
   detectionRangeColor: {r: 0.25, g: 0.8, b: 1, a: 0.7}
   loseRangeColor: {r: 1, g: 0.7, b: 0.25, a: 0.65}
@@ -300,7 +298,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20dc5c135a98cba4e9fec49b580dcc4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobPathAgent2D
-  navigationGrid: {fileID: 0}
   drawPathGizmos: 1
   pathColor: {r: 1, g: 1, b: 0, a: 0.9}
   partialPathColor: {r: 1, g: 0.5, b: 0.2, a: 0.9}
@@ -333,9 +330,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobController
   config: {fileID: 11400000, guid: 4cdad9c996ec4c742b6bd28d36ae4121, type: 2}
-  navigationGrid: {fileID: 0}
-  targetProvider: {fileID: 0}
-  autoResolveDependencies: 1
   onAttackRangeEntered:
     m_PersistentCalls:
       m_Calls: []
@@ -346,19 +340,6 @@ MonoBehaviour:
   chaseColor: {r: 1, g: 0.35, b: 0.35, a: 0.95}
   attackColor: {r: 1, g: 0.9, b: 0.2, a: 0.95}
   returnColor: {r: 0.4, g: 1, b: 0.6, a: 0.95}
---- !u!114 &5100462655454951225
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8304804741037770803}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3ea5dcdd735b9544eb98d6ab17656b4c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::MobTargetProvider
-  target: {fileID: 0}
 --- !u!114 &96597474463099594
 MonoBehaviour:
   m_ObjectHideFlags: 0

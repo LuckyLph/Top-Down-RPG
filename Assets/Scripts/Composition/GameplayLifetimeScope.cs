@@ -17,6 +17,7 @@ public class GameplayLifetimeScope : LifetimeScope
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(player);
+        builder.RegisterInstance<IPlayerLocator>(new PlayerLocator(player.transform, player.GetComponent<Health>()));
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterComponentInHierarchy<PlayerHudController>();
 

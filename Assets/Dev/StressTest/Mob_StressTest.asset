@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5935883b566f36048bc3caeb685a342e, type: 3}
+  m_Name: Mob_StressTest
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::MobConfig
+  moveSpeed: 2
+  acceleration: 20
+  waypointReachDistance: 0.05
+  arrivalDistance: 0.15
+  detectionRadius: 6
+  loseTargetDistance: 8
+  lineOfSightInterval: 0.2
+  obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  attackStopDistance: 0.375
+  attackExitBuffer: 0.25
+  attackDamage: 0
+  attackInterval: 0.75
+  patrolRoamRadius: 12
+  patrolSampleAttempts: 12
+  idleDurationRange: {x: 0.5, y: 1.5}
+  repathInterval: 0.25
+  nearestCellSearchRadius: 8
+  stuckTimeout: 1
+  movementProfile: {fileID: 11400000, guid: 55e5271f71628e1bf0c34e5cd4a56789, type: 2}

@@ -4,6 +4,7 @@
     "TopDownRPG.Gameplay",
     "VContainer",
     "TopDownRPG.Core",
+    "TopDownRPG.DevTools",
     "Unity.TextMeshPro"
   ],
   "includePlatforms": [],

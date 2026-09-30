@@ -1,0 +1,21 @@
+{
+  "name": "TopDownRPG.DevTools",
+  "references": [
+    "TopDownRPG.Gameplay",
+    "TopDownRPG.Core",
+    "VContainer",
+    "skner.DualGrid",
+    "Unity.2D.Tilemap.Extras"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_EDITOR || DEVELOPMENT_BUILD"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

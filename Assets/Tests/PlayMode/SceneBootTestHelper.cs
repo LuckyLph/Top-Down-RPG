@@ -19,8 +19,14 @@ public static class SceneBootTestHelper
 
     public static IEnumerator BootIntoStartingArea()
     {
+        yield return BootIntoArea(StartingAreaPath);
+    }
+
+    // Any scene can be booted as an area in the editor, listed in GameScenes or not (see BootFlow).
+    public static IEnumerator BootIntoArea(string areaScenePath)
+    {
 #if UNITY_EDITOR
-        EditorBootRequest.Set(new[] { StartingAreaPath });
+        EditorBootRequest.Set(new[] { areaScenePath });
 #endif
         yield return LoadMainScene();
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");

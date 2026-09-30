@@ -76,6 +76,26 @@ public class PathfindingBenchmarkTests
     }
 
     [Test]
+    public void UnreachableGoal_Strict()
+    {
+        BuildGrid(cell => cell.x == Size / 2);
+        List<(Vector3Int, Vector3Int)> pairs = new();
+        Random random = new(11);
+        for (int i = 0; i < 20; i++)
+        {
+            pairs.Add((new Vector3Int(random.Next(0, Size / 2), random.Next(0, Size), 0),
+                new Vector3Int(random.Next(Size / 2 + 1, Size), random.Next(0, Size), 0)));
+        }
+
+        GridAStarPathfinder2D pathfinder = (GridAStarPathfinder2D)navigationGrid.Pathfinder;
+        Measure("Unreachable goal (strict)", pairs.Count, i =>
+        {
+            pathfinder.FindPath(new PathRequest(pairs[i].Item1, pairs[i].Item2, false, profile));
+            return pathfinder.LastExpandedCount;
+        });
+    }
+
+    [Test]
     public void BuildPathToWorld_Maze()
     {
         Random random = new(7);

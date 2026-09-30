@@ -88,6 +88,34 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void AStar_FailsWithoutSearching_WhenStrictGoalIsInAnotherRegion()
+    {
+        SetupNavigationGrid(addGapInBarrier: false);
+
+        PathResult result = navigationGrid.Pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), allowPartial: false));
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(((GridAStarPathfinder2D)navigationGrid.Pathfinder).LastExpandedCount, Is.Zero);
+    }
+
+    [Test]
+    public void AStar_StopsAtSearchCap_AndReturnsBestPartialPath()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        navigationGrid.MaxSearchCells = 3;
+        GridAStarPathfinder2D pathfinder = (GridAStarPathfinder2D)navigationGrid.Pathfinder;
+
+        PathResult partial = pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), allowPartial: true));
+        Assert.That(pathfinder.LastExpandedCount, Is.EqualTo(3));
+        Assert.That(partial.Success, Is.True);
+        Assert.That(partial.IsPartial, Is.True);
+        Assert.That(partial.ReachedResolvedGoal, Is.False);
+
+        PathResult strict = pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), allowPartial: false));
+        Assert.That(strict.Success, Is.False);
+    }
+
+    [Test]
     public void AStar_ReturnsPartial_WhenGoalIsOutsideWalkableGrid_AndPartialAllowed()
     {
         SetupNavigationGrid(addGapInBarrier: true);

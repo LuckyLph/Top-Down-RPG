@@ -56,6 +56,14 @@ public class GridAStarPathfinder2D : IPathfinder2D
             adjustedGoalToNearestWalkable = true;
         }
 
+        // Connectivity is cached per profile, so a goal in another region fails without searching it.
+        if (!request.AllowPartial && !navigationGrid.AreCellsConnected(start, goal, movementProfile))
+        {
+            return PathResult.Failure;
+        }
+
+        int maxExpanded = navigationGrid.MaxSearchCells;
+
         OpenHeap openHeap = new();
         HashSet<Vector3Int> closedSet = new();
         Dictionary<Vector3Int, Vector3Int> cameFrom = new();
@@ -68,7 +76,7 @@ public class GridAStarPathfinder2D : IPathfinder2D
         Vector3Int closestToGoal = start;
         int closestHeuristic = startHeuristic;
 
-        while (openHeap.Count > 0)
+        while (openHeap.Count > 0 && LastExpandedCount < maxExpanded)
         {
             OpenEntry entry = openHeap.Pop();
             Vector3Int current = entry.Cell;

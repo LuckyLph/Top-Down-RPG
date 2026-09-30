@@ -42,6 +42,9 @@ public class NavigationGrid2D : MonoBehaviour
     [SerializeField] private List<NavigationTerrainSource2D> terrainSources = new();
     [SerializeField] private bool discoverSourcesInChildren = true;
     [SerializeField] private int nearestCellSearchRadius = 8;
+    [Tooltip("Upper bound on cells one A* search may expand. A search that hits it returns its best partial path, " +
+        "or fails if partial paths were not allowed. Raise it for very large maps.")]
+    [SerializeField, Min(1)] private int maxSearchCells = 10000;
     [Header("Debug")]
     [SerializeField] private bool drawGridBoundsGizmo = true;
     [SerializeField] private bool drawWalkableCellGizmos = false;
@@ -60,6 +63,12 @@ public class NavigationGrid2D : MonoBehaviour
     public IPathfinder2D Pathfinder => pathfinder;
     public BoundsInt WalkableBounds => walkableBounds;
     public bool IsBuilt => pathfinder != null;
+
+    public int MaxSearchCells
+    {
+        get => maxSearchCells;
+        set => maxSearchCells = Mathf.Max(1, value);
+    }
     public IReadOnlyList<NavigationTerrainSource2D> TerrainSources => terrainSources;
 
     private void Awake()

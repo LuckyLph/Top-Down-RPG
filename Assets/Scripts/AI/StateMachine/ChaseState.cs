@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class ChaseState : MobStateBase
 {
     private float repathTimer;
@@ -32,7 +34,16 @@ public class ChaseState : MobStateBase
         // collisions can push the mob off its path, leaving its old waypoints behind a wall.
         if (!PathAgent.HasGoalCell || repathTimer <= 0f)
         {
-            bool pathFound = PathAgent.BuildPathToWorld(Perception.CurrentTarget.position, allowPartial: true);
+            Vector2 targetPosition = Perception.CurrentTarget.position;
+
+            // Cached connectivity rules out an unreachable target without an A* search across the region.
+            if (!PathAgent.CanReachWorldTarget(targetPosition))
+            {
+                Brain.ChangeState(MobStateId.Return);
+                return;
+            }
+
+            bool pathFound = PathAgent.BuildPathToWorld(targetPosition, allowPartial: true);
             repathTimer = Config.repathInterval;
 
             if (!pathFound || !PathAgent.ReachedResolvedGoal || PathAgent.GoalWasAdjusted)

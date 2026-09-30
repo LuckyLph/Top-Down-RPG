@@ -54,6 +54,35 @@ public class MobMotor2DTests
         Assert.That(motor.SupportsAttackAnimation, Is.False);
     }
 
+    [Test]
+    public void FixedTick_KeepsFacing_WhenOnlySteeringDriftMovesTheMob()
+    {
+        MobMotor2D motor = CreateMotorWithWeaselAnimator();
+        motor.Initialize(null);
+        motor.FaceTowards(motor.Position + Vector2.right);
+
+        // Holding still (no desired velocity) while crowd separation nudges the mob left.
+        motor.Stop();
+        motor.SetSteeringVelocity(Vector2.left);
+        motor.FixedTick();
+
+        Assert.That(root.GetComponent<Rigidbody2D>().linearVelocity.x, Is.LessThan(0f), "The drift itself should still apply.");
+        Assert.That(motor.LastMoveDirection.x, Is.GreaterThan(0.9f), "Facing should stay on the target, not turn to face the drift.");
+    }
+
+    [Test]
+    public void FixedTick_FacesIntendedDirection_EvenWhenSteeringDeflectsTheMob()
+    {
+        MobMotor2D motor = CreateMotorWithWeaselAnimator();
+        motor.Initialize(null);
+
+        motor.SetDesiredVelocity(Vector2.up * 2f);
+        motor.SetSteeringVelocity(Vector2.left * 1.5f);
+        motor.FixedTick();
+
+        Assert.That(motor.LastMoveDirection.y, Is.GreaterThan(0.99f));
+    }
+
     private MobMotor2D CreateMotorWithWeaselAnimator()
     {
         root = new GameObject("Mob");

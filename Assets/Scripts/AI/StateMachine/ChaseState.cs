@@ -2,6 +2,11 @@ using UnityEngine;
 
 public class ChaseState : MobStateBase
 {
+    // Once waiting, the way ahead must clear by this factor more (and the target move this much farther)
+    // before moving again. Without it, separation nudged a waiting mob just out of the blocked zone, it
+    // stepped forward, got blocked again, and crowds flickered back and forth several times a second.
+    private const float WaitReleaseFactor = MobSeparation2D.SenseRadiusFactor;
+
     private float repathTimer;
     private bool waitingBehindCrowd;
 
@@ -62,7 +67,7 @@ public class ChaseState : MobStateBase
 
     public override void FixedTick()
     {
-        waitingBehindCrowd = IsBlockedByCrowdNearTarget();
+        waitingBehindCrowd = IsBlockedByCrowdNearTarget(waitingBehindCrowd ? WaitReleaseFactor : 1f);
         if (waitingBehindCrowd)
         {
             // Hold position facing the target; separation still keeps this mob off its neighbors.
@@ -74,7 +79,7 @@ public class ChaseState : MobStateBase
         PathAgent.FixedTick();
     }
 
-    private bool IsBlockedByCrowdNearTarget()
+    private bool IsBlockedByCrowdNearTarget(float rangeFactor)
     {
         Transform target = Perception.CurrentTarget;
         if (target == null)
@@ -83,7 +88,7 @@ public class ChaseState : MobStateBase
         }
 
         Vector2 targetPosition = target.position;
-        return Vector2.Distance(Motor.Position, targetPosition) <= Config.crowdWaitDistance
-            && Brain.Separation.HasNeighborToward(targetPosition);
+        return Vector2.Distance(Motor.Position, targetPosition) <= Config.crowdWaitDistance * rangeFactor
+            && Brain.Separation.HasNeighborToward(targetPosition, Config.separationRadius * rangeFactor);
     }
 }

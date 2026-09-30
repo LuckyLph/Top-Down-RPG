@@ -495,6 +495,44 @@ public class MobStateMachineTests
             "The mob should hold (only separation moves it, away from the ally) rather than push toward the target.");
     }
 
+    [Test]
+    public void ChaseState_KeepsWaiting_WhenSeparationNudgesItJustPastTheAlly()
+    {
+        SetupWorld(new Vector3(1.7f, 0.5f, 0f));
+        CreateMob(new Vector3(2.2f, 0.5f, 0f));
+        player.position = new Vector3(3f, 0.5f, 0f);
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        // Pushed back to just beyond the separation radius (0.8) from the ally, but within 1.5x of it.
+        Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
+        rb.position = new Vector2(1.2f, 0.5f);
+        rb.linearVelocity = Vector2.zero;
+        brain.FixedTickStateMachine();
+
+        Assert.That(rb.linearVelocity.x, Is.LessThanOrEqualTo(0f), "The mob should stay put instead of stepping straight back in.");
+    }
+
+    [Test]
+    public void ChaseState_StopsWaiting_OnceTheWayAheadIsClearlyOpen()
+    {
+        SetupWorld(new Vector3(1.7f, 0.5f, 0f));
+        MobController ally = CreateMob(new Vector3(2.2f, 0.5f, 0f));
+        player.position = new Vector3(3f, 0.5f, 0f);
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Object.DestroyImmediate(ally.gameObject);
+        Physics2D.SyncTransforms();
+        brain.FixedTickStateMachine();
+        brain.TickStateMachine(config.repathInterval);
+        brain.FixedTickStateMachine();
+
+        Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
+    }
+
     // A pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so
     // the mob can still path to where it last saw the target.
     private GameObject BlockLineOfSightAt(Vector2 position)

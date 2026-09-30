@@ -143,9 +143,9 @@ public class MobMotor2D : MonoBehaviour
 
         if (spriteRenderer != null)
         {
-            if (useHorizontalFlip && Mathf.Abs(rb.linearVelocity.x) > 0.01f)
+            if (useHorizontalFlip && Mathf.Abs(desiredVelocity.x) > 0.01f)
             {
-                spriteRenderer.flipX = rb.linearVelocity.x < 0f;
+                spriteRenderer.flipX = desiredVelocity.x < 0f;
             }
             else if (!useHorizontalFlip)
             {
@@ -174,12 +174,16 @@ public class MobMotor2D : MonoBehaviour
         supportsAttackAnimation = CanDriveAnimator() && AnimatorHasBoolParameter(IsAttackingHash);
     }
 
+    // Facing and the walk cycle follow what the mob is trying to do, not every nudge it receives:
+    // crowd separation shuffles a holding mob around, and turning to face that drift made crowds
+    // flicker. A mob with no intent to move keeps its facing (e.g. toward its target) and stays idle.
     private void UpdateAnimator(Vector2 velocity)
     {
-        bool isMoving = velocity.sqrMagnitude > 0.0001f;
-        if (isMoving)
+        bool intendsToMove = desiredVelocity.sqrMagnitude > 0.0001f;
+        bool isMoving = intendsToMove && velocity.sqrMagnitude > 0.0001f;
+        if (intendsToMove)
         {
-            lastMoveDirection = velocity.normalized;
+            lastMoveDirection = desiredVelocity.normalized;
         }
 
         if (!CanDriveAnimator())
@@ -187,8 +191,7 @@ public class MobMotor2D : MonoBehaviour
             return;
         }
 
-        Vector2 animationDirection = isMoving ? velocity.normalized : lastMoveDirection;
-        ApplyAnimatorMovement(isMoving, animationDirection);
+        ApplyAnimatorMovement(isMoving, lastMoveDirection);
     }
 
     private void ResolveSpriteRenderer()

@@ -6,7 +6,10 @@ using UnityEngine;
 // axis, so crowds slide along walls instead of clipping into them.
 public sealed class MobSeparation2D
 {
-    private const int MaxNeighbors = 16;
+    private const int MaxNeighbors = 32;
+    // Neighbors are sensed a bit beyond the push radius so HasNeighborToward can be asked about a
+    // wider release distance (see ChaseState's waiting hysteresis).
+    public const float SenseRadiusFactor = 1.5f;
     // Golden angle, used to give exactly coincident mobs distinct push directions.
     private const float GoldenAngle = 2.39996323f;
 
@@ -47,7 +50,7 @@ public sealed class MobSeparation2D
             return;
         }
 
-        neighborCount = Physics2D.OverlapCircle(position, radius, filter, neighbors);
+        neighborCount = Physics2D.OverlapCircle(position, radius * SenseRadiusFactor, filter, neighbors);
         Vector2 push = Vector2.zero;
         for (int i = 0; i < neighborCount; i++)
         {
@@ -70,9 +73,10 @@ public sealed class MobSeparation2D
         velocity = ClampToWalkable(push * config.separationStrength);
     }
 
-    // Whether another mob stands directly between this one and the target, within the separation
-    // radius. Chasers use it to wait behind a crowd instead of pushing into it.
-    public bool HasNeighborToward(Vector2 target)
+    // Whether another mob stands directly between this one and the target, within maxDistance (at most
+    // SenseRadiusFactor times the separation radius). Chasers use it to wait behind a crowd instead of
+    // pushing into it.
+    public bool HasNeighborToward(Vector2 target, float maxDistance)
     {
         Vector2 toTarget = target - position;
         float distanceToTarget = toTarget.magnitude;
@@ -93,7 +97,7 @@ public sealed class MobSeparation2D
             Vector2 toOther = NeighborPosition(other) - position;
             float distance = toOther.magnitude;
             // Within about 60 degrees of straight ahead, and not beyond the target.
-            if (distance > 0.0001f && distance < distanceToTarget && Vector2.Dot(toOther / distance, forward) > 0.5f)
+            if (distance > 0.0001f && distance <= maxDistance && distance < distanceToTarget && Vector2.Dot(toOther / distance, forward) > 0.5f)
             {
                 return true;
             }

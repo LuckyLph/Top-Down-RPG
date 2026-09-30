@@ -145,15 +145,47 @@ public class CombatComponentTests
         DamagePopupLayer layer = CreatePopupLayer();
 
         FloatingDamageText popup = layer.Spawn(5, new Vector3(0f, 2f, 0f), camera);
-        popup.Refresh();
 
         RectTransform popupRect = popup.GetComponent<RectTransform>();
         Canvas parentCanvas = popup.GetComponentInParent<Canvas>();
+        float spawnY = popupRect.anchoredPosition.y;
 
         Assert.That(popup.GetComponent<TextMeshProUGUI>().text, Is.EqualTo("5"));
         Assert.That(parentCanvas, Is.SameAs(layer.GetComponent<Canvas>()));
         Assert.That(parentCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
-        Assert.That(popupRect.anchoredPosition.y, Is.GreaterThan(0f));
+        Assert.That(spawnY, Is.GreaterThan(0f));
+
+        layer.Tick(popup.Lifetime * 0.5f);
+        layer.RefreshPositions();
+
+        Assert.That(popupRect.anchoredPosition.y, Is.GreaterThan(spawnY), "Popup should rise as it ages.");
+        Assert.That(popup.GetComponent<CanvasGroup>().alpha, Is.LessThan(1f), "Popup should fade as it ages.");
+    }
+
+    [Test]
+    public void DamagePopupLayer_TickPastLifetime_ReleasesPopupForReuse()
+    {
+        root = new GameObject("PopupPoolRoot");
+        Camera camera = CreateCamera();
+        DamagePopupLayer layer = CreatePopupLayer();
+
+        FloatingDamageText first = layer.Spawn(1, Vector3.zero, camera);
+        layer.Tick(first.Lifetime * 0.5f);
+
+        Assert.That(first.gameObject.activeSelf, Is.True);
+        Assert.That(layer.ActiveCount, Is.EqualTo(1));
+
+        layer.Tick(first.Lifetime);
+
+        Assert.That(first.gameObject.activeSelf, Is.False, "Finished popup should be released to the pool.");
+        Assert.That(layer.ActiveCount, Is.EqualTo(0));
+
+        FloatingDamageText second = layer.Spawn(2, Vector3.zero, camera);
+
+        Assert.That(second, Is.SameAs(first), "Spawning again should reuse the pooled popup.");
+        Assert.That(second.gameObject.activeSelf, Is.True);
+        Assert.That(second.GetComponent<TextMeshProUGUI>().text, Is.EqualTo("2"));
+        Assert.That(layer.ActiveCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -197,6 +229,7 @@ public class CombatComponentTests
         presenter.Dispose();
         combatEvents.Publish(report);
         Assert.That(CountActivePopups(layer), Is.EqualTo(1));
+        Assert.That(layer.ActiveCount, Is.EqualTo(1));
     }
 
     private Camera CreateCamera()

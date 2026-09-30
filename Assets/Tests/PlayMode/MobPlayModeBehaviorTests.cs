@@ -89,12 +89,16 @@ public class MobPlayModeBehaviorTests
 
         FloatingDamageText popup = Object.FindAnyObjectByType<FloatingDamageText>();
         Assert.That(popup, Is.Not.Null, "A floating damage popup should be spawned when damage is applied.");
-        Assert.That(popup.GetComponentInParent<DamagePopupLayer>(), Is.Not.Null, "Popups should live on the Gameplay scene's popup layer.");
+        DamagePopupLayer layer = popup.GetComponentInParent<DamagePopupLayer>();
+        Assert.That(layer, Is.Not.Null, "Popups should live on the Gameplay scene's popup layer.");
+        Assert.That(layer.ActiveCount, Is.GreaterThan(0), "The layer should be driving the spawned popup.");
 
         player.transform.position = originalPlayerPosition;
         yield return new WaitForSeconds(1.2f);
 
-        Assert.That(Object.FindAnyObjectByType<FloatingDamageText>(), Is.Null, "Damage popup should return to the pool after fading out.");
+        Assert.That(popup.gameObject.activeSelf, Is.False, "Damage popup should return to the pool after fading out.");
+        Assert.That(layer.ActiveCount, Is.EqualTo(0));
+        Assert.That(Object.FindAnyObjectByType<FloatingDamageText>(), Is.Null);
     }
 
     [UnityTest]

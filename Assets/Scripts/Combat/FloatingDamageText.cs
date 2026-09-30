@@ -1,8 +1,7 @@
-using System;
 using TMPro;
 using UnityEngine;
 
-// Pooled damage number view. DamagePopupLayer owns the canvas and pool; this only animates itself.
+// Pooled damage number view. DamagePopupLayer owns the canvas, pool and timing; this only renders itself.
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
 [RequireComponent(typeof(TextMeshProUGUI))]
@@ -19,7 +18,6 @@ public class FloatingDamageText : MonoBehaviour
     private Camera targetCamera;
     private Vector3 worldPosition;
     private float elapsed;
-    private Action<FloatingDamageText> finished;
 
     public float Lifetime => lifetime;
 
@@ -28,34 +26,26 @@ public class FloatingDamageText : MonoBehaviour
         ResolveReferences();
     }
 
-    private void Update()
-    {
-        elapsed += Time.deltaTime;
-        if (elapsed >= lifetime)
-        {
-            Finish();
-        }
-    }
-
-    private void LateUpdate()
-    {
-        Refresh();
-    }
-
-    public void Show(int amount, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, Action<FloatingDamageText> onFinished)
+    public void Show(int amount, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas)
     {
         ResolveReferences();
 
         worldPosition = startWorldPosition;
         targetCamera = camera;
         canvasRect = parentCanvas;
-        finished = onFinished;
         elapsed = 0f;
 
         text.text = amount.ToString();
         text.color = textColor;
         canvasGroup.alpha = 1f;
         Refresh();
+    }
+
+    // Returns true once the popup has lived out its lifetime and can go back to the pool.
+    internal bool Advance(float deltaTime)
+    {
+        elapsed += deltaTime;
+        return elapsed >= lifetime;
     }
 
     // Projects the rising world position onto the overlay canvas and fades out over the lifetime.
@@ -80,21 +70,6 @@ public class FloatingDamageText : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, null, out Vector2 localPoint);
         rectTransform.anchoredPosition = localPoint;
         canvasGroup.alpha = 1f - t;
-    }
-
-    private void Finish()
-    {
-        Action<FloatingDamageText> callback = finished;
-        finished = null;
-
-        if (callback != null)
-        {
-            callback(this);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
     }
 
     private void ResolveReferences()

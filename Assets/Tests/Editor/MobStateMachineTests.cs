@@ -232,6 +232,48 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    [Test]
+    public void PatrolState_GoesIdle_WhenBlockedFromReachingDestination()
+    {
+        SetupWorld();
+
+        brain.ChangeState(MobStateId.Patrol);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Patrol));
+
+        // Edit mode runs no physics, so the mob stays put exactly as if something blocked it.
+        TickBlockedPastStuckTimeout();
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    [Test]
+    public void ReturnState_GoesIdle_WhenBlockedFromReachingSpawn()
+    {
+        SetupWorld();
+
+        Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
+        rb.position = new Vector2(5.5f, 0.5f);
+        brain.transform.position = rb.position;
+
+        brain.ChangeState(MobStateId.Return);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+
+        TickBlockedPastStuckTimeout();
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    private void TickBlockedPastStuckTimeout()
+    {
+        int fixedTicks = Mathf.CeilToInt(config.stuckTimeout / Time.fixedDeltaTime) + 1;
+        for (int i = 0; i < fixedTicks; i++)
+        {
+            brain.FixedTickStateMachine();
+        }
+
+        brain.TickStateMachine(0.1f);
+    }
+
     private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false)
     {
         root = new GameObject("MobStateMachineTestRoot");

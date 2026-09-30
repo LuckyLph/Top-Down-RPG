@@ -3,6 +3,9 @@ using UnityEngine;
 
 public class MobPathAgent2D : MonoBehaviour
 {
+    // Moving slower than this fraction of move speed while following a path counts as stalled.
+    private const float MinProgressSpeedFraction = 0.2f;
+
     [Header("Debug")]
     [SerializeField] private bool drawPathGizmos = true;
     [SerializeField] private Color pathColor = new(1f, 1f, 0f, 0.9f);
@@ -21,6 +24,8 @@ public class MobPathAgent2D : MonoBehaviour
     private bool goalWasAdjusted;
     private Vector3Int lastGoalCell;
     private bool hasGoalCell;
+    private float stalledTime;
+    private Vector2 lastProgressPosition;
 
     public NavigationGrid2D NavigationGrid => navigationGrid;
     public bool HasPath => hasPath;
@@ -30,6 +35,8 @@ public class MobPathAgent2D : MonoBehaviour
     public bool GoalWasAdjusted => goalWasAdjusted;
     public bool HasGoalCell => hasGoalCell;
     public Vector3Int LastGoalCell => lastGoalCell;
+    // Time spent following the current path without making headway, e.g. pushing into another mob.
+    public float StalledTime => stalledTime;
 
     internal IReadOnlyList<Vector2> Waypoints => waypoints;
 
@@ -118,6 +125,8 @@ public class MobPathAgent2D : MonoBehaviour
         }
 
         waypointIndex = 0;
+        stalledTime = 0f;
+        lastProgressPosition = motor.Position;
         hasPath = waypoints.Count > 0;
         reachedDestination = !hasPath;
         isPartialPath = result.IsPartial;
@@ -200,6 +209,8 @@ public class MobPathAgent2D : MonoBehaviour
         }
 
         Vector2 position = motor.Position;
+        TrackProgress(position);
+
         while (waypointIndex < waypoints.Count && Vector2.Distance(position, waypoints[waypointIndex]) <= GetReachThreshold(waypointIndex))
         {
             waypointIndex++;
@@ -216,6 +227,14 @@ public class MobPathAgent2D : MonoBehaviour
         Vector2 nextPoint = waypoints[waypointIndex];
         Vector2 direction = (nextPoint - position).normalized;
         motor.SetDesiredVelocity(direction * motor.MoveSpeed);
+    }
+
+    private void TrackProgress(Vector2 position)
+    {
+        float dt = Time.fixedDeltaTime;
+        float minStep = motor.MoveSpeed * MinProgressSpeedFraction * dt;
+        stalledTime = (position - lastProgressPosition).sqrMagnitude < minStep * minStep ? stalledTime + dt : 0f;
+        lastProgressPosition = position;
     }
 
     // Be more forgiving for the final waypoint to avoid jitter around destination.
@@ -236,6 +255,7 @@ public class MobPathAgent2D : MonoBehaviour
         reachedResolvedGoal = false;
         goalWasAdjusted = false;
         hasGoalCell = false;
+        stalledTime = 0f;
 
         if (motor != null)
         {

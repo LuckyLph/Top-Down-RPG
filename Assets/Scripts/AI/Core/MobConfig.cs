@@ -29,6 +29,8 @@ public class MobConfig : ScriptableObject
     [Header("Navigation")]
     [Min(0.01f)] public float repathInterval = 0.25f;
     [Min(1)] public int nearestCellSearchRadius = 8;
+    // Patrol and return give up after following a path this long without making headway.
+    [Min(0.1f)] public float stuckTimeout = 1f;
     public TerrainMovementProfile2D movementProfile;
 
     public TerrainMovementProfile2D MovementProfile => movementProfile;

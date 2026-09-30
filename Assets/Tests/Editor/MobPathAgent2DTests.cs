@@ -72,6 +72,31 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.ReachedDestination, Is.True);
     }
 
+    [Test]
+    public void StalledTime_Accumulates_WhileFollowingPathWithoutMoving_AndResetsOnProgress()
+    {
+        CreateGridRoot();
+        TerrainType2D ground = CreateTerrain("ground");
+        AddTerrainLayer("Ground", ground, Rect(0, 0, 4, 0));
+        BuildGridAndAgent(null);
+
+        PlaceMob(new Vector2(0.5f, 0.5f));
+        Assert.That(pathAgent.BuildPathToWorld(navigationGrid.CellToWorldCenter(new Vector3Int(4, 0, 0)), allowPartial: false), Is.True);
+
+        const int blockedTicks = 10;
+        for (int i = 0; i < blockedTicks; i++)
+        {
+            pathAgent.FixedTick();
+        }
+
+        Assert.That(pathAgent.StalledTime, Is.EqualTo(blockedTicks * Time.fixedDeltaTime).Within(0.0001f));
+
+        PlaceMob(new Vector2(0.6f, 0.5f));
+        pathAgent.FixedTick();
+
+        Assert.That(pathAgent.StalledTime, Is.Zero);
+    }
+
     private void CreateGridRoot()
     {
         root = Track(new GameObject("MobPathAgentTestRoot"));

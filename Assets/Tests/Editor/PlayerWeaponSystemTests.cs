@@ -3,8 +3,10 @@ using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using VContainer;
 
@@ -81,7 +83,7 @@ public class PlayerWeaponSystemTests
         weaponController.Construct(CreateSpawner());
 
         weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, spawnDistance: 0.75f));
-        SetPrivateField(playerController, "lastMoveDirection", Vector2.right);
+        playerController.Face(Vector2.right);
 
         bool firstAttack = weaponController.TryAttack();
         bool secondAttack = weaponController.TryAttack();
@@ -260,18 +262,31 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
-    public void PlayerPrefab_AssignsProjectInputActionAsset()
+    public void MainScope_AssignsProjectInputActionAsset()
     {
-        GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
         InputActionAsset actionsAsset = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
-        Assert.That(playerPrefab, Is.Not.Null);
         Assert.That(actionsAsset, Is.Not.Null);
 
-        PlayerController playerController = playerPrefab.GetComponent<PlayerController>();
-        Assert.That(playerController, Is.Not.Null);
+        SceneSetup[] previousSetup = EditorSceneManager.GetSceneManagerSetup();
+        Scene mainScene = EditorSceneManager.OpenScene("Assets/Scenes/Main.unity", OpenSceneMode.Additive);
+        try
+        {
+            MainLifetimeScope scope = mainScene.GetRootGameObjects()
+                .Select(root => root.GetComponentInChildren<MainLifetimeScope>(true))
+                .FirstOrDefault(found => found != null);
+            Assert.That(scope, Is.Not.Null);
 
-        SerializedProperty assetProperty = new SerializedObject(playerController).FindProperty("inputActionsAsset");
-        Assert.That(assetProperty.objectReferenceValue, Is.SameAs(actionsAsset), "Builds only use the asset assigned on the prefab.");
+            SerializedProperty assetProperty = new SerializedObject(scope).FindProperty("inputActions");
+            Assert.That(assetProperty.objectReferenceValue, Is.SameAs(actionsAsset), "Builds only use the asset assigned on the Main scope.");
+        }
+        finally
+        {
+            EditorSceneManager.CloseScene(mainScene, true);
+            if (previousSetup.Length > 0)
+            {
+                EditorSceneManager.RestoreSceneManagerSetup(previousSetup);
+            }
+        }
     }
 
     private static SlashSpawner CreateSpawner()
@@ -394,13 +409,6 @@ public class PlayerWeaponSystemTests
 
         Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
         return null;
-    }
-
-    private static void SetPrivateField<T>(Object target, string fieldName, T value)
-    {
-        FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field, Is.Not.Null, $"Expected field '{fieldName}' to exist on {target.GetType().Name}.");
-        field.SetValue(target, value);
     }
 
     private static void InvokePrivateMethod(Object target, string methodName)

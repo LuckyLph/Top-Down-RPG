@@ -430,9 +430,9 @@ Camera:
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
-    y: 0.10526316
-    width: 0.6317868
-    height: 0.631579
+    y: 0.10638297
+    width: 0.6380857
+    height: 0.63829786
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 34
@@ -733,6 +733,7 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   gameScenes: {fileID: 11400000, guid: d4d21378ba9714c4ea1815ca90e450c6, type: 2}
+  inputActions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   screenFader: {fileID: 953731977}
   cameraFollow: {fileID: 519420034}
   mainCamera: {fileID: 519420031}

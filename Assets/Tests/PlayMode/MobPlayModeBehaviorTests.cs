@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -234,7 +233,7 @@ public class MobPlayModeBehaviorTests
         int expectedDamage = weaponController.CurrentWeapon != null ? weaponController.CurrentWeapon.Damage : 1;
 
         player.transform.position = mob.transform.position + Vector3.left * 0.45f;
-        SetPrivateField(playerController, "lastMoveDirection", Vector2.right);
+        playerController.Face(Vector2.right);
 
         weaponController.TryAttack();
         yield return null;
@@ -288,12 +287,5 @@ public class MobPlayModeBehaviorTests
         {
             yield return null;
         }
-    }
-
-    private static void SetPrivateField<T>(Object target, string fieldName, T value)
-    {
-        FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field, Is.Not.Null, $"Expected field '{fieldName}' to exist on {target.GetType().Name}.");
-        field.SetValue(target, value);
     }
 }

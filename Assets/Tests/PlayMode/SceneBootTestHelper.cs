@@ -52,8 +52,13 @@ public static class SceneBootTestHelper
 
     public static GameFlow ResolveGameFlow()
     {
+        return ResolveFromMain<GameFlow>();
+    }
+
+    public static T ResolveFromMain<T>()
+    {
         MainLifetimeScope scope = UnityEngine.Object.FindAnyObjectByType<MainLifetimeScope>();
-        return scope != null && scope.Container != null ? scope.Container.Resolve<GameFlow>() : null;
+        return scope != null && scope.Container != null ? scope.Container.Resolve<T>() : default;
     }
 
     // GameFlow flips IsTransitioning synchronously when a transition starts.

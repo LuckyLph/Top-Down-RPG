@@ -1,7 +1,8 @@
 {
   "name": "TopDownRPG.Core",
   "references": [
-    "VContainer"
+    "VContainer",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

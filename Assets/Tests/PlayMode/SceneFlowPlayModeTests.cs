@@ -22,7 +22,7 @@ public class SceneFlowPlayModeTests
         PlayerController player = Object.FindAnyObjectByType<PlayerController>();
         CameraFollow2D cameraFollow = Object.FindAnyObjectByType<CameraFollow2D>();
         Assert.That(player, Is.Not.Null);
-        Assert.That(player.InputEnabled, Is.True, "Input should be unlocked once the transition finished.");
+        Assert.That(SceneBootTestHelper.ResolveFromMain<IPlayerInput>().GameplayEnabled, Is.True, "Input should be unlocked once the transition finished.");
         Assert.That(cameraFollow.Target, Is.SameAs(player.transform));
     }
 
@@ -33,6 +33,7 @@ public class SceneFlowPlayModeTests
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         PlayerController player = Object.FindAnyObjectByType<PlayerController>();
+        IPlayerInput playerInput = SceneBootTestHelper.ResolveFromMain<IPlayerInput>();
         SpawnPoint spawnPoint = Object.FindAnyObjectByType<SpawnPoint>();
         Assert.That(spawnPoint, Is.Not.Null, "The starting area should contain a SpawnPoint.");
         string spawnId = spawnPoint.SpawnId;
@@ -41,13 +42,13 @@ public class SceneFlowPlayModeTests
         player.Teleport(spawnPosition + new Vector3(6f, 4f, 0f));
         gameFlow.ChangeAreaAsync(gameFlow.Scenes.StartingArea, spawnId);
         Assert.That(gameFlow.IsTransitioning, Is.True);
-        Assert.That(player.InputEnabled, Is.False, "Input should be locked during a transition.");
+        Assert.That(playerInput.GameplayEnabled, Is.False, "Input should be locked during a transition.");
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
 
         Assert.That(SceneManager.GetActiveScene().path, Is.EqualTo(SceneBootTestHelper.StartingAreaPath));
         Assert.That(Object.FindObjectsByType<NavigationGrid2D>().Length, Is.EqualTo(1), "Old area should be unloaded before the new one loads.");
         Assert.That(Vector2.Distance(player.transform.position, spawnPosition), Is.LessThan(0.01f));
-        Assert.That(player.InputEnabled, Is.True);
+        Assert.That(playerInput.GameplayEnabled, Is.True);
 
         MobController mob = Object.FindAnyObjectByType<MobController>();
         Assert.That(mob, Is.Not.Null);
@@ -70,6 +71,7 @@ public class SceneFlowPlayModeTests
 
         Assert.That(gameFlow.IsInMenu, Is.True);
         Assert.That(gameFlow.IsInGame, Is.False);
+        Assert.That(SceneBootTestHelper.ResolveFromMain<IPlayerInput>().GameplayEnabled, Is.False, "Gameplay input should be off in the menu.");
         Assert.That(Object.FindAnyObjectByType<PlayerController>(), Is.Null, "Gameplay should be unloaded in the menu.");
         Assert.That(Object.FindAnyObjectByType<MobController>(), Is.Null, "The area should be unloaded in the menu.");
         Assert.That(Object.FindAnyObjectByType<CameraFollow2D>().Target, Is.Null);

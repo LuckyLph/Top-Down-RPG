@@ -6,18 +6,13 @@ using UnityEngine.Tilemaps;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
 
-// Paints a large procedural map into the stress scene's tilemaps before anything navigates it, so
-// the scene file stays small and the map can be resized from the inspector. The map is centered on
-// the origin (where the spawn point sits), with a clear area around it and a solid border.
 [DefaultExecutionOrder(-1000)]
 public class StressTestMap : MonoBehaviour
 {
     public enum WallLayout
     {
         Open,
-        // Short random wall segments; some enclose pockets the mobs cannot reach.
         Scattered,
-        // Full-height walls every few columns with one gap each: long, expensive paths.
         Corridors
     }
 
@@ -89,16 +84,12 @@ public class StressTestMap : MonoBehaviour
             wallVisuals.SetTiles(wallPositions, wallTiles);
         }
 
-        // Rebuild regardless of whether the grid's own Awake already ran against the empty tilemaps.
         navigationGrid.BuildGrid();
 
         Debug.Log($"[StressTest] Generated a {width}x{height} {layout} map with {wallPositions.Length} wall cells " +
             $"in {stopwatch.ElapsedMilliseconds} ms.", this);
     }
 
-    // The dual-grid module refreshes render tiles one data tile at a time, which takes seconds at this
-    // size. It is paused while both tilemaps are painted in single batches instead, mirroring its
-    // mapping: data cell (x, y) is drawn by render cells (x..x+1, y..y+1).
     private void PaintGround(List<Vector3Int> groundCells, int minX, int minY)
     {
         bool moduleWasEnabled = ground.enabled;
@@ -121,7 +112,6 @@ public class StressTestMap : MonoBehaviour
         ground.enabled = moduleWasEnabled;
     }
 
-    // Just outside the ground, so it blocks physics without taking cells from navigation.
     private void AddBorder(HashSet<Vector3Int> cells, int minX, int minY)
     {
         for (int x = minX - 1; x <= minX + width; x++)

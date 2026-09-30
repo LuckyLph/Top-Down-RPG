@@ -85,7 +85,6 @@ public class PlayerController : MonoBehaviour
             rb = GetComponent<Rigidbody2D>();
         }
 
-        // Physics2D auto-sync is off, so move both the body and the transform.
         rb.position = position;
         rb.linearVelocity = Vector2.zero;
         transform.position = new Vector3(position.x, position.y, transform.position.z);

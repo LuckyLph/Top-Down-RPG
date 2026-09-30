@@ -1,7 +1,6 @@
 using System;
 using VContainer.Unity;
 
-// Keeps the HUD in sync with the session player's health and equipped weapon.
 public sealed class PlayerHudPresenter : IStartable, IDisposable
 {
     private readonly IPlayerLocator player;

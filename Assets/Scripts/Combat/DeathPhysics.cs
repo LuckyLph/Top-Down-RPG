@@ -2,7 +2,6 @@ using UnityEngine;
 
 public static class DeathPhysics
 {
-    // Removes a dead object from collisions and stops it in place.
     public static void Disable(GameObject deadObject)
     {
         Collider2D[] colliders = deadObject.GetComponents<Collider2D>();

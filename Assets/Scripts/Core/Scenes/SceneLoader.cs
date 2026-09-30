@@ -17,8 +17,6 @@ public sealed class SceneLoader
         }
 
 #if UNITY_EDITOR
-        // Loads by path even when the scene is missing from the build list, so new areas can be
-        // played before they are registered. SceneBuildValidator catches the omission at build time.
         AsyncOperation operation = EditorSceneManager.LoadSceneAsyncInPlayMode(
             definition.ScenePath,
             new LoadSceneParameters(LoadSceneMode.Additive));
@@ -58,7 +56,6 @@ public sealed class SceneLoader
         cancellation.ThrowIfCancellationRequested();
     }
 
-    // Additive unloads never trigger the automatic cleanup that single-mode loads do.
     public async Awaitable UnloadUnusedAssetsAsync(CancellationToken cancellation)
     {
         await Resources.UnloadUnusedAssets();

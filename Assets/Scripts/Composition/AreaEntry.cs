@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Places the session player at the SpawnPoint named by this load's AreaEntryRequest.
 public sealed class AreaEntry : IAreaEntry
 {
     private readonly AreaEntryRequest request;

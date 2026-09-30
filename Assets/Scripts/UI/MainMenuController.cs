@@ -18,14 +18,12 @@ public class MainMenuController : MonoBehaviour
 
     private void Start()
     {
-        // Lets keyboard and gamepad navigate the menu without a mouse click first.
         if (firstSelected != null && EventSystem.current != null)
         {
             EventSystem.current.SetSelectedGameObject(firstSelected.gameObject);
         }
     }
 
-    // Wired to the New Game button.
     public void StartNewGame()
     {
         if (gameFlow == null)
@@ -37,7 +35,6 @@ public class MainMenuController : MonoBehaviour
         _ = gameFlow.StartNewGameAsync();
     }
 
-    // Wired to the Quit button.
     public void QuitGame()
     {
 #if UNITY_EDITOR

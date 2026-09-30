@@ -2,8 +2,6 @@ using System;
 using UnityEngine;
 using VContainer.Unity;
 
-// Turns published damage into floating numbers on the Gameplay scene's popup layer and drives
-// the layer: timing in Tick, projection in PostLateTick (after CameraFollow2D's LateUpdate).
 public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTickable, IDisposable
 {
     private readonly CombatEvents combatEvents;

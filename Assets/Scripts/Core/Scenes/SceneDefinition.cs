@@ -6,8 +6,6 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 #endif
 
-// Stable reference to a scene asset. Stores the scene GUID (survives renames/moves in the editor)
-// and the resolved path used at runtime, so no editor-only types are serialized into builds.
 [CreateAssetMenu(menuName = "TopDownRPG/Scenes/Scene Definition", fileName = "SceneDefinition")]
 public class SceneDefinition : ScriptableObject
 {
@@ -29,7 +27,6 @@ public class SceneDefinition : ScriptableObject
         return !string.IsNullOrEmpty(path) && path == scenePath;
     }
 
-    // For scenes opened in the editor that have no authored definition (e.g. a new area being prototyped).
     public static SceneDefinition CreateTransient(string path)
     {
         SceneDefinition definition = CreateInstance<SceneDefinition>();

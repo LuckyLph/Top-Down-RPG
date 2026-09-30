@@ -18,11 +18,8 @@ public class TerrainMovementProfile2D : ScriptableObject
     [SerializeField] private List<TerrainRule> terrainRules = new();
 
     private Dictionary<TerrainType2D, TerrainRule> ruleLookup;
-    // Cached because the pathfinder's heuristic asks for it for every neighbor it scores.
     private int minimumTraversalCost = -1;
     private int version;
-
-    // Incremented whenever walkability or costs change so cached navigation data can be invalidated.
     public int Version => version;
     public bool DefaultIsWalkable => defaultIsWalkable;
     public int DefaultTraversalCost => Mathf.Max(1, defaultTraversalCost);

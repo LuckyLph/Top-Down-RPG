@@ -2,7 +2,6 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-// Creates weapon slashes through the container so slash prefabs can receive injected services.
 public sealed class SlashSpawner
 {
     private readonly IObjectResolver resolver;
@@ -28,7 +27,6 @@ public sealed class SlashSpawner
         }
 
         SwordSlashAttack slash = resolver.Instantiate(slashPrefab);
-        // Slash templates may be authored inactive; spawned slashes always run.
         slash.gameObject.SetActive(true);
         slash.gameObject.name = $"{weapon.DisplayName}Slash";
         slash.Initialize(owner, weapon, direction, ownerSpriteRenderer);

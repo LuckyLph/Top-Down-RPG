@@ -25,8 +25,6 @@ public class MobMotor2D : MonoBehaviour
     private bool isAttackAnimationActive;
     private float attackAnimationEndTime;
     private bool supportsAttackAnimation;
-    // The animator and controller supportsAttackAnimation was computed for; reading
-    // Animator.parameters allocates, so it is only re-checked when either changes.
     private Animator resolvedAnimator;
     private RuntimeAnimatorController resolvedController;
 
@@ -86,7 +84,6 @@ public class MobMotor2D : MonoBehaviour
         desiredVelocity = Vector2.zero;
     }
 
-    // Added on top of the desired velocity (e.g. crowd separation), within the same speed limit.
     public void SetSteeringVelocity(Vector2 velocity)
     {
         steeringVelocity = velocity;
@@ -174,9 +171,6 @@ public class MobMotor2D : MonoBehaviour
         supportsAttackAnimation = CanDriveAnimator() && AnimatorHasBoolParameter(IsAttackingHash);
     }
 
-    // Facing and the walk cycle follow what the mob is trying to do, not every nudge it receives:
-    // crowd separation shuffles a holding mob around, and turning to face that drift made crowds
-    // flicker. A mob with no intent to move keeps its facing (e.g. toward its target) and stays idle.
     private void UpdateAnimator(Vector2 velocity)
     {
         bool intendsToMove = desiredVelocity.sqrMagnitude > 0.0001f;

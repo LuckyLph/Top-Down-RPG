@@ -46,7 +46,6 @@ public class CameraFollow2D : MonoBehaviour
         velocity = Vector3.zero;
     }
 
-    // Jumps straight to the target, e.g. after a teleport, instead of smoothing across the map.
     public void SnapToTarget()
     {
         if (target == null)

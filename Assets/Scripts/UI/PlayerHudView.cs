@@ -2,7 +2,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Passive HUD view: holds the prefab's UI references and renders what PlayerHudPresenter tells it.
 [DisallowMultipleComponent]
 public class PlayerHudView : MonoBehaviour
 {
@@ -55,7 +54,6 @@ public class PlayerHudView : MonoBehaviour
         weaponIcon.color = icon == null ? missingWeaponIconTint : activeWeaponIconTint;
     }
 
-    // Used by tests and editor tooling that build the HUD in code.
     internal void ConfigureReferences(Image fill, TextMeshProUGUI text, Image icon)
     {
         healthFill = fill;

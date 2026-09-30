@@ -32,8 +32,6 @@ public class MobPatrolAnchor : MonoBehaviour
         return config != null ? config.NextIdleDuration() : Random.Range(0.5f, 1.5f);
     }
 
-    // Samples a walkable cell around spawn. Candidates the mob cannot reach are rejected so it never
-    // plans a partial path toward a cell on the far side of a wall.
     public bool TryGetRoamDestination(Func<Vector2, bool> isReachable, out Vector2 destination)
     {
         destination = spawnPosition;

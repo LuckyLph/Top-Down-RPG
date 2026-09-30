@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Owns the project's "Player" action map. UI actions stay with the EventSystem's input module.
 public sealed class PlayerInputService : IPlayerInput, IDisposable
 {
     private const string PlayerMapName = "Player";

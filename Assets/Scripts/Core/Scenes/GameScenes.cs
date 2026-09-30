@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// The scene catalogue the game flow boots from. Area scenes listed here are what the
-// editor bootstrapper recognises when you press Play with an area open.
 [CreateAssetMenu(menuName = "TopDownRPG/Scenes/Game Scenes", fileName = "GameScenes")]
 public class GameScenes : ScriptableObject
 {

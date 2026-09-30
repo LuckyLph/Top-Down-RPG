@@ -82,7 +82,6 @@ public class MobController : MonoBehaviour
         FixedTickStateMachine();
     }
 
-    // Injected by the area's LifetimeScope: its own area's grid and the session's player.
     [Inject]
     public void Construct(NavigationGrid2D navGrid, IPlayerLocator playerLocator)
     {
@@ -91,8 +90,6 @@ public class MobController : MonoBehaviour
         Reinitialize();
     }
 
-    // For mobs built outside a container (tests, tools); runtime spawns use IObjectResolver.Instantiate.
-    // Initializes immediately so the brain's components are ready to drive by hand.
     public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerLocator playerLocator)
     {
         config = mobConfig;
@@ -111,9 +108,6 @@ public class MobController : MonoBehaviour
         Rebuild();
     }
 
-    // Re-initializes components and states for new dependencies. A brain that was already running a
-    // state resumes from Idle, since Start (which enters the first state) will not run again; one that
-    // has not started yet is left for Start.
     private void Rebuild()
     {
         bool wasRunning = currentState != null;
@@ -141,7 +135,6 @@ public class MobController : MonoBehaviour
     {
         EnsureInitialized();
 
-        // Sensed before the state runs so it can react to the crowd (e.g. Chase waiting behind it).
         separation.Sense(motor.Position);
         currentState?.FixedTick();
         motor.SetSteeringVelocity(separation.Velocity);
@@ -276,14 +269,12 @@ public class MobController : MonoBehaviour
         Transform target = perception.CurrentTarget;
         if (target != cachedTarget)
         {
-            // Queried every frame while chasing or attacking, so the lookup is done once per target.
             cachedTarget = target;
             target.TryGetComponent(out cachedTargetCollider);
         }
 
         if (selfCollider != null && cachedTargetCollider != null)
         {
-            // Edge-to-edge distance avoids scale/collider-size issues from center-distance checks.
             ColliderDistance2D colliderDistance = selfCollider.Distance(cachedTargetCollider);
             distance = Mathf.Max(0f, colliderDistance.distance);
             return true;

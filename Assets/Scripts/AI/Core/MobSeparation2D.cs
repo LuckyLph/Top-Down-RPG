@@ -1,16 +1,9 @@
 using UnityEngine;
 
-// Keeps mobs from stacking. Mob bodies are kinematic, so physics never pushes them apart; instead each
-// mob senses nearby mobs on its own layer once per physics step and steers away from them, harder the
-// more they overlap. A push that would carry the mob into a cell it cannot walk on is dropped per
-// axis, so crowds slide along walls instead of clipping into them.
 public sealed class MobSeparation2D
 {
     private const int MaxNeighbors = 32;
-    // Neighbors are sensed a bit beyond the push radius so HasNeighborToward can be asked about a
-    // wider release distance (see ChaseState's waiting hysteresis).
     public const float SenseRadiusFactor = 1.5f;
-    // Golden angle, used to give exactly coincident mobs distinct push directions.
     private const float GoldenAngle = 2.39996323f;
 
     private readonly Collider2D[] neighbors = new Collider2D[MaxNeighbors];
@@ -35,7 +28,6 @@ public sealed class MobSeparation2D
         };
     }
 
-    // Push away from neighbors from the last Sense call, in units per second.
     public Vector2 Velocity => velocity;
 
     public void Sense(Vector2 mobPosition)
@@ -73,9 +65,6 @@ public sealed class MobSeparation2D
         velocity = ClampToWalkable(push * config.separationStrength);
     }
 
-    // Whether another mob stands directly between this one and the target, within maxDistance (at most
-    // SenseRadiusFactor times the separation radius). Chasers use it to wait behind a crowd instead of
-    // pushing into it.
     public bool HasNeighborToward(Vector2 target, float maxDistance)
     {
         Vector2 toTarget = target - position;
@@ -96,7 +85,6 @@ public sealed class MobSeparation2D
 
             Vector2 toOther = NeighborPosition(other) - position;
             float distance = toOther.magnitude;
-            // Within about 60 degrees of straight ahead, and not beyond the target.
             if (distance > 0.0001f && distance <= maxDistance && distance < distanceToTarget && Vector2.Dot(toOther / distance, forward) > 0.5f)
             {
                 return true;
@@ -111,8 +99,6 @@ public sealed class MobSeparation2D
         return other.attachedRigidbody != null ? other.attachedRigidbody.position : (Vector2)other.transform.position;
     }
 
-    // Two mobs on exactly the same spot need opposite pushes: both derive one axis from the pair and
-    // take opposite ends of it.
     private Vector2 CoincidentDirection(Collider2D other)
     {
         int selfId = self.GetInstanceID();

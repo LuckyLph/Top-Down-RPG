@@ -2,9 +2,6 @@
 using System;
 using UnityEditor;
 
-// Hand-off from the editor Play Mode bootstrapper (and PlayMode tests) to BootFlow: the scenes
-// that were open when Play was pressed, so Main can load them instead of the main menu.
-// Backed by SessionState so it survives the play mode transition but not an editor restart.
 public static class EditorBootRequest
 {
     private const string ScenesKey = "TopDownRPG.EditorBootRequest.Scenes";

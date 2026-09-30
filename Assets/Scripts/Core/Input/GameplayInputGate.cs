@@ -1,7 +1,6 @@
 using System;
 using VContainer.Unity;
 
-// Gameplay input is only live while a session is running and no scene transition is in progress.
 public sealed class GameplayInputGate : IStartable, IDisposable
 {
     private readonly GameFlow gameFlow;

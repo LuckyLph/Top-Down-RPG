@@ -1,7 +1,6 @@
 using System.Threading;
 using UnityEngine;
 
-// Full-screen fade used to hide scene loads. Starts opaque so the first frame after boot is black.
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
 public class ScreenFader : MonoBehaviour
@@ -34,7 +33,6 @@ public class ScreenFader : MonoBehaviour
 
     private async Awaitable FadeToAsync(float targetAlpha, CancellationToken cancellation)
     {
-        // Block UI clicks for the whole fade, including a fade-in that is still covering the screen.
         canvasGroup.blocksRaycasts = true;
 
         float startAlpha = canvasGroup.alpha;

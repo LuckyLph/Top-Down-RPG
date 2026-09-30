@@ -57,7 +57,6 @@ public class SwordSlashAttack : MonoBehaviour
         Tick(Time.deltaTime);
     }
 
-    // Advances lifetime and follows the owner; destroys the slash once its animation has played.
     internal void Tick(float deltaTime)
     {
         if (activeLifetime <= 0f)
@@ -80,7 +79,6 @@ public class SwordSlashAttack : MonoBehaviour
         TryDamageCollider(other);
     }
 
-    // Authoring helper for building slash prefabs from code (editor bootstrap, tests).
     public void ConfigureReferences(Transform visualTransform, SpriteRenderer renderer, BoxCollider2D boxCollider, Animator runtimeAnimator, AnimationClip animationClip = null)
     {
         visualRoot = visualTransform;

@@ -2,9 +2,6 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-// Scope of one area scene (tilemaps, navigation, mobs, spawn points). GameFlow parents it to the
-// Gameplay scope, so area objects can resolve the session's player, and enqueues the
-// AreaEntryRequest for this load into it.
 public class AreaLifetimeScope : LifetimeScope
 {
     protected override void Configure(IContainerBuilder builder)
@@ -31,7 +28,6 @@ public class AreaLifetimeScope : LifetimeScope
         builder.RegisterBuildCallback(InjectSceneMobs);
     }
 
-    // Mobs authored in the scene; mobs spawned at runtime must use IObjectResolver.Instantiate.
     private void InjectSceneMobs(IObjectResolver resolver)
     {
         foreach (MobController mob in SceneQuery.FindAll<MobController>(gameObject.scene))

@@ -5,9 +5,6 @@ using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
 
-// Orchestrates which additive scenes are loaded under the persistent Main scene:
-// MainMenu, or Gameplay (one per session) plus exactly one Area at a time.
-// It also decides each loaded scene's parent scope (Main for MainMenu/Gameplay, Gameplay for areas).
 public sealed class GameFlow
 {
     private readonly SceneLoader sceneLoader;
@@ -86,11 +83,9 @@ public sealed class GameFlow
         }
         catch (OperationCanceledException)
         {
-            // Exiting play mode or quitting mid-transition.
         }
         catch (Exception exception)
         {
-            // Callers such as UI buttons fire and forget, so make sure failures are visible.
             Debug.LogException(exception);
             throw;
         }
@@ -123,7 +118,6 @@ public sealed class GameFlow
             menuScene = default;
         }
 
-        // A new game always starts from a fresh Gameplay scene so player state resets.
         await UnloadAreaAsync(cancellation);
         await UnloadGameplayAsync(cancellation);
         gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
@@ -134,7 +128,6 @@ public sealed class GameFlow
 
     private async Awaitable LoadAreaCoreAsync(SceneDefinition area, string spawnId, CancellationToken cancellation)
     {
-        // Unload first so two areas (navigation grids, global lights, mobs) never coexist.
         await UnloadAreaAsync(cancellation);
         await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
 
@@ -146,15 +139,10 @@ public sealed class GameFlow
 
         CurrentArea = area;
 
-        // The active scene receives runtime Instantiate calls (popups, VFX, drops) and supplies
-        // render settings, so transient objects are cleaned up with the area.
         SceneManager.SetActiveScene(areaScene);
         EnterArea(areaScene);
     }
 
-    // The scene's LifetimeScope builds in Awake, which runs while the load is awaited, so the parent
-    // (and any Enqueue around this call) must stay pushed until the load completes. Transitions never
-    // overlap, so the loading scene's scope is the only one that awakes in that window.
     private async Awaitable<Scene> LoadUnderScopeAsync(
         SceneDefinition definition,
         LifetimeScope parent,

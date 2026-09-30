@@ -2,8 +2,6 @@ using System.Threading;
 using UnityEngine;
 using VContainer.Unity;
 
-// Entry point of the Main scene. Builds go to the main menu; in the editor, the scenes that were
-// open when Play was pressed (see EditorBootRequest) decide where to start.
 public sealed class BootFlow : IAsyncStartable
 {
     private readonly GameFlow gameFlow;
@@ -45,7 +43,6 @@ public sealed class BootFlow : IAsyncStartable
             }
             else if (area == null)
             {
-                // Any other open scene is treated as an area, authored definition or not.
                 area = gameScenes.FindArea(scenePath) ?? SceneDefinition.CreateTransient(scenePath);
             }
         }

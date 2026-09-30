@@ -4,10 +4,6 @@ using VContainer;
 using VContainer.Unity;
 using Random = System.Random;
 
-// Spawns mobs through the area's container, the way real runtime spawns must, so each one gets the
-// area's navigation grid and the session player. The AreaLifetimeScope lists this object in its
-// auto-inject game objects. Mobs only spawn on cells connected to the spawner's own cell (the
-// player's spawn point), so none start sealed inside a wall pocket.
 public class StressTestSpawner : MonoBehaviour
 {
     private const int AttemptsPerMob = 30;
@@ -70,7 +66,6 @@ public class StressTestSpawner : MonoBehaviour
         mobRoot = new GameObject("StressMobs").transform;
         mobRoot.SetParent(transform, false);
 
-        // The player may not be placed yet, so initial "near" mobs gather around the spawn point.
         SpawnAround(transform.position, initialNearSpawn);
         SpawnAcrossMap(initialAcrossMap);
     }

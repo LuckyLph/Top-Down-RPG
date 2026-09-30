@@ -3,14 +3,8 @@ using System.Text;
 using Unity.Profiling;
 using UnityEngine;
 
-// On-screen stats and spawn controls for the stress scene. Pathfinding numbers come from the
-// ProfilerMarkers in GridAStarPathfinder2D and MobPathAgent2D, averaged per frame over each refresh
-// window. The text is rebuilt a few times per second so the overlay itself barely registers in the GC
-// figure; use the Profiler for exact attribution.
 public class StressTestOverlay : MonoBehaviour
 {
-    // Recorders only store frames in which their marker fired, summed per frame; this must hold every
-    // such frame in one refresh window.
     private const int SampleCapacity = 512;
     private const float RefreshInterval = 0.25f;
     private static readonly string[] StateNames = { "Idle", "Patrol", "Chase", "Attack", "Return", "Search" };
@@ -96,9 +90,6 @@ public class StressTestOverlay : MonoBehaviour
         cachedText = text.ToString();
     }
 
-    // Per-frame mean of everything recorded since the last call, then clears the recorder. Frames in
-    // which the marker never fired have no sample, so the total is divided by elapsed frames rather
-    // than by the sample count. Time recorders report nanoseconds.
     private static void ConsumePerFrame(ref ProfilerRecorder recorder, int frames, out double value, out double calls, bool valueIsTime = true)
     {
         value = 0d;
@@ -115,7 +106,6 @@ public class StressTestOverlay : MonoBehaviour
             calls += sample.Count;
         }
 
-        // Reset also stops collection, so restart it for the next window.
         recorder.Reset();
         recorder.Start();
         value /= frames;
@@ -131,7 +121,6 @@ public class StressTestOverlay : MonoBehaviour
         Matrix4x4 previousMatrix = GUI.matrix;
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
-        // Bottom-left, clear of the HUD's health bar.
         const float width = 260f;
         const float height = 300f;
         float top = Screen.height / scale - height - 10f;

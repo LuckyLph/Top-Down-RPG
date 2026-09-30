@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// Published by DamageReceiver after damage is applied; presentation (popups, VFX, audio) reacts to it
-// so combat outcomes never depend on presentation.
 public readonly struct DamageReport
 {
     public DamageReport(Health target, int amount, GameObject source, Vector3 popupWorldPosition)

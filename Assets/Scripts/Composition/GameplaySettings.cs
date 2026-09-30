@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Session-level tuning registered in the Gameplay scope.
 [CreateAssetMenu(menuName = "TopDownRPG/Gameplay Settings", fileName = "GameplaySettings")]
 public class GameplaySettings : ScriptableObject
 {

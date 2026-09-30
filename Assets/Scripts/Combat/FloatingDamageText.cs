@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine;
 
-// Pooled damage number view. DamagePopupLayer owns the canvas, pool and timing; this only renders itself.
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
 [RequireComponent(typeof(TextMeshProUGUI))]
@@ -41,14 +40,12 @@ public class FloatingDamageText : MonoBehaviour
         Refresh();
     }
 
-    // Returns true once the popup has lived out its lifetime and can go back to the pool.
     internal bool Advance(float deltaTime)
     {
         elapsed += deltaTime;
         return elapsed >= lifetime;
     }
 
-    // Projects the rising world position onto the overlay canvas and fades out over the lifetime.
     internal void Refresh()
     {
         if (targetCamera == null || canvasRect == null)
@@ -66,7 +63,6 @@ public class FloatingDamageText : MonoBehaviour
             return;
         }
 
-        // Overlay canvases take a null camera for screen-to-local conversion.
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, null, out Vector2 localPoint);
         rectTransform.anchoredPosition = localPoint;
         canvasGroup.alpha = 1f - t;

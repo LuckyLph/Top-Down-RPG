@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Scene-scoped component lookups: unlike FindAnyObjectByType they never cross into other loaded scenes.
 public static class SceneQuery
 {
     private static readonly List<GameObject> RootBuffer = new();

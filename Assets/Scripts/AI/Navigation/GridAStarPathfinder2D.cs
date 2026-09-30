@@ -8,8 +8,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
     private readonly NavigationGrid2D navigationGrid;
 
-    // Search state reused across calls so a warmed-up search allocates nothing. Searches run one at a
-    // time on the main thread, so sharing it is safe.
     private readonly OpenHeap openHeap = new();
     private readonly Dictionary<Vector3Int, SearchNode> nodes = new();
     private readonly Vector3Int[] neighborBuffer = new Vector3Int[8];
@@ -19,7 +17,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
         navigationGrid = navGrid;
     }
 
-    // Cells closed by the most recent search; lets tests and benchmarks compare search effort.
     internal int LastExpandedCount { get; private set; }
 
     public PathResult FindPath(PathRequest request)
@@ -68,15 +65,12 @@ public class GridAStarPathfinder2D : IPathfinder2D
             adjustedGoalToNearestWalkable = true;
         }
 
-        // Connectivity is cached per profile, so a goal in another region fails without searching it.
         bool goalIsReachable = navigationGrid.AreCellsConnected(start, goal, movementProfile);
         if (!goalIsReachable && !request.AllowPartial)
         {
             return PathResult.Failure;
         }
 
-        // A reachable goal always ends the search, so only the partial search toward an unreachable goal
-        // (which would otherwise flood the start region looking for the closest cell) is capped.
         int maxExpanded = goalIsReachable ? int.MaxValue : navigationGrid.MaxSearchCells;
         openHeap.Clear();
         nodes.Clear();
@@ -95,7 +89,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
             SearchNode currentNode = nodes[current];
             if (currentNode.Closed || entry.F != currentNode.F)
             {
-                // Stale entry left behind by a later, cheaper push of the same cell.
                 continue;
             }
 
@@ -171,7 +164,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
         cells.Reverse();
     }
 
-    // One record per discovered cell: replaces separate g/f/parent/order maps and the closed set.
     private struct SearchNode
     {
         public SearchNode(int g, int f, Vector3Int parent, int order)
@@ -204,10 +196,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
         public int F { get; }
         public int H { get; }
         public int Order { get; }
-
-        // Ties on F go to the cell closer to the goal, so the search runs down one of many equal-cost
-        // routes instead of widening across all of them (open 8-way grids tie constantly). Remaining
-        // ties go to the cell first added to the open set, keeping paths deterministic.
         public bool IsBefore(OpenEntry other)
         {
             if (F != other.F)
@@ -219,7 +207,6 @@ public class GridAStarPathfinder2D : IPathfinder2D
         }
     }
 
-    // Binary min-heap. Decrease-key is handled by pushing a new entry and skipping stale ones on pop.
     private sealed class OpenHeap
     {
         private readonly List<OpenEntry> entries = new();

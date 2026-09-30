@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
-// Overlay canvas in the Gameplay scene that hosts pooled damage numbers and drives all active ones.
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Canvas))]
 public class DamagePopupLayer : MonoBehaviour
@@ -43,10 +42,8 @@ public class DamagePopupLayer : MonoBehaviour
         return popup;
     }
 
-    // Advances every active popup and returns the finished ones to the pool.
     public void Tick(float deltaTime)
     {
-        // Backwards with swap-remove: the swapped-in popup has already been advanced this tick.
         for (int i = active.Count - 1; i >= 0; i--)
         {
             FloatingDamageText popup = active[i];
@@ -62,7 +59,6 @@ public class DamagePopupLayer : MonoBehaviour
         }
     }
 
-    // Projects active popups onto the canvas; run after the camera has moved for the frame.
     public void RefreshPositions()
     {
         for (int i = 0; i < active.Count; i++)

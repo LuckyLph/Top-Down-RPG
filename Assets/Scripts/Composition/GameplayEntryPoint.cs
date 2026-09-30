@@ -1,7 +1,6 @@
 using System;
 using VContainer.Unity;
 
-// Points the Main scene's camera at the session's player for the lifetime of the Gameplay scene.
 public sealed class GameplayEntryPoint : IStartable, IDisposable
 {
     private readonly CameraFollow2D cameraFollow;

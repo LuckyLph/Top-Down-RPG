@@ -2,7 +2,6 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-// Scope of the MainMenu scene. GameFlow parents it to the Main scope while loading the scene.
 public class MenuLifetimeScope : LifetimeScope
 {
     protected override void Configure(IContainerBuilder builder)

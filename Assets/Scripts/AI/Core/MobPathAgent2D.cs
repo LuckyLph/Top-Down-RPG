@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class MobPathAgent2D : MonoBehaviour
 {
-    // Moving slower than this fraction of move speed while following a path counts as stalled.
     private const float MinProgressSpeedFraction = 0.2f;
 
     private static readonly ProfilerMarker BuildPathMarker = new("MobPathAgent2D.BuildPathToWorld");
@@ -16,7 +15,6 @@ public class MobPathAgent2D : MonoBehaviour
     [SerializeField] private Color goalColor = new(0.2f, 1f, 0.2f, 0.9f);
 
     private readonly List<Vector2> waypoints = new();
-    // Reused across path builds so re-planning does not allocate.
     private readonly List<Vector3Int> pathCells = new();
     private readonly List<Vector3Int> smoothedCells = new();
     private readonly List<int> routeCost = new();
@@ -42,7 +40,6 @@ public class MobPathAgent2D : MonoBehaviour
     public bool GoalWasAdjusted => goalWasAdjusted;
     public bool HasGoalCell => hasGoalCell;
     public Vector3Int LastGoalCell => lastGoalCell;
-    // Time spent following the current path without making headway, e.g. pushing into another mob.
     public float StalledTime => stalledTime;
 
     internal IReadOnlyList<Vector2> Waypoints => waypoints;
@@ -94,8 +91,6 @@ public class MobPathAgent2D : MonoBehaviour
         int firstCellIndex = 0;
         if (smoothed.Count > 1 && smoothed[0] == startCell)
         {
-            // Repathing should continue forward from the current cell instead of
-            // steering back to its center, which causes visible left/right jitter.
             firstCellIndex = 1;
         }
 
@@ -111,11 +106,9 @@ public class MobPathAgent2D : MonoBehaviour
 
         if (waypoints.Count == 0 && !result.IsPartial && Vector2.Distance(motor.Position, worldGoal) > config.arrivalDistance)
         {
-            // Targets inside the same walkable cell still need direct pursuit.
             waypoints.Add(worldGoal);
         }
 
-        // Drop the first waypoint if we are already standing on it.
         if (waypoints.Count > 0 && Vector2.Distance(motor.Position, waypoints[0]) <= config.waypointReachDistance)
         {
             waypoints.RemoveAt(0);
@@ -138,9 +131,6 @@ public class MobPathAgent2D : MonoBehaviour
         return true;
     }
 
-    // Called every frame by idle/patrol/return states, so this uses the grid's cached connectivity
-    // instead of running A*. Mirrors the pathfinder: the start snaps to the nearest walkable cell,
-    // while an unwalkable goal counts as unreachable.
     public bool CanReachWorldTarget(Vector2 worldGoal)
     {
         if (navigationGrid == null || !navigationGrid.IsBuilt || motor == null || config == null)
@@ -169,7 +159,6 @@ public class MobPathAgent2D : MonoBehaviour
 
         TerrainMovementProfile2D movementProfile = config != null ? config.MovementProfile : null;
 
-        // routeCost[i] is the cost of following the A* path from its start to cell i.
         routeCost.Clear();
         routeCost.Add(0);
         for (int i = 1; i < sourceCells.Count; i++)
@@ -186,8 +175,6 @@ public class MobPathAgent2D : MonoBehaviour
             int furthestVisible = anchorIndex + 1;
             for (int i = anchorIndex + 2; i < sourceCells.Count; i++)
             {
-                // Only shortcut when the straight line costs no more than the route it replaces, so
-                // smoothing never drags the mob through terrain the pathfinder chose to avoid.
                 if (navigationGrid.TryGetLineCost(sourceCells[anchorIndex], sourceCells[i], movementProfile, out int lineCost)
                     && lineCost <= routeCost[i] - routeCost[anchorIndex])
                 {
@@ -248,7 +235,6 @@ public class MobPathAgent2D : MonoBehaviour
         lastProgressPosition = position;
     }
 
-    // Be more forgiving for the final waypoint to avoid jitter around destination.
     private float GetReachThreshold(int index)
     {
         return index == waypoints.Count - 1

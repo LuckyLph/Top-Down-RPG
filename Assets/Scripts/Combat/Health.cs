@@ -33,7 +33,6 @@ public class Health : MonoBehaviour
 
     public int MaxHealth => maxHealth;
 
-    // Lazily initialized so health reads correctly before Awake (e.g. components added in edit mode).
     public int CurrentHealth
     {
         get

@@ -30,8 +30,6 @@ public class DamageReceiver : MonoBehaviour
         combatEvents = events;
     }
 
-    // Only the hit object and its ancestors are searched, so hitting an unrelated collider (a wall
-    // sharing a level root with enemies) can never damage some other receiver in that hierarchy.
     public static DamageReceiver FindFor(Transform hitTransform)
     {
         return hitTransform != null ? hitTransform.GetComponentInParent<DamageReceiver>() : null;

@@ -224,8 +224,6 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
-    // Non-allocating variant for hot paths: writes traversable neighbors into buffer (room for 8) and
-    // returns how many were written.
     public int GetNeighbors8(Vector3Int cell, TerrainMovementProfile2D movementProfile, Vector3Int[] buffer)
     {
         int count = 0;
@@ -305,7 +303,6 @@ public class NavigationGrid2D : MonoBehaviour
 
         if (absX == 1 && absY == 1)
         {
-            // Prevent corner cutting. Both orthogonal cells must be traversable.
             Vector3Int orthogonalA = new(from.x + dx, from.y, from.z);
             Vector3Int orthogonalB = new(from.x, from.y + dy, from.z);
             return IsCellWalkable(orthogonalA, movementProfile) && IsCellWalkable(orthogonalB, movementProfile);
@@ -360,8 +357,6 @@ public class NavigationGrid2D : MonoBehaviour
             && fromRegion == toRegion;
     }
 
-    // Labels connected regions for a profile up front, so the first reachability query during play
-    // doesn't flood-fill the whole grid mid-frame.
     public void PrewarmRegions(TerrainMovementProfile2D movementProfile)
     {
         if (IsBuilt)
@@ -392,7 +387,6 @@ public class NavigationGrid2D : MonoBehaviour
         return TryGetLineCost(from, to, movementProfile, out _);
     }
 
-    // Walks the straight cell line between two cells, summing movement costs. Fails if any step is not traversable.
     public bool TryGetLineCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile, out int cost)
     {
         cost = 0;
@@ -524,8 +518,6 @@ public class NavigationGrid2D : MonoBehaviour
         return regions;
     }
 
-    // Flood-fills walkable cells into connected regions. Orthogonal adjacency is sufficient because
-    // diagonal moves are only allowed when both orthogonal cells are walkable (no corner cutting).
     private void LabelRegions(RegionMap regions, TerrainMovementProfile2D movementProfile)
     {
         regions.RegionByCell.Clear();

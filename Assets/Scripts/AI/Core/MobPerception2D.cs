@@ -26,8 +26,6 @@ public class MobPerception2D : MonoBehaviour
     public bool HasLineOfSight => hasLineOfSight;
     public float DistanceToTarget => distanceToTarget;
     public Vector2 LastKnownTargetPosition => lastKnownTargetPosition;
-    // The target is alive and within losing range but out of sight (e.g. behind a wall), as opposed to
-    // having escaped or died. Distance is reset to infinity when the target is gone.
     public bool IsTargetHiddenInRange => config != null && !hasLineOfSight && distanceToTarget <= config.loseTargetDistance;
 
     public void Initialize(IPlayerLocator playerLocator, MobConfig mobConfig)

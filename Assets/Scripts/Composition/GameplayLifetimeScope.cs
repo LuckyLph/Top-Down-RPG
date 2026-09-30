@@ -2,9 +2,6 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
-// Scope of the Gameplay scene (player, HUD, combat presentation), alive for one play session.
-// GameFlow parents it to the Main scope, and area scopes to it, so area objects resolve the
-// session's player and combat services from here.
 public class GameplayLifetimeScope : LifetimeScope
 {
     [SerializeField] private PlayerController player;
@@ -38,7 +35,6 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
 
-        // Every component on the player (controller, weapon, damage receiver) gets its dependencies.
         builder.RegisterBuildCallback(resolver => resolver.InjectGameObject(player.gameObject));
     }
 }

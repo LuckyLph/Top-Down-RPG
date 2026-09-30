@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Where the player appears when an area is entered with this id (e.g. "start", "from_town").
 public class SpawnPoint : MonoBehaviour
 {
     [SerializeField] private string spawnId = "start";

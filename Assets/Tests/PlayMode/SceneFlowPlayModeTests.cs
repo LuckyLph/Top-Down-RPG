@@ -86,6 +86,32 @@ public class SceneFlowPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator PlayerDeath_RestartsCurrentAreaWithFreshPlayer()
+    {
+        yield return SceneBootTestHelper.BootIntoStartingArea();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        SceneDefinition areaBeforeDeath = gameFlow.CurrentArea;
+        PlayerController deadPlayer = Object.FindAnyObjectByType<PlayerController>();
+        Vector3 spawnPosition = Object.FindAnyObjectByType<SpawnPoint>().transform.position;
+        Health deadHealth = deadPlayer.GetComponent<Health>();
+
+        deadPlayer.Teleport(spawnPosition + new Vector3(5f, 3f, 0f));
+        deadHealth.ApplyDamage(deadHealth.MaxHealth);
+        Assert.That(deadHealth.IsDead, Is.True);
+
+        yield return SceneBootTestHelper.WaitUntil(() => deadPlayer == null, "the Gameplay scene to be reloaded after death");
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        PlayerController freshPlayer = Object.FindAnyObjectByType<PlayerController>();
+        Health freshHealth = freshPlayer.GetComponent<Health>();
+        Assert.That(gameFlow.IsInGame, Is.True);
+        Assert.That(gameFlow.CurrentArea.ScenePath, Is.EqualTo(areaBeforeDeath.ScenePath));
+        Assert.That(freshHealth.CurrentHealth, Is.EqualTo(freshHealth.MaxHealth));
+        Assert.That(Vector2.Distance(freshPlayer.transform.position, spawnPosition), Is.LessThan(0.01f));
+    }
+
+    [UnityTest]
     public IEnumerator Boot_WithoutEditorRequest_ShowsMainMenuWithFocusedButton()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();

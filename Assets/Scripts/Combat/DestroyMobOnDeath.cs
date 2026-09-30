@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
@@ -8,6 +9,7 @@ public class DestroyMobOnDeath : MonoBehaviour
     [SerializeField] private SpriteRenderer sourceSpriteRenderer;
 
     private Health health;
+    private EffectSpawner effectSpawner;
     private bool handledDeath;
 
     private void Awake()
@@ -18,6 +20,12 @@ public class DestroyMobOnDeath : MonoBehaviour
     private void OnValidate()
     {
         ResolveReferences();
+    }
+
+    [Inject]
+    public void Construct(EffectSpawner spawner)
+    {
+        effectSpawner = spawner;
     }
 
     private void OnEnable()
@@ -58,18 +66,18 @@ public class DestroyMobOnDeath : MonoBehaviour
             return;
         }
 
-        GameObject instanceObject = Instantiate(deathAnimationTemplate.gameObject);
-        instanceObject.name = $"{gameObject.name} Death Animation";
-        instanceObject.transform.SetParent(null, false);
-        instanceObject.SetActive(false);
-
-        MobDeathAnimation instance = instanceObject.GetComponent<MobDeathAnimation>();
-        if (instance != null)
+        if (effectSpawner == null)
         {
-            instance.InitializeFrom(sourceSpriteRenderer);
+            Debug.LogWarning($"{name} was not injected with an {nameof(EffectSpawner)}; skipping its death animation.", this);
+            return;
         }
 
-        instanceObject.SetActive(true);
+        string instanceName = $"{gameObject.name} Death Animation";
+        effectSpawner.Spawn(deathAnimationTemplate, instance =>
+        {
+            instance.name = instanceName;
+            instance.InitializeFrom(sourceSpriteRenderer);
+        });
     }
 
     private void ResolveReferences()

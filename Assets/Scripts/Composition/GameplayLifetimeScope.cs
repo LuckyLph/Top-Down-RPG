@@ -8,6 +8,7 @@ public class GameplayLifetimeScope : LifetimeScope
 {
     [SerializeField] private PlayerController player;
     [SerializeField] private DamagePopupLayer damagePopupLayer;
+    [SerializeField] private GameplaySettings settings;
 
     protected override LifetimeScope FindParent()
     {
@@ -19,13 +20,16 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterInstance(player);
         builder.RegisterInstance<IPlayerLocator>(new PlayerLocator(player.transform, player.GetComponent<Health>()));
         builder.RegisterComponent(damagePopupLayer);
+        builder.RegisterInstance(settings);
         builder.RegisterComponentInHierarchy<PlayerHudController>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
+        builder.Register<EffectSpawner>(Lifetime.Singleton);
 
         builder.RegisterEntryPoint<DamagePopupPresenter>();
         builder.RegisterEntryPoint<GameplayEntryPoint>();
+        builder.RegisterEntryPoint<PlayerDeathHandler>();
 
         // Every component on the player (controller, weapon, damage receiver) gets its dependencies.
         builder.RegisterBuildCallback(resolver => resolver.InjectGameObject(player.gameObject));

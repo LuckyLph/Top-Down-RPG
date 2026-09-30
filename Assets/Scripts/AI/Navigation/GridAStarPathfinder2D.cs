@@ -69,12 +69,15 @@ public class GridAStarPathfinder2D : IPathfinder2D
         }
 
         // Connectivity is cached per profile, so a goal in another region fails without searching it.
-        if (!request.AllowPartial && !navigationGrid.AreCellsConnected(start, goal, movementProfile))
+        bool goalIsReachable = navigationGrid.AreCellsConnected(start, goal, movementProfile);
+        if (!goalIsReachable && !request.AllowPartial)
         {
             return PathResult.Failure;
         }
 
-        int maxExpanded = navigationGrid.MaxSearchCells;
+        // A reachable goal always ends the search, so only the partial search toward an unreachable goal
+        // (which would otherwise flood the start region looking for the closest cell) is capped.
+        int maxExpanded = goalIsReachable ? int.MaxValue : navigationGrid.MaxSearchCells;
         openHeap.Clear();
         nodes.Clear();
 

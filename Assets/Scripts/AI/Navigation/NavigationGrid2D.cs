@@ -42,9 +42,9 @@ public class NavigationGrid2D : MonoBehaviour
     [SerializeField] private List<NavigationTerrainSource2D> terrainSources = new();
     [SerializeField] private bool discoverSourcesInChildren = true;
     [SerializeField] private int nearestCellSearchRadius = 8;
-    [Tooltip("Upper bound on cells one A* search may expand. A search that hits it returns its best partial path, " +
-        "or fails if partial paths were not allowed. Raise it for very large maps.")]
-    [SerializeField, Min(1)] private int maxSearchCells = 10000;
+    [Tooltip("Upper bound on cells a partial A* search toward an unreachable goal may expand before returning " +
+        "the closest cell found so far. Searches toward reachable goals are never capped.")]
+    [SerializeField, Min(1)] private int maxSearchCells = 4096;
     [Header("Debug")]
     [SerializeField] private bool drawGridBoundsGizmo = true;
     [SerializeField] private bool drawWalkableCellGizmos = false;

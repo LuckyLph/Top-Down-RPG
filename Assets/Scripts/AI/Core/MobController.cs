@@ -26,6 +26,7 @@ public class MobController : MonoBehaviour
     [SerializeField] private Color chaseColor = new(1f, 0.35f, 0.35f, 0.95f);
     [SerializeField] private Color attackColor = new(1f, 0.9f, 0.2f, 0.95f);
     [SerializeField] private Color returnColor = new(0.4f, 1f, 0.6f, 0.95f);
+    [SerializeField] private Color searchColor = new(1f, 0.6f, 0.2f, 0.95f);
 
     private readonly Dictionary<MobStateId, IMobState> states = new();
 
@@ -254,6 +255,7 @@ public class MobController : MonoBehaviour
         states[MobStateId.Chase] = new ChaseState(this);
         states[MobStateId.AttackRange] = new AttackRangeState(this);
         states[MobStateId.Return] = new ReturnToSpawnState(this);
+        states[MobStateId.Search] = new SearchState(this);
     }
 
     private bool TryGetAttackDistanceToTarget(out float distance)
@@ -327,6 +329,7 @@ public class MobController : MonoBehaviour
             MobStateId.Chase => chaseColor,
             MobStateId.AttackRange => attackColor,
             MobStateId.Return => returnColor,
+            MobStateId.Search => searchColor,
             _ => Color.white
         };
     }

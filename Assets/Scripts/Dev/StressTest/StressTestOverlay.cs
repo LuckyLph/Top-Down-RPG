@@ -13,7 +13,7 @@ public class StressTestOverlay : MonoBehaviour
     // such frame in one refresh window.
     private const int SampleCapacity = 512;
     private const float RefreshInterval = 0.25f;
-    private static readonly string[] StateNames = { "Idle", "Patrol", "Chase", "Attack", "Return" };
+    private static readonly string[] StateNames = { "Idle", "Patrol", "Chase", "Attack", "Return", "Search" };
 
     [SerializeField] private StressTestSpawner spawner;
     [SerializeField] private bool visible = true;

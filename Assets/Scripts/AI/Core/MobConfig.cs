@@ -14,6 +14,8 @@ public class MobConfig : ScriptableObject
     [Min(0f)] public float loseTargetDistance = 8f;
     [Min(0.01f)] public float lineOfSightInterval = 0.2f;
     public LayerMask obstacleLayerMask = 1 << 8;
+    // How long a mob searches the last known position of a target that slipped out of sight in range.
+    [Min(0f)] public float searchDuration = 3f;
 
     [Header("Combat")]
     [Min(0f)] public float attackStopDistance = 1.25f;

@@ -163,6 +163,55 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void ChaseState_SearchesLastKnownPosition_WhenTargetGoesOutOfSightWithinRange()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+        Assert.That(brain.PathAgent.HasPath, Is.True, "The mob should head for where it last saw the target.");
+    }
+
+    [Test]
+    public void SearchState_ResumesChase_WhenTargetComesBackIntoView()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        GameObject pillar = BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+
+        Object.DestroyImmediate(pillar);
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    [Test]
+    public void SearchState_GivesUpAndReturns_AfterSearchDuration()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+
+        brain.TickStateMachine(config.searchDuration + 0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
     public void ChaseState_TransitionsToReturn_WhenTargetHasNoReachablePath()
     {
         SetupWorld(addHorizontalBarrier: true);
@@ -340,6 +389,18 @@ public class MobStateMachineTests
         }
 
         Assert.That(patrols, Is.GreaterThan(0));
+    }
+
+    // A pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so
+    // the mob can still path to where it last saw the target.
+    private GameObject BlockLineOfSightAt(Vector2 position)
+    {
+        GameObject pillar = new("Pillar") { layer = 8 };
+        pillar.transform.SetParent(root.transform);
+        pillar.transform.position = position;
+        pillar.AddComponent<BoxCollider2D>().size = new Vector2(0.5f, 3f);
+        Physics2D.SyncTransforms();
+        return pillar;
     }
 
     private void TickBlockedPastStuckTimeout()

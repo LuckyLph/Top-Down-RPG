@@ -18,7 +18,7 @@ public class ChaseState : MobStateBase
     {
         if (!Perception.HasDetectedTarget || Perception.CurrentTarget == null)
         {
-            Brain.ChangeState(MobStateId.Return);
+            Brain.ChangeState(Perception.IsTargetHiddenInRange ? MobStateId.Search : MobStateId.Return);
             return;
         }
 

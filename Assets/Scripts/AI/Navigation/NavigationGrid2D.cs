@@ -334,6 +334,28 @@ public class NavigationGrid2D : MonoBehaviour
             && fromRegion == toRegion;
     }
 
+    // Labels connected regions for a profile up front, so the first reachability query during play
+    // doesn't flood-fill the whole grid mid-frame.
+    public void PrewarmRegions(TerrainMovementProfile2D movementProfile)
+    {
+        if (IsBuilt)
+        {
+            GetRegionMap(movementProfile);
+        }
+    }
+
+    internal bool AreRegionsLabeled(TerrainMovementProfile2D movementProfile)
+    {
+        RegionMap regions = defaultRegions;
+        if (movementProfile != null)
+        {
+            regionsByProfile.TryGetValue(movementProfile, out regions);
+        }
+
+        int profileVersion = movementProfile != null ? movementProfile.Version : 0;
+        return regions != null && regions.IsLabeled && regions.ProfileVersion == profileVersion;
+    }
+
     public bool HasLineOfSightCells(Vector3Int from, Vector3Int to)
     {
         return HasLineOfSightCells(from, to, null);

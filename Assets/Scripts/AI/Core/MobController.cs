@@ -178,9 +178,14 @@ public class MobController : MonoBehaviour
             return;
         }
 
-        if (navigationGrid != null && !navigationGrid.IsBuilt)
+        if (navigationGrid != null)
         {
-            navigationGrid.BuildGrid();
+            if (!navigationGrid.IsBuilt)
+            {
+                navigationGrid.BuildGrid();
+            }
+
+            navigationGrid.PrewarmRegions(config.MovementProfile);
         }
 
         motor.Initialize(config);

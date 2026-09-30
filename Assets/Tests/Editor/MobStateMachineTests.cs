@@ -68,6 +68,14 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void Initialization_PrewarmsNavigationRegions_ForTheMobsProfile()
+    {
+        SetupWorld();
+
+        Assert.That(navGrid.AreRegionsLabeled(config.MovementProfile), Is.True);
+    }
+
+    [Test]
     public void ReturnState_TransitionsToIdle_WhenMobIsInSpawnCellButNotSpawnPoint()
     {
         SetupWorld(new Vector3(0.1f, 0.1f, 0f));

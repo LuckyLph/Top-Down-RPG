@@ -68,6 +68,21 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void Reinjection_WhileRunning_ResumesFromIdleInsteadOfStalling()
+    {
+        SetupWorld();
+        brain.ChangeState(MobStateId.Patrol);
+
+        // A scope rebuild re-injects the brain after Start has already entered its first state.
+        brain.Construct(navGrid, new PlayerLocator(player, playerHealth));
+
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    [Test]
     public void Initialization_PrewarmsNavigationRegions_ForTheMobsProfile()
     {
         SetupWorld();

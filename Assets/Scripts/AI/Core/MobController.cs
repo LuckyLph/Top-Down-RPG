@@ -95,9 +95,7 @@ public class MobController : MonoBehaviour
         config = mobConfig;
         navigationGrid = navGrid;
         player = playerLocator;
-        initialized = false;
-        currentState = null;
-        EnsureInitialized();
+        Rebuild();
     }
 
     private void Reinitialize()
@@ -107,9 +105,24 @@ public class MobController : MonoBehaviour
             return;
         }
 
-        initialized = false;
+        Rebuild();
+    }
+
+    // Re-initializes components and states for new dependencies. A brain that was already running a
+    // state resumes from Idle, since Start (which enters the first state) will not run again; one that
+    // has not started yet is left for Start.
+    private void Rebuild()
+    {
+        bool wasRunning = currentState != null;
+        currentState?.Exit();
         currentState = null;
+        initialized = false;
         EnsureInitialized();
+
+        if (wasRunning && initialized)
+        {
+            ChangeState(MobStateId.Idle);
+        }
     }
 
     public void TickStateMachine(float dt)

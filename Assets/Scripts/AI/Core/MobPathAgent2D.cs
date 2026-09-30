@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 public class MobPathAgent2D : MonoBehaviour
 {
     // Moving slower than this fraction of move speed while following a path counts as stalled.
     private const float MinProgressSpeedFraction = 0.2f;
+
+    private static readonly ProfilerMarker BuildPathMarker = new("MobPathAgent2D.BuildPathToWorld");
 
     [Header("Debug")]
     [SerializeField] private bool drawPathGizmos = true;
@@ -54,6 +57,14 @@ public class MobPathAgent2D : MonoBehaviour
     }
 
     public bool BuildPathToWorld(Vector2 worldGoal, bool allowPartial)
+    {
+        using (BuildPathMarker.Auto())
+        {
+            return BuildPath(worldGoal, allowPartial);
+        }
+    }
+
+    private bool BuildPath(Vector2 worldGoal, bool allowPartial)
     {
         if (navigationGrid == null || navigationGrid.Pathfinder == null || motor == null || config == null)
         {

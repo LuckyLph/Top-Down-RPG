@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 public class GridAStarPathfinder2D : IPathfinder2D
 {
+    private static readonly ProfilerMarker FindPathMarker = new("GridAStarPathfinder2D.FindPath");
+
     private readonly NavigationGrid2D navigationGrid;
 
     public GridAStarPathfinder2D(NavigationGrid2D navGrid)
@@ -10,8 +13,20 @@ public class GridAStarPathfinder2D : IPathfinder2D
         navigationGrid = navGrid;
     }
 
+    // Cells closed by the most recent search; lets tests and benchmarks compare search effort.
+    internal int LastExpandedCount { get; private set; }
+
     public PathResult FindPath(PathRequest request)
     {
+        using (FindPathMarker.Auto())
+        {
+            return Search(request);
+        }
+    }
+
+    private PathResult Search(PathRequest request)
+    {
+        LastExpandedCount = 0;
         if (navigationGrid == null || !navigationGrid.IsBuilt)
         {
             return PathResult.Failure;
@@ -73,6 +88,7 @@ public class GridAStarPathfinder2D : IPathfinder2D
             }
 
             closedSet.Add(current);
+            LastExpandedCount++;
 
             int heuristic = navigationGrid.HeuristicCost(current, goal, movementProfile);
             if (heuristic < closestHeuristic)

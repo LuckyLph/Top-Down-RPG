@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -106,6 +107,36 @@ public class MobStateMachineTests
         brain.FixedTickStateMachine();
 
         Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f));
+    }
+
+    [Test]
+    public void ChaseState_Repaths_WhenMobIsPushedOffPathWhileTargetStaysInSameCell()
+    {
+        // Wall at x = 2 running from the grid's south edge up to y = 3, so the initial route goes over its top.
+        List<Vector3Int> wall = new();
+        for (int y = -10; y <= 3; y++)
+        {
+            wall.Add(new Vector3Int(2, y, 0));
+        }
+
+        SetupWorld(new Vector3(0.5f, 0.5f, 0f), blockedCells: wall);
+
+        player.position = new Vector3(4.5f, 0.5f, 0f);
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.PathAgent.HasPath, Is.True);
+
+        // Shoved to the east side of the wall; the old next waypoint is now behind it.
+        Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
+        rb.position = new Vector2(3.5f, -3.5f);
+        brain.transform.position = rb.position;
+        rb.linearVelocity = Vector2.zero;
+
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+        Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f), "Mob should head straight for the target instead of back into the wall.");
     }
 
     [Test]
@@ -299,7 +330,7 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
     }
 
-    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false)
+    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null)
     {
         root = new GameObject("MobStateMachineTestRoot");
         Grid grid = root.AddComponent<Grid>();
@@ -332,6 +363,14 @@ public class MobStateMachineTests
             for (int x = -10; x <= 10; x++)
             {
                 collisionTilemap.SetTile(new Vector3Int(x, 1, 0), blockTile);
+            }
+        }
+
+        if (blockedCells != null)
+        {
+            foreach (Vector3Int cell in blockedCells)
+            {
+                collisionTilemap.SetTile(cell, blockTile);
             }
         }
 

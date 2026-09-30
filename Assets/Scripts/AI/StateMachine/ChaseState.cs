@@ -1,5 +1,3 @@
-using UnityEngine;
-
 public class ChaseState : MobStateBase
 {
     private float repathTimer;
@@ -29,17 +27,12 @@ public class ChaseState : MobStateBase
         }
 
         repathTimer -= Brain.DeltaTime;
-        Vector2 targetPosition = Perception.CurrentTarget.position;
-        bool goalCellChanged = PathAgent.IsGoalCellChanged(targetPosition);
 
-        bool shouldBuildPath =
-            !PathAgent.HasGoalCell ||
-            (goalCellChanged && repathTimer <= 0f) ||
-            (!PathAgent.HasPath && repathTimer <= 0f);
-
-        if (shouldBuildPath)
+        // Re-plan from where the mob actually is every interval, even if the target's cell is unchanged:
+        // collisions can push the mob off its path, leaving its old waypoints behind a wall.
+        if (!PathAgent.HasGoalCell || repathTimer <= 0f)
         {
-            bool pathFound = PathAgent.BuildPathToWorld(targetPosition, allowPartial: true);
+            bool pathFound = PathAgent.BuildPathToWorld(Perception.CurrentTarget.position, allowPartial: true);
             repathTimer = Config.repathInterval;
 
             if (!pathFound || !PathAgent.ReachedResolvedGoal || PathAgent.GoalWasAdjusted)

@@ -53,17 +53,6 @@ public class MobPathAgent2D : MonoBehaviour
         ClearPath();
     }
 
-    public bool IsGoalCellChanged(Vector2 worldGoal)
-    {
-        if (navigationGrid == null)
-        {
-            return true;
-        }
-
-        Vector3Int currentGoalCell = navigationGrid.WorldToCell(worldGoal);
-        return !hasGoalCell || currentGoalCell != lastGoalCell;
-    }
-
     public bool BuildPathToWorld(Vector2 worldGoal, bool allowPartial)
     {
         if (navigationGrid == null || navigationGrid.Pathfinder == null || motor == null || config == null)
@@ -73,13 +62,6 @@ public class MobPathAgent2D : MonoBehaviour
 
         Vector3Int startCell = navigationGrid.WorldToCell(motor.Position);
         Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
-
-        // Avoid resetting waypoint progression when chasing the same goal cell.
-        if (hasGoalCell && hasPath && goalCell == lastGoalCell)
-        {
-            return true;
-        }
-
         PathRequest request = new(startCell, goalCell, allowPartial, config.MovementProfile);
         PathResult result = navigationGrid.Pathfinder.FindPath(request);
 

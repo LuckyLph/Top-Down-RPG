@@ -168,7 +168,9 @@ public class MobController : MonoBehaviour
 
         if (config == null)
         {
-            config = CreateRuntimeFallbackConfig();
+            Debug.LogError($"{name} has no {nameof(MobConfig)} assigned; disabling its brain.", this);
+            enabled = false;
+            return;
         }
 
         if (navigationGrid != null && !navigationGrid.IsBuilt)
@@ -235,13 +237,6 @@ public class MobController : MonoBehaviour
         states[MobStateId.Chase] = new ChaseState(this);
         states[MobStateId.AttackRange] = new AttackRangeState(this);
         states[MobStateId.Return] = new ReturnToSpawnState(this);
-    }
-
-    private static MobConfig CreateRuntimeFallbackConfig()
-    {
-        MobConfig runtimeConfig = ScriptableObject.CreateInstance<MobConfig>();
-        runtimeConfig.hideFlags = HideFlags.HideAndDontSave;
-        return runtimeConfig;
     }
 
     private bool TryGetAttackDistanceToTarget(out float distance)

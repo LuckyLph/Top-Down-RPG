@@ -9,10 +9,12 @@ public class MainLifetimeScope : LifetimeScope
     [SerializeField] private GameScenes gameScenes;
     [SerializeField] private ScreenFader screenFader;
     [SerializeField] private CameraFollow2D cameraFollow;
+    [SerializeField] private Camera mainCamera;
 
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(gameScenes);
+        builder.RegisterComponent(mainCamera);
         builder.RegisterComponent(screenFader);
         builder.RegisterComponent(cameraFollow);
         builder.Register<SceneLoader>(Lifetime.Singleton);

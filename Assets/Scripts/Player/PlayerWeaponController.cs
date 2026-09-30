@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using VContainer;
 
 [DisallowMultipleComponent]
 public class PlayerWeaponController : MonoBehaviour
@@ -7,6 +8,7 @@ public class PlayerWeaponController : MonoBehaviour
     [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerWeapon startingWeapon;
 
+    private SlashSpawner slashSpawner;
     private PlayerWeapon currentWeapon;
     private SpriteRenderer ownerSpriteRenderer;
     private float nextAttackTime;
@@ -40,6 +42,12 @@ public class PlayerWeaponController : MonoBehaviour
         ResolveReferences();
     }
 
+    [Inject]
+    public void Construct(SlashSpawner spawner)
+    {
+        slashSpawner = spawner;
+    }
+
     public void Equip(PlayerWeapon weapon)
     {
         ResolveReferences();
@@ -56,13 +64,23 @@ public class PlayerWeaponController : MonoBehaviour
             return false;
         }
 
+        if (slashSpawner == null)
+        {
+            Debug.LogError($"{nameof(PlayerWeaponController)} was not injected with a {nameof(SlashSpawner)}.", this);
+            return false;
+        }
+
         Vector2 attackDirection = CurrentFacingDirection;
         if (attackDirection.sqrMagnitude <= 0.0001f)
         {
             attackDirection = Vector2.down;
         }
 
-        SwordSlashAttack.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer);
+        if (slashSpawner.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer) == null)
+        {
+            return false;
+        }
+
         nextAttackTime = Time.time + currentWeapon.AttackCooldown;
         return true;
     }

@@ -1,7 +1,6 @@
-using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class CombatComponentTests
 {
@@ -134,69 +133,95 @@ public class CombatComponentTests
     }
 
     [Test]
-    public void FloatingDamageText_SpawnsUnderOverlayCanvasAndProjectsWorldPosition()
+    public void DamagePopupLayer_SpawnsUnderOverlayCanvasAndProjectsWorldPosition()
     {
-        GameObject cameraObject = new("Main Camera");
-        cameraObject.tag = "MainCamera";
+        root = new GameObject("PopupRoot");
+        Camera camera = CreateCamera();
+        DamagePopupLayer layer = CreatePopupLayer();
 
-        Camera camera = cameraObject.AddComponent<Camera>();
-        camera.orthographic = true;
-        camera.transform.position = new Vector3(0f, 0f, -10f);
+        FloatingDamageText popup = layer.Spawn(5, new Vector3(0f, 2f, 0f), camera);
+        popup.Refresh();
 
-        FloatingDamageText popup = FloatingDamageText.Spawn(5, new Vector3(0f, 2f, 0f));
+        RectTransform popupRect = popup.GetComponent<RectTransform>();
+        Canvas parentCanvas = popup.GetComponentInParent<Canvas>();
 
-        try
-        {
-            MethodInfo lateUpdate = typeof(FloatingDamageText).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.That(lateUpdate, Is.Not.Null);
-            lateUpdate.Invoke(popup, null);
-
-            Component popupText = popup.GetComponent("TextMeshProUGUI");
-            RectTransform popupRect = popup.GetComponent<RectTransform>();
-            Canvas parentCanvas = popup.GetComponentInParent<Canvas>();
-
-            Assert.That(popupText, Is.Not.Null);
-            Assert.That(popupRect, Is.Not.Null);
-            Assert.That(parentCanvas, Is.Not.Null);
-            Assert.That(parentCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
-            Assert.That(popupRect.anchoredPosition.y, Is.GreaterThan(0f));
-        }
-        finally
-        {
-            Object.DestroyImmediate(popup.gameObject);
-            Object.DestroyImmediate(cameraObject);
-        }
+        Assert.That(popup.GetComponent<TextMeshProUGUI>().text, Is.EqualTo("5"));
+        Assert.That(parentCanvas, Is.SameAs(layer.GetComponent<Canvas>()));
+        Assert.That(parentCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
+        Assert.That(popupRect.anchoredPosition.y, Is.GreaterThan(0f));
     }
 
     [Test]
-    public void DamageReceiver_ReceiveDamage_SpawnsUiPopup()
+    public void DamageReceiver_ReceiveDamage_PublishesDamageReport()
     {
         root = new GameObject("DamageReceiverRoot");
-        root.transform.position = Vector3.zero;
+        root.transform.position = new Vector3(2f, 3f, 0f);
+        Health health = root.AddComponent<Health>();
+        DamageReceiver receiver = root.AddComponent<DamageReceiver>();
+        GameObject source = new("Source");
+        source.transform.SetParent(root.transform);
 
-        GameObject cameraObject = new("Main Camera");
-        cameraObject.tag = "MainCamera";
+        CombatEvents combatEvents = new();
+        DamageReport? published = null;
+        combatEvents.DamageApplied += report => published = report;
+        receiver.Construct(combatEvents);
+
+        receiver.ReceiveDamage(2, source);
+
+        Assert.That(published.HasValue, Is.True);
+        Assert.That(published.Value.Target, Is.SameAs(health));
+        Assert.That(published.Value.Amount, Is.EqualTo(2));
+        Assert.That(published.Value.Source, Is.SameAs(source));
+        Assert.That(published.Value.PopupWorldPosition.y, Is.GreaterThan(root.transform.position.y));
+    }
+
+    [Test]
+    public void DamagePopupPresenter_SpawnsPopupsOnlyWhileStarted()
+    {
+        root = new GameObject("PresenterRoot");
+        Camera camera = CreateCamera();
+        DamagePopupLayer layer = CreatePopupLayer();
+        CombatEvents combatEvents = new();
+        DamagePopupPresenter presenter = new(combatEvents, layer, camera);
+        DamageReport report = new(null, 3, null, Vector3.zero);
+
+        presenter.Start();
+        combatEvents.Publish(report);
+        Assert.That(CountActivePopups(layer), Is.EqualTo(1));
+
+        presenter.Dispose();
+        combatEvents.Publish(report);
+        Assert.That(CountActivePopups(layer), Is.EqualTo(1));
+    }
+
+    private Camera CreateCamera()
+    {
+        GameObject cameraObject = new("Camera");
+        cameraObject.transform.SetParent(root.transform);
         Camera camera = cameraObject.AddComponent<Camera>();
         camera.orthographic = true;
         camera.transform.position = new Vector3(0f, 0f, -10f);
+        return camera;
+    }
 
-        Health health = root.AddComponent<Health>();
-        DamageReceiver receiver = root.AddComponent<DamageReceiver>();
+    private DamagePopupLayer CreatePopupLayer()
+    {
+        GameObject canvasObject = new("DamagePopupCanvas", typeof(RectTransform), typeof(Canvas));
+        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        DamagePopupLayer layer = canvasObject.AddComponent<DamagePopupLayer>();
 
-        try
-        {
-            receiver.ReceiveDamage(1);
+        GameObject template = new("DamagePopupTemplate", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI), typeof(CanvasGroup));
+        template.transform.SetParent(root.transform, false);
+        template.SetActive(false);
+        RectTransform templateRect = template.GetComponent<RectTransform>();
+        templateRect.anchorMin = new Vector2(0.5f, 0.5f);
+        templateRect.anchorMax = new Vector2(0.5f, 0.5f);
+        layer.Configure(template.AddComponent<FloatingDamageText>());
+        return layer;
+    }
 
-            FloatingDamageText popup = Object.FindAnyObjectByType<FloatingDamageText>();
-            Assert.That(popup, Is.Not.Null);
-
-            Assert.That(popup.GetComponent("TextMeshProUGUI"), Is.Not.Null);
-            Assert.That(popup.GetComponent<Renderer>(), Is.Null);
-            Assert.That(popup.GetComponentInParent<Canvas>(), Is.Not.Null);
-        }
-        finally
-        {
-            Object.DestroyImmediate(cameraObject);
-        }
+    private static int CountActivePopups(DamagePopupLayer layer)
+    {
+        return layer.GetComponentsInChildren<FloatingDamageText>(false).Length;
     }
 }

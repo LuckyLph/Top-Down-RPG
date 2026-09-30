@@ -3,6 +3,7 @@
   "references": [
     "TopDownRPG.Gameplay",
     "TopDownRPG.Core",
+    "VContainer",
     "Unity.InputSystem",
     "Unity.TextMeshPro"
   ],

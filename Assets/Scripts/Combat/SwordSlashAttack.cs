@@ -54,13 +54,19 @@ public class SwordSlashAttack : MonoBehaviour
 
     private void Update()
     {
+        Tick(Time.deltaTime);
+    }
+
+    // Advances lifetime and follows the owner; destroys the slash once its animation has played.
+    internal void Tick(float deltaTime)
+    {
         if (activeLifetime <= 0f)
         {
             Destroy(gameObject);
             return;
         }
 
-        elapsedTime += Time.deltaTime;
+        elapsedTime += deltaTime;
         UpdateFollowPosition();
 
         if (elapsedTime >= activeLifetime)
@@ -74,14 +80,7 @@ public class SwordSlashAttack : MonoBehaviour
         TryDamageCollider(other);
     }
 
-    public static SwordSlashAttack Spawn(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, SpriteRenderer ownerSpriteRenderer = null)
-    {
-        SwordSlashAttack slashAttack = CreateSlashInstance(weapon);
-        slashAttack.gameObject.name = $"{(weapon != null ? weapon.DisplayName : "Player")}Slash";
-        slashAttack.Initialize(owner, weapon, attackDirection, ownerSpriteRenderer);
-        return slashAttack;
-    }
-
+    // Authoring helper for building slash prefabs from code (editor bootstrap, tests).
     public void ConfigureReferences(Transform visualTransform, SpriteRenderer renderer, BoxCollider2D boxCollider, Animator runtimeAnimator, AnimationClip animationClip = null)
     {
         visualRoot = visualTransform;
@@ -188,51 +187,6 @@ public class SwordSlashAttack : MonoBehaviour
     {
         rootBaseScale = transform.localScale;
         rootBaseScale.x = Mathf.Abs(rootBaseScale.x);
-    }
-
-    private static SwordSlashAttack CreateSlashInstance(PlayerWeapon weapon)
-    {
-        if (weapon != null && weapon.SlashPrefab != null)
-        {
-            GameObject slashObject = Instantiate(weapon.SlashPrefab);
-            slashObject.SetActive(true);
-
-            SwordSlashAttack slashAttack = slashObject.GetComponent<SwordSlashAttack>();
-            if (slashAttack != null)
-            {
-                return slashAttack;
-            }
-
-            slashAttack = slashObject.GetComponentInChildren<SwordSlashAttack>(true);
-            if (slashAttack != null)
-            {
-                return slashAttack;
-            }
-
-            Destroy(slashObject);
-        }
-
-        return CreateFallbackSlashInstance(weapon);
-    }
-
-    private static SwordSlashAttack CreateFallbackSlashInstance(PlayerWeapon weapon)
-    {
-        GameObject root = new($"{(weapon != null ? weapon.DisplayName : "Player")}Slash");
-        BoxCollider2D boxCollider = root.AddComponent<BoxCollider2D>();
-        boxCollider.isTrigger = true;
-        boxCollider.offset = new Vector2(0f, 0.1f);
-        boxCollider.size = new Vector2(0.9f, 0.9f);
-
-        Animator runtimeAnimator = root.AddComponent<Animator>();
-        SwordSlashAttack slashAttack = root.AddComponent<SwordSlashAttack>();
-
-        GameObject visualObject = new("Visual");
-        visualObject.transform.SetParent(root.transform, false);
-        visualObject.transform.localScale = Vector3.one * 0.14f;
-        SpriteRenderer renderer = visualObject.AddComponent<SpriteRenderer>();
-
-        slashAttack.ConfigureReferences(visualObject.transform, renderer, boxCollider, runtimeAnimator);
-        return slashAttack;
     }
 
     private void MatchOwnerSorting(SpriteRenderer ownerSpriteRenderer)

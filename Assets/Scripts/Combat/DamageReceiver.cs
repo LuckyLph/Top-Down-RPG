@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
@@ -7,6 +8,7 @@ public class DamageReceiver : MonoBehaviour
     [SerializeField] private Vector3 floatingTextOffset = new(0f, 1.4f, 0f);
 
     private Health health;
+    private CombatEvents combatEvents;
 
     public Health Health
     {
@@ -20,6 +22,12 @@ public class DamageReceiver : MonoBehaviour
     private void Awake()
     {
         ResolveHealth();
+    }
+
+    [Inject]
+    public void Construct(CombatEvents events)
+    {
+        combatEvents = events;
     }
 
     // Only the hit object and its ancestors are searched, so hitting an unrelated collider (a wall
@@ -36,7 +44,7 @@ public class DamageReceiver : MonoBehaviour
         int appliedDamage = health.ApplyDamage(amount, source);
         if (appliedDamage > 0)
         {
-            FloatingDamageText.Spawn(appliedDamage, transform.position + floatingTextOffset);
+            combatEvents?.Publish(new DamageReport(health, appliedDamage, source, transform.position + floatingTextOffset));
         }
 
         return appliedDamage;

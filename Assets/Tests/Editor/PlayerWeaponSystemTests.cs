@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using VContainer;
 
 public class PlayerWeaponSystemTests
 {
@@ -77,6 +78,7 @@ public class PlayerWeaponSystemTests
         root.AddComponent<Rigidbody2D>();
         PlayerController playerController = root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+        weaponController.Construct(CreateSpawner());
 
         weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, spawnDistance: 0.75f));
         SetPrivateField(playerController, "lastMoveDirection", Vector2.right);
@@ -106,7 +108,7 @@ public class PlayerWeaponSystemTests
         BoxCollider2D targetCollider = target.GetComponent<BoxCollider2D>();
 
         PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 3, hitboxSize: new Vector2(1.2f, 1f));
-        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
+        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
 
         Assert.That(targetHealth.CurrentHealth, Is.EqualTo(targetHealth.MaxHealth - 3));
         Assert.That(ownerHealth.CurrentHealth, Is.EqualTo(ownerHealth.MaxHealth));
@@ -131,7 +133,7 @@ public class PlayerWeaponSystemTests
         Health enemyHealth = distantEnemy.GetComponent<Health>();
         Health ownerHealth = owner.GetComponent<Health>();
         PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2);
-        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
+        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
 
         Assert.That(slashAttack.TryDamageCollider(wallCollider), Is.False);
         Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
@@ -151,7 +153,7 @@ public class PlayerWeaponSystemTests
         Health secondHealth = secondTarget.GetComponent<Health>();
 
         PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2, hitboxSize: new Vector2(1.2f, 1.2f));
-        SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
+        CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
 
         Assert.That(firstHealth.CurrentHealth, Is.EqualTo(firstHealth.MaxHealth - 2));
         Assert.That(secondHealth.CurrentHealth, Is.EqualTo(secondHealth.MaxHealth - 2));
@@ -174,12 +176,12 @@ public class PlayerWeaponSystemTests
         SpriteRenderer spriteRenderer = visuals.AddComponent<SpriteRenderer>();
 
         PlayerWeapon weapon = CreateTestWeapon("Sword", spawnDistance: 0.55f);
-        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right, spriteRenderer);
+        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right, spriteRenderer);
 
         Vector3 initialOffset = slashAttack.transform.position - visuals.transform.position;
         owner.transform.position += new Vector3(1.25f, 0.4f, 0f);
 
-        InvokePrivateMethod(slashAttack, "Update");
+        slashAttack.Tick(0f);
 
         Vector3 followedOffset = slashAttack.transform.position - visuals.transform.position;
         Assert.That(Vector3.Distance(followedOffset, initialOffset), Is.LessThan(0.001f));
@@ -222,8 +224,8 @@ public class PlayerWeaponSystemTests
         owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
 
         PlayerWeapon weapon = CreateTestWeapon("Sword");
-        SwordSlashAttack eastSlash = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
-        SwordSlashAttack westSlash = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.left);
+        SwordSlashAttack eastSlash = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
+        SwordSlashAttack westSlash = CreateSpawner().Spawn(owner.transform, weapon, Vector2.left);
 
         Assert.That(eastSlash.transform.localScale.x, Is.LessThan(0f));
         Assert.That(westSlash.transform.localScale.x, Is.GreaterThan(0f));
@@ -241,7 +243,7 @@ public class PlayerWeaponSystemTests
         owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
 
         PlayerWeapon weapon = CreateTestWeapon("Sword");
-        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner.transform, weapon, Vector2.right);
+        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
 
         Assert.That(slashAttack.SpriteRenderer, Is.Not.Null);
         Assert.That(slashAttack.SpriteRenderer.sprite, Is.Not.Null);
@@ -272,6 +274,11 @@ public class PlayerWeaponSystemTests
         Assert.That(assetProperty.objectReferenceValue, Is.SameAs(actionsAsset), "Builds only use the asset assigned on the prefab.");
     }
 
+    private static SlashSpawner CreateSpawner()
+    {
+        return new SlashSpawner(new ContainerBuilder().Build());
+    }
+
     private static PlayerWeapon CreateTestWeapon(
         string name,
         int damage = 1,
@@ -296,7 +303,7 @@ public class PlayerWeaponSystemTests
 
     private static void AssertSpawnPosition(Transform owner, PlayerWeapon weapon, Vector2 direction, Vector3 expectedPosition)
     {
-        SwordSlashAttack slashAttack = SwordSlashAttack.Spawn(owner, weapon, direction);
+        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner, weapon, direction);
         Assert.That(Vector3.Distance(slashAttack.transform.position, expectedPosition), Is.LessThan(0.001f));
         Object.DestroyImmediate(slashAttack.gameObject);
     }

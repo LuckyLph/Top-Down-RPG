@@ -227,17 +227,34 @@ public class MobStateMachineTests
     }
 
     [Test]
-    public void SearchState_GivesUpAndReturns_AfterSearchDuration()
+    public void SearchState_SearchTimeStartsOnArrival_NotWhileWalkingThere()
     {
-        SetupWorld();
-        player.position = new Vector3(3f, 0f, 0f);
-        brain.ChangeState(MobStateId.Idle);
-        brain.TickStateMachine(0.1f);
-        BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+        EnterSearchWithTargetGone();
 
+        // Still walking to the last known position (edit mode runs no physics, so it never gets there).
         brain.TickStateMachine(config.searchDuration + 0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Walking there must not use up the search time.");
+
+        Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
+        rb.position = new Vector2(3f, 0f);
+        brain.transform.position = rb.position;
+        brain.FixedTickStateMachine();
+        Assert.That(brain.PathAgent.ReachedDestination, Is.True);
+
+        brain.TickStateMachine(config.searchDuration - 0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "It should wait the full search time at the spot.");
+
+        brain.TickStateMachine(0.2f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
+    public void SearchState_StartsSearchTime_WhenBlockedOnTheWay()
+    {
+        EnterSearchWithTargetGone();
+
+        TickBlockedPastStuckTimeout();
+        brain.TickStateMachine(config.searchDuration);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
@@ -514,6 +531,21 @@ public class MobStateMachineTests
         brain.FixedTickStateMachine();
 
         Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
+    }
+
+    // Chase a target at (3, 0), lose sight of it behind a pillar so the mob starts searching, then take the
+    // target far away so it cannot be spotted again during the search.
+    private void EnterSearchWithTargetGone()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
+
+        player.position = new Vector3(100f, 0f, 0f);
     }
 
     // A pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so

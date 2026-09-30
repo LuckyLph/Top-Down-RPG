@@ -90,14 +90,19 @@ public class CombatComponentTests
         GameObject visuals = new("Visuals");
         visuals.transform.SetParent(target.transform);
 
+        ManualClock clock = new();
+        dealer.Construct(clock);
         dealer.ResetCooldown();
 
         bool firstHit = dealer.TryDealDamage(visuals.transform);
         bool secondHit = dealer.TryDealDamage(visuals.transform);
+        clock.Advance(dealer.AttackInterval);
+        bool hitAfterInterval = dealer.TryDealDamage(visuals.transform);
 
         Assert.That(firstHit, Is.True);
         Assert.That(secondHit, Is.False);
-        Assert.That(health.CurrentHealth, Is.EqualTo(9));
+        Assert.That(hitAfterInterval, Is.True);
+        Assert.That(health.CurrentHealth, Is.EqualTo(8));
     }
 
     [Test]

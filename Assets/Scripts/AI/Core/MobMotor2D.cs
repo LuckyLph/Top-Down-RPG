@@ -28,6 +28,10 @@ public class MobMotor2D : MonoBehaviour
     public Vector2 Position => rb != null ? rb.position : (Vector2)transform.position;
     public float MoveSpeed => moveSpeed;
 
+    internal bool SupportsAttackAnimation => supportsAttackAnimation;
+    internal bool IsAttackAnimationActive => isAttackAnimationActive;
+    internal Vector2 LastMoveDirection => lastMoveDirection;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();

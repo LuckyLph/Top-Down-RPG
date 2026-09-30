@@ -18,10 +18,11 @@ public class GameplayLifetimeScope : LifetimeScope
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(player);
+        builder.RegisterInstance(player.GetComponent<PlayerWeaponController>());
         builder.RegisterInstance<IPlayerLocator>(new PlayerLocator(player.transform, player.GetComponent<Health>()));
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
-        builder.RegisterComponentInHierarchy<PlayerHudController>();
+        builder.RegisterComponentInHierarchy<PlayerHudView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
@@ -30,6 +31,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<DamagePopupPresenter>();
         builder.RegisterEntryPoint<GameplayEntryPoint>();
         builder.RegisterEntryPoint<PlayerDeathHandler>();
+        builder.RegisterEntryPoint<PlayerHudPresenter>();
 
         // Every component on the player (controller, weapon, damage receiver) gets its dependencies.
         builder.RegisterBuildCallback(resolver => resolver.InjectGameObject(player.gameObject));

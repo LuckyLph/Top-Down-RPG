@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
 using UnityEditor;
-using System.Reflection;
 
 public class MobMotor2DTests
 {
@@ -32,18 +31,11 @@ public class MobMotor2DTests
 
         motor.PlayAttackAnimation(Vector2.right);
 
-        Assert.That(GetPrivateField<bool>(motor, "supportsAttackAnimation"), Is.True);
-        Assert.That(GetPrivateField<bool>(motor, "isAttackAnimationActive"), Is.True);
+        Assert.That(motor.SupportsAttackAnimation, Is.True);
+        Assert.That(motor.IsAttackAnimationActive, Is.True);
 
-        Vector2 lastMoveDirection = GetPrivateField<Vector2>(motor, "lastMoveDirection");
+        Vector2 lastMoveDirection = motor.LastMoveDirection;
         Assert.That(lastMoveDirection.x, Is.GreaterThan(0.9f));
         Assert.That(lastMoveDirection.y, Is.EqualTo(0f).Within(0.001f));
-    }
-
-    private static T GetPrivateField<T>(Object target, string fieldName)
-    {
-        FieldInfo field = typeof(MobMotor2D).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(field, Is.Not.Null, $"Expected field '{fieldName}' to exist on {nameof(MobMotor2D)}.");
-        return (T)field.GetValue(target);
     }
 }

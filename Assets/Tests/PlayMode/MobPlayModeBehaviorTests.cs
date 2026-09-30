@@ -190,11 +190,11 @@ public class MobPlayModeBehaviorTests
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         MobController mob = Object.FindAnyObjectByType<MobController>();
-        PlayerHudController hud = Object.FindAnyObjectByType<PlayerHudController>();
+        PlayerHudView hud = Object.FindAnyObjectByType<PlayerHudView>();
 
         Assert.That(player, Is.Not.Null);
         Assert.That(mob, Is.Not.Null);
-        Assert.That(hud, Is.Not.Null, "The clearing slice should contain the reusable PlayerHudController.");
+        Assert.That(hud, Is.Not.Null, "The clearing slice should contain the reusable PlayerHudView.");
 
         PlayerController playerController = player.GetComponent<PlayerController>();
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();

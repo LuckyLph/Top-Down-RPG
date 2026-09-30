@@ -116,7 +116,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3201ecdc673146239dc58914bd62206d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerHudController
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerHudView
+  healthFill: {fileID: 8199029880212830360}
+  healthText: {fileID: 8882182650238593039}
+  weaponIcon: {fileID: 1279281163464098912}
   activeWeaponIconTint: {r: 1, g: 1, b: 1, a: 1}
   missingWeaponIconTint: {r: 1, g: 1, b: 1, a: 0.25}
 --- !u!1 &782419015254719122

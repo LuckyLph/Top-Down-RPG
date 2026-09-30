@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
@@ -13,10 +12,14 @@ using VContainer;
 public class PlayerWeaponSystemTests
 {
     private GameObject root;
+    private PlayerHudPresenter hudPresenter;
 
     [TearDown]
     public void TearDown()
     {
+        hudPresenter?.Dispose();
+        hudPresenter = null;
+
         foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             Object.DestroyImmediate(slashAttack.gameObject);
@@ -44,7 +47,7 @@ public class PlayerWeaponSystemTests
         root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
-        Image iconImage = CreatePlayerHudCanvas(weaponController);
+        Image iconImage = CreatePlayerHudCanvas(weaponController).WeaponIcon;
         Sprite iconSprite = LoadWeaponHudIconSprite();
 
         weaponController.Equip(CreateTestWeapon("Sword", icon: iconSprite));
@@ -62,12 +65,36 @@ public class PlayerWeaponSystemTests
         root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
-        Image iconImage = CreatePlayerHudCanvas(weaponController);
+        Image iconImage = CreatePlayerHudCanvas(weaponController).WeaponIcon;
 
         weaponController.Equip(CreateTestWeapon("Training Sword", icon: null));
 
         Assert.That(iconImage.sprite, Is.Null);
         Assert.That(iconImage.color.a, Is.EqualTo(0.25f).Within(0.001f));
+    }
+
+    [Test]
+    public void HudPresenter_ShowsHealthChangesUntilDisposed()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<Rigidbody2D>();
+        root.AddComponent<PlayerController>();
+        Health health = root.AddComponent<Health>();
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+
+        HudElements hud = CreatePlayerHudCanvas(weaponController);
+        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth}"));
+        Assert.That(hud.HealthFill.fillAmount, Is.EqualTo(1f).Within(0.001f));
+
+        health.ApplyDamage(3);
+        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.CurrentHealth}"));
+        Assert.That(hud.HealthFill.fillAmount, Is.EqualTo((float)health.CurrentHealth / health.MaxHealth).Within(0.001f));
+
+        hudPresenter.Dispose();
+        hudPresenter = null;
+        string textAfterDispose = hud.HealthText.text;
+        health.ApplyDamage(1);
+        Assert.That(hud.HealthText.text, Is.EqualTo(textAfterDispose), "A disposed presenter should stop listening.");
     }
 
     [Test]
@@ -80,7 +107,8 @@ public class PlayerWeaponSystemTests
         root.AddComponent<Rigidbody2D>();
         PlayerController playerController = root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateSpawner());
+        ManualClock clock = new();
+        weaponController.Construct(CreateSpawner(), clock);
 
         weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, spawnDistance: 0.75f));
         playerController.Face(Vector2.right);
@@ -88,9 +116,15 @@ public class PlayerWeaponSystemTests
         bool firstAttack = weaponController.TryAttack();
         bool secondAttack = weaponController.TryAttack();
         SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
+        clock.Advance(0.49f);
+        bool attackBeforeCooldown = weaponController.TryAttack();
+        clock.Advance(0.01f);
+        bool attackAfterCooldown = weaponController.TryAttack();
 
         Assert.That(firstAttack, Is.True);
         Assert.That(secondAttack, Is.False);
+        Assert.That(attackBeforeCooldown, Is.False);
+        Assert.That(attackAfterCooldown, Is.True);
         Assert.That(slashAttack, Is.Not.Null);
         Assert.That(slashAttack.Direction.x, Is.GreaterThan(0.9f));
         Assert.That(slashAttack.transform.position.x, Is.GreaterThan(root.transform.position.x));
@@ -357,7 +391,21 @@ public class PlayerWeaponSystemTests
         return target;
     }
 
-    private static Image CreatePlayerHudCanvas(PlayerWeaponController weaponController)
+    private readonly struct HudElements
+    {
+        public HudElements(Image healthFill, TextMeshProUGUI healthText, Image weaponIcon)
+        {
+            HealthFill = healthFill;
+            HealthText = healthText;
+            WeaponIcon = weaponIcon;
+        }
+
+        public Image HealthFill { get; }
+        public TextMeshProUGUI HealthText { get; }
+        public Image WeaponIcon { get; }
+    }
+
+    private HudElements CreatePlayerHudCanvas(PlayerWeaponController weaponController)
     {
         GameObject canvasObject = new("PlayerHudCanvas");
         canvasObject.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
@@ -390,10 +438,13 @@ public class PlayerWeaponSystemTests
         Image weaponIcon = weaponIconObject.AddComponent<Image>();
         weaponIcon.preserveAspect = true;
 
-        PlayerHudController hudController = canvasObject.AddComponent<PlayerHudController>();
-        InvokePrivateMethod(hudController, "OnEnable");
-        hudController.Bind(weaponController.GetComponent<Health>(), weaponController);
-        return weaponIcon;
+        PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
+        view.ConfigureReferences(healthFill, healthText, weaponIcon);
+
+        PlayerLocator player = new(weaponController.transform, weaponController.GetComponent<Health>());
+        hudPresenter = new PlayerHudPresenter(player, weaponController, view);
+        hudPresenter.Start();
+        return new HudElements(healthFill, healthText, weaponIcon);
     }
 
     private static Sprite LoadWeaponHudIconSprite()
@@ -409,12 +460,5 @@ public class PlayerWeaponSystemTests
 
         Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
         return null;
-    }
-
-    private static void InvokePrivateMethod(Object target, string methodName)
-    {
-        MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(method, Is.Not.Null, $"Expected method '{methodName}' to exist on {target.GetType().Name}.");
-        method.Invoke(target, null);
     }
 }

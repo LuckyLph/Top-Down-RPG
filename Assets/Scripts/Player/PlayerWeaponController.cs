@@ -9,6 +9,7 @@ public class PlayerWeaponController : MonoBehaviour
     [SerializeField] private PlayerWeapon startingWeapon;
 
     private SlashSpawner slashSpawner;
+    private IClock clock = UnityClock.Shared;
     private PlayerWeapon currentWeapon;
     private SpriteRenderer ownerSpriteRenderer;
     private float nextAttackTime;
@@ -43,9 +44,10 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     [Inject]
-    public void Construct(SlashSpawner spawner)
+    public void Construct(SlashSpawner spawner, IClock gameClock)
     {
         slashSpawner = spawner;
+        clock = gameClock ?? UnityClock.Shared;
     }
 
     public void Equip(PlayerWeapon weapon)
@@ -59,7 +61,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         ResolveReferences();
 
-        if (currentWeapon == null || Time.time < nextAttackTime)
+        if (currentWeapon == null || clock.Time < nextAttackTime)
         {
             return false;
         }
@@ -81,7 +83,7 @@ public class PlayerWeaponController : MonoBehaviour
             return false;
         }
 
-        nextAttackTime = Time.time + currentWeapon.AttackCooldown;
+        nextAttackTime = clock.Time + currentWeapon.AttackCooldown;
         return true;
     }
 

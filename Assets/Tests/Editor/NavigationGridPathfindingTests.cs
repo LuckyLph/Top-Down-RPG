@@ -292,6 +292,22 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void MinimumTraversalCost_RefreshesWhenRulesChange()
+    {
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(defaultWalkable: false);
+        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(10));
+
+        landProfile.SetTerrainRule(waterTerrain, true, 4);
+        Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(4));
+
+        landProfile.SetTerrainRule(waterTerrain, false, 4);
+        Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(10));
+    }
+
+    [Test]
     public void AreCellsConnected_AgreesWithAStar_OnRandomGrid()
     {
         root = CreateGridRoot("ConnectivityRandomRoot");

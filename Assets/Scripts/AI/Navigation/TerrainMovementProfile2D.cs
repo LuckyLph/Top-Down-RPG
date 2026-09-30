@@ -18,6 +18,8 @@ public class TerrainMovementProfile2D : ScriptableObject
     [SerializeField] private List<TerrainRule> terrainRules = new();
 
     private Dictionary<TerrainType2D, TerrainRule> ruleLookup;
+    // Cached because the pathfinder's heuristic asks for it for every neighbor it scores.
+    private int minimumTraversalCost = -1;
     private int version;
 
     // Incremented whenever walkability or costs change so cached navigation data can be invalidated.
@@ -67,6 +69,16 @@ public class TerrainMovementProfile2D : ScriptableObject
     }
 
     public int GetMinimumTraversalCost()
+    {
+        if (minimumTraversalCost < 0)
+        {
+            minimumTraversalCost = CalculateMinimumTraversalCost();
+        }
+
+        return minimumTraversalCost;
+    }
+
+    private int CalculateMinimumTraversalCost()
     {
         int minimum = int.MaxValue;
         if (defaultIsWalkable)
@@ -131,12 +143,14 @@ public class TerrainMovementProfile2D : ScriptableObject
     private void InvalidateRules()
     {
         ruleLookup = null;
+        minimumTraversalCost = -1;
         version++;
     }
 
     private void OnEnable()
     {
         ruleLookup = null;
+        minimumTraversalCost = -1;
     }
 
 #if UNITY_EDITOR

@@ -16,6 +16,10 @@ public class MobPathAgent2D : MonoBehaviour
     [SerializeField] private Color goalColor = new(0.2f, 1f, 0.2f, 0.9f);
 
     private readonly List<Vector2> waypoints = new();
+    // Reused across path builds so re-planning does not allocate.
+    private readonly List<Vector3Int> pathCells = new();
+    private readonly List<Vector3Int> smoothedCells = new();
+    private readonly List<int> routeCost = new();
     private NavigationGrid2D navigationGrid;
     private MobConfig config;
     private MobMotor2D motor;
@@ -74,7 +78,7 @@ public class MobPathAgent2D : MonoBehaviour
         Vector3Int startCell = navigationGrid.WorldToCell(motor.Position);
         Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
         PathRequest request = new(startCell, goalCell, allowPartial, config.MovementProfile);
-        PathResult result = navigationGrid.Pathfinder.FindPath(request);
+        PathResult result = navigationGrid.Pathfinder.FindPath(request, pathCells);
 
         hasGoalCell = true;
         lastGoalCell = goalCell;
@@ -86,21 +90,21 @@ public class MobPathAgent2D : MonoBehaviour
         }
 
         waypoints.Clear();
-        IReadOnlyList<Vector3Int> smoothedCells = SmoothPathCells(result.Cells);
+        IReadOnlyList<Vector3Int> smoothed = SmoothPathCells(result.Cells);
         int firstCellIndex = 0;
-        if (smoothedCells.Count > 1 && smoothedCells[0] == startCell)
+        if (smoothed.Count > 1 && smoothed[0] == startCell)
         {
             // Repathing should continue forward from the current cell instead of
             // steering back to its center, which causes visible left/right jitter.
             firstCellIndex = 1;
         }
 
-        for (int i = firstCellIndex; i < smoothedCells.Count; i++)
+        for (int i = firstCellIndex; i < smoothed.Count; i++)
         {
-            bool isFinalCell = i == smoothedCells.Count - 1;
+            bool isFinalCell = i == smoothed.Count - 1;
             Vector2 waypoint = isFinalCell && !result.IsPartial
                 ? worldGoal
-                : navigationGrid.CellToWorldCenter(smoothedCells[i]);
+                : navigationGrid.CellToWorldCenter(smoothed[i]);
 
             waypoints.Add(waypoint);
         }
@@ -166,13 +170,15 @@ public class MobPathAgent2D : MonoBehaviour
         TerrainMovementProfile2D movementProfile = config != null ? config.MovementProfile : null;
 
         // routeCost[i] is the cost of following the A* path from its start to cell i.
-        int[] routeCost = new int[sourceCells.Count];
+        routeCost.Clear();
+        routeCost.Add(0);
         for (int i = 1; i < sourceCells.Count; i++)
         {
-            routeCost[i] = routeCost[i - 1] + navigationGrid.MovementCost(sourceCells[i - 1], sourceCells[i], movementProfile);
+            routeCost.Add(routeCost[i - 1] + navigationGrid.MovementCost(sourceCells[i - 1], sourceCells[i], movementProfile));
         }
 
-        List<Vector3Int> smoothed = new() { sourceCells[0] };
+        smoothedCells.Clear();
+        smoothedCells.Add(sourceCells[0]);
         int anchorIndex = 0;
 
         while (anchorIndex < sourceCells.Count - 1)
@@ -193,11 +199,11 @@ public class MobPathAgent2D : MonoBehaviour
                 }
             }
 
-            smoothed.Add(sourceCells[furthestVisible]);
+            smoothedCells.Add(sourceCells[furthestVisible]);
             anchorIndex = furthestVisible;
         }
 
-        return smoothed;
+        return smoothedCells;
     }
 
     public void FixedTick()

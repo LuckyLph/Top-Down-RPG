@@ -8,6 +8,12 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
     private readonly NavigationGrid2D navigationGrid;
 
+    // Search state reused across calls so a warmed-up search allocates nothing. Searches run one at a
+    // time on the main thread, so sharing it is safe.
+    private readonly OpenHeap openHeap = new();
+    private readonly Dictionary<Vector3Int, SearchNode> nodes = new();
+    private readonly Vector3Int[] neighborBuffer = new Vector3Int[8];
+
     public GridAStarPathfinder2D(NavigationGrid2D navGrid)
     {
         navigationGrid = navGrid;
@@ -18,13 +24,19 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
     public PathResult FindPath(PathRequest request)
     {
+        return FindPath(request, new List<Vector3Int>());
+    }
+
+    public PathResult FindPath(PathRequest request, List<Vector3Int> cellsBuffer)
+    {
         using (FindPathMarker.Auto())
         {
-            return Search(request);
+            cellsBuffer.Clear();
+            return Search(request, cellsBuffer);
         }
     }
 
-    private PathResult Search(PathRequest request)
+    private PathResult Search(PathRequest request, List<Vector3Int> cells)
     {
         LastExpandedCount = 0;
         if (navigationGrid == null || !navigationGrid.IsBuilt)
@@ -63,14 +75,11 @@ public class GridAStarPathfinder2D : IPathfinder2D
         }
 
         int maxExpanded = navigationGrid.MaxSearchCells;
+        openHeap.Clear();
+        nodes.Clear();
 
-        OpenHeap openHeap = new();
-        HashSet<Vector3Int> closedSet = new();
-        Dictionary<Vector3Int, Vector3Int> cameFrom = new();
         int startHeuristic = navigationGrid.HeuristicCost(start, goal, movementProfile);
-        Dictionary<Vector3Int, int> gScore = new() { [start] = 0 };
-        Dictionary<Vector3Int, int> fScore = new() { [start] = startHeuristic };
-        Dictionary<Vector3Int, int> insertionOrder = new() { [start] = 0 };
+        nodes[start] = new SearchNode(0, startHeuristic, start, 0);
         openHeap.Push(new OpenEntry(start, startHeuristic, startHeuristic, 0));
 
         Vector3Int closestToGoal = start;
@@ -80,7 +89,8 @@ public class GridAStarPathfinder2D : IPathfinder2D
         {
             OpenEntry entry = openHeap.Pop();
             Vector3Int current = entry.Cell;
-            if (closedSet.Contains(current) || entry.F != fScore[current])
+            SearchNode currentNode = nodes[current];
+            if (currentNode.Closed || entry.F != currentNode.F)
             {
                 // Stale entry left behind by a later, cheaper push of the same cell.
                 continue;
@@ -88,47 +98,46 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
             if (current == goal)
             {
+                ReconstructPath(start, current, cells);
                 return new PathResult(
                     success: true,
                     isPartial: adjustedGoalToNearestWalkable,
                     goalWasAdjusted: adjustedGoalToNearestWalkable,
                     reachedResolvedGoal: true,
-                    cells: ReconstructPath(cameFrom, current));
+                    cells: cells);
             }
 
-            closedSet.Add(current);
+            currentNode.Closed = true;
+            nodes[current] = currentNode;
             LastExpandedCount++;
 
-            int heuristic = navigationGrid.HeuristicCost(current, goal, movementProfile);
-            if (heuristic < closestHeuristic)
+            if (entry.H < closestHeuristic)
             {
-                closestHeuristic = heuristic;
+                closestHeuristic = entry.H;
                 closestToGoal = current;
             }
 
-            foreach (Vector3Int neighbor in navigationGrid.GetNeighbors8(current, movementProfile))
+            int neighborCount = navigationGrid.GetNeighbors8(current, movementProfile, neighborBuffer);
+            for (int i = 0; i < neighborCount; i++)
             {
-                if (closedSet.Contains(neighbor))
+                Vector3Int neighbor = neighborBuffer[i];
+                bool isKnown = nodes.TryGetValue(neighbor, out SearchNode neighborNode);
+                if (isKnown && neighborNode.Closed)
                 {
                     continue;
                 }
 
-                int tentativeG = gScore[current] + navigationGrid.MovementCost(current, neighbor, movementProfile);
-                if (!gScore.TryGetValue(neighbor, out int neighborG) || tentativeG < neighborG)
+                int tentativeG = currentNode.G + navigationGrid.MovementCost(current, neighbor, movementProfile);
+                if (isKnown && tentativeG >= neighborNode.G)
                 {
-                    int neighborHeuristic = navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
-                    cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeG;
-                    fScore[neighbor] = tentativeG + neighborHeuristic;
-
-                    if (!insertionOrder.TryGetValue(neighbor, out int order))
-                    {
-                        order = insertionOrder.Count;
-                        insertionOrder[neighbor] = order;
-                    }
-
-                    openHeap.Push(new OpenEntry(neighbor, fScore[neighbor], neighborHeuristic, order));
+                    continue;
                 }
+
+                int neighborHeuristic = navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
+                int order = isKnown ? neighborNode.Order : nodes.Count;
+                int f = tentativeG + neighborHeuristic;
+                nodes[neighbor] = new SearchNode(tentativeG, f, current, order);
+                openHeap.Push(new OpenEntry(neighbor, f, neighborHeuristic, order));
             }
         }
 
@@ -137,25 +146,45 @@ public class GridAStarPathfinder2D : IPathfinder2D
             return PathResult.Failure;
         }
 
+        ReconstructPath(start, closestToGoal, cells);
         return new PathResult(
             success: true,
             isPartial: true,
             goalWasAdjusted: adjustedGoalToNearestWalkable,
             reachedResolvedGoal: false,
-            cells: ReconstructPath(cameFrom, closestToGoal));
+            cells: cells);
     }
 
-    private static IReadOnlyList<Vector3Int> ReconstructPath(Dictionary<Vector3Int, Vector3Int> cameFrom, Vector3Int current)
+    private void ReconstructPath(Vector3Int start, Vector3Int end, List<Vector3Int> cells)
     {
-        List<Vector3Int> path = new() { current };
-        while (cameFrom.TryGetValue(current, out Vector3Int previous))
+        Vector3Int current = end;
+        cells.Add(current);
+        while (current != start)
         {
-            current = previous;
-            path.Add(current);
+            current = nodes[current].Parent;
+            cells.Add(current);
         }
 
-        path.Reverse();
-        return path;
+        cells.Reverse();
+    }
+
+    // One record per discovered cell: replaces separate g/f/parent/order maps and the closed set.
+    private struct SearchNode
+    {
+        public SearchNode(int g, int f, Vector3Int parent, int order)
+        {
+            G = g;
+            F = f;
+            Parent = parent;
+            Order = order;
+            Closed = false;
+        }
+
+        public int G;
+        public int F;
+        public Vector3Int Parent;
+        public int Order;
+        public bool Closed;
     }
 
     private readonly struct OpenEntry
@@ -193,6 +222,11 @@ public class GridAStarPathfinder2D : IPathfinder2D
         private readonly List<OpenEntry> entries = new();
 
         public int Count => entries.Count;
+
+        public void Clear()
+        {
+            entries.Clear();
+        }
 
         public void Push(OpenEntry entry)
         {

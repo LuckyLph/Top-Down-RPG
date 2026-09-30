@@ -2,6 +2,8 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.TestTools.Constraints;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 public class MobPathAgent2DTests
 {
@@ -111,6 +113,25 @@ public class MobPathAgent2DTests
         }
 
         Assert.That(smoothedCost, Is.EqualTo(optimalCost), "Smoothing must not route through the costly water corridor.");
+    }
+
+    [Test]
+    public void BuildPathToWorld_DoesNotAllocate_OnceWarmedUp()
+    {
+        CreateGridRoot();
+        TerrainType2D ground = CreateTerrain("ground");
+        List<Vector3Int> lShape = Rect(0, 0, 4, 0);
+        lShape.AddRange(Rect(4, 1, 4, 4));
+        AddTerrainLayer("Ground", ground, lShape);
+        BuildGridAndAgent(null);
+
+        PlaceMob(new Vector2(0.5f, 0.5f));
+        Vector2 goal = navigationGrid.CellToWorldCenter(new Vector3Int(4, 4, 0));
+        pathAgent.BuildPathToWorld(goal, allowPartial: true);
+
+        TestDelegate buildPath = () => pathAgent.BuildPathToWorld(goal, allowPartial: true);
+        Assert.That(buildPath, Is.Not.AllocatingGCMemory());
+        Assert.That(pathAgent.Waypoints.Count, Is.EqualTo(2));
     }
 
     [Test]

@@ -224,6 +224,23 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    // Non-allocating variant for hot paths: writes traversable neighbors into buffer (room for 8) and
+    // returns how many were written.
+    public int GetNeighbors8(Vector3Int cell, TerrainMovementProfile2D movementProfile, Vector3Int[] buffer)
+    {
+        int count = 0;
+        for (int i = 0; i < NeighborOffsets8.Length; i++)
+        {
+            Vector3Int neighbor = cell + NeighborOffsets8[i];
+            if (CanTraverse(cell, neighbor, movementProfile))
+            {
+                buffer[count++] = neighbor;
+            }
+        }
+
+        return count;
+    }
+
     public bool TryGetNearestWalkableCell(Vector3Int origin, out Vector3Int nearest, int maxRadius = -1)
     {
         return TryGetNearestWalkableCell(origin, null, out nearest, maxRadius);

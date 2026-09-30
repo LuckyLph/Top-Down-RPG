@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.TestTools.Constraints;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 public class NavigationGridPathfindingTests
 {
@@ -85,6 +87,19 @@ public class NavigationGridPathfindingTests
         Assert.That(partialResult.ReachedResolvedGoal, Is.False);
         Assert.That(partialResult.Cells.Count, Is.GreaterThan(0));
         Assert.That(partialResult.Cells[^1].x, Is.LessThanOrEqualTo(1));
+    }
+
+    [Test]
+    public void AStar_DoesNotAllocate_OnceWarmedUp()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        PathRequest request = new(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), allowPartial: false);
+        List<Vector3Int> cells = new();
+        navigationGrid.Pathfinder.FindPath(request, cells);
+
+        TestDelegate search = () => navigationGrid.Pathfinder.FindPath(request, cells);
+        Assert.That(search, Is.Not.AllocatingGCMemory());
+        Assert.That(cells[^1], Is.EqualTo(new Vector3Int(4, 4, 0)));
     }
 
     [Test]

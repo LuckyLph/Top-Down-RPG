@@ -23,6 +23,14 @@ public class MobConfig : ScriptableObject
     [Min(0)] public int attackDamage = 1;
     [Min(0f)] public float attackInterval = 0.75f;
 
+    [Header("Crowd")]
+    // Mobs closer than this (center to center) steer apart; 0 disables separation.
+    [Min(0f)] public float separationRadius = 0.6f;
+    // Push speed at full overlap, in units per second.
+    [Min(0f)] public float separationStrength = 2f;
+    // Within this distance of its target, a chasing mob with another mob directly ahead waits instead of pushing.
+    [Min(0f)] public float crowdWaitDistance = 2f;
+
     [Header("Patrol")]
     [Min(0f)] public float patrolRoamRadius = 4f;
     [Min(1)] public int patrolSampleAttempts = 12;

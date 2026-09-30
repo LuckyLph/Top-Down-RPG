@@ -3,6 +3,7 @@ using UnityEngine;
 public class ChaseState : MobStateBase
 {
     private float repathTimer;
+    private bool waitingBehindCrowd;
 
     public ChaseState(MobController brain) : base(brain) { }
 
@@ -11,6 +12,7 @@ public class ChaseState : MobStateBase
     public override void Enter()
     {
         repathTimer = 0f;
+        waitingBehindCrowd = false;
         PathAgent.ClearPath();
     }
 
@@ -29,6 +31,11 @@ public class ChaseState : MobStateBase
         }
 
         repathTimer -= Brain.DeltaTime;
+        if (waitingBehindCrowd)
+        {
+            // Not moving, so there is nothing to re-plan until the way clears.
+            return;
+        }
 
         // Re-plan from where the mob actually is every interval, even if the target's cell is unchanged:
         // collisions can push the mob off its path, leaving its old waypoints behind a wall.
@@ -55,6 +62,28 @@ public class ChaseState : MobStateBase
 
     public override void FixedTick()
     {
+        waitingBehindCrowd = IsBlockedByCrowdNearTarget();
+        if (waitingBehindCrowd)
+        {
+            // Hold position facing the target; separation still keeps this mob off its neighbors.
+            Motor.Stop();
+            Motor.FaceTowards(Perception.CurrentTarget.position);
+            return;
+        }
+
         PathAgent.FixedTick();
+    }
+
+    private bool IsBlockedByCrowdNearTarget()
+    {
+        Transform target = Perception.CurrentTarget;
+        if (target == null)
+        {
+            return false;
+        }
+
+        Vector2 targetPosition = target.position;
+        return Vector2.Distance(Motor.Position, targetPosition) <= Config.crowdWaitDistance
+            && Brain.Separation.HasNeighborToward(targetPosition);
     }
 }

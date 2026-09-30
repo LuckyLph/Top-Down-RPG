@@ -20,6 +20,7 @@ public class MobMotor2D : MonoBehaviour
 
     private Rigidbody2D rb;
     private Vector2 desiredVelocity;
+    private Vector2 steeringVelocity;
     private Vector2 lastMoveDirection = Vector2.down;
     private bool isAttackAnimationActive;
     private float attackAnimationEndTime;
@@ -85,6 +86,12 @@ public class MobMotor2D : MonoBehaviour
         desiredVelocity = Vector2.zero;
     }
 
+    // Added on top of the desired velocity (e.g. crowd separation), within the same speed limit.
+    public void SetSteeringVelocity(Vector2 velocity)
+    {
+        steeringVelocity = velocity;
+    }
+
     public void FaceTowards(Vector2 worldPosition)
     {
         Vector2 direction = worldPosition - Position;
@@ -131,7 +138,8 @@ public class MobMotor2D : MonoBehaviour
         }
 
         float step = acceleration * Time.fixedDeltaTime;
-        rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, desiredVelocity, step);
+        Vector2 targetVelocity = Vector2.ClampMagnitude(desiredVelocity + steeringVelocity, moveSpeed);
+        rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, targetVelocity, step);
 
         if (spriteRenderer != null)
         {

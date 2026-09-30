@@ -14,10 +14,22 @@ public class MobStateMachineTests
     private Health playerHealth;
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
+    // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
+    private readonly List<GameObject> sceneObjects = new();
 
     [TearDown]
     public void TearDown()
     {
+        foreach (GameObject sceneObject in sceneObjects)
+        {
+            if (sceneObject != null)
+            {
+                Object.DestroyImmediate(sceneObject);
+            }
+        }
+
+        sceneObjects.Clear();
+
         if (root != null)
         {
             Object.DestroyImmediate(root);
@@ -391,6 +403,62 @@ public class MobStateMachineTests
         Assert.That(patrols, Is.GreaterThan(0));
     }
 
+    [Test]
+    public void Separation_PushesOverlappingMobsApart()
+    {
+        SetupWorld(new Vector3(0.5f, 0.5f, 0f));
+        MobController neighbor = CreateMob(new Vector3(0.7f, 0.5f, 0f));
+
+        brain.FixedTickStateMachine();
+        neighbor.FixedTickStateMachine();
+
+        Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.LessThan(0f));
+        Assert.That(neighbor.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
+    }
+
+    [Test]
+    public void Separation_PushesExactlyCoincidentMobsInOppositeDirections()
+    {
+        SetupWorld(new Vector3(0.5f, 0.5f, 0f));
+        MobController neighbor = CreateMob(new Vector3(0.5f, 0.5f, 0f));
+
+        brain.FixedTickStateMachine();
+        neighbor.FixedTickStateMachine();
+
+        Vector2 first = brain.GetComponent<Rigidbody2D>().linearVelocity;
+        Vector2 second = neighbor.GetComponent<Rigidbody2D>().linearVelocity;
+        Assert.That(first.sqrMagnitude, Is.GreaterThan(0f));
+        Assert.That(Vector2.Dot(first, second), Is.LessThan(0f));
+    }
+
+    [Test]
+    public void Separation_NeverPushesAMobIntoAWall()
+    {
+        // The barrier row y = 1 is unwalkable; the neighbor below pushes this mob straight at it.
+        SetupWorld(new Vector3(0.5f, 0.85f, 0f), addHorizontalBarrier: true);
+        CreateMob(new Vector3(0.5f, 0.55f, 0f));
+
+        brain.FixedTickStateMachine();
+
+        Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.y, Is.LessThanOrEqualTo(0f));
+    }
+
+    [Test]
+    public void ChaseState_WaitsBehindAnAllyNearTheTarget_InsteadOfPushingIntoIt()
+    {
+        SetupWorld(new Vector3(1.7f, 0.5f, 0f));
+        CreateMob(new Vector3(2.2f, 0.5f, 0f));
+        player.position = new Vector3(3f, 0.5f, 0f);
+
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+        Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.LessThanOrEqualTo(0f),
+            "The mob should hold (only separation moves it, away from the ally) rather than push toward the target.");
+    }
+
     // A pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so
     // the mob can still path to where it last saw the target.
     private GameObject BlockLineOfSightAt(Vector2 position)
@@ -463,6 +531,7 @@ public class MobStateMachineTests
         navGrid.BuildGrid();
 
         GameObject playerObject = new("Player");
+        sceneObjects.Add(playerObject);
         playerObject.tag = "Player";
         playerObject.transform.position = new Vector3(100f, 0f, 0f);
         player = playerObject.transform;
@@ -481,8 +550,14 @@ public class MobStateMachineTests
         config.repathInterval = 0.1f;
         config.patrolRoamRadius = 2f;
 
+        brain = CreateMob(spawnPosition ?? Vector3.zero);
+    }
+
+    private MobController CreateMob(Vector3 position)
+    {
         GameObject mob = new("Mob");
-        mob.transform.position = spawnPosition ?? Vector3.zero;
+        sceneObjects.Add(mob);
+        mob.transform.position = position;
         Rigidbody2D rb = mob.AddComponent<Rigidbody2D>();
         rb.gravityScale = 0f;
         mob.AddComponent<BoxCollider2D>();
@@ -496,8 +571,10 @@ public class MobStateMachineTests
         mob.AddComponent<MobPerception2D>();
         mob.AddComponent<MobPathAgent2D>();
         mob.AddComponent<MobPatrolAnchor>();
-        brain = mob.AddComponent<MobController>();
+        MobController mobBrain = mob.AddComponent<MobController>();
 
-        brain.Configure(config, navGrid, new PlayerLocator(player, playerHealth));
+        mobBrain.Configure(config, navGrid, new PlayerLocator(player, playerHealth));
+        Physics2D.SyncTransforms();
+        return mobBrain;
     }
 }

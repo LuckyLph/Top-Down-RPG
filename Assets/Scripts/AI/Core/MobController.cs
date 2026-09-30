@@ -40,6 +40,7 @@ public class MobController : MonoBehaviour
     private Collider2D selfCollider;
     private Transform cachedTarget;
     private Collider2D cachedTargetCollider;
+    private MobSeparation2D separation;
     private IMobState currentState;
     private bool initialized;
     private float deltaTime;
@@ -52,6 +53,7 @@ public class MobController : MonoBehaviour
     public MobPathAgent2D PathAgent => pathAgent;
     public MobPatrolAnchor Patrol => patrol;
     public MeleeDamageDealer DamageDealer => damageDealer;
+    public MobSeparation2D Separation => separation;
     public MobStateId CurrentStateId => currentState != null ? currentState.StateId : MobStateId.Idle;
     public float DeltaTime => deltaTime;
 
@@ -139,7 +141,10 @@ public class MobController : MonoBehaviour
     {
         EnsureInitialized();
 
+        // Sensed before the state runs so it can react to the crowd (e.g. Chase waiting behind it).
+        separation.Sense(motor.Position);
         currentState?.FixedTick();
+        motor.SetSteeringVelocity(separation.Velocity);
         motor.FixedTick();
     }
 
@@ -209,6 +214,7 @@ public class MobController : MonoBehaviour
         perception.Initialize(player, config);
         patrol.Initialize(navigationGrid, config);
         damageDealer.Initialize(config);
+        separation = new MobSeparation2D(selfCollider, config, navigationGrid);
 
         RegisterStates();
         initialized = true;

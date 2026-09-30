@@ -59,13 +59,14 @@ public class GridAStarPathfinder2D : IPathfinder2D
         OpenHeap openHeap = new();
         HashSet<Vector3Int> closedSet = new();
         Dictionary<Vector3Int, Vector3Int> cameFrom = new();
+        int startHeuristic = navigationGrid.HeuristicCost(start, goal, movementProfile);
         Dictionary<Vector3Int, int> gScore = new() { [start] = 0 };
-        Dictionary<Vector3Int, int> fScore = new() { [start] = navigationGrid.HeuristicCost(start, goal, movementProfile) };
+        Dictionary<Vector3Int, int> fScore = new() { [start] = startHeuristic };
         Dictionary<Vector3Int, int> insertionOrder = new() { [start] = 0 };
-        openHeap.Push(new OpenEntry(start, fScore[start], 0));
+        openHeap.Push(new OpenEntry(start, startHeuristic, startHeuristic, 0));
 
         Vector3Int closestToGoal = start;
-        int closestHeuristic = navigationGrid.HeuristicCost(start, goal, movementProfile);
+        int closestHeuristic = startHeuristic;
 
         while (openHeap.Count > 0)
         {
@@ -107,9 +108,10 @@ public class GridAStarPathfinder2D : IPathfinder2D
                 int tentativeG = gScore[current] + navigationGrid.MovementCost(current, neighbor, movementProfile);
                 if (!gScore.TryGetValue(neighbor, out int neighborG) || tentativeG < neighborG)
                 {
+                    int neighborHeuristic = navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
                     cameFrom[neighbor] = current;
                     gScore[neighbor] = tentativeG;
-                    fScore[neighbor] = tentativeG + navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
+                    fScore[neighbor] = tentativeG + neighborHeuristic;
 
                     if (!insertionOrder.TryGetValue(neighbor, out int order))
                     {
@@ -117,7 +119,7 @@ public class GridAStarPathfinder2D : IPathfinder2D
                         insertionOrder[neighbor] = order;
                     }
 
-                    openHeap.Push(new OpenEntry(neighbor, fScore[neighbor], order));
+                    openHeap.Push(new OpenEntry(neighbor, fScore[neighbor], neighborHeuristic, order));
                 }
             }
         }
@@ -150,21 +152,30 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
     private readonly struct OpenEntry
     {
-        public OpenEntry(Vector3Int cell, int f, int order)
+        public OpenEntry(Vector3Int cell, int f, int h, int order)
         {
             Cell = cell;
             F = f;
+            H = h;
             Order = order;
         }
 
         public Vector3Int Cell { get; }
         public int F { get; }
+        public int H { get; }
         public int Order { get; }
 
-        // Ties on F go to the cell first added to the open set, keeping paths deterministic.
+        // Ties on F go to the cell closer to the goal, so the search runs down one of many equal-cost
+        // routes instead of widening across all of them (open 8-way grids tie constantly). Remaining
+        // ties go to the cell first added to the open set, keeping paths deterministic.
         public bool IsBefore(OpenEntry other)
         {
-            return F != other.F ? F < other.F : Order < other.Order;
+            if (F != other.F)
+            {
+                return F < other.F;
+            }
+
+            return H != other.H ? H < other.H : Order < other.Order;
         }
     }
 

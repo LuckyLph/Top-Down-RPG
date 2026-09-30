@@ -103,6 +103,34 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void AStar_ExpandsFewCellsBeyondThePath_OnOpenGround()
+    {
+        root = CreateGridRoot("NavGridOpenGroundRoot");
+        Tilemap dataTilemap = CreateTilemapObject("GroundData");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        for (int x = 0; x < 32; x++)
+        {
+            for (int y = 0; y < 32; y++)
+            {
+                dataTilemap.SetTile(new Vector3Int(x, y, 0), fillTile);
+            }
+        }
+
+        AttachTerrainSource(dataTilemap, null, null, groundTerrain);
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        PathResult result = navigationGrid.Pathfinder.FindPath(new PathRequest(new Vector3Int(0, 0, 0), new Vector3Int(31, 17, 0), allowPartial: false));
+        int expanded = ((GridAStarPathfinder2D)navigationGrid.Pathfinder).LastExpandedCount;
+
+        Assert.That(result.Success, Is.True);
+        // Every cell inside the (0,0)-(31,17) parallelogram ties on cost; a search that widens across
+        // the ties expands hundreds of them.
+        Assert.That(expanded, Is.LessThanOrEqualTo(result.Cells.Count * 2));
+    }
+
+    [Test]
     public void AStar_DoesNotCutCorners_OnDiagonal()
     {
         root = CreateGridRoot("NavGridCornerTestRoot");

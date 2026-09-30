@@ -31,6 +31,8 @@ public class MobPathAgent2D : MonoBehaviour
     public bool HasGoalCell => hasGoalCell;
     public Vector3Int LastGoalCell => lastGoalCell;
 
+    internal IReadOnlyList<Vector2> Waypoints => waypoints;
+
     private void Awake()
     {
         motor = GetComponent<MobMotor2D>();
@@ -198,17 +200,9 @@ public class MobPathAgent2D : MonoBehaviour
         }
 
         Vector2 position = motor.Position;
-        float threshold = config.waypointReachDistance;
-
-        while (waypointIndex < waypoints.Count && Vector2.Distance(position, waypoints[waypointIndex]) <= threshold)
+        while (waypointIndex < waypoints.Count && Vector2.Distance(position, waypoints[waypointIndex]) <= GetReachThreshold(waypointIndex))
         {
             waypointIndex++;
-
-            // Be more forgiving for the final waypoint to avoid jitter around destination.
-            if (waypointIndex == waypoints.Count - 1)
-            {
-                threshold = Mathf.Max(config.waypointReachDistance, config.arrivalDistance);
-            }
         }
 
         if (waypointIndex >= waypoints.Count)
@@ -222,6 +216,14 @@ public class MobPathAgent2D : MonoBehaviour
         Vector2 nextPoint = waypoints[waypointIndex];
         Vector2 direction = (nextPoint - position).normalized;
         motor.SetDesiredVelocity(direction * motor.MoveSpeed);
+    }
+
+    // Be more forgiving for the final waypoint to avoid jitter around destination.
+    private float GetReachThreshold(int index)
+    {
+        return index == waypoints.Count - 1
+            ? Mathf.Max(config.waypointReachDistance, config.arrivalDistance)
+            : config.waypointReachDistance;
     }
 
     public void ClearPath()

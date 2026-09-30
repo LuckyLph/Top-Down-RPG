@@ -25,7 +25,7 @@ public class MobConfig : ScriptableObject
 
     [Header("Crowd")]
     // Mobs closer than this (center to center) steer apart; 0 disables separation.
-    [Min(0f)] public float separationRadius = 0.6f;
+    [Min(0f)] public float separationRadius = 0.8f;
     // Push speed at full overlap, in units per second.
     [Min(0f)] public float separationStrength = 2f;
     // Within this distance of its target, a chasing mob with another mob directly ahead waits instead of pushing.

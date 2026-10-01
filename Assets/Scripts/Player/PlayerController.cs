@@ -1,5 +1,4 @@
 using UnityEngine;
-using VContainer;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
@@ -16,7 +15,7 @@ public class PlayerController : MonoBehaviour
     private static readonly int LastMoveYHash = Animator.StringToHash("LastMoveY");
 
     private Rigidbody2D rb;
-    private IPlayerInput input;
+    private IPlayerCommandSource commandSource;
     private Vector2 moveInput;
     private Vector2 lastMoveDirection = Vector2.down;
 
@@ -39,15 +38,28 @@ public class PlayerController : MonoBehaviour
         ResolveWeaponController();
     }
 
-    [Inject]
-    public void Construct(IPlayerInput playerInput)
+    private void Start()
     {
-        input = playerInput;
+        if (commandSource == null)
+        {
+            Debug.LogError($"{name} has no {nameof(IPlayerCommandSource)}; it will not respond to input.", this);
+        }
+    }
+
+    public void SetCommandSource(IPlayerCommandSource source)
+    {
+        commandSource = source;
     }
 
     private void Update()
     {
-        moveInput = input != null ? input.Move.normalized : Vector2.zero;
+        Tick();
+    }
+
+    internal void Tick()
+    {
+        PlayerCommand command = commandSource != null ? commandSource.ReadCommand() : default;
+        moveInput = command.Move.normalized;
 
         bool isMoving = moveInput.sqrMagnitude > 0.0001f;
         if (isMoving)
@@ -55,9 +67,9 @@ public class PlayerController : MonoBehaviour
             lastMoveDirection = moveInput;
         }
 
-        if (input != null && input.AttackPressedThisFrame)
+        if (command.Attack && weaponController != null)
         {
-            weaponController?.TryAttack();
+            weaponController.TryAttack();
         }
 
         Vector2 animationDirection = isMoving ? moveInput : lastMoveDirection;

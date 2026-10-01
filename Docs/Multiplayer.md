@@ -38,7 +38,6 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 
 | Area | Today | Target |
 |---|---|---|
-| `PlayerController` | Reads `IPlayerInput` directly | Consumes a per-player command (move, attack) from a command source; the local source wraps `IPlayerInput` |
 | `SwordSlashAttack` | The visual object also finds hits and applies damage | Hit resolution separated from the cosmetic slash |
 | Mobs in areas | Prefab instances in the scene, injected by the area scope | Spawned from mob spawn markers by a spawner |
 | `PlayerDeathHandler` | A full party wipe reloads the whole session | Per-player downed/respawn; session only ends on a full party wipe (rules to be designed) |
@@ -53,7 +52,7 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 
 - [x] Player registry + local player; mob perception picks among players.
 - [x] Runtime player spawning through `resolver.Instantiate`; `AreaEntry` places all registered players.
-- [ ] Player command source split out of `PlayerController`.
+- [x] Player command source split out of `PlayerController`.
 - [ ] Combat: hit resolution and damage application in one place; slash, death effect and popups driven by events only.
 - [ ] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
 - [ ] Per-player death and respawn.

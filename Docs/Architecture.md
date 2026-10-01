@@ -106,6 +106,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Registration | Kind |
 |---|---|
 | `PlayerRegistry` as `IPlayerRegistry` + self | singleton |
+| `LocalPlayerCommandSource` | singleton |
 | `PlayerSpawner` (with the inspector's player prefab and the Gameplay scene as parameters) | singleton |
 | `LocalPlayer` -> `PlayerSpawner.SpawnLocalPlayer()` | singleton factory |
 | `DamagePopupLayer` | component |
@@ -132,7 +133,6 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 | Component | `Construct` parameters | Injected by |
 |---|---|---|
-| `PlayerController` | `IPlayerInput` | `PlayerSpawner` (`resolver.Instantiate`) |
 | `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`) |
 | `DamageReceiver` | `CombatEvents` | `PlayerSpawner` (player) / Area callback (mobs) |
 | `MainMenuController` | `GameFlow` | Menu scope |
@@ -145,7 +145,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 ## Input
 
-- [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `Move`, `AttackPressedThisFrame`, `GameplayEnabled`. The seam gameplay code depends on.
+- [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `Move`, `AttackPressedThisFrame`, `GameplayEnabled`. The local device seam; gameplay reaches it only through `LocalPlayerCommandSource` (see Player).
 - [PlayerInputService](../Assets/Scripts/Core/Input/PlayerInputService.cs): wraps the `Player` action map of [InputSystem_Actions.inputactions](../Assets/InputSystem_Actions.inputactions) (`Move`, `Attack` used; the asset also defines Look/Interact/Crouch/Jump/Previous/Next/Sprint). Returns neutral input while the map is disabled. Logs an error if the map/actions are missing.
 - [GameplayInputGate](../Assets/Scripts/Core/Input/GameplayInputGate.cs): entry point that enables the Player map only when `GameFlow.IsInGame && !IsTransitioning`; listens to `TransitionStarted`/`TransitionFinished`.
 - UI input uses the `UI` map through the `EventSystem` in Main.
@@ -179,11 +179,13 @@ Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerControll
 
 | Type | Role |
 |---|---|
-| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads `IPlayerInput.Move` in `Update`, sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack presses to the weapon controller. `FacingDirection`, `Teleport`, internal `Face` (tests). |
+| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads a `PlayerCommand` from its `IPlayerCommandSource` in `Update` (internal `Tick`), sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack commands to the weapon controller. No source = idle, with an error logged in `Start`. `SetCommandSource`, `FacingDirection`, `Teleport`, internal `Face` (tests). |
+| [PlayerCommand](../Assets/Scripts/Player/PlayerCommand.cs) / [IPlayerCommandSource](../Assets/Scripts/Player/IPlayerCommandSource.cs) | One frame of player intent (`Move`, `Attack`) and where a player gets it from, so each player can be driven independently. |
+| [LocalPlayerCommandSource](../Assets/Scripts/Player/LocalPlayerCommandSource.cs) | Wraps `IPlayerInput`; `PlayerSpawner` gives it to the local player only. |
 | [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown and spawns a slash in the facing direction via `SlashSpawner`. Event `EquippedWeaponChanged`. |
 | [PlayerHandle](../Assets/Scripts/Player/PlayerHandle.cs) | One player as other systems see it: `Transform`, `Health`, `IsAlive`. |
 | [IPlayerRegistry](../Assets/Scripts/Player/IPlayerRegistry.cs) / [PlayerRegistry](../Assets/Scripts/Player/PlayerRegistry.cs) | Every player in the session: `Players`, `Contains`, `AnyAlive`, events `PlayerAdded`/`PlayerRemoved`. `Add`/`Remove` (ignore null and duplicates) are on the concrete class only. Used by mobs and death handling. |
-| [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | `SpawnLocalPlayer`: instantiates the player prefab through `IObjectResolver` (injecting its components), moves it into the Gameplay scene so it survives area changes, registers its handle and returns the `LocalPlayer`. |
+| [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | `SpawnLocalPlayer`: instantiates the player prefab through `IObjectResolver` (injecting its components), gives it the `LocalPlayerCommandSource`, moves it into the Gameplay scene so it survives area changes, registers its handle and returns the `LocalPlayer`. |
 | [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Used by the camera, HUD, `AreaEntry` and the stress spawner. |
 | [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). Once the registry is non-empty and no player is alive, waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). |
 
@@ -363,7 +365,8 @@ flowchart LR
         GameplayInputGate --> PlayerInputService
     end
     subgraph Gameplay scope
-        PlayerController -- IPlayerInput --> PlayerInputService
+        PlayerController -- IPlayerCommandSource --> LocalPlayerCommandSource
+        LocalPlayerCommandSource -- IPlayerInput --> PlayerInputService
         PlayerController --> PlayerWeaponController
         PlayerWeaponController --> SlashSpawner --> SwordSlashAttack
         SwordSlashAttack --> DamageReceiver
@@ -414,13 +417,13 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
 | [PlayerRegistryTests.cs](../Assets/Tests/Editor/PlayerRegistryTests.cs) | Add/remove events, null and duplicate handling, `AnyAlive` |
 | [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, dispose |
-| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter, attack cooldown/facing, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
+| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter, attack cooldown/facing, `PlayerController` driven by a command source (facing, attack, idle without one), `LocalPlayerCommandSource`, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
 
 Fakes and seams:
 - [ManualClock](../Assets/Tests/Editor/ManualClock.cs): `IClock` with settable `Time` and `Advance`.
 - A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
-- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Face`, `MobMotor2D` attack/facing state, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
+- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Face`/`Tick`, `MobMotor2D` attack/facing state, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
 
 ### PlayMode (`Assets/Tests/PlayMode`)
 
@@ -441,7 +444,7 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **No pooling for slashes or death effects**: `SlashSpawner` and `EffectSpawner` instantiate, and `SwordSlashAttack`/`MobDeathAnimation` destroy themselves. Only damage popups are pooled.
 - **Allocating calls per attack**: `SwordSlashAttack` uses `Physics2D.OverlapBoxAll` and `GetComponentsInChildren<Collider2D>` on every slash.
 - **Time not routed through `IClock`**: `MobMotor2D` attack animation timing (`Time.time`), `SwordSlashAttack`, `MobDeathAnimation` and `DamagePopupPresenter` (`Time.deltaTime`). Patrol destinations and idle durations use unseeded `UnityEngine.Random`.
-- **`?.`/`??` on Unity objects**: `weaponController?.TryAttack()` (`PlayerController`), `referenceTilemap ??= dataTilemap` (`NavigationGrid2D`), `FindArea(...) ?? CreateTransient(...)` (`BootFlow`).
+- **`?.`/`??` on Unity objects**: `referenceTilemap ??= dataTilemap` (`NavigationGrid2D`), `FindArea(...) ?? CreateTransient(...)` (`BootFlow`).
 - **Static mutable state**: `SceneQuery` shares a static root-object buffer. `UnityClock.Shared` is a static used as a fallback clock inside components.
 - **Two classes in one file**: `SceneDefinitionEditor.cs` also defines `SceneDefinitionPathSync`.
 - **Area scope assumptions**: `NavigationGrid2D` is registered only if the area has one, but every `MobController` requires it, so a mob in an area without a grid fails to resolve. Only `MobController` objects present at build time get injected automatically.
@@ -450,6 +453,5 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **Unused or test-only API**: `NavigationGrid2D.GetNeighbors4` (both overloads), the `IEnumerable` `GetNeighbors8` overloads and `HasLineOfSightCells`; `NavigationTerrainSource2D.RenderTilemap`/`IsConfigured`; `TerrainType2D.TerrainId`; `YPositionSorter.SetSortingOrderOffset`/`SetSortingReferenceY`/`ClearSortingReferenceY`; `ScreenFader.IsOpaque`; `PlayerWeaponController.CurrentWeaponName` (tests only); `MobController.onAttackRangeEntered` has no listeners on the Weasel prefab.
 - **Duplicated tuning**: `nearestCellSearchRadius` exists on both `NavigationGrid2D` (used when no radius is passed, e.g. inside A*) and `MobConfig`. `MobMotor2D` speed/acceleration, `MeleeDamageDealer` damage/interval and `SwordSlashAttack.damageAmount` are serialized but overwritten at runtime by `MobConfig`/`PlayerWeapon`.
 - **Magic numbers**: `MobDeathAnimation` scales the effect by a hard-coded `1.2`; the `StressTestSpawner` tooltip hard-codes "Detection radius is 6".
-- **Silent fallbacks**: `PlayerController` does nothing when `IPlayerInput` was not injected (no error), unlike `PlayerWeaponController` and `MainMenuController`, which log one.
 - **Editor asset writes on load**: `PlayerSlashPrefabBootstrap` can regenerate `SwordSlash.prefab` and rewrite `Sword.asset` from an `[InitializeOnLoad]` delay call.
 - **Folder naming**: `YPositionSorter` lives under `Assets/Scripts/Camera` although it handles sprite sorting; the camera follow script is in `Core/Camera`.

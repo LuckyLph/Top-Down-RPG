@@ -131,6 +131,59 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void PlayerController_FacesAndAttacksFromItsCommandSource()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<BoxCollider2D>();
+        root.AddComponent<Rigidbody2D>();
+        PlayerController playerController = root.AddComponent<PlayerController>();
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+        weaponController.Construct(CreateSpawner(), new ManualClock());
+        weaponController.Equip(CreateTestWeapon("Sword"));
+        SerializedObject serializedController = new(playerController);
+        serializedController.FindProperty("weaponController").objectReferenceValue = weaponController;
+        serializedController.ApplyModifiedPropertiesWithoutUndo();
+        FakeCommandSource commands = new();
+        playerController.SetCommandSource(commands);
+
+        commands.Next = new PlayerCommand(new Vector2(-3f, 0f), attack: false);
+        playerController.Tick();
+        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left));
+        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Null);
+
+        commands.Next = new PlayerCommand(Vector2.zero, attack: true);
+        playerController.Tick();
+        SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
+        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left), "Standing still keeps the last facing.");
+        Assert.That(slashAttack, Is.Not.Null);
+        Assert.That(slashAttack.Direction.x, Is.LessThan(-0.9f));
+    }
+
+    [Test]
+    public void PlayerController_WithoutCommandSource_StaysIdle()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<Rigidbody2D>();
+        PlayerController playerController = root.AddComponent<PlayerController>();
+
+        playerController.Tick();
+
+        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.down));
+    }
+
+    [Test]
+    public void LocalPlayerCommandSource_ForwardsMoveAndAttackFromInput()
+    {
+        FakePlayerInput input = new() { Move = new Vector2(0.5f, 1f), AttackPressedThisFrame = true };
+        LocalPlayerCommandSource source = new(input);
+
+        PlayerCommand command = source.ReadCommand();
+
+        Assert.That(command.Move, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(command.Attack, Is.True);
+    }
+
+    [Test]
     public void PlayerSlashAttack_DamagesTargetOnlyOnceAndIgnoresOwner()
     {
         root = new GameObject("CombatRoot");
@@ -321,6 +374,23 @@ public class PlayerWeaponSystemTests
                 EditorSceneManager.RestoreSceneManagerSetup(previousSetup);
             }
         }
+    }
+
+    private sealed class FakeCommandSource : IPlayerCommandSource
+    {
+        public PlayerCommand Next { get; set; }
+
+        public PlayerCommand ReadCommand()
+        {
+            return Next;
+        }
+    }
+
+    private sealed class FakePlayerInput : IPlayerInput
+    {
+        public Vector2 Move { get; set; }
+        public bool AttackPressedThisFrame { get; set; }
+        public bool GameplayEnabled { get; set; } = true;
     }
 
     private static SlashSpawner CreateSpawner()

@@ -26,6 +26,7 @@ public class GameplayLifetimeScope : LifetimeScope
         }
 
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
+        builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
             .WithParameter(playerPrefab)
             .WithParameter(gameObject.scene);

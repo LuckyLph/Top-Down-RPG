@@ -30,6 +30,7 @@ public class Health : MonoBehaviour
 
     public event Action<DamageEvent> Damaged;
     public event Action<Health> Died;
+    public event Action<Health> Restored;
 
     public int MaxHealth => maxHealth;
 
@@ -80,6 +81,19 @@ public class Health : MonoBehaviour
         }
 
         return appliedDamage;
+    }
+
+    public void Restore()
+    {
+        InitializeIfNeeded();
+
+        if (currentHealth == maxHealth)
+        {
+            return;
+        }
+
+        currentHealth = maxHealth;
+        Restored?.Invoke(this);
     }
 
     private void InitializeIfNeeded()

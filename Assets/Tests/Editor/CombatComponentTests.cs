@@ -60,6 +60,29 @@ public class CombatComponentTests
     }
 
     [Test]
+    public void Health_Restore_RefillsADeadHealthOnceAndAllowsDyingAgain()
+    {
+        root = new GameObject("HealthRestoreTest");
+        Health health = root.AddComponent<Health>();
+        int restoredCount = 0;
+        int deathCount = 0;
+        health.Restored += _ => restoredCount++;
+        health.Died += _ => deathCount++;
+
+        health.Restore();
+        Assert.That(restoredCount, Is.EqualTo(0), "Restoring full health is a no-op.");
+
+        health.ApplyDamage(health.MaxHealth);
+        health.Restore();
+        Assert.That(health.IsDead, Is.False);
+        Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
+        Assert.That(restoredCount, Is.EqualTo(1));
+
+        health.ApplyDamage(health.MaxHealth);
+        Assert.That(deathCount, Is.EqualTo(2), "A restored Health can die again.");
+    }
+
+    [Test]
     public void DamageService_IgnoresInvalidDamageMissingTargetsAndHitsAfterDeath()
     {
         root = new GameObject("DamageReceiverTest");

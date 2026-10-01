@@ -137,6 +137,39 @@ public class SceneFlowPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator PlayerDeath_RespawnsAtTheSpawnPointWhileATeammateIsAlive()
+    {
+        yield return SceneBootTestHelper.BootIntoStartingArea();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        IObjectResolver gameplayResolver = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerRegistry players = gameplayResolver.Resolve<PlayerRegistry>();
+        PlayerController localPlayer = Object.FindAnyObjectByType<PlayerController>();
+        Health localHealth = localPlayer.GetComponent<Health>();
+        Collider2D localCollider = localPlayer.GetComponent<Collider2D>();
+        Rigidbody2D localBody = localPlayer.GetComponent<Rigidbody2D>();
+        SpawnPoint spawnPoint = Object.FindAnyObjectByType<SpawnPoint>();
+
+        GameObject partnerObject = new("Partner");
+        partnerObject.transform.position = new Vector3(1000f, 1000f, 0f);
+        players.Add(new PlayerHandle(partnerObject.transform, partnerObject.AddComponent<Health>()));
+
+        localPlayer.Teleport(spawnPoint.transform.position + new Vector3(5f, 3f, 0f));
+        localHealth.ApplyDamage(localHealth.MaxHealth);
+        Assert.That(localPlayer.enabled, Is.False, "A dead player stops responding to input.");
+        Assert.That(localBody.simulated, Is.False);
+
+        yield return SceneBootTestHelper.WaitUntil(() => !localHealth.IsDead, "the dead player to respawn");
+
+        Assert.That(localHealth.CurrentHealth, Is.EqualTo(localHealth.MaxHealth));
+        Assert.That(Vector2.Distance(localPlayer.transform.position, spawnPoint.GetSlotPosition(0)), Is.LessThan(0.01f));
+        Assert.That(localPlayer.enabled, Is.True);
+        Assert.That(localCollider == null || localCollider.enabled, Is.True);
+        Assert.That(localBody.simulated, Is.True);
+        Assert.That(gameFlow.IsTransitioning, Is.False, "A respawn must not restart the area.");
+    }
+
+    [UnityTest]
     public IEnumerator PlayerDeath_WaitsUntilTheWholePartyIsDown()
     {
         yield return SceneBootTestHelper.BootIntoStartingArea();
@@ -153,6 +186,7 @@ public class SceneFlowPlayModeTests
         PlayerHandle partner = new(partnerObject.transform, partnerObject.AddComponent<Health>());
         players.Add(partner);
 
+        Assert.That(settings.RespawnDelaySeconds, Is.GreaterThan(settings.RestartDelaySeconds + 0.5f), "This test kills the partner before the local player respawns.");
         localHealth.ApplyDamage(localHealth.MaxHealth);
         yield return new WaitForSeconds(settings.RestartDelaySeconds + 0.5f);
 

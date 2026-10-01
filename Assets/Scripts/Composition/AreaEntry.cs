@@ -6,23 +6,27 @@ public sealed class AreaEntry : IAreaEntry
     private readonly AreaEntryRequest request;
     private readonly SpawnPoint[] spawnPoints;
     private readonly IPlayerRegistry players;
+    private readonly ActiveSpawnPoint activeSpawnPoint;
     private readonly CameraFollow2D cameraFollow;
 
     public AreaEntry(
         AreaEntryRequest request,
         SpawnPoint[] spawnPoints,
         IPlayerRegistry players,
+        ActiveSpawnPoint activeSpawnPoint,
         CameraFollow2D cameraFollow)
     {
         this.request = request;
         this.spawnPoints = spawnPoints;
         this.players = players;
+        this.activeSpawnPoint = activeSpawnPoint;
         this.cameraFollow = cameraFollow;
     }
 
     public void Enter()
     {
         SpawnPoint spawnPoint = FindSpawnPoint(request.SpawnId);
+        activeSpawnPoint.Set(spawnPoint);
         if (spawnPoint == null)
         {
             Debug.LogWarning("Area has no SpawnPoint; the players stay where they are.");

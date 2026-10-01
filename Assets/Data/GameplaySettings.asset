@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: GameplaySettings
   m_EditorClassIdentifier: TopDownRPG.Gameplay::GameplaySettings
   restartDelaySeconds: 1.5
+  respawnDelaySeconds: 3

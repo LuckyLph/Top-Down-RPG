@@ -46,16 +46,63 @@ public class AreaEntryTests
         PlayerController second = CreatePlayer(players);
         PlayerController third = CreatePlayer(players);
 
+        ActiveSpawnPoint activeSpawnPoint = new();
         AreaEntry entry = new(
             new AreaEntryRequest(null, "start"),
             new[] { other, start },
             players,
+            activeSpawnPoint,
             CreateCameraFollow());
         entry.Enter();
+
+        Assert.That(activeSpawnPoint.Current, Is.SameAs(start), "Respawns should use the spawn point the party entered through.");
 
         Assert.That((Vector2)first.transform.position, Is.EqualTo(start.GetSlotPosition(0)));
         Assert.That((Vector2)second.transform.position, Is.EqualTo(start.GetSlotPosition(1)));
         Assert.That((Vector2)third.transform.position, Is.EqualTo(start.GetSlotPosition(2)));
+    }
+
+    [Test]
+    public void Respawner_RestoresADeadPlayerIntoItsSlotAtTheActiveSpawnPoint()
+    {
+        SpawnPoint start = CreateSpawnPoint("start", new Vector2(2f, 3f));
+        PlayerRegistry players = new();
+        CreatePlayer(players);
+        PlayerController second = CreatePlayer(players);
+        PlayerHandle secondHandle = players.Players[1];
+        ActiveSpawnPoint activeSpawnPoint = new();
+        activeSpawnPoint.Set(start);
+        PlayerRespawner respawner = new(players, activeSpawnPoint);
+
+        Assert.That(respawner.TryRespawn(secondHandle), Is.False, "A living player is not respawned.");
+
+        secondHandle.Health.ApplyDamage(secondHandle.Health.MaxHealth);
+        Assert.That(respawner.TryRespawn(secondHandle), Is.True);
+
+        Assert.That(secondHandle.Health.IsDead, Is.False);
+        Assert.That(secondHandle.Health.CurrentHealth, Is.EqualTo(secondHandle.Health.MaxHealth));
+        Assert.That((Vector2)second.transform.position, Is.EqualTo(start.GetSlotPosition(1)));
+    }
+
+    [Test]
+    public void Respawner_IgnoresPlayersOutsideTheRegistry_AndRespawnsInPlaceWithoutASpawnPoint()
+    {
+        PlayerRegistry players = new();
+        PlayerController registered = CreatePlayer(players);
+        PlayerHandle registeredHandle = players.Players[0];
+        PlayerRegistry otherSession = new();
+        CreatePlayer(otherSession);
+        PlayerHandle stranger = otherSession.Players[0];
+        PlayerRespawner respawner = new(players, new ActiveSpawnPoint());
+
+        stranger.Health.ApplyDamage(stranger.Health.MaxHealth);
+        Assert.That(respawner.TryRespawn(stranger), Is.False);
+        Assert.That(stranger.Health.IsDead, Is.True);
+
+        Vector3 deathPosition = registered.transform.position;
+        registeredHandle.Health.ApplyDamage(registeredHandle.Health.MaxHealth);
+        Assert.That(respawner.TryRespawn(registeredHandle), Is.True);
+        Assert.That(registered.transform.position, Is.EqualTo(deathPosition));
     }
 
     private SpawnPoint CreateSpawnPoint(string spawnId, Vector2 position)

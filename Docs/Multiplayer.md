@@ -12,6 +12,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, area changes). |
 | Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. Unity Relay/Lobby (Multiplayer Services) for internet play, after direct connect works. |
 | Areas | The party is always in the same area. The host decides area changes. |
+| Death | A dead player respawns at the area's spawn point after a delay while a teammate is alive. Everyone dead at once restarts the area. |
 | Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
 
 ## Authority model
@@ -23,6 +24,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
 | `Health` of players and mobs | Host | Current HP + damage events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
+| Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
 | Current area | Host | Area change message; each client loads and fades locally |
 | Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
@@ -39,7 +41,6 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Area | Today | Target |
 |---|---|---|
 | `SwordSlashAttack` | The slash object decides what it hit (damage itself goes through `DamageService`) | Only the host's copy resolves hits; other clients' slashes are visual only |
-| `PlayerDeathHandler` | A full party wipe reloads the whole session | Per-player downed/respawn; session only ends on a full party wipe (rules to be designed) |
 | `GameFlow` | Local player triggers area loads | Host decides the area; clients follow |
 
 ## Phases
@@ -53,7 +54,7 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 - [x] Player command source split out of `PlayerController`.
 - [x] Combat: damage application in one place (`DamageService`); popups driven by `CombatEvents`, death effects by `Health.Died`. Which copy of a slash resolves hits is decided in Phase 3.
 - [x] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
-- [ ] Per-player death and respawn.
+- [x] Per-player death and respawn: a dead player respawns at the area's spawn point after `GameplaySettings.RespawnDelaySeconds` while a teammate is alive; everyone dead at once restarts the area.
 - [x] Remaining gameplay timers through `IClock`, injected RNG (`IRandom`). Visual-only animations keep `Time.deltaTime`.
 
 ### Phase 2: networking foundation
@@ -93,7 +94,6 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 
 ## Open questions
 
-- Downed/revive or instant respawn? What ends a run with 2–4 players?
 - Does difficulty scale with player count (mob HP, damage, spawn count)?
 - Friendly fire: off by default for co-op?
 - Should each player's camera stay independent, or should the game keep the party on one screen?

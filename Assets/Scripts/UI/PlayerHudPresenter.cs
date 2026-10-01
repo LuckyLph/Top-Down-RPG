@@ -20,6 +20,7 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
         {
             player.Health.Damaged += HandleDamaged;
             player.Health.Died += HandleDied;
+            player.Health.Restored += HandleRestored;
         }
 
         if (weaponController != null)
@@ -37,6 +38,7 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
         {
             player.Health.Damaged -= HandleDamaged;
             player.Health.Died -= HandleDied;
+            player.Health.Restored -= HandleRestored;
         }
 
         if (weaponController != null)
@@ -51,6 +53,11 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
     }
 
     private void HandleDied(Health _)
+    {
+        RefreshHealth();
+    }
+
+    private void HandleRestored(Health _)
     {
         RefreshHealth();
     }

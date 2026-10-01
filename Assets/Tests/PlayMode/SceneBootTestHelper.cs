@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VContainer;
+using VContainer.Unity;
 
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
@@ -17,18 +18,18 @@ public static class SceneBootTestHelper
     public const string StartingAreaPath = "Assets/Scenes/Areas/Area_Clearing.unity";
     private const float TimeoutSeconds = 15f;
 
-    public static IEnumerator BootIntoStartingArea()
+    public static IEnumerator BootIntoStartingArea(ISaveStore saveStore = null)
     {
-        yield return BootIntoArea(StartingAreaPath);
+        yield return BootIntoArea(StartingAreaPath, saveStore);
     }
 
     // Any scene can be booted as an area in the editor, listed in GameScenes or not (see BootFlow).
-    public static IEnumerator BootIntoArea(string areaScenePath)
+    public static IEnumerator BootIntoArea(string areaScenePath, ISaveStore saveStore = null)
     {
 #if UNITY_EDITOR
         EditorBootRequest.Set(new[] { areaScenePath });
 #endif
-        yield return LoadMainScene();
+        yield return LoadMainScene(saveStore);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
 
         GameFlow gameFlow = ResolveGameFlow();
@@ -44,12 +45,12 @@ public static class SceneBootTestHelper
         Assert.That(gameFlow.IsInGame, Is.True, "Boot should end in a gameplay session.");
     }
 
-    public static IEnumerator BootIntoMainMenu()
+    public static IEnumerator BootIntoMainMenu(ISaveStore saveStore = null)
     {
 #if UNITY_EDITOR
         EditorBootRequest.Clear();
 #endif
-        yield return LoadMainScene();
+        yield return LoadMainScene(saveStore);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
 
         GameFlow gameFlow = ResolveGameFlow();
@@ -87,14 +88,19 @@ public static class SceneBootTestHelper
         }
     }
 
-    private static IEnumerator LoadMainScene()
+    private static IEnumerator LoadMainScene(ISaveStore saveStore)
     {
+        ISaveStore store = saveStore ?? new MemorySaveStore();
+        using (LifetimeScope.Enqueue(builder => builder.RegisterInstance<ISaveStore>(store)))
+        {
 #if UNITY_EDITOR
-        yield return EditorSceneManager.LoadSceneAsyncInPlayMode(
-            MainScenePath,
-            new LoadSceneParameters(LoadSceneMode.Single));
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(
+                MainScenePath,
+                new LoadSceneParameters(LoadSceneMode.Single));
 #else
-        yield return SceneManager.LoadSceneAsync(MainScenePath, LoadSceneMode.Single);
+            yield return SceneManager.LoadSceneAsync(MainScenePath, LoadSceneMode.Single);
 #endif
+            yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
+        }
     }
 }

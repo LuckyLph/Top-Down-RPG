@@ -8,25 +8,45 @@ using VContainer;
 public class MainMenuController : MonoBehaviour
 {
     [SerializeField] private Selectable firstSelected;
+    [SerializeField] private Button continueButton;
     [SerializeField] private TMP_InputField joinAddressField;
     [SerializeField] private TMP_Text statusText;
 
     private GameFlow gameFlow;
     private NetworkSession session;
+    private GameSave gameSave;
     private bool isJoining;
 
+    internal Button ContinueButton => continueButton;
+
     [Inject]
-    public void Construct(GameFlow flow, NetworkSession networkSession)
+    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save)
     {
         gameFlow = flow;
         session = networkSession;
+        gameSave = save;
+    }
+
+    private void Awake()
+    {
+        if (continueButton == null)
+        {
+            Debug.LogError($"{nameof(MainMenuController)} has no Continue button assigned.", this);
+        }
     }
 
     private void Start()
     {
-        if (firstSelected != null && EventSystem.current != null)
+        bool hasSave = gameSave != null && gameSave.HasSave;
+        if (continueButton != null)
         {
-            EventSystem.current.SetSelectedGameObject(firstSelected.gameObject);
+            continueButton.interactable = hasSave;
+        }
+
+        Selectable selected = hasSave && continueButton != null ? continueButton : firstSelected;
+        if (selected != null && EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(selected.gameObject);
         }
 
         if (joinAddressField != null && session != null && string.IsNullOrEmpty(joinAddressField.text))
@@ -47,6 +67,22 @@ public class MainMenuController : MonoBehaviour
         _ = gameFlow.StartNewGameAsync();
     }
 
+    public void ContinueGame()
+    {
+        if (!EnsureInjected())
+        {
+            return;
+        }
+
+        if (!gameSave.TryLoadArea(out SceneDefinition area, out string spawnId))
+        {
+            SetStatus("No saved game to continue.");
+            return;
+        }
+
+        _ = gameFlow.StartNewGameAsync(area, spawnId);
+    }
+
     public void HostGame()
     {
         if (!EnsureInjected() || isJoining)
@@ -61,7 +97,8 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        _ = gameFlow.StartNewGameAsync();
+        gameSave.GetSavedOrStartingArea(out SceneDefinition area, out string spawnId);
+        _ = gameFlow.StartNewGameAsync(area, spawnId);
     }
 
     public void JoinGame()
@@ -108,7 +145,7 @@ public class MainMenuController : MonoBehaviour
 
     private bool EnsureInjected()
     {
-        if (gameFlow != null && session != null)
+        if (gameFlow != null && session != null && gameSave != null)
         {
             return true;
         }

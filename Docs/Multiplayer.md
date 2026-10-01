@@ -10,7 +10,9 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Topology | Host and play (listen server). One player is both server and client. No dedicated server. |
 | Players | Designed and balanced for 2, must support up to 4. Single player is the same code path with one player. |
 | Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, area changes). |
-| Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. Unity Relay/Lobby (Multiplayer Services) for internet play, after direct connect works. |
+| Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. |
+| Internet play | No paid or account-bound services for now: direct IP only, and friends play over the internet through a virtual LAN (Tailscale, ZeroTier). A hosted relay is deferred until there is a distribution platform (see Phase 6). |
+| Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. |
 | Areas | The party is always in the same area. The host decides area changes. |
 | Death | A dead player respawns at the area's spawn point after a delay while a teammate is alive. Everyone dead at once restarts the area. |
 | Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
@@ -26,6 +28,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
 | Current area | Host | Area change message; each client loads and fades locally |
+| Save data | Host | Not replicated. The host saves on area entry and continues from its own save. |
 | Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
@@ -35,6 +38,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 - Plain C# logic stays free of networking types so EditMode tests keep working with fakes.
 - Things that exist per player or per mob are spawned at runtime from a prefab, not placed in scenes. Scenes hold markers (spawn points).
 - Timers go through `IClock` and randomness through an injected source, so the host's simulation is not tied to `Time`/`UnityEngine.Random` statics.
+- Persistent state goes through `GameSave` and is written only where `IGameAuthority.IsAuthoritative`. Add fields to `GameSaveData` and bump `CurrentVersion` instead of writing new files; identify assets in saves by GUID, not path.
 
 ## Where the current code assumes one local player
 
@@ -99,8 +103,27 @@ This also keeps each machine loading only what it needs, which leaves the door o
 
 ### Phase 6: services and persistence
 
-- [ ] Relay/Lobby sessions for internet play.
-- [ ] Save data and what carries over between sessions.
+Decision: no Unity Gaming Services for now. Relay has a free tier (50 average monthly CCU, 3 GiB per CCU), but it is a paid product tied to a Unity Cloud account, and the current Multiplayer Services package (2.3.x) requires Unity Transport 2.7.3, which this project avoids (see [Architecture.md](Architecture.md#packages); 2.2.4 is the last release on Transport 2.6.0). Free alternatives considered:
+
+| Option | Why not now |
+|---|---|
+| Virtual LAN (Tailscale, ZeroTier) | Chosen: no code, works with the existing direct-IP join. Each player installs the app once. |
+| Steam Datagram Relay through a community NGO transport | Free relay and friend invites, but shipping needs a Steam app and the transport is community-maintained. The natural choice if the game ships on Steam. |
+| Epic Online Services P2P | Free relay, but no maintained NGO transport; we would own one. |
+| UPnP port mapping | Fails on routers with UPnP off and behind carrier-grade NAT. |
+
+A relay is a transport swap: it replaces how `NetworkSession.StartHost`/`JoinAsync` configure the transport, while area announcements, epochs and the ready handshake stay as they are. No connection-method abstraction was added ahead of that, since its shape depends on the transport chosen.
+
+Save data decisions:
+- What persists now: the area the party is in and the spawn point it entered by. Health is restored on respawn and every player starts with the same weapon, so neither is saved yet. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
+- Where: a local JSON file at `Application.persistentDataPath/save.json`, written by the host (or the single player) only. No Cloud Save, so offline and direct-IP games need no sign-in.
+- When: every time an area is entered (new game, continue, area change, party-wipe restart). The save always matches the area the party is in, so leaving the session needs no extra write.
+- Menu: Continue starts the saved area offline; New Game starts over from the starting area (overwriting the save once entered); Host Game continues from the save when there is one, otherwise from the starting area.
+- Joining clients: get the host's area and world through the area announcement and replication, and never write a save.
+
+- [x] Save data: host-only local save of the current area and spawn, Continue in the menu, hosting continues from the save.
+- [x] Internet play without Unity services: documented virtual LAN setup over the existing direct-IP join (see Testing).
+- [ ] Hosted relay for internet play without a virtual LAN (deferred; Steam is the likely transport if the game ships there).
 
 ## Testing
 
@@ -115,6 +138,22 @@ This also keeps each machine loading only what it needs, which leaves the door o
 3. Click Host Game in the main editor, then Join Game in a virtual player (the address field defaults to `127.0.0.1`).
 
 Hosting listens on `0.0.0.0:7777`, so Windows may ask to allow the Unity editor through the firewall the first time.
+
+Virtual players use the same company and product name as the main editor, so they share its save file. Only the host writes it during a session, but a virtual player that starts an offline game also saves there.
+
+### Checking saves
+
+1. Play, click New Game, then return to the menu (or stop and press Play again). Continue is now enabled and selected.
+2. Click Continue: the game starts in the saved area.
+3. In Multiplayer Play Mode, Host Game in the main editor continues from that save; Join Game in a virtual player follows the host's area and writes nothing.
+4. The file is `%USERPROFILE%/AppData/LocalLow/<company>/<product>/save.json` on Windows. Delete it to get a clean menu. Automated tests use an in-memory store and never touch it.
+
+### Playing over the internet (virtual LAN)
+
+1. Every player installs [Tailscale](https://tailscale.com) (or ZeroTier) and joins the same network: the host invites the others to its tailnet, or shares the node with them.
+2. The host clicks Host Game. Its virtual LAN address is shown in the Tailscale app (`100.x.y.z`).
+3. Each other player types that address in the join field and clicks Join Game.
+4. If the join times out, allow the game (or the Unity editor) through the host's Windows firewall for UDP 7777 on that network.
 
 ### In-process test limits
 

@@ -1,3 +1,4 @@
+using System.IO;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -33,6 +34,9 @@ public class MainLifetimeScope : LifetimeScope
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>();
 
+        builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, FileSaveStore.DefaultFileName)));
+        builder.Register<GameSave>(Lifetime.Singleton);
+
         if (networkManagerPrefab == null || networkSettings == null)
         {
             Debug.LogError($"{name} needs a NetworkManager prefab and NetworkSettings; online play is unavailable.", this);
@@ -47,6 +51,7 @@ public class MainLifetimeScope : LifetimeScope
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
             builder.RegisterEntryPoint<NetworkAreaSync>();
+            builder.RegisterEntryPoint<GameSaveRecorder>();
         }
 
         builder.RegisterEntryPoint<BootFlow>();

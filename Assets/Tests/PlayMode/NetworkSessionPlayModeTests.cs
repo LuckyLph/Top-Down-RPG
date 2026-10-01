@@ -23,9 +23,10 @@ public class NetworkSessionPlayModeTests
     }
 
     [UnityTest]
-    public IEnumerator HostFromMenu_EntersTheGame_AndReturningToTheMenuEndsTheSession()
+    public IEnumerator HostFromMenu_EntersTheGame_SavesIt_AndReturningToTheMenuEndsTheSession()
     {
-        yield return SceneBootTestHelper.BootIntoMainMenu();
+        MemorySaveStore saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
@@ -35,6 +36,7 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.IsInGame, Is.True);
         Assert.That(session.IsActive, Is.True, "Entering the game must keep the session running.");
+        Assert.That(saveStore.WriteCount, Is.EqualTo(1), "The host saves the area it entered.");
 
         gameFlow.ShowMainMenuAsync();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
@@ -44,7 +46,8 @@ public class NetworkSessionPlayModeTests
     [UnityTest]
     public IEnumerator JoinFromMenu_FollowsTheHostsAreaAnnouncements_AndReturnsToTheMenuWhenTheHostLeaves()
     {
-        yield return SceneBootTestHelper.BootIntoMainMenu();
+        MemorySaveStore saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
@@ -95,6 +98,7 @@ public class NetworkSessionPlayModeTests
         remoteHost.Shutdown();
         yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
         Assert.That(session.IsActive, Is.False);
+        Assert.That(saveStore.WriteCount, Is.Zero, "A joined client never saves the host's areas.");
     }
 
     [UnityTest]

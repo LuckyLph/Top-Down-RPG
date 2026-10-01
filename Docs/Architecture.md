@@ -48,7 +48,7 @@ Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both tes
 | Scene | Role | Key contents |
 |---|---|---|
 | [Main.unity](../Assets/Scenes/Main.unity) | Persistent root, never unloaded. First scene in the build. | `MainLifetimeScope`, Main Camera (`CameraFollow2D`), `EventSystem`, `TransitionCanvas/Fade` (`ScreenFader`) |
-| [MainMenu.unity](../Assets/Scenes/MainMenu.unity) | Title screen, loaded additively. | `MenuLifetimeScope`, `MainMenuCanvas` with `MainMenuController`; `Buttons` holds New Game, Host Game, the join address field, Join Game, Quit and a status line |
+| [MainMenu.unity](../Assets/Scenes/MainMenu.unity) | Title screen, loaded additively. | `MenuLifetimeScope`, `MainMenuCanvas` with `MainMenuController`; `Buttons` holds Continue, New Game, Host Game, the join address field, Join Game, Quit and a status line |
 | [Gameplay.unity](../Assets/Scenes/Gameplay.unity) | Session scene, loaded additively for a play session. | `GameplayLifetimeScope` (references the `Player` prefab, spawned at runtime), `PlayerHudCanvas` prefab, `DamagePopupCanvas` (`DamagePopupLayer`) |
 | [Areas/Area_Clearing.unity](../Assets/Scenes/Areas/Area_Clearing.unity) | Starting area, loaded additively under Gameplay. | `AreaLifetimeScope`, `Grid` with DualGrid grass tilemap + render tilemap + `CollisionTilemap` (Obstacles layer), `NavigationGrid2D`, `NavigationTerrainSource2D`, `SpawnPoint_start`, `MobSpawn_Weasel` (`MobSpawnPoint` for the Weasel prefab), Global Light 2D |
 | [Dev/StressTest/Area_StressTest.unity](../Assets/Dev/StressTest/Area_StressTest.unity) | Dev-only area (not in the build list, no `SceneDefinition`). | Same area setup plus `StressTestMap`, `StressTestSpawner`, `StressTestOverlay`, `WallVisualTilemap` |
@@ -72,7 +72,7 @@ Main (MainLifetimeScope)
 2. `MainLifetimeScope` builds; its entry point [BootFlow](../Assets/Scripts/Core/Boot/BootFlow.cs) (`IAsyncStartable`) runs.
 3. Editor only: `BootFlow` consumes the boot request. If an area scene (known or any other scene, via `SceneDefinition.CreateTransient`) or Gameplay was open, it calls `GameFlow.StartNewGameAsync(area)`; if only MainMenu was open it shows the menu.
 4. Otherwise `GameFlow.ShowMainMenuAsync()`.
-5. Menu "New Game" -> `MainMenuController.StartNewGame()` -> `GameFlow.StartNewGameAsync()` (starting area + starting spawn id from `GameScenes`). "Host Game" starts hosting first; "Join Game" connects to the address in the field and then waits in the menu until the host announces its area, which starts the game (see Networking).
+5. Menu "New Game" -> `MainMenuController.StartNewGame()` -> `GameFlow.StartNewGameAsync()` (starting area + starting spawn id from `GameScenes`). "Continue" starts a new session in the saved area instead (see Save data). "Host Game" starts hosting first, then continues from the save when there is one or starts from the starting area otherwise; "Join Game" connects to the address in the field and then waits in the menu until the host announces its area, which starts the game (see Networking).
 
 ### GameFlow
 
@@ -103,11 +103,13 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `GameplayInputGate` | entry point |
 | `BootFlow` | entry point |
 | `NetworkSession` (gets the inspector's `NetworkManager` prefab and `NetworkSettings`) | singleton; logs an error and is skipped if either is missing |
-| `NetworkSessionLifecycle`, `NetworkAreaSync` | entry points |
+| `NetworkSessionLifecycle`, `NetworkAreaSync`, `GameSaveRecorder` | entry points (the recorder needs `IGameAuthority`, so it is registered with the session) |
+| `ISaveStore` -> `FileSaveStore` at `Application.persistentDataPath/save.json` | instance |
+| `GameSave` | singleton |
 
 ### MenuLifetimeScope ([MenuLifetimeScope.cs](../Assets/Scripts/Composition/MenuLifetimeScope.cs))
 
-- `MainMenuController` via `RegisterComponentInHierarchy` (injected with `GameFlow` and `NetworkSession`).
+- `MainMenuController` via `RegisterComponentInHierarchy` (injected with `GameFlow`, `NetworkSession` and `GameSave`).
 
 ### GameplayLifetimeScope ([GameplayLifetimeScope.cs](../Assets/Scripts/Composition/GameplayLifetimeScope.cs))
 
@@ -144,7 +146,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 |---|---|---|
 | `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`), or `InjectingNetworkPrefabHandler` on clients |
 | `PlayerNetworkSync` | `PlayerBinder` | same as `PlayerWeaponController` |
-| `MainMenuController` | `GameFlow` | Menu scope |
+| `MainMenuController` | `GameFlow`, `NetworkSession`, `GameSave` | Menu scope |
 | `MobController` | `NavigationGrid2D`, `IPlayerRegistry`, `IRandom` | `AreaMobSpawner` or `StressTestSpawner` (`resolver.Instantiate`), or `InjectingNetworkPrefabHandler` on clients |
 | `MobMotor2D` | `IClock` | same as `MobController` |
 | `MeleeDamageDealer` | `IClock`, `DamageService` | same as `MobController` |
@@ -189,6 +191,20 @@ Networked transforms use `LegacyLerp` position interpolation with unreliable del
 
 Unreliable deltas are the biggest win (a lost update is replaced by the next one instead of resent behind it). Rerun the benchmark by name after changing tick rate, speeds or transform settings.
 
+## Save data
+
+One local save file, written by the machine that decides game state. See [Multiplayer.md](Multiplayer.md#phase-6-services-and-persistence) for what persists and why.
+
+| Type | Role |
+|---|---|
+| [ISaveStore](../Assets/Scripts/Core/Save/ISaveStore.cs) | `TryRead`/`Write` of the save text, so save logic is tested without the disk. |
+| [FileSaveStore](../Assets/Scripts/Core/Save/FileSaveStore.cs) | Writes `<path>.tmp`, then swaps it in (`File.Replace`, or a move for the first save) so a crash never leaves half a save; logs IO failures as errors and returns false. |
+| [GameSaveData](../Assets/Scripts/Core/Save/GameSaveData.cs) | Serialized form (`JsonUtility`): `version` (`CurrentVersion` 1), `areaSceneGuid`, `spawnId`. `TryParse` returns false on malformed JSON. |
+| [GameSave](../Assets/Scripts/Core/Save/GameSave.cs) | `SaveArea(area, spawnId)` writes only areas listed in `GameScenes` (dev and transient areas are skipped). `TryLoadArea` resolves the saved GUID through `GameScenes.FindAreaByGuid`; malformed files, other format versions and areas no longer in the build are ignored with a warning. `HasSave`, `GetSavedOrStartingArea` (falls back to the `GameScenes` start). |
+| [GameSaveRecorder](../Assets/Scripts/Core/Save/GameSaveRecorder.cs) | Main-scope entry point. On `GameFlow.AreaLoading` it remembers the transition if `IGameAuthority.IsAuthoritative` at that moment (offline or host; a joined client never saves); on `TransitionFinished` it saves that area and spawn id if the game ended up in it. A party-wipe restart saves the same area again. |
+
+Areas are saved by scene GUID, not path, so moving or renaming a scene keeps saves valid. Booting the editor straight into a listed area saves it like any other entry. Multiplayer Play Mode virtual players run with the same company and product name, so they use the same save folder: a virtual player playing offline writes the same file.
+
 ## Input
 
 - [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `Move`, `AttackPressedThisFrame`, `GameplayEnabled`. The local device seam; gameplay reaches it only through `LocalPlayerCommandSource` (see Player).
@@ -215,7 +231,7 @@ Unreliable deltas are the biggest win (a lost update is replaced by the next one
 | Type | Role |
 |---|---|
 | [ScreenFader](../Assets/Scripts/Core/UI/ScreenFader.cs) | `CanvasGroup` fade used by `GameFlow` (unscaled time); blocks raycasts while visible; starts opaque. |
-| [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `StartNewGame`, `HostGame` (start hosting, then a new game), `JoinGame` (join the address in `joinAddressField`, prefilled with the default; once connected it waits for the host's area announcement, ignores repeat clicks while connecting) and `QuitGame`; writes progress and failures to `statusText`; selects the first button for gamepad/keyboard navigation. |
+| [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `ContinueGame` (new session in the saved area; the button is only interactable, and selected first, when `GameSave.HasSave`), `StartNewGame`, `HostGame` (start hosting, then the saved area or the starting area), `JoinGame` (join the address in `joinAddressField`, prefilled with the default; once connected it waits for the host's area announcement, ignores repeat clicks while connecting) and `QuitGame`; writes progress and failures to `statusText`; selects Continue, or else `firstSelected`, for gamepad/keyboard navigation; logs an error in `Awake` when `continueButton` is unassigned. |
 | [PlayerHudView](../Assets/Scripts/UI/PlayerHudView.cs) | Passive view on `PlayerHudCanvas`: health fill + "HP n" text, weapon icon with tint when missing. |
 | [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; binds to whichever player `LocalPlayerTracker` holds (rebinding when it changes) and listens to its `Health.Damaged`/`Died`/`Restored` and `PlayerWeaponController.EquippedWeaponChanged`, pushing into the view; clears the health display while there is no local player. |
 
@@ -403,7 +419,7 @@ Menu root: `Tools/TopDownRPG/`.
 
 | Type | Assets | Consumed by |
 |---|---|---|
-| `GameScenes` | `Assets/Data/Scenes/GameScenes.asset` | `MainLifetimeScope`, `GameFlow`, `BootFlow`, editor scene tools |
+| `GameScenes` | `Assets/Data/Scenes/GameScenes.asset` | `MainLifetimeScope`, `GameFlow`, `BootFlow`, `GameSave` (`FindAreaByGuid`), editor scene tools |
 | `NetworkSettings` | `Assets/Data/NetworkSettings.asset` | `MainLifetimeScope` -> `NetworkSession`, `MainMenuController` |
 | `SceneDefinition` | `Assets/Data/Scenes/Scene_*.asset` | `GameScenes`, `GameFlow`, `SceneLoader` |
 | `GameplaySettings` | `Assets/Data/GameplaySettings.asset` | `PlayerDeathHandler` (restart and respawn delays) |
@@ -445,6 +461,9 @@ flowchart LR
         Health -- Died --> DestroyMobOnDeath --> EffectSpawner
     end
     MainMenuController -- StartNewGameAsync --> GameFlow
+    MainMenuController -- TryLoadArea / GetSavedOrStartingArea --> GameSave
+    GameSaveRecorder -- AreaLoading / TransitionFinished --> GameFlow
+    GameSaveRecorder -- SaveArea --> GameSave --> ISaveStore
     MainMenuController -- StartHost / JoinAsync --> NetworkSession
     NetworkSessionLifecycle -- ConnectionLost / TransitionFinished --> NetworkSession
 ```
@@ -453,11 +472,11 @@ Events summary:
 
 | Event | Publisher | Subscribers |
 |---|---|---|
-| `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate`, `NetworkSessionLifecycle` (finished only) |
+| `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate`, `NetworkSessionLifecycle` and `GameSaveRecorder` (finished only) |
 | `NetworkSession.ConnectionLost` | `NetworkSession` | `NetworkSessionLifecycle` |
 | `NetworkSession.ClientReady` | `NetworkSession` (host) | `GameplayPlayers` |
 | `NetworkSession.AreaAnnounced` | `NetworkSession` (client) | `NetworkAreaSync` |
-| `GameFlow.AreaLoading` | `GameFlow` | `NetworkAreaSync` (host) |
+| `GameFlow.AreaLoading` | `GameFlow` | `NetworkAreaSync` (host), `GameSaveRecorder` |
 | `MobMotor2D.AttackAnimationPlayed` | `MobMotor2D.PlayAttackAnimation` | `MobNetworkSync` (host) |
 | `LocalPlayerTracker.Changed` | `PlayerBinder` | `GameplayEntryPoint`, `PlayerHudPresenter` |
 | `PlayerWeaponController.Attacked` | `PlayerWeaponController.TryAttack` | `PlayerNetworkSync` (owner) |
@@ -478,6 +497,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | File | Covers |
 |---|---|
 | [AreaEntryTests.cs](../Assets/Tests/Editor/AreaEntryTests.cs) | Spawn point slots, every registered player placed in its own slot at the requested spawn (and recorded as the active spawn point), `PlayerRespawner` rules and placement |
+| [GameSaveTests.cs](../Assets/Tests/Editor/GameSaveTests.cs) | Save/load round trip by scene GUID and format version, areas outside `GameScenes` not saved, missing/malformed/other-version/unknown-area saves ignored with a warning, `GetSavedOrStartingArea` fallback, `FileSaveStore` round trip and replace without a leftover temp file (in a temp folder) |
 | [AreaAnnouncementTests.cs](../Assets/Tests/Editor/AreaAnnouncementTests.cs) | Announcement round trip through Netcode buffers; null strings become empty |
 | [AreaMobSpawnerTests.cs](../Assets/Tests/Editor/AreaMobSpawnerTests.cs) | Spawn points without a prefab log an error and spawn nothing; on a client each mob prefab is registered once, nothing spawns, and dispose unregisters; offline registers nothing |
 | [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `Restore`, `SyncTo`, `DamageService` publishing and invalid hits, replicated damage without authority, `MeleeDamageDealer` cooldown, receiver lookup and missing `DamageService`, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
@@ -495,6 +515,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 
 Fakes and seams:
 - [ManualClock](../Assets/Tests/Editor/ManualClock.cs): `IClock` with settable `Time` and `Advance`.
+- `MemorySaveStore` ([EditMode](../Assets/Tests/Editor/MemorySaveStore.cs), [PlayMode](../Assets/Tests/PlayMode/MemorySaveStore.cs)): in-memory `ISaveStore` with `Contents` and `WriteCount`. `GameSaveTests` builds its own `GameScenes` and `SceneDefinition`s with fake GUIDs.
 - `SystemRandom` with a fixed seed stands in for `IRandom`.
 - A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
@@ -504,13 +525,14 @@ Fakes and seams:
 
 | File | Covers |
 |---|---|
-| [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
+| [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits. Every boot registers a `MemorySaveStore` (the test's own, or a fresh one) into Main with `LifetimeScope.Enqueue`, so tests never read or write the real save file. |
+| [GameSavePlayModeTests.cs](../Assets/Tests/PlayMode/GameSavePlayModeTests.cs) | Entering an area saves its scene GUID and spawn; without a save Continue is disabled and not selected; after playing and returning to the menu, Continue is selected and starts a new session in the saved area |
 | [NetworkAreaSyncPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkAreaSyncPlayModeTests.cs) | Hosted game plus in-process client: a late joiner is told the current area; after a host area change the old mob is despawned on the client, the new area's mob stays hidden until the client reports ready for the new epoch (a stale report is ignored), and re-reporting ready does not spawn a second player. A host restart without clients bumps the epoch and respawns the host's player. |
 | [NetworkMobsPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkMobsPlayModeTests.cs) | Hosted game plus in-process client: the host's mob is a spawned network object; the client's copy has its AI off and a kinematic body, follows the host's mob, mirrors its HP and publishes the hit for popups; the client's own player takes the host's damage, dies and is respawned by the host; killing the mob despawns the client copy and plays the death animation on both |
 | [NetworkSmoothnessPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSmoothnessPlayModeTests.cs) | Under simulated 150 ms / 20 ms / 4% loss: the host's copy of a client's player starts within 0.8 s, never jumps back a visible pixel, never freezes for 0.6 s and keeps its speed within 50% on average over 3 runs. Plus the explicit `NetworkBench` benchmark described under Transform smoothing. |
 | [InProcessClient.cs](../Assets/Tests/PlayMode/InProcessClient.cs) | Helper: a second `NetworkManager` cloned from the session's (without its simulator), with its own container, prefab handler, player registry, local player tracker and scripted input, acting as a joining client inside the test process; it also registers the current area's mob prefabs, keeps received copies in `DontDestroyOnLoad`, records area announcements, sends ready for the host's (or a given) epoch and exposes `Resolve<T>()`. Never let the host reload the Gameplay scene while one is connected: that froze the editor every time (see [Multiplayer.md](Multiplayer.md#testing)). |
 | [NetworkPlayersPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkPlayersPlayModeTests.cs) | Hosting from the menu, then a second in-process `NetworkManager` acting as a client (with its own container and prefab handler): nothing reaches it before it reports ready, both sides then see both players with the right ownership, the client's movement and facing reach the host copy, its attack plays on the host, and its player is removed when it disconnects |
-| [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game and the menu ends the session; joining a second in-process host from the menu waits for its announcement, loads the announced area, reports ready with its epoch, follows an area change and a new-session restart, then returns to the menu when that host leaves; join timeout with no host |
+| [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game, saves it, and the menu ends the session; joining a second in-process host from the menu waits for its announcement, loads the announced area, reports ready with its epoch, follows an area change and a new-session restart, then returns to the menu when that host leaves, never writing a save; join timeout with no host |
 | [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, respawn at the spawn point while a teammate lives, restart only on a full party wipe, menu boot focus |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Clearing mobs spawned from spawn points into the area scene, detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |
 | [StressTestScenePlayModeTests.cs](../Assets/Tests/PlayMode/StressTestScenePlayModeTests.cs) | Stress area boots, spawns its initial mobs and they engage |

@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 public class CombatComponentTests
 {
@@ -59,19 +60,25 @@ public class CombatComponentTests
     }
 
     [Test]
-    public void DamageReceiver_ReceiveDamage_IgnoresInvalidDamageAndHitsAfterDeath()
+    public void DamageService_IgnoresInvalidDamageMissingTargetsAndHitsAfterDeath()
     {
         root = new GameObject("DamageReceiverTest");
         Health health = root.AddComponent<Health>();
         DamageReceiver receiver = root.AddComponent<DamageReceiver>();
+        CombatEvents combatEvents = new();
+        int publishedCount = 0;
+        combatEvents.DamageApplied += _ => publishedCount++;
+        DamageService damageService = new(combatEvents);
 
-        Assert.That(receiver.ReceiveDamage(0), Is.EqualTo(0));
-        Assert.That(receiver.ReceiveDamage(-5), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(null, 5), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(receiver, 0), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(receiver, -5), Is.EqualTo(0));
         Assert.That(health.CurrentHealth, Is.EqualTo(10));
 
-        Assert.That(receiver.ReceiveDamage(10), Is.EqualTo(10));
+        Assert.That(damageService.ApplyDamage(receiver, 10), Is.EqualTo(10));
         Assert.That(health.IsDead, Is.True);
-        Assert.That(receiver.ReceiveDamage(1), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(receiver, 1), Is.EqualTo(0));
+        Assert.That(publishedCount, Is.EqualTo(1), "Only damage that was applied is reported.");
     }
 
     [Test]
@@ -91,7 +98,7 @@ public class CombatComponentTests
         visuals.transform.SetParent(target.transform);
 
         ManualClock clock = new();
-        dealer.Construct(clock);
+        dealer.Construct(clock, new DamageService(new CombatEvents()));
         dealer.ResetCooldown();
 
         bool firstHit = dealer.TryDealDamage(visuals.transform);
@@ -131,10 +138,27 @@ public class CombatComponentTests
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
 
+        dealer.Construct(new ManualClock(), new DamageService(new CombatEvents()));
         dealer.ResetCooldown();
 
         Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
         Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
+    }
+
+    [Test]
+    public void MeleeDamageDealer_WithoutDamageService_LogsErrorAndDealsNoDamage()
+    {
+        root = new GameObject("DealerRoot");
+        MeleeDamageDealer dealer = root.AddComponent<MeleeDamageDealer>();
+        GameObject target = new("Target");
+        target.transform.SetParent(root.transform);
+        Health health = target.AddComponent<Health>();
+        target.AddComponent<DamageReceiver>();
+        dealer.ResetCooldown();
+
+        LogAssert.Expect(LogType.Error, "MeleeDamageDealer was not injected with a DamageService.");
+        Assert.That(dealer.TryDealDamage(target.transform), Is.False);
+        Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
     }
 
     [Test]
@@ -189,7 +213,7 @@ public class CombatComponentTests
     }
 
     [Test]
-    public void DamageReceiver_ReceiveDamage_PublishesDamageReport()
+    public void DamageService_PublishesDamageReport()
     {
         root = new GameObject("DamageReceiverRoot");
         root.transform.position = new Vector3(2f, 3f, 0f);
@@ -201,14 +225,15 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         DamageReport? published = null;
         combatEvents.DamageApplied += report => published = report;
-        receiver.Construct(combatEvents);
+        DamageService damageService = new(combatEvents);
 
-        receiver.ReceiveDamage(2, source);
+        damageService.ApplyDamage(receiver, 2, source);
 
         Assert.That(published.HasValue, Is.True);
         Assert.That(published.Value.Target, Is.SameAs(health));
         Assert.That(published.Value.Amount, Is.EqualTo(2));
         Assert.That(published.Value.Source, Is.SameAs(source));
+        Assert.That(published.Value.PopupWorldPosition, Is.EqualTo(receiver.PopupWorldPosition));
         Assert.That(published.Value.PopupWorldPosition.y, Is.GreaterThan(root.transform.position.y));
     }
 

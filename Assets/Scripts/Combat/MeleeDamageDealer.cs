@@ -8,6 +8,7 @@ public class MeleeDamageDealer : MonoBehaviour
     [SerializeField, Min(0f)] private float attackInterval = 0.75f;
 
     private IClock clock = UnityClock.Shared;
+    private DamageService damageService;
     private float nextAttackTime;
 
     public int DamageAmount => damageAmount;
@@ -15,9 +16,10 @@ public class MeleeDamageDealer : MonoBehaviour
     public float NextAttackTime => nextAttackTime;
 
     [Inject]
-    public void Construct(IClock gameClock)
+    public void Construct(IClock gameClock, DamageService damage)
     {
         clock = gameClock ?? UnityClock.Shared;
+        damageService = damage;
     }
 
     public void Initialize(MobConfig config)
@@ -43,13 +45,19 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
+        if (damageService == null)
+        {
+            Debug.LogError($"{nameof(MeleeDamageDealer)} was not injected with a {nameof(DamageService)}.", this);
+            return false;
+        }
+
         DamageReceiver receiver = DamageReceiver.FindFor(target);
         if (receiver == null)
         {
             return false;
         }
 
-        int appliedDamage = receiver.ReceiveDamage(damageAmount, gameObject);
+        int appliedDamage = damageService.ApplyDamage(receiver, damageAmount, gameObject);
         if (appliedDamage <= 0)
         {
             return false;

@@ -395,7 +395,7 @@ public class PlayerWeaponSystemTests
 
     private static SlashSpawner CreateSpawner()
     {
-        return new SlashSpawner(new ContainerBuilder().Build());
+        return new SlashSpawner(new ContainerBuilder().Build(), new DamageService(new CombatEvents()));
     }
 
     private static PlayerWeapon CreateTestWeapon(

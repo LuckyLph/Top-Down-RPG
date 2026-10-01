@@ -173,7 +173,8 @@ public class MobPlayModeBehaviorTests
         Assert.That(receiver, Is.Not.Null);
         Assert.That(health, Is.Not.Null);
 
-        receiver.ReceiveDamage(health.CurrentHealth);
+        DamageService damageService = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<DamageService>();
+        damageService.ApplyDamage(receiver, health.CurrentHealth);
         yield return null;
 
         Assert.That(health.IsDead, Is.True);

@@ -112,7 +112,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `DamagePopupLayer` | component |
 | `GameplaySettings` | instance |
 | `PlayerHudView` | component in hierarchy |
-| `CombatEvents`, `SlashSpawner`, `EffectSpawner` | singletons |
+| `CombatEvents`, `DamageService`, `SlashSpawner`, `EffectSpawner` | singletons |
 | `DamagePopupPresenter`, `GameplayEntryPoint`, `PlayerDeathHandler`, `PlayerHudPresenter` | entry points |
 | Build callback: resolves `LocalPlayer` | spawns the local player before entry points start |
 
@@ -134,10 +134,9 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Component | `Construct` parameters | Injected by |
 |---|---|---|
 | `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`) |
-| `DamageReceiver` | `CombatEvents` | `PlayerSpawner` (player) / Area callback (mobs) |
 | `MainMenuController` | `GameFlow` | Menu scope |
 | `MobController` | `NavigationGrid2D`, `IPlayerRegistry` | Area scope build callback, or `resolver.Instantiate` |
-| `MeleeDamageDealer` | `IClock` | same as `MobController` |
+| `MeleeDamageDealer` | `IClock`, `DamageService` | same as `MobController` |
 | `DestroyMobOnDeath` | `EffectSpawner` | same as `MobController` |
 | `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `LocalPlayer` | Area scope `autoInjectGameObjects` |
 
@@ -198,18 +197,19 @@ Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`
 | Type | Role |
 |---|---|
 | [Health](../Assets/Scripts/Combat/Health.cs) | Int HP; `ApplyDamage` clamps, returns applied amount; events `Damaged(Health.DamageEvent)` and `Died(Health)` (once). No healing/reset. |
-| [DamageReceiver](../Assets/Scripts/Combat/DamageReceiver.cs) | Entry point for hits. `FindFor(transform)` walks up parents. `ReceiveDamage` applies to `Health` and publishes a `DamageReport` to `CombatEvents`. |
+| [DamageReceiver](../Assets/Scripts/Combat/DamageReceiver.cs) | Marks something as hittable: `FindFor(transform)` walks up parents; exposes its `Health` and `PopupWorldPosition`. Applies nothing itself. |
+| [DamageService](../Assets/Scripts/Combat/DamageService.cs) | Gameplay-scope singleton and the only gameplay path that applies damage: `ApplyDamage(receiver, amount, source)` ignores null targets and non-positive amounts, applies to `Health` and publishes a `DamageReport` to `CombatEvents` when damage landed. This is the seam the host will own once networking arrives ([Multiplayer.md](Multiplayer.md)). Tests still call `Health.ApplyDamage` directly to set up state. |
 | [DamageReport](../Assets/Scripts/Combat/DamageReport.cs) | Target, amount, source, popup world position. |
 | [CombatEvents](../Assets/Scripts/Combat/CombatEvents.cs) | Gameplay-scope event bus: `DamageApplied(DamageReport)`. |
-| [MeleeDamageDealer](../Assets/Scripts/Combat/MeleeDamageDealer.cs) | Mob melee: `TryDealDamage(target)` with `IClock` cooldown; damage/interval overwritten from `MobConfig`. |
+| [MeleeDamageDealer](../Assets/Scripts/Combat/MeleeDamageDealer.cs) | Mob melee: `TryDealDamage(target)` with `IClock` cooldown, through `DamageService` (logs an error and deals nothing without one); damage/interval overwritten from `MobConfig`. |
 
 ### Player weapon and slash
 
 | Type | Role |
 |---|---|
 | [PlayerWeapon](../Assets/Scripts/Combat/PlayerWeapon.cs) | ScriptableObject: name, damage, cooldown, spawn distance, per-direction offsets (Down, Up, Left, Right), slash prefab, HUD icon. Asset: `Assets/Data/Weapons/Sword.asset`. |
-| [SlashSpawner](../Assets/Scripts/Combat/SlashSpawner.cs) | Instantiates the weapon's slash prefab through `IObjectResolver` and initializes it. |
-| [SwordSlashAttack](../Assets/Scripts/Combat/SwordSlashAttack.cs) | Trigger hitbox that follows the owner's sprite, rotates to the attack direction, mirrors when facing east, plays its clip through a `PlayableGraph`, damages each `DamageReceiver` once (never the owner), checks initial overlaps, self-destroys after the clip length. Prefab: `Assets/Prefabs/Combat/SwordSlash.prefab`. |
+| [SlashSpawner](../Assets/Scripts/Combat/SlashSpawner.cs) | Instantiates the weapon's slash prefab through `IObjectResolver` and initializes it with the `DamageService`. |
+| [SwordSlashAttack](../Assets/Scripts/Combat/SwordSlashAttack.cs) | Trigger hitbox that follows the owner's sprite, rotates to the attack direction, mirrors when facing east, plays its clip through a `PlayableGraph`, decides which `DamageReceiver`s it hit (each once, never the owner) and applies the damage through `DamageService`, checks initial overlaps, self-destroys after the clip length. Prefab: `Assets/Prefabs/Combat/SwordSlash.prefab`. |
 
 ### Death
 
@@ -369,9 +369,9 @@ flowchart LR
         LocalPlayerCommandSource -- IPlayerInput --> PlayerInputService
         PlayerController --> PlayerWeaponController
         PlayerWeaponController --> SlashSpawner --> SwordSlashAttack
-        SwordSlashAttack --> DamageReceiver
-        DamageReceiver --> Health
-        DamageReceiver -- DamageApplied --> CombatEvents
+        SwordSlashAttack --> DamageService
+        DamageService --> Health
+        DamageService -- DamageApplied --> CombatEvents
         CombatEvents --> DamagePopupPresenter --> DamagePopupLayer
         Health -- Damaged/Died --> PlayerHudPresenter --> PlayerHudView
         PlayerWeaponController -- EquippedWeaponChanged --> PlayerHudPresenter
@@ -382,7 +382,7 @@ flowchart LR
         GameFlow -- IAreaEntry.Enter --> AreaEntry -- IPlayerRegistry --> PlayerController
         MobPerception2D -- IPlayerRegistry --> PlayerRegistry
         MobController --> NavigationGrid2D
-        MobController --> MeleeDamageDealer --> DamageReceiver
+        MobController --> MeleeDamageDealer --> DamageService
         Health -- Died --> DestroyMobOnDeath --> EffectSpawner
     end
     MainMenuController -- StartNewGameAsync --> GameFlow
@@ -395,7 +395,7 @@ Events summary:
 | `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate` |
 | `Health.Damaged` | `Health` | `PlayerHudPresenter` |
 | `Health.Died` | `Health` | `PlayerHudPresenter`, `PlayerDeathHandler`, `DisableOnDeath`, `DestroyMobOnDeath` |
-| `CombatEvents.DamageApplied` | `DamageReceiver` | `DamagePopupPresenter` |
+| `CombatEvents.DamageApplied` | `DamageService` | `DamagePopupPresenter` |
 | `PlayerRegistry.PlayerAdded` / `PlayerRemoved` | `PlayerRegistry` | `PlayerDeathHandler` |
 | `PlayerWeaponController.EquippedWeaponChanged` | `PlayerWeaponController` | `PlayerHudPresenter` |
 | `MobController.onAttackRangeEntered` (UnityEvent) | `AttackRangeState` | inspector listeners (none on Weasel) |
@@ -409,7 +409,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | File | Covers |
 |---|---|
 | [AreaEntryTests.cs](../Assets/Tests/Editor/AreaEntryTests.cs) | Spawn point slots, every registered player placed in its own slot at the requested spawn |
-| [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `DamageReceiver` publishing and invalid hits, `MeleeDamageDealer` cooldown and receiver lookup, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
+| [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `DamageService` publishing and invalid hits, `MeleeDamageDealer` cooldown, receiver lookup and missing `DamageService`, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
 | [MobMotor2DTests.cs](../Assets/Tests/Editor/MobMotor2DTests.cs) | Attack animation flag, no allocation, controller change, facing vs steering drift |
 | [MobPathAgent2DTests.cs](../Assets/Tests/Editor/MobPathAgent2DTests.cs) | Arrival distance, smoothing respects terrain cost, no allocation when warm, stall tracking |
 | [MobStateMachineTests.cs](../Assets/Tests/Editor/MobStateMachineTests.cs) | All state transitions, reinjection, region prewarm, search timing, unreachable/off-grid/dead targets, attack cooldown, patrol reachability, separation (push apart, coincident, never into walls), chase crowd waiting, multi-player targeting (nearest visible, sticky target, switch on death or hiding, drop on registry removal) |

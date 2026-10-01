@@ -779,6 +779,7 @@ public class MobStateMachineTests
         mob.AddComponent<MobPatrolAnchor>();
         MobController mobBrain = mob.AddComponent<MobController>();
 
+        mob.GetComponent<MeleeDamageDealer>().Construct(UnityClock.Shared, new DamageService(new CombatEvents()));
         mobBrain.Configure(config, navGrid, players);
         Physics2D.SyncTransforms();
         return mobBrain;

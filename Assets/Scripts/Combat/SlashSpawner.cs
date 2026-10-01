@@ -5,10 +5,12 @@ using VContainer.Unity;
 public sealed class SlashSpawner
 {
     private readonly IObjectResolver resolver;
+    private readonly DamageService damageService;
 
-    public SlashSpawner(IObjectResolver resolver)
+    public SlashSpawner(IObjectResolver resolver, DamageService damageService)
     {
         this.resolver = resolver;
+        this.damageService = damageService;
     }
 
     public SwordSlashAttack Spawn(Transform owner, PlayerWeapon weapon, Vector2 direction, SpriteRenderer ownerSpriteRenderer = null)
@@ -29,7 +31,7 @@ public sealed class SlashSpawner
         SwordSlashAttack slash = resolver.Instantiate(slashPrefab);
         slash.gameObject.SetActive(true);
         slash.gameObject.name = $"{weapon.DisplayName}Slash";
-        slash.Initialize(owner, weapon, direction, ownerSpriteRenderer);
+        slash.Initialize(owner, weapon, direction, damageService, ownerSpriteRenderer);
         return slash;
     }
 }

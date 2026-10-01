@@ -20,6 +20,7 @@ public class SwordSlashAttack : MonoBehaviour
     private Transform ownerRoot;
     private Transform ownerAnchor;
     private GameObject damageSource;
+    private DamageService damageService;
     private Vector2 direction = Vector2.down;
     private Vector2 spawnOffset;
     private float spawnDistance;
@@ -92,10 +93,11 @@ public class SwordSlashAttack : MonoBehaviour
         }
     }
 
-    public void Initialize(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, SpriteRenderer ownerSpriteRenderer = null)
+    public void Initialize(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, DamageService damage, SpriteRenderer ownerSpriteRenderer = null)
     {
         ResolveReferences();
 
+        damageService = damage;
         ownerRoot = owner;
         damageSource = owner != null ? owner.gameObject : gameObject;
         direction = attackDirection.sqrMagnitude > 0.0001f ? attackDirection.normalized : Vector2.down;
@@ -125,7 +127,7 @@ public class SwordSlashAttack : MonoBehaviour
 
     public bool TryDamageCollider(Collider2D other)
     {
-        if (other == null)
+        if (other == null || damageService == null)
         {
             return false;
         }
@@ -144,7 +146,7 @@ public class SwordSlashAttack : MonoBehaviour
             return false;
         }
 
-        int appliedDamage = receiver.ReceiveDamage(damageAmount, damageSource);
+        int appliedDamage = damageService.ApplyDamage(receiver, damageAmount, damageSource);
         if (appliedDamage <= 0)
         {
             return false;

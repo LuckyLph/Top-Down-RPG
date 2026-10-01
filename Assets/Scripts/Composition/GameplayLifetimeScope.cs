@@ -36,6 +36,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<PlayerHudView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
+        builder.Register<DamageService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
 

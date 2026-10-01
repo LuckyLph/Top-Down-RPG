@@ -25,6 +25,7 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 | `com.unity.netcode.gameobjects` 2.13.3 | Netcode for GameObjects: `NetworkManager`, host/client sessions, network prefab handlers |
 | `com.unity.transport` 2.6.0 | `UnityTransport`. Pinned to the version Netcode declares: 2.7.x throws a Burst `NullReferenceException` from its `AnalyticsLayer` job every network update in this editor version. |
 | `com.unity.multiplayer.playmode` 2.0.2 | Multiplayer Play Mode (up to 3 extra virtual players in the editor) |
+| `com.unity.multiplayer.tools` 2.2.12 | Network Simulator (latency, jitter, packet loss) and network profiling. Simulation only runs in the editor and development builds. |
 | `com.coplaydev.unity-mcp` (git) | UnityMCP editor automation |
 
 ## Assemblies
@@ -165,6 +166,20 @@ Netcode for GameObjects, host-and-play. See [Multiplayer.md](Multiplayer.md) for
 - `Assets/DefaultNetworkPrefabs.asset` is Netcode's auto-maintained network prefab list, referenced by the NetworkManager prefab. It is empty until something gets a `NetworkObject`.
 - Scene management is disabled: `GameFlow` keeps loading scenes on every machine. Revisit in Phase 5 of the multiplayer plan.
 - Netcode sets `Application.runInBackground` while a `NetworkManager` exists.
+- The NetworkManager prefab carries a `NetworkSimulator` set to the `None` preset. It drives every transport in the process, so only one should be enabled (the in-process test clients remove theirs).
+
+### Transform smoothing
+
+Networked transforms use `LegacyLerp` position interpolation with unreliable deltas and the default buffer (`NetworkTransform.InterpolationBufferTickOffset` 0, tick rate 30). This was chosen by measurement, not by the package docs' suggestion: the explicit benchmark `NetworkSmoothnessPlayModeTests.Benchmark_RemotePlayerSmoothness_UnderStress` moves an in-process client's player for 2 s at a time under 150 ms latency, 20 ms jitter and 4% loss and records, per rendered frame of the host's copy, how far the speed strays from the owner's, the longest freeze and visible backward jumps. Results on this machine (6 runs per setting, run in both orders):
+
+| Setting | Start lag | Mean speed error | Runs with a freeze over 150 ms |
+|---|---|---|---|
+| `LegacyLerp`, unreliable deltas, offset 0 or 1 | ~390 ms | 22–26% | 0–2 of 6 |
+| `Lerp`, unreliable deltas, offset 1 or 2 | ~380 ms | 57–63% | 0–2 of 6 |
+| `SmoothDampening`, unreliable deltas | ~350 ms | ~100% | up to 3 of 6 |
+| Any type with reliable deltas | 450–550 ms | 60–150%, with backward jumps for `Lerp`/`SmoothDampening` | frequent |
+
+Unreliable deltas are the biggest win (a lost update is replaced by the next one instead of resent behind it). Rerun the benchmark by name after changing tick rate, speeds or transform settings.
 
 ## Input
 
@@ -200,7 +215,7 @@ Damage popups are under Combat.
 
 ## Player
 
-Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `NetworkObject`, `NetworkTransform` with owner authority syncing x/y position only, `PlayerNetworkSync`, `YPositionSorter` on a child), referenced by `GameplayLifetimeScope`, spawned at runtime by `PlayerSpawner`, and listed in `Assets/DefaultNetworkPrefabs.asset`. Offline the networking components stay unspawned and do nothing.
+Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `NetworkObject`, `NetworkTransform` with owner authority syncing x/y position only (`LegacyLerp`, unreliable deltas, see Transform smoothing), `PlayerNetworkSync`, `YPositionSorter` on a child), referenced by `GameplayLifetimeScope`, spawned at runtime by `PlayerSpawner`, and listed in `Assets/DefaultNetworkPrefabs.asset`. Offline the networking components stay unspawned and do nothing.
 
 | Type | Role |
 |---|---|
@@ -476,6 +491,8 @@ Fakes and seams:
 | File | Covers |
 |---|---|
 | [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
+| [NetworkSmoothnessPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSmoothnessPlayModeTests.cs) | Under simulated 150 ms / 20 ms / 4% loss: the host's copy of a client's player starts within 0.8 s, never jumps back a visible pixel, never freezes for 0.6 s and keeps its speed within 50% on average over 3 runs. Plus the explicit `NetworkBench` benchmark described under Transform smoothing. |
+| [InProcessClient.cs](../Assets/Tests/PlayMode/InProcessClient.cs) | Helper: a second `NetworkManager` cloned from the session's (without its simulator), with its own container, prefab handler, player registry, local player tracker and scripted input, acting as a joining client inside the test process |
 | [NetworkPlayersPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkPlayersPlayModeTests.cs) | Hosting from the menu, then a second in-process `NetworkManager` acting as a client (with its own container and prefab handler): nothing reaches it before it reports ready, both sides then see both players with the right ownership, the client's movement and facing reach the host copy, its attack plays on the host, and its player is removed when it disconnects |
 | [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game and the menu ends the session; joining a second in-process host from the menu, then returning to the menu when that host leaves; join timeout with no host |
 | [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, respawn at the spawn point while a teammate lives, restart only on a full party wipe, menu boot focus |

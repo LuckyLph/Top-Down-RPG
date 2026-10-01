@@ -8,7 +8,8 @@
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime",
     "Unity.Collections",
-    "Unity.Networking.Transport"
+    "Unity.Networking.Transport",
+    "Unity.Multiplayer.Tools.NetworkSimulator.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -76,9 +76,8 @@ public class NetworkSessionPlayModeTests
 
     private static NetworkManager StartRemoteHost(NetworkSession session)
     {
-        GameObject hostObject = Object.Instantiate(session.NetworkManager.gameObject);
-        hostObject.name = "RemoteHost";
-        NetworkManager host = hostObject.GetComponent<NetworkManager>();
+        NetworkManager host = InProcessClient.CloneNetworkManager(session, "RemoteHost");
+        GameObject hostObject = host.gameObject;
         hostObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port, "127.0.0.1");
         Assert.That(host.StartHost(), Is.True, "The remote host should start.");
         return host;

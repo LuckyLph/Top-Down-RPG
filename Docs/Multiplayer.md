@@ -80,7 +80,7 @@ Known gaps until Phase 4 and 5 (expected, not bugs):
 
 ### Phase 4: mobs
 
-- [ ] Mob AI ticks only on the host; clients show replicated position and state.
+- [ ] Mob AI ticks only on the host; clients show replicated position and state. Mob transforms use the same measured smoothing as players (`LegacyLerp`, unreliable deltas); rerun the smoothness benchmark once mobs replicate.
 - [ ] `Health` HP replicated; damage events reach clients and republish to `CombatEvents` so popups and HUD are unchanged.
 - [ ] Mob death despawns on the host; the death animation plays locally on each client.
 
@@ -108,6 +108,10 @@ Known gaps until Phase 4 and 5 (expected, not bugs):
 3. Click Host Game in the main editor, then Join Game in a virtual player (the address field defaults to `127.0.0.1`).
 
 Hosting listens on `0.0.0.0:7777`, so Windows may ask to allow the Unity editor through the firewall the first time.
+
+### Testing under a bad connection
+
+During Play Mode, select `NetworkManager` under `DontDestroyOnLoad` in the Hierarchy and pick a Connection Preset on its Network Simulator (for example Home Broadband with Congested Network), or set a custom preset from code with `NetworkSimulatorPreset.Create`. The simulator affects every connection in that editor process. A repeatable 150 ms / 20 ms jitter / 4% loss run lives in `NetworkSmoothnessPlayModeTests`.
 
 ## Open questions
 

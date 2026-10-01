@@ -4,9 +4,9 @@ using VContainer.Unity;
 public sealed class GameplayEntryPoint : IStartable, IDisposable
 {
     private readonly CameraFollow2D cameraFollow;
-    private readonly PlayerController player;
+    private readonly LocalPlayer player;
 
-    public GameplayEntryPoint(CameraFollow2D cameraFollow, PlayerController player)
+    public GameplayEntryPoint(CameraFollow2D cameraFollow, LocalPlayer player)
     {
         this.cameraFollow = cameraFollow;
         this.player = player;
@@ -14,7 +14,7 @@ public sealed class GameplayEntryPoint : IStartable, IDisposable
 
     public void Start()
     {
-        cameraFollow.SetTarget(player.transform);
+        cameraFollow.SetTarget(player.Transform);
         cameraFollow.SnapToTarget();
     }
 

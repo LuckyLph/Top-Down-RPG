@@ -6,7 +6,7 @@ All C# types are in the global namespace (no `namespace` declarations). Paths be
 
 ## Overview
 
-A Unity 6 (URP 2D) top-down action RPG prototype. The player boots into a main menu, starts a new game, and is placed in an area scene (currently the grass "Clearing") where they walk in 8 directions and swing a sword. Weasel mobs idle, patrol around their spawn, spot the player with line-of-sight checks, path around walls on a tilemap grid, crowd around the player without overlapping, and melee attack on a cooldown. Damage shows floating numbers and a HUD health bar. When the player dies the current area restarts after a delay. A dev-only stress-test area spawns hundreds of mobs on a procedurally generated map to profile AI and pathfinding.
+A Unity 6 (URP 2D) top-down action RPG prototype. The player boots into a main menu, starts a new game, and is placed in an area scene (currently the grass "Clearing") where they walk in 8 directions and swing a sword. Weasel mobs idle, patrol around their spawn, spot the player with line-of-sight checks, path around walls on a tilemap grid, crowd around the player without overlapping, and melee attack on a cooldown. Damage shows floating numbers and a HUD health bar. Mobs target whichever registered player they spot (nearest visible), so the code is ready for more than one player. When every player is dead the current area restarts after a delay. A dev-only stress-test area spawns hundreds of mobs on a procedurally generated map to profile AI and pathfinding.
 
 ## Packages
 
@@ -105,8 +105,8 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 | Registration | Kind |
 |---|---|
-| `PlayerController`, its `PlayerWeaponController` | instances |
-| `IPlayerLocator` -> `new PlayerLocator(player.transform, player Health)` | instance |
+| `LocalPlayer` (built from the inspector's `PlayerController`) | instance |
+| `PlayerRegistry` as `IPlayerRegistry` + self, holding the local player's `PlayerHandle` | instance |
 | `DamagePopupLayer` | component |
 | `GameplaySettings` | instance |
 | `PlayerHudView` | component in hierarchy |
@@ -114,7 +114,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `DamagePopupPresenter`, `GameplayEntryPoint`, `PlayerDeathHandler`, `PlayerHudPresenter` | entry points |
 | Build callback: `InjectGameObject(player)` | injects all player components |
 
-[GameplayEntryPoint](../Assets/Scripts/Composition/GameplayEntryPoint.cs): on start points `CameraFollow2D` at the player and snaps; clears the target on dispose.
+[GameplayEntryPoint](../Assets/Scripts/Composition/GameplayEntryPoint.cs): on start points `CameraFollow2D` at the local player and snaps; clears the target on dispose.
 
 ### AreaLifetimeScope ([AreaLifetimeScope.cs](../Assets/Scripts/Composition/AreaLifetimeScope.cs))
 
@@ -122,7 +122,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 - `AreaEntry` as `IAreaEntry`, with every `SpawnPoint` in the scene. `AreaEntryRequest` comes from `GameFlow`'s enqueued registration.
 - Build callback: `InjectGameObject` on every `MobController` in the scene. Other scene objects needing injection go in the scope's `autoInjectGameObjects` (the stress scene lists its `StressTest` object).
 
-[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), teleports the player and snaps the camera.
+[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), teleports the local player and snaps the camera.
 
 ### How components get injected
 
@@ -135,10 +135,10 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `PlayerWeaponController` | `SlashSpawner`, `IClock` | Gameplay scope build callback |
 | `DamageReceiver` | `CombatEvents` | Gameplay (player) / Area (mobs) callback |
 | `MainMenuController` | `GameFlow` | Menu scope |
-| `MobController` | `NavigationGrid2D`, `IPlayerLocator` | Area scope build callback, or `resolver.Instantiate` |
+| `MobController` | `NavigationGrid2D`, `IPlayerRegistry` | Area scope build callback, or `resolver.Instantiate` |
 | `MeleeDamageDealer` | `IClock` | same as `MobController` |
 | `DestroyMobOnDeath` | `EffectSpawner` | same as `MobController` |
-| `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `IPlayerLocator` | Area scope `autoInjectGameObjects` |
+| `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `LocalPlayer` | Area scope `autoInjectGameObjects` |
 
 `MeleeDamageDealer` and `PlayerWeaponController` default their clock to `UnityClock.Shared` when not injected.
 
@@ -168,7 +168,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | [ScreenFader](../Assets/Scripts/Core/UI/ScreenFader.cs) | `CanvasGroup` fade used by `GameFlow` (unscaled time); blocks raycasts while visible; starts opaque. |
 | [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `StartNewGame` / `QuitGame`; selects the first button for gamepad/keyboard navigation. |
 | [PlayerHudView](../Assets/Scripts/UI/PlayerHudView.cs) | Passive view on `PlayerHudCanvas`: health fill + "HP n" text, weapon icon with tint when missing. |
-| [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; subscribes to player `Health.Damaged`/`Died` and `PlayerWeaponController.EquippedWeaponChanged`, pushes into the view. |
+| [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; subscribes to the local player's `Health.Damaged`/`Died` and `PlayerWeaponController.EquippedWeaponChanged`, pushes into the view. |
 
 Damage popups are under Combat.
 
@@ -180,8 +180,10 @@ Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerControll
 |---|---|
 | [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads `IPlayerInput.Move` in `Update`, sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack presses to the weapon controller. `FacingDirection`, `Teleport`, internal `Face` (tests). |
 | [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown and spawns a slash in the facing direction via `SlashSpawner`. Event `EquippedWeaponChanged`. |
-| [IPlayerLocator](../Assets/Scripts/Player/IPlayerLocator.cs) / [PlayerLocator](../Assets/Scripts/Player/PlayerLocator.cs) | `Transform`, `Health`, `IsAlive`. How mobs, HUD and death handling find the player. |
-| [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; on player `Health.Died` waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh player). |
+| [PlayerHandle](../Assets/Scripts/Player/PlayerHandle.cs) | One player as other systems see it: `Transform`, `Health`, `IsAlive`. |
+| [IPlayerRegistry](../Assets/Scripts/Player/IPlayerRegistry.cs) / [PlayerRegistry](../Assets/Scripts/Player/PlayerRegistry.cs) | Every player in the session: `Players`, `Contains`, `AnyAlive`, events `PlayerAdded`/`PlayerRemoved`. `Add`/`Remove` (ignore null and duplicates) are on the concrete class only. Used by mobs and death handling. |
+| [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Used by the camera, HUD, `AreaEntry` and the stress spawner. |
+| [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). Once the registry is non-empty and no player is alive, waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). |
 
 Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`Assets/Data/GameplaySettings.asset`): restart delay.
 
@@ -234,7 +236,7 @@ Prefab: [Weasel.prefab](../Assets/Prefabs/Mobs/Weasel.prefab): `MobController`, 
 |---|---|
 | [MobController](../Assets/Scripts/AI/Core/MobController.cs) | The brain. Initializes all mob components from `MobConfig`, builds the grid if needed, prewarms regions, creates the six states and `MobSeparation2D`. `Update` -> `TickStateMachine(dt)`; `FixedUpdate` -> `FixedTickStateMachine()`. Exposes components to states, `ChangeState`, attack-range checks (collider distance), `onAttackRangeEntered` UnityEvent, gizmos + state label. `Configure(...)` is a non-DI setup path used by tests. |
 | [MobMotor2D](../Assets/Scripts/AI/Core/MobMotor2D.cs) | Rigidbody2D movement: `desiredVelocity` (path) + `steeringVelocity` (separation), clamped to move speed, accelerated with `MoveTowards` in `FixedTick`. Drives animator params incl. optional `IsAttacking`; faces intended direction, not drift. |
-| [MobPerception2D](../Assets/Scripts/AI/Core/MobPerception2D.cs) | Target = `IPlayerLocator.Transform`. Range hysteresis (`detectionRadius` to acquire, `loseTargetDistance` to keep), throttled `Physics2D.Linecast` against `obstacleLayerMask`. Exposes `HasDetectedTarget`, `HasLineOfSight`, `LastKnownTargetPosition`, `IsTargetHiddenInRange`. Resets when the player is dead. |
+| [MobPerception2D](../Assets/Scripts/AI/Core/MobPerception2D.cs) | Picks its target from `IPlayerRegistry`. Range hysteresis (`detectionRadius` to acquire, `loseTargetDistance` to keep), throttled `Physics2D.Linecast` against `obstacleLayerMask`. Keeps its current target while it stays detected; while it is not detected (hidden or outside detection range) it switches to the nearest other alive player inside `detectionRadius` with line of sight. Drops the target when it dies, leaves the registry or goes beyond `loseTargetDistance`. Exposes `CurrentTarget`, `CurrentTargetPlayer`, `HasDetectedTarget`, `HasLineOfSight`, `LastKnownTargetPosition`, `IsTargetHiddenInRange`. |
 | [MobPathAgent2D](../Assets/Scripts/AI/Core/MobPathAgent2D.cs) | Requests paths from the grid's `IPathfinder2D`, smooths them, follows waypoints, tracks `StalledTime`. See Navigation. |
 | [MobPatrolAnchor](../Assets/Scripts/AI/Core/MobPatrolAnchor.cs) | Remembers spawn position; samples random reachable roam destinations within `patrolRoamRadius`; idle durations. |
 | [MobSeparation2D](../Assets/Scripts/AI/Core/MobSeparation2D.cs) | Plain class for crowd steering. See Crowd separation. |
@@ -373,7 +375,7 @@ flowchart LR
     end
     subgraph Area scope
         GameFlow -- IAreaEntry.Enter --> AreaEntry --> PlayerController
-        MobController -- IPlayerLocator --> PlayerLocator
+        MobPerception2D -- IPlayerRegistry --> PlayerRegistry
         MobController --> NavigationGrid2D
         MobController --> MeleeDamageDealer --> DamageReceiver
         Health -- Died --> DestroyMobOnDeath --> EffectSpawner
@@ -389,6 +391,7 @@ Events summary:
 | `Health.Damaged` | `Health` | `PlayerHudPresenter` |
 | `Health.Died` | `Health` | `PlayerHudPresenter`, `PlayerDeathHandler`, `DisableOnDeath`, `DestroyMobOnDeath` |
 | `CombatEvents.DamageApplied` | `DamageReceiver` | `DamagePopupPresenter` |
+| `PlayerRegistry.PlayerAdded` / `PlayerRemoved` | `PlayerRegistry` | `PlayerDeathHandler` |
 | `PlayerWeaponController.EquippedWeaponChanged` | `PlayerWeaponController` | `PlayerHudPresenter` |
 | `MobController.onAttackRangeEntered` (UnityEvent) | `AttackRangeState` | inspector listeners (none on Weasel) |
 
@@ -403,15 +406,16 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `DamageReceiver` publishing and invalid hits, `MeleeDamageDealer` cooldown and receiver lookup, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
 | [MobMotor2DTests.cs](../Assets/Tests/Editor/MobMotor2DTests.cs) | Attack animation flag, no allocation, controller change, facing vs steering drift |
 | [MobPathAgent2DTests.cs](../Assets/Tests/Editor/MobPathAgent2DTests.cs) | Arrival distance, smoothing respects terrain cost, no allocation when warm, stall tracking |
-| [MobStateMachineTests.cs](../Assets/Tests/Editor/MobStateMachineTests.cs) | All state transitions, reinjection, region prewarm, search timing, unreachable/off-grid/dead targets, attack cooldown, patrol reachability, separation (push apart, coincident, never into walls), chase crowd waiting |
+| [MobStateMachineTests.cs](../Assets/Tests/Editor/MobStateMachineTests.cs) | All state transitions, reinjection, region prewarm, search timing, unreachable/off-grid/dead targets, attack cooldown, patrol reachability, separation (push apart, coincident, never into walls), chase crowd waiting, multi-player targeting (nearest visible, sticky target, switch on death or hiding, drop on registry removal) |
 | [NavigationGridPathfindingTests.cs](../Assets/Tests/Editor/NavigationGridPathfindingTests.cs) | A* shortest/partial/strict paths, allocation, search cap, corner cutting, terrain profiles and costs, overlapping sources, region connectivity vs A* on random grids |
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
+| [PlayerRegistryTests.cs](../Assets/Tests/Editor/PlayerRegistryTests.cs) | Add/remove events, null and duplicate handling, `AnyAlive` |
 | [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, dispose |
 | [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter, attack cooldown/facing, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
 
 Fakes and seams:
 - [ManualClock](../Assets/Tests/Editor/ManualClock.cs): `IClock` with settable `Time` and `Advance`.
-- Real `PlayerLocator` over test transforms stands in for the player.
+- A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
 - `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Face`, `MobMotor2D` attack/facing state, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
 
@@ -420,7 +424,7 @@ Fakes and seams:
 | File | Covers |
 |---|---|
 | [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
-| [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem), `ChangeAreaAsync` placement, menu round trip, death restart, menu boot focus |
+| [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem), `ChangeAreaAsync` placement, menu round trip, death restart, restart only on a full party wipe, menu boot focus |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |
 | [StressTestScenePlayModeTests.cs](../Assets/Tests/PlayMode/StressTestScenePlayModeTests.cs) | Stress area boots, spawns its initial mobs and they engage |
 
@@ -439,7 +443,7 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **Two classes in one file**: `SceneDefinitionEditor.cs` also defines `SceneDefinitionPathSync`.
 - **Area scope assumptions**: `NavigationGrid2D` is registered only if the area has one, but every `MobController` requires it, so a mob in an area without a grid fails to resolve. Only `MobController` objects present at build time get injected automatically.
 - **No in-game area transitions**: `GameFlow.ChangeAreaAsync` exists and is tested, but nothing in gameplay (doors, triggers) calls it. `GameScenes.areas` holds only the Clearing.
-- **Death restarts the whole session**: player death reloads Gameplay + area; `Health` has no heal/reset API.
+- **Death restarts the whole session**: a full party wipe reloads Gameplay + area; there is no per-player respawn and `Health` has no heal/reset API.
 - **Unused or test-only API**: `NavigationGrid2D.GetNeighbors4` (both overloads), the `IEnumerable` `GetNeighbors8` overloads and `HasLineOfSightCells`; `NavigationTerrainSource2D.RenderTilemap`/`IsConfigured`; `TerrainType2D.TerrainId`; `YPositionSorter.SetSortingOrderOffset`/`SetSortingReferenceY`/`ClearSortingReferenceY`; `ScreenFader.IsOpaque`; `PlayerWeaponController.CurrentWeaponName` (tests only); `MobController.onAttackRangeEntered` has no listeners on the Weasel prefab.
 - **Duplicated tuning**: `nearestCellSearchRadius` exists on both `NavigationGrid2D` (used when no radius is passed, e.g. inside A*) and `MobConfig`. `MobMotor2D` speed/acceleration, `MeleeDamageDealer` damage/interval and `SwordSlashAttack.damageAmount` are serialized but overwritten at runtime by `MobConfig`/`PlayerWeapon`.
 - **Magic numbers**: `MobDeathAnimation` scales the effect by a hard-coded `1.2`; the `StressTestSpawner` tooltip hard-codes "Detection radius is 6".

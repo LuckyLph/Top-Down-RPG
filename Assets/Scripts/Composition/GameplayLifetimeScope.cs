@@ -19,9 +19,11 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
-        builder.RegisterInstance(player);
-        builder.RegisterInstance(player.GetComponent<PlayerWeaponController>());
-        builder.RegisterInstance<IPlayerLocator>(new PlayerLocator(player.transform, player.GetComponent<Health>()));
+        LocalPlayer localPlayer = new(player);
+        PlayerRegistry players = new();
+        players.Add(localPlayer.Handle);
+        builder.RegisterInstance(localPlayer);
+        builder.RegisterInstance(players).As<IPlayerRegistry>().AsSelf();
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();

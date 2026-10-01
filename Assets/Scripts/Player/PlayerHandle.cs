@@ -1,8 +1,8 @@
 using UnityEngine;
 
-public sealed class PlayerLocator : IPlayerLocator
+public sealed class PlayerHandle
 {
-    public PlayerLocator(Transform transform, Health health)
+    public PlayerHandle(Transform transform, Health health)
     {
         Transform = transform;
         Health = health;

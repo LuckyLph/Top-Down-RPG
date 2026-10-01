@@ -38,13 +38,11 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 
 | Area | Today | Target |
 |---|---|---|
-| `IPlayerLocator` | One `Transform`/`Health`, used by mobs, HUD, stress spawner | Player registry (all players, joined/left events) + a separate local player for camera/HUD |
-| `MobPerception2D` | Target is always the single player | Chooses a target among registered players (nearest detected, with hysteresis) and remembers which one |
 | Player spawn | `Player` prefab placed in `Gameplay.unity` | Spawned at runtime per player; `AreaEntry` places every player |
 | `PlayerController` | Reads `IPlayerInput` directly | Consumes a per-player command (move, attack) from a command source; the local source wraps `IPlayerInput` |
 | `SwordSlashAttack` | The visual object also finds hits and applies damage | Hit resolution separated from the cosmetic slash |
 | Mobs in areas | Prefab instances in the scene, injected by the area scope | Spawned from mob spawn markers by a spawner |
-| `PlayerDeathHandler` | Player death reloads the whole session | Per-player downed/respawn; session only ends on a full party wipe (rules to be designed) |
+| `PlayerDeathHandler` | A full party wipe reloads the whole session | Per-player downed/respawn; session only ends on a full party wipe (rules to be designed) |
 | `GameFlow` | Local player triggers area loads | Host decides the area; clients follow |
 | Time and RNG | `MobMotor2D` uses `Time.time`, patrol uses unseeded `Random` | `IClock` and an injected RNG |
 
@@ -54,7 +52,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 
 Each step ships on its own, keeps single player working, and comes with EditMode tests.
 
-- [ ] Player registry + local player; mob perception picks among players.
+- [x] Player registry + local player; mob perception picks among players.
 - [ ] Runtime player spawning through `resolver.Instantiate`; `AreaEntry` places all registered players.
 - [ ] Player command source split out of `PlayerController`.
 - [ ] Combat: hit resolution and damage application in one place; slash, death effect and popups driven by events only.

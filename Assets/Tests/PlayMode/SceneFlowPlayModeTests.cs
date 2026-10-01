@@ -62,7 +62,8 @@ public class SceneFlowPlayModeTests
 
         MobController mob = Object.FindAnyObjectByType<MobController>();
         Assert.That(mob, Is.Not.Null);
-        Assert.That(mob.Perception.CurrentTarget, Is.SameAs(player.transform), "Area mobs should be injected with the session player.");
+        IPlayerRegistry sessionPlayers = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<IPlayerRegistry>();
+        Assert.That(mob.Players, Is.SameAs(sessionPlayers), "Area mobs should be injected with the session's players.");
         Assert.That(mob.NavigationGrid.gameObject.scene, Is.EqualTo(SceneManager.GetActiveScene()));
 
         LifetimeScope gameplayScope = Object.FindAnyObjectByType<GameplayLifetimeScope>();
@@ -127,6 +128,36 @@ public class SceneFlowPlayModeTests
         Assert.That(gameFlow.CurrentArea.ScenePath, Is.EqualTo(areaBeforeDeath.ScenePath));
         Assert.That(freshHealth.CurrentHealth, Is.EqualTo(freshHealth.MaxHealth));
         Assert.That(Vector2.Distance(freshPlayer.transform.position, spawnPosition), Is.LessThan(0.01f));
+    }
+
+    [UnityTest]
+    public IEnumerator PlayerDeath_WaitsUntilTheWholePartyIsDown()
+    {
+        yield return SceneBootTestHelper.BootIntoStartingArea();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        IObjectResolver gameplayResolver = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerRegistry players = gameplayResolver.Resolve<PlayerRegistry>();
+        GameplaySettings settings = gameplayResolver.Resolve<GameplaySettings>();
+        PlayerController localPlayer = Object.FindAnyObjectByType<PlayerController>();
+        Health localHealth = localPlayer.GetComponent<Health>();
+
+        GameObject partnerObject = new("Partner");
+        partnerObject.transform.position = new Vector3(1000f, 1000f, 0f);
+        PlayerHandle partner = new(partnerObject.transform, partnerObject.AddComponent<Health>());
+        players.Add(partner);
+
+        localHealth.ApplyDamage(localHealth.MaxHealth);
+        yield return new WaitForSeconds(settings.RestartDelaySeconds + 0.5f);
+
+        Assert.That(localPlayer != null, Is.True, "The session must keep running while a party member is alive.");
+        Assert.That(gameFlow.IsTransitioning, Is.False);
+
+        partner.Health.ApplyDamage(partner.Health.MaxHealth);
+        yield return SceneBootTestHelper.WaitUntil(() => localPlayer == null, "the Gameplay scene to be reloaded after the party wipe");
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        Assert.That(gameFlow.IsInGame, Is.True);
     }
 
     [UnityTest]

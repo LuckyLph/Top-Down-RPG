@@ -31,7 +31,7 @@ public class MobController : MonoBehaviour
     private readonly Dictionary<MobStateId, IMobState> states = new();
 
     private NavigationGrid2D navigationGrid;
-    private IPlayerLocator player;
+    private IPlayerRegistry players;
     private MobMotor2D motor;
     private MobPerception2D perception;
     private MobPathAgent2D pathAgent;
@@ -47,7 +47,7 @@ public class MobController : MonoBehaviour
 
     public MobConfig Config => config;
     public NavigationGrid2D NavigationGrid => navigationGrid;
-    public IPlayerLocator Player => player;
+    public IPlayerRegistry Players => players;
     public MobMotor2D Motor => motor;
     public MobPerception2D Perception => perception;
     public MobPathAgent2D PathAgent => pathAgent;
@@ -83,18 +83,18 @@ public class MobController : MonoBehaviour
     }
 
     [Inject]
-    public void Construct(NavigationGrid2D navGrid, IPlayerLocator playerLocator)
+    public void Construct(NavigationGrid2D navGrid, IPlayerRegistry playerRegistry)
     {
         navigationGrid = navGrid;
-        player = playerLocator;
+        players = playerRegistry;
         Reinitialize();
     }
 
-    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerLocator playerLocator)
+    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerRegistry playerRegistry)
     {
         config = mobConfig;
         navigationGrid = navGrid;
-        player = playerLocator;
+        players = playerRegistry;
         Rebuild();
     }
 
@@ -204,7 +204,7 @@ public class MobController : MonoBehaviour
 
         motor.Initialize(config);
         pathAgent.Initialize(navigationGrid, motor, config);
-        perception.Initialize(player, config);
+        perception.Initialize(players, config);
         patrol.Initialize(navigationGrid, config);
         damageDealer.Initialize(config);
         separation = new MobSeparation2D(selfCollider, config, navigationGrid);

@@ -4,13 +4,13 @@ public sealed class AreaEntry : IAreaEntry
 {
     private readonly AreaEntryRequest request;
     private readonly SpawnPoint[] spawnPoints;
-    private readonly PlayerController player;
+    private readonly LocalPlayer player;
     private readonly CameraFollow2D cameraFollow;
 
     public AreaEntry(
         AreaEntryRequest request,
         SpawnPoint[] spawnPoints,
-        PlayerController player,
+        LocalPlayer player,
         CameraFollow2D cameraFollow)
     {
         this.request = request;
@@ -24,11 +24,11 @@ public sealed class AreaEntry : IAreaEntry
         SpawnPoint spawnPoint = FindSpawnPoint(request.SpawnId);
         if (spawnPoint == null)
         {
-            Debug.LogWarning($"Area has no SpawnPoint; the player stays at {player.transform.position}.");
+            Debug.LogWarning($"Area has no SpawnPoint; the player stays at {player.Transform.position}.");
             return;
         }
 
-        player.Teleport(spawnPoint.transform.position);
+        player.Controller.Teleport(spawnPoint.transform.position);
         cameraFollow.SnapToTarget();
     }
 

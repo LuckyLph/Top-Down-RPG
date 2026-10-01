@@ -441,8 +441,8 @@ public class PlayerWeaponSystemTests
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
         view.ConfigureReferences(healthFill, healthText, weaponIcon);
 
-        PlayerLocator player = new(weaponController.transform, weaponController.GetComponent<Health>());
-        hudPresenter = new PlayerHudPresenter(player, weaponController, view);
+        LocalPlayer player = new(weaponController.GetComponent<PlayerController>());
+        hudPresenter = new PlayerHudPresenter(player, view);
         hudPresenter.Start();
         return new HudElements(healthFill, healthText, weaponIcon);
     }

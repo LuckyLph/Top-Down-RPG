@@ -20,7 +20,7 @@ public class StressTestSpawner : MonoBehaviour
     private readonly List<MobController> mobs = new();
     private IObjectResolver resolver;
     private NavigationGrid2D navigationGrid;
-    private IPlayerLocator player;
+    private LocalPlayer player;
     private Random random;
     private Transform mobRoot;
     private int spawnedTotal;
@@ -46,11 +46,11 @@ public class StressTestSpawner : MonoBehaviour
     public int InitialMobCount => initialNearSpawn + initialAcrossMap;
 
     [Inject]
-    public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, IPlayerLocator playerLocator)
+    public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, LocalPlayer localPlayer)
     {
         resolver = objectResolver;
         navigationGrid = grid;
-        player = playerLocator;
+        player = localPlayer;
     }
 
     private void Start()

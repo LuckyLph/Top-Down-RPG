@@ -60,7 +60,7 @@ public class MobPlayModeBehaviorTests
         yield return null;
 
         Assert.That(secondMob.NavigationGrid, Is.SameAs(navGrid));
-        Assert.That(secondMob.Player, Is.SameAs(firstMob.Player));
+        Assert.That(secondMob.Players, Is.SameAs(firstMob.Players));
         Assert.That(secondMob.gameObject.scene, Is.EqualTo(navGrid.gameObject.scene));
 
         Object.Destroy(secondMob.gameObject);

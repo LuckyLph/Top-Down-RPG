@@ -5,19 +5,45 @@ using VContainer.Unity;
 
 public sealed class PlayerDeathHandler : IStartable, IDisposable
 {
-    private readonly IPlayerLocator player;
+    private readonly IPlayerRegistry players;
     private readonly GameFlow gameFlow;
     private readonly GameplaySettings settings;
     private readonly CancellationTokenSource disposeCancellation = new();
+    private bool restartPending;
 
-    public PlayerDeathHandler(IPlayerLocator player, GameFlow gameFlow, GameplaySettings settings)
+    public PlayerDeathHandler(IPlayerRegistry players, GameFlow gameFlow, GameplaySettings settings)
     {
-        this.player = player;
+        this.players = players;
         this.gameFlow = gameFlow;
         this.settings = settings;
     }
 
     public void Start()
+    {
+        foreach (PlayerHandle player in players.Players)
+        {
+            Subscribe(player);
+        }
+
+        players.PlayerAdded += Subscribe;
+        players.PlayerRemoved += HandlePlayerRemoved;
+    }
+
+    public void Dispose()
+    {
+        players.PlayerAdded -= Subscribe;
+        players.PlayerRemoved -= HandlePlayerRemoved;
+
+        foreach (PlayerHandle player in players.Players)
+        {
+            Unsubscribe(player);
+        }
+
+        disposeCancellation.Cancel();
+        disposeCancellation.Dispose();
+    }
+
+    private void Subscribe(PlayerHandle player)
     {
         if (player.Health != null)
         {
@@ -25,19 +51,33 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
         }
     }
 
-    public void Dispose()
+    private void Unsubscribe(PlayerHandle player)
     {
         if (player.Health != null)
         {
             player.Health.Died -= HandleDied;
         }
+    }
 
-        disposeCancellation.Cancel();
-        disposeCancellation.Dispose();
+    private void HandlePlayerRemoved(PlayerHandle player)
+    {
+        Unsubscribe(player);
+        RestartIfPartyWiped();
     }
 
     private void HandleDied(Health deadPlayer)
     {
+        RestartIfPartyWiped();
+    }
+
+    private void RestartIfPartyWiped()
+    {
+        if (restartPending || players.Players.Count == 0 || players.AnyAlive)
+        {
+            return;
+        }
+
+        restartPending = true;
         _ = RestartAfterDelayAsync(disposeCancellation.Token);
     }
 

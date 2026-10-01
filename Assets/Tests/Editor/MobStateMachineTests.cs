@@ -12,6 +12,8 @@ public class MobStateMachineTests
     private MobController brain;
     private Transform player;
     private Health playerHealth;
+    private PlayerHandle playerHandle;
+    private PlayerRegistry players;
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
     // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
@@ -86,7 +88,7 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Patrol);
 
         // A scope rebuild re-injects the brain after Start has already entered its first state.
-        brain.Construct(navGrid, new PlayerLocator(player, playerHealth));
+        brain.Construct(navGrid, players);
 
         player.position = new Vector3(3f, 0f, 0f);
         brain.TickStateMachine(0.1f);
@@ -313,6 +315,7 @@ public class MobStateMachineTests
         SetupWorld();
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
         int healthAfterEnter = playerHealth.CurrentHealth;
 
@@ -328,6 +331,7 @@ public class MobStateMachineTests
         SetupWorld();
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
         int healthAfterFirstHit = playerHealth.CurrentHealth;
         Assert.That(healthAfterFirstHit, Is.EqualTo(9));
@@ -343,11 +347,109 @@ public class MobStateMachineTests
     }
 
     [Test]
+    public void Perception_TargetsTheNearestVisiblePlayer()
+    {
+        SetupWorld();
+        player.position = new Vector3(5f, 0f, 0f);
+        PlayerHandle nearer = AddPlayer(new Vector3(0f, 3f, 0f));
+        brain.ChangeState(MobStateId.Idle);
+
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(nearer));
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    [Test]
+    public void Perception_IgnoresACloserPlayerBehindAWall()
+    {
+        SetupWorld();
+        player.position = new Vector3(0f, 5f, 0f);
+        AddPlayer(new Vector3(3f, 0f, 0f));
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.ChangeState(MobStateId.Idle);
+
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
+    }
+
+    [Test]
+    public void Perception_KeepsItsTarget_WhenAnotherPlayerComesCloser()
+    {
+        SetupWorld();
+        player.position = new Vector3(4f, 0f, 0f);
+        PlayerHandle other = AddPlayer(new Vector3(100f, 0f, 0f));
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
+
+        other.Transform.position = new Vector3(0f, 2f, 0f);
+        for (int i = 0; i < 5; i++)
+        {
+            brain.TickStateMachine(config.lineOfSightInterval);
+            Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
+        }
+    }
+
+    [Test]
+    public void Perception_SwitchesToAnotherVisiblePlayer_WhenItsTargetDies()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        PlayerHandle other = AddPlayer(new Vector3(0f, 5f, 0f));
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
+
+        playerHealth.ApplyDamage(playerHealth.MaxHealth);
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(other));
+        Assert.That(brain.Perception.HasDetectedTarget, Is.True);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    [Test]
+    public void Perception_SwitchesToAnotherVisiblePlayer_WhenItsTargetHides()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        PlayerHandle other = AddPlayer(new Vector3(0f, -5f, 0f));
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
+
+        BlockLineOfSightAt(new Vector2(1.5f, 0f));
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(other));
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase), "Another player in view means no search.");
+    }
+
+    [Test]
+    public void Perception_DropsATargetThatLeavesTheRegistry()
+    {
+        SetupWorld();
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+
+        players.Remove(playerHandle);
+        brain.TickStateMachine(config.lineOfSightInterval);
+
+        Assert.That(brain.Perception.CurrentTarget, Is.Null);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+    }
+
+    [Test]
     public void AttackRangeState_StopsAttacking_WhenTargetDies()
     {
         SetupWorld();
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
         playerHealth.ApplyDamage(playerHealth.MaxHealth);
 
@@ -535,6 +637,18 @@ public class MobStateMachineTests
 
     // Chase a target at (3, 0), lose sight of it behind a pillar so the mob starts searching, then take the
     // target far away so it cannot be spotted again during the search.
+    private PlayerHandle AddPlayer(Vector3 position)
+    {
+        GameObject playerObject = new("OtherPlayer");
+        sceneObjects.Add(playerObject);
+        playerObject.tag = "Player";
+        playerObject.transform.position = position;
+        PlayerHandle handle = new(playerObject.transform, playerObject.AddComponent<Health>());
+        playerObject.AddComponent<DamageReceiver>();
+        players.Add(handle);
+        return handle;
+    }
+
     private void EnterSearchWithTargetGone()
     {
         SetupWorld();
@@ -627,6 +741,9 @@ public class MobStateMachineTests
         playerHealth = playerObject.AddComponent<Health>();
         playerObject.AddComponent<DamageReceiver>();
         playerObject.AddComponent<DisableOnDeath>();
+        playerHandle = new PlayerHandle(player, playerHealth);
+        players = new PlayerRegistry();
+        players.Add(playerHandle);
 
         config = ScriptableObject.CreateInstance<MobConfig>();
         config.idleDurationRange = new Vector2(10f, 10f);
@@ -662,7 +779,7 @@ public class MobStateMachineTests
         mob.AddComponent<MobPatrolAnchor>();
         MobController mobBrain = mob.AddComponent<MobController>();
 
-        mobBrain.Configure(config, navGrid, new PlayerLocator(player, playerHealth));
+        mobBrain.Configure(config, navGrid, players);
         Physics2D.SyncTransforms();
         return mobBrain;
     }

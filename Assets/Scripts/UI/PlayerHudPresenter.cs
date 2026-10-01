@@ -3,14 +3,14 @@ using VContainer.Unity;
 
 public sealed class PlayerHudPresenter : IStartable, IDisposable
 {
-    private readonly IPlayerLocator player;
+    private readonly PlayerHandle player;
     private readonly PlayerWeaponController weaponController;
     private readonly PlayerHudView view;
 
-    public PlayerHudPresenter(IPlayerLocator player, PlayerWeaponController weaponController, PlayerHudView view)
+    public PlayerHudPresenter(LocalPlayer localPlayer, PlayerHudView view)
     {
-        this.player = player;
-        this.weaponController = weaponController;
+        player = localPlayer.Handle;
+        weaponController = localPlayer.Weapon;
         this.view = view;
     }
 

@@ -24,7 +24,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
             return;
         }
 
-        session.RegisterPrefab(spawner.PlayerNetworkPrefab, resolver);
+        session.RegisterPrefab(spawner.PlayerNetworkPrefab, resolver, spawner.PlayersScene);
         registeredPrefab = true;
     }
 

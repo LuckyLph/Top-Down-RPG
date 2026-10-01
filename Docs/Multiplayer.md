@@ -72,8 +72,7 @@ Until Phase 3, a client that joins only connects: it loads the starting area loc
 - [x] Per-player HUD and camera bound to the local player only, through `LocalPlayerTracker`.
 - [x] Ready handshake: a joining client reports ready once its Gameplay scope can receive spawns; until then the host hides spawned objects from it, then shows them and spawns its player.
 
-Known gaps until Phase 5 (expected, not bugs):
-- A party wipe restarts only the host's scenes; clients keep theirs and receive fresh player and mob spawns.
+Known gaps (expected, not bugs):
 - A teleport by the owner is interpolated on other machines instead of snapping.
 - Mobs spawned by the dev stress-test spawner stay local to the host.
 
@@ -86,9 +85,17 @@ Known gaps until Phase 5 (expected, not bugs):
 
 ### Phase 5: areas and joining
 
-- [ ] Host-driven area changes. Either use NGO scene management, or keep `GameFlow` in charge with NGO scene management disabled. With it disabled, NGO only syncs scenes that were loaded before a client joined, so everything per area must be spawned at runtime (which Phase 1 mob spawning already gives us).
-- [ ] Late join: a joining player gets the current area, players, mobs and HP.
-- [ ] Disconnects: a leaving player is despawned; host leaving ends the session for everyone.
+Decision: keep `GameFlow` in charge with Netcode's scene management off (Option A). Netcode's scene management mirrors the host's loaded scenes onto every client; we load scenes ourselves and tell clients which area to load. What we give up, and how we cover it:
+- Objects placed in scenes are not synced to late joiners. Rule: every networked object (players, mobs, and future doors, chests, pickups) is spawned at runtime from a marker, never placed in a scene.
+- Clients are not automatically sent to the host's scenes. The host announces its area (`AreaAnnouncement`) on every change and to every client that connects.
+- No built-in "all clients finished loading" events. The ready handshake, tagged with the area epoch, plays that role.
+- No scene-migration sync. Players live in the Gameplay scene and mobs in their area, so nothing networked moves between scenes.
+This also keeps each machine loading only what it needs, which leaves the door open to players in different areas later.
+
+- [x] Host-driven area changes: `GameFlow.AreaLoading` on the host despawns the scene's objects, bumps the area epoch and announces; clients follow through `GameFlow`, and new objects reach a client only after it reports ready for that epoch.
+- [x] Late join: a client connecting mid-game is told the current area, loads it, reports ready, and then receives the players, mobs and current HP.
+- [x] Party wipe: the host's restart is announced as a new session, so clients reload with it.
+- [x] Disconnects: a leaving client's player is removed by Netcode; the host leaving sends every client back to the menu.
 
 ### Phase 6: services and persistence
 
@@ -108,6 +115,10 @@ Known gaps until Phase 5 (expected, not bugs):
 3. Click Host Game in the main editor, then Join Game in a virtual player (the address field defaults to `127.0.0.1`).
 
 Hosting listens on `0.0.0.0:7777`, so Windows may ask to allow the Unity editor through the firewall the first time.
+
+### In-process test limits
+
+The PlayMode tests fake a second player with a second `NetworkManager` inside the editor (`InProcessClient`). Letting the host reload the Gameplay scene while that client is connected froze the editor every time (a deadlock inside the scene load, before any scene code ran), while area reloads were fine. Host restarts are therefore tested without a connected in-process client, and the client side of a restart is tested against an in-process host instead. Check a real host restart with a joined player in Multiplayer Play Mode, which uses separate processes.
 
 ### Testing under a bad connection
 

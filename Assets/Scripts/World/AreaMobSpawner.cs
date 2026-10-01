@@ -39,7 +39,7 @@ public sealed class AreaMobSpawner : IStartable, IDisposable
             NetworkObject prefab = spawnPoint.MobPrefab.GetComponent<NetworkObject>();
             if (prefab != null && !registeredPrefabs.Contains(prefab))
             {
-                networkObjects.RegisterPrefab(prefab, resolver);
+                networkObjects.RegisterPrefab(prefab, resolver, scene);
                 registeredPrefabs.Add(prefab);
             }
         }

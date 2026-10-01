@@ -91,7 +91,7 @@ public class AreaMobSpawnerTests
         public List<NetworkObject> Registered { get; } = new();
         public List<NetworkObject> Spawned { get; } = new();
 
-        public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver)
+        public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver, Scene targetScene)
         {
             Registered.Add(prefab);
         }

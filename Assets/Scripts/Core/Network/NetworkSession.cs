@@ -5,18 +5,23 @@ using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VContainer;
 using Object = UnityEngine.Object;
 
 public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDisposable
 {
     public const string ClientReadyMessage = "TopDownRPG.ClientReady";
+    public const string AreaAnnouncementMessage = "TopDownRPG.AreaAnnouncement";
+    private const int AnnouncementBufferSize = 1024;
 
     private readonly NetworkManager networkManager;
     private readonly UnityTransport transport;
     private readonly NetworkSettings settings;
     private readonly HashSet<ulong> readyClients = new();
     private readonly NetworkObject.VisibilityDelegate visibleToReadyClients;
+    private readonly List<NetworkObject> despawnBuffer = new();
+    private AreaAnnouncement? currentArea;
     private bool shutdownRequested;
     private bool quitting;
 
@@ -38,10 +43,12 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
 
         networkManager.OnClientStopped += HandleClientStopped;
         networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
+        networkManager.OnClientConnectedCallback += HandleClientConnected;
     }
 
     public event Action ConnectionLost;
     public event Action<ulong> ClientReady;
+    public event Action<AreaAnnouncement> AreaAnnounced;
 
     public NetworkManager NetworkManager => networkManager;
     public NetworkSettings Settings => settings;
@@ -52,6 +59,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     public bool IsAuthoritative => !IsActive || networkManager.IsServer;
     public ulong LocalClientId => networkManager.LocalClientId;
     public IReadOnlyCollection<ulong> ReadyClients => readyClients;
+    public int AreaEpoch { get; private set; }
 
     public bool StartHost()
     {
@@ -60,9 +68,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             return false;
         }
 
-        shutdownRequested = false;
-        readyClients.Clear();
-        networkManager.SetSingleton();
+        ResetSessionState();
         transport.SetConnectionData(settings.DefaultAddress, settings.Port, settings.ListenAddress);
         if (!networkManager.StartHost())
         {
@@ -80,15 +86,15 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             return false;
         }
 
-        shutdownRequested = false;
-        readyClients.Clear();
-        networkManager.SetSingleton();
+        ResetSessionState();
         string hostAddress = string.IsNullOrWhiteSpace(address) ? settings.DefaultAddress : address.Trim();
         transport.SetConnectionData(hostAddress, settings.Port);
         if (!networkManager.StartClient())
         {
             return false;
         }
+
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(AreaAnnouncementMessage, HandleAreaAnnouncementMessage);
 
         float deadline = Time.realtimeSinceStartup + timeoutSeconds;
         try
@@ -135,8 +141,65 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             return;
         }
 
-        using FastBufferWriter writer = new(0, Allocator.Temp);
+        using FastBufferWriter writer = new(sizeof(int), Allocator.Temp);
+        writer.WriteValueSafe(AreaEpoch);
         networkManager.CustomMessagingManager.SendNamedMessage(ClientReadyMessage, NetworkManager.ServerClientId, writer);
+    }
+
+    public void BeginAnnouncedArea(AreaAnnouncement announcement)
+    {
+        if (!networkManager.IsServer)
+        {
+            AreaEpoch = announcement.Epoch;
+        }
+    }
+
+    public void AnnounceArea(string scenePath, string spawnId, bool newSession)
+    {
+        if (!networkManager.IsServer)
+        {
+            return;
+        }
+
+        AreaEpoch++;
+        readyClients.Clear();
+        currentArea = new AreaAnnouncement(scenePath, spawnId, AreaEpoch, newSession);
+        foreach (ulong clientId in networkManager.ConnectedClientsIds)
+        {
+            if (clientId != NetworkManager.ServerClientId)
+            {
+                SendAreaAnnouncement(clientId, currentArea.Value);
+            }
+        }
+    }
+
+    public void DespawnObjectsIn(Scene scene)
+    {
+        if (!networkManager.IsServer || !scene.IsValid())
+        {
+            return;
+        }
+
+        despawnBuffer.Clear();
+        foreach (NetworkObject spawned in networkManager.SpawnManager.SpawnedObjectsList)
+        {
+            if (spawned != null && spawned.gameObject.scene == scene)
+            {
+                despawnBuffer.Add(spawned);
+            }
+        }
+
+        foreach (NetworkObject spawned in despawnBuffer)
+        {
+            spawned.Despawn();
+        }
+
+        despawnBuffer.Clear();
+    }
+
+    public bool HasPlayerObject(ulong clientId)
+    {
+        return networkManager.ConnectedClients.TryGetValue(clientId, out NetworkClient client) && client.PlayerObject != null;
     }
 
     public void Spawn(NetworkObject instance)
@@ -151,9 +214,9 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
         instance.SpawnAsPlayerObject(ownerClientId, destroyWithScene: true);
     }
 
-    public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver)
+    public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver, Scene targetScene)
     {
-        networkManager.PrefabHandler.AddHandler(prefab, new InjectingNetworkPrefabHandler(prefab, resolver));
+        networkManager.PrefabHandler.AddHandler(prefab, new InjectingNetworkPrefabHandler(prefab, resolver, targetScene));
     }
 
     public void UnregisterPrefab(NetworkObject prefab)
@@ -177,6 +240,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
 
         networkManager.OnClientStopped -= HandleClientStopped;
         networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
+        networkManager.OnClientConnectedCallback -= HandleClientConnected;
         Shutdown();
         Object.Destroy(networkManager.gameObject);
     }
@@ -196,9 +260,39 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     }
 #endif
 
+    private void ResetSessionState()
+    {
+        shutdownRequested = false;
+        readyClients.Clear();
+        currentArea = null;
+        AreaEpoch = 0;
+        networkManager.SetSingleton();
+    }
+
+    private void SendAreaAnnouncement(ulong clientId, AreaAnnouncement announcement)
+    {
+        using FastBufferWriter writer = new(AnnouncementBufferSize, Allocator.Temp);
+        announcement.Write(writer);
+        networkManager.CustomMessagingManager.SendNamedMessage(AreaAnnouncementMessage, clientId, writer);
+    }
+
+    private void HandleClientConnected(ulong clientId)
+    {
+        if (networkManager.IsServer && clientId != NetworkManager.ServerClientId && currentArea.HasValue)
+        {
+            SendAreaAnnouncement(clientId, currentArea.Value);
+        }
+    }
+
+    private void HandleAreaAnnouncementMessage(ulong senderClientId, FastBufferReader payload)
+    {
+        AreaAnnounced?.Invoke(AreaAnnouncement.Read(payload));
+    }
+
     private void HandleClientReadyMessage(ulong senderClientId, FastBufferReader payload)
     {
-        if (!readyClients.Add(senderClientId))
+        payload.ReadValueSafe(out int epoch);
+        if (epoch != AreaEpoch || !readyClients.Add(senderClientId))
         {
             return;
         }

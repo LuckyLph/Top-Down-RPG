@@ -46,6 +46,7 @@ public class MainLifetimeScope : LifetimeScope
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
+            builder.RegisterEntryPoint<NetworkAreaSync>();
         }
 
         builder.RegisterEntryPoint<BootFlow>();

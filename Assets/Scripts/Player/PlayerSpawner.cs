@@ -27,6 +27,7 @@ public sealed class PlayerSpawner
     }
 
     public NetworkObject PlayerNetworkPrefab => playerPrefab.GetComponent<NetworkObject>();
+    public Scene PlayersScene => scene;
 
     public void SpawnLocalPlayer()
     {
@@ -46,6 +47,11 @@ public sealed class PlayerSpawner
         if (!session.IsServer)
         {
             Debug.LogError($"Only the host spawns players for other clients (client {ownerClientId}).");
+            return;
+        }
+
+        if (session.HasPlayerObject(ownerClientId))
+        {
             return;
         }
 

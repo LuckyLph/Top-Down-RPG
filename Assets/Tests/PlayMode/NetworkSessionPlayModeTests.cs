@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Threading;
 using NUnit.Framework;
+using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -41,20 +42,55 @@ public class NetworkSessionPlayModeTests
     }
 
     [UnityTest]
-    public IEnumerator JoinFromMenu_ConnectsToAHost_AndReturnsToTheMenuWhenTheHostLeaves()
+    public IEnumerator JoinFromMenu_FollowsTheHostsAreaAnnouncements_AndReturnsToTheMenuWhenTheHostLeaves()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
         remoteHost = StartRemoteHost(session);
+        int lastReadyEpoch = 0;
+        remoteHost.CustomMessagingManager.RegisterNamedMessageHandler(
+            NetworkSession.ClientReadyMessage,
+            (sender, reader) =>
+            {
+                reader.ReadValueSafe(out int epoch);
+                lastReadyEpoch = epoch;
+            });
 
         Object.FindAnyObjectByType<MainMenuController>().JoinGame();
-        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInGame && !gameFlow.IsTransitioning, "the client to join and enter the game");
+        yield return SceneBootTestHelper.WaitUntil(() => session.IsConnectedClient, "the client to connect");
+        for (int i = 0; i < 10; i++)
+        {
+            yield return null;
+        }
+
+        Assert.That(gameFlow.IsInMenu, Is.True, "A client waits in the menu until the host says which area to load.");
+
+        string areaPath = gameFlow.Scenes.StartingArea.ScenePath;
+        ulong clientId = remoteHost.ConnectedClientsIds[remoteHost.ConnectedClientsIds.Count - 1];
+        Announce(clientId, new AreaAnnouncement(areaPath, gameFlow.Scenes.StartingSpawnId, 1, true));
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInGame && !gameFlow.IsTransitioning, "the client to load the announced area");
+        yield return SceneBootTestHelper.WaitUntil(() => lastReadyEpoch == 1, "the client to report ready for that area");
 
         Assert.That(session.IsConnectedClient, Is.True);
         Assert.That(session.IsHost, Is.False);
+        Assert.That(gameFlow.CurrentArea.ScenePath, Is.EqualTo(areaPath));
         Assert.That(remoteHost.ConnectedClientsIds.Count, Is.EqualTo(2), "The host should see itself and the joined client.");
+
+        UnityEngine.SceneManagement.Scene firstAreaScene = gameFlow.AreaScene;
+        Announce(clientId, new AreaAnnouncement(areaPath, gameFlow.Scenes.StartingSpawnId, 2, false));
+        yield return SceneBootTestHelper.WaitUntil(
+            () => lastReadyEpoch == 2 && gameFlow.IsInGame && !gameFlow.IsTransitioning,
+            "the client to follow the host into the next area and report ready again");
+        Assert.That(gameFlow.AreaScene, Is.Not.EqualTo(firstAreaScene), "A non-session announcement reloads the area.");
+
+        UnityEngine.SceneManagement.Scene firstGameplayScene = gameFlow.GameplayScene;
+        Announce(clientId, new AreaAnnouncement(areaPath, gameFlow.Scenes.StartingSpawnId, 3, true));
+        yield return SceneBootTestHelper.WaitUntil(
+            () => lastReadyEpoch == 3 && gameFlow.IsInGame && !gameFlow.IsTransitioning,
+            "the client to restart with the host and report ready again");
+        Assert.That(gameFlow.GameplayScene, Is.Not.EqualTo(firstGameplayScene), "A new-session announcement reloads the whole session.");
 
         remoteHost.Shutdown();
         yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
@@ -72,6 +108,13 @@ public class NetworkSessionPlayModeTests
 
         Assert.That(join.GetAwaiter().GetResult(), Is.False);
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the failed client to shut down");
+    }
+
+    private void Announce(ulong clientId, AreaAnnouncement announcement)
+    {
+        using FastBufferWriter writer = new(1024, Allocator.Temp);
+        announcement.Write(writer);
+        remoteHost.CustomMessagingManager.SendNamedMessage(NetworkSession.AreaAnnouncementMessage, clientId, writer);
     }
 
     private static NetworkManager StartRemoteHost(NetworkSession session)

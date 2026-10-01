@@ -12,9 +12,11 @@ using Object = UnityEngine.Object;
 public sealed class InProcessClient : IDisposable
 {
     private readonly IObjectResolver container;
+    private readonly NetworkSession host;
 
-    private InProcessClient(NetworkManager manager, IObjectResolver container, PlayerRegistry players, LocalPlayerTracker localPlayer, TestInput input)
+    private InProcessClient(NetworkSession host, NetworkManager manager, IObjectResolver container, PlayerRegistry players, LocalPlayerTracker localPlayer, TestInput input)
     {
+        this.host = host;
         Manager = manager;
         this.container = container;
         Players = players;
@@ -26,6 +28,7 @@ public sealed class InProcessClient : IDisposable
     public PlayerRegistry Players { get; }
     public LocalPlayerTracker LocalPlayer { get; }
     public TestInput Input { get; }
+    public List<AreaAnnouncement> Announcements { get; } = new();
 
     public T Resolve<T>()
     {
@@ -64,19 +67,23 @@ public sealed class InProcessClient : IDisposable
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
         GameObject clientObject = manager.gameObject;
         clientObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
-        manager.PrefabHandler.AddHandler(playerPrefab, new InjectingNetworkPrefabHandler(playerPrefab, container));
+        manager.PrefabHandler.AddHandler(playerPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(playerPrefab, container)));
         HashSet<NetworkObject> mobPrefabs = new();
         foreach (MobSpawnPoint spawnPoint in Object.FindObjectsByType<MobSpawnPoint>())
         {
             NetworkObject mobPrefab = spawnPoint.MobPrefab != null ? spawnPoint.MobPrefab.GetComponent<NetworkObject>() : null;
             if (mobPrefab != null && mobPrefabs.Add(mobPrefab))
             {
-                manager.PrefabHandler.AddHandler(mobPrefab, new InjectingNetworkPrefabHandler(mobPrefab, container));
+                manager.PrefabHandler.AddHandler(mobPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(mobPrefab, container)));
             }
         }
 
         Assert.That(manager.StartClient(), Is.True, "The in-process client should start.");
-        return new InProcessClient(manager, container, players, localPlayer, input);
+        InProcessClient client = new(session, manager, container, players, localPlayer, input);
+        manager.CustomMessagingManager.RegisterNamedMessageHandler(
+            NetworkSession.AreaAnnouncementMessage,
+            (sender, reader) => client.Announcements.Add(AreaAnnouncement.Read(reader)));
+        return client;
     }
 
     public static NetworkManager CloneNetworkManager(NetworkSession session, string name)
@@ -97,7 +104,13 @@ public sealed class InProcessClient : IDisposable
 
     public void SendReady()
     {
-        using FastBufferWriter writer = new(0, Allocator.Temp);
+        SendReady(host.AreaEpoch);
+    }
+
+    public void SendReady(int areaEpoch)
+    {
+        using FastBufferWriter writer = new(sizeof(int), Allocator.Temp);
+        writer.WriteValueSafe(areaEpoch);
         Manager.CustomMessagingManager.SendNamedMessage(NetworkSession.ClientReadyMessage, NetworkManager.ServerClientId, writer);
     }
 
@@ -135,6 +148,28 @@ public sealed class InProcessClient : IDisposable
         }
 
         return null;
+    }
+
+    private sealed class PersistentCopyHandler : INetworkPrefabInstanceHandler
+    {
+        private readonly INetworkPrefabInstanceHandler inner;
+
+        public PersistentCopyHandler(INetworkPrefabInstanceHandler inner)
+        {
+            this.inner = inner;
+        }
+
+        public NetworkObject Instantiate(ulong ownerClientId, Vector3 position, Quaternion rotation)
+        {
+            NetworkObject instance = inner.Instantiate(ownerClientId, position, rotation);
+            Object.DontDestroyOnLoad(instance.gameObject);
+            return instance;
+        }
+
+        public void Destroy(NetworkObject networkObject)
+        {
+            inner.Destroy(networkObject);
+        }
     }
 
     public sealed class TestInput : IPlayerInput

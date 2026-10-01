@@ -27,12 +27,14 @@ public sealed class GameFlow
 
     public event Action TransitionStarted;
     public event Action TransitionFinished;
+    public event Action<AreaTransition> AreaLoading;
 
     public bool IsTransitioning { get; private set; }
     public bool IsInMenu => IsLoaded(menuScene);
     public bool IsInGame => IsLoaded(gameplayScene) && IsLoaded(areaScene);
     public SceneDefinition CurrentArea { get; private set; }
     public Scene AreaScene => areaScene;
+    public Scene GameplayScene => gameplayScene;
     public GameScenes Scenes => gameScenes;
 
     public Awaitable ShowMainMenuAsync(CancellationToken cancellation = default)
@@ -47,7 +49,13 @@ public sealed class GameFlow
     {
         SceneDefinition targetArea = area != null ? area : gameScenes.StartingArea;
         string targetSpawn = string.IsNullOrEmpty(spawnId) ? gameScenes.StartingSpawnId : spawnId;
-        return RunTransitionAsync(token => StartNewGameCoreAsync(targetArea, targetSpawn, token), cancellation);
+        return RunTransitionAsync(
+            token =>
+            {
+                AreaLoading?.Invoke(new AreaTransition(targetArea, targetSpawn, true));
+                return StartNewGameCoreAsync(targetArea, targetSpawn, token);
+            },
+            cancellation);
     }
 
     public async Awaitable ChangeAreaAsync(SceneDefinition area, string spawnId, CancellationToken cancellation = default)
@@ -58,7 +66,13 @@ public sealed class GameFlow
             return;
         }
 
-        await RunTransitionAsync(token => LoadAreaCoreAsync(area, spawnId, token), cancellation);
+        await RunTransitionAsync(
+            token =>
+            {
+                AreaLoading?.Invoke(new AreaTransition(area, spawnId, false));
+                return LoadAreaCoreAsync(area, spawnId, token);
+            },
+            cancellation);
     }
 
     private async Awaitable RunTransitionAsync(Func<CancellationToken, Awaitable> transition, CancellationToken cancellation)

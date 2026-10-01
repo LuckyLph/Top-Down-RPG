@@ -94,13 +94,7 @@ public class MainMenuController : MonoBehaviour
             isJoining = false;
         }
 
-        if (!connected)
-        {
-            SetStatus("Could not connect to the host.");
-            return;
-        }
-
-        _ = gameFlow.StartNewGameAsync();
+        SetStatus(connected ? "Connected. Joining the host's area..." : "Could not connect to the host.");
     }
 
     public void QuitGame()

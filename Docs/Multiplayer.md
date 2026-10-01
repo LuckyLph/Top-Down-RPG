@@ -39,7 +39,6 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Area | Today | Target |
 |---|---|---|
 | `SwordSlashAttack` | The slash object decides what it hit (damage itself goes through `DamageService`) | Only the host's copy resolves hits; other clients' slashes are visual only |
-| Mobs in areas | Prefab instances in the scene, injected by the area scope | Spawned from mob spawn markers by a spawner |
 | `PlayerDeathHandler` | A full party wipe reloads the whole session | Per-player downed/respawn; session only ends on a full party wipe (rules to be designed) |
 | `GameFlow` | Local player triggers area loads | Host decides the area; clients follow |
 | Time and RNG | `MobMotor2D` uses `Time.time`, patrol uses unseeded `Random` | `IClock` and an injected RNG |
@@ -54,7 +53,7 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 - [x] Runtime player spawning through `resolver.Instantiate`; `AreaEntry` places all registered players.
 - [x] Player command source split out of `PlayerController`.
 - [x] Combat: damage application in one place (`DamageService`); popups driven by `CombatEvents`, death effects by `Health.Died`. Which copy of a slash resolves hits is decided in Phase 3.
-- [ ] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
+- [x] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
 - [ ] Per-player death and respawn.
 - [ ] Remaining timers through `IClock`, injected RNG.
 

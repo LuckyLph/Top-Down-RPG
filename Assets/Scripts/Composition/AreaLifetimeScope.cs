@@ -15,24 +15,31 @@ public class AreaLifetimeScope : LifetimeScope
             return;
         }
 
-        NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
-        if (navigationGrid != null)
+        foreach (MobController placedMob in SceneQuery.FindAll<MobController>(gameObject.scene))
         {
-            builder.RegisterComponent(navigationGrid);
+            Debug.LogError($"{placedMob.name} is placed in the area scene; use a {nameof(MobSpawnPoint)} instead so it is spawned at runtime.", placedMob);
         }
 
         builder.Register<AreaEntry>(Lifetime.Singleton)
             .As<IAreaEntry>()
             .WithParameter(SceneQuery.FindAll<SpawnPoint>(gameObject.scene));
 
-        builder.RegisterBuildCallback(InjectSceneMobs);
-    }
-
-    private void InjectSceneMobs(IObjectResolver resolver)
-    {
-        foreach (MobController mob in SceneQuery.FindAll<MobController>(gameObject.scene))
+        MobSpawnPoint[] mobSpawnPoints = SceneQuery.FindAll<MobSpawnPoint>(gameObject.scene);
+        NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
+        if (navigationGrid == null)
         {
-            resolver.InjectGameObject(mob.gameObject);
+            if (mobSpawnPoints.Length > 0)
+            {
+                Debug.LogError($"{name}: the area has mob spawn points but no {nameof(NavigationGrid2D)}; no mobs are spawned.", this);
+            }
+
+            return;
         }
+
+        builder.RegisterComponent(navigationGrid);
+        builder.Register<AreaMobSpawner>(Lifetime.Singleton)
+            .WithParameter(mobSpawnPoints)
+            .WithParameter(gameObject.scene);
+        builder.RegisterBuildCallback(resolver => resolver.Resolve<AreaMobSpawner>().SpawnAll());
     }
 }

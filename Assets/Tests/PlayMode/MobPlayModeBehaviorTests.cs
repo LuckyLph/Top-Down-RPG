@@ -42,6 +42,36 @@ public class MobPlayModeBehaviorTests
     }
 
     [UnityTest]
+    public IEnumerator AreaMobs_AreSpawnedFromSpawnPointsIntoTheAreaScene()
+    {
+        yield return SceneBootTestHelper.BootIntoStartingArea();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        MobSpawnPoint[] spawnPoints = Object.FindObjectsByType<MobSpawnPoint>();
+        MobController[] mobs = Object.FindObjectsByType<MobController>();
+
+        Assert.That(spawnPoints, Is.Not.Empty, "The clearing should define at least one mob spawn point.");
+        Assert.That(mobs.Length, Is.EqualTo(spawnPoints.Length), "Each spawn point should spawn exactly one mob.");
+
+        foreach (MobSpawnPoint spawnPoint in spawnPoints)
+        {
+            bool spawnedHere = false;
+            foreach (MobController mob in mobs)
+            {
+                if (Vector2.Distance(mob.Patrol.SpawnPosition, spawnPoint.transform.position) < 0.01f)
+                {
+                    spawnedHere = true;
+                    Assert.That(mob.gameObject.scene, Is.EqualTo(gameFlow.AreaScene));
+                    Assert.That(mob.NavigationGrid, Is.Not.Null);
+                    Assert.That(mob.Players, Is.Not.Null);
+                }
+            }
+
+            Assert.That(spawnedHere, Is.True, $"No mob was spawned at {spawnPoint.name}.");
+        }
+    }
+
+    [UnityTest]
     public IEnumerator MobsSpawnedThroughAreaScope_ShareGridAndPlayer()
     {
         yield return SceneBootTestHelper.BootIntoStartingArea();

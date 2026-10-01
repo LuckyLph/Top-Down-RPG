@@ -33,6 +33,22 @@ public class MobMotor2DTests
     }
 
     [Test]
+    public void AttackAnimation_EndsOnTheInjectedClock()
+    {
+        MobMotor2D motor = CreateMotorWithWeaselAnimator();
+        ManualClock clock = new();
+        motor.Construct(clock);
+
+        motor.PlayAttackAnimation(Vector2.right);
+        motor.UpdateAttackAnimation();
+        Assert.That(motor.IsAttackAnimationActive, Is.True);
+
+        clock.Advance(10f);
+        motor.UpdateAttackAnimation();
+        Assert.That(motor.IsAttackAnimationActive, Is.False);
+    }
+
+    [Test]
     public void PlayAttackAnimation_DoesNotAllocate_AfterFirstAttack()
     {
         MobMotor2D motor = CreateMotorWithWeaselAnimator();

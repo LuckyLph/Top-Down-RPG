@@ -38,7 +38,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 ### Architecture
 - Prefer composition: small single-purpose components over large ones. Plain C# classes (no `MonoBehaviour`) for logic that does not need the engine, so it is unit-testable.
 - Use VContainer for dependencies: constructor injection for plain classes, `[Inject]` method injection on components, registration in the `*LifetimeScope` classes under `Composition`. Do not add singletons, static mutable state, or `FindObjectOfType` service lookups.
-- Depend on interfaces at seams (`IClock`, `IPlayerInput`, `IPlayerRegistry`) so tests can substitute fakes.
+- Depend on interfaces at seams (`IClock`, `IRandom`, `IPlayerInput`, `IPlayerRegistry`) so tests can substitute fakes.
 - Communicate between systems with events/interfaces, not by reaching into other objects' internals. Avoid `SendMessage`, string-based lookups, and `Invoke("name")`.
 - Keep the AI state machine states small and free of engine lookups; share behaviour via the mob's components.
 - Use coroutines sparingly; prefer explicit state/timers driven by the clock so behaviour is deterministic and testable.

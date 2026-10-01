@@ -14,6 +14,7 @@ public class MobStateMachineTests
     private Health playerHealth;
     private PlayerHandle playerHandle;
     private PlayerRegistry players;
+    private readonly IRandom random = new SystemRandom(1234);
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
     // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
@@ -88,7 +89,7 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Patrol);
 
         // A scope rebuild re-injects the brain after Start has already entered its first state.
-        brain.Construct(navGrid, players);
+        brain.Construct(navGrid, players, random);
 
         player.position = new Vector3(3f, 0f, 0f);
         brain.TickStateMachine(0.1f);
@@ -524,9 +525,8 @@ public class MobStateMachineTests
         config.patrolRoamRadius = 4f;
 
         int patrols = 0;
-        for (int seed = 0; seed < 30; seed++)
+        for (int attempt = 0; attempt < 30; attempt++)
         {
-            Random.InitState(seed);
             brain.ChangeState(MobStateId.Idle);
             brain.ChangeState(MobStateId.Patrol);
             if (brain.CurrentStateId != MobStateId.Patrol)
@@ -535,7 +535,7 @@ public class MobStateMachineTests
             }
 
             patrols++;
-            Assert.That(brain.PathAgent.IsPartialPath, Is.False, $"Seed {seed} picked a roam destination across the wall.");
+            Assert.That(brain.PathAgent.IsPartialPath, Is.False, $"Attempt {attempt} picked a roam destination across the wall.");
         }
 
         Assert.That(patrols, Is.GreaterThan(0));
@@ -780,7 +780,7 @@ public class MobStateMachineTests
         MobController mobBrain = mob.AddComponent<MobController>();
 
         mob.GetComponent<MeleeDamageDealer>().Construct(UnityClock.Shared, new DamageService(new CombatEvents()));
-        mobBrain.Configure(config, navGrid, players);
+        mobBrain.Configure(config, navGrid, players, random);
         Physics2D.SyncTransforms();
         return mobBrain;
     }

@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public class MobPatrolAnchor : MonoBehaviour
 {
@@ -11,6 +10,7 @@ public class MobPatrolAnchor : MonoBehaviour
 
     private NavigationGrid2D navigationGrid;
     private MobConfig config;
+    private IRandom random;
     private Vector2 spawnPosition;
 
     public Vector2 SpawnPosition => spawnPosition;
@@ -20,23 +20,24 @@ public class MobPatrolAnchor : MonoBehaviour
         spawnPosition = transform.position;
     }
 
-    public void Initialize(NavigationGrid2D navGrid, MobConfig mobConfig)
+    public void Initialize(NavigationGrid2D navGrid, MobConfig mobConfig, IRandom randomSource)
     {
         navigationGrid = navGrid;
         config = mobConfig;
+        random = randomSource;
         spawnPosition = transform.position;
     }
 
     public float GetIdleDuration()
     {
-        return config != null ? config.NextIdleDuration() : Random.Range(0.5f, 1.5f);
+        return config != null && random != null ? config.NextIdleDuration(random) : 1f;
     }
 
     public bool TryGetRoamDestination(Func<Vector2, bool> isReachable, out Vector2 destination)
     {
         destination = spawnPosition;
 
-        if (navigationGrid == null || config == null)
+        if (navigationGrid == null || config == null || random == null)
         {
             return false;
         }
@@ -44,7 +45,7 @@ public class MobPatrolAnchor : MonoBehaviour
         int attempts = Mathf.Max(1, config.patrolSampleAttempts);
         for (int i = 0; i < attempts; i++)
         {
-            Vector2 offset = Random.insideUnitCircle * config.patrolRoamRadius;
+            Vector2 offset = random.InsideUnitCircle() * config.patrolRoamRadius;
             Vector2 candidateWorld = spawnPosition + offset;
             Vector3Int candidateCell = navigationGrid.WorldToCell(candidateWorld);
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class MobMotor2D : MonoBehaviour
@@ -19,6 +20,7 @@ public class MobMotor2D : MonoBehaviour
     private static readonly int IsAttackingHash = Animator.StringToHash("IsAttacking");
 
     private Rigidbody2D rb;
+    private IClock clock = UnityClock.Shared;
     private Vector2 desiredVelocity;
     private Vector2 steeringVelocity;
     private Vector2 lastMoveDirection = Vector2.down;
@@ -51,6 +53,12 @@ public class MobMotor2D : MonoBehaviour
     private void Update()
     {
         UpdateAttackAnimation();
+    }
+
+    [Inject]
+    public void Construct(IClock gameClock)
+    {
+        clock = gameClock ?? UnityClock.Shared;
     }
 
     public void Initialize(MobConfig config)
@@ -122,7 +130,7 @@ public class MobMotor2D : MonoBehaviour
             return;
         }
 
-        attackAnimationEndTime = Time.time + attackAnimationDuration;
+        attackAnimationEndTime = clock.Time + attackAnimationDuration;
         isAttackAnimationActive = true;
         ApplyAttackAnimation(direction);
     }
@@ -196,14 +204,14 @@ public class MobMotor2D : MonoBehaviour
         }
     }
 
-    private void UpdateAttackAnimation()
+    internal void UpdateAttackAnimation()
     {
         if (!isAttackAnimationActive)
         {
             return;
         }
 
-        if (Time.time >= attackAnimationEndTime)
+        if (clock.Time >= attackAnimationEndTime)
         {
             EndAttackAnimation();
             return;

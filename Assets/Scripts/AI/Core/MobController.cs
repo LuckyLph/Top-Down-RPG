@@ -32,6 +32,7 @@ public class MobController : MonoBehaviour
 
     private NavigationGrid2D navigationGrid;
     private IPlayerRegistry players;
+    private IRandom random;
     private MobMotor2D motor;
     private MobPerception2D perception;
     private MobPathAgent2D pathAgent;
@@ -48,6 +49,7 @@ public class MobController : MonoBehaviour
     public MobConfig Config => config;
     public NavigationGrid2D NavigationGrid => navigationGrid;
     public IPlayerRegistry Players => players;
+    public IRandom Random => random;
     public MobMotor2D Motor => motor;
     public MobPerception2D Perception => perception;
     public MobPathAgent2D PathAgent => pathAgent;
@@ -66,6 +68,11 @@ public class MobController : MonoBehaviour
     {
         EnsureInitialized();
 
+        if (navigationGrid == null || players == null || random == null)
+        {
+            Debug.LogError($"{name} was not injected with its navigation grid, players and random source; spawn mobs through a {nameof(MobSpawnPoint)} or resolver.Instantiate.", this);
+        }
+
         if (currentState == null)
         {
             ChangeState(MobStateId.Idle);
@@ -83,18 +90,20 @@ public class MobController : MonoBehaviour
     }
 
     [Inject]
-    public void Construct(NavigationGrid2D navGrid, IPlayerRegistry playerRegistry)
+    public void Construct(NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
         navigationGrid = navGrid;
         players = playerRegistry;
+        random = randomSource;
         Reinitialize();
     }
 
-    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerRegistry playerRegistry)
+    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
         config = mobConfig;
         navigationGrid = navGrid;
         players = playerRegistry;
+        random = randomSource;
         Rebuild();
     }
 
@@ -205,7 +214,7 @@ public class MobController : MonoBehaviour
         motor.Initialize(config);
         pathAgent.Initialize(navigationGrid, motor, config);
         perception.Initialize(players, config);
-        patrol.Initialize(navigationGrid, config);
+        patrol.Initialize(navigationGrid, config, random);
         damageDealer.Initialize(config);
         separation = new MobSeparation2D(selfCollider, config, navigationGrid);
 

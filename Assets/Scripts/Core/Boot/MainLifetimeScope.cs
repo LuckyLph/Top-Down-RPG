@@ -18,6 +18,7 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterComponent(screenFader);
         builder.RegisterComponent(cameraFollow);
         builder.RegisterInstance<IClock>(UnityClock.Shared);
+        builder.RegisterInstance<IRandom>(new SystemRandom());
 
         builder.Register<SceneLoader>(Lifetime.Singleton);
         builder.Register<GameFlow>(Lifetime.Singleton)

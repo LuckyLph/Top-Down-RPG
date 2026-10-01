@@ -47,10 +47,10 @@ public class MobConfig : ScriptableObject
 
     public TerrainMovementProfile2D MovementProfile => movementProfile;
 
-    public float NextIdleDuration()
+    public float NextIdleDuration(IRandom random)
     {
         float min = Mathf.Min(idleDurationRange.x, idleDurationRange.y);
         float max = Mathf.Max(idleDurationRange.x, idleDurationRange.y);
-        return Random.Range(min, max);
+        return random.Range(min, max);
     }
 }

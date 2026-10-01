@@ -91,7 +91,7 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         int publishedCount = 0;
         combatEvents.DamageApplied += _ => publishedCount++;
-        DamageService damageService = new(combatEvents);
+        DamageService damageService = new(combatEvents, FixedGameAuthority.Authoritative);
 
         Assert.That(damageService.ApplyDamage(null, 5), Is.EqualTo(0));
         Assert.That(damageService.ApplyDamage(receiver, 0), Is.EqualTo(0));
@@ -121,7 +121,7 @@ public class CombatComponentTests
         visuals.transform.SetParent(target.transform);
 
         ManualClock clock = new();
-        dealer.Construct(clock, new DamageService(new CombatEvents()));
+        dealer.Construct(clock, new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         bool firstHit = dealer.TryDealDamage(visuals.transform);
@@ -161,7 +161,7 @@ public class CombatComponentTests
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
 
-        dealer.Construct(new ManualClock(), new DamageService(new CombatEvents()));
+        dealer.Construct(new ManualClock(), new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
@@ -248,7 +248,7 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         DamageReport? published = null;
         combatEvents.DamageApplied += report => published = report;
-        DamageService damageService = new(combatEvents);
+        DamageService damageService = new(combatEvents, FixedGameAuthority.Authoritative);
 
         damageService.ApplyDamage(receiver, 2, source);
 

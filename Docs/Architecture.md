@@ -112,17 +112,16 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Registration | Kind |
 |---|---|
 | `PlayerRegistry` as `IPlayerRegistry` + self | singleton |
-| `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `PlayerRespawner` | singletons |
+| `LocalPlayerTracker`, `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `PlayerBinder`, `PlayerRespawner` | singletons |
 | `PlayerSpawner` (with the inspector's player prefab and the Gameplay scene as parameters) | singleton |
-| `LocalPlayer` -> `PlayerSpawner.SpawnLocalPlayer()` | singleton factory |
+| `GameplayPlayers` | entry point (spawns players in `Start`, see Player) |
 | `DamagePopupLayer` | component |
 | `GameplaySettings` | instance |
 | `PlayerHudView` | component in hierarchy |
 | `CombatEvents`, `DamageService`, `SlashSpawner`, `EffectSpawner` | singletons |
 | `DamagePopupPresenter`, `GameplayEntryPoint`, `PlayerDeathHandler`, `PlayerHudPresenter` | entry points |
-| Build callback: resolves `LocalPlayer` | spawns the local player before entry points start |
 
-[GameplayEntryPoint](../Assets/Scripts/Composition/GameplayEntryPoint.cs): on start points `CameraFollow2D` at the local player and snaps; clears the target on dispose.
+[GameplayEntryPoint](../Assets/Scripts/Composition/GameplayEntryPoint.cs): points `CameraFollow2D` at the local player and snaps whenever `LocalPlayerTracker` assigns one (on a client that happens when the host's spawn arrives); clears the target on dispose.
 
 ### AreaLifetimeScope ([AreaLifetimeScope.cs](../Assets/Scripts/Composition/AreaLifetimeScope.cs))
 
@@ -131,7 +130,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 - `AreaMobSpawner` (with every `MobSpawnPoint` and the area scene as parameters), plus a build callback that calls `SpawnAll`.
 - Logs an error for every `MobController` placed directly in the area scene: mobs must come from spawn points. Other scene objects needing injection go in the scope's `autoInjectGameObjects` (the stress scene lists its `StressTest` object).
 
-[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), records it in the Gameplay-scope `ActiveSpawnPoint` for respawns, teleports every registered player to its own slot at that spawn point (`SpawnPoint.GetSlotPosition`, in registry order, players without a `PlayerController` are skipped) and snaps the camera.
+[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), records it in the Gameplay-scope `ActiveSpawnPoint` for respawns, teleports every registered player this machine moves (`PlayerController.SimulatesMovement`: all players offline, only the local one online) to its own slot at that spawn point (`SpawnPoint.GetSlotPosition`, in registry order) and snaps the camera.
 
 ### How components get injected
 
@@ -140,24 +139,26 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 | Component | `Construct` parameters | Injected by |
 |---|---|---|
-| `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`) |
+| `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`), or `InjectingNetworkPrefabHandler` on clients |
+| `PlayerNetworkSync` | `PlayerBinder` | same as `PlayerWeaponController` |
 | `MainMenuController` | `GameFlow` | Menu scope |
 | `MobController` | `NavigationGrid2D`, `IPlayerRegistry`, `IRandom` | `AreaMobSpawner` or `StressTestSpawner` (`resolver.Instantiate`) |
 | `MobMotor2D` | `IClock` | same as `MobController` |
 | `MeleeDamageDealer` | `IClock`, `DamageService` | same as `MobController` |
 | `DestroyMobOnDeath` | `EffectSpawner` | same as `MobController` |
-| `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `LocalPlayer` | Area scope `autoInjectGameObjects` |
+| `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `LocalPlayerTracker` | Area scope `autoInjectGameObjects` |
 
 `MeleeDamageDealer`, `MobMotor2D` and `PlayerWeaponController` default their clock to `UnityClock.Shared` when not injected.
 
 ## Networking
 
-Netcode for GameObjects, host-and-play. See [Multiplayer.md](Multiplayer.md) for the plan; this section describes what exists. Nothing gameplay-related is replicated yet: joining connects the client and loads the same starting area locally.
+Netcode for GameObjects, host-and-play. See [Multiplayer.md](Multiplayer.md) for the plan; this section describes what exists. Players are replicated (see Player); mobs, health and damage are not yet, so each machine still runs its own mobs.
 
 | Type | Role |
 |---|---|
 | [NetworkSettings](../Assets/Scripts/Core/Network/NetworkSettings.cs) | ScriptableObject (`Assets/Data/NetworkSettings.asset`): default join address (`127.0.0.1`), host listen address (`0.0.0.0`), port (7777), client connect timeout (10 s). |
-| [NetworkSession](../Assets/Scripts/Core/Network/NetworkSession.cs) | Main-scope singleton that owns the `NetworkManager`: instantiates it from `Assets/Prefabs/Network/NetworkManager.prefab` (`NetworkManager` + `UnityTransport`, scene management off, no player prefab) and destroys it on dispose, so it never outlives the Main scope despite Netcode moving it to `DontDestroyOnLoad`. `StartHost()`, `JoinAsync(address, timeout, token)` (connects, waits for the connection, shuts down and returns false on failure/timeout), `Shutdown()`, `RegisterPrefab`/`UnregisterPrefab`, `IsActive`/`IsHost`/`IsConnectedClient`, event `ConnectionLost` (local client stopped without `Shutdown` being called). Gameplay code never uses `NetworkManager.Singleton`. |
+| [NetworkSession](../Assets/Scripts/Core/Network/NetworkSession.cs) | Main-scope singleton that owns the `NetworkManager`: instantiates it from `Assets/Prefabs/Network/NetworkManager.prefab` (`NetworkManager` + `UnityTransport`, scene management off, no player prefab) and destroys it on dispose, so it never outlives the Main scope despite Netcode moving it to `DontDestroyOnLoad`. `StartHost()`, `JoinAsync(address, timeout, token)` (connects, waits for the connection, shuts down and returns false on failure/timeout), `Shutdown()`, `RegisterPrefab`/`UnregisterPrefab`, `IsActive`/`IsHost`/`IsServer`/`IsConnectedClient`/`LocalClientId`, event `ConnectionLost` (local client stopped without `Shutdown` being called). Makes its `NetworkManager` the Netcode singleton before starting, since Netcode falls back to the singleton when spawning. Implements `IGameAuthority` (`IsAuthoritative` = offline or server). Ready handshake: a client calls `NotifyReady()` once its Gameplay scope can receive spawns; the host records it (`ReadyClients`, `IsClientReady`, cleared on disconnect), shows it every object spawned through the session, and raises `ClientReady`. `SpawnPlayerObject(instance, owner)` spawns with a visibility check so objects only reach ready clients. |
+| [IGameAuthority](../Assets/Scripts/Core/Network/IGameAuthority.cs) | `IsAuthoritative`: whether this machine decides game state. Implemented by `NetworkSession`; tests use a fixed fake. |
 | [InjectingNetworkPrefabHandler](../Assets/Scripts/Core/Network/InjectingNetworkPrefabHandler.cs) | `INetworkPrefabInstanceHandler` that creates network prefab instances through an `IObjectResolver` so their `[Inject]` methods run, and destroys them on despawn. Netcode only calls it on clients; the host must create its instances with `resolver.Instantiate` itself before spawning. |
 | [NetworkSessionLifecycle](../Assets/Scripts/Core/Network/NetworkSessionLifecycle.cs) | Main-scope entry point: shuts the session down whenever a transition ends in the menu, and returns to the menu (with a warning) when the connection is lost during a game. |
 
@@ -193,26 +194,30 @@ Netcode for GameObjects, host-and-play. See [Multiplayer.md](Multiplayer.md) for
 | [ScreenFader](../Assets/Scripts/Core/UI/ScreenFader.cs) | `CanvasGroup` fade used by `GameFlow` (unscaled time); blocks raycasts while visible; starts opaque. |
 | [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `StartNewGame`, `HostGame` (start hosting, then a new game), `JoinGame` (join the address in `joinAddressField`, prefilled with the default; enters the game once connected, ignores repeat clicks while connecting) and `QuitGame`; writes progress and failures to `statusText`; selects the first button for gamepad/keyboard navigation. |
 | [PlayerHudView](../Assets/Scripts/UI/PlayerHudView.cs) | Passive view on `PlayerHudCanvas`: health fill + "HP n" text, weapon icon with tint when missing. |
-| [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; subscribes to the local player's `Health.Damaged`/`Died`/`Restored` and `PlayerWeaponController.EquippedWeaponChanged`, pushes into the view. |
+| [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; binds to whichever player `LocalPlayerTracker` holds (rebinding when it changes) and listens to its `Health.Damaged`/`Died`/`Restored` and `PlayerWeaponController.EquippedWeaponChanged`, pushing into the view; clears the health display while there is no local player. |
 
 Damage popups are under Combat.
 
 ## Player
 
-Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `YPositionSorter`), referenced by `GameplayLifetimeScope` and spawned at runtime by `PlayerSpawner`.
+Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `NetworkObject`, `NetworkTransform` with owner authority syncing x/y position only, `PlayerNetworkSync`, `YPositionSorter` on a child), referenced by `GameplayLifetimeScope`, spawned at runtime by `PlayerSpawner`, and listed in `Assets/DefaultNetworkPrefabs.asset`. Offline the networking components stay unspawned and do nothing.
 
 | Type | Role |
 |---|---|
-| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads a `PlayerCommand` from its `IPlayerCommandSource` in `Update` (internal `Tick`), sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack commands to the weapon controller. No source = idle, with an error logged in `Start`. `SetCommandSource`, `FacingDirection`, `Teleport`, internal `Face` (tests). |
+| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads a `PlayerCommand` from its `IPlayerCommandSource` in `Update` (internal `Tick`), sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack commands to the weapon controller. No source = idle, with an error logged in `Start`. `SetSimulatesMovement(false)` stops it touching the Rigidbody2D (remote copies, moved by `NetworkTransform`). `SetCommandSource`, `CurrentMove`, `FacingDirection`, `SimulatesMovement`, `Face`, `Teleport`. |
 | [PlayerCommand](../Assets/Scripts/Player/PlayerCommand.cs) / [IPlayerCommandSource](../Assets/Scripts/Player/IPlayerCommandSource.cs) | One frame of player intent (`Move`, `Attack`) and where a player gets it from, so each player can be driven independently. |
 | [LocalPlayerCommandSource](../Assets/Scripts/Player/LocalPlayerCommandSource.cs) | Wraps `IPlayerInput`; `PlayerSpawner` gives it to the local player only. |
-| [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown and spawns a slash in the facing direction via `SlashSpawner`. Event `EquippedWeaponChanged`. |
+| [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown, spawns a slash in the facing direction via `SlashSpawner` and raises `Attacked(direction)`. `PlayRemoteAttack(direction)` replays another machine's swing without a cooldown or event. Event `EquippedWeaponChanged`. |
 | [PlayerHandle](../Assets/Scripts/Player/PlayerHandle.cs) | One player as other systems see it: `Transform`, `Health`, `IsAlive`. |
 | [IPlayerRegistry](../Assets/Scripts/Player/IPlayerRegistry.cs) / [PlayerRegistry](../Assets/Scripts/Player/PlayerRegistry.cs) | Every player in the session: `Players`, `Contains`, `AnyAlive`, events `PlayerAdded`/`PlayerRemoved`. `Add`/`Remove` (ignore null and duplicates) are on the concrete class only. Used by mobs and death handling. |
-| [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | `SpawnLocalPlayer`: instantiates the player prefab through `IObjectResolver` (injecting its components), gives it the `LocalPlayerCommandSource`, moves it into the Gameplay scene so it survives area changes, registers its handle and returns the `LocalPlayer`. |
-| [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Used by the camera, HUD, `AreaEntry` and the stress spawner. |
-| [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). If no registered player is alive (party wipe), waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). Otherwise waits `RespawnDelaySeconds` and asks `PlayerRespawner` to bring the dead player back, unless a party wipe happened in the meantime. |
-| [PlayerRespawner](../Assets/Scripts/Player/PlayerRespawner.cs) | `TryRespawn(player)`: only for dead players in the registry; `Health.Restore()` (which re-enables the player through `DisableOnDeath`) and teleports to the player's slot at `ActiveSpawnPoint.Current`, or leaves them in place when there is none. |
+| [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | Instantiates the player prefab through `IObjectResolver` (injecting its components) and moves it into the Gameplay scene so it survives area changes. `SpawnLocalPlayer`: offline binds it as the local player directly; when hosting, spawns it as the host's network player object. `SpawnRemotePlayer(clientId)` (host only): spawns a player object owned by that client. `PlayerNetworkPrefab`. |
+| [GameplayPlayers](../Assets/Scripts/Player/GameplayPlayers.cs) | Gameplay entry point. Offline: spawns the local player. Online: registers the player prefab with the session (so client copies are injected from this scope); the host spawns its own player, one for every ready client and then each newly ready client; a client sends `NotifyReady`. Unregisters on dispose. |
+| [PlayerBinder](../Assets/Scripts/Player/PlayerBinder.cs) | `BindLocal(controller)`: local command source, movement on, registers, places it at its slot of `ActiveSpawnPoint` if the area was already entered, assigns it to `LocalPlayerTracker`. `BindRemote(controller, commands)`: given command source, movement off, registers. `Unbind(handle)`. |
+| [LocalPlayerTracker](../Assets/Scripts/Player/LocalPlayerTracker.cs) | The current `LocalPlayer` (null until this machine's player exists) and a `Changed` event. |
+| [PlayerNetworkSync](../Assets/Scripts/Player/PlayerNetworkSync.cs) | `NetworkBehaviour` on the player. On spawn the owner binds as local and forwards `Attacked` through `AttackRpc` (owner-invoked, runs on everyone else, replays with `PlayRemoteAttack`); other machines bind it as remote, make its body kinematic without interpolation, and feed it `move`/`facing` from owner-written `NetworkVariable`s (owner updates them when they change by more than 0.01). Unbinds on despawn. |
+| [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Reached through `LocalPlayerTracker` by the camera, HUD and the stress spawner. |
+| [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; does nothing on a client (`IGameAuthority`). Listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). If no registered player is alive (party wipe), waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). Otherwise waits `RespawnDelaySeconds` and asks `PlayerRespawner` to bring the dead player back, unless a party wipe happened in the meantime. |
+| [PlayerRespawner](../Assets/Scripts/Player/PlayerRespawner.cs) | `TryRespawn(player)`: only for dead players in the registry; `Health.Restore()` (which re-enables the player through `DisableOnDeath`) and, if this machine moves that player, teleports it to its slot at `ActiveSpawnPoint.Current`; otherwise it stays in place. |
 | [ActiveSpawnPoint](../Assets/Scripts/World/ActiveSpawnPoint.cs) | The `SpawnPoint` the party last entered the current area through. |
 
 Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`Assets/Data/GameplaySettings.asset`): restart delay (1.5 s), respawn delay (3 s).
@@ -225,7 +230,7 @@ Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`
 |---|---|
 | [Health](../Assets/Scripts/Combat/Health.cs) | Int HP; `ApplyDamage` clamps, returns applied amount; events `Damaged(Health.DamageEvent)` and `Died(Health)` (once per death). `Restore()` refills to max and raises `Restored(Health)` (no-op at full health); a restored `Health` can die again. |
 | [DamageReceiver](../Assets/Scripts/Combat/DamageReceiver.cs) | Marks something as hittable: `FindFor(transform)` walks up parents; exposes its `Health` and `PopupWorldPosition`. Applies nothing itself. |
-| [DamageService](../Assets/Scripts/Combat/DamageService.cs) | Gameplay-scope singleton and the only gameplay path that applies damage: `ApplyDamage(receiver, amount, source)` ignores null targets and non-positive amounts, applies to `Health` and publishes a `DamageReport` to `CombatEvents` when damage landed. This is the seam the host will own once networking arrives ([Multiplayer.md](Multiplayer.md)). Tests still call `Health.ApplyDamage` directly to set up state. |
+| [DamageService](../Assets/Scripts/Combat/DamageService.cs) | Gameplay-scope singleton and the only gameplay path that applies damage: `ApplyDamage(receiver, amount, source)` ignores null targets, non-positive amounts and every hit on a machine without `IGameAuthority` (a client), applies to `Health` and publishes a `DamageReport` to `CombatEvents` when damage landed. Slashes play on every machine but only the host's (or the offline game's) apply damage. Tests still call `Health.ApplyDamage` directly to set up state. |
 | [DamageReport](../Assets/Scripts/Combat/DamageReport.cs) | Target, amount, source, popup world position. |
 | [CombatEvents](../Assets/Scripts/Combat/CombatEvents.cs) | Gameplay-scope event bus: `DamageApplied(DamageReport)`. |
 | [MeleeDamageDealer](../Assets/Scripts/Combat/MeleeDamageDealer.cs) | Mob melee: `TryDealDamage(target)` with `IClock` cooldown, through `DamageService` (logs an error and deals nothing without one); damage/interval overwritten from `MobConfig`. |
@@ -242,7 +247,7 @@ Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`
 
 | Type | Role |
 |---|---|
-| [DisableOnDeath](../Assets/Scripts/Combat/DisableOnDeath.cs) | Player: on death disables every other enabled MonoBehaviour except `Health`/`DamageReceiver`, then `DeathPhysics.Disable`; on `Health.Restored` re-enables exactly the behaviours and colliders it turned off and restores the Rigidbody2D's `simulated` flag. |
+| [DisableOnDeath](../Assets/Scripts/Combat/DisableOnDeath.cs) | Player: on death disables every other enabled MonoBehaviour except `Health`/`DamageReceiver` and networking components, then `DeathPhysics.Disable`; on `Health.Restored` re-enables exactly the behaviours and colliders it turned off and restores the Rigidbody2D's `simulated` flag. |
 | [DestroyMobOnDeath](../Assets/Scripts/Combat/DestroyMobOnDeath.cs) | Mobs: disables physics, spawns the `MobDeathAnimation` template via `EffectSpawner`, destroys the mob. |
 | [DeathPhysics](../Assets/Scripts/Combat/DeathPhysics.cs) | Static helper: disable colliders, zero and unsimulate the Rigidbody2D. |
 | [MobDeathAnimation](../Assets/Scripts/Combat/MobDeathAnimation.cs) | Copies the dead mob's sprite renderer settings/scale, plays `MobDeath.anim` via `PlayableGraph`, self-destroys. Prefab: `Assets/Prefabs/Combat/MobDeathAnimation.prefab`. |
@@ -425,6 +430,9 @@ Events summary:
 |---|---|---|
 | `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate`, `NetworkSessionLifecycle` (finished only) |
 | `NetworkSession.ConnectionLost` | `NetworkSession` | `NetworkSessionLifecycle` |
+| `NetworkSession.ClientReady` | `NetworkSession` (host) | `GameplayPlayers` |
+| `LocalPlayerTracker.Changed` | `PlayerBinder` | `GameplayEntryPoint`, `PlayerHudPresenter` |
+| `PlayerWeaponController.Attacked` | `PlayerWeaponController.TryAttack` | `PlayerNetworkSync` (owner) |
 | `Health.Damaged` | `Health` | `PlayerHudPresenter` |
 | `Health.Died` | `Health` | `PlayerHudPresenter`, `PlayerDeathHandler`, `DisableOnDeath`, `DestroyMobOnDeath` |
 | `Health.Restored` | `Health.Restore` (via `PlayerRespawner`) | `PlayerHudPresenter`, `DisableOnDeath` |
@@ -451,22 +459,24 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
 | [SystemRandomTests.cs](../Assets/Tests/Editor/SystemRandomTests.cs) | Range bounds, unit circle, same seed same sequence |
 | [InjectingNetworkPrefabHandlerTests.cs](../Assets/Tests/Editor/InjectingNetworkPrefabHandlerTests.cs) | Network prefab instances are injected copies at the requested pose |
+| [PlayerBinderTests.cs](../Assets/Tests/Editor/PlayerBinderTests.cs) | Local/remote binding, unbinding, placement at the active spawn point, `DamageService` without authority |
 | [PlayerRegistryTests.cs](../Assets/Tests/Editor/PlayerRegistryTests.cs) | Add/remove events, null and duplicate handling, `AnyAlive` |
 | [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, dispose |
-| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter, attack cooldown/facing, `PlayerController` driven by a command source (facing, attack, idle without one), `LocalPlayerCommandSource`, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
+| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter (including rebinding when the local player changes), attack cooldown/facing, `Attacked` raised by local swings but not by `PlayRemoteAttack`, `PlayerController` driven by a command source (facing, attack, idle without one), `LocalPlayerCommandSource`, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
 
 Fakes and seams:
 - [ManualClock](../Assets/Tests/Editor/ManualClock.cs): `IClock` with settable `Time` and `Advance`.
 - `SystemRandom` with a fixed seed stands in for `IRandom`.
 - A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
-- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Face`/`Tick`, `MobMotor2D` attack/facing state and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
+- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Tick`, `MobMotor2D` attack/facing state and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
 
 ### PlayMode (`Assets/Tests/PlayMode`)
 
 | File | Covers |
 |---|---|
 | [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
+| [NetworkPlayersPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkPlayersPlayModeTests.cs) | Hosting from the menu, then a second in-process `NetworkManager` acting as a client (with its own container and prefab handler): nothing reaches it before it reports ready, both sides then see both players with the right ownership, the client's movement and facing reach the host copy, its attack plays on the host, and its player is removed when it disconnects |
 | [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game and the menu ends the session; joining a second in-process host from the menu, then returning to the menu when that host leaves; join timeout with no host |
 | [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, respawn at the spawn point while a teammate lives, restart only on a full party wipe, menu boot focus |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Clearing mobs spawned from spawn points into the area scene, detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |

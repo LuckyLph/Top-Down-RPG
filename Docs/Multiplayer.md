@@ -67,9 +67,16 @@ Until Phase 3, a client that joins only connects: it loads the starting area loc
 
 ### Phase 3: players
 
-- [ ] `NetworkObject` on the player prefab, owner-authoritative transform/rigidbody sync, facing and animation state replicated.
-- [ ] Attack sent by the owner; every client plays the slash visual; the host applies damage to mobs.
-- [ ] Per-player HUD and camera bound to the local player only.
+- [x] `NetworkObject` on the player prefab, owner-authoritative `NetworkTransform` (x/y only), remote copies kinematic; move and facing replicated so remote animation matches.
+- [x] Attack sent by the owner (`AttackRpc`); every other machine replays the slash; only the host's `DamageService` applies damage (clients apply none).
+- [x] Per-player HUD and camera bound to the local player only, through `LocalPlayerTracker`.
+- [x] Ready handshake: a joining client reports ready once its Gameplay scope can receive spawns; until then the host hides spawned objects from it, then shows them and spawns its player.
+
+Known gaps until Phase 4 and 5 (expected, not bugs):
+- Each machine still runs its own mobs. On a client nothing deals damage, so its local mobs can neither hurt nor be hurt; the host's mobs hit the host's copy of a client's player, but that health is not sent to the client.
+- The host can't move a client's player (the owner moves it), so respawning a client's player only restores health on the host's copy.
+- A party wipe restarts only the host's scenes; clients keep theirs and receive fresh player spawns.
+- A teleport by the owner is interpolated on other machines instead of snapping.
 
 ### Phase 4: mobs
 

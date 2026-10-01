@@ -37,7 +37,7 @@ public sealed class AreaEntry : IAreaEntry
         for (int i = 0; i < party.Count; i++)
         {
             Transform playerTransform = party[i].Transform;
-            if (playerTransform != null && playerTransform.TryGetComponent(out PlayerController controller))
+            if (playerTransform != null && playerTransform.TryGetComponent(out PlayerController controller) && controller.SimulatesMovement)
             {
                 controller.Teleport(spawnPoint.GetSlotPosition(i));
             }

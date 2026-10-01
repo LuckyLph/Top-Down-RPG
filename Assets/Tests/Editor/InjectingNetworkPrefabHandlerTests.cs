@@ -32,7 +32,7 @@ public class InjectingNetworkPrefabHandlerTests
         ManualClock clock = new() { Time = 100f };
         ContainerBuilder builder = new();
         builder.RegisterInstance<IClock>(clock);
-        builder.RegisterInstance(new DamageService(new CombatEvents()));
+        builder.RegisterInstance(new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
         InjectingNetworkPrefabHandler handler = new(prefabNetworkObject, builder.Build());
 
         NetworkObject instance = handler.Instantiate(1, new Vector3(2f, 3f, 0f), Quaternion.Euler(0f, 0f, 90f));

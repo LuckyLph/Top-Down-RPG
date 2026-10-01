@@ -6,7 +6,9 @@
     "TopDownRPG.Core",
     "TopDownRPG.DevTools",
     "Unity.TextMeshPro",
-    "Unity.Netcode.Runtime"
+    "Unity.Netcode.Runtime",
+    "Unity.Collections",
+    "Unity.Networking.Transport"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

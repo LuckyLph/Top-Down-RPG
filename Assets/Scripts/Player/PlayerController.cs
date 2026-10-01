@@ -18,8 +18,11 @@ public class PlayerController : MonoBehaviour
     private IPlayerCommandSource commandSource;
     private Vector2 moveInput;
     private Vector2 lastMoveDirection = Vector2.down;
+    private bool simulatesMovement = true;
 
     public Vector2 FacingDirection => lastMoveDirection;
+    public Vector2 CurrentMove => moveInput;
+    public bool SimulatesMovement => simulatesMovement;
 
     private void Awake()
     {
@@ -49,6 +52,11 @@ public class PlayerController : MonoBehaviour
     public void SetCommandSource(IPlayerCommandSource source)
     {
         commandSource = source;
+    }
+
+    public void SetSimulatesMovement(bool simulates)
+    {
+        simulatesMovement = simulates;
     }
 
     private void Update()
@@ -87,6 +95,11 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!simulatesMovement)
+        {
+            return;
+        }
+
         rb.linearVelocity = moveInput * moveSpeed;
     }
 
@@ -102,7 +115,7 @@ public class PlayerController : MonoBehaviour
         transform.position = new Vector3(position.x, position.y, transform.position.z);
     }
 
-    internal void Face(Vector2 direction)
+    public void Face(Vector2 direction)
     {
         if (direction.sqrMagnitude > 0.0001f)
         {

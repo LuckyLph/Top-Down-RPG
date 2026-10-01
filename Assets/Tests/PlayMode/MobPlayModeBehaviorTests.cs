@@ -235,9 +235,9 @@ public class MobPlayModeBehaviorTests
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
         Health playerHealth = player.GetComponent<Health>();
         Health mobHealth = mob.GetComponent<Health>();
-        TextMeshProUGUI healthText = FindTextByName("HealthText");
-        Image healthFill = FindImageByName("HealthFill");
-        Image weaponIcon = FindImageByName("WeaponIcon");
+        TextMeshProUGUI healthText = FindTextByName(hud.transform, "HealthText");
+        Image healthFill = FindImageByName(hud.transform, "HealthFill");
+        Image weaponIcon = FindImageByName(hud.transform, "WeaponIcon");
 
         Assert.That(playerController, Is.Not.Null);
         Assert.That(weaponController, Is.Not.Null);
@@ -254,7 +254,7 @@ public class MobPlayModeBehaviorTests
         Assert.That(healthText.text, Is.EqualTo($"HP {playerHealth.CurrentHealth}"));
         float initialExpectedFill = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
         Assert.That(healthFill.fillAmount, Is.EqualTo(initialExpectedFill).Within(0.001f));
-        Assert.That(weaponIcon.sprite, Is.SameAs(weaponController.CurrentWeapon.HudIcon), "HUD should show the equipped weapon icon.");
+        Assert.That(weaponIcon.sprite, Is.EqualTo(weaponController.CurrentWeapon.HudIcon), "HUD should show the equipped weapon icon.");
 
         float initialFillAmount = healthFill.fillAmount;
         int initialPlayerHealth = playerHealth.CurrentHealth;
@@ -284,9 +284,9 @@ public class MobPlayModeBehaviorTests
         mob.transform.position = originalMobPosition;
     }
 
-    private static Image FindImageByName(string objectName)
+    private static Image FindImageByName(Transform root, string objectName)
     {
-        Image[] images = Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Image[] images = root.GetComponentsInChildren<Image>(true);
         for (int i = 0; i < images.Length; i++)
         {
             if (images[i] != null && images[i].name == objectName)
@@ -298,9 +298,9 @@ public class MobPlayModeBehaviorTests
         return null;
     }
 
-    private static TextMeshProUGUI FindTextByName(string objectName)
+    private static TextMeshProUGUI FindTextByName(Transform root, string objectName)
     {
-        TextMeshProUGUI[] texts = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
         for (int i = 0; i < texts.Length; i++)
         {
             if (texts[i] != null && texts[i].name == objectName)

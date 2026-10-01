@@ -22,7 +22,7 @@ public sealed class PlayerRespawner
         player.Health.Restore();
 
         SpawnPoint spawnPoint = activeSpawnPoint.Current;
-        if (spawnPoint != null && player.Transform.TryGetComponent(out PlayerController controller))
+        if (spawnPoint != null && player.Transform.TryGetComponent(out PlayerController controller) && controller.SimulatesMovement)
         {
             controller.Teleport(spawnPoint.GetSlotPosition(IndexOf(player)));
         }

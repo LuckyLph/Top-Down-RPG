@@ -15,6 +15,7 @@ public class PlayerWeaponController : MonoBehaviour
     private float nextAttackTime;
 
     public event Action<PlayerWeapon> EquippedWeaponChanged;
+    public event Action<Vector2> Attacked;
 
     public PlayerWeapon CurrentWeapon => currentWeapon;
     public string CurrentWeaponName
@@ -84,7 +85,19 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         nextAttackTime = clock.Time + currentWeapon.AttackCooldown;
+        Attacked?.Invoke(attackDirection);
         return true;
+    }
+
+    public void PlayRemoteAttack(Vector2 direction)
+    {
+        if (currentWeapon == null || slashSpawner == null)
+        {
+            return;
+        }
+
+        Vector2 attackDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.down;
+        slashSpawner.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer);
     }
 
     private void ResolveReferences()

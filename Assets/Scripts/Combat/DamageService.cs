@@ -3,15 +3,17 @@ using UnityEngine;
 public sealed class DamageService
 {
     private readonly CombatEvents combatEvents;
+    private readonly IGameAuthority authority;
 
-    public DamageService(CombatEvents combatEvents)
+    public DamageService(CombatEvents combatEvents, IGameAuthority authority)
     {
         this.combatEvents = combatEvents;
+        this.authority = authority;
     }
 
     public int ApplyDamage(DamageReceiver target, int amount, GameObject source = null)
     {
-        if (target == null || amount <= 0)
+        if (target == null || amount <= 0 || !authority.IsAuthoritative)
         {
             return 0;
         }

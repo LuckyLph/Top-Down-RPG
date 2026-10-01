@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -94,6 +95,8 @@ public class DisableOnDeath : MonoBehaviour
                 behaviour == this ||
                 behaviour is Health ||
                 behaviour is DamageReceiver ||
+                behaviour is NetworkObject ||
+                behaviour is NetworkBehaviour ||
                 !behaviour.enabled)
             {
                 continue;

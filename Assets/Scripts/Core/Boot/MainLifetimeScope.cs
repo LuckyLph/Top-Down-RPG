@@ -40,6 +40,8 @@ public class MainLifetimeScope : LifetimeScope
         else
         {
             builder.Register<NetworkSession>(Lifetime.Singleton)
+                .As<IGameAuthority>()
+                .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();

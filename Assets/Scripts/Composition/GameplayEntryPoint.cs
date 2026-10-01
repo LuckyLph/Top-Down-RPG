@@ -4,25 +4,38 @@ using VContainer.Unity;
 public sealed class GameplayEntryPoint : IStartable, IDisposable
 {
     private readonly CameraFollow2D cameraFollow;
-    private readonly LocalPlayer player;
+    private readonly LocalPlayerTracker localPlayer;
 
-    public GameplayEntryPoint(CameraFollow2D cameraFollow, LocalPlayer player)
+    public GameplayEntryPoint(CameraFollow2D cameraFollow, LocalPlayerTracker localPlayer)
     {
         this.cameraFollow = cameraFollow;
-        this.player = player;
+        this.localPlayer = localPlayer;
     }
 
     public void Start()
     {
-        cameraFollow.SetTarget(player.Transform);
-        cameraFollow.SnapToTarget();
+        localPlayer.Changed += Follow;
+        Follow(localPlayer.Current);
     }
 
     public void Dispose()
     {
+        localPlayer.Changed -= Follow;
+
         if (cameraFollow != null)
         {
             cameraFollow.SetTarget(null);
         }
+    }
+
+    private void Follow(LocalPlayer player)
+    {
+        if (player == null)
+        {
+            return;
+        }
+
+        cameraFollow.SetTarget(player.Transform);
+        cameraFollow.SnapToTarget();
     }
 }

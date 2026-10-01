@@ -37,7 +37,7 @@ public class SceneFlowPlayModeTests
         Assert.That(areaScope, Is.InstanceOf<AreaLifetimeScope>());
         Assert.That(areaScope.Parent, Is.SameAs(gameplayScope), "GameFlow should parent the area scope to Gameplay.");
 
-        LocalPlayer localPlayer = gameplayScope.Container.Resolve<LocalPlayer>();
+        LocalPlayer localPlayer = gameplayScope.Container.Resolve<LocalPlayerTracker>().Current;
         Assert.That(localPlayer.Controller, Is.SameAs(player));
         Assert.That(gameplayScope.Container.Resolve<IPlayerRegistry>().Players, Is.EquivalentTo(new[] { localPlayer.Handle }));
     }

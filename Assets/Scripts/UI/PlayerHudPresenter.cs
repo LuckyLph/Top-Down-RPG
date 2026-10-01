@@ -3,24 +3,41 @@ using VContainer.Unity;
 
 public sealed class PlayerHudPresenter : IStartable, IDisposable
 {
-    private readonly PlayerHandle player;
-    private readonly PlayerWeaponController weaponController;
+    private readonly LocalPlayerTracker localPlayer;
     private readonly PlayerHudView view;
+    private Health health;
+    private PlayerWeaponController weaponController;
 
-    public PlayerHudPresenter(LocalPlayer localPlayer, PlayerHudView view)
+    public PlayerHudPresenter(LocalPlayerTracker localPlayer, PlayerHudView view)
     {
-        player = localPlayer.Handle;
-        weaponController = localPlayer.Weapon;
+        this.localPlayer = localPlayer;
         this.view = view;
     }
 
     public void Start()
     {
-        if (player.Health != null)
+        localPlayer.Changed += Bind;
+        Bind(localPlayer.Current);
+    }
+
+    public void Dispose()
+    {
+        localPlayer.Changed -= Bind;
+        Unbind();
+    }
+
+    private void Bind(LocalPlayer player)
+    {
+        Unbind();
+
+        health = player != null ? player.Handle.Health : null;
+        weaponController = player != null ? player.Weapon : null;
+
+        if (health != null)
         {
-            player.Health.Damaged += HandleDamaged;
-            player.Health.Died += HandleDied;
-            player.Health.Restored += HandleRestored;
+            health.Damaged += HandleDamaged;
+            health.Died += HandleDied;
+            health.Restored += HandleRestored;
         }
 
         if (weaponController != null)
@@ -32,19 +49,22 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
         HandleEquippedWeaponChanged(weaponController != null ? weaponController.CurrentWeapon : null);
     }
 
-    public void Dispose()
+    private void Unbind()
     {
-        if (player.Health != null)
+        if (health != null)
         {
-            player.Health.Damaged -= HandleDamaged;
-            player.Health.Died -= HandleDied;
-            player.Health.Restored -= HandleRestored;
+            health.Damaged -= HandleDamaged;
+            health.Died -= HandleDied;
+            health.Restored -= HandleRestored;
         }
 
         if (weaponController != null)
         {
             weaponController.EquippedWeaponChanged -= HandleEquippedWeaponChanged;
         }
+
+        health = null;
+        weaponController = null;
     }
 
     private void HandleDamaged(Health.DamageEvent _)
@@ -69,12 +89,12 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
 
     private void RefreshHealth()
     {
-        if (player.Health == null)
+        if (health == null)
         {
             view.ClearHealth();
             return;
         }
 
-        view.SetHealth(player.Health.CurrentHealth, player.Health.MaxHealth);
+        view.SetHealth(health.CurrentHealth, health.MaxHealth);
     }
 }

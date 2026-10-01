@@ -20,7 +20,7 @@ public class StressTestSpawner : MonoBehaviour
     private readonly List<MobController> mobs = new();
     private IObjectResolver resolver;
     private NavigationGrid2D navigationGrid;
-    private LocalPlayer player;
+    private LocalPlayerTracker localPlayer;
     private Random random;
     private Transform mobRoot;
     private int spawnedTotal;
@@ -46,11 +46,11 @@ public class StressTestSpawner : MonoBehaviour
     public int InitialMobCount => initialNearSpawn + initialAcrossMap;
 
     [Inject]
-    public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, LocalPlayer localPlayer)
+    public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, LocalPlayerTracker localPlayerTracker)
     {
         resolver = objectResolver;
         navigationGrid = grid;
-        player = localPlayer;
+        localPlayer = localPlayerTracker;
     }
 
     private void Start()
@@ -152,6 +152,7 @@ public class StressTestSpawner : MonoBehaviour
 
     private Vector2 PlayerPosition()
     {
+        LocalPlayer player = localPlayer != null ? localPlayer.Current : null;
         return player != null && player.Transform != null ? player.Transform.position : transform.position;
     }
 

@@ -160,6 +160,56 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void TryAttack_RaisesAttacked_ButRemoteAttacksDoNot()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<BoxCollider2D>();
+        root.AddComponent<Rigidbody2D>();
+        PlayerController playerController = root.AddComponent<PlayerController>();
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+        weaponController.Construct(CreateSpawner(), new ManualClock());
+        weaponController.Equip(CreateTestWeapon("Sword"));
+        playerController.Face(Vector2.up);
+        Vector2? attacked = null;
+        weaponController.Attacked += direction => attacked = direction;
+
+        weaponController.PlayRemoteAttack(Vector2.left);
+        Assert.That(attacked, Is.Null, "Replaying another player's attack must not be sent back out.");
+        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>().Direction.x, Is.LessThan(-0.9f));
+
+        Assert.That(weaponController.TryAttack(), Is.True);
+        Assert.That(attacked, Is.EqualTo(Vector2.up));
+    }
+
+    [Test]
+    public void HudPresenter_FollowsTheLocalPlayerWhenItChanges()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<Rigidbody2D>();
+        root.AddComponent<PlayerController>();
+        Health firstHealth = root.AddComponent<Health>();
+        root.AddComponent<PlayerWeaponController>();
+        GameObject second = new("SecondPlayer");
+        second.transform.SetParent(root.transform);
+        second.AddComponent<Rigidbody2D>();
+        PlayerController secondController = second.AddComponent<PlayerController>();
+        Health secondHealth = second.AddComponent<Health>();
+        second.AddComponent<PlayerWeaponController>();
+
+        HudElements hud = CreatePlayerHudCanvas(root.GetComponent<PlayerWeaponController>());
+        LocalPlayerTracker localPlayer = new();
+        hudPresenter.Dispose();
+        hudPresenter = new PlayerHudPresenter(localPlayer, Object.FindAnyObjectByType<PlayerHudView>());
+        hudPresenter.Start();
+
+        localPlayer.Assign(new LocalPlayer(secondController));
+        secondHealth.ApplyDamage(4);
+        firstHealth.ApplyDamage(1);
+
+        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {secondHealth.CurrentHealth}"));
+    }
+
+    [Test]
     public void PlayerController_WithoutCommandSource_StaysIdle()
     {
         root = new GameObject("PlayerRoot");
@@ -395,7 +445,7 @@ public class PlayerWeaponSystemTests
 
     private static SlashSpawner CreateSpawner()
     {
-        return new SlashSpawner(new ContainerBuilder().Build(), new DamageService(new CombatEvents()));
+        return new SlashSpawner(new ContainerBuilder().Build(), new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
     }
 
     private static PlayerWeapon CreateTestWeapon(
@@ -511,8 +561,9 @@ public class PlayerWeaponSystemTests
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
         view.ConfigureReferences(healthFill, healthText, weaponIcon);
 
-        LocalPlayer player = new(weaponController.GetComponent<PlayerController>());
-        hudPresenter = new PlayerHudPresenter(player, view);
+        LocalPlayerTracker localPlayer = new();
+        localPlayer.Assign(new LocalPlayer(weaponController.GetComponent<PlayerController>()));
+        hudPresenter = new PlayerHudPresenter(localPlayer, view);
         hudPresenter.Start();
         return new HudElements(healthFill, healthText, weaponIcon);
     }

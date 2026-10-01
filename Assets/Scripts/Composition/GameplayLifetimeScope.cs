@@ -26,13 +26,14 @@ public class GameplayLifetimeScope : LifetimeScope
         }
 
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
+        builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
+        builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
             .WithParameter(playerPrefab)
             .WithParameter(gameObject.scene);
-        builder.Register(resolver => resolver.Resolve<PlayerSpawner>().SpawnLocalPlayer(), Lifetime.Singleton);
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
@@ -42,11 +43,10 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
 
+        builder.RegisterEntryPoint<GameplayPlayers>();
         builder.RegisterEntryPoint<DamagePopupPresenter>();
         builder.RegisterEntryPoint<GameplayEntryPoint>();
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
-
-        builder.RegisterBuildCallback(resolver => resolver.Resolve<LocalPlayer>());
     }
 }

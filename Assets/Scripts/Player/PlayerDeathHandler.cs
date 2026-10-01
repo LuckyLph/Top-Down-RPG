@@ -7,15 +7,22 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
 {
     private readonly IPlayerRegistry players;
     private readonly PlayerRespawner respawner;
+    private readonly IGameAuthority authority;
     private readonly GameFlow gameFlow;
     private readonly GameplaySettings settings;
     private readonly CancellationTokenSource disposeCancellation = new();
     private bool restartPending;
 
-    public PlayerDeathHandler(IPlayerRegistry players, PlayerRespawner respawner, GameFlow gameFlow, GameplaySettings settings)
+    public PlayerDeathHandler(
+        IPlayerRegistry players,
+        PlayerRespawner respawner,
+        IGameAuthority authority,
+        GameFlow gameFlow,
+        GameplaySettings settings)
     {
         this.players = players;
         this.respawner = respawner;
+        this.authority = authority;
         this.gameFlow = gameFlow;
         this.settings = settings;
     }
@@ -69,7 +76,7 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
 
     private void HandleDied(Health deadHealth)
     {
-        if (RestartIfPartyWiped())
+        if (!authority.IsAuthoritative || RestartIfPartyWiped())
         {
             return;
         }
@@ -83,7 +90,7 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
 
     private bool RestartIfPartyWiped()
     {
-        if (restartPending)
+        if (restartPending || !authority.IsAuthoritative)
         {
             return true;
         }

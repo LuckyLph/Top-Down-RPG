@@ -83,6 +83,12 @@ public class Health : MonoBehaviour
         return appliedDamage;
     }
 
+    public void SyncTo(int value)
+    {
+        InitializeIfNeeded();
+        currentHealth = Mathf.Clamp(value, 0, maxHealth);
+    }
+
     public void Restore()
     {
         InitializeIfNeeded();

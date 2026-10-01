@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using VContainer;
 
@@ -25,17 +26,23 @@ public class MobMotor2D : MonoBehaviour
     private Vector2 steeringVelocity;
     private Vector2 lastMoveDirection = Vector2.down;
     private bool isAttackAnimationActive;
+    private bool isMoving;
+    private bool remoteDriven;
+    private bool remoteMoving;
     private float attackAnimationEndTime;
     private bool supportsAttackAnimation;
     private Animator resolvedAnimator;
     private RuntimeAnimatorController resolvedController;
 
+    public event Action<Vector2> AttackAnimationPlayed;
+
     public Vector2 Position => rb != null ? rb.position : (Vector2)transform.position;
     public float MoveSpeed => moveSpeed;
+    public bool IsMoving => isMoving;
+    public Vector2 FacingDirection => lastMoveDirection;
 
     internal bool SupportsAttackAnimation => supportsAttackAnimation;
     internal bool IsAttackAnimationActive => isAttackAnimationActive;
-    internal Vector2 LastMoveDirection => lastMoveDirection;
 
     private void Awake()
     {
@@ -133,6 +140,28 @@ public class MobMotor2D : MonoBehaviour
         attackAnimationEndTime = clock.Time + attackAnimationDuration;
         isAttackAnimationActive = true;
         ApplyAttackAnimation(direction);
+        AttackAnimationPlayed?.Invoke(lastMoveDirection);
+    }
+
+    public void ShowRemoteMovement(bool moving, Vector2 facing)
+    {
+        ResolveAnimator();
+        remoteDriven = true;
+        remoteMoving = moving;
+        if (facing.sqrMagnitude > 0.0001f)
+        {
+            lastMoveDirection = facing.normalized;
+        }
+
+        if (useHorizontalFlip && spriteRenderer != null && Mathf.Abs(lastMoveDirection.x) > 0.01f)
+        {
+            spriteRenderer.flipX = lastMoveDirection.x < 0f;
+        }
+
+        if (!isAttackAnimationActive)
+        {
+            UpdateAnimator(Vector2.zero);
+        }
     }
 
     public void FixedTick()
@@ -181,11 +210,18 @@ public class MobMotor2D : MonoBehaviour
 
     private void UpdateAnimator(Vector2 velocity)
     {
-        bool intendsToMove = desiredVelocity.sqrMagnitude > 0.0001f;
-        bool isMoving = intendsToMove && velocity.sqrMagnitude > 0.0001f;
-        if (intendsToMove)
+        if (remoteDriven)
         {
-            lastMoveDirection = desiredVelocity.normalized;
+            isMoving = remoteMoving;
+        }
+        else
+        {
+            bool intendsToMove = desiredVelocity.sqrMagnitude > 0.0001f;
+            isMoving = intendsToMove && velocity.sqrMagnitude > 0.0001f;
+            if (intendsToMove)
+            {
+                lastMoveDirection = desiredVelocity.normalized;
+            }
         }
 
         if (!CanDriveAnimator())

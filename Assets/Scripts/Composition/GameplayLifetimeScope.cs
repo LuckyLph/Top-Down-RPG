@@ -43,10 +43,12 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
 
-        builder.RegisterEntryPoint<GameplayPlayers>();
+        builder.RegisterEntryPoint<GameplayPlayers>().AsSelf();
         builder.RegisterEntryPoint<DamagePopupPresenter>();
         builder.RegisterEntryPoint<GameplayEntryPoint>();
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
+
+        builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());
     }
 }

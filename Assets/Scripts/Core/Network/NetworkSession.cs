@@ -8,7 +8,7 @@ using UnityEngine;
 using VContainer;
 using Object = UnityEngine.Object;
 
-public sealed class NetworkSession : IGameAuthority, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDisposable
 {
     public const string ClientReadyMessage = "TopDownRPG.ClientReady";
 
@@ -18,11 +18,16 @@ public sealed class NetworkSession : IGameAuthority, IDisposable
     private readonly HashSet<ulong> readyClients = new();
     private readonly NetworkObject.VisibilityDelegate visibleToReadyClients;
     private bool shutdownRequested;
+    private bool quitting;
 
     public NetworkSession(NetworkManager networkManagerPrefab, NetworkSettings settings)
     {
         this.settings = settings;
         visibleToReadyClients = IsClientReady;
+        Application.quitting += HandleQuitting;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+#endif
         networkManager = Object.Instantiate(networkManagerPrefab);
         networkManager.name = networkManagerPrefab.name;
         transport = networkManager.GetComponent<UnityTransport>();
@@ -134,6 +139,12 @@ public sealed class NetworkSession : IGameAuthority, IDisposable
         networkManager.CustomMessagingManager.SendNamedMessage(ClientReadyMessage, NetworkManager.ServerClientId, writer);
     }
 
+    public void Spawn(NetworkObject instance)
+    {
+        instance.CheckObjectVisibility = visibleToReadyClients;
+        instance.Spawn(destroyWithScene: true);
+    }
+
     public void SpawnPlayerObject(NetworkObject instance, ulong ownerClientId)
     {
         instance.CheckObjectVisibility = visibleToReadyClients;
@@ -155,6 +166,10 @@ public sealed class NetworkSession : IGameAuthority, IDisposable
 
     public void Dispose()
     {
+        Application.quitting -= HandleQuitting;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+#endif
         if (networkManager == null)
         {
             return;
@@ -165,6 +180,21 @@ public sealed class NetworkSession : IGameAuthority, IDisposable
         Shutdown();
         Object.Destroy(networkManager.gameObject);
     }
+
+    private void HandleQuitting()
+    {
+        quitting = true;
+    }
+
+#if UNITY_EDITOR
+    private void HandlePlayModeStateChanged(UnityEditor.PlayModeStateChange change)
+    {
+        if (change == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+        {
+            quitting = true;
+        }
+    }
+#endif
 
     private void HandleClientReadyMessage(ulong senderClientId, FastBufferReader payload)
     {
@@ -191,7 +221,7 @@ public sealed class NetworkSession : IGameAuthority, IDisposable
 
     private void HandleClientStopped(bool wasHost)
     {
-        if (shutdownRequested)
+        if (shutdownRequested || quitting)
         {
             return;
         }

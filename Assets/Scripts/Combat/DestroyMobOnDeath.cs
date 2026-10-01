@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 using VContainer;
 
@@ -10,6 +11,7 @@ public class DestroyMobOnDeath : MonoBehaviour
 
     private Health health;
     private EffectSpawner effectSpawner;
+    private IGameAuthority authority;
     private bool handledDeath;
 
     private void Awake()
@@ -23,9 +25,10 @@ public class DestroyMobOnDeath : MonoBehaviour
     }
 
     [Inject]
-    public void Construct(EffectSpawner spawner)
+    public void Construct(EffectSpawner spawner, IGameAuthority gameAuthority)
     {
         effectSpawner = spawner;
+        authority = gameAuthority;
     }
 
     private void OnEnable()
@@ -56,7 +59,28 @@ public class DestroyMobOnDeath : MonoBehaviour
         handledDeath = true;
         DeathPhysics.Disable(gameObject);
         SpawnDeathAnimation();
+
+        if (authority != null && !authority.IsAuthoritative)
+        {
+            HideUntilDespawned();
+            return;
+        }
+
+        if (TryGetComponent(out NetworkObject networkObject) && networkObject.IsSpawned)
+        {
+            networkObject.Despawn();
+            return;
+        }
+
         Destroy(gameObject);
+    }
+
+    private void HideUntilDespawned()
+    {
+        foreach (Renderer bodyRenderer in GetComponentsInChildren<Renderer>())
+        {
+            bodyRenderer.enabled = false;
+        }
     }
 
     private void SpawnDeathAnimation()

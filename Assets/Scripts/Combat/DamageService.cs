@@ -24,6 +24,21 @@ public sealed class DamageService
             return 0;
         }
 
+        return ApplyAndPublish(target, health, amount, source);
+    }
+
+    public int ApplyReplicatedDamage(DamageReceiver target, int amount)
+    {
+        if (target == null || amount <= 0 || target.Health == null)
+        {
+            return 0;
+        }
+
+        return ApplyAndPublish(target, target.Health, amount, null);
+    }
+
+    private int ApplyAndPublish(DamageReceiver target, Health health, int amount, GameObject source)
+    {
         int appliedDamage = health.ApplyDamage(amount, source);
         if (appliedDamage > 0)
         {

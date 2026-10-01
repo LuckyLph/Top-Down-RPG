@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.Collections;
 using Unity.Multiplayer.Tools.NetworkSimulator.Runtime;
@@ -26,8 +27,15 @@ public sealed class InProcessClient : IDisposable
     public LocalPlayerTracker LocalPlayer { get; }
     public TestInput Input { get; }
 
+    public T Resolve<T>()
+    {
+        return container.Resolve<T>();
+    }
+
     public static InProcessClient Start(NetworkSession session, NetworkObject playerPrefab)
     {
+        NavigationGrid2D navigationGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
+
         TestInput input = new();
         PlayerRegistry players = new();
         LocalPlayerTracker localPlayer = new();
@@ -44,12 +52,29 @@ public sealed class InProcessClient : IDisposable
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
+        builder.Register<EffectSpawner>(Lifetime.Singleton);
+        builder.RegisterInstance<IRandom>(new SystemRandom(1));
+        if (navigationGrid != null)
+        {
+            builder.RegisterInstance(navigationGrid);
+        }
+
         IObjectResolver container = builder.Build();
 
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
         GameObject clientObject = manager.gameObject;
         clientObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
         manager.PrefabHandler.AddHandler(playerPrefab, new InjectingNetworkPrefabHandler(playerPrefab, container));
+        HashSet<NetworkObject> mobPrefabs = new();
+        foreach (MobSpawnPoint spawnPoint in Object.FindObjectsByType<MobSpawnPoint>())
+        {
+            NetworkObject mobPrefab = spawnPoint.MobPrefab != null ? spawnPoint.MobPrefab.GetComponent<NetworkObject>() : null;
+            if (mobPrefab != null && mobPrefabs.Add(mobPrefab))
+            {
+                manager.PrefabHandler.AddHandler(mobPrefab, new InjectingNetworkPrefabHandler(mobPrefab, container));
+            }
+        }
+
         Assert.That(manager.StartClient(), Is.True, "The in-process client should start.");
         return new InProcessClient(manager, container, players, localPlayer, input);
     }

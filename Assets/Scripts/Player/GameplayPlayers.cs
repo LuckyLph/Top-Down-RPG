@@ -17,6 +17,17 @@ public sealed class GameplayPlayers : IStartable, IDisposable
         this.resolver = resolver;
     }
 
+    public void RegisterNetworkPrefabs()
+    {
+        if (!session.IsActive || registeredPrefab)
+        {
+            return;
+        }
+
+        session.RegisterPrefab(spawner.PlayerNetworkPrefab, resolver);
+        registeredPrefab = true;
+    }
+
     public void Start()
     {
         if (!session.IsActive)
@@ -25,12 +36,8 @@ public sealed class GameplayPlayers : IStartable, IDisposable
             return;
         }
 
-        session.RegisterPrefab(spawner.PlayerNetworkPrefab, resolver);
-        registeredPrefab = true;
-
         if (!session.IsServer)
         {
-            session.NotifyReady();
             return;
         }
 

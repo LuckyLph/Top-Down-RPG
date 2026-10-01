@@ -83,6 +83,44 @@ public class CombatComponentTests
     }
 
     [Test]
+    public void Health_SyncTo_SetsAndClampsWithoutRaisingEvents()
+    {
+        root = new GameObject("HealthSyncTest");
+        Health health = root.AddComponent<Health>();
+        int events = 0;
+        health.Damaged += _ => events++;
+        health.Died += _ => events++;
+
+        health.SyncTo(4);
+        Assert.That(health.CurrentHealth, Is.EqualTo(4));
+        health.SyncTo(-3);
+        Assert.That(health.CurrentHealth, Is.EqualTo(0));
+        health.SyncTo(health.MaxHealth + 5);
+        Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
+        Assert.That(events, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void DamageService_ReplicatedDamage_AppliesAndPublishesWithoutAuthority()
+    {
+        root = new GameObject("ReplicatedDamageTest");
+        Health health = root.AddComponent<Health>();
+        DamageReceiver receiver = root.AddComponent<DamageReceiver>();
+        CombatEvents combatEvents = new();
+        DamageReport? published = null;
+        combatEvents.DamageApplied += report => published = report;
+        DamageService damageService = new(combatEvents, new FixedGameAuthority(false));
+
+        Assert.That(damageService.ApplyDamage(receiver, 3), Is.EqualTo(0), "A client never decides damage itself.");
+        Assert.That(damageService.ApplyReplicatedDamage(receiver, 3), Is.EqualTo(3), "Damage the host already decided is mirrored.");
+
+        Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth - 3));
+        Assert.That(published.HasValue, Is.True);
+        Assert.That(published.Value.Amount, Is.EqualTo(3));
+        Assert.That(published.Value.PopupWorldPosition, Is.EqualTo(receiver.PopupWorldPosition));
+    }
+
+    [Test]
     public void DamageService_IgnoresInvalidDamageMissingTargetsAndHitsAfterDeath()
     {
         root = new GameObject("DamageReceiverTest");

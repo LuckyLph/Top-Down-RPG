@@ -13,6 +13,7 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
 
     private PlayerController controller;
     private PlayerWeaponController weapon;
+    private Health health;
     private Rigidbody2D body;
     private PlayerBinder binder;
     private PlayerHandle handle;
@@ -21,6 +22,7 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
     {
         controller = GetComponent<PlayerController>();
         weapon = GetComponent<PlayerWeaponController>();
+        health = GetComponent<Health>();
         body = GetComponent<Rigidbody2D>();
     }
 
@@ -46,6 +48,11 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
                 weapon.Attacked += HandleLocalAttack;
             }
 
+            if (health != null)
+            {
+                health.Restored += HandleLocalRestored;
+            }
+
             return;
         }
 
@@ -66,6 +73,11 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
         if (weapon != null)
         {
             weapon.Attacked -= HandleLocalAttack;
+        }
+
+        if (health != null)
+        {
+            health.Restored -= HandleLocalRestored;
         }
 
         facing.OnValueChanged -= HandleFacingChanged;
@@ -106,6 +118,11 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
     private void HandleFacingChanged(Vector2 previous, Vector2 current)
     {
         controller.Face(current);
+    }
+
+    private void HandleLocalRestored(Health _)
+    {
+        binder.PlaceAtActiveSpawn(handle);
     }
 
     private void HandleLocalAttack(Vector2 direction)

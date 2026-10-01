@@ -27,7 +27,7 @@ public class MobMotor2DTests
         Assert.That(motor.SupportsAttackAnimation, Is.True);
         Assert.That(motor.IsAttackAnimationActive, Is.True);
 
-        Vector2 lastMoveDirection = motor.LastMoveDirection;
+        Vector2 lastMoveDirection = motor.FacingDirection;
         Assert.That(lastMoveDirection.x, Is.GreaterThan(0.9f));
         Assert.That(lastMoveDirection.y, Is.EqualTo(0f).Within(0.001f));
     }
@@ -46,6 +46,37 @@ public class MobMotor2DTests
         clock.Advance(10f);
         motor.UpdateAttackAnimation();
         Assert.That(motor.IsAttackAnimationActive, Is.False);
+    }
+
+    [Test]
+    public void ShowRemoteMovement_DrivesMovingAndFacing_AndSurvivesTheEndOfAnAttack()
+    {
+        MobMotor2D motor = CreateMotorWithWeaselAnimator();
+        ManualClock clock = new();
+        motor.Construct(clock);
+
+        motor.ShowRemoteMovement(true, new Vector2(0f, 2f));
+        Assert.That(motor.IsMoving, Is.True);
+        Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.up));
+
+        motor.PlayAttackAnimation(Vector2.left);
+        clock.Advance(10f);
+        motor.UpdateAttackAnimation();
+
+        Assert.That(motor.IsMoving, Is.True, "A replicated mob keeps the host's movement state after its attack animation.");
+        Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.left));
+    }
+
+    [Test]
+    public void PlayAttackAnimation_RaisesAttackAnimationPlayed_WithTheFacing()
+    {
+        MobMotor2D motor = CreateMotorWithWeaselAnimator();
+        Vector2? played = null;
+        motor.AttackAnimationPlayed += direction => played = direction;
+
+        motor.PlayAttackAnimation(new Vector2(3f, 0f));
+
+        Assert.That(played, Is.EqualTo(Vector2.right));
     }
 
     [Test]
@@ -83,7 +114,7 @@ public class MobMotor2DTests
         motor.FixedTick();
 
         Assert.That(root.GetComponent<Rigidbody2D>().linearVelocity.x, Is.LessThan(0f), "The drift itself should still apply.");
-        Assert.That(motor.LastMoveDirection.x, Is.GreaterThan(0.9f), "Facing should stay on the target, not turn to face the drift.");
+        Assert.That(motor.FacingDirection.x, Is.GreaterThan(0.9f), "Facing should stay on the target, not turn to face the drift.");
     }
 
     [Test]
@@ -96,7 +127,7 @@ public class MobMotor2DTests
         motor.SetSteeringVelocity(Vector2.left * 1.5f);
         motor.FixedTick();
 
-        Assert.That(motor.LastMoveDirection.y, Is.GreaterThan(0.99f));
+        Assert.That(motor.FacingDirection.y, Is.GreaterThan(0.99f));
     }
 
     private MobMotor2D CreateMotorWithWeaselAnimator()

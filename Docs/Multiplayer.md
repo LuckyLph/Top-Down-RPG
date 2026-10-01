@@ -72,17 +72,17 @@ Until Phase 3, a client that joins only connects: it loads the starting area loc
 - [x] Per-player HUD and camera bound to the local player only, through `LocalPlayerTracker`.
 - [x] Ready handshake: a joining client reports ready once its Gameplay scope can receive spawns; until then the host hides spawned objects from it, then shows them and spawns its player.
 
-Known gaps until Phase 4 and 5 (expected, not bugs):
-- Each machine still runs its own mobs. On a client nothing deals damage, so its local mobs can neither hurt nor be hurt; the host's mobs hit the host's copy of a client's player, but that health is not sent to the client.
-- The host can't move a client's player (the owner moves it), so respawning a client's player only restores health on the host's copy.
-- A party wipe restarts only the host's scenes; clients keep theirs and receive fresh player spawns.
+Known gaps until Phase 5 (expected, not bugs):
+- A party wipe restarts only the host's scenes; clients keep theirs and receive fresh player and mob spawns.
 - A teleport by the owner is interpolated on other machines instead of snapping.
+- Mobs spawned by the dev stress-test spawner stay local to the host.
 
 ### Phase 4: mobs
 
-- [ ] Mob AI ticks only on the host; clients show replicated position and state. Mob transforms use the same measured smoothing as players (`LegacyLerp`, unreliable deltas); rerun the smoothness benchmark once mobs replicate.
-- [ ] `Health` HP replicated; damage events reach clients and republish to `CombatEvents` so popups and HUD are unchanged.
-- [ ] Mob death despawns on the host; the death animation plays locally on each client.
+- [x] Mob AI ticks only on the host; clients show replicated position and state (`MobNetworkSync`). Mob transforms use the same measured smoothing as players (`LegacyLerp`, unreliable deltas). The player smoothness regression test passes with mobs replicating alongside; there is no mob-specific benchmark yet.
+- [x] `Health` HP replicated for players and mobs (`NetworkHealth`); hits reach clients through `DamageService.ApplyReplicatedDamage`, so popups and HUD are unchanged. The host's respawns reach the owner, which places itself at its spawn slot.
+- [x] Mob death despawns on the host; the death animation plays locally on each machine.
+- [x] Clients report ready only after their area has registered its mob prefabs, so late spawns always arrive injected.
 
 ### Phase 5: areas and joining
 

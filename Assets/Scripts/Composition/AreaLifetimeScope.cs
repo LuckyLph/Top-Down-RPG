@@ -23,6 +23,7 @@ public class AreaLifetimeScope : LifetimeScope
         builder.Register<AreaEntry>(Lifetime.Singleton)
             .As<IAreaEntry>()
             .WithParameter(SceneQuery.FindAll<SpawnPoint>(gameObject.scene));
+        builder.RegisterEntryPoint<AreaClientReady>();
 
         MobSpawnPoint[] mobSpawnPoints = SceneQuery.FindAll<MobSpawnPoint>(gameObject.scene);
         NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
@@ -37,9 +38,10 @@ public class AreaLifetimeScope : LifetimeScope
         }
 
         builder.RegisterComponent(navigationGrid);
-        builder.Register<AreaMobSpawner>(Lifetime.Singleton)
+        builder.RegisterEntryPoint<AreaMobSpawner>()
             .WithParameter(mobSpawnPoints)
-            .WithParameter(gameObject.scene);
-        builder.RegisterBuildCallback(resolver => resolver.Resolve<AreaMobSpawner>().SpawnAll());
+            .WithParameter(gameObject.scene)
+            .AsSelf();
+        builder.RegisterBuildCallback(resolver => resolver.Resolve<AreaMobSpawner>().RegisterNetworkPrefabs());
     }
 }

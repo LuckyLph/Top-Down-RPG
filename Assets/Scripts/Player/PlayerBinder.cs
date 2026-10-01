@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using UnityEngine;
+
 public sealed class PlayerBinder
 {
     private readonly PlayerRegistry players;
@@ -23,15 +26,28 @@ public sealed class PlayerBinder
         controller.SetSimulatesMovement(true);
         LocalPlayer local = new(controller);
         players.Add(local.Handle);
-
-        SpawnPoint spawnPoint = activeSpawnPoint.Current;
-        if (spawnPoint != null)
-        {
-            controller.Teleport(spawnPoint.GetSlotPosition(players.Players.Count - 1));
-        }
-
+        PlaceAtActiveSpawn(local.Handle);
         localPlayer.Assign(local);
         return local.Handle;
+    }
+
+    public void PlaceAtActiveSpawn(PlayerHandle handle)
+    {
+        SpawnPoint spawnPoint = activeSpawnPoint.Current;
+        if (spawnPoint == null || handle == null || !handle.Transform.TryGetComponent(out PlayerController controller))
+        {
+            return;
+        }
+
+        IReadOnlyList<PlayerHandle> party = players.Players;
+        for (int i = 0; i < party.Count; i++)
+        {
+            if (party[i] == handle)
+            {
+                controller.Teleport(spawnPoint.GetSlotPosition(i));
+                return;
+            }
+        }
     }
 
     public PlayerHandle BindRemote(PlayerController controller, IPlayerCommandSource commands)

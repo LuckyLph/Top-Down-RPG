@@ -5,7 +5,8 @@
     "VContainer",
     "TopDownRPG.Core",
     "TopDownRPG.DevTools",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Unity.Netcode.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer;
@@ -10,6 +11,8 @@ public class MainLifetimeScope : LifetimeScope
     [SerializeField] private ScreenFader screenFader;
     [SerializeField] private CameraFollow2D cameraFollow;
     [SerializeField] private Camera mainCamera;
+    [SerializeField] private NetworkManager networkManagerPrefab;
+    [SerializeField] private NetworkSettings networkSettings;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -29,6 +32,18 @@ public class MainLifetimeScope : LifetimeScope
             .As<IPlayerInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>();
+
+        if (networkManagerPrefab == null || networkSettings == null)
+        {
+            Debug.LogError($"{name} needs a NetworkManager prefab and NetworkSettings; online play is unavailable.", this);
+        }
+        else
+        {
+            builder.Register<NetworkSession>(Lifetime.Singleton)
+                .WithParameter(networkManagerPrefab)
+                .WithParameter(networkSettings);
+            builder.RegisterEntryPoint<NetworkSessionLifecycle>();
+        }
 
         builder.RegisterEntryPoint<BootFlow>();
     }

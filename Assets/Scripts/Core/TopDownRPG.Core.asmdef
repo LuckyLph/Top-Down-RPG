@@ -2,7 +2,9 @@
   "name": "TopDownRPG.Core",
   "references": [
     "VContainer",
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -59,9 +59,11 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 
 ### Phase 2: networking foundation
 
-- [ ] Add NGO, Unity Transport and Multiplayer Play Mode.
-- [ ] `NetworkManager` in `Main`; host / join (direct IP) in the main menu; connection flow in Core.
-- [ ] VContainer integration: the host creates network prefabs with `resolver.Instantiate` then spawns them; clients get them through an `INetworkPrefabInstanceHandler` registered with `NetworkManager.PrefabHandler` that also calls `resolver.Instantiate`. The handler's `Instantiate` is not called on the host, only on clients.
+- [x] Add NGO 2.13.3, Unity Transport (pinned to 2.6.0, see [Architecture.md](Architecture.md#packages)) and Multiplayer Play Mode 2.0.2.
+- [x] `NetworkSession` in the Main scope owns the `NetworkManager` (spawned from a prefab rather than placed in `Main`, so it dies with the scope); Host Game / Join Game (direct IP) in the main menu; returning to the menu ends the session, and a lost connection returns a client to the menu.
+- [x] VContainer integration: `NetworkSession.RegisterPrefab` installs an `InjectingNetworkPrefabHandler` that creates client-side instances through `resolver.Instantiate`. The handler's `Instantiate` is not called on the host, so the host creates its instances with `resolver.Instantiate` and then spawns them (first used in Phase 3).
+
+Until Phase 3, a client that joins only connects: it loads the starting area locally with its own player and mobs, and nothing is replicated.
 
 ### Phase 3: players
 
@@ -91,6 +93,14 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 - EditMode: all new plain-class logic (registry, targeting, commands, respawn rules) with fakes, as today.
 - PlayMode: host and client in the same process for spawn, replication and damage flows.
 - Manual: Multiplayer Play Mode with 2 and 4 players, and a small online test area.
+
+### Running two players in the editor
+
+1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2 (up to Player 4).
+2. Press Play. Every player boots to the main menu.
+3. Click Host Game in the main editor, then Join Game in a virtual player (the address field defaults to `127.0.0.1`).
+
+Hosting listens on `0.0.0.0:7777`, so Windows may ask to allow the Unity editor through the firewall the first time.
 
 ## Open questions
 

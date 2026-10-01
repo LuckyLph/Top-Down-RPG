@@ -22,18 +22,21 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 | `com.unity.2d.aseprite`, `com.unity.2d.animation` | Sprite import and animation |
 | `com.unity.ugui` + TextMesh Pro | Menu, HUD, damage popups |
 | `com.unity.test-framework` | EditMode and PlayMode tests |
+| `com.unity.netcode.gameobjects` 2.13.3 | Netcode for GameObjects: `NetworkManager`, host/client sessions, network prefab handlers |
+| `com.unity.transport` 2.6.0 | `UnityTransport`. Pinned to the version Netcode declares: 2.7.x throws a Burst `NullReferenceException` from its `AnalyticsLayer` job every network update in this editor version. |
+| `com.unity.multiplayer.playmode` 2.0.2 | Multiplayer Play Mode (up to 3 extra virtual players in the editor) |
 | `com.coplaydev.unity-mcp` (git) | UnityMCP editor automation |
 
 ## Assemblies
 
 | Assembly | Folder | References | Notes |
 |---|---|---|---|
-| `TopDownRPG.Core` | `Assets/Scripts/Core` | VContainer, Unity.InputSystem | Boot, scene flow, input, clock, camera follow, screen fader. Must not reference Gameplay. |
+| `TopDownRPG.Core` | `Assets/Scripts/Core` | VContainer, Unity.InputSystem, Unity.Netcode.Runtime, Unity.Networking.Transport | Boot, scene flow, input, clock, randomness, network session, camera follow, screen fader. Must not reference Gameplay. |
 | `TopDownRPG.Gameplay` | `Assets/Scripts` (everything outside `Core` and `Dev`) | Core, VContainer, Unity.InputSystem, Unity.TextMeshPro | AI, navigation, combat, player, UI, effects, world, composition roots. |
 | `TopDownRPG.DevTools` | `Assets/Scripts/Dev` | Gameplay, Core, VContainer, skner.DualGrid, Unity.2D.Tilemap.Extras | `defineConstraints: UNITY_EDITOR \|\| DEVELOPMENT_BUILD`; not auto-referenced. |
 | `TopDownRPG.Editor` | `Assets/Editor` | Core, Gameplay, VContainer | Editor-only platform. |
-| `TopDownRPG.EditModeTests` | `Assets/Tests/Editor` | Gameplay, Core, VContainer, Unity.InputSystem, Unity.TextMeshPro | Editor-only test assembly. |
-| `TopDownRPG.PlayModeTests` | `Assets/Tests/PlayMode` | Gameplay, Core, DevTools, VContainer, Unity.TextMeshPro | Needs DevTools for the stress-scene test. |
+| `TopDownRPG.EditModeTests` | `Assets/Tests/Editor` | Gameplay, Core, VContainer, Unity.InputSystem, Unity.TextMeshPro, Unity.Netcode.Runtime | Editor-only test assembly. |
+| `TopDownRPG.PlayModeTests` | `Assets/Tests/PlayMode` | Gameplay, Core, DevTools, VContainer, Unity.TextMeshPro, Unity.Netcode.Runtime | Needs DevTools for the stress-scene test. |
 
 Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both test assemblies on top. Core and Gameplay each have an `AssemblyInfo.cs` ([Core](../Assets/Scripts/Core/AssemblyInfo.cs), [Gameplay](../Assets/Scripts/AssemblyInfo.cs)) granting `InternalsVisibleTo` to both test assemblies; `internal` members are test seams.
 
@@ -44,7 +47,7 @@ Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both tes
 | Scene | Role | Key contents |
 |---|---|---|
 | [Main.unity](../Assets/Scenes/Main.unity) | Persistent root, never unloaded. First scene in the build. | `MainLifetimeScope`, Main Camera (`CameraFollow2D`), `EventSystem`, `TransitionCanvas/Fade` (`ScreenFader`) |
-| [MainMenu.unity](../Assets/Scenes/MainMenu.unity) | Title screen, loaded additively. | `MenuLifetimeScope`, `MainMenuCanvas` with `MainMenuController`, New Game and Quit buttons |
+| [MainMenu.unity](../Assets/Scenes/MainMenu.unity) | Title screen, loaded additively. | `MenuLifetimeScope`, `MainMenuCanvas` with `MainMenuController`; `Buttons` holds New Game, Host Game, the join address field, Join Game, Quit and a status line |
 | [Gameplay.unity](../Assets/Scenes/Gameplay.unity) | Session scene, loaded additively for a play session. | `GameplayLifetimeScope` (references the `Player` prefab, spawned at runtime), `PlayerHudCanvas` prefab, `DamagePopupCanvas` (`DamagePopupLayer`) |
 | [Areas/Area_Clearing.unity](../Assets/Scenes/Areas/Area_Clearing.unity) | Starting area, loaded additively under Gameplay. | `AreaLifetimeScope`, `Grid` with DualGrid grass tilemap + render tilemap + `CollisionTilemap` (Obstacles layer), `NavigationGrid2D`, `NavigationTerrainSource2D`, `SpawnPoint_start`, `MobSpawn_Weasel` (`MobSpawnPoint` for the Weasel prefab), Global Light 2D |
 | [Dev/StressTest/Area_StressTest.unity](../Assets/Dev/StressTest/Area_StressTest.unity) | Dev-only area (not in the build list, no `SceneDefinition`). | Same area setup plus `StressTestMap`, `StressTestSpawner`, `StressTestOverlay`, `WallVisualTilemap` |
@@ -68,7 +71,7 @@ Main (MainLifetimeScope)
 2. `MainLifetimeScope` builds; its entry point [BootFlow](../Assets/Scripts/Core/Boot/BootFlow.cs) (`IAsyncStartable`) runs.
 3. Editor only: `BootFlow` consumes the boot request. If an area scene (known or any other scene, via `SceneDefinition.CreateTransient`) or Gameplay was open, it calls `GameFlow.StartNewGameAsync(area)`; if only MainMenu was open it shows the menu.
 4. Otherwise `GameFlow.ShowMainMenuAsync()`.
-5. Menu "New Game" -> `MainMenuController.StartNewGame()` -> `GameFlow.StartNewGameAsync()` (starting area + starting spawn id from `GameScenes`).
+5. Menu "New Game" -> `MainMenuController.StartNewGame()` -> `GameFlow.StartNewGameAsync()` (starting area + starting spawn id from `GameScenes`). "Host Game" starts hosting first; "Join Game" connects to the address in the field first (see Networking).
 
 ### GameFlow
 
@@ -97,10 +100,12 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `PlayerInputService` as `IPlayerInput` + self (gets the `InputActionAsset`) | singleton |
 | `GameplayInputGate` | entry point |
 | `BootFlow` | entry point |
+| `NetworkSession` (gets the inspector's `NetworkManager` prefab and `NetworkSettings`) | singleton; logs an error and is skipped if either is missing |
+| `NetworkSessionLifecycle` | entry point |
 
 ### MenuLifetimeScope ([MenuLifetimeScope.cs](../Assets/Scripts/Composition/MenuLifetimeScope.cs))
 
-- `MainMenuController` via `RegisterComponentInHierarchy` (injected with `GameFlow`).
+- `MainMenuController` via `RegisterComponentInHierarchy` (injected with `GameFlow` and `NetworkSession`).
 
 ### GameplayLifetimeScope ([GameplayLifetimeScope.cs](../Assets/Scripts/Composition/GameplayLifetimeScope.cs))
 
@@ -145,6 +150,21 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 `MeleeDamageDealer`, `MobMotor2D` and `PlayerWeaponController` default their clock to `UnityClock.Shared` when not injected.
 
+## Networking
+
+Netcode for GameObjects, host-and-play. See [Multiplayer.md](Multiplayer.md) for the plan; this section describes what exists. Nothing gameplay-related is replicated yet: joining connects the client and loads the same starting area locally.
+
+| Type | Role |
+|---|---|
+| [NetworkSettings](../Assets/Scripts/Core/Network/NetworkSettings.cs) | ScriptableObject (`Assets/Data/NetworkSettings.asset`): default join address (`127.0.0.1`), host listen address (`0.0.0.0`), port (7777), client connect timeout (10 s). |
+| [NetworkSession](../Assets/Scripts/Core/Network/NetworkSession.cs) | Main-scope singleton that owns the `NetworkManager`: instantiates it from `Assets/Prefabs/Network/NetworkManager.prefab` (`NetworkManager` + `UnityTransport`, scene management off, no player prefab) and destroys it on dispose, so it never outlives the Main scope despite Netcode moving it to `DontDestroyOnLoad`. `StartHost()`, `JoinAsync(address, timeout, token)` (connects, waits for the connection, shuts down and returns false on failure/timeout), `Shutdown()`, `RegisterPrefab`/`UnregisterPrefab`, `IsActive`/`IsHost`/`IsConnectedClient`, event `ConnectionLost` (local client stopped without `Shutdown` being called). Gameplay code never uses `NetworkManager.Singleton`. |
+| [InjectingNetworkPrefabHandler](../Assets/Scripts/Core/Network/InjectingNetworkPrefabHandler.cs) | `INetworkPrefabInstanceHandler` that creates network prefab instances through an `IObjectResolver` so their `[Inject]` methods run, and destroys them on despawn. Netcode only calls it on clients; the host must create its instances with `resolver.Instantiate` itself before spawning. |
+| [NetworkSessionLifecycle](../Assets/Scripts/Core/Network/NetworkSessionLifecycle.cs) | Main-scope entry point: shuts the session down whenever a transition ends in the menu, and returns to the menu (with a warning) when the connection is lost during a game. |
+
+- `Assets/DefaultNetworkPrefabs.asset` is Netcode's auto-maintained network prefab list, referenced by the NetworkManager prefab. It is empty until something gets a `NetworkObject`.
+- Scene management is disabled: `GameFlow` keeps loading scenes on every machine. Revisit in Phase 5 of the multiplayer plan.
+- Netcode sets `Application.runInBackground` while a `NetworkManager` exists.
+
 ## Input
 
 - [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `Move`, `AttackPressedThisFrame`, `GameplayEnabled`. The local device seam; gameplay reaches it only through `LocalPlayerCommandSource` (see Player).
@@ -171,7 +191,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Type | Role |
 |---|---|
 | [ScreenFader](../Assets/Scripts/Core/UI/ScreenFader.cs) | `CanvasGroup` fade used by `GameFlow` (unscaled time); blocks raycasts while visible; starts opaque. |
-| [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `StartNewGame` / `QuitGame`; selects the first button for gamepad/keyboard navigation. |
+| [MainMenuController](../Assets/Scripts/UI/MainMenuController.cs) | Button handlers `StartNewGame`, `HostGame` (start hosting, then a new game), `JoinGame` (join the address in `joinAddressField`, prefilled with the default; enters the game once connected, ignores repeat clicks while connecting) and `QuitGame`; writes progress and failures to `statusText`; selects the first button for gamepad/keyboard navigation. |
 | [PlayerHudView](../Assets/Scripts/UI/PlayerHudView.cs) | Passive view on `PlayerHudCanvas`: health fill + "HP n" text, weapon icon with tint when missing. |
 | [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; subscribes to the local player's `Health.Damaged`/`Died`/`Restored` and `PlayerWeaponController.EquippedWeaponChanged`, pushes into the view. |
 
@@ -354,6 +374,7 @@ Menu root: `Tools/TopDownRPG/`.
 | Type | Assets | Consumed by |
 |---|---|---|
 | `GameScenes` | `Assets/Data/Scenes/GameScenes.asset` | `MainLifetimeScope`, `GameFlow`, `BootFlow`, editor scene tools |
+| `NetworkSettings` | `Assets/Data/NetworkSettings.asset` | `MainLifetimeScope` -> `NetworkSession`, `MainMenuController` |
 | `SceneDefinition` | `Assets/Data/Scenes/Scene_*.asset` | `GameScenes`, `GameFlow`, `SceneLoader` |
 | `GameplaySettings` | `Assets/Data/GameplaySettings.asset` | `PlayerDeathHandler` (restart and respawn delays) |
 | `PlayerWeapon` | `Assets/Data/Weapons/Sword.asset` | `PlayerWeaponController`, `SlashSpawner`, `SwordSlashAttack`, HUD |
@@ -394,13 +415,16 @@ flowchart LR
         Health -- Died --> DestroyMobOnDeath --> EffectSpawner
     end
     MainMenuController -- StartNewGameAsync --> GameFlow
+    MainMenuController -- StartHost / JoinAsync --> NetworkSession
+    NetworkSessionLifecycle -- ConnectionLost / TransitionFinished --> NetworkSession
 ```
 
 Events summary:
 
 | Event | Publisher | Subscribers |
 |---|---|---|
-| `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate` |
+| `GameFlow.TransitionStarted` / `TransitionFinished` | `GameFlow` | `GameplayInputGate`, `NetworkSessionLifecycle` (finished only) |
+| `NetworkSession.ConnectionLost` | `NetworkSession` | `NetworkSessionLifecycle` |
 | `Health.Damaged` | `Health` | `PlayerHudPresenter` |
 | `Health.Died` | `Health` | `PlayerHudPresenter`, `PlayerDeathHandler`, `DisableOnDeath`, `DestroyMobOnDeath` |
 | `Health.Restored` | `Health.Restore` (via `PlayerRespawner`) | `PlayerHudPresenter`, `DisableOnDeath` |
@@ -426,6 +450,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [NavigationGridPathfindingTests.cs](../Assets/Tests/Editor/NavigationGridPathfindingTests.cs) | A* shortest/partial/strict paths, allocation, search cap, corner cutting, terrain profiles and costs, overlapping sources, region connectivity vs A* on random grids |
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
 | [SystemRandomTests.cs](../Assets/Tests/Editor/SystemRandomTests.cs) | Range bounds, unit circle, same seed same sequence |
+| [InjectingNetworkPrefabHandlerTests.cs](../Assets/Tests/Editor/InjectingNetworkPrefabHandlerTests.cs) | Network prefab instances are injected copies at the requested pose |
 | [PlayerRegistryTests.cs](../Assets/Tests/Editor/PlayerRegistryTests.cs) | Add/remove events, null and duplicate handling, `AnyAlive` |
 | [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, dispose |
 | [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter, attack cooldown/facing, `PlayerController` driven by a command source (facing, attack, idle without one), `LocalPlayerCommandSource`, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
@@ -442,6 +467,7 @@ Fakes and seams:
 | File | Covers |
 |---|---|
 | [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
+| [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game and the menu ends the session; joining a second in-process host from the menu, then returning to the menu when that host leaves; join timeout with no host |
 | [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, respawn at the spawn point while a teammate lives, restart only on a full party wipe, menu boot focus |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Clearing mobs spawned from spawn points into the area scene, detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |
 | [StressTestScenePlayModeTests.cs](../Assets/Tests/PlayMode/StressTestScenePlayModeTests.cs) | Stress area boots, spawns its initial mobs and they engage |

@@ -1,21 +1,22 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class AreaEntry : IAreaEntry
 {
     private readonly AreaEntryRequest request;
     private readonly SpawnPoint[] spawnPoints;
-    private readonly LocalPlayer player;
+    private readonly IPlayerRegistry players;
     private readonly CameraFollow2D cameraFollow;
 
     public AreaEntry(
         AreaEntryRequest request,
         SpawnPoint[] spawnPoints,
-        LocalPlayer player,
+        IPlayerRegistry players,
         CameraFollow2D cameraFollow)
     {
         this.request = request;
         this.spawnPoints = spawnPoints;
-        this.player = player;
+        this.players = players;
         this.cameraFollow = cameraFollow;
     }
 
@@ -24,11 +25,20 @@ public sealed class AreaEntry : IAreaEntry
         SpawnPoint spawnPoint = FindSpawnPoint(request.SpawnId);
         if (spawnPoint == null)
         {
-            Debug.LogWarning($"Area has no SpawnPoint; the player stays at {player.Transform.position}.");
+            Debug.LogWarning("Area has no SpawnPoint; the players stay where they are.");
             return;
         }
 
-        player.Controller.Teleport(spawnPoint.transform.position);
+        IReadOnlyList<PlayerHandle> party = players.Players;
+        for (int i = 0; i < party.Count; i++)
+        {
+            Transform playerTransform = party[i].Transform;
+            if (playerTransform != null && playerTransform.TryGetComponent(out PlayerController controller))
+            {
+                controller.Teleport(spawnPoint.GetSlotPosition(i));
+            }
+        }
+
         cameraFollow.SnapToTarget();
     }
 
@@ -47,7 +57,10 @@ public sealed class AreaEntry : IAreaEntry
                 return candidate;
             }
 
-            fallback ??= candidate;
+            if (fallback == null)
+            {
+                fallback = candidate;
+            }
         }
 
         if (fallback != null)

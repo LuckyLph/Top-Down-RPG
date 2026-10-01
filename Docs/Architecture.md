@@ -45,7 +45,7 @@ Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both tes
 |---|---|---|
 | [Main.unity](../Assets/Scenes/Main.unity) | Persistent root, never unloaded. First scene in the build. | `MainLifetimeScope`, Main Camera (`CameraFollow2D`), `EventSystem`, `TransitionCanvas/Fade` (`ScreenFader`) |
 | [MainMenu.unity](../Assets/Scenes/MainMenu.unity) | Title screen, loaded additively. | `MenuLifetimeScope`, `MainMenuCanvas` with `MainMenuController`, New Game and Quit buttons |
-| [Gameplay.unity](../Assets/Scenes/Gameplay.unity) | Session scene, loaded additively for a play session. | `GameplayLifetimeScope`, `Player` prefab, `PlayerHudCanvas` prefab, `DamagePopupCanvas` (`DamagePopupLayer`) |
+| [Gameplay.unity](../Assets/Scenes/Gameplay.unity) | Session scene, loaded additively for a play session. | `GameplayLifetimeScope` (references the `Player` prefab, spawned at runtime), `PlayerHudCanvas` prefab, `DamagePopupCanvas` (`DamagePopupLayer`) |
 | [Areas/Area_Clearing.unity](../Assets/Scenes/Areas/Area_Clearing.unity) | Starting area, loaded additively under Gameplay. | `AreaLifetimeScope`, `Grid` with DualGrid grass tilemap + render tilemap + `CollisionTilemap` (Obstacles layer), `NavigationGrid2D`, `NavigationTerrainSource2D`, `SpawnPoint_start`, `Weasel` prefab instance, Global Light 2D |
 | [Dev/StressTest/Area_StressTest.unity](../Assets/Dev/StressTest/Area_StressTest.unity) | Dev-only area (not in the build list, no `SceneDefinition`). | Same area setup plus `StressTestMap`, `StressTestSpawner`, `StressTestOverlay`, `WallVisualTilemap` |
 
@@ -105,14 +105,15 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 | Registration | Kind |
 |---|---|
-| `LocalPlayer` (built from the inspector's `PlayerController`) | instance |
-| `PlayerRegistry` as `IPlayerRegistry` + self, holding the local player's `PlayerHandle` | instance |
+| `PlayerRegistry` as `IPlayerRegistry` + self | singleton |
+| `PlayerSpawner` (with the inspector's player prefab and the Gameplay scene as parameters) | singleton |
+| `LocalPlayer` -> `PlayerSpawner.SpawnLocalPlayer()` | singleton factory |
 | `DamagePopupLayer` | component |
 | `GameplaySettings` | instance |
 | `PlayerHudView` | component in hierarchy |
 | `CombatEvents`, `SlashSpawner`, `EffectSpawner` | singletons |
 | `DamagePopupPresenter`, `GameplayEntryPoint`, `PlayerDeathHandler`, `PlayerHudPresenter` | entry points |
-| Build callback: `InjectGameObject(player)` | injects all player components |
+| Build callback: resolves `LocalPlayer` | spawns the local player before entry points start |
 
 [GameplayEntryPoint](../Assets/Scripts/Composition/GameplayEntryPoint.cs): on start points `CameraFollow2D` at the local player and snaps; clears the target on dispose.
 
@@ -122,7 +123,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 - `AreaEntry` as `IAreaEntry`, with every `SpawnPoint` in the scene. `AreaEntryRequest` comes from `GameFlow`'s enqueued registration.
 - Build callback: `InjectGameObject` on every `MobController` in the scene. Other scene objects needing injection go in the scope's `autoInjectGameObjects` (the stress scene lists its `StressTest` object).
 
-[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), teleports the local player and snaps the camera.
+[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), teleports every registered player to its own slot at that spawn point (`SpawnPoint.GetSlotPosition`, in registry order, players without a `PlayerController` are skipped) and snaps the camera.
 
 ### How components get injected
 
@@ -131,9 +132,9 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 | Component | `Construct` parameters | Injected by |
 |---|---|---|
-| `PlayerController` | `IPlayerInput` | Gameplay scope build callback |
-| `PlayerWeaponController` | `SlashSpawner`, `IClock` | Gameplay scope build callback |
-| `DamageReceiver` | `CombatEvents` | Gameplay (player) / Area (mobs) callback |
+| `PlayerController` | `IPlayerInput` | `PlayerSpawner` (`resolver.Instantiate`) |
+| `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`) |
+| `DamageReceiver` | `CombatEvents` | `PlayerSpawner` (player) / Area callback (mobs) |
 | `MainMenuController` | `GameFlow` | Menu scope |
 | `MobController` | `NavigationGrid2D`, `IPlayerRegistry` | Area scope build callback, or `resolver.Instantiate` |
 | `MeleeDamageDealer` | `IClock` | same as `MobController` |
@@ -174,7 +175,7 @@ Damage popups are under Combat.
 
 ## Player
 
-Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `YPositionSorter`), placed in `Gameplay.unity`.
+Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `YPositionSorter`), referenced by `GameplayLifetimeScope` and spawned at runtime by `PlayerSpawner`.
 
 | Type | Role |
 |---|---|
@@ -182,6 +183,7 @@ Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerControll
 | [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown and spawns a slash in the facing direction via `SlashSpawner`. Event `EquippedWeaponChanged`. |
 | [PlayerHandle](../Assets/Scripts/Player/PlayerHandle.cs) | One player as other systems see it: `Transform`, `Health`, `IsAlive`. |
 | [IPlayerRegistry](../Assets/Scripts/Player/IPlayerRegistry.cs) / [PlayerRegistry](../Assets/Scripts/Player/PlayerRegistry.cs) | Every player in the session: `Players`, `Contains`, `AnyAlive`, events `PlayerAdded`/`PlayerRemoved`. `Add`/`Remove` (ignore null and duplicates) are on the concrete class only. Used by mobs and death handling. |
+| [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | `SpawnLocalPlayer`: instantiates the player prefab through `IObjectResolver` (injecting its components), moves it into the Gameplay scene so it survives area changes, registers its handle and returns the `LocalPlayer`. |
 | [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Used by the camera, HUD, `AreaEntry` and the stress spawner. |
 | [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). Once the registry is non-empty and no player is alive, waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). |
 
@@ -305,7 +307,7 @@ Costs: 10 per straight step by default, diagonals x1.4.
 
 ## World and areas
 
-- Areas are separate scenes with a `Grid`, a DualGrid terrain tilemap (`DualGridTilemapModule` data + render tilemaps), a `CollisionTilemap` on the `Obstacles` layer, `NavigationGrid2D` + `NavigationTerrainSource2D`, one or more [SpawnPoint](../Assets/Scripts/World/SpawnPoint.cs)s (string `spawnId`, gizmo), mob prefab instances, and an `AreaLifetimeScope`.
+- Areas are separate scenes with a `Grid`, a DualGrid terrain tilemap (`DualGridTilemapModule` data + render tilemaps), a `CollisionTilemap` on the `Obstacles` layer, `NavigationGrid2D` + `NavigationTerrainSource2D`, one or more [SpawnPoint](../Assets/Scripts/World/SpawnPoint.cs)s (string `spawnId`, `partySpacing`, `GetSlotPosition(index)`: slot 0 on the point, then alternating right/left, gizmo), mob prefab instances, and an `AreaLifetimeScope`.
 - Project layers include `Obstacles` (collision tilemaps; `MobConfig.obstacleLayerMask` uses it for line of sight), `Player` and `Enemy`. Separation only senses colliders on the mob's own layer.
 - Adding an area: create from the area template, add a `SceneDefinition`, list it in `GameScenes.areas`, enable it in build settings (enforced by `SceneBuildValidator`).
 
@@ -374,7 +376,7 @@ flowchart LR
         GameplayEntryPoint --> CameraFollow2D
     end
     subgraph Area scope
-        GameFlow -- IAreaEntry.Enter --> AreaEntry --> PlayerController
+        GameFlow -- IAreaEntry.Enter --> AreaEntry -- IPlayerRegistry --> PlayerController
         MobPerception2D -- IPlayerRegistry --> PlayerRegistry
         MobController --> NavigationGrid2D
         MobController --> MeleeDamageDealer --> DamageReceiver
@@ -403,6 +405,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 
 | File | Covers |
 |---|---|
+| [AreaEntryTests.cs](../Assets/Tests/Editor/AreaEntryTests.cs) | Spawn point slots, every registered player placed in its own slot at the requested spawn |
 | [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `DamageReceiver` publishing and invalid hits, `MeleeDamageDealer` cooldown and receiver lookup, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
 | [MobMotor2DTests.cs](../Assets/Tests/Editor/MobMotor2DTests.cs) | Attack animation flag, no allocation, controller change, facing vs steering drift |
 | [MobPathAgent2DTests.cs](../Assets/Tests/Editor/MobPathAgent2DTests.cs) | Arrival distance, smoothing respects terrain cost, no allocation when warm, stall tracking |
@@ -424,7 +427,7 @@ Fakes and seams:
 | File | Covers |
 |---|---|
 | [SceneBootTestHelper.cs](../Assets/Tests/PlayMode/SceneBootTestHelper.cs) | Helper: boots through `Main` like a build using `EditorBootRequest`, resolves services from `MainLifetimeScope`, timeout-guarded waits |
-| [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem), `ChangeAreaAsync` placement, menu round trip, death restart, restart only on a full party wipe, menu boot focus |
+| [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, restart only on a full party wipe, menu boot focus |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |
 | [StressTestScenePlayModeTests.cs](../Assets/Tests/PlayMode/StressTestScenePlayModeTests.cs) | Stress area boots, spawns its initial mobs and they engage |
 
@@ -438,7 +441,7 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **No pooling for slashes or death effects**: `SlashSpawner` and `EffectSpawner` instantiate, and `SwordSlashAttack`/`MobDeathAnimation` destroy themselves. Only damage popups are pooled.
 - **Allocating calls per attack**: `SwordSlashAttack` uses `Physics2D.OverlapBoxAll` and `GetComponentsInChildren<Collider2D>` on every slash.
 - **Time not routed through `IClock`**: `MobMotor2D` attack animation timing (`Time.time`), `SwordSlashAttack`, `MobDeathAnimation` and `DamagePopupPresenter` (`Time.deltaTime`). Patrol destinations and idle durations use unseeded `UnityEngine.Random`.
-- **`?.`/`??` on Unity objects**: `weaponController?.TryAttack()` (`PlayerController`), `fallback ??= candidate` (`AreaEntry`), `referenceTilemap ??= dataTilemap` (`NavigationGrid2D`), `FindArea(...) ?? CreateTransient(...)` (`BootFlow`).
+- **`?.`/`??` on Unity objects**: `weaponController?.TryAttack()` (`PlayerController`), `referenceTilemap ??= dataTilemap` (`NavigationGrid2D`), `FindArea(...) ?? CreateTransient(...)` (`BootFlow`).
 - **Static mutable state**: `SceneQuery` shares a static root-object buffer. `UnityClock.Shared` is a static used as a fallback clock inside components.
 - **Two classes in one file**: `SceneDefinitionEditor.cs` also defines `SceneDefinitionPathSync`.
 - **Area scope assumptions**: `NavigationGrid2D` is registered only if the area has one, but every `MobController` requires it, so a mob in an area without a grid fails to resolve. Only `MobController` objects present at build time get injected automatically.

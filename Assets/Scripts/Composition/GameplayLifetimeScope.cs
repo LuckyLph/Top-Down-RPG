@@ -4,7 +4,7 @@ using VContainer.Unity;
 
 public class GameplayLifetimeScope : LifetimeScope
 {
-    [SerializeField] private PlayerController player;
+    [SerializeField] private PlayerController playerPrefab;
     [SerializeField] private DamagePopupLayer damagePopupLayer;
     [SerializeField] private GameplaySettings settings;
 
@@ -19,11 +19,17 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
-        LocalPlayer localPlayer = new(player);
-        PlayerRegistry players = new();
-        players.Add(localPlayer.Handle);
-        builder.RegisterInstance(localPlayer);
-        builder.RegisterInstance(players).As<IPlayerRegistry>().AsSelf();
+        if (playerPrefab == null)
+        {
+            Debug.LogError($"{name} has no player prefab assigned; no player can be spawned.", this);
+            return;
+        }
+
+        builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
+        builder.Register<PlayerSpawner>(Lifetime.Singleton)
+            .WithParameter(playerPrefab)
+            .WithParameter(gameObject.scene);
+        builder.Register(resolver => resolver.Resolve<PlayerSpawner>().SpawnLocalPlayer(), Lifetime.Singleton);
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
@@ -37,6 +43,6 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
 
-        builder.RegisterBuildCallback(resolver => resolver.InjectGameObject(player.gameObject));
+        builder.RegisterBuildCallback(resolver => resolver.Resolve<LocalPlayer>());
     }
 }

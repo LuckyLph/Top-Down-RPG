@@ -26,6 +26,8 @@ public class SceneFlowPlayModeTests
         Assert.That(player, Is.Not.Null);
         Assert.That(SceneBootTestHelper.ResolveFromMain<IPlayerInput>().GameplayEnabled, Is.True, "Input should be unlocked once the transition finished.");
         Assert.That(cameraFollow.Target, Is.SameAs(player.transform));
+        Assert.That(Object.FindObjectsByType<PlayerController>().Length, Is.EqualTo(1), "Exactly one local player should be spawned.");
+        Assert.That(player.gameObject.scene.path, Is.EqualTo("Assets/Scenes/Gameplay.unity"), "The player should live in the Gameplay scene so it survives area changes.");
 
         LifetimeScope mainScope = Object.FindAnyObjectByType<MainLifetimeScope>();
         LifetimeScope gameplayScope = Object.FindAnyObjectByType<GameplayLifetimeScope>();
@@ -34,6 +36,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameplayScope.Parent, Is.SameAs(mainScope), "GameFlow should parent the Gameplay scope to Main.");
         Assert.That(areaScope, Is.InstanceOf<AreaLifetimeScope>());
         Assert.That(areaScope.Parent, Is.SameAs(gameplayScope), "GameFlow should parent the area scope to Gameplay.");
+
+        LocalPlayer localPlayer = gameplayScope.Container.Resolve<LocalPlayer>();
+        Assert.That(localPlayer.Controller, Is.SameAs(player));
+        Assert.That(gameplayScope.Container.Resolve<IPlayerRegistry>().Players, Is.EquivalentTo(new[] { localPlayer.Handle }));
     }
 
     [UnityTest]

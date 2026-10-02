@@ -161,7 +161,7 @@ The host's own player takes the same path: offline and host-owned casts call `Ab
 ### HUD and feedback (local only)
 
 - Ability bar: six slots labelled Q W E R | A S, each with the ability icon (or an empty state), a radial cooldown fill with seconds remaining, and a flash on failed casts. It is a passive `AbilityBarView` with an `AbilityBarPresenter` bound to the local player through `LocalPlayerTracker`, in the same shape as the health HUD. It goes on `PlayerHudCanvas`.
-- Hover feedback on the targetable enemy under the cursor: highlight and an attack cursor.
+- Hover feedback on the targetable enemy under the cursor: highlight (a red ring on the ground under it, so the mob's sprite and its death animation are untouched) and an attack cursor.
 - A pooled click marker at move destinations.
 - Nothing here is a networked object.
 
@@ -194,8 +194,8 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] `CastRpc` and `AbilityService`, called once per cast on the host only.
 
 ### Phase 4: HUD and feedback
-- [ ] Ability bar view and presenter.
-- [ ] Hover highlight, attack cursor and pooled move marker.
+- [x] Ability bar view and presenter.
+- [x] Hover highlight, attack cursor and pooled move marker.
 
 ### Later
 - Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine.

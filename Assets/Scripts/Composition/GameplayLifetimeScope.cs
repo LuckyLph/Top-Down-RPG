@@ -6,6 +6,7 @@ public class GameplayLifetimeScope : LifetimeScope
 {
     [SerializeField] private PlayerController playerPrefab;
     [SerializeField] private DamagePopupLayer damagePopupLayer;
+    [SerializeField] private PointerFeedbackLayer pointerFeedbackLayer;
     [SerializeField] private GameplaySettings settings;
 
     protected override void Configure(IContainerBuilder builder)
@@ -46,6 +47,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
+        builder.RegisterComponentInHierarchy<AbilityBarView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
@@ -58,6 +60,17 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<GameplayEntryPoint>();
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
+        builder.RegisterEntryPoint<AbilityBarPresenter>();
+
+        if (pointerFeedbackLayer == null)
+        {
+            Debug.LogError($"{name} has no {nameof(PointerFeedbackLayer)}; there will be no hover or move feedback.", this);
+        }
+        else
+        {
+            builder.RegisterComponent(pointerFeedbackLayer);
+            builder.RegisterEntryPoint<PointerFeedbackPresenter>();
+        }
 
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());
     }

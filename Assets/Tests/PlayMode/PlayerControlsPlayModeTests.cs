@@ -114,6 +114,33 @@ public class PlayerControlsPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator Hud_ShowsTheLoadoutAndCooldowns_AndPointerFeedbackIsReady()
+    {
+        yield return Boot();
+        AbilitySlotView[] slots = Object.FindAnyObjectByType<AbilityBarView>().GetComponentsInChildren<AbilitySlotView>();
+        PlayerAbilities abilities = player.GetComponent<PlayerAbilities>();
+
+        Assert.That(slots.Length, Is.EqualTo(AbilitySlots.Count));
+        for (int i = 0; i < slots.Length; i++)
+        {
+            Assert.That(slots[i].NameText.text, Is.EqualTo(abilities.GetAbility(i).DisplayName), "Blanks have no icon, so their names show.");
+        }
+
+        Assert.That(abilities.TryCast(0, new CastAim(Vector2.zero, Vector2.right, default)), Is.EqualTo(CastOutcome.Started));
+        abilities.EndCast(0);
+        yield return null;
+        yield return null;
+
+        Assert.That(slots[0].CooldownFill.fillAmount, Is.GreaterThan(0.5f));
+        Assert.That(slots[0].CooldownText.text, Is.EqualTo(Mathf.CeilToInt(abilities.RemainingCooldown(0)).ToString()));
+
+        PointerFeedbackLayer feedback = Object.FindAnyObjectByType<PointerFeedbackLayer>();
+        Assert.That(feedback, Is.Not.Null);
+        Assert.That(feedback.PooledMarkerCount, Is.GreaterThan(0), "Move markers are prewarmed.");
+        Assert.That(feedback.AttackCursorShown, Is.False);
+    }
+
+    [UnityTest]
     public IEnumerator Death_ClearsTheOrders()
     {
         yield return Boot();

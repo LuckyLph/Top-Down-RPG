@@ -102,6 +102,48 @@ public class NetworkSessionPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator HostLeavingWhileAClientLoadsItsArea_ReturnsTheClientToTheMenu_WithoutSaving()
+    {
+        MemorySaveStore saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        remoteHost = StartRemoteHost(session);
+        bool lostDuringTransition = false;
+        int connectionLosses = 0;
+        session.ConnectionLost += () =>
+        {
+            connectionLosses++;
+            lostDuringTransition = gameFlow.IsTransitioning;
+        };
+
+        Object.FindAnyObjectByType<MainMenuController>().JoinGame();
+        yield return SceneBootTestHelper.WaitUntil(() => session.IsConnectedClient, "the client to connect");
+
+        ulong clientId = remoteHost.ConnectedClientsIds[remoteHost.ConnectedClientsIds.Count - 1];
+        Announce(clientId, new AreaAnnouncement(gameFlow.Scenes.StartingArea.ScenePath, gameFlow.Scenes.StartingSpawnId, 1, true));
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsTransitioning, "the client to start loading the announced area");
+        Assert.That(session.IsAuthoritative, Is.False);
+
+        remoteHost.Shutdown();
+        yield return SceneBootTestHelper.WaitUntil(() => connectionLosses > 0, "the client to notice the host left");
+        Assert.That(lostDuringTransition, Is.True, "The host must leave while the client is still loading for this test to mean anything.");
+        Assert.That(session.IsAuthoritative, Is.False, "A client that lost its host must not start deciding game state on its own.");
+
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after its load");
+        Assert.That(gameFlow.IsInGame, Is.False);
+        Assert.That(session.IsActive, Is.False);
+        Assert.That(saveStore.WriteCount, Is.Zero, "A client that lost its host never saves the host's area.");
+        Assert.That(session.IsAuthoritative, Is.True, "Back in the menu, an offline game decides its own state again.");
+
+        Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.IsInGame, Is.True);
+        Assert.That(saveStore.WriteCount, Is.EqualTo(1), "An offline game after the lost session saves as usual.");
+    }
+
+    [UnityTest]
     public IEnumerator Join_GivesUpWhenNoHostAnswers()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();

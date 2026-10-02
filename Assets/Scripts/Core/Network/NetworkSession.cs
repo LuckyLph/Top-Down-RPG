@@ -24,6 +24,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     private AreaAnnouncement? currentArea;
     private bool shutdownRequested;
     private bool quitting;
+    private bool followingHost;
 
     public NetworkSession(NetworkManager networkManagerPrefab, NetworkSettings settings)
     {
@@ -56,7 +57,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     public bool IsHost => networkManager.IsHost;
     public bool IsServer => networkManager.IsServer;
     public bool IsConnectedClient => networkManager.IsConnectedClient;
-    public bool IsAuthoritative => !IsActive || networkManager.IsServer;
+    public bool IsAuthoritative => IsActive ? networkManager.IsServer : !followingHost;
     public ulong LocalClientId => networkManager.LocalClientId;
     public IReadOnlyCollection<ulong> ReadyClients => readyClients;
     public int AreaEpoch { get; private set; }
@@ -94,6 +95,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             return false;
         }
 
+        followingHost = true;
         networkManager.CustomMessagingManager.RegisterNamedMessageHandler(AreaAnnouncementMessage, HandleAreaAnnouncementMessage);
 
         float deadline = Time.realtimeSinceStartup + timeoutSeconds;
@@ -122,6 +124,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     public void Shutdown()
     {
         shutdownRequested = true;
+        followingHost = false;
         readyClients.Clear();
         if (networkManager != null && networkManager.IsListening)
         {
@@ -263,6 +266,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     private void ResetSessionState()
     {
         shutdownRequested = false;
+        followingHost = false;
         readyClients.Clear();
         currentArea = null;
         AreaEpoch = 0;

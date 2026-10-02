@@ -6,6 +6,7 @@ public sealed class NetworkSessionLifecycle : IStartable, IDisposable
 {
     private readonly NetworkSession session;
     private readonly GameFlow gameFlow;
+    private bool returnToMenuPending;
 
     public NetworkSessionLifecycle(NetworkSession session, GameFlow gameFlow)
     {
@@ -27,20 +28,38 @@ public sealed class NetworkSessionLifecycle : IStartable, IDisposable
 
     private void HandleTransitionFinished()
     {
-        if (gameFlow.IsInMenu && session.IsActive)
+        if (gameFlow.IsInMenu)
         {
             session.Shutdown();
         }
+
+        ReturnToMenuIfPending();
     }
 
     private void HandleConnectionLost()
     {
-        if (!gameFlow.IsInGame)
+        if (gameFlow.IsInMenu && !gameFlow.IsTransitioning)
         {
+            session.Shutdown();
             return;
         }
 
         Debug.LogWarning("Lost the connection to the session; returning to the main menu.");
-        _ = gameFlow.ShowMainMenuAsync();
+        returnToMenuPending = true;
+        ReturnToMenuIfPending();
+    }
+
+    private void ReturnToMenuIfPending()
+    {
+        if (!returnToMenuPending || gameFlow.IsTransitioning)
+        {
+            return;
+        }
+
+        returnToMenuPending = false;
+        if (!gameFlow.IsInMenu)
+        {
+            _ = gameFlow.ShowMainMenuAsync();
+        }
     }
 }

@@ -1,9 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// A thin world-space health bar above a unit, in the style of League of Legends minion bars: a dark frame and a
-/// fill that shrinks toward the left. It polls <see cref="Health.CurrentHealth"/> each frame (one integer compare)
-/// because network syncs set health silently, and hides while the unit is dead.
+/// A thin world-space health bar above a unit, in the style of League of Legends minion bars: a dark rounded frame
+/// and a rounded fill (both 9-sliced, so the corners keep their radius at any width) that shrinks toward the left.
+/// It polls <see cref="Health.CurrentHealth"/> each frame (one integer compare) because network syncs set health
+/// silently, and hides while the unit is dead.
 /// </summary>
 [DisallowMultipleComponent]
 public class WorldHealthBar : MonoBehaviour
@@ -12,8 +13,8 @@ public class WorldHealthBar : MonoBehaviour
     [SerializeField] private SpriteRenderer frame;
     [SerializeField] private SpriteRenderer fill;
 
-    private float fullScaleX;
     private float fullWidth;
+    private float fillHeight;
     private float leftEdge;
     private int shownHealth = int.MinValue;
     private int shownMaxHealth;
@@ -24,9 +25,9 @@ public class WorldHealthBar : MonoBehaviour
     private void Awake()
     {
         ResolveHealth();
-        if (health == null || frame == null || fill == null)
+        if (health == null || frame == null || fill == null || fill.drawMode == SpriteDrawMode.Simple)
         {
-            Debug.LogError($"{name} needs a {nameof(Health)} above it and frame and fill renderers.", this);
+            Debug.LogError($"{name} needs a {nameof(Health)} above it, a frame renderer and a sliced fill renderer.", this);
             enabled = false;
             return;
         }
@@ -74,10 +75,8 @@ public class WorldHealthBar : MonoBehaviour
         frame.enabled = alive;
         fill.enabled = alive;
 
+        fill.size = new Vector2(fullWidth * FillFraction, fillHeight);
         Transform fillTransform = fill.transform;
-        Vector3 scale = fillTransform.localScale;
-        scale.x = fullScaleX * FillFraction;
-        fillTransform.localScale = scale;
         Vector3 position = fillTransform.localPosition;
         position.x = leftEdge + fullWidth * FillFraction * 0.5f;
         fillTransform.localPosition = position;
@@ -94,11 +93,9 @@ public class WorldHealthBar : MonoBehaviour
 
     private void CacheFillGeometry()
     {
-        Transform fillTransform = fill.transform;
-        fullScaleX = fillTransform.localScale.x;
-        float spriteWidth = fill.sprite != null ? fill.sprite.bounds.size.x : 1f;
-        fullWidth = spriteWidth * fullScaleX;
-        leftEdge = fillTransform.localPosition.x - fullWidth * 0.5f;
+        fullWidth = fill.size.x;
+        fillHeight = fill.size.y;
+        leftEdge = fill.transform.localPosition.x - fullWidth * 0.5f;
     }
 
     private void ResolveHealth()

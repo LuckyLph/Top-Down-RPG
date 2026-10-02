@@ -17,9 +17,9 @@ public class WorldHealthBarTests
         health = unit.AddComponent<Health>();
         GameObject barObject = new("HealthBar");
         barObject.transform.SetParent(unit.transform);
-        Sprite square = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Square.png");
-        SpriteRenderer frame = Part(barObject, "Frame", square, 2.75f);
-        fill = Part(barObject, "Fill", square, 2.5f);
+        Sprite rounded = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/RoundedBar.png");
+        SpriteRenderer frame = Part(barObject, "Frame", rounded, new Vector2(0.66f, 0.075f));
+        fill = Part(barObject, "Fill", rounded, new Vector2(0.62f, 0.04f));
         bar = barObject.AddComponent<WorldHealthBar>();
         bar.Configure(health, frame, fill);
     }
@@ -94,18 +94,25 @@ public class WorldHealthBarTests
         Assert.That(prefabFrame.sortingLayerName, Is.EqualTo("Overlay"));
         Assert.That(prefabFill.sortingLayerName, Is.EqualTo("Overlay"));
         Assert.That(prefabFill.sortingOrder, Is.GreaterThan(prefabFrame.sortingOrder));
-        Assert.That(prefabFill.transform.localScale.y * prefabFill.sprite.bounds.size.y, Is.LessThanOrEqualTo(0.1f), "The bar is thin.");
+        Assert.That(prefabFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced), "Sliced keeps the rounded corners at any width.");
+        Assert.That(prefabFill.sprite.border.x, Is.GreaterThan(0f));
+        Assert.That(prefabFrame.size.y * prefabFrame.transform.localScale.y, Is.LessThanOrEqualTo(0.08f), "The bar is thin.");
+        Assert.That(prefabFill.size.y, Is.LessThan(prefabFrame.size.y));
+        Assert.That(prefabFill.color.r, Is.GreaterThan(0.95f), "The fill is a bright red.");
+        Assert.That(prefabFill.sharedMaterial.shader.name, Does.Contain("Unlit"), "Overlay is not lit by the areas' 2D lights; a lit material would draw black.");
+        Assert.That(prefabFrame.sharedMaterial.shader.name, Does.Contain("Unlit"));
         Assert.That(prefabBar.transform.localPosition.y, Is.GreaterThan(1f), "The bar sits above the weasel's head.");
         Assert.That(SortingLayer.GetLayerValueFromName("Overlay"), Is.GreaterThan(SortingLayer.GetLayerValueFromName("Entities")), "Bars draw over every unit.");
     }
 
-    private SpriteRenderer Part(GameObject parent, string name, Sprite sprite, float scaleX)
+    private SpriteRenderer Part(GameObject parent, string name, Sprite sprite, Vector2 size)
     {
         GameObject part = new(name);
         part.transform.SetParent(parent.transform);
-        part.transform.localScale = new Vector3(scaleX, 0.25f, 1f);
         SpriteRenderer renderer = part.AddComponent<SpriteRenderer>();
         renderer.sprite = sprite;
+        renderer.drawMode = SpriteDrawMode.Sliced;
+        renderer.size = size;
         return renderer;
     }
 

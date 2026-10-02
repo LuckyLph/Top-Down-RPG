@@ -77,6 +77,65 @@ public class NetworkPlayersPlayModeTests
         Assert.That(hostLocal.Current, Is.Not.Null);
     }
 
+    [UnityTest]
+    public IEnumerator APlayerThatIsDeadWhenItReachesAClient_ArrivesDead_AndComesBackOnRespawn()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerRegistry hostPlayers = gameplay.Resolve<PlayerRegistry>();
+        PlayerController hostPlayer = gameplay.Resolve<LocalPlayerTracker>().Current.Controller;
+        NetworkObject hostPlayerObject = hostPlayer.GetComponent<NetworkObject>();
+
+        client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendReady();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostPlayers.Players.Count == 2 && client.Players.Players.Count == 2,
+            "both sides to see both players");
+
+        ulong clientId = client.Manager.LocalClientId;
+        hostPlayerObject.NetworkHide(clientId);
+        yield return SceneBootTestHelper.WaitUntil(
+            () => InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId) == null,
+            "the client to drop its copy of the host's player");
+
+        gameplay.Resolve<DamageService>().ApplyDamage(hostPlayer.GetComponent<DamageReceiver>(), hostPlayer.GetComponent<Health>().MaxHealth);
+        Assert.That(hostPlayer.GetComponent<Health>().IsDead, Is.True);
+
+        hostPlayerObject.NetworkShow(clientId);
+        yield return SceneBootTestHelper.WaitUntil(
+            () => InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId) != null,
+            "the client to receive the dead host player");
+
+        PlayerController copy = InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId);
+        Assert.That(copy.GetComponent<Health>().IsDead, Is.True);
+        Assert.That(AnyColliderEnabled(copy), Is.False, "A player that arrives dead must not block the living like a standing body.");
+        Assert.That(copy.enabled, Is.False, "A player that arrives dead must have its gameplay behaviours off, as if this machine saw it die.");
+
+        yield return SceneBootTestHelper.WaitUntil(() => !copy.GetComponent<Health>().IsDead, "the host to respawn its player on the client");
+        Assert.That(AnyColliderEnabled(copy), Is.True, "The respawned player must collide again.");
+        Assert.That(copy.enabled, Is.True);
+    }
+
+    private static bool AnyColliderEnabled(Component unit)
+    {
+        foreach (Collider2D unitCollider in unit.GetComponents<Collider2D>())
+        {
+            if (unitCollider.enabled)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool HasSlashOwnedBy(Transform owner)
     {
         foreach (SwordSlashAttack slash in Object.FindObjectsByType<SwordSlashAttack>())

@@ -83,21 +83,33 @@ public class CombatComponentTests
     }
 
     [Test]
-    public void Health_SyncTo_SetsAndClampsWithoutRaisingEvents()
+    public void Health_SyncTo_SetsAndClampsWithoutDamaged_AndRaisesDiedOnlyWhenItKills()
     {
         root = new GameObject("HealthSyncTest");
         Health health = root.AddComponent<Health>();
-        int events = 0;
-        health.Damaged += _ => events++;
-        health.Died += _ => events++;
+        int damagedEvents = 0;
+        int deaths = 0;
+        int restores = 0;
+        health.Damaged += _ => damagedEvents++;
+        health.Died += _ => deaths++;
+        health.Restored += _ => restores++;
 
         health.SyncTo(4);
         Assert.That(health.CurrentHealth, Is.EqualTo(4));
+        Assert.That(deaths, Is.Zero);
+
         health.SyncTo(-3);
         Assert.That(health.CurrentHealth, Is.EqualTo(0));
+        Assert.That(health.IsDead, Is.True);
+        Assert.That(deaths, Is.EqualTo(1), "Syncing a living unit to zero is a death.");
+
+        health.SyncTo(0);
+        Assert.That(deaths, Is.EqualTo(1), "Syncing an already dead unit to zero again is not another death.");
+
         health.SyncTo(health.MaxHealth + 5);
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
-        Assert.That(events, Is.EqualTo(0));
+        Assert.That(damagedEvents, Is.Zero);
+        Assert.That(restores, Is.Zero, "Coming back to life goes through Restore, not SyncTo.");
     }
 
     [Test]

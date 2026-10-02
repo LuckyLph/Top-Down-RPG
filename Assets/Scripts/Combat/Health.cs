@@ -83,10 +83,20 @@ public class Health : MonoBehaviour
         return appliedDamage;
     }
 
+    /// <summary>
+    /// Sets HP to <paramref name="value"/> (clamped) for network sync without raising <see cref="Damaged"/>. Raises
+    /// <see cref="Died"/> when it takes a living unit to zero, so death reactions run on machines that only learn
+    /// the result, such as a client that receives an already dead player.
+    /// </summary>
     public void SyncTo(int value)
     {
         InitializeIfNeeded();
+        bool wasAlive = currentHealth > 0;
         currentHealth = Mathf.Clamp(value, 0, maxHealth);
+        if (wasAlive && currentHealth == 0)
+        {
+            Died?.Invoke(this);
+        }
     }
 
     public void Restore()

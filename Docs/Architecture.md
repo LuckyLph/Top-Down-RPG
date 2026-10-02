@@ -380,7 +380,7 @@ Blanks (`Assets/Data/Abilities`, used by `Assets/Data/Classes/Class_Placeholder.
 
 ## Mob AI: components
 
-Prefab: [Weasel.prefab](../Assets/Prefabs/Mobs/Weasel.prefab): `MobController`, `MobMotor2D`, `MobPerception2D`, `MobPathAgent2D`, `MobPatrolAnchor`, `MeleeDamageDealer`, `Health`, `DamageReceiver`, `DestroyMobOnDeath`, `NetworkObject`, `NetworkTransform` (server authority, x/y only, `LegacyLerp`, unreliable deltas), `NetworkHealth`, `MobNetworkSync`, `YPositionSorter` (on `Visuals`), `WorldHealthBar` (on the `HealthBar` child, 1.3 above the feet); config `Mob_Default`, death template `MobDeathAnimation.prefab`, animator `Weasel.controller`.
+Prefab: [Weasel.prefab](../Assets/Prefabs/Mobs/Weasel.prefab): `MobController`, `MobMotor2D`, `MobPerception2D`, `MobPathAgent2D`, `MobPatrolAnchor`, `MeleeDamageDealer`, `Health`, `DamageReceiver`, `DestroyMobOnDeath`, `NetworkObject`, `NetworkTransform` (server authority, x/y only, `LegacyLerp`, unreliable deltas), `NetworkHealth`, `MobNetworkSync`, `YPositionSorter` (on `Visuals`), `WorldHealthBar` (on the `HealthBar` child, 1.45 above the feet, clear of the ears); config `Mob_Default`, death template `MobDeathAnimation.prefab`, animator `Weasel.controller`.
 
 | Type | Role |
 |---|---|

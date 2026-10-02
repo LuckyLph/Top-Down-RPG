@@ -1,34 +1,76 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// Reads the <c>Player</c> action map for the local player and answers whether the pointer is over UI through
+/// the Main scope's <see cref="EventSystem"/>.
+/// </summary>
 public sealed class PlayerInputService : IPlayerInput, IDisposable
 {
-    private const string PlayerMapName = "Player";
-    private const string MoveActionName = "Move";
-    private const string AttackActionName = "Attack";
+    public const string PlayerMapName = "Player";
+    public const string MoveClickActionName = "MoveClick";
+    public const string PointActionName = "Point";
+    public const string StopActionName = "Stop";
+    public const string AbilityActionPrefix = "Ability";
 
     private readonly InputActionMap playerMap;
-    private readonly InputAction moveAction;
-    private readonly InputAction attackAction;
+    private readonly InputAction moveClickAction;
+    private readonly InputAction pointAction;
+    private readonly InputAction stopAction;
+    private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
+    private readonly EventSystem eventSystem;
 
-    public PlayerInputService(InputActionAsset actions)
+    public PlayerInputService(InputActionAsset actions, EventSystem eventSystem)
     {
+        this.eventSystem = eventSystem;
         playerMap = actions != null ? actions.FindActionMap(PlayerMapName, false) : null;
-        moveAction = playerMap?.FindAction(MoveActionName, false);
-        attackAction = playerMap?.FindAction(AttackActionName, false);
+        moveClickAction = playerMap?.FindAction(MoveClickActionName, false);
+        pointAction = playerMap?.FindAction(PointActionName, false);
+        stopAction = playerMap?.FindAction(StopActionName, false);
 
-        if (moveAction == null || attackAction == null)
+        bool hasAllAbilities = true;
+        for (int i = 0; i < abilityActions.Length; i++)
+        {
+            abilityActions[i] = playerMap?.FindAction(AbilityActionName(i), false);
+            hasAllAbilities &= abilityActions[i] != null;
+        }
+
+        if (moveClickAction == null || pointAction == null || stopAction == null || !hasAllAbilities)
         {
             Debug.LogError(
                 $"{nameof(PlayerInputService)} needs an input asset with a '{PlayerMapName}' map containing " +
-                $"'{MoveActionName}' and '{AttackActionName}' actions.");
+                $"'{MoveClickActionName}', '{PointActionName}', '{StopActionName}' and " +
+                $"'{AbilityActionName(0)}' to '{AbilityActionName(AbilitySlots.Count - 1)}' actions.");
         }
     }
 
-    public Vector2 Move => GameplayEnabled && moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
-    public bool AttackPressedThisFrame => GameplayEnabled && attackAction != null && attackAction.WasPressedThisFrame();
     public bool GameplayEnabled => playerMap != null && playerMap.enabled;
+    public Vector2 PointerScreenPosition => GameplayEnabled && pointAction != null ? pointAction.ReadValue<Vector2>() : Vector2.zero;
+    public bool IsPointerOverUI => eventSystem != null && eventSystem.IsPointerOverGameObject();
+    public bool MovePressedThisFrame => GameplayEnabled && moveClickAction != null && moveClickAction.WasPressedThisFrame();
+    public bool MoveHeld => GameplayEnabled && moveClickAction != null && moveClickAction.IsPressed();
+    public bool StopPressedThisFrame => GameplayEnabled && stopAction != null && stopAction.WasPressedThisFrame();
+
+    public bool WasAbilityPressedThisFrame(int slot)
+    {
+        if (!GameplayEnabled || slot < 0 || slot >= abilityActions.Length)
+        {
+            return false;
+        }
+
+        InputAction action = abilityActions[slot];
+        return action != null && action.WasPressedThisFrame();
+    }
+
+    /// <summary>
+    /// The action name for ability <paramref name="slot"/>: <c>Ability1</c> for slot 0, and so on.
+    /// </summary>
+    public static string AbilityActionName(int slot)
+    {
+        return AbilityActionPrefix + (slot + 1);
+    }
 
     public void SetGameplayEnabled(bool enabled)
     {

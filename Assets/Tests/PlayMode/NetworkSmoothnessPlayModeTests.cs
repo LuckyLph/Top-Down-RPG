@@ -13,6 +13,7 @@ public class NetworkSmoothnessPlayModeTests
     private const float OnePixel = 1f / 32f;
     private const int BenchmarkRuns = 6;
     private const int RegressionRuns = 3;
+    private const float FarAwayDistance = 1000f;
 
     private static readonly (NetworkTransform.InterpolationTypes, bool, int)[] BenchmarkConfigurations =
     {
@@ -114,6 +115,10 @@ public class NetworkSmoothnessPlayModeTests
 
         Object.FindAnyObjectByType<MainMenuController>().HostGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.GetComponent<NetworkObject>().Despawn();
+        }
 
         IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
         PlayerRegistry hostPlayers = gameplay.Resolve<PlayerRegistry>();
@@ -134,7 +139,10 @@ public class NetworkSmoothnessPlayModeTests
         Transform owner = client.LocalPlayer.Current.Transform;
         float hostStartX = hostCopy.transform.position.x;
         float moveStarted = Time.realtimeSinceStartup;
-        client.Input.Move = new Vector2(direction, 0f);
+        client.Input.PointAt((Vector2)owner.position + new Vector2(direction * FarAwayDistance, 0f));
+        client.Input.MovePressedThisFrame = true;
+        yield return null;
+        client.Input.MovePressedThisFrame = false;
 
         while (Mathf.Abs(hostCopy.transform.position.x - hostStartX) < 0.05f)
         {
@@ -191,7 +199,9 @@ public class NetworkSmoothnessPlayModeTests
         result.MeanSpeedError = frames > 0 ? speedErrorSum / frames : 0f;
         result.Frames = frames;
 
-        client.Input.Move = Vector2.zero;
+        client.Input.StopPressedThisFrame = true;
+        yield return null;
+        client.Input.StopPressedThisFrame = false;
         yield return WaitUntilStill(hostCopy.transform);
     }
 

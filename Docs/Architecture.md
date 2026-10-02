@@ -32,7 +32,7 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 
 | Assembly | Folder | References | Notes |
 |---|---|---|---|
-| `TopDownRPG.Core` | `Assets/Scripts/Core` | VContainer, Unity.InputSystem, Unity.Netcode.Runtime, Unity.Networking.Transport | Boot, scene flow, input, clock, randomness, network session, camera follow, screen fader. Must not reference Gameplay. |
+| `TopDownRPG.Core` | `Assets/Scripts/Core` | VContainer, Unity.InputSystem, UnityEngine.UI (for the `EventSystem` pointer-over-UI check), Unity.Netcode.Runtime, Unity.Networking.Transport | Boot, scene flow, input, clock, randomness, network session, camera follow, screen fader. Must not reference Gameplay. |
 | `TopDownRPG.Gameplay` | `Assets/Scripts` (everything outside `Core` and `Dev`) | Core, VContainer, Unity.InputSystem, Unity.TextMeshPro | AI, navigation, combat, player, UI, effects, world, composition roots. |
 | `TopDownRPG.DevTools` | `Assets/Scripts/Dev` | Gameplay, Core, VContainer, skner.DualGrid, Unity.2D.Tilemap.Extras | `defineConstraints: UNITY_EDITOR \|\| DEVELOPMENT_BUILD`; not auto-referenced. |
 | `TopDownRPG.Editor` | `Assets/Editor` | Core, Gameplay, VContainer | Editor-only platform. |
@@ -99,7 +99,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `IClock` -> `UnityClock.Shared` | instance |
 | `IRandom` -> `new SystemRandom()` (time-seeded) | instance |
 | `SceneLoader`, `GameFlow` (gets this scope as `LifetimeScope` parameter) | singletons |
-| `PlayerInputService` as `IPlayerInput` + self (gets the `InputActionAsset`) | singleton |
+| `PlayerInputService` as `IPlayerInput` + self (gets the `InputActionAsset` and the scene's `EventSystem` from the inspector; a missing `EventSystem` logs an error) | singleton |
 | `GameplayInputGate` | entry point |
 | `BootFlow` | entry point |
 | `NetworkSession` (gets the inspector's `NetworkManager` prefab and `NetworkSettings`) | singleton; logs an error and is skipped if either is missing |
@@ -116,7 +116,8 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Registration | Kind |
 |---|---|
 | `PlayerRegistry` as `IPlayerRegistry` + self | singleton |
-| `LocalPlayerTracker`, `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `ActiveNavigationGrid`, `PlayerBinder`, `PlayerRespawner` | singletons |
+| `PlayerControlSettings` (the player prefab's own asset, so there is one source of truth; a prefab without one logs an error and registers nothing) | instance |
+| `LocalPlayerTracker`, `PointerTargetPicker`, `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `ActiveNavigationGrid`, `PlayerBinder`, `PlayerRespawner` | singletons |
 | `PlayerSpawner` (with the inspector's player prefab and the Gameplay scene as parameters) | singleton |
 | `GameplayPlayers` | entry point (spawns players in `Start`, see Player) |
 | `DamagePopupLayer` | component |
@@ -146,6 +147,8 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 |---|---|---|
 | `PlayerWeaponController` | `SlashSpawner`, `IClock` | `PlayerSpawner` (`resolver.Instantiate`), or `InjectingNetworkPrefabHandler` on clients |
 | `PlayerNetworkSync` | `PlayerBinder` | same as `PlayerWeaponController` |
+| `PlayerController` | `IClock` | same as `PlayerWeaponController` |
+| `PlayerMotor2D` | `ActiveNavigationGrid` | same as `PlayerWeaponController` |
 | `MainMenuController` | `GameFlow`, `NetworkSession`, `GameSave` | Menu scope |
 | `MobController` | `NavigationGrid2D`, `IPlayerRegistry`, `IRandom` | `AreaMobSpawner` or `StressTestSpawner` (`resolver.Instantiate`), or `InjectingNetworkPrefabHandler` on clients |
 | `MobMotor2D` | `IClock` | same as `MobController` |
@@ -154,7 +157,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `NetworkHealth` | `DamageService` | player: same as `PlayerWeaponController`; mob: same as `MobController` |
 | `StressTestSpawner` | `IObjectResolver`, `NavigationGrid2D`, `LocalPlayerTracker` | Area scope `autoInjectGameObjects` |
 
-`MeleeDamageDealer`, `MobMotor2D` and `PlayerWeaponController` default their clock to `UnityClock.Shared` when not injected.
+`MeleeDamageDealer`, `MobMotor2D`, `PlayerController` and `PlayerWeaponController` default their clock to `UnityClock.Shared` when not injected. A `PlayerMotor2D` that was never injected has no grid and moves in straight lines.
 
 ## Networking
 
@@ -189,7 +192,9 @@ Networked transforms use `LegacyLerp` position interpolation with unreliable del
 | `SmoothDampening`, unreliable deltas | ~350 ms | ~100% | up to 3 of 6 |
 | Any type with reliable deltas | 450–550 ms | 60–150%, with backward jumps for `Lerp`/`SmoothDampening` | frequent |
 
-Unreliable deltas are the biggest win (a lost update is replaced by the next one instead of resent behind it). Rerun the benchmark by name after changing tick rate, speeds or transform settings.
+Unreliable deltas are the biggest win (a lost update is replaced by the next one instead of resent behind it). Rerun the benchmark by name after changing tick rate, speeds, movement code or transform settings.
+
+Rerun after click-to-move replaced WASD (the client's player now walks on far-away move orders, with the area's mobs despawned): `LegacyLerp` unreliable offset 0 gave 385 ms start lag, 21% mean speed error and no stall over 150 ms in 6 runs; offset 1 26%; `Lerp` 59–67%; `SmoothDampening` ~106%; reliable deltas 76% with stalls in 5 of 6 runs. The ranking and the shipped setting are unchanged. The 3-run regression test is noisier than the 6-run benchmark (38% in the same session).
 
 ## Save data
 
@@ -207,8 +212,17 @@ Areas are saved by scene GUID, not path, so moving or renaming a scene keeps sav
 
 ## Input
 
-- [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `Move`, `AttackPressedThisFrame`, `GameplayEnabled`. The local device seam; gameplay reaches it only through `LocalPlayerCommandSource` (see Player).
-- [PlayerInputService](../Assets/Scripts/Core/Input/PlayerInputService.cs): wraps the `Player` action map of [InputSystem_Actions.inputactions](../Assets/InputSystem_Actions.inputactions) (`Move`, `Attack` used; the asset also defines Look/Interact/Crouch/Jump/Previous/Next/Sprint). Returns neutral input while the map is disabled. Logs an error if the map/actions are missing.
+Click-to-move, specified in [PlayerControls.md](PlayerControls.md). Mouse only for gameplay; the gamepad still works in menus.
+
+| Input | Action (`Player` map) |
+|---|---|
+| Right mouse button | `MoveClick`: pressed gives an order at the cursor, held re-evaluates it |
+| Pointer position | `Point` (`<Pointer>/position`, pass-through) |
+| X | `Stop` |
+| Q W E R, A S | `Ability1`…`Ability6` (read into commands; nothing uses them until the ability pipeline lands) |
+
+- [IPlayerInput](../Assets/Scripts/Core/Input/IPlayerInput.cs): `GameplayEnabled`, `PointerScreenPosition`, `IsPointerOverUI`, `MovePressedThisFrame`, `MoveHeld`, `StopPressedThisFrame`, `WasAbilityPressedThisFrame(slot)`. The local device seam; gameplay reaches it only through `LocalPlayerCommandSource` (see Player). [AbilitySlots](../Assets/Scripts/Core/Input/AbilitySlots.cs)`.Count` is 6.
+- [PlayerInputService](../Assets/Scripts/Core/Input/PlayerInputService.cs): wraps the `Player` action map of [InputSystem_Actions.inputactions](../Assets/InputSystem_Actions.inputactions) (action names are public constants; `AbilityActionName(slot)`). Returns neutral input while the map is disabled. `IsPointerOverUI` asks the injected Main-scope `EventSystem` (`IsPointerOverGameObject`, so only graphics with `raycastTarget` block clicks; every HUD graphic has it off today, and `ScreenFader` blocks while visible). Logs an error if the map or any action is missing. WASD movement and the left-click/space `Attack` action are gone; the template's unused actions (Look, Interact, Crouch, Jump, Previous, Next, Sprint) remain, minus Interact's E binding, which is Ability3 now.
 - [GameplayInputGate](../Assets/Scripts/Core/Input/GameplayInputGate.cs): entry point that enables the Player map only when `GameFlow.IsInGame && !IsTransitioning`; listens to `TransitionStarted`/`TransitionFinished`.
 - UI input uses the `UI` map through the `EventSystem` in Main.
 
@@ -216,7 +230,7 @@ Areas are saved by scene GUID, not path, so moving or renaming a scene keeps sav
 
 - [IClock](../Assets/Scripts/Core/Clock/IClock.cs): `float Time`. Used for cooldowns and gameplay timers.
 - [UnityClock](../Assets/Scripts/Core/Clock/UnityClock.cs): `Time.time`; `UnityClock.Shared` is registered in the Main scope.
-- Clock consumers: `MeleeDamageDealer`, `PlayerWeaponController`, `MobMotor2D` (attack animation window). Mob AI timers are driven by the `dt` passed to `MobController.TickStateMachine`, which tests control. Purely visual, per-client animations (`SwordSlashAttack` lifetime, `MobDeathAnimation`, damage popups) advance with `Time.deltaTime` on purpose.
+- Clock consumers: `MeleeDamageDealer`, `PlayerWeaponController`, `PlayerController` (order timing: hold re-evaluation, chase repaths), `MobMotor2D` (attack animation window). Mob AI timers are driven by the `dt` passed to `MobController.TickStateMachine`, which tests control. Purely visual, per-client animations (`SwordSlashAttack` lifetime, `MobDeathAnimation`, damage popups) advance with `Time.deltaTime` on purpose.
 - [IRandom](../Assets/Scripts/Core/Random/IRandom.cs): `Range(min, max)`, `InsideUnitCircle()`. [SystemRandom](../Assets/Scripts/Core/Random/SystemRandom.cs) wraps `System.Random`, time-seeded or with an explicit seed (tests). Gameplay code never uses `UnityEngine.Random`.
 - Randomness consumers: `MobPatrolAnchor` (roam destinations, idle durations via `MobConfig.NextIdleDuration(IRandom)`), passed down from `MobController`.
 
@@ -239,27 +253,46 @@ Damage popups are under Combat.
 
 ## Player
 
-Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `NetworkObject`, `NetworkTransform` with owner authority syncing x/y position only (`LegacyLerp`, unreliable deltas, see Transform smoothing), `PlayerNetworkSync`, `YPositionSorter` on a child), referenced by `GameplayLifetimeScope`, spawned at runtime by `PlayerSpawner`, and listed in `Assets/DefaultNetworkPrefabs.asset`. Offline the networking components stay unspawned and do nothing.
+Prefab: [Player.prefab](../Assets/Prefabs/Player/Player.prefab) (`PlayerController` with `PlayerControlSettings`, `PlayerMotor2D`, `PlayerWeaponController`, `Health`, `DamageReceiver`, `DisableOnDeath`, `NetworkObject`, `NetworkTransform` with owner authority syncing x/y position only (`LegacyLerp`, unreliable deltas, see Transform smoothing), `PlayerNetworkSync`, `YPositionSorter` on a child), referenced by `GameplayLifetimeScope`, spawned at runtime by `PlayerSpawner`, and listed in `Assets/DefaultNetworkPrefabs.asset`. Offline the networking components stay unspawned and do nothing.
 
 | Type | Role |
 |---|---|
-| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Reads a `PlayerCommand` from its `IPlayerCommandSource` in `Update` (internal `Tick`), sets `Rigidbody2D.linearVelocity` in `FixedUpdate`, drives animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`), forwards attack commands to the weapon controller. No source = idle, with an error logged in `Start`. `SetSimulatesMovement(false)` stops it touching the Rigidbody2D (remote copies, moved by `NetworkTransform`). `SetCommandSource`, `CurrentMove`, `FacingDirection`, `SimulatesMovement`, `Face`, `Teleport`. |
-| [PlayerCommand](../Assets/Scripts/Player/PlayerCommand.cs) / [IPlayerCommandSource](../Assets/Scripts/Player/IPlayerCommandSource.cs) | One frame of player intent (`Move`, `Attack`) and where a player gets it from, so each player can be driven independently. |
-| [LocalPlayerCommandSource](../Assets/Scripts/Player/LocalPlayerCommandSource.cs) | Wraps `IPlayerInput`; `PlayerSpawner` gives it to the local player only. |
-| [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack` checks the `IClock` cooldown, spawns a slash in the facing direction via `SlashSpawner` and raises `Attacked(direction)`. `PlayRemoteAttack(direction)` replays another machine's swing without a cooldown or event. Event `EquippedWeaponChanged`. |
+| [PlayerController](../Assets/Scripts/Player/PlayerController.cs) | Wires the command source, `PlayerOrders`, `PlayerMotor2D` and the weapon. Each `Update` (internal `Tick`): read a `PlayerCommand`, tick the orders with the motor's state, the clock and the equipped weapon's `AttackRange`, then apply the output (`MoveTo`/`Stop` on the motor, `Face(aim)`, `TryAttack(aim)` on swing requests). Remote copies (`SetSimulatesMovement(false)`) do nothing in `Tick` and only show replicated movement. Death (`OnDisable`, through `DisableOnDeath`) and `Teleport` clear the orders, so a respawn starts Idle. No source on a simulated player = idle, with an error logged in `Start`. Keeps `SetCommandSource`, `CurrentMove`, `FacingDirection`, `SimulatesMovement`, `Face`, `Teleport`; adds `ShowRemoteMovement`, `ClearOrders`, `CurrentOrder`, `ControlSettings`. |
+| [PlayerOrders](../Assets/Scripts/Player/PlayerOrders.cs) | Plain class: the order state machine (Idle, Move, Attack), see Player orders below. [PlayerOrderTypes.cs](../Assets/Scripts/Player/PlayerOrderTypes.cs) holds `PlayerOrderKind`, `PlayerMotorRequest`, the `PlayerOrderContext` input and the `PlayerOrderOutput` (motor request + destination, aim, swing). |
+| [PlayerMotor2D](../Assets/Scripts/Player/PlayerMotor2D.cs) | Owns a `PathFollower2D` (configured from `PlayerControlSettings`, straight-line shortcut on). `MoveTo(point)` paths on `ActiveNavigationGrid.Current` with partial paths allowed (an unwalkable point ends at the nearest walkable cell; a point with none within the search radius, e.g. far outside the map, is walked back along the line toward the player until a walkable cell); without a grid it goes in a straight line. `FixedUpdate` sets `Rigidbody2D.linearVelocity` from the follower (`Time.fixedDeltaTime`), facing follows movement. `Update` drives the animator (`IsMoving`, `MoveX/Y`, `LastMoveX/Y`, walk speed). `Stop`, `Face`, `Teleport`, `ReachedDestination`, `StalledTime`, `CurrentMove`, `FacingDirection`; `ShowRemoteMovement(move, facing)` for remote copies, whose body it never moves. Sets up the body (no gravity, frozen rotation, interpolation) in `Awake`. |
+| [PlayerControlSettings](../Assets/Scripts/Player/PlayerControlSettings.cs) | ScriptableObject (`Assets/Data/PlayerControlSettings.asset`): move speed 5, waypoint reach and arrival 0.1, nearest-cell radius 8, terrain profile `TerrainMovement_Default`, stuck timeout 0.75 s, hold re-evaluation 0.15 s, chase repath 0.5 s or when the target moved 0.5, pick radius 0.35, enemy layers `Enemy`, ally layers `Player`. `FollowerSettings` builds the path follower settings. |
+| [PlayerCommand](../Assets/Scripts/Player/PlayerCommand.cs) / [IPlayerCommandSource](../Assets/Scripts/Player/IPlayerCommandSource.cs) | One frame of intent in world space (`PointerWorld`, `Target` under the pointer, `MovePressed`, `MoveHeld`, `StopPressed`, `HasAbility`/`AbilitySlot`; `default` is "nothing") and where the local player gets it from. Only the local player reads commands. |
+| [LocalPlayerCommandSource](../Assets/Scripts/Player/LocalPlayerCommandSource.cs) | Builds commands from `IPlayerInput` with the Main-scope `Camera` (screen to world) and `PointerTargetPicker` (only while the move button is pressed or held). A press over UI is dropped along with the hold that follows it; a hold that started on the world keeps steering over UI. Nothing while gameplay input is disabled. `PlayerBinder` gives it to the local player only. |
+| [PointerTargetPicker](../Assets/Scripts/Player/PointerTargetPicker.cs) | `Pick(worldPoint)`: non-allocating `Physics2D.OverlapCircle` within the pick radius on the enemy + ally layers (no triggers), returning the living unit whose collider centre is closest. Enemies need a `DamageReceiver` (alive `Health`); allies must be registered, living players. No line-of-sight test. |
+| [UnitTarget](../Assets/Scripts/Player/UnitTarget.cs) | A picked or ordered unit: `Health` (identity), `Collider`, `UnitTeam` (`None`, `Enemy`, `Ally`). |
+| [IUnitQueries](../Assets/Scripts/Player/IUnitQueries.cs) / [PlayerUnitQueries](../Assets/Scripts/Player/PlayerUnitQueries.cs) | What orders ask about a target: alive, position, and collider-to-collider distance from the player (`Collider2D.Distance`, zero when overlapping, centre distance when a collider is missing or disabled). |
+| [PlayerWeaponController](../Assets/Scripts/Player/PlayerWeaponController.cs) | Holds the equipped `PlayerWeapon`; `TryAttack(direction)` checks the `IClock` cooldown, spawns a slash toward the direction (the facing direction when it is zero) via `SlashSpawner` and raises `Attacked(direction)`. `PlayRemoteAttack(direction)` replays another machine's swing without a cooldown or event. Event `EquippedWeaponChanged`. |
 | [PlayerHandle](../Assets/Scripts/Player/PlayerHandle.cs) | One player as other systems see it: `Transform`, `Health`, `IsAlive`. |
 | [IPlayerRegistry](../Assets/Scripts/Player/IPlayerRegistry.cs) / [PlayerRegistry](../Assets/Scripts/Player/PlayerRegistry.cs) | Every player in the session: `Players`, `Contains`, `AnyAlive`, events `PlayerAdded`/`PlayerRemoved`. `Add`/`Remove` (ignore null and duplicates) are on the concrete class only. Used by mobs and death handling. |
 | [PlayerSpawner](../Assets/Scripts/Player/PlayerSpawner.cs) | Instantiates the player prefab through `IObjectResolver` (injecting its components) and moves it into the Gameplay scene so it survives area changes. `SpawnLocalPlayer`: offline binds it as the local player directly; when hosting, spawns it as the host's network player object. `SpawnRemotePlayer(clientId)` (host only): spawns a player object owned by that client, unless it already has one. `PlayerNetworkPrefab`, `PlayersScene`. |
 | [GameplayPlayers](../Assets/Scripts/Player/GameplayPlayers.cs) | Gameplay entry point. Offline: spawns the local player. Online: `RegisterNetworkPrefabs` (build callback) registers the player prefab with the session so client copies are injected from this scope and placed in the Gameplay scene; in `Start` the host spawns its own player, one for every ready client and then each newly ready client. Unregisters on dispose. |
-| [PlayerBinder](../Assets/Scripts/Player/PlayerBinder.cs) | `BindLocal(controller)`: local command source, movement on, registers, places it at its slot of `ActiveSpawnPoint` if the area was already entered, assigns it to `LocalPlayerTracker`. `BindRemote(controller, commands)`: given command source, movement off, registers. `PlaceAtActiveSpawn(handle)`: teleports to that player's slot. `Unbind(handle)`. |
+| [PlayerBinder](../Assets/Scripts/Player/PlayerBinder.cs) | `BindLocal(controller)`: local command source, movement on, registers, places it at its slot of `ActiveSpawnPoint` if the area was already entered, assigns it to `LocalPlayerTracker`. `BindRemote(controller)`: no command source, movement off, registers. `PlaceAtActiveSpawn(handle)`: teleports to that player's slot. `Unbind(handle)`. |
 | [LocalPlayerTracker](../Assets/Scripts/Player/LocalPlayerTracker.cs) | The current `LocalPlayer` (null until this machine's player exists) and a `Changed` event. |
-| [PlayerNetworkSync](../Assets/Scripts/Player/PlayerNetworkSync.cs) | `NetworkBehaviour` on the player. On spawn the owner binds as local and forwards `Attacked` through `AttackRpc` (owner-invoked, runs on everyone else, replays with `PlayRemoteAttack`); other machines bind it as remote, make its body kinematic without interpolation, and feed it `move`/`facing` from owner-written `NetworkVariable`s (owner updates them when they change by more than 0.01). The owner also places itself at its spawn slot when its `Health` is restored (the host cannot move a client's player). Unbinds on despawn. |
+| [PlayerNetworkSync](../Assets/Scripts/Player/PlayerNetworkSync.cs) | `NetworkBehaviour` on the player. On spawn the owner binds as local and forwards `Attacked` through `AttackRpc` (owner-invoked, runs on everyone else, replays with `PlayRemoteAttack`); other machines bind it as remote, make its body kinematic without interpolation, and every frame pass the owner-written `move`/`facing` `NetworkVariable`s to `PlayerController.ShowRemoteMovement`, which drives the copy's animation (owner updates them when they change by more than 0.01; `move` is the motor's `CurrentMove`). The owner also places itself at its spawn slot when its `Health` is restored (the host cannot move a client's player). Unbinds on despawn. |
 | [LocalPlayer](../Assets/Scripts/Player/LocalPlayer.cs) | The player this machine controls: `Controller`, `Weapon`, `Handle`, `Transform`. Reached through `LocalPlayerTracker` by the camera, HUD and the stress spawner. |
 | [PlayerDeathHandler](../Assets/Scripts/Player/PlayerDeathHandler.cs) | Entry point; does nothing on a client (`IGameAuthority`). Listens to `Health.Died` of every registered player (follows `PlayerAdded`/`PlayerRemoved`). If no registered player is alive (party wipe), waits `GameplaySettings.RestartDelaySeconds`, then `GameFlow.StartNewGameAsync(CurrentArea)` (full session reload = fresh players). Otherwise waits `RespawnDelaySeconds` and asks `PlayerRespawner` to bring the dead player back, unless a party wipe happened in the meantime. |
 | [PlayerRespawner](../Assets/Scripts/Player/PlayerRespawner.cs) | `TryRespawn(player)`: only for dead players in the registry; `Health.Restore()` (which re-enables the player through `DisableOnDeath`) and, if this machine moves that player, teleports it to its slot at `ActiveSpawnPoint.Current`; otherwise it stays in place. |
 | [ActiveSpawnPoint](../Assets/Scripts/World/ActiveSpawnPoint.cs) | The `SpawnPoint` the party last entered the current area through. |
 
 Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`Assets/Data/GameplaySettings.asset`): restart delay (1.5 s), respawn delay (3 s).
+
+### Player orders
+
+[PlayerOrders](../Assets/Scripts/Player/PlayerOrders.cs) runs on the machine that moves the player (the owner). Each tick: Stop clears the order; a move press issues an order from the command; a held button re-issues one every `HoldReevaluateInterval`; then the current order runs.
+
+| Order | Issued by | Runs | Ends |
+|---|---|---|---|
+| Idle | Stop, or an order ending | Nothing | Any new order |
+| Move(point) | Press (or hold) on the ground, an ally, or a dead enemy | `MoveTo(point)` once; the arrival check is skipped on the tick it is issued, because the motor still reports the previous path | Motor reached its destination, or stalled for `StuckTimeout` |
+| Attack(target) | Press (or hold) on a living enemy; re-issuing the same target keeps the chase as it is | In `AttackRange` (collider distance): `Stop` once, aim at the target, request a swing every tick (the weapon cooldown decides). Out of range: `MoveTo(target)` when the chase starts, every `RepathInterval`, or once the target moved `TargetMoveRepathDistance` from the last goal. Walls and distance never cancel it. | The target dies or is destroyed |
+
+An empty command (gameplay input disabled during transitions) makes no new order and lets the current one run on. `Clear` (death, teleports, becoming a remote copy) drops the order without a motor request; the controller stops the motor itself.
+
 
 ## Combat
 
@@ -279,7 +312,7 @@ Config: [GameplaySettings](../Assets/Scripts/Composition/GameplaySettings.cs) (`
 
 | Type | Role |
 |---|---|
-| [PlayerWeapon](../Assets/Scripts/Combat/PlayerWeapon.cs) | ScriptableObject: name, damage, cooldown, spawn distance, per-direction offsets (Down, Up, Left, Right), slash prefab, HUD icon. Asset: `Assets/Data/Weapons/Sword.asset`. |
+| [PlayerWeapon](../Assets/Scripts/Combat/PlayerWeapon.cs) | ScriptableObject: name, damage, cooldown, attack range for auto attacks (collider-to-collider, 0.3 on the sword), spawn distance, per-direction offsets (Down, Up, Left, Right), slash prefab, HUD icon. Asset: `Assets/Data/Weapons/Sword.asset`. |
 | [SlashSpawner](../Assets/Scripts/Combat/SlashSpawner.cs) | Instantiates the weapon's slash prefab through `IObjectResolver` and initializes it with the `DamageService`. |
 | [SwordSlashAttack](../Assets/Scripts/Combat/SwordSlashAttack.cs) | Trigger hitbox that follows the owner's sprite, rotates to the attack direction, mirrors when facing east, plays its clip through a `PlayableGraph`, decides which `DamageReceiver`s it hit (each once, never the owner) and applies the damage through `DamageService`, checks initial overlaps, self-destroys after the clip length. Prefab: `Assets/Prefabs/Combat/SwordSlash.prefab`. |
 
@@ -377,7 +410,7 @@ Config: `MobConfig` Crowd header (`separationRadius`, `separationStrength`, `cro
 | [TerrainMovementProfile2D](../Assets/Scripts/AI/Navigation/TerrainMovementProfile2D.cs) | Per-mob rules: default walkable/cost + per-terrain rules; `Version` bumps on change so region caches refresh. Asset: `Assets/Settings/AI/TerrainMovement_Default.asset`. |
 | [PathFollower2D](../Assets/Scripts/AI/Navigation/PathFollower2D.cs) | Plain class shared by mobs (through `MobPathAgent2D`) and, from Phase 2 of [PlayerControls.md](PlayerControls.md), players. `Configure(grid, profile, settings)`, `BuildPath(start, goal, allowPartial)`, `CanReach(start, goal)`, `Tick(position, moveSpeed, deltaTime)` returning the desired velocity (zero once there is no path), `Clear`, path flags, `StalledTime`, `Waypoints`. No engine lookups, no motor or `MobConfig` dependency, no allocations once its buffers are warm. |
 | [PathFollowerSettings2D](../Assets/Scripts/AI/Navigation/PathFollowerSettings2D.cs) | Waypoint reach distance, arrival distance, nearest-cell search radius (-1 = the grid's) and `UseStraightLineShortcut`. |
-| [ActiveNavigationGrid](../Assets/Scripts/World/ActiveNavigationGrid.cs) | Gameplay-scope holder for the current area's grid (`Current`, `Set`, `Clear(grid)` which only clears that grid). Players live in the Gameplay scope and cannot inject the area's grid directly. Set by `AreaEntry.Enter`, cleared by `AreaEntry.Dispose`; each machine holds its own area's grid. |
+| [ActiveNavigationGrid](../Assets/Scripts/World/ActiveNavigationGrid.cs) | Gameplay-scope holder for the current area's grid (`Current`, `Set`, `Clear(grid)` which only clears that grid). Players live in the Gameplay scope and cannot inject the area's grid directly. Set by `AreaEntry.Enter`, cleared by `AreaEntry.Dispose`; each machine holds its own area's grid. Read by `PlayerMotor2D` on every `MoveTo`. |
 
 Path follower flow ([PathFollower2D](../Assets/Scripts/AI/Navigation/PathFollower2D.cs)): world goal -> cells -> `FindPath` into a reused buffer -> smooth (skip intermediate cells only when the straight line is traversable and no more expensive than the route) -> waypoints (last one is the exact goal unless partial; the first is dropped when already within the reach distance) -> `Tick` steers toward the next waypoint, using the arrival distance for the final one, and grows `StalledTime` while the body covers less than 20% of `moveSpeed`. A failed build clears the path and the goal cell. `CanReach` = goal walkable + same region as the nearest walkable cell to the start. `MobPathAgent2D` calls it with `Time.fixedDeltaTime` and the motor's speed.
 
@@ -389,7 +422,7 @@ Costs: 10 per straight step by default, diagonals x1.4.
 
 - Areas are separate scenes with a `Grid`, a DualGrid terrain tilemap (`DualGridTilemapModule` data + render tilemaps), a `CollisionTilemap` on the `Obstacles` layer, `NavigationGrid2D` + `NavigationTerrainSource2D`, one or more [SpawnPoint](../Assets/Scripts/World/SpawnPoint.cs)s (string `spawnId`, `partySpacing`, `GetSlotPosition(index)`: slot 0 on the point, then alternating right/left, gizmo), [MobSpawnPoint](../Assets/Scripts/World/MobSpawnPoint.cs)s (mob prefab, gizmo) and an `AreaLifetimeScope`.
 - [AreaMobSpawner](../Assets/Scripts/World/AreaMobSpawner.cs): area entry point over `INetworkObjectSpawner`. `Start` (offline or host): `SpawnAll` instantiates each spawn point's mob prefab through the area container at the point's position, moves it into the area scene, and when hosting spawns it as a network object; spawn points without a prefab log an error. On a client it spawns nothing; `RegisterNetworkPrefabs` instead registers each distinct mob prefab so the host's mobs arrive injected from this area's container and in this area's scene, and `Dispose` unregisters them. Mobs are never placed in area scenes directly; the stress-test spawner's mobs stay local (offline tool).
-- Project layers include `Obstacles` (collision tilemaps; `MobConfig.obstacleLayerMask` uses it for line of sight), `Player` and `Enemy`. Separation only senses colliders on the mob's own layer.
+- Project layers include `Obstacles` (collision tilemaps; `MobConfig.obstacleLayerMask` uses it for line of sight), `Player` and `Enemy`. Separation only senses colliders on the mob's own layer. `Player` vs `Player` collisions are off in the 2D physics matrix, so players walk through each other; everything else collides.
 - Adding an area: create from the area template, add a `SceneDefinition`, list it in `GameScenes.areas`, enable it in build settings (enforced by `SceneBuildValidator`).
 
 ## Dev tools (stress test)
@@ -428,7 +461,8 @@ Menu root: `Tools/TopDownRPG/`.
 | `NetworkSettings` | `Assets/Data/NetworkSettings.asset` | `MainLifetimeScope` -> `NetworkSession`, `MainMenuController` |
 | `SceneDefinition` | `Assets/Data/Scenes/Scene_*.asset` | `GameScenes`, `GameFlow`, `SceneLoader` |
 | `GameplaySettings` | `Assets/Data/GameplaySettings.asset` | `PlayerDeathHandler` (restart and respawn delays) |
-| `PlayerWeapon` | `Assets/Data/Weapons/Sword.asset` | `PlayerWeaponController`, `SlashSpawner`, `SwordSlashAttack`, HUD |
+| `PlayerWeapon` | `Assets/Data/Weapons/Sword.asset` | `PlayerWeaponController`, `PlayerController` (attack range), `SlashSpawner`, `SwordSlashAttack`, HUD |
+| `PlayerControlSettings` | `Assets/Data/PlayerControlSettings.asset` | Player prefab (`PlayerController` -> `PlayerOrders`, `PlayerMotor2D`), Gameplay scope -> `PointerTargetPicker` |
 | `MobConfig` | `Assets/Settings/AI/Mob_Default.asset`, `Assets/Dev/StressTest/Mob_StressTest.asset` | All mob components and states |
 | `TerrainMovementProfile2D` | `Assets/Settings/AI/TerrainMovement_Default.asset` | `MobConfig.movementProfile` -> navigation |
 | `TerrainType2D` | `Assets/Settings/AI/Terrain_Grass.asset` | `NavigationTerrainSource2D`, profiles |
@@ -447,6 +481,9 @@ flowchart LR
     subgraph Gameplay scope
         PlayerController -- IPlayerCommandSource --> LocalPlayerCommandSource
         LocalPlayerCommandSource -- IPlayerInput --> PlayerInputService
+        LocalPlayerCommandSource --> PointerTargetPicker
+        PlayerController --> PlayerOrders
+        PlayerController --> PlayerMotor2D -- Current --> ActiveNavigationGrid
         PlayerController --> PlayerWeaponController
         PlayerWeaponController --> SlashSpawner --> SwordSlashAttack
         SwordSlashAttack --> DamageService
@@ -516,18 +553,22 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
 | [SystemRandomTests.cs](../Assets/Tests/Editor/SystemRandomTests.cs) | Range bounds, unit circle, same seed same sequence |
 | [InjectingNetworkPrefabHandlerTests.cs](../Assets/Tests/Editor/InjectingNetworkPrefabHandlerTests.cs) | Network prefab instances are injected copies at the requested pose |
-| [PlayerBinderTests.cs](../Assets/Tests/Editor/PlayerBinderTests.cs) | Local/remote binding, unbinding, placement at the active spawn point, `DamageService` without authority |
+| [PlayerBinderTests.cs](../Assets/Tests/Editor/PlayerBinderTests.cs) | Local/remote binding (remote copies get no command source), unbinding, placement at the active spawn point, `DamageService` without authority |
+| [PlayerOrdersTests.cs](../Assets/Tests/Editor/PlayerOrdersTests.cs) | With a fake `IUnitQueries`: ground click moves, arrival (ignoring the stale arrival on the issuing tick), stuck timeout, clicks on allies and dead enemies move, attack chase and its repath rules, in range (stop once, aim, swing every tick), already in range, leaving range and no leash, target death, Stop, new orders replacing old ones, throttled hold re-evaluation (ground and enemy), holding over the same enemy, empty commands, `Clear`, no allocation |
+| [PlayerMotor2DTests.cs](../Assets/Tests/Editor/PlayerMotor2DTests.cs) | Straight line without a grid (velocity, `CurrentMove`, facing), path around a wall on the active grid, shortcut for a clear line, unwalkable and far-outside-the-map destinations, switching and clearing the active grid, arrival, `Stop`, remote copies, stall time, no allocation when warm, `Player` vs `Player` collisions off (and nothing else) |
+| [PlayerTargetingTests.cs](../Assets/Tests/Editor/PlayerTargetingTests.cs) | `PointerTargetPicker` (closest living enemy, dead units and receiver-less colliders ignored, registered living allies only, radius, no line-of-sight test, no allocation) and `LocalPlayerCommandSource` (screen to world with the camera, picking under the pointer, presses and holds over UI, accepted holds over UI, Stop and ability slot, disabled input), `PlayerCommand` defaults |
 | [PlayerRegistryTests.cs](../Assets/Tests/Editor/PlayerRegistryTests.cs) | Add/remove events, null and duplicate handling, `AnyAlive` |
-| [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, dispose |
-| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter (including rebinding when the local player changes), attack cooldown/facing, `Attacked` raised by local swings but not by `PlayRemoteAttack`, `PlayerController` driven by a command source (facing, attack, idle without one), `LocalPlayerCommandSource`, slash hit rules/follow/offsets/mirroring/opening sprite, input asset Attack binding, Main scope input asset wiring |
+| [PlayerInputServiceTests.cs](../Assets/Tests/Editor/PlayerInputServiceTests.cs) | Map enable/disable, neutral input when disabled, ability slots outside the bar, no `EventSystem` = never over UI, missing actions logged, dispose; the project asset's bindings (right button, pointer, X, Q W E R A S), no `Move`/`Attack` actions and no other Player action on those keys or D |
+| [PlayerWeaponSystemTests.cs](../Assets/Tests/Editor/PlayerWeaponSystemTests.cs) | Equip + HUD icon, HUD presenter (including rebinding when the local player changes), `TryAttack(direction)` direction and cooldown, `Attacked` raised by local swings (a zero direction uses the facing) but not by `PlayRemoteAttack`, `PlayerController` attack order on an enemy in range (faces and swings toward it), idle without a command source, slash hit rules/follow/offsets/mirroring/opening sprite, Main scope input asset wiring |
 
 Fakes and seams:
 - [ManualClock](../Assets/Tests/Editor/ManualClock.cs): `IClock` with settable `Time` and `Advance`.
+- [FakePlayerInput](../Assets/Tests/Editor/FakePlayerInput.cs): settable `IPlayerInput`. [TestPlayerControlSettings](../Assets/Tests/Editor/TestPlayerControlSettings.cs): builds a `PlayerControlSettings` (layers `Enemy`/`Player`) and assigns it to a `PlayerController`.
 - `MemorySaveStore` ([EditMode](../Assets/Tests/Editor/MemorySaveStore.cs), [PlayMode](../Assets/Tests/PlayMode/MemorySaveStore.cs)): in-memory `ISaveStore` with `Contents` and `WriteCount`. `GameSaveTests` builds its own `GameScenes` and `SceneDefinition`s with fake GUIDs.
 - `SystemRandom` with a fixed seed stands in for `IRandom`.
 - A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
-- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Tick`, `MobMotor2D` attack/facing state, `DesiredVelocity` and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
+- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Tick`/`Orders`, `PlayerMotor2D.FixedTick`/`Follower`, `MobMotor2D` attack/facing state, `DesiredVelocity` and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
 
 ### PlayMode (`Assets/Tests/PlayMode`)
 
@@ -537,11 +578,12 @@ Fakes and seams:
 | [GameSavePlayModeTests.cs](../Assets/Tests/PlayMode/GameSavePlayModeTests.cs) | Entering an area saves its scene GUID and spawn; without a save Continue is disabled and not selected; after playing and returning to the menu, Continue is selected and starts a new session in the saved area |
 | [NetworkAreaSyncPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkAreaSyncPlayModeTests.cs) | Hosted game plus in-process client: a late joiner is told the current area; after a host area change the old mob is despawned on the client, the new area's mob stays hidden until the client reports ready for the new epoch (a stale report is ignored), and re-reporting ready does not spawn a second player. A host restart without clients bumps the epoch and respawns the host's player. |
 | [NetworkMobsPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkMobsPlayModeTests.cs) | Hosted game plus in-process client: the host's mob is a spawned network object; the client's copy has its AI off and a kinematic body, follows the host's mob, mirrors its HP and publishes the hit for popups; the client's own player takes the host's damage, dies and is respawned by the host; killing the mob despawns the client copy and plays the death animation on both |
-| [NetworkSmoothnessPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSmoothnessPlayModeTests.cs) | Under simulated 150 ms / 20 ms / 4% loss: the host's copy of a client's player starts within 0.8 s, never jumps back a visible pixel, never freezes for 0.6 s and keeps its speed within 50% on average over 3 runs. Plus the explicit `NetworkBench` benchmark described under Transform smoothing. |
-| [InProcessClient.cs](../Assets/Tests/PlayMode/InProcessClient.cs) | Helper: a second `NetworkManager` cloned from the session's (without its simulator), with its own container, prefab handler, player registry, local player tracker and scripted input, acting as a joining client inside the test process; it also registers the current area's mob prefabs, keeps received copies in `DontDestroyOnLoad`, records area announcements, sends ready for the host's (or a given) epoch and exposes `Resolve<T>()`. Never let the host reload the Gameplay scene while one is connected: that froze the editor every time (see [Multiplayer.md](Multiplayer.md#testing)). |
-| [NetworkPlayersPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkPlayersPlayModeTests.cs) | Hosting from the menu, then a second in-process `NetworkManager` acting as a client (with its own container and prefab handler): nothing reaches it before it reports ready, both sides then see both players with the right ownership, the client's movement and facing reach the host copy, its attack plays on the host, and its player is removed when it disconnects |
+| [NetworkSmoothnessPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSmoothnessPlayModeTests.cs) | With the area's mobs despawned and under simulated 150 ms / 20 ms / 4% loss, the client's player is sent on move orders 1000 units left or right (constant speed) and stopped with Stop: the host's copy starts within 0.8 s, never jumps back a visible pixel, never freezes for 0.6 s and keeps its speed within 50% on average over 3 runs. Plus the explicit `NetworkBench` benchmark described under Transform smoothing. |
+| [InProcessClient.cs](../Assets/Tests/PlayMode/InProcessClient.cs) | Helper: a second `NetworkManager` cloned from the session's (without its simulator), with its own container (camera, the player prefab's `PlayerControlSettings`, picker, an empty `ActiveNavigationGrid` so its player walks in straight lines), prefab handler, player registry, local player tracker and scripted input (`TestInput.PointAt(world)` plus one-frame `MovePressedThisFrame`/`StopPressedThisFrame`), acting as a joining client inside the test process; it also registers the current area's mob prefabs, keeps received copies in `DontDestroyOnLoad`, records area announcements, sends ready for the host's (or a given) epoch and exposes `Resolve<T>()`. Never let the host reload the Gameplay scene while one is connected: that froze the editor every time (see [Multiplayer.md](Multiplayer.md#testing)). |
+| [NetworkPlayersPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkPlayersPlayModeTests.cs) | Hosting from the menu, then a second in-process `NetworkManager` acting as a client (with its own container and prefab handler): nothing reaches it before it reports ready, both sides then see both players with the right ownership, the client's move order (a click far to the right) reaches the host copy as movement, facing and a walking animation, a swing on the client plays on the host, and its player is removed when it disconnects |
 | [NetworkSessionPlayModeTests.cs](../Assets/Tests/PlayMode/NetworkSessionPlayModeTests.cs) | Host from the menu enters the game, saves it, and the menu ends the session; joining a second in-process host from the menu waits for its announcement, loads the announced area, reports ready with its epoch, follows an area change and a new-session restart, then returns to the menu when that host leaves, never writing a save; join timeout with no host |
 | [SceneFlowPlayModeTests.cs](../Assets/Tests/PlayMode/SceneFlowPlayModeTests.cs) | Boot composition (single camera/listener/EventSystem, one spawned player in the Gameplay scene and registry), `ChangeAreaAsync` placement, menu round trip, death restart, respawn at the spawn point while a teammate lives, restart only on a full party wipe, menu boot focus |
+| [PlayerControlsPlayModeTests.cs](../Assets/Tests/PlayMode/PlayerControlsPlayModeTests.cs) | In the Clearing, with a scripted command source on the local player: entering makes the area's grid active; a click behind a runtime-built collision wall paths around it and arrives; a click on a mob hidden behind that wall (picked with `PointerTargetPicker`) paths around and kills it, then goes Idle; walking through a body on the `Player` layer without pushing it; death clears the orders |
 | [MobPlayModeBehaviorTests.cs](../Assets/Tests/PlayMode/MobPlayModeBehaviorTests.cs) | Clearing mobs spawned from spawn points into the area scene, detection/loss in the Clearing, shared grid/player injection, attack + popup, attack interval, player death disengagement, mob death animation, HUD + slash damage |
 | [StressTestScenePlayModeTests.cs](../Assets/Tests/PlayMode/StressTestScenePlayModeTests.cs) | Stress area boots, spawns its initial mobs and they engage |
 
@@ -563,4 +605,5 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **Duplicated tuning**: `nearestCellSearchRadius` exists on both `NavigationGrid2D` (used when no radius is passed, e.g. inside A*) and `MobConfig`. `MobMotor2D` speed/acceleration, `MeleeDamageDealer` damage/interval and `SwordSlashAttack.damageAmount` are serialized but overwritten at runtime by `MobConfig`/`PlayerWeapon`.
 - **Magic numbers**: `MobDeathAnimation` scales the effect by a hard-coded `1.2`; the `StressTestSpawner` tooltip hard-codes "Detection radius is 6".
 - **Editor asset writes on load**: `PlayerSlashPrefabBootstrap` can regenerate `SwordSlash.prefab` and rewrite `Sword.asset` from an `[InitializeOnLoad]` delay call.
+- **The Clearing has no walls**: its collision tilemap is empty and its edges are only missing ground, so nothing physical stops a body at the edge; paths keep players and mobs inside. `PlayerControlsPlayModeTests` builds its own wall at runtime.
 - **Folder naming**: `YPositionSorter` lives under `Assets/Scripts/Camera` although it handles sprite sorting; the camera follow script is in `Core/Camera`.

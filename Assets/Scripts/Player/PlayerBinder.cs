@@ -50,9 +50,9 @@ public sealed class PlayerBinder
         }
     }
 
-    public PlayerHandle BindRemote(PlayerController controller, IPlayerCommandSource commands)
+    public PlayerHandle BindRemote(PlayerController controller)
     {
-        controller.SetCommandSource(commands);
+        controller.SetCommandSource(null);
         controller.SetSimulatesMovement(false);
         PlayerHandle handle = new(controller.transform, controller.GetComponent<Health>());
         players.Add(handle);

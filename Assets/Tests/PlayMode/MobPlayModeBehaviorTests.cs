@@ -272,9 +272,7 @@ public class MobPlayModeBehaviorTests
         int expectedDamage = weaponController.CurrentWeapon != null ? weaponController.CurrentWeapon.Damage : 1;
 
         player.transform.position = mob.transform.position + Vector3.left * 0.45f;
-        playerController.Face(Vector2.right);
-
-        weaponController.TryAttack();
+        weaponController.TryAttack(Vector2.right);
         yield return null;
 
         Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth - expectedDamage));

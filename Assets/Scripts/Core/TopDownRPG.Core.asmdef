@@ -3,6 +3,7 @@
   "references": [
     "VContainer",
     "Unity.InputSystem",
+    "UnityEngine.UI",
     "Unity.Netcode.Runtime",
     "Unity.Networking.Transport",
     "Unity.Collections"

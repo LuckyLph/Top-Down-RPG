@@ -25,8 +25,16 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
+        if (playerPrefab.ControlSettings == null)
+        {
+            Debug.LogError($"{name}: the player prefab has no {nameof(PlayerControlSettings)}; no player can be spawned.", this);
+            return;
+        }
+
+        builder.RegisterInstance(playerPrefab.ControlSettings);
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
+        builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
         builder.Register<ActiveNavigationGrid>(Lifetime.Singleton);

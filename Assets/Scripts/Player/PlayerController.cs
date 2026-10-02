@@ -1,52 +1,87 @@
 using UnityEngine;
+using VContainer;
 
+/// <summary>
+/// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/> and weapon: each frame
+/// it reads a command, ticks the orders and applies their motor, facing and swing requests. Remote copies only show
+/// replicated movement.
+/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(PlayerMotor2D))]
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField, Min(0.1f)] private float walkAnimationSpeed = 0.85f;
-    [SerializeField] private Animator animator;
+    [SerializeField] private PlayerControlSettings controlSettings;
     [SerializeField] private PlayerWeaponController weaponController;
+    [SerializeField] private PlayerMotor2D motor;
 
-    private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
-    private static readonly int MoveXHash = Animator.StringToHash("MoveX");
-    private static readonly int MoveYHash = Animator.StringToHash("MoveY");
-    private static readonly int LastMoveXHash = Animator.StringToHash("LastMoveX");
-    private static readonly int LastMoveYHash = Animator.StringToHash("LastMoveY");
-
-    private Rigidbody2D rb;
     private IPlayerCommandSource commandSource;
-    private Vector2 moveInput;
-    private Vector2 lastMoveDirection = Vector2.down;
+    private IClock clock = UnityClock.Shared;
+    private PlayerOrders orders;
     private bool simulatesMovement = true;
 
-    public Vector2 FacingDirection => lastMoveDirection;
-    public Vector2 CurrentMove => moveInput;
+    public PlayerControlSettings ControlSettings => controlSettings;
+    public Vector2 FacingDirection => Motor.FacingDirection;
+    public Vector2 CurrentMove => Motor.CurrentMove;
     public bool SimulatesMovement => simulatesMovement;
+    public PlayerOrderKind CurrentOrder => orders != null ? orders.Current : PlayerOrderKind.Idle;
+
+    internal PlayerOrders Orders => orders;
+
+    private PlayerMotor2D Motor
+    {
+        get
+        {
+            if (motor == null)
+            {
+                motor = GetComponent<PlayerMotor2D>();
+            }
+
+            return motor;
+        }
+    }
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
-        ResolveAnimator();
         ResolveWeaponController();
+        if (controlSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(PlayerControlSettings)}; it cannot take orders.", this);
+        }
 
-        rb.gravityScale = 0f;
-        rb.freezeRotation = true;
-        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        EnsureInitialized();
     }
 
     private void OnValidate()
     {
-        ResolveAnimator();
         ResolveWeaponController();
+        if (motor == null)
+        {
+            motor = GetComponent<PlayerMotor2D>();
+        }
     }
 
     private void Start()
     {
-        if (commandSource == null)
+        if (simulatesMovement && commandSource == null)
         {
             Debug.LogError($"{name} has no {nameof(IPlayerCommandSource)}; it will not respond to input.", this);
         }
+    }
+
+    private void OnDisable()
+    {
+        ClearOrders();
+    }
+
+    private void Update()
+    {
+        Tick();
+    }
+
+    [Inject]
+    public void Construct(IClock gameClock)
+    {
+        clock = gameClock ?? UnityClock.Shared;
     }
 
     public void SetCommandSource(IPlayerCommandSource source)
@@ -57,78 +92,101 @@ public class PlayerController : MonoBehaviour
     public void SetSimulatesMovement(bool simulates)
     {
         simulatesMovement = simulates;
-    }
-
-    private void Update()
-    {
-        Tick();
-    }
-
-    internal void Tick()
-    {
-        PlayerCommand command = commandSource != null ? commandSource.ReadCommand() : default;
-        moveInput = command.Move.normalized;
-
-        bool isMoving = moveInput.sqrMagnitude > 0.0001f;
-        if (isMoving)
+        Motor.SetSimulatesMovement(simulates);
+        if (!simulates)
         {
-            lastMoveDirection = moveInput;
-        }
-
-        if (command.Attack && weaponController != null)
-        {
-            weaponController.TryAttack();
-        }
-
-        Vector2 animationDirection = isMoving ? moveInput : lastMoveDirection;
-
-        if (animator != null)
-        {
-            animator.SetBool(IsMovingHash, isMoving);
-            animator.SetFloat(MoveXHash, animationDirection.x);
-            animator.SetFloat(MoveYHash, animationDirection.y);
-            animator.SetFloat(LastMoveXHash, lastMoveDirection.x);
-            animator.SetFloat(LastMoveYHash, lastMoveDirection.y);
-            animator.speed = isMoving ? walkAnimationSpeed : 1f;
+            ClearOrders();
         }
     }
 
-    private void FixedUpdate()
+    /// <summary>
+    /// Shows another machine's movement on this remote copy.
+    /// </summary>
+    public void ShowRemoteMovement(Vector2 move, Vector2 facing)
     {
-        if (!simulatesMovement)
-        {
-            return;
-        }
-
-        rb.linearVelocity = moveInput * moveSpeed;
+        Motor.ShowRemoteMovement(move, facing);
     }
 
     public void Teleport(Vector2 position)
     {
-        if (rb == null)
-        {
-            rb = GetComponent<Rigidbody2D>();
-        }
-
-        rb.position = position;
-        rb.linearVelocity = Vector2.zero;
-        transform.position = new Vector3(position.x, position.y, transform.position.z);
+        ClearOrders();
+        Motor.Teleport(position);
     }
 
     public void Face(Vector2 direction)
     {
-        if (direction.sqrMagnitude > 0.0001f)
+        Motor.Face(direction);
+    }
+
+    /// <summary>
+    /// Drops the current order and stops moving.
+    /// </summary>
+    public void ClearOrders()
+    {
+        if (orders != null)
         {
-            lastMoveDirection = direction.normalized;
+            orders.Clear();
+        }
+
+        Motor.Stop();
+    }
+
+    internal void Tick()
+    {
+        EnsureInitialized();
+        if (!simulatesMovement || orders == null)
+        {
+            return;
+        }
+
+        PlayerCommand command = commandSource != null ? commandSource.ReadCommand() : default;
+        PlayerMotor2D playerMotor = Motor;
+        PlayerOrderContext context = new(
+            playerMotor.Position,
+            clock.Time,
+            playerMotor.ReachedDestination,
+            playerMotor.StalledTime,
+            AttackRange());
+        Apply(orders.Tick(command, context));
+    }
+
+    private void Apply(in PlayerOrderOutput output)
+    {
+        PlayerMotor2D playerMotor = Motor;
+        if (output.Motor == PlayerMotorRequest.MoveTo)
+        {
+            playerMotor.MoveTo(output.Destination);
+        }
+        else if (output.Motor == PlayerMotorRequest.Stop)
+        {
+            playerMotor.Stop();
+        }
+
+        if (output.HasAim)
+        {
+            playerMotor.Face(output.AimDirection);
+        }
+
+        if (output.Swing && weaponController != null)
+        {
+            weaponController.TryAttack(output.AimDirection);
         }
     }
 
-    private void ResolveAnimator()
+    private float AttackRange()
     {
-        if (animator == null)
+        return weaponController != null && weaponController.CurrentWeapon != null ? weaponController.CurrentWeapon.AttackRange : 0f;
+    }
+
+    private void EnsureInitialized()
+    {
+        if (orders != null || controlSettings == null)
         {
-            animator = GetComponentInChildren<Animator>(true);
+            return;
         }
+
+        Motor.Initialize(controlSettings);
+        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()));
     }
 
     private void ResolveWeaponController()

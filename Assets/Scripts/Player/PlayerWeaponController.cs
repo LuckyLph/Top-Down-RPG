@@ -58,7 +58,10 @@ public class PlayerWeaponController : MonoBehaviour
         EquippedWeaponChanged?.Invoke(currentWeapon);
     }
 
-    public bool TryAttack()
+    /// <summary>
+    /// Swings toward <paramref name="direction"/> (the facing direction when it is zero) if the cooldown allows.
+    /// </summary>
+    public bool TryAttack(Vector2 direction)
     {
         ResolveReferences();
 
@@ -73,7 +76,7 @@ public class PlayerWeaponController : MonoBehaviour
             return false;
         }
 
-        Vector2 attackDirection = CurrentFacingDirection;
+        Vector2 attackDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : CurrentFacingDirection;
         if (attackDirection.sqrMagnitude <= 0.0001f)
         {
             attackDirection = Vector2.down;

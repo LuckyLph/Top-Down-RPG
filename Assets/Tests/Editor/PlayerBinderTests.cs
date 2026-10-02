@@ -16,7 +16,7 @@ public class PlayerBinderTests
         players = new PlayerRegistry();
         localPlayer = new LocalPlayerTracker();
         activeSpawnPoint = new ActiveSpawnPoint();
-        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new StillInput()), activeSpawnPoint);
+        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null), activeSpawnPoint);
     }
 
     [TearDown]
@@ -58,7 +58,7 @@ public class PlayerBinderTests
         PlayerController controller = CreatePlayer();
         Vector3 position = controller.transform.position;
 
-        PlayerHandle handle = binder.BindRemote(controller, new StillCommands());
+        PlayerHandle handle = binder.BindRemote(controller);
 
         Assert.That(players.Contains(handle), Is.True);
         Assert.That(localPlayer.Current, Is.Null);
@@ -70,7 +70,7 @@ public class PlayerBinderTests
     public void Unbind_RemovesThePlayer_AndClearsItIfItWasLocal()
     {
         PlayerHandle local = binder.BindLocal(CreatePlayer());
-        PlayerHandle remote = binder.BindRemote(CreatePlayer(), new StillCommands());
+        PlayerHandle remote = binder.BindRemote(CreatePlayer());
 
         binder.Unbind(remote);
         Assert.That(players.Contains(remote), Is.False);
@@ -111,20 +111,5 @@ public class PlayerBinderTests
         GameObject created = new(name);
         createdObjects.Add(created);
         return created;
-    }
-
-    private sealed class StillCommands : IPlayerCommandSource
-    {
-        public PlayerCommand ReadCommand()
-        {
-            return default;
-        }
-    }
-
-    private sealed class StillInput : IPlayerInput
-    {
-        public Vector2 Move => Vector2.zero;
-        public bool AttackPressedThisFrame => false;
-        public bool GameplayEnabled => true;
     }
 }

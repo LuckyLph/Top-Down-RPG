@@ -8,6 +8,8 @@ public sealed class PlayerWeapon : ScriptableObject
     [SerializeField] private string displayName = "Sword";
     [SerializeField, Min(0)] private int damage = 1;
     [SerializeField, Min(0.01f)] private float attackCooldown = 0.35f;
+    [SerializeField, Min(0f), Tooltip("Collider-to-collider distance within which an attack order stops chasing and swings.")]
+    private float attackRange = 0.3f;
     [SerializeField, Min(0f)] private float slashSpawnDistance = 0.55f;
     [SerializeField, Tooltip("World-space directional offsets ordered Down, Up, Left, Right.")]
     private Vector2[] slashSpawnOffsets = new Vector2[DirectionalSpawnOffsetCount];
@@ -17,6 +19,7 @@ public sealed class PlayerWeapon : ScriptableObject
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
     public float AttackCooldown => Mathf.Max(0.01f, attackCooldown);
+    public float AttackRange => Mathf.Max(0f, attackRange);
     public float SlashSpawnDistance => Mathf.Max(0f, slashSpawnDistance);
     public GameObject SlashPrefab => slashPrefab;
     public Sprite HudIcon => hudIcon;
@@ -39,7 +42,8 @@ public sealed class PlayerWeapon : ScriptableObject
         float spawnDistance,
         Vector2[] spawnOffsets,
         GameObject prefab = null,
-        Sprite icon = null)
+        Sprite icon = null,
+        float range = 0.3f)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
@@ -49,6 +53,7 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.slashSpawnOffsets = NormalizeDirectionalSpawnOffsets(spawnOffsets);
         weapon.slashPrefab = prefab;
         weapon.hudIcon = icon;
+        weapon.attackRange = range;
         weapon.hideFlags = HideFlags.HideAndDontSave;
         return weapon;
     }

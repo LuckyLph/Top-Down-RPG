@@ -1,6 +1,7 @@
 using System.IO;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using VContainer;
 using VContainer.Unity;
@@ -9,6 +10,7 @@ public class MainLifetimeScope : LifetimeScope
 {
     [SerializeField] private GameScenes gameScenes;
     [SerializeField] private InputActionAsset inputActions;
+    [SerializeField] private EventSystem eventSystem;
     [SerializeField] private ScreenFader screenFader;
     [SerializeField] private CameraFollow2D cameraFollow;
     [SerializeField] private Camera mainCamera;
@@ -28,8 +30,14 @@ public class MainLifetimeScope : LifetimeScope
         builder.Register<GameFlow>(Lifetime.Singleton)
             .WithParameter<LifetimeScope>(this);
 
+        if (eventSystem == null)
+        {
+            Debug.LogError($"{name} has no EventSystem assigned; clicks over UI will reach gameplay.", this);
+        }
+
         builder.Register<PlayerInputService>(Lifetime.Singleton)
             .WithParameter(inputActions)
+            .WithParameter(eventSystem)
             .As<IPlayerInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>();

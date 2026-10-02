@@ -69,11 +69,9 @@ public sealed class PathFollower2D
 
         if (settings.UseStraightLineShortcut && IsStraightLineOptimal(startCell, goalCell))
         {
+            BuildStraightPath(start, worldGoal);
             hasGoalCell = true;
             lastGoalCell = goalCell;
-            waypoints.Clear();
-            waypoints.Add(worldGoal);
-            FinishPath(start, false, true, false);
             return true;
         }
 
@@ -114,6 +112,18 @@ public sealed class PathFollower2D
 
         FinishPath(start, result.IsPartial, result.ReachedResolvedGoal, result.GoalWasAdjusted);
         return true;
+    }
+
+    /// <summary>
+    /// Replaces the path with a single waypoint at <paramref name="worldGoal"/>, ignoring the grid. Used where there
+    /// is no grid to path on, and by the straight-line shortcut.
+    /// </summary>
+    public void BuildStraightPath(Vector2 start, Vector2 worldGoal)
+    {
+        hasGoalCell = false;
+        waypoints.Clear();
+        waypoints.Add(worldGoal);
+        FinishPath(start, false, true, false);
     }
 
     /// <summary>

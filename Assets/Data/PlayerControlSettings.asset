@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 989f47edcb3ff154b8d89f81357e9305, type: 3}
+  m_Name: PlayerControlSettings
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerControlSettings
+  moveSpeed: 5
+  waypointReachDistance: 0.1
+  arrivalDistance: 0.1
+  nearestCellSearchRadius: 8
+  movementProfile: {fileID: 11400000, guid: 55e5271f71628e1bf0c34e5cd4a56789, type: 2}
+  stuckTimeout: 0.75
+  holdReevaluateInterval: 0.15
+  repathInterval: 0.5
+  targetMoveRepathDistance: 0.5
+  pickRadius: 0.35
+  enemyLayers:
+    serializedVersion: 2
+    m_Bits: 1024
+  allyLayers:
+    serializedVersion: 2
+    m_Bits: 512

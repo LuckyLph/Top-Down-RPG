@@ -4,7 +4,7 @@ using VContainer;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
-public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
+public class PlayerNetworkSync : NetworkBehaviour
 {
     private const float ChangeThreshold = 0.01f;
 
@@ -63,9 +63,8 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
             body.linearVelocity = Vector2.zero;
         }
 
-        handle = binder.BindRemote(controller, this);
-        controller.Face(facing.Value);
-        facing.OnValueChanged += HandleFacingChanged;
+        handle = binder.BindRemote(controller);
+        controller.ShowRemoteMovement(move.Value, facing.Value);
     }
 
     public override void OnNetworkDespawn()
@@ -80,8 +79,6 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
             health.Restored -= HandleLocalRestored;
         }
 
-        facing.OnValueChanged -= HandleFacingChanged;
-
         if (binder != null)
         {
             binder.Unbind(handle);
@@ -92,8 +89,14 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
 
     private void Update()
     {
-        if (!IsSpawned || !IsOwner)
+        if (!IsSpawned)
         {
+            return;
+        }
+
+        if (!IsOwner)
+        {
+            controller.ShowRemoteMovement(move.Value, facing.Value);
             return;
         }
 
@@ -108,16 +111,6 @@ public class PlayerNetworkSync : NetworkBehaviour, IPlayerCommandSource
         {
             facing.Value = currentFacing;
         }
-    }
-
-    public PlayerCommand ReadCommand()
-    {
-        return new PlayerCommand(move.Value, false);
-    }
-
-    private void HandleFacingChanged(Vector2 previous, Vector2 current)
-    {
-        controller.Face(current);
     }
 
     private void HandleLocalRestored(Health _)

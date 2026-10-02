@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Sword
   damage: 2
   attackCooldown: 0.35
+  attackRange: 0.3
   slashSpawnDistance: 0.55
   slashSpawnOffsets:
   - {x: 0, y: -0.1}

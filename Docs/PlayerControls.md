@@ -181,11 +181,11 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] `ActiveNavigationGrid` set by area entry and cleared on unload.
 
 ### Phase 2: click-to-move and auto attack
-- [ ] Input actions, the reworked `IPlayerInput` and the pointer-over-UI check. WASD and the old attack binding are removed.
-- [ ] `PlayerCommand` in world space, the target picker and `LocalPlayerCommandSource`.
-- [ ] `PlayerOrders` with Idle, Move and Attack, `PlayerMotor2D`, `PlayerControlSettings`, the weapon attack range, and `TryAttack(direction)`.
-- [ ] Players pass through each other (`Player` vs `Player` collision off).
-- [ ] Remote players animated from the replicated state. Old-input tests are migrated and the smoothness benchmark is rerun.
+- [x] Input actions, the reworked `IPlayerInput` and the pointer-over-UI check. WASD and the old attack binding are removed.
+- [x] `PlayerCommand` in world space, the target picker and `LocalPlayerCommandSource`.
+- [x] `PlayerOrders` with Idle, Move and Attack, `PlayerMotor2D`, `PlayerControlSettings`, the weapon attack range, and `TryAttack(direction)`.
+- [x] Players pass through each other (`Player` vs `Player` collision off).
+- [x] Remote players animated from the replicated state. Old-input tests are migrated and the smoothness benchmark is rerun.
 
 ### Phase 3: ability pipeline with blanks
 - [ ] `AbilityDefinition`, `PlayerClass`, the weapon's two ability slots, and the placeholder class plus six blank assets.

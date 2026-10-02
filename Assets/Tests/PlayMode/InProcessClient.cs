@@ -38,6 +38,8 @@ public sealed class InProcessClient : IDisposable
     public static InProcessClient Start(NetworkSession session, NetworkObject playerPrefab)
     {
         NavigationGrid2D navigationGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
+        Camera camera = Camera.main;
+        PlayerControlSettings controlSettings = playerPrefab.GetComponent<PlayerController>().ControlSettings;
 
         TestInput input = new();
         PlayerRegistry players = new();
@@ -49,7 +51,11 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IPlayerInput>(input);
         builder.RegisterInstance<IClock>(UnityClock.Shared);
         builder.RegisterInstance<IGameAuthority>(new ClientAuthority());
+        builder.RegisterInstance(camera);
+        builder.RegisterInstance(controlSettings);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
+        builder.Register<ActiveNavigationGrid>(Lifetime.Singleton);
+        builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<CombatEvents>(Lifetime.Singleton);
@@ -79,6 +85,7 @@ public sealed class InProcessClient : IDisposable
         }
 
         Assert.That(manager.StartClient(), Is.True, "The in-process client should start.");
+        input.Camera = camera;
         InProcessClient client = new(session, manager, container, players, localPlayer, input);
         manager.CustomMessagingManager.RegisterNamedMessageHandler(
             NetworkSession.AreaAnnouncementMessage,
@@ -174,9 +181,28 @@ public sealed class InProcessClient : IDisposable
 
     public sealed class TestInput : IPlayerInput
     {
-        public Vector2 Move { get; set; }
-        public bool AttackPressedThisFrame { get; set; }
+        public Camera Camera { get; set; }
         public bool GameplayEnabled => true;
+        public Vector2 PointerScreenPosition { get; set; }
+        public bool IsPointerOverUI => false;
+        public bool MovePressedThisFrame { get; set; }
+        public bool MoveHeld { get; set; }
+        public bool StopPressedThisFrame { get; set; }
+
+        public bool WasAbilityPressedThisFrame(int slot)
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// Points at <paramref name="worldPoint"/> through the camera; the click itself is
+        /// <see cref="MovePressedThisFrame"/>, held for one frame by the caller.
+        /// </summary>
+        public void PointAt(Vector2 worldPoint)
+        {
+            Vector3 screen = Camera.WorldToScreenPoint(new Vector3(worldPoint.x, worldPoint.y, 0f));
+            PointerScreenPosition = new Vector2(screen.x, screen.y);
+        }
     }
 
     private sealed class ClientAuthority : IGameAuthority

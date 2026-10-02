@@ -13,6 +13,8 @@ public class PlayerWeaponSystemTests
 {
     private GameObject root;
     private PlayerHudPresenter hudPresenter;
+    private PlayerControlSettings settings;
+    private GameObject enemyRoot;
 
     [TearDown]
     public void TearDown()
@@ -36,6 +38,16 @@ public class PlayerWeaponSystemTests
         if (root != null)
         {
             Object.DestroyImmediate(root);
+        }
+
+        if (settings != null)
+        {
+            Object.DestroyImmediate(settings);
+        }
+
+        if (enemyRoot != null)
+        {
+            Object.DestroyImmediate(enemyRoot);
         }
     }
 
@@ -98,7 +110,7 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
-    public void TryAttack_UsesFacingDirectionAndRespectsCooldown()
+    public void TryAttack_SwingsTowardTheGivenDirection_AndRespectsCooldown()
     {
         root = new GameObject("PlayerRoot");
         root.transform.position = Vector3.zero;
@@ -111,15 +123,15 @@ public class PlayerWeaponSystemTests
         weaponController.Construct(CreateSpawner(), clock);
 
         weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, spawnDistance: 0.75f));
-        playerController.Face(Vector2.right);
+        playerController.Face(Vector2.up);
 
-        bool firstAttack = weaponController.TryAttack();
-        bool secondAttack = weaponController.TryAttack();
+        bool firstAttack = weaponController.TryAttack(new Vector2(3f, 0f));
+        bool secondAttack = weaponController.TryAttack(Vector2.right);
         SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
         clock.Advance(0.49f);
-        bool attackBeforeCooldown = weaponController.TryAttack();
+        bool attackBeforeCooldown = weaponController.TryAttack(Vector2.right);
         clock.Advance(0.01f);
-        bool attackAfterCooldown = weaponController.TryAttack();
+        bool attackAfterCooldown = weaponController.TryAttack(Vector2.right);
 
         Assert.That(firstAttack, Is.True);
         Assert.That(secondAttack, Is.False);
@@ -131,30 +143,35 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
-    public void PlayerController_FacesAndAttacksFromItsCommandSource()
+    public void PlayerController_AttackOrderOnAnEnemyInRange_FacesItAndSwingsTowardIt()
     {
         root = new GameObject("PlayerRoot");
-        root.AddComponent<BoxCollider2D>();
-        root.AddComponent<Rigidbody2D>();
+        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
         PlayerController playerController = root.AddComponent<PlayerController>();
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
         weaponController.Construct(CreateSpawner(), new ManualClock());
         weaponController.Equip(CreateTestWeapon("Sword"));
-        SerializedObject serializedController = new(playerController);
-        serializedController.FindProperty("weaponController").objectReferenceValue = weaponController;
-        serializedController.ApplyModifiedPropertiesWithoutUndo();
+        settings = TestPlayerControlSettings.Create();
+        TestPlayerControlSettings.Assign(playerController, settings);
+        enemyRoot = new GameObject("EnemyRoot");
+        GameObject enemy = CreateDamageable("Enemy", new Vector2(-0.5f, 0f), enemyRoot.transform);
+        enemy.GetComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        Physics2D.SyncTransforms();
         FakeCommandSource commands = new();
         playerController.SetCommandSource(commands);
 
-        commands.Next = new PlayerCommand(new Vector2(-3f, 0f), attack: false);
+        commands.Next = new PlayerCommand(
+            enemy.transform.position,
+            new UnitTarget(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy),
+            movePressed: true,
+            moveHeld: true,
+            stopPressed: false);
         playerController.Tick();
-        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left));
-        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Null);
 
-        commands.Next = new PlayerCommand(Vector2.zero, attack: true);
-        playerController.Tick();
         SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
-        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left), "Standing still keeps the last facing.");
+        Assert.That(playerController.CurrentOrder, Is.EqualTo(PlayerOrderKind.Attack));
+        Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left));
         Assert.That(slashAttack, Is.Not.Null);
         Assert.That(slashAttack.Direction.x, Is.LessThan(-0.9f));
     }
@@ -177,8 +194,8 @@ public class PlayerWeaponSystemTests
         Assert.That(attacked, Is.Null, "Replaying another player's attack must not be sent back out.");
         Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>().Direction.x, Is.LessThan(-0.9f));
 
-        Assert.That(weaponController.TryAttack(), Is.True);
-        Assert.That(attacked, Is.EqualTo(Vector2.up));
+        Assert.That(weaponController.TryAttack(Vector2.zero), Is.True);
+        Assert.That(attacked, Is.EqualTo(Vector2.up), "A zero direction swings where the player faces.");
     }
 
     [Test]
@@ -219,18 +236,6 @@ public class PlayerWeaponSystemTests
         playerController.Tick();
 
         Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.down));
-    }
-
-    [Test]
-    public void LocalPlayerCommandSource_ForwardsMoveAndAttackFromInput()
-    {
-        FakePlayerInput input = new() { Move = new Vector2(0.5f, 1f), AttackPressedThisFrame = true };
-        LocalPlayerCommandSource source = new(input);
-
-        PlayerCommand command = source.ReadCommand();
-
-        Assert.That(command.Move, Is.EqualTo(new Vector2(0.5f, 1f)));
-        Assert.That(command.Attack, Is.True);
     }
 
     [Test]
@@ -389,16 +394,6 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
-    public void InputActionAsset_AttackActionIncludesSpaceBinding()
-    {
-        InputActionAsset actionsAsset = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
-        Assert.That(actionsAsset, Is.Not.Null);
-
-        InputAction attackAction = actionsAsset.FindAction("Player/Attack", true);
-        Assert.That(attackAction.bindings.Any(binding => binding.path == "<Keyboard>/space"), Is.True);
-    }
-
-    [Test]
     public void MainScope_AssignsProjectInputActionAsset()
     {
         InputActionAsset actionsAsset = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
@@ -434,13 +429,6 @@ public class PlayerWeaponSystemTests
         {
             return Next;
         }
-    }
-
-    private sealed class FakePlayerInput : IPlayerInput
-    {
-        public Vector2 Move { get; set; }
-        public bool AttackPressedThisFrame { get; set; }
-        public bool GameplayEnabled { get; set; } = true;
     }
 
     private static SlashSpawner CreateSpawner()

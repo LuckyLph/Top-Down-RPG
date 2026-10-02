@@ -58,14 +58,18 @@ public class NetworkPlayersPlayModeTests
         client.DisableColliders();
 
         float startX = hostCopy.transform.position.x;
-        client.Input.Move = Vector2.right;
-        yield return SceneBootTestHelper.WaitUntil(() => hostCopy.transform.position.x > startX + 0.5f, "the client's movement to reach the host");
-        client.Input.Move = Vector2.zero;
-        Assert.That(hostCopy.FacingDirection.x, Is.GreaterThan(0.9f));
-
-        client.Input.AttackPressedThisFrame = true;
+        client.Input.PointAt((Vector2)clientOwned.transform.position + Vector2.right * 50f);
+        client.Input.MovePressedThisFrame = true;
         yield return null;
-        client.Input.AttackPressedThisFrame = false;
+        client.Input.MovePressedThisFrame = false;
+        yield return SceneBootTestHelper.WaitUntil(() => hostCopy.transform.position.x > startX + 0.5f, "the client's movement to reach the host");
+        Assert.That(hostCopy.FacingDirection.x, Is.GreaterThan(0.9f));
+        Assert.That(hostCopy.CurrentMove.x, Is.GreaterThan(0.9f), "The host's copy should show the client walking.");
+        client.Input.StopPressedThisFrame = true;
+        yield return null;
+        client.Input.StopPressedThisFrame = false;
+
+        clientOwned.GetComponent<PlayerWeaponController>().TryAttack(Vector2.right);
         yield return SceneBootTestHelper.WaitUntil(() => HasSlashOwnedBy(hostCopy.transform), "the client's attack to play on the host");
 
         client.Manager.Shutdown();

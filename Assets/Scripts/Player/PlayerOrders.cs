@@ -68,9 +68,14 @@ public sealed class PlayerOrders
             Stop();
         }
 
-        if (command.MovePressed || (command.MoveHeld && context.Time >= nextHoldEvaluationTime))
+        if (command.MovePressed)
         {
-            IssueFrom(command);
+            IssueFrom(command, true);
+            nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
+        }
+        else if (command.MoveHeld && context.Time >= nextHoldEvaluationTime)
+        {
+            IssueFrom(command, false);
             nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
         }
 
@@ -86,7 +91,7 @@ public sealed class PlayerOrders
 
         RunCurrent(context);
         fresh = false;
-        return new PlayerOrderOutput(motorRequest, destination, hasAim, aimDirection, swing);
+        return new PlayerOrderOutput(motorRequest, destination, hasAim, hasAim ? aimDirection : Vector2.zero, swing);
     }
 
     /// <summary>
@@ -120,17 +125,25 @@ public sealed class PlayerOrders
         BecomeIdle();
     }
 
-    private void IssueFrom(in PlayerCommand command)
+    /// <summary>
+    /// Gives the order under the cursor. A held button only keeps steering a move or attack: unlike a press, it never
+    /// replaces a CastWhenInRange approach or drops a buffered cast.
+    /// </summary>
+    private void IssueFrom(in PlayerCommand command, bool pressed)
     {
         Order order = OrderFrom(command);
         bool casting = current.Kind == PlayerOrderKind.Casting;
         Order replaced = casting ? paused : current;
-        if (order.SameAs(replaced))
+        if (order.SameAs(replaced) || (!pressed && replaced.Kind == PlayerOrderKind.CastWhenInRange))
         {
             return;
         }
 
-        DropBuffered(CastOutcome.Cancelled);
+        if (pressed)
+        {
+            DropBuffered(CastOutcome.Cancelled);
+        }
+
         if (casting)
         {
             paused = order;
@@ -451,7 +464,10 @@ public sealed class PlayerOrders
             aim = UnitAim(aim.Target, context);
         }
 
-        if (!Begin(slot, ability, aim, context, paused))
+        Order toPause = paused;
+        fresh = true;
+        chasing = false;
+        if (!Begin(slot, ability, aim, context, toPause))
         {
             return false;
         }
@@ -459,6 +475,10 @@ public sealed class PlayerOrders
         if (current.Kind == PlayerOrderKind.Casting)
         {
             RunCasting(context);
+        }
+        else
+        {
+            RunCastWhenInRange(context);
         }
 
         return true;

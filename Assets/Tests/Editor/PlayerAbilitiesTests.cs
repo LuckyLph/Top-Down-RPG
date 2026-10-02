@@ -157,6 +157,59 @@ public class PlayerAbilitiesTests
     }
 
     [Test]
+    public void ThroughTheOrders_DeathMidCastEndsTheCast_AndTheNextCastWaitsOnlyForItsCooldown()
+    {
+        abilities.Configure(Track(PlayerClass.Create("Casting", Track(AbilityDefinition.Create("Slow", cooldown: 2f, castTime: 0.5f)))));
+        PlayerControlSettings settings = Track(TestPlayerControlSettings.Create());
+        PlayerOrders orders = new(settings, new PlayerUnitQueries(null), abilities);
+        List<CastOutcome> failures = new();
+        int ended = 0;
+        abilities.CastFailed += (_, reason) => failures.Add(reason);
+        abilities.CastEnded += _ => ended++;
+        PlayerCommand press = new(Vector2.right, default, false, false, false, abilitySlot: 0);
+
+        orders.Tick(press, new PlayerOrderContext(Vector2.zero, clock.Time, true, 0f, 0.3f));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+        Assert.That(abilities.IsCasting, Is.True);
+
+        orders.Clear();
+        Assert.That(abilities.IsCasting, Is.False, "Death ends the running cast.");
+        Assert.That(ended, Is.EqualTo(1));
+
+        clock.Advance(1f);
+        orders.Tick(press, new PlayerOrderContext(Vector2.zero, clock.Time, true, 0f, 0.3f));
+        Assert.That(failures, Is.EqualTo(new[] { CastOutcome.OnCooldown }), "Only the cooldown blocks the next cast, never a leaked cast.");
+
+        clock.Advance(1f);
+        orders.Tick(press, new PlayerOrderContext(Vector2.zero, clock.Time, true, 0f, 0.3f));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+        Assert.That(applied, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void PlayRemoteCast_IgnoresADeadCaster_AndUnitCastsWithoutALivingTarget()
+    {
+        abilities.Configure(Track(PlayerClass.Create("Unit", Track(AbilityDefinition.Create("Mend", targeting: AbilityTargeting.Unit, unitFilter: AbilityUnitFilter.Ally)))));
+        Health target = Track(new GameObject("Target")).AddComponent<Health>();
+        CastAim aimed = new(Vector2.zero, Vector2.up, new UnitTarget(target, null, UnitTeam.Ally));
+
+        abilities.PlayRemoteCast(0, default);
+        Assert.That(applied, Is.Zero, "The target did not resolve on this machine.");
+
+        abilities.PlayRemoteCast(0, aimed);
+        Assert.That(applied, Is.EqualTo(1));
+
+        target.ApplyDamage(target.MaxHealth);
+        abilities.PlayRemoteCast(0, aimed);
+        Assert.That(applied, Is.EqualTo(1), "The target died before the cast arrived.");
+
+        target.Restore();
+        health.ApplyDamage(health.MaxHealth);
+        abilities.PlayRemoteCast(0, aimed);
+        Assert.That(applied, Is.EqualTo(1), "This machine sees the caster as dead.");
+    }
+
+    [Test]
     public void RecentCasts_RecordLocalAndRemoteCastsNewestFirst_ForTheGizmos()
     {
         Assert.That(abilities.RecentCastCount, Is.Zero);

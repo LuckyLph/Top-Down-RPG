@@ -37,8 +37,6 @@ public enum CastMovement
 public enum CastOutcome
 {
     Started,
-    Buffered,
-    Approaching,
     EmptySlot,
     OnCooldown,
     CastInProgress,

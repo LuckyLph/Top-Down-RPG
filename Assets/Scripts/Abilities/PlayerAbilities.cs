@@ -208,12 +208,19 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
     /// <summary>
     /// Replays a cast another machine started for this player: no cooldown or events here, but the
-    /// <see cref="AbilityService"/> applies it if this machine is the authority.
+    /// <see cref="AbilityService"/> applies it if this machine is the authority. Casts from a player this machine
+    /// sees as dead, and <see cref="AbilityTargeting.Unit"/> casts whose target is gone or dead here, are ignored.
     /// </summary>
     public void PlayRemoteCast(int slot, in CastAim aim)
     {
         AbilityDefinition ability = GetAbility(slot);
-        if (ability == null)
+        if (ability == null || (health != null && health.IsDead))
+        {
+            return;
+        }
+
+        Health target = aim.Target.Health;
+        if (ability.Targeting == AbilityTargeting.Unit && (target == null || target.IsDead))
         {
             return;
         }

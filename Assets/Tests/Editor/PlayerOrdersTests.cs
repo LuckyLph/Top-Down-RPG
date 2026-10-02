@@ -684,6 +684,136 @@ public class PlayerOrdersTests
         Assert.That(cast, Is.Not.AllocatingGCMemory());
     }
 
+    [Test]
+    public void ABufferedContinueCast_KeepsThePausedMoveGoing()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 0.25f));
+        caster.Set(1, Ability(castTime: 0.5f, targeting: AbilityTargeting.None, movement: CastMovement.Continue, bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.right));
+
+        reachedDestination = true;
+        time = 0.25f;
+        PlayerOrderOutput fired = Tick(default);
+
+        Assert.That(orders.CastingSlot, Is.EqualTo(1));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Move), "The stopped motor's stale arrival must not end the paused move.");
+        Assert.That(fired.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(fired.Destination, Is.EqualTo(new Vector2(5f, 0f)));
+
+        reachedDestination = false;
+        time = 0.75f;
+        Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+    }
+
+    [Test]
+    public void ABufferedInstantCast_FiresAndTheOrderResumesInTheSameTick()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 0.3f));
+        caster.Set(1, Ability(castTime: 0f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.up));
+
+        time = 0.3f;
+        PlayerOrderOutput output = Tick(default);
+
+        Assert.That(caster.Started, Is.EqualTo(2));
+        Assert.That(caster.Ended, Is.EqualTo(2));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+    }
+
+    [Test]
+    public void ABufferedUnitCastOutOfRange_BecomesAnApproach_ThatChasesAtOnce()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0f, 2f), distance: 1f);
+        caster.Set(0, Ability(castTime: 0.3f));
+        caster.Set(1, Ability(targeting: AbilityTargeting.Unit, range: 3f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, new Vector2(0f, 2f), enemy));
+
+        units.SetPosition(enemy, new Vector2(0f, 6f));
+        units.SetDistance(enemy, 5.5f);
+        time = 0.3f;
+        PlayerOrderOutput output = Tick(default);
+
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.CastWhenInRange));
+        Assert.That(orders.ApproachingSlot, Is.EqualTo(1));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(output.Destination, Is.EqualTo(new Vector2(0f, 6f)));
+    }
+
+    [Test]
+    public void HoldingDuringACast_SteersThePausedOrder_ButOnlyAPressDropsTheBufferedCast()
+    {
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        Tick(Click(new Vector2(5f, 0f)));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.right));
+
+        time = 0.2f;
+        Tick(Hold(new Vector2(6f, 1f)));
+        Assert.That(orders.HasBufferedCast, Is.True, "Holding the move button keeps the buffered cast.");
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Move));
+
+        Tick(Click(new Vector2(-3f, 0f)));
+        Assert.That(orders.HasBufferedCast, Is.False);
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
+    }
+
+    [Test]
+    public void HoldingTheButton_KeepsAnApproach_ButAClickReplacesIt()
+    {
+        UnitTarget ally = CreateUnit(UnitTeam.Ally, new Vector2(6f, 0f), distance: 5.5f);
+        caster.Set(2, Ability(targeting: AbilityTargeting.Unit, filter: AbilityUnitFilter.Ally, range: 4f));
+        Tick(Click(new Vector2(-1f, 0f)));
+        Tick(Press(2, new Vector2(6f, 0f), ally));
+
+        time = 0.2f;
+        Tick(Hold(new Vector2(-1f, 2f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.CastWhenInRange));
+
+        Tick(Click(new Vector2(-1f, 2f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+    }
+
+    [Test]
+    public void StopDuringAContinueCast_StopsTheMotorAndThePausedMove()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 1f, targeting: AbilityTargeting.None, movement: CastMovement.Continue));
+        Tick(Press(0, Vector2.zero));
+
+        PlayerOrderOutput stopped = Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+
+        Assert.That(stopped.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None), "Nothing moves the player for the rest of the cast.");
+    }
+
+    [Test]
+    public void ASwingAtATargetOnTopOfThePlayer_CarriesNoStaleAim()
+    {
+        caster.Set(0, Ability(castTime: 0f));
+        Tick(Press(0, new Vector2(-2f, 0f)));
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, Vector2.zero, distance: 0f);
+
+        PlayerOrderOutput output = Tick(Click(Vector2.zero, enemy));
+
+        Assert.That(output.Swing, Is.True);
+        Assert.That(output.HasAim, Is.False);
+        Assert.That(output.AimDirection, Is.EqualTo(Vector2.zero), "The weapon falls back to the facing instead of an old aim.");
+    }
+
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
         return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange));

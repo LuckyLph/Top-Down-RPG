@@ -41,7 +41,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Right mouse button, pressed on the ground | Move order to the cursor's point |
 | Right mouse button, pressed on an enemy | Attack order on that enemy |
 | Right mouse button, pressed on an ally | Move order to the clicked point (the same as clicking the ground) |
-| Right mouse button, held | Re-evaluated at a throttled rate: the order follows the cursor, attacking an enemy under the cursor or moving to the ground under it |
+| Right mouse button, held | Re-evaluated at a throttled rate: the order follows the cursor, attacking an enemy under the cursor or moving to the ground under it. A hold only steers: it never cancels a buffered cast or a CastWhenInRange approach; a new click does. |
 | Q, W, E, R | Class abilities 1–4 |
 | A, S | Weapon abilities 1–2 |
 | X | Stop: cancel the current order, any order waiting to resume, and any buffered cast. It uses X because LoL's S belongs to a weapon ability here. |
@@ -91,7 +91,7 @@ Buffering:
 - There is at most one buffered cast, and a newer bufferable press replaces it.
 - The buffered cast keeps the aim taken when its key was pressed.
 - It fires as soon as the running cast ends, and it pauses the order that was about to resume. A buffered `Unit` cast whose target is out of range by then becomes CastWhenInRange, which replaces that order like any new order.
-- It is dropped when it is older than the buffer window in `PlayerControlSettings`, when the player gives a new order or presses Stop, or when it is no longer valid as it fires (for example its unit target died). A dropped buffered cast reports its failure like any other.
+- It is dropped when it is older than the buffer window in `PlayerControlSettings`, when the player clicks a new order (holding the button does not count) or presses Stop, or when it is no longer valid as it fires (for example its unit target died). A dropped buffered cast reports its failure like any other.
 
 Blanks: the placeholder class and the sword get six distinct blank abilities with different cooldowns, cast times, targeting modes and movement modes, so every branch of the pipeline can be exercised in play.
 

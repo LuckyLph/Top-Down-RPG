@@ -138,7 +138,6 @@ public class PlayerNetworkSync : NetworkBehaviour
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
     private void AttackRpc(Vector2 direction)
     {
-        controller.Face(direction);
         if (weapon != null)
         {
             weapon.PlayRemoteAttack(direction);
@@ -156,7 +155,6 @@ public class PlayerNetworkSync : NetworkBehaviour
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
     private void CastRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget)
     {
-        controller.Face(direction);
         if (abilities != null)
         {
             abilities.PlayRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default));

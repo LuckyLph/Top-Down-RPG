@@ -204,7 +204,8 @@ public class PlayerController : MonoBehaviour
             abilities = GetComponent<PlayerAbilities>();
         }
 
-        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), abilities);
+        IAbilityCaster caster = abilities != null ? abilities : null;
+        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), caster);
     }
 
     private void OnDrawGizmos()

@@ -15,7 +15,6 @@ MonoBehaviour:
   moveSpeed: 5
   waypointReachDistance: 0.1
   arrivalDistance: 0.1
-  nearestCellSearchRadius: 8
   movementProfile: {fileID: 11400000, guid: 55e5271f71628e1bf0c34e5cd4a56789, type: 2}
   stuckTimeout: 0.75
   holdReevaluateInterval: 0.15

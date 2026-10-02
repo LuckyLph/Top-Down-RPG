@@ -17,9 +17,6 @@ public sealed class PlayerControlSettings : ScriptableObject
     [SerializeField, Min(0.01f), Tooltip("Distance at which the final waypoint counts as reached.")]
     private float arrivalDistance = 0.1f;
 
-    [SerializeField, Min(1), Tooltip("Cells searched around an unwalkable start for the nearest walkable one.")]
-    private int nearestCellSearchRadius = 8;
-
     [SerializeField, Tooltip("Terrain walkability and costs for player paths. Empty uses the grid's defaults.")]
     private TerrainMovementProfile2D movementProfile;
 
@@ -52,7 +49,6 @@ public sealed class PlayerControlSettings : ScriptableObject
     public float MoveSpeed => moveSpeed;
     public float WaypointReachDistance => waypointReachDistance;
     public float ArrivalDistance => arrivalDistance;
-    public int NearestCellSearchRadius => nearestCellSearchRadius;
     public TerrainMovementProfile2D MovementProfile => movementProfile;
     public float StuckTimeout => stuckTimeout;
     public float HoldReevaluateInterval => holdReevaluateInterval;
@@ -64,5 +60,5 @@ public sealed class PlayerControlSettings : ScriptableObject
     public LayerMask AllyLayers => allyLayers;
 
     public PathFollowerSettings2D FollowerSettings =>
-        new(waypointReachDistance, arrivalDistance, nearestCellSearchRadius, useStraightLineShortcut: true);
+        new(waypointReachDistance, arrivalDistance, useStraightLineShortcut: true);
 }

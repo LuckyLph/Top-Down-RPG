@@ -2,8 +2,9 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/> and weapon: each frame
-/// it reads a command, ticks the orders and applies their motor, facing and swing requests. Remote copies only show
+/// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/>, weapon and
+/// <see cref="PlayerAbilities"/>: each frame it reads a command, ticks the orders (which start casts) and applies
+/// their motor, facing and swing requests. Remote copies only show
 /// replicated movement.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
@@ -13,6 +14,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private PlayerControlSettings controlSettings;
     [SerializeField] private PlayerWeaponController weaponController;
     [SerializeField] private PlayerMotor2D motor;
+    [SerializeField] private PlayerAbilities abilities;
 
     private IPlayerCommandSource commandSource;
     private IClock clock = UnityClock.Shared;
@@ -57,6 +59,11 @@ public class PlayerController : MonoBehaviour
         if (motor == null)
         {
             motor = GetComponent<PlayerMotor2D>();
+        }
+
+        if (abilities == null)
+        {
+            abilities = GetComponent<PlayerAbilities>();
         }
     }
 
@@ -162,10 +169,7 @@ public class PlayerController : MonoBehaviour
             playerMotor.Stop();
         }
 
-        if (output.HasAim)
-        {
-            playerMotor.Face(output.AimDirection);
-        }
+        playerMotor.SetAim(output.HasAim, output.AimDirection);
 
         if (output.Swing && weaponController != null)
         {
@@ -186,7 +190,12 @@ public class PlayerController : MonoBehaviour
         }
 
         Motor.Initialize(controlSettings);
-        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()));
+        if (abilities == null)
+        {
+            abilities = GetComponent<PlayerAbilities>();
+        }
+
+        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), abilities);
     }
 
     private void ResolveWeaponController()

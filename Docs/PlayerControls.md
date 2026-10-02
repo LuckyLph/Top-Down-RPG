@@ -64,7 +64,7 @@ The player always has exactly one current order, plus at most one paused order w
 | Casting(slot, aim) | Runs the cast time with the ability's movement mode, keeping the order it interrupted as the paused order. | Cast time over: the paused order resumes (Idle if there was none). |
 
 Rules:
-- A new order replaces the current one at once, except during a cast: then it replaces the paused order and starts when the cast ends. Stop clears both.
+- A new order replaces the current one at once, except during a cast: then it replaces the paused order and starts when the cast ends. Stop clears both: during a cast it clears the paused order (and any buffered cast), while the started cast itself runs to its end and the player is then Idle.
 - Range checks use collider-to-collider distance (`Collider2D.Distance`), as mob attacks already do.
 - Facing follows the movement direction while moving, and the aim direction while attacking or casting.
 - Death clears all orders. Respawn starts at Idle.
@@ -90,7 +90,7 @@ A cast attempt fails without side effects, and reports why, when the slot is emp
 Buffering:
 - There is at most one buffered cast, and a newer bufferable press replaces it.
 - The buffered cast keeps the aim taken when its key was pressed.
-- It fires as soon as the running cast ends, and it pauses the order that was about to resume.
+- It fires as soon as the running cast ends, and it pauses the order that was about to resume. A buffered `Unit` cast whose target is out of range by then becomes CastWhenInRange, which replaces that order like any new order.
 - It is dropped when it is older than the buffer window in `PlayerControlSettings`, when the player gives a new order or presses Stop, or when it is no longer valid as it fires (for example its unit target died). A dropped buffered cast reports its failure like any other.
 
 Blanks: the placeholder class and the sword get six distinct blank abilities with different cooldowns, cast times, targeting modes and movement modes, so every branch of the pipeline can be exercised in play.
@@ -188,10 +188,10 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Remote players animated from the replicated state. Old-input tests are migrated and the smoothness benchmark is rerun.
 
 ### Phase 3: ability pipeline with blanks
-- [ ] `AbilityDefinition`, `PlayerClass`, the weapon's two ability slots, and the placeholder class plus six blank assets.
-- [ ] Cooldowns, `PlayerAbilities`, the Casting and CastWhenInRange orders, movement modes, and pausing and resuming orders.
-- [ ] Unit filters (enemy, ally, any) and per-ability cast buffering. At least one blank is bufferable and at least one targets allies.
-- [ ] `CastRpc` and `AbilityService`, called once per cast on the host only.
+- [x] `AbilityDefinition`, `PlayerClass`, the weapon's two ability slots, and the placeholder class plus six blank assets.
+- [x] Cooldowns, `PlayerAbilities`, the Casting and CastWhenInRange orders, movement modes, and pausing and resuming orders.
+- [x] Unit filters (enemy, ally, any) and per-ability cast buffering. At least one blank is bufferable and at least one targets allies.
+- [x] `CastRpc` and `AbilityService`, called once per cast on the host only.
 
 ### Phase 4: HUD and feedback
 - [ ] Ability bar view and presenter.

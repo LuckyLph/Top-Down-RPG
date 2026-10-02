@@ -11,6 +11,7 @@ public class PlayerOrdersTests
     private readonly List<Object> createdObjects = new();
     private PlayerControlSettings settings;
     private FakeUnits units;
+    private FakeCaster caster;
     private PlayerOrders orders;
     private float time;
     private Vector2 position;
@@ -20,9 +21,10 @@ public class PlayerOrdersTests
     [SetUp]
     public void SetUp()
     {
-        settings = Track(TestPlayerControlSettings.Create(stuckTimeout: 0.75f, holdReevaluateInterval: 0.15f, repathInterval: 0.5f, targetMoveRepathDistance: 0.5f));
+        settings = Track(TestPlayerControlSettings.Create(stuckTimeout: 0.75f, holdReevaluateInterval: 0.15f, repathInterval: 0.5f, targetMoveRepathDistance: 0.5f, castBufferWindow: 0.4f));
         units = new FakeUnits();
-        orders = new PlayerOrders(settings, units);
+        caster = new FakeCaster();
+        orders = new PlayerOrders(settings, units, caster);
         time = 0f;
         position = Vector2.zero;
         reachedDestination = true;
@@ -311,6 +313,377 @@ public class PlayerOrdersTests
         Assert.That(tick, Is.Not.AllocatingGCMemory());
     }
 
+    [Test]
+    public void AnInstantCast_StartsAndEndsInOneTick_AndTheOrderRunsOn()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 0f, targeting: AbilityTargeting.Direction));
+
+        PlayerOrderOutput output = Tick(Press(0, new Vector2(0f, 3f)));
+
+        Assert.That(caster.Started, Is.EqualTo(1));
+        Assert.That(caster.Ended, Is.EqualTo(1));
+        Assert.That(caster.LastAim.Direction, Is.EqualTo(Vector2.up));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo), "The resumed move repaths from where the player stopped.");
+        Assert.That(output.Destination, Is.EqualTo(new Vector2(5f, 0f)));
+        Assert.That(output.AimDirection, Is.EqualTo(Vector2.up), "The player turns toward an instant cast.");
+    }
+
+    [Test]
+    public void ACastWithCastTime_PausesTheOrder_FacesTheAim_AndResumesWhenItIsOver()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(1, Ability(castTime: 0.5f, targeting: AbilityTargeting.Direction));
+
+        PlayerOrderOutput started = Tick(Press(1, new Vector2(-3f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(orders.CastingSlot, Is.EqualTo(1));
+        Assert.That(started.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(started.HasAim, Is.True);
+        Assert.That(started.AimDirection, Is.EqualTo(Vector2.left));
+
+        time = 0.49f;
+        PlayerOrderOutput during = Tick(default);
+        Assert.That(during.Motor, Is.EqualTo(PlayerMotorRequest.None));
+        Assert.That(during.AimDirection, Is.EqualTo(Vector2.left));
+        Assert.That(caster.Ended, Is.Zero);
+
+        time = 0.5f;
+        PlayerOrderOutput resumed = Tick(default);
+        Assert.That(caster.Ended, Is.EqualTo(1));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(resumed.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+
+        time = 0.6f;
+        Assert.That(Tick(default).HasAim, Is.False, "Facing follows movement again after the cast.");
+    }
+
+    [Test]
+    public void ContinueMovement_KeepsThePausedOrderMoving_WithoutSwinging()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(4f, 0f), distance: 3.5f);
+        Tick(Click(new Vector2(4f, 0f), enemy));
+        caster.Set(0, Ability(castTime: 2f, targeting: AbilityTargeting.None, movement: CastMovement.Continue));
+
+        PlayerOrderOutput started = Tick(Press(0, Vector2.zero));
+        Assert.That(started.Motor, Is.EqualTo(PlayerMotorRequest.None), "Continue keeps the current path.");
+        Assert.That(started.HasAim, Is.False, "A self cast has no aim.");
+
+        time = 0.6f;
+        units.SetPosition(enemy, new Vector2(4.2f, 0f));
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.MoveTo), "The paused chase keeps repathing.");
+
+        units.SetDistance(enemy, 0.1f);
+        PlayerOrderOutput inRange = Tick(default);
+        Assert.That(inRange.Swing, Is.False, "The paused attack does not swing during the cast.");
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+    }
+
+    [Test]
+    public void AbilityMovement_StandsStillForNow()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        caster.Set(0, Ability(castTime: 0.3f, movement: CastMovement.Ability));
+
+        Assert.That(Tick(Press(0, new Vector2(1f, 0f))).Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        time = 0.1f;
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None));
+    }
+
+    [Test]
+    public void PointTargeting_ClampsTheCursorToTheRange()
+    {
+        position = new Vector2(1f, 1f);
+        caster.Set(0, Ability(targeting: AbilityTargeting.Point, range: 2f));
+
+        Tick(Press(0, new Vector2(11f, 1f)));
+
+        Assert.That(caster.LastAim.Point, Is.EqualTo(new Vector2(3f, 1f)));
+        Assert.That(caster.LastAim.Direction, Is.EqualTo(Vector2.right));
+
+        caster.Set(1, Ability(targeting: AbilityTargeting.Point, range: 2f));
+        Tick(Press(1, new Vector2(1f, 2f)));
+        Assert.That(caster.LastAim.Point, Is.EqualTo(new Vector2(1f, 2f)), "A point inside the range is used as is.");
+    }
+
+    [Test]
+    public void UnitTargeting_UsesTheUnitUnderTheCursorThatPassesTheFilter()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0f, 1f), distance: 0.5f);
+        UnitTarget self = CreateUnit(UnitTeam.Ally, Vector2.zero, distance: 0f);
+        caster.Set(0, Ability(targeting: AbilityTargeting.Unit, filter: AbilityUnitFilter.Enemy, range: 3f));
+        caster.Set(1, Ability(targeting: AbilityTargeting.Unit, filter: AbilityUnitFilter.Ally, range: 3f));
+        caster.Set(2, Ability(targeting: AbilityTargeting.Unit, filter: AbilityUnitFilter.Any, range: 3f));
+
+        Tick(Press(0, new Vector2(0f, 1f), self));
+        Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.NoTarget)), "An enemy-only ability cannot target an ally.");
+
+        Tick(Press(0, new Vector2(0f, 1f), enemy));
+        Assert.That(caster.LastAim.Target.IsSameUnit(enemy), Is.True);
+        Assert.That(caster.LastAim.Direction, Is.EqualTo(Vector2.up));
+
+        Tick(Press(1, Vector2.zero, self));
+        Assert.That(caster.LastAim.Target.IsSameUnit(self), Is.True, "The caster counts as an ally.");
+
+        Tick(Press(2, new Vector2(0f, 1f), enemy));
+        Assert.That(caster.LastAim.Target.IsSameUnit(enemy), Is.True);
+        Tick(Press(2, Vector2.zero, self));
+        Assert.That(caster.LastAim.Target.IsSameUnit(self), Is.True);
+
+        Tick(Press(2, new Vector2(5f, 5f)));
+        Assert.That(caster.LastFailure, Is.EqualTo((2, CastOutcome.NoTarget)), "Nothing under the cursor means no cast.");
+        Assert.That(caster.Started, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void CasterFailures_AreReported_AndChangeNothing()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability());
+        caster.Failure = CastOutcome.OnCooldown;
+
+        PlayerOrderOutput output = Tick(Press(0, Vector2.right));
+
+        Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.OnCooldown)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.None));
+
+        caster.Failure = null;
+        Tick(Press(3, Vector2.right));
+        Assert.That(caster.LastFailure, Is.EqualTo((3, CastOutcome.EmptySlot)));
+    }
+
+    [Test]
+    public void ANonBufferablePressDuringACast_Fails()
+    {
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(castTime: 0f));
+        Tick(Press(0, Vector2.right));
+
+        Tick(Press(1, Vector2.right));
+
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.CastInProgress)));
+        Assert.That(orders.CastingSlot, Is.EqualTo(0));
+        Assert.That(orders.HasBufferedCast, Is.False);
+    }
+
+    [Test]
+    public void ABufferedCast_FiresWhenTheRunningCastEnds_PausingTheOrderAboutToResume()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 0.3f));
+        caster.Set(1, Ability(castTime: 0.5f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+
+        time = 0.1f;
+        Tick(Press(1, Vector2.up));
+        Assert.That(orders.BufferedSlot, Is.EqualTo(1));
+
+        time = 0.3f;
+        Tick(default);
+
+        Assert.That(orders.CastingSlot, Is.EqualTo(1));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(caster.LastAim.Direction, Is.EqualTo(Vector2.up), "The buffered cast keeps the aim taken at the press.");
+        Assert.That(orders.HasBufferedCast, Is.False);
+
+        time = 0.8f;
+        Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+    }
+
+    [Test]
+    public void TheNewestBufferedPress_Wins()
+    {
+        caster.Set(0, Ability(castTime: 0.3f));
+        caster.Set(1, Ability(bufferable: true));
+        caster.Set(2, Ability(bufferable: true));
+        Tick(Press(0, Vector2.right));
+
+        Tick(Press(1, Vector2.right));
+        Tick(Press(2, Vector2.right));
+
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
+        Assert.That(orders.BufferedSlot, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ABufferedCast_ExpiresAfterTheWindow()
+    {
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.right));
+
+        time = 0.4f;
+        Tick(default);
+        Assert.That(orders.HasBufferedCast, Is.True);
+
+        time = 0.41f;
+        Tick(default);
+        Assert.That(orders.HasBufferedCast, Is.False);
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Expired)));
+
+        time = 1f;
+        Tick(default);
+        Assert.That(caster.Started, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ABufferedCast_IsDroppedByANewOrderOrStop()
+    {
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        Tick(Press(0, Vector2.right));
+
+        Tick(Press(1, Vector2.right));
+        Tick(Click(new Vector2(3f, 3f)));
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
+        Assert.That(orders.HasBufferedCast, Is.False);
+
+        Tick(Press(1, Vector2.right));
+        Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+        Assert.That(orders.HasBufferedCast, Is.False);
+        Assert.That(caster.FailureCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ABufferedUnitCast_IsDroppedIfItsTargetDiedBeforeItFires()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(1f, 0f), distance: 0.5f);
+        caster.Set(0, Ability(castTime: 0.3f));
+        caster.Set(1, Ability(targeting: AbilityTargeting.Unit, range: 3f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, new Vector2(1f, 0f), enemy));
+
+        units.SetAlive(enemy, false);
+        time = 0.3f;
+        Tick(default);
+
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.NoTarget)));
+        Assert.That(caster.Started, Is.EqualTo(1));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+    }
+
+    [Test]
+    public void ANewOrderDuringACast_ReplacesThePausedOrder_AndStartsWhenTheCastEnds()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        caster.Set(0, Ability(castTime: 0.5f));
+        Tick(Press(0, Vector2.right));
+
+        PlayerOrderOutput clicked = Tick(Click(new Vector2(-2f, 0f)));
+        Assert.That(clicked.Motor, Is.EqualTo(PlayerMotorRequest.None), "The cast keeps the player still.");
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+
+        time = 0.5f;
+        PlayerOrderOutput resumed = Tick(default);
+        Assert.That(resumed.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(resumed.Destination, Is.EqualTo(new Vector2(-2f, 0f)));
+    }
+
+    [Test]
+    public void StopDuringACast_ClearsThePausedOrder_AndTheCastEndsIntoIdle()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        caster.Set(0, Ability(castTime: 0.5f));
+        Tick(Press(0, Vector2.right));
+
+        Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting), "A started cast runs to its end.");
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Idle));
+
+        time = 0.5f;
+        Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(caster.Ended, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AUnitCastOutOfRange_WalksIntoRange_ThenCasts_ThenGoesIdle()
+    {
+        UnitTarget ally = CreateUnit(UnitTeam.Ally, new Vector2(6f, 0f), distance: 5.5f);
+        caster.Set(2, Ability(castTime: 0.2f, targeting: AbilityTargeting.Unit, filter: AbilityUnitFilter.Ally, range: 4f));
+
+        PlayerOrderOutput approaching = Tick(Press(2, new Vector2(6f, 0f), ally));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.CastWhenInRange));
+        Assert.That(orders.ApproachingSlot, Is.EqualTo(2));
+        Assert.That(approaching.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(approaching.Destination, Is.EqualTo(new Vector2(6f, 0f)));
+        Assert.That(caster.Started, Is.Zero);
+
+        position = new Vector2(2.5f, 0f);
+        units.SetDistance(ally, 3.5f);
+        time = 0.1f;
+        PlayerOrderOutput inRange = Tick(default);
+        Assert.That(caster.Started, Is.EqualTo(1));
+        Assert.That(caster.LastAim.Target.IsSameUnit(ally), Is.True);
+        Assert.That(inRange.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+
+        time = 0.3f;
+        Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle), "The approach order ends with its cast.");
+    }
+
+    [Test]
+    public void AnApproachWhoseTargetDies_EndsIdle()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(6f, 0f), distance: 5.5f);
+        caster.Set(3, Ability(targeting: AbilityTargeting.Unit, range: 3f));
+        Tick(Press(3, new Vector2(6f, 0f), enemy));
+
+        units.SetAlive(enemy, false);
+        PlayerOrderOutput output = Tick(default);
+
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(caster.LastFailure, Is.EqualTo((3, CastOutcome.NoTarget)));
+    }
+
+    [Test]
+    public void Clear_EndsARunningCast_AndDropsTheBufferedOne()
+    {
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.right));
+
+        orders.Clear();
+
+        Assert.That(caster.Ended, Is.EqualTo(1));
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+    }
+
+    [Test]
+    public void Casting_DoesNotAllocate()
+    {
+        caster.Set(0, Ability(castTime: 0f));
+        caster.Set(1, Ability(castTime: 0.1f, bufferable: true));
+        PlayerCommand instant = Press(0, Vector2.right);
+        PlayerCommand buffered = Press(1, Vector2.up);
+        PlayerOrderContext context = new(position, 0f, false, 0f, AttackRange);
+        PlayerOrderContext later = new(position, 1f, false, 0f, AttackRange);
+        orders.Tick(instant, context);
+
+        TestDelegate cast = () =>
+        {
+            orders.Tick(buffered, context);
+            orders.Tick(buffered, context);
+            orders.Tick(default, later);
+            orders.Tick(instant, later);
+        };
+
+        Assert.That(cast, Is.Not.AllocatingGCMemory());
+    }
+
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
         return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange));
@@ -326,6 +699,22 @@ public class PlayerOrdersTests
         return new PlayerCommand(point, target, movePressed: false, moveHeld: true, stopPressed: false);
     }
 
+    private static PlayerCommand Press(int slot, Vector2 point, UnitTarget target = default)
+    {
+        return new PlayerCommand(point, target, movePressed: false, moveHeld: false, stopPressed: false, abilitySlot: slot);
+    }
+
+    private AbilityDefinition Ability(
+        float castTime = 0f,
+        AbilityTargeting targeting = AbilityTargeting.Direction,
+        AbilityUnitFilter filter = AbilityUnitFilter.Enemy,
+        float range = 3f,
+        CastMovement movement = CastMovement.Stop,
+        bool bufferable = false)
+    {
+        return Track(AbilityDefinition.Create("Test", 1f, castTime, targeting, filter, range, movement, bufferable));
+    }
+
     private UnitTarget CreateUnit(UnitTeam team, Vector2 unitPosition, float distance)
     {
         GameObject unit = Track(new GameObject($"{team}Unit"));
@@ -338,6 +727,64 @@ public class PlayerOrdersTests
     {
         createdObjects.Add(created);
         return created;
+    }
+
+    private sealed class FakeCaster : IAbilityCaster
+    {
+        private readonly AbilityDefinition[] slots = new AbilityDefinition[AbilitySlots.Count];
+
+        public CastOutcome? Failure { get; set; }
+        public int Started { get; private set; }
+        public int Ended { get; private set; }
+        public int FailureCount { get; private set; }
+        public CastAim LastAim { get; private set; }
+        public (int, CastOutcome) LastFailure { get; private set; }
+
+        public void Set(int slot, AbilityDefinition ability)
+        {
+            slots[slot] = ability;
+        }
+
+        public AbilityDefinition GetAbility(int slot)
+        {
+            return slots[slot];
+        }
+
+        public bool CanCast(int slot, out CastOutcome failure)
+        {
+            if (slots[slot] == null)
+            {
+                failure = CastOutcome.EmptySlot;
+                return false;
+            }
+
+            failure = Failure ?? CastOutcome.Started;
+            return Failure == null;
+        }
+
+        public CastOutcome TryCast(int slot, in CastAim aim)
+        {
+            if (!CanCast(slot, out CastOutcome failure))
+            {
+                ReportFailure(slot, failure);
+                return failure;
+            }
+
+            Started++;
+            LastAim = aim;
+            return CastOutcome.Started;
+        }
+
+        public void EndCast(int slot)
+        {
+            Ended++;
+        }
+
+        public void ReportFailure(int slot, CastOutcome reason)
+        {
+            FailureCount++;
+            LastFailure = (slot, reason);
+        }
     }
 
     private sealed class FakeUnits : IUnitQueries

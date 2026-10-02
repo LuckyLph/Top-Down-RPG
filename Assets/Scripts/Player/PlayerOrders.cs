@@ -1,23 +1,35 @@
 using UnityEngine;
 
 /// <summary>
-/// The player's order state machine (Idle, Move, Attack). Each tick it turns a <see cref="PlayerCommand"/> and the
-/// player's state into motor requests, a facing direction and swing requests. No engine lookups: targets are
-/// queried through <see cref="IUnitQueries"/>.
+/// The player's order state machine: Idle, Move, Attack, CastWhenInRange and Casting, plus at most one paused order
+/// while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and the player's
+/// state into motor requests, a facing direction and swing requests, and starts casts through the
+/// <see cref="IAbilityCaster"/>. No engine lookups: targets are queried through <see cref="IUnitQueries"/>.
 /// </summary>
 public sealed class PlayerOrders
 {
+    private const float AimThreshold = 0.0001f;
+
     private readonly PlayerControlSettings settings;
     private readonly IUnitQueries units;
+    private readonly IAbilityCaster caster;
 
-    private PlayerOrderKind current;
-    private Vector2 moveDestination;
-    private UnitTarget attackTarget;
-    private bool freshOrder;
+    private Order current;
+    private Order paused;
+    private bool fresh;
     private bool chasing;
     private Vector2 chaseGoal;
     private float nextRepathTime;
     private float nextHoldEvaluationTime;
+
+    private AbilityDefinition castAbility;
+    private CastAim castAim;
+    private float castEndTime;
+
+    private bool hasBuffered;
+    private int bufferedSlot;
+    private CastAim bufferedAim;
+    private float bufferedTime;
 
     private PlayerMotorRequest motorRequest;
     private Vector2 destination;
@@ -25,19 +37,25 @@ public sealed class PlayerOrders
     private Vector2 aimDirection;
     private bool swing;
 
-    public PlayerOrders(PlayerControlSettings settings, IUnitQueries units)
+    public PlayerOrders(PlayerControlSettings settings, IUnitQueries units, IAbilityCaster caster = null)
     {
         this.settings = settings;
         this.units = units;
+        this.caster = caster;
     }
 
-    public PlayerOrderKind Current => current;
-    public Vector2 MoveDestination => moveDestination;
-    public UnitTarget AttackTarget => attackTarget;
+    public PlayerOrderKind Current => current.Kind;
+    public PlayerOrderKind Paused => current.Kind == PlayerOrderKind.Casting ? paused.Kind : PlayerOrderKind.Idle;
+    public Vector2 MoveDestination => current.Destination;
+    public UnitTarget AttackTarget => current.Target;
+    public int CastingSlot => current.Kind == PlayerOrderKind.Casting ? current.Slot : -1;
+    public int ApproachingSlot => current.Kind == PlayerOrderKind.CastWhenInRange ? current.Slot : -1;
+    public bool HasBufferedCast => hasBuffered;
+    public int BufferedSlot => hasBuffered ? bufferedSlot : -1;
 
     /// <summary>
-    /// Applies the command (stop, a new order, or a throttled re-evaluation while the move button is held), then
-    /// runs the current order.
+    /// Applies the command (stop, a new order, a throttled re-evaluation while the move button is held, an ability
+    /// press), then runs the current order.
     /// </summary>
     public PlayerOrderOutput Tick(in PlayerCommand command, in PlayerOrderContext context)
     {
@@ -47,126 +65,426 @@ public sealed class PlayerOrders
 
         if (command.StopPressed)
         {
-            BecomeIdle();
+            Stop();
         }
 
-        if (command.MovePressed)
-        {
-            IssueFrom(command);
-            nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
-        }
-        else if (command.MoveHeld && context.Time >= nextHoldEvaluationTime)
+        if (command.MovePressed || (command.MoveHeld && context.Time >= nextHoldEvaluationTime))
         {
             IssueFrom(command);
             nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
         }
 
-        switch (current)
+        if (command.HasAbility)
         {
-            case PlayerOrderKind.Move:
-                RunMove(context);
-                break;
-            case PlayerOrderKind.Attack:
-                RunAttack(context);
-                break;
+            PressAbility(command.AbilitySlot, command, context);
         }
 
-        freshOrder = false;
+        if (hasBuffered && context.Time - bufferedTime > settings.CastBufferWindow)
+        {
+            DropBuffered(CastOutcome.Expired);
+        }
+
+        RunCurrent(context);
+        fresh = false;
         return new PlayerOrderOutput(motorRequest, destination, hasAim, aimDirection, swing);
     }
 
     /// <summary>
-    /// Drops the current order without asking the motor for anything (used on death, teleports and when the
-    /// player stops being simulated here).
+    /// Drops every order, ends a running cast and drops a buffered one, without asking the motor for anything (used
+    /// on death, teleports and when the player stops being simulated here).
     /// </summary>
     public void Clear()
     {
-        current = PlayerOrderKind.Idle;
-        attackTarget = default;
+        if (current.Kind == PlayerOrderKind.Casting && caster != null)
+        {
+            caster.EndCast(current.Slot);
+        }
+
+        DropBuffered(CastOutcome.Cancelled);
+        current = default;
+        paused = default;
         chasing = false;
-        freshOrder = false;
+        fresh = false;
+    }
+
+    private void Stop()
+    {
+        DropBuffered(CastOutcome.Cancelled);
+        if (current.Kind == PlayerOrderKind.Casting)
+        {
+            paused = default;
+            motorRequest = PlayerMotorRequest.Stop;
+            return;
+        }
+
+        BecomeIdle();
     }
 
     private void IssueFrom(in PlayerCommand command)
     {
+        Order order = OrderFrom(command);
+        bool casting = current.Kind == PlayerOrderKind.Casting;
+        Order replaced = casting ? paused : current;
+        if (order.SameAs(replaced))
+        {
+            return;
+        }
+
+        DropBuffered(CastOutcome.Cancelled);
+        if (casting)
+        {
+            paused = order;
+        }
+        else
+        {
+            current = order;
+        }
+
+        fresh = true;
+        chasing = false;
+    }
+
+    private Order OrderFrom(in PlayerCommand command)
+    {
         UnitTarget target = command.Target;
         if (target.Team == UnitTeam.Enemy && units.IsAlive(target))
         {
-            if (current == PlayerOrderKind.Attack && attackTarget.IsSameUnit(target))
+            return Order.Attack(target);
+        }
+
+        return Order.Move(command.PointerWorld);
+    }
+
+    private void PressAbility(int slot, in PlayerCommand command, in PlayerOrderContext context)
+    {
+        if (caster == null)
+        {
+            return;
+        }
+
+        if (!caster.CanCast(slot, out CastOutcome failure))
+        {
+            caster.ReportFailure(slot, failure);
+            return;
+        }
+
+        AbilityDefinition ability = caster.GetAbility(slot);
+        if (!TryAim(ability, command, context, out CastAim aim))
+        {
+            caster.ReportFailure(slot, CastOutcome.NoTarget);
+            return;
+        }
+
+        if (current.Kind == PlayerOrderKind.Casting)
+        {
+            if (!ability.Bufferable)
             {
+                caster.ReportFailure(slot, CastOutcome.CastInProgress);
                 return;
             }
 
-            current = PlayerOrderKind.Attack;
-            attackTarget = target;
-            chasing = false;
-            freshOrder = true;
+            DropBuffered(CastOutcome.Cancelled);
+            hasBuffered = true;
+            bufferedSlot = slot;
+            bufferedAim = aim;
+            bufferedTime = context.Time;
             return;
         }
 
-        if (current == PlayerOrderKind.Move && !freshOrder && command.PointerWorld == moveDestination)
-        {
-            return;
-        }
-
-        current = PlayerOrderKind.Move;
-        moveDestination = command.PointerWorld;
-        attackTarget = default;
-        chasing = false;
-        freshOrder = true;
+        Begin(slot, ability, aim, context, current);
     }
 
-    private void RunMove(in PlayerOrderContext context)
+    private bool TryAim(AbilityDefinition ability, in PlayerCommand command, in PlayerOrderContext context, out CastAim aim)
     {
-        if (freshOrder)
+        Vector2 toCursor = command.PointerWorld - context.Position;
+        Vector2 direction = toCursor.sqrMagnitude > AimThreshold ? toCursor.normalized : Vector2.zero;
+        switch (ability.Targeting)
         {
-            RequestMoveTo(moveDestination);
+            case AbilityTargeting.None:
+                aim = new CastAim(context.Position, Vector2.zero, default);
+                return true;
+            case AbilityTargeting.Direction:
+                aim = new CastAim(command.PointerWorld, direction, default);
+                return true;
+            case AbilityTargeting.Point:
+                aim = new CastAim(context.Position + Vector2.ClampMagnitude(toCursor, ability.Range), direction, default);
+                return true;
+            default:
+                UnitTarget target = command.Target;
+                if (!target.Exists || !ability.Accepts(target.Team) || !units.IsAlive(target))
+                {
+                    aim = default;
+                    return false;
+                }
+
+                aim = UnitAim(target, context);
+                return true;
+        }
+    }
+
+    private CastAim UnitAim(UnitTarget target, in PlayerOrderContext context)
+    {
+        Vector2 targetPosition = units.PositionOf(target);
+        Vector2 toTarget = targetPosition - context.Position;
+        return new CastAim(targetPosition, toTarget.sqrMagnitude > AimThreshold ? toTarget.normalized : Vector2.zero, target);
+    }
+
+    /// <summary>
+    /// Starts a cast that pauses <paramref name="toPause"/>, or turns an out-of-range unit cast into a
+    /// CastWhenInRange order. False when the caster refused the cast (it reported why).
+    /// </summary>
+    private bool Begin(int slot, AbilityDefinition ability, in CastAim aim, in PlayerOrderContext context, Order toPause)
+    {
+        if (ability.Targeting == AbilityTargeting.Unit && units.DistanceTo(aim.Target) > ability.Range)
+        {
+            current = Order.CastWhenInRange(slot, aim.Target);
+            paused = default;
+            fresh = true;
+            chasing = false;
+            return true;
+        }
+
+        if (caster.TryCast(slot, aim) != CastOutcome.Started)
+        {
+            return false;
+        }
+
+        paused = toPause;
+        current = Order.Casting(slot);
+        castAbility = ability;
+        castAim = aim;
+        castEndTime = context.Time + ability.CastTime;
+        if (ability.CastMovement != CastMovement.Continue)
+        {
+            motorRequest = PlayerMotorRequest.Stop;
+            chasing = false;
+        }
+
+        return true;
+    }
+
+    private void RunCurrent(in PlayerOrderContext context)
+    {
+        switch (current.Kind)
+        {
+            case PlayerOrderKind.Move:
+                RunMove(ref current, context);
+                break;
+            case PlayerOrderKind.Attack:
+                RunAttack(ref current, context, true);
+                break;
+            case PlayerOrderKind.CastWhenInRange:
+                RunCastWhenInRange(context);
+                break;
+            case PlayerOrderKind.Casting:
+                RunCasting(context);
+                break;
+        }
+    }
+
+    private void RunMove(ref Order order, in PlayerOrderContext context)
+    {
+        if (fresh)
+        {
+            RequestMoveTo(order.Destination);
             return;
         }
 
         if (context.ReachedDestination || context.StalledTime >= settings.StuckTimeout)
         {
-            BecomeIdle();
+            order = default;
+            motorRequest = PlayerMotorRequest.Stop;
         }
     }
 
-    private void RunAttack(in PlayerOrderContext context)
+    private void RunAttack(ref Order order, in PlayerOrderContext context, bool act)
     {
-        if (!units.IsAlive(attackTarget))
+        if (!units.IsAlive(order.Target))
+        {
+            order = default;
+            motorRequest = PlayerMotorRequest.Stop;
+            chasing = false;
+            return;
+        }
+
+        Vector2 targetPosition = units.PositionOf(order.Target);
+        if (units.DistanceTo(order.Target) > context.AttackRange)
+        {
+            Chase(targetPosition, context);
+            return;
+        }
+
+        StopChasing();
+        if (!act)
+        {
+            return;
+        }
+
+        Vector2 toTarget = targetPosition - context.Position;
+        if (toTarget.sqrMagnitude > AimThreshold)
+        {
+            hasAim = true;
+            aimDirection = toTarget.normalized;
+        }
+
+        swing = true;
+    }
+
+    private void RunCastWhenInRange(in PlayerOrderContext context)
+    {
+        int slot = current.Slot;
+        AbilityDefinition ability = caster != null ? caster.GetAbility(slot) : null;
+        if (ability == null || !units.IsAlive(current.Target))
+        {
+            if (caster != null)
+            {
+                caster.ReportFailure(slot, ability == null ? CastOutcome.EmptySlot : CastOutcome.NoTarget);
+            }
+
+            BecomeIdle();
+            return;
+        }
+
+        if (units.DistanceTo(current.Target) > ability.Range)
+        {
+            Chase(units.PositionOf(current.Target), context);
+            return;
+        }
+
+        StopChasing();
+        if (!Begin(slot, ability, UnitAim(current.Target, context), context, default))
         {
             BecomeIdle();
             return;
         }
 
-        Vector2 targetPosition = units.PositionOf(attackTarget);
-        if (units.DistanceTo(attackTarget) <= context.AttackRange)
+        RunCasting(context);
+    }
+
+    private void RunCasting(in PlayerOrderContext context)
+    {
+        if (castAbility.Targeting != AbilityTargeting.None && castAim.Direction.sqrMagnitude > AimThreshold)
         {
-            if (chasing || freshOrder)
-            {
-                motorRequest = PlayerMotorRequest.Stop;
-            }
+            hasAim = true;
+            aimDirection = castAim.Direction;
+        }
 
-            chasing = false;
-            Vector2 toTarget = targetPosition - context.Position;
-            if (toTarget.sqrMagnitude > 0.0001f)
-            {
-                hasAim = true;
-                aimDirection = toTarget.normalized;
-            }
+        if (castAbility.CastMovement == CastMovement.Continue)
+        {
+            RunPausedMovement(context);
+        }
 
-            swing = true;
+        if (context.Time >= castEndTime)
+        {
+            FinishCast(context);
+        }
+    }
+
+    private void RunPausedMovement(in PlayerOrderContext context)
+    {
+        switch (paused.Kind)
+        {
+            case PlayerOrderKind.Move:
+                RunMove(ref paused, context);
+                break;
+            case PlayerOrderKind.Attack:
+                RunAttack(ref paused, context, false);
+                break;
+            case PlayerOrderKind.CastWhenInRange:
+                AbilityDefinition ability = caster.GetAbility(paused.Slot);
+                if (ability != null && units.IsAlive(paused.Target) && units.DistanceTo(paused.Target) > ability.Range)
+                {
+                    Chase(units.PositionOf(paused.Target), context);
+                }
+                else
+                {
+                    StopChasing();
+                }
+
+                break;
+        }
+    }
+
+    private void FinishCast(in PlayerOrderContext context)
+    {
+        caster.EndCast(current.Slot);
+        current = default;
+
+        if (hasBuffered && TryFireBuffered(context))
+        {
             return;
         }
 
+        current = paused;
+        paused = default;
+        fresh = true;
+        chasing = false;
+        if (current.Kind == PlayerOrderKind.Idle)
+        {
+            motorRequest = PlayerMotorRequest.Stop;
+            return;
+        }
+
+        RunCurrent(context);
+    }
+
+    private bool TryFireBuffered(in PlayerOrderContext context)
+    {
+        hasBuffered = false;
+        int slot = bufferedSlot;
+        if (!caster.CanCast(slot, out CastOutcome failure))
+        {
+            caster.ReportFailure(slot, failure);
+            return false;
+        }
+
+        AbilityDefinition ability = caster.GetAbility(slot);
+        CastAim aim = bufferedAim;
+        if (ability.Targeting == AbilityTargeting.Unit)
+        {
+            if (!units.IsAlive(aim.Target))
+            {
+                caster.ReportFailure(slot, CastOutcome.NoTarget);
+                return false;
+            }
+
+            aim = UnitAim(aim.Target, context);
+        }
+
+        if (!Begin(slot, ability, aim, context, paused))
+        {
+            return false;
+        }
+
+        if (current.Kind == PlayerOrderKind.Casting)
+        {
+            RunCasting(context);
+        }
+
+        return true;
+    }
+
+    private void Chase(Vector2 targetPosition, in PlayerOrderContext context)
+    {
         float repathDistance = settings.TargetMoveRepathDistance;
         bool targetMoved = (targetPosition - chaseGoal).sqrMagnitude > repathDistance * repathDistance;
-        if (!chasing || context.Time >= nextRepathTime || targetMoved)
+        if (!chasing || fresh || context.Time >= nextRepathTime || targetMoved)
         {
             chasing = true;
             chaseGoal = targetPosition;
             nextRepathTime = context.Time + settings.RepathInterval;
             RequestMoveTo(targetPosition);
         }
+    }
+
+    private void StopChasing()
+    {
+        if (chasing || fresh)
+        {
+            motorRequest = PlayerMotorRequest.Stop;
+        }
+
+        chasing = false;
     }
 
     private void RequestMoveTo(Vector2 point)
@@ -177,11 +495,70 @@ public sealed class PlayerOrders
 
     private void BecomeIdle()
     {
-        if (current != PlayerOrderKind.Idle)
+        if (current.Kind != PlayerOrderKind.Idle)
         {
             motorRequest = PlayerMotorRequest.Stop;
         }
 
-        Clear();
+        current = default;
+        chasing = false;
+        fresh = false;
+    }
+
+    private void DropBuffered(CastOutcome reason)
+    {
+        if (!hasBuffered)
+        {
+            return;
+        }
+
+        hasBuffered = false;
+        if (caster != null)
+        {
+            caster.ReportFailure(bufferedSlot, reason);
+        }
+    }
+
+    private struct Order
+    {
+        public PlayerOrderKind Kind;
+        public Vector2 Destination;
+        public UnitTarget Target;
+        public int Slot;
+
+        public static Order Move(Vector2 point)
+        {
+            return new Order { Kind = PlayerOrderKind.Move, Destination = point };
+        }
+
+        public static Order Attack(UnitTarget target)
+        {
+            return new Order { Kind = PlayerOrderKind.Attack, Target = target };
+        }
+
+        public static Order CastWhenInRange(int slot, UnitTarget target)
+        {
+            return new Order { Kind = PlayerOrderKind.CastWhenInRange, Target = target, Slot = slot };
+        }
+
+        public static Order Casting(int slot)
+        {
+            return new Order { Kind = PlayerOrderKind.Casting, Slot = slot };
+        }
+
+        public readonly bool SameAs(in Order other)
+        {
+            if (Kind != other.Kind)
+            {
+                return false;
+            }
+
+            return Kind switch
+            {
+                PlayerOrderKind.Move => Destination == other.Destination,
+                PlayerOrderKind.Attack => Target.IsSameUnit(other.Target),
+                _ => false
+            };
+        }
     }
 }

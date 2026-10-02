@@ -7,7 +7,9 @@ public enum PlayerOrderKind
 {
     Idle,
     Move,
-    Attack
+    Attack,
+    CastWhenInRange,
+    Casting
 }
 
 /// <summary>

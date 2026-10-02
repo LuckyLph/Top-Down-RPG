@@ -60,6 +60,7 @@ public sealed class InProcessClient : IDisposable
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
+        builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
@@ -189,9 +190,11 @@ public sealed class InProcessClient : IDisposable
         public bool MoveHeld { get; set; }
         public bool StopPressedThisFrame { get; set; }
 
+        public int AbilityPressedThisFrame { get; set; } = -1;
+
         public bool WasAbilityPressedThisFrame(int slot)
         {
-            return false;
+            return slot == AbilityPressedThisFrame;
         }
 
         /// <summary>

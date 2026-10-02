@@ -154,6 +154,7 @@ GameObject:
   - component: {fileID: 4797542250920115980}
   - component: {fileID: 7658512828760025517}
   - component: {fileID: 734304616056688651}
+  - component: {fileID: 8509953176593211654}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -265,6 +266,7 @@ MonoBehaviour:
   controlSettings: {fileID: 11400000, guid: b536d6fafea074e4fac718256960edb2, type: 2}
   weaponController: {fileID: 7019887641318625157}
   motor: {fileID: 734304616056688651}
+  abilities: {fileID: 8509953176593211654}
 --- !u!114 &1071056690780457742
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -430,3 +432,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerMotor2D
   walkAnimationSpeed: 0.85
   animator: {fileID: 1571185521030094183}
+--- !u!114 &8509953176593211654
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f04142d9093b6a04aac4b37f188d49fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerAbilities
+  playerClass: {fileID: 11400000, guid: 5768b25c19ba2c34998873c4cd3a0d9c, type: 2}
+  weaponController: {fileID: 7019887641318625157}

@@ -174,6 +174,21 @@ public class PlayerTargetingTests
     }
 
     [Test]
+    public void CommandSource_PicksTheUnitUnderTheCursorForAnAbilityPress()
+    {
+        Camera camera = CreateCamera(new Vector2(10f, 20f));
+        Health mob = CreateMob(new Vector2(10f, 20f));
+        Physics2D.SyncTransforms();
+        FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), AbilityPressed = 2 };
+        LocalPlayerCommandSource source = new(input, camera, picker);
+
+        PlayerCommand command = source.ReadCommand();
+
+        Assert.That(command.AbilitySlot, Is.EqualTo(2));
+        Assert.That(command.Target.Health, Is.SameAs(mob));
+    }
+
+    [Test]
     public void CommandSource_GivesNothingWhileGameplayInputIsDisabled()
     {
         FakePlayerInput input = new() { GameplayEnabled = false, MovePressedThisFrame = true, MoveHeld = true, StopPressedThisFrame = true, AbilityPressed = 0 };

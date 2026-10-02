@@ -161,6 +161,22 @@ public class PlayerMotor2DTests
     }
 
     [Test]
+    public void Aiming_HoldsTheFacingWhileMoving_UntilReleased()
+    {
+        Place(Vector2.zero);
+        motor.MoveTo(new Vector2(5f, 0f));
+
+        motor.SetAim(true, Vector2.up);
+        motor.FixedTick(FixedDelta);
+        Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.up));
+        Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.right));
+
+        motor.SetAim(false, Vector2.zero);
+        motor.FixedTick(FixedDelta);
+        Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.right));
+    }
+
+    [Test]
     public void Stop_DropsThePathAndZeroesVelocity()
     {
         Place(Vector2.zero);

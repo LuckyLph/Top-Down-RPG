@@ -36,6 +36,9 @@ public sealed class PlayerControlSettings : ScriptableObject
     [SerializeField, Min(0f), Tooltip("Distance an attack target must move from the last path goal to trigger an early repath.")]
     private float targetMoveRepathDistance = 0.5f;
 
+    [SerializeField, Min(0f), Tooltip("Seconds a buffered cast waits for the running cast to end before it is dropped.")]
+    private float castBufferWindow = 0.4f;
+
     [Header("Targeting")]
     [SerializeField, Min(0f), Tooltip("Radius around the cursor in which a unit can be clicked.")]
     private float pickRadius = 0.35f;
@@ -55,6 +58,7 @@ public sealed class PlayerControlSettings : ScriptableObject
     public float HoldReevaluateInterval => holdReevaluateInterval;
     public float RepathInterval => repathInterval;
     public float TargetMoveRepathDistance => targetMoveRepathDistance;
+    public float CastBufferWindow => castBufferWindow;
     public float PickRadius => pickRadius;
     public LayerMask EnemyLayers => enemyLayers;
     public LayerMask AllyLayers => allyLayers;

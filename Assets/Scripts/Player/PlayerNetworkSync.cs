@@ -13,6 +13,7 @@ public class PlayerNetworkSync : NetworkBehaviour
 
     private PlayerController controller;
     private PlayerWeaponController weapon;
+    private PlayerAbilities abilities;
     private Health health;
     private Rigidbody2D body;
     private PlayerBinder binder;
@@ -22,6 +23,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     {
         controller = GetComponent<PlayerController>();
         weapon = GetComponent<PlayerWeaponController>();
+        abilities = GetComponent<PlayerAbilities>();
         health = GetComponent<Health>();
         body = GetComponent<Rigidbody2D>();
     }
@@ -53,6 +55,11 @@ public class PlayerNetworkSync : NetworkBehaviour
                 health.Restored += HandleLocalRestored;
             }
 
+            if (abilities != null)
+            {
+                abilities.CastStarted += HandleLocalCast;
+            }
+
             return;
         }
 
@@ -77,6 +84,11 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (health != null)
         {
             health.Restored -= HandleLocalRestored;
+        }
+
+        if (abilities != null)
+        {
+            abilities.CastStarted -= HandleLocalCast;
         }
 
         if (binder != null)
@@ -131,5 +143,34 @@ public class PlayerNetworkSync : NetworkBehaviour
         {
             weapon.PlayRemoteAttack(direction);
         }
+    }
+
+    private void HandleLocalCast(AbilityCast cast)
+    {
+        Health target = cast.Aim.Target.Health;
+        NetworkObject targetObject = target != null ? target.GetComponent<NetworkObject>() : null;
+        bool hasTarget = targetObject != null && targetObject.IsSpawned;
+        CastRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, hasTarget ? new NetworkObjectReference(targetObject) : default, hasTarget);
+    }
+
+    [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
+    private void CastRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget)
+    {
+        controller.Face(direction);
+        if (abilities != null)
+        {
+            abilities.PlayRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default));
+        }
+    }
+
+    private UnitTarget ResolveTarget(NetworkObjectReference reference)
+    {
+        if (!reference.TryGet(out NetworkObject targetObject, NetworkManager))
+        {
+            return default;
+        }
+
+        UnitTeam team = targetObject.TryGetComponent(out PlayerController _) ? UnitTeam.Ally : UnitTeam.Enemy;
+        return new UnitTarget(targetObject.GetComponent<Health>(), targetObject.GetComponent<Collider2D>(), team);
     }
 }

@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Turns the local <see cref="IPlayerInput"/> into world-space <see cref="PlayerCommand"/>s with the main camera
-/// and the <see cref="PointerTargetPicker"/>. A move press over UI is dropped, and so is the hold that follows it.
+/// and the <see cref="PointerTargetPicker"/> (picking only on move presses, holds and ability presses). A move press
+/// over UI is dropped, and so is the hold that follows it.
 /// </summary>
 public sealed class LocalPlayerCommandSource : IPlayerCommandSource
 {
@@ -41,9 +42,11 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
 
         Vector2 screen = input.PointerScreenPosition;
         Vector2 pointerWorld = camera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, 0f));
-        UnitTarget target = (movePressed || moveHeld) && picker != null ? picker.Pick(pointerWorld) : default;
+        int abilitySlot = ReadAbilitySlot();
+        bool wantsTarget = movePressed || moveHeld || abilitySlot != PlayerCommand.NoAbility;
+        UnitTarget target = wantsTarget && picker != null ? picker.Pick(pointerWorld) : default;
 
-        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, ReadAbilitySlot());
+        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot);
     }
 
     private int ReadAbilitySlot()

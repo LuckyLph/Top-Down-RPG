@@ -31,6 +31,7 @@ public class PlayerMotor2D : MonoBehaviour
     private Vector2 currentMove;
     private Vector2 facing = Vector2.down;
     private bool simulatesMovement = true;
+    private bool aiming;
 
     public Vector2 CurrentMove => currentMove;
     public Vector2 FacingDirection => facing;
@@ -143,6 +144,18 @@ public class PlayerMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// While aiming, the player faces <paramref name="direction"/> and movement no longer turns it.
+    /// </summary>
+    public void SetAim(bool aim, Vector2 direction)
+    {
+        aiming = aim;
+        if (aim)
+        {
+            Face(direction);
+        }
+    }
+
     public void SetSimulatesMovement(bool simulates)
     {
         if (!simulates)
@@ -182,7 +195,7 @@ public class PlayerMotor2D : MonoBehaviour
         Vector2 velocity = follower.Tick(Position, speed, deltaTime);
         Body.linearVelocity = velocity;
         currentMove = speed > 0f ? velocity / speed : Vector2.zero;
-        if (currentMove.sqrMagnitude > MovingThreshold)
+        if (!aiming && currentMove.sqrMagnitude > MovingThreshold)
         {
             facing = currentMove.normalized;
         }

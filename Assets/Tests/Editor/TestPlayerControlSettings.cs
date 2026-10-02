@@ -10,6 +10,7 @@ public static class TestPlayerControlSettings
         float repathInterval = 0.5f,
         float targetMoveRepathDistance = 0.5f,
         float pickRadius = 0.35f,
+        float castBufferWindow = 0.4f,
         TerrainMovementProfile2D movementProfile = null)
     {
         PlayerControlSettings settings = ScriptableObject.CreateInstance<PlayerControlSettings>();
@@ -21,6 +22,7 @@ public static class TestPlayerControlSettings
         serialized.FindProperty("repathInterval").floatValue = repathInterval;
         serialized.FindProperty("targetMoveRepathDistance").floatValue = targetMoveRepathDistance;
         serialized.FindProperty("pickRadius").floatValue = pickRadius;
+        serialized.FindProperty("castBufferWindow").floatValue = castBufferWindow;
         serialized.FindProperty("movementProfile").objectReferenceValue = movementProfile;
         serialized.FindProperty("enemyLayers").intValue = LayerMask.GetMask("Enemy");
         serialized.FindProperty("allyLayers").intValue = LayerMask.GetMask("Player");

@@ -3,6 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Player Weapon", menuName = "TopDownRPG/Combat/Player Weapon")]
 public sealed class PlayerWeapon : ScriptableObject
 {
+    public const int AbilityCount = 2;
     private const int DirectionalSpawnOffsetCount = 4;
 
     [SerializeField] private string displayName = "Sword";
@@ -15,6 +16,8 @@ public sealed class PlayerWeapon : ScriptableObject
     private Vector2[] slashSpawnOffsets = new Vector2[DirectionalSpawnOffsetCount];
     [SerializeField] private GameObject slashPrefab;
     [SerializeField] private Sprite hudIcon;
+    [SerializeField, Tooltip("Exactly two abilities, for the A and S slots. Empty entries are empty slots.")]
+    private AbilityDefinition[] abilities = new AbilityDefinition[AbilityCount];
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
@@ -27,6 +30,12 @@ public sealed class PlayerWeapon : ScriptableObject
     private void OnValidate()
     {
         EnsureDirectionalSpawnOffsets();
+        abilities = AbilitySlotArrays.Resize(abilities, AbilityCount);
+    }
+
+    public AbilityDefinition GetAbility(int index)
+    {
+        return abilities != null && index >= 0 && index < abilities.Length ? abilities[index] : null;
     }
 
     public Vector2 GetSlashSpawnOffset(Vector2 attackDirection)
@@ -43,7 +52,8 @@ public sealed class PlayerWeapon : ScriptableObject
         Vector2[] spawnOffsets,
         GameObject prefab = null,
         Sprite icon = null,
-        float range = 0.3f)
+        float range = 0.3f,
+        AbilityDefinition[] weaponAbilities = null)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
@@ -54,6 +64,7 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.slashPrefab = prefab;
         weapon.hudIcon = icon;
         weapon.attackRange = range;
+        weapon.abilities = AbilitySlotArrays.Resize(weaponAbilities, AbilityCount);
         weapon.hideFlags = HideFlags.HideAndDontSave;
         return weapon;
     }

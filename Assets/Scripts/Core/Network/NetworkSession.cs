@@ -19,6 +19,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     private readonly UnityTransport transport;
     private readonly NetworkSettings settings;
     private readonly HashSet<ulong> readyClients = new();
+    private readonly HashSet<ulong> admittedClients = new();
     private readonly NetworkObject.VisibilityDelegate visibleToReadyClients;
     private readonly List<NetworkObject> despawnBuffer = new();
     private AreaAnnouncement? currentArea;
@@ -42,6 +43,12 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             Debug.LogError($"{networkManagerPrefab.name} has no {nameof(UnityTransport)}; hosting and joining will fail.", networkManagerPrefab);
         }
 
+        if (!networkManager.NetworkConfig.ConnectionApproval)
+        {
+            Debug.LogError($"{networkManagerPrefab.name} has Connection Approval off; the host cannot refuse clients on another version or beyond {settings.MaxPlayers} players.", networkManagerPrefab);
+        }
+
+        networkManager.ConnectionApprovalCallback = HandleConnectionApproval;
         networkManager.OnClientStopped += HandleClientStopped;
         networkManager.OnClientDisconnectCallback += HandleClientDisconnected;
         networkManager.OnClientConnectedCallback += HandleClientConnected;
@@ -61,6 +68,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
     public ulong LocalClientId => networkManager.LocalClientId;
     public IReadOnlyCollection<ulong> ReadyClients => readyClients;
     public int AreaEpoch { get; private set; }
+    public string JoinRefusal { get; private set; }
 
     public bool StartHost()
     {
@@ -90,6 +98,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
         ResetSessionState();
         string hostAddress = string.IsNullOrWhiteSpace(address) ? settings.DefaultAddress : address.Trim();
         transport.SetConnectionData(hostAddress, settings.Port);
+        networkManager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version);
         if (!networkManager.StartClient())
         {
             return false;
@@ -105,6 +114,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             {
                 if (!networkManager.IsListening || Time.realtimeSinceStartup > deadline)
                 {
+                    JoinRefusal = JoinApproval.TryDecodeRefusal(networkManager.DisconnectReason, out string refusal) ? refusal : null;
                     Shutdown();
                     return false;
                 }
@@ -241,6 +251,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
             return;
         }
 
+        networkManager.ConnectionApprovalCallback = null;
         networkManager.OnClientStopped -= HandleClientStopped;
         networkManager.OnClientDisconnectCallback -= HandleClientDisconnected;
         networkManager.OnClientConnectedCallback -= HandleClientConnected;
@@ -268,6 +279,8 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
         shutdownRequested = false;
         followingHost = false;
         readyClients.Clear();
+        admittedClients.Clear();
+        JoinRefusal = null;
         currentArea = null;
         AreaEpoch = 0;
         networkManager.SetSingleton();
@@ -280,8 +293,31 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
         networkManager.CustomMessagingManager.SendNamedMessage(AreaAnnouncementMessage, clientId, writer);
     }
 
+    private void HandleConnectionApproval(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+    {
+        response.CreatePlayerObject = false;
+        if (request.ClientNetworkId == NetworkManager.ServerClientId)
+        {
+            response.Approved = true;
+            return;
+        }
+
+        int playerCount = networkManager.ConnectedClientsIds.Count + admittedClients.Count;
+        string refusal = JoinApproval.Evaluate(request.Payload, Application.version, playerCount, settings.MaxPlayers);
+        if (refusal != null)
+        {
+            response.Approved = false;
+            response.Reason = JoinApproval.EncodeRefusal(refusal);
+            return;
+        }
+
+        response.Approved = true;
+        admittedClients.Add(request.ClientNetworkId);
+    }
+
     private void HandleClientConnected(ulong clientId)
     {
+        admittedClients.Remove(clientId);
         if (networkManager.IsServer && clientId != NetworkManager.ServerClientId && currentArea.HasValue)
         {
             SendAreaAnnouncement(clientId, currentArea.Value);
@@ -314,6 +350,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDis
 
     private void HandleClientDisconnected(ulong clientId)
     {
+        admittedClients.Remove(clientId);
         readyClients.Remove(clientId);
     }
 

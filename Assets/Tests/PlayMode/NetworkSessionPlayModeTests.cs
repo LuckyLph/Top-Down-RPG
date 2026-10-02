@@ -144,6 +144,49 @@ public class NetworkSessionPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator Join_ReportsTheHostsRefusal()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        remoteHost = StartRemoteHost(session, "the game is full (4 players).");
+        Awaitable<bool> join = session.JoinAsync("127.0.0.1", 10f, CancellationToken.None);
+        yield return SceneBootTestHelper.WaitUntil(() => join.GetAwaiter().IsCompleted, "the refused join to end");
+
+        Assert.That(join.GetAwaiter().GetResult(), Is.False);
+        Assert.That(session.JoinRefusal, Is.EqualTo("the game is full (4 players)."));
+        Assert.That(remoteHost.ConnectedClientsIds.Count, Is.EqualTo(1), "Only the host itself is connected.");
+        yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the refused client to shut down");
+    }
+
+    [UnityTest]
+    public IEnumerator Host_RefusesAClientRunningAnotherVersion()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Assert.That(session.StartHost(), Is.True);
+
+        NetworkManager outdated = InProcessClient.CloneNetworkManager(session, "OutdatedClient");
+        try
+        {
+            outdated.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
+            outdated.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version + "-other");
+            Assert.That(outdated.StartClient(), Is.True);
+            yield return SceneBootTestHelper.WaitUntil(() => !outdated.IsListening, "the host to refuse the outdated client");
+
+            Assert.That(JoinApproval.TryDecodeRefusal(outdated.DisconnectReason, out string refusal), Is.True, outdated.DisconnectReason);
+            Assert.That(refusal, Does.Contain(Application.version + "-other"));
+            Assert.That(session.NetworkManager.ConnectedClientsIds.Count, Is.EqualTo(1), "Only the host itself is connected.");
+        }
+        finally
+        {
+            Object.Destroy(outdated.gameObject);
+            session.Shutdown();
+        }
+    }
+
+    [UnityTest]
     public IEnumerator Join_GivesUpWhenNoHostAnswers()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();
@@ -163,11 +206,17 @@ public class NetworkSessionPlayModeTests
         remoteHost.CustomMessagingManager.SendNamedMessage(NetworkSession.AreaAnnouncementMessage, clientId, writer);
     }
 
-    private static NetworkManager StartRemoteHost(NetworkSession session)
+    private static NetworkManager StartRemoteHost(NetworkSession session, string refusal = null)
     {
         NetworkManager host = InProcessClient.CloneNetworkManager(session, "RemoteHost");
         GameObject hostObject = host.gameObject;
         hostObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port, "127.0.0.1");
+        host.ConnectionApprovalCallback = (request, response) =>
+        {
+            bool refuse = refusal != null && request.ClientNetworkId != NetworkManager.ServerClientId;
+            response.Approved = !refuse;
+            response.Reason = refuse ? JoinApproval.EncodeRefusal(refusal) : null;
+        };
         Assert.That(host.StartHost(), Is.True, "The remote host should start.");
         return host;
     }

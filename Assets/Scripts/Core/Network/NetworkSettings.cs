@@ -15,8 +15,12 @@ public class NetworkSettings : ScriptableObject
     [SerializeField, Min(0.5f), Tooltip("Seconds a client waits for the host before giving up.")]
     private float connectTimeoutSeconds = 10f;
 
+    [SerializeField, Range(1, 4), Tooltip("Most players in one session, the host included. The host refuses clients beyond it.")]
+    private int maxPlayers = 4;
+
     public string DefaultAddress => defaultAddress;
     public string ListenAddress => listenAddress;
     public ushort Port => port;
     public float ConnectTimeoutSeconds => connectTimeoutSeconds;
+    public int MaxPlayers => maxPlayers;
 }

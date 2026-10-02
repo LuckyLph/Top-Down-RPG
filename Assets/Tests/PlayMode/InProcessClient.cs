@@ -74,6 +74,7 @@ public sealed class InProcessClient : IDisposable
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
         GameObject clientObject = manager.gameObject;
         clientObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
+        manager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version);
         manager.PrefabHandler.AddHandler(playerPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(playerPrefab, container)));
         HashSet<NetworkObject> mobPrefabs = new();
         foreach (MobSpawnPoint spawnPoint in Object.FindObjectsByType<MobSpawnPoint>())

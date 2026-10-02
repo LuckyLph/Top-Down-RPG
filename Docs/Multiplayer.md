@@ -99,7 +99,8 @@ This also keeps each machine loading only what it needs, which leaves the door o
 - [x] Host-driven area changes: `GameFlow.AreaLoading` on the host despawns the scene's objects, bumps the area epoch and announces; clients follow through `GameFlow`, and new objects reach a client only after it reports ready for that epoch.
 - [x] Late join: a client connecting mid-game is told the current area, loads it, reports ready, and then receives the players, mobs and current HP.
 - [x] Party wipe: the host's restart is announced as a new session, so clients reload with it.
-- [x] Disconnects: a leaving client's player is removed by Netcode; the host leaving sends every client back to the menu.
+- [x] Disconnects: a leaving client's player is removed by Netcode; the host leaving sends every client back to the menu, including a client still loading or changing area (it goes back once that load ends).
+- [x] Connection approval: the host refuses clients beyond `NetworkSettings.MaxPlayers` (4, host included) and clients running another build version, and the joining player sees why.
 
 ### Phase 6: services and persistence
 

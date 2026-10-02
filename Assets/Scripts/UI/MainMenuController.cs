@@ -131,7 +131,14 @@ public class MainMenuController : MonoBehaviour
             isJoining = false;
         }
 
-        SetStatus(connected ? "Connected. Joining the host's area..." : "Could not connect to the host.");
+        if (connected)
+        {
+            SetStatus("Connected. Joining the host's area...");
+        }
+        else
+        {
+            SetStatus(session.JoinRefusal != null ? $"The host refused to let you in: {session.JoinRefusal}" : "Could not connect to the host.");
+        }
     }
 
     public void QuitGame()

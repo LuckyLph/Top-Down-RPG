@@ -16,3 +16,4 @@ MonoBehaviour:
   listenAddress: 0.0.0.0
   port: 7777
   connectTimeoutSeconds: 10
+  maxPlayers: 4

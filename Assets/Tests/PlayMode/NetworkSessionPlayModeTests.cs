@@ -144,6 +144,32 @@ public class NetworkSessionPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator MenuButtons_DoNothingWhileTheMenuIsStillFading()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        MainMenuController menu = Object.FindAnyObjectByType<MainMenuController>();
+        gameFlow.ShowMainMenuAsync();
+        Assert.That(gameFlow.IsTransitioning, Is.True);
+
+        menu.HostGame();
+        Assert.That(session.IsActive, Is.False, "Hosting during a transition would be shut down when the menu finishes fading in.");
+        menu.JoinGame();
+        Assert.That(session.IsActive, Is.False, "Joining during a transition would be shut down when the menu finishes fading in.");
+
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.IsInMenu, Is.True);
+        Assert.That(session.IsActive, Is.False);
+
+        menu.HostGame();
+        Assert.That(session.IsHost, Is.True, "Once the menu has settled, Host Game works.");
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.IsInGame, Is.True);
+    }
+
+    [UnityTest]
     public IEnumerator Join_ReportsTheHostsRefusal()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();

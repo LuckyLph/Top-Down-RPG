@@ -59,7 +59,7 @@ public class MainMenuController : MonoBehaviour
 
     public void StartNewGame()
     {
-        if (!EnsureInjected())
+        if (!CanStartGame())
         {
             return;
         }
@@ -69,7 +69,7 @@ public class MainMenuController : MonoBehaviour
 
     public void ContinueGame()
     {
-        if (!EnsureInjected())
+        if (!CanStartGame())
         {
             return;
         }
@@ -85,7 +85,7 @@ public class MainMenuController : MonoBehaviour
 
     public void HostGame()
     {
-        if (!EnsureInjected() || isJoining)
+        if (!CanStartGame())
         {
             return;
         }
@@ -103,7 +103,7 @@ public class MainMenuController : MonoBehaviour
 
     public void JoinGame()
     {
-        if (!EnsureInjected() || isJoining)
+        if (!CanStartGame())
         {
             return;
         }
@@ -148,6 +148,11 @@ public class MainMenuController : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    private bool CanStartGame()
+    {
+        return EnsureInjected() && !isJoining && !gameFlow.IsTransitioning;
     }
 
     private bool EnsureInjected()

@@ -6,8 +6,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class AbilityBarView : MonoBehaviour
 {
-    private static readonly string[] KeyLabels = { "Q", "W", "E", "R", "A", "S" };
-
     [SerializeField] private AbilitySlotView[] slots = new AbilitySlotView[AbilitySlots.Count];
 
     public int SlotCount => slots != null ? slots.Length : 0;
@@ -74,11 +72,11 @@ public class AbilityBarView : MonoBehaviour
 
     private void LabelKeys()
     {
-        for (int i = 0; i < slots.Length && i < KeyLabels.Length; i++)
+        for (int i = 0; i < slots.Length; i++)
         {
             if (slots[i] != null)
             {
-                slots[i].SetKey(KeyLabels[i]);
+                slots[i].SetKey(AbilitySlots.KeyName(i));
             }
         }
     }

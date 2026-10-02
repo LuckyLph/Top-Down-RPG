@@ -157,6 +157,49 @@ public class PlayerAbilitiesTests
     }
 
     [Test]
+    public void RecentCasts_RecordLocalAndRemoteCastsNewestFirst_ForTheGizmos()
+    {
+        Assert.That(abilities.RecentCastCount, Is.Zero);
+
+        abilities.TryCast(0, new CastAim(Vector2.one, Vector2.up, default));
+        abilities.EndCast(0);
+        abilities.PlayRemoteCast(1, default);
+        abilities.PlayRemoteCast(3, default);
+
+        Assert.That(abilities.TryGetRecentCast(0, out AbilityCast newest, out bool newestRemote), Is.True);
+        Assert.That(newest.Slot, Is.EqualTo(1));
+        Assert.That(newestRemote, Is.True);
+        Assert.That(abilities.TryGetRecentCast(1, out AbilityCast older, out bool olderRemote), Is.True);
+        Assert.That(older.Slot, Is.EqualTo(0));
+        Assert.That(older.Aim.Point, Is.EqualTo(Vector2.one));
+        Assert.That(olderRemote, Is.False);
+        Assert.That(abilities.TryGetRecentCast(2, out _, out _), Is.False, "An empty slot's remote cast is not recorded.");
+
+        for (int i = 0; i < 20; i++)
+        {
+            abilities.PlayRemoteCast(2, default);
+        }
+
+        Assert.That(abilities.RecentCastCount, Is.EqualTo(8), "Only the latest casts are kept.");
+        Assert.That(abilities.TryGetRecentCast(-1, out _, out _), Is.False);
+        Assert.That(abilities.TryGetRecentCast(8, out _, out _), Is.False);
+    }
+
+    [Test]
+    public void SlotKeyNames_FollowTheBar()
+    {
+        string[] keys = new string[AbilitySlots.Count];
+        for (int i = 0; i < keys.Length; i++)
+        {
+            keys[i] = AbilitySlots.KeyName(i);
+        }
+
+        Assert.That(keys, Is.EqualTo(new[] { "Q", "W", "E", "R", "A", "S" }));
+        Assert.That(AbilitySlots.KeyName(-1), Is.Empty);
+        Assert.That(AbilitySlots.KeyName(AbilitySlots.Count), Is.Empty);
+    }
+
+    [Test]
     public void Cooldowns_TrackReadinessAndRemainingTime()
     {
         AbilityCooldowns cooldowns = new(2);

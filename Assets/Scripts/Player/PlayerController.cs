@@ -1,11 +1,15 @@
 using UnityEngine;
 using VContainer;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/>, weapon and
 /// <see cref="PlayerAbilities"/>: each frame it reads a command, ticks the orders (which start casts) and applies
 /// their motor, facing and swing requests. Remote copies only show
-/// replicated movement.
+/// replicated movement. Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach
+/// and a buffered cast.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerMotor2D))]
@@ -15,6 +19,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private PlayerWeaponController weaponController;
     [SerializeField] private PlayerMotor2D motor;
     [SerializeField] private PlayerAbilities abilities;
+
+    [Header("Debug")]
+    [SerializeField, Tooltip("Draw the target a unit cast is walking into range of, and any buffered cast.")]
+    private bool drawAbilityOrderGizmos = true;
+    [SerializeField] private Color approachGizmoColor = new(1f, 1f, 1f, 0.8f);
 
     private IPlayerCommandSource commandSource;
     private IClock clock = UnityClock.Shared;
@@ -196,6 +205,41 @@ public class PlayerController : MonoBehaviour
         }
 
         orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), abilities);
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!drawAbilityOrderGizmos || orders == null || abilities == null)
+        {
+            return;
+        }
+
+        Vector3 origin = transform.position;
+        int approachingSlot = orders.ApproachingSlot;
+        Health target = orders.AttackTarget.Health;
+        if (approachingSlot >= 0 && target != null)
+        {
+            Gizmos.color = approachGizmoColor;
+            Gizmos.DrawLine(origin, target.transform.position);
+            Gizmos.DrawWireCube(target.transform.position, new Vector3(0.5f, 0.5f, 0f));
+        }
+
+#if UNITY_EDITOR
+        Handles.color = approachGizmoColor;
+        if (approachingSlot >= 0 && target != null)
+        {
+            AbilityDefinition approaching = abilities.GetAbility(approachingSlot);
+            string abilityName = approaching != null ? approaching.DisplayName : string.Empty;
+            Handles.Label(target.transform.position + Vector3.up * 0.6f, $"{AbilitySlots.KeyName(approachingSlot)} {abilityName}: approaching");
+        }
+
+        if (orders.HasBufferedCast)
+        {
+            AbilityDefinition buffered = abilities.GetAbility(orders.BufferedSlot);
+            string abilityName = buffered != null ? buffered.DisplayName : string.Empty;
+            Handles.Label(origin + Vector3.down * 0.4f, $"buffered: {AbilitySlots.KeyName(orders.BufferedSlot)} {abilityName}");
+        }
+#endif
     }
 
     private void ResolveWeaponController()

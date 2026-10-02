@@ -13,6 +13,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/Multiplayer.md` is the plan for online co-op (host-and-play, 2–4 players). Follow its "Rules for new code" in all new work, and tick off its phase checklist as steps land.
 
+`Docs/PlayerControls.md` is the spec for the click-to-move controls and ability rework. Follow it when working on player input, movement, auto attacks or abilities, and tick off its phase checklist as steps land.
+
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 
 ## Unity good practices

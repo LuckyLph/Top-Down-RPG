@@ -116,7 +116,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | Registration | Kind |
 |---|---|
 | `PlayerRegistry` as `IPlayerRegistry` + self | singleton |
-| `LocalPlayerTracker`, `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `PlayerBinder`, `PlayerRespawner` | singletons |
+| `LocalPlayerTracker`, `LocalPlayerCommandSource`, `ActiveSpawnPoint`, `ActiveNavigationGrid`, `PlayerBinder`, `PlayerRespawner` | singletons |
 | `PlayerSpawner` (with the inspector's player prefab and the Gameplay scene as parameters) | singleton |
 | `GameplayPlayers` | entry point (spawns players in `Start`, see Player) |
 | `DamagePopupLayer` | component |
@@ -129,13 +129,13 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 
 ### AreaLifetimeScope ([AreaLifetimeScope.cs](../Assets/Scripts/Composition/AreaLifetimeScope.cs))
 
-- `AreaEntry` as `IAreaEntry`, with every `SpawnPoint` in the scene. `AreaEntryRequest` comes from `GameFlow`'s enqueued registration.
+- `AreaEntry` as `IAreaEntry`, with every `SpawnPoint` in the scene and the area's `NavigationGrid2D` (null when there is none). `AreaEntryRequest` comes from `GameFlow`'s enqueued registration.
 - `AreaClientReady` entry point: on a client, tells the host it is ready once the area is up (after the build callbacks below registered the area's network prefabs).
 - `NavigationGrid2D`: first one found in the area scene via [SceneQuery](../Assets/Scripts/Core/Scenes/SceneQuery.cs). Without one, nothing below is registered, and an error is logged if the area has mob spawn points.
 - `AreaMobSpawner` entry point, also resolvable as itself (with every `MobSpawnPoint` and the area scene as parameters), plus a build callback that calls `RegisterNetworkPrefabs`.
 - Logs an error for every `MobController` placed directly in the area scene: mobs must come from spawn points. Other scene objects needing injection go in the scope's `autoInjectGameObjects` (the stress scene lists its `StressTest` object).
 
-[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), records it in the Gameplay-scope `ActiveSpawnPoint` for respawns, teleports every registered player this machine moves (`PlayerController.SimulatesMovement`: all players offline, only the local one online) to its own slot at that spawn point (`SpawnPoint.GetSlotPosition`, in registry order) and snaps the camera.
+[AreaEntry](../Assets/Scripts/Composition/AreaEntry.cs): sets the Gameplay-scope `ActiveNavigationGrid` to the area's grid (empty for an area without one), finds the `SpawnPoint` whose id matches the request (falls back to the first one with a warning), records it in the Gameplay-scope `ActiveSpawnPoint` for respawns, teleports every registered player this machine moves (`PlayerController.SimulatesMovement`: all players offline, only the local one online) to its own slot at that spawn point (`SpawnPoint.GetSlotPosition`, in registry order) and snaps the camera. It is `IDisposable`: when the area scene unloads, its scope is destroyed, VContainer disposes it, and it clears `ActiveNavigationGrid` if that still points at its own grid. Scope disposal is the hook (rather than `GameFlow.AreaLoading`) because it fires on every unload path (area change, new game, return to menu), at the moment the grid is destroyed rather than before the fade-out, and on clients too, without the Gameplay scope subscribing to Core events.
 
 ### How components get injected
 
@@ -314,7 +314,7 @@ Prefab: [Weasel.prefab](../Assets/Prefabs/Mobs/Weasel.prefab): `MobController`, 
 | [MobMotor2D](../Assets/Scripts/AI/Core/MobMotor2D.cs) | Rigidbody2D movement: `desiredVelocity` (path) + `steeringVelocity` (separation), clamped to move speed, accelerated with `MoveTowards` in `FixedTick`. Drives animator params incl. optional `IsAttacking` (timed on `IClock`); faces intended direction, not drift. `IsMoving`, `FacingDirection`, event `AttackAnimationPlayed(direction)`. `ShowRemoteMovement(moving, facing)` drives the animator from replicated state instead of its own velocity (and keeps doing so after attack animations). |
 | [MobNetworkSync](../Assets/Scripts/AI/Core/MobNetworkSync.cs) | `NetworkBehaviour` on mobs. Host: writes `IsMoving`/`FacingDirection` into server-written `NetworkVariable`s when they change and forwards `AttackAnimationPlayed` as `AttackRpc` to clients. Clients: disable the `MobController` (no AI), make the body kinematic without interpolation, and feed the replicated state into `MobMotor2D.ShowRemoteMovement` / `PlayAttackAnimation`. |
 | [MobPerception2D](../Assets/Scripts/AI/Core/MobPerception2D.cs) | Picks its target from `IPlayerRegistry`. Range hysteresis (`detectionRadius` to acquire, `loseTargetDistance` to keep), throttled `Physics2D.Linecast` against `obstacleLayerMask`. Keeps its current target while it stays detected; while it is not detected (hidden or outside detection range) it switches to the nearest other alive player inside `detectionRadius` with line of sight. Drops the target when it dies, leaves the registry or goes beyond `loseTargetDistance`. Exposes `CurrentTarget`, `CurrentTargetPlayer`, `HasDetectedTarget`, `HasLineOfSight`, `LastKnownTargetPosition`, `IsTargetHiddenInRange`. |
-| [MobPathAgent2D](../Assets/Scripts/AI/Core/MobPathAgent2D.cs) | Requests paths from the grid's `IPathfinder2D`, smooths them, follows waypoints, tracks `StalledTime`. See Navigation. |
+| [MobPathAgent2D](../Assets/Scripts/AI/Core/MobPathAgent2D.cs) | Mob wrapper around `PathFollower2D`: configures it from `MobConfig` (movement profile, `waypointReachDistance`, `arrivalDistance`, `nearestCellSearchRadius`; shortcut off), builds from `MobMotor2D.Position` and feeds the returned velocity to the motor (`Stop` when there is no path). Public API: `BuildPathToWorld`, `CanReachWorldTarget`, `FixedTick`, `ClearPath`, path flags, `StalledTime`, `NavigationGrid`. Keeps the `MobPathAgent2D.BuildPathToWorld` profiler marker and the path gizmos. See Navigation. |
 | [MobPatrolAnchor](../Assets/Scripts/AI/Core/MobPatrolAnchor.cs) | Remembers spawn position; samples reachable roam destinations within `patrolRoamRadius` and idle durations from the injected `IRandom` (no roaming without one). |
 | [MobSeparation2D](../Assets/Scripts/AI/Core/MobSeparation2D.cs) | Plain class for crowd steering. See Crowd separation. |
 | [IMobState](../Assets/Scripts/AI/Core/IMobState.cs), [MobStateId](../Assets/Scripts/AI/Core/MobStateId.cs) | State contract (`Enter`/`Tick`/`FixedTick`/`Exit`) and ids. |
@@ -375,8 +375,13 @@ Config: `MobConfig` Crowd header (`separationRadius`, `separationStrength`, `cro
 | [PathTypes.cs](../Assets/Scripts/AI/Navigation/PathTypes.cs) | `PathRequest` (start, goal, allowPartial, profile), `PathResult` (success, partial, goal adjusted, reached resolved goal, cells). |
 | [TerrainType2D](../Assets/Scripts/AI/Navigation/TerrainType2D.cs) | Terrain tag asset (`Assets/Settings/AI/Terrain_Grass.asset`). |
 | [TerrainMovementProfile2D](../Assets/Scripts/AI/Navigation/TerrainMovementProfile2D.cs) | Per-mob rules: default walkable/cost + per-terrain rules; `Version` bumps on change so region caches refresh. Asset: `Assets/Settings/AI/TerrainMovement_Default.asset`. |
+| [PathFollower2D](../Assets/Scripts/AI/Navigation/PathFollower2D.cs) | Plain class shared by mobs (through `MobPathAgent2D`) and, from Phase 2 of [PlayerControls.md](PlayerControls.md), players. `Configure(grid, profile, settings)`, `BuildPath(start, goal, allowPartial)`, `CanReach(start, goal)`, `Tick(position, moveSpeed, deltaTime)` returning the desired velocity (zero once there is no path), `Clear`, path flags, `StalledTime`, `Waypoints`. No engine lookups, no motor or `MobConfig` dependency, no allocations once its buffers are warm. |
+| [PathFollowerSettings2D](../Assets/Scripts/AI/Navigation/PathFollowerSettings2D.cs) | Waypoint reach distance, arrival distance, nearest-cell search radius (-1 = the grid's) and `UseStraightLineShortcut`. |
+| [ActiveNavigationGrid](../Assets/Scripts/World/ActiveNavigationGrid.cs) | Gameplay-scope holder for the current area's grid (`Current`, `Set`, `Clear(grid)` which only clears that grid). Players live in the Gameplay scope and cannot inject the area's grid directly. Set by `AreaEntry.Enter`, cleared by `AreaEntry.Dispose`; each machine holds its own area's grid. |
 
-Path agent flow ([MobPathAgent2D](../Assets/Scripts/AI/Core/MobPathAgent2D.cs)): world goal -> cells -> `FindPath` into a reused buffer -> smooth (skip intermediate cells only when the straight line is traversable and no more expensive than the route) -> waypoints (last one is the exact goal unless partial) -> `FixedTick` steers toward the next waypoint, using `arrivalDistance` for the final one. `CanReachWorldTarget` = goal walkable + same region. `ProfilerMarker` `MobPathAgent2D.BuildPathToWorld`.
+Path follower flow ([PathFollower2D](../Assets/Scripts/AI/Navigation/PathFollower2D.cs)): world goal -> cells -> `FindPath` into a reused buffer -> smooth (skip intermediate cells only when the straight line is traversable and no more expensive than the route) -> waypoints (last one is the exact goal unless partial; the first is dropped when already within the reach distance) -> `Tick` steers toward the next waypoint, using the arrival distance for the final one, and grows `StalledTime` while the body covers less than 20% of `moveSpeed`. A failed build clears the path and the goal cell. `CanReach` = goal walkable + same region as the nearest walkable cell to the start. `MobPathAgent2D` calls it with `Time.fixedDeltaTime` and the motor's speed.
+
+Straight-line shortcut (`UseStraightLineShortcut`): when the Bresenham line from the start cell to the goal cell is traversable and its cost is no more than the octile heuristic (so no route can be cheaper), the follower skips A* and uses the exact goal as its only waypoint. It is off for mobs: on random grids about 9% of the queries where it applies gave different waypoints than A* plus smoothing (smoothing stops at the first intermediate cell it cannot see, and A* breaks ties between equal-cost routes differently from the line), so turning it on would change mob paths. It is meant for player clicks.
 
 Costs: 10 per straight step by default, diagonals x1.4.
 
@@ -455,6 +460,7 @@ flowchart LR
     end
     subgraph Area scope
         GameFlow -- IAreaEntry.Enter --> AreaEntry -- IPlayerRegistry --> PlayerController
+        AreaEntry -- Set / Clear on dispose --> ActiveNavigationGrid
         MobPerception2D -- IPlayerRegistry --> PlayerRegistry
         MobController --> NavigationGrid2D
         MobController --> MeleeDamageDealer --> DamageService
@@ -503,6 +509,8 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | [CombatComponentTests.cs](../Assets/Tests/Editor/CombatComponentTests.cs) | `Health` clamping/single death, `Restore`, `SyncTo`, `DamageService` publishing and invalid hits, replicated damage without authority, `MeleeDamageDealer` cooldown, receiver lookup and missing `DamageService`, `DamagePopupLayer` projection and pooling, `DamagePopupPresenter` subscription lifetime |
 | [MobMotor2DTests.cs](../Assets/Tests/Editor/MobMotor2DTests.cs) | Attack animation flag and its end on the injected clock, `AttackAnimationPlayed`, remote-driven movement surviving an attack, no allocation, controller change, facing vs steering drift |
 | [MobPathAgent2DTests.cs](../Assets/Tests/Editor/MobPathAgent2DTests.cs) | Arrival distance, smoothing respects terrain cost, no allocation when warm, stall tracking |
+| [PathFollower2DTests.cs](../Assets/Tests/Editor/PathFollower2DTests.cs) | Waypoints recorded from the pre-extraction mob agent (wall gap, partial toward an unreachable goal, strict failure clearing the goal), the follower matching `MobPathAgent2D` step by step on seeded random grids (build result, flags, waypoints, motor velocity, stall time while following with blocked ticks), arrival distance, stall time from the given delta, no allocation when warm (build, tick, reach check, shortcut), unconfigured follower, the straight-line shortcut skipping A* and falling back behind walls or across costlier terrain |
+| [ActiveNavigationGridTests.cs](../Assets/Tests/Editor/ActiveNavigationGridTests.cs) | `Clear` only clears its own grid; through a VContainer area container: entering sets the grid and disposing clears it, a change of area points at the new grid (also when the old area is disposed after the new one was entered), an area without a grid leaves the holder empty |
 | [MobStateMachineTests.cs](../Assets/Tests/Editor/MobStateMachineTests.cs) | All state transitions, reinjection, region prewarm, search timing, unreachable/off-grid/dead targets, attack cooldown, patrol reachability, separation (push apart, coincident, never into walls), chase crowd waiting, multi-player targeting (nearest visible, sticky target, switch on death or hiding, drop on registry removal) |
 | [NavigationGridPathfindingTests.cs](../Assets/Tests/Editor/NavigationGridPathfindingTests.cs) | A* shortest/partial/strict paths, allocation, search cap, corner cutting, terrain profiles and costs, overlapping sources, region connectivity vs A* on random grids |
 | [PathfindingBenchmarkTests.cs](../Assets/Tests/Editor/PathfindingBenchmarkTests.cs) | `[Explicit, Category("Benchmark")]` timing runs, logged with a `[PathBench]` prefix; run by name |
@@ -519,7 +527,7 @@ Fakes and seams:
 - `SystemRandom` with a fixed seed stands in for `IRandom`.
 - A real `PlayerRegistry` of `PlayerHandle`s over test transforms stands in for the session players.
 - Mobs are driven manually: `MobController.Configure`/`Construct`, then `TickStateMachine(dt)` / `FixedTickStateMachine()`.
-- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Tick`, `MobMotor2D` attack/facing state and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
+- `internal` hooks via `InternalsVisibleTo`: `DamagePopupLayer.Configure`/`ActiveCount`, `PlayerHudView.ConfigureReferences`, `FloatingDamageText.Advance`/`Refresh`, `SwordSlashAttack.Tick`, `PlayerController.Tick`, `MobMotor2D` attack/facing state, `DesiredVelocity` and `UpdateAttackAnimation`, `MobPathAgent2D.Waypoints`, `GridAStarPathfinder2D.LastExpandedCount`, `NavigationGrid2D.AreRegionsLabeled`.
 
 ### PlayMode (`Assets/Tests/PlayMode`)
 

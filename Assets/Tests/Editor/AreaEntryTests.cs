@@ -50,8 +50,10 @@ public class AreaEntryTests
         AreaEntry entry = new(
             new AreaEntryRequest(null, "start"),
             new[] { other, start },
+            null,
             players,
             activeSpawnPoint,
+            new ActiveNavigationGrid(),
             CreateCameraFollow());
         entry.Enter();
 

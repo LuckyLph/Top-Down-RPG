@@ -20,13 +20,14 @@ public class AreaLifetimeScope : LifetimeScope
             Debug.LogError($"{placedMob.name} is placed in the area scene; use a {nameof(MobSpawnPoint)} instead so it is spawned at runtime.", placedMob);
         }
 
+        NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
         builder.Register<AreaEntry>(Lifetime.Singleton)
             .As<IAreaEntry>()
-            .WithParameter(SceneQuery.FindAll<SpawnPoint>(gameObject.scene));
+            .WithParameter(SceneQuery.FindAll<SpawnPoint>(gameObject.scene))
+            .WithParameter(navigationGrid);
         builder.RegisterEntryPoint<AreaClientReady>();
 
         MobSpawnPoint[] mobSpawnPoints = SceneQuery.FindAll<MobSpawnPoint>(gameObject.scene);
-        NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);
         if (navigationGrid == null)
         {
             if (mobSpawnPoints.Length > 0)

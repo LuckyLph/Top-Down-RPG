@@ -41,6 +41,7 @@ public class MobMotor2D : MonoBehaviour
     public bool IsMoving => isMoving;
     public Vector2 FacingDirection => lastMoveDirection;
 
+    internal Vector2 DesiredVelocity => desiredVelocity;
     internal bool SupportsAttackAnimation => supportsAttackAnimation;
     internal bool IsAttackAnimationActive => isAttackAnimationActive;
 

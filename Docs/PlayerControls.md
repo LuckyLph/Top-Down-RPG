@@ -177,8 +177,8 @@ The host's own player takes the same path: offline and host-owned casts call `Ab
 Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests.
 
 ### Phase 1: shared path following
-- [ ] Extract path building, smoothing and following from `MobPathAgent2D` into a plain class. Mob behaviour must not change, and the mob tests and the stress scene stay green with no new allocations.
-- [ ] `ActiveNavigationGrid` set by area entry and cleared on unload.
+- [x] Extract path building, smoothing and following from `MobPathAgent2D` into a plain class. Mob behaviour must not change, and the mob tests and the stress scene stay green with no new allocations.
+- [x] `ActiveNavigationGrid` set by area entry and cleared on unload.
 
 ### Phase 2: click-to-move and auto attack
 - [ ] Input actions, the reworked `IPlayerInput` and the pointer-over-UI check. WASD and the old attack binding are removed.

@@ -29,6 +29,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
+        builder.Register<ActiveNavigationGrid>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)

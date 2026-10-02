@@ -377,6 +377,29 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void PlayerSlashAttack_DrawsBehindTheOwnerWhenSwingingUp_AndInFrontOtherwise()
+    {
+        root = new GameObject("CombatRoot");
+
+        GameObject owner = new("Owner");
+        owner.transform.SetParent(root.transform);
+        owner.AddComponent<BoxCollider2D>();
+        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        SpriteRenderer ownerRenderer = new GameObject("Visual").AddComponent<SpriteRenderer>();
+        ownerRenderer.transform.SetParent(owner.transform);
+        ownerRenderer.sortingOrder = 10;
+
+        PlayerWeapon weapon = CreateTestWeapon("Sword");
+        SlashSpawner spawner = CreateSpawner();
+
+        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.up, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(9));
+        Assert.That(spawner.Spawn(owner.transform, weapon, new Vector2(0.6f, 0.8f), ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(9));
+        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.down, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
+        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.left, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
+        Assert.That(spawner.Spawn(owner.transform, weapon, new Vector2(0.8f, 0.6f), ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
+    }
+
+    [Test]
     public void PlayerSlashAttack_AppliesOpeningSpriteFromAnimationClip()
     {
         root = new GameObject("CombatRoot");

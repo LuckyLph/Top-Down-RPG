@@ -197,7 +197,7 @@ public class SwordSlashAttack : MonoBehaviour
         }
 
         spriteRenderer.sortingLayerID = ownerSpriteRenderer.sortingLayerID;
-        spriteRenderer.sortingOrder = ownerSpriteRenderer.sortingOrder + 1;
+        spriteRenderer.sortingOrder = ownerSpriteRenderer.sortingOrder + (IsNorthDirection(direction) ? -1 : 1);
     }
 
     private void UpdateFollowPosition()
@@ -232,6 +232,11 @@ public class SwordSlashAttack : MonoBehaviour
     private static bool IsEastDirection(Vector2 attackDirection)
     {
         return attackDirection.x > 0f && Mathf.Abs(attackDirection.x) > Mathf.Abs(attackDirection.y);
+    }
+
+    private static bool IsNorthDirection(Vector2 attackDirection)
+    {
+        return attackDirection.y > 0f && attackDirection.y >= Mathf.Abs(attackDirection.x);
     }
 
     private static Transform ResolveOwnerAnchor(Transform owner, SpriteRenderer ownerSpriteRenderer)

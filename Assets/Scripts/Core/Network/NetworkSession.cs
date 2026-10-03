@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using VContainer;
 using Object = UnityEngine.Object;
 
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IDisposable
 {
     public const string ClientReadyMessage = "TopDownRPG.ClientReady";
     public const string AreaAnnouncementMessage = "TopDownRPG.AreaAnnouncement";

@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3174669bc6097f0449fd7cfd6f12aa3b, type: 3}
+  m_Name: Status_Fortify
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffectDefinition
+  displayName: Fortify
+  icon: {fileID: 0}
+  description: +30% resistance to every damage type except True.
+  kind: 0
+  tags: 0
+  duration: 8
+  stacking: 0
+  maxStacks: 1
+  periodic: 0
+  periodicAmount: 0
+  periodicDamageType: 0
+  tickInterval: 1
+  damageDealtMultiplier: 1
+  damageTakenMultiplier: 1
+  resistanceDeltas:
+  - type: 0
+    percent: 30
+  - type: 1
+    percent: 30
+  - type: 2
+    percent: 30
+  - type: 3
+    percent: 30
+  - type: 4
+    percent: 30
+  grantsDamageImmunity: 0
+  grantsStatusImmunity: 0

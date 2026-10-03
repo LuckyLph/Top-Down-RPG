@@ -8,8 +8,9 @@ public class MeleeDamageDealer : MonoBehaviour
     [SerializeField, Min(0f)] private float attackInterval = 0.75f;
 
     private IClock clock = UnityClock.Shared;
-    private DamageService damageService;
+    private HitService hitService;
     private DamageType damageType = DamageType.Physical;
+    private StatusEffectDefinition[] statuses;
     private float nextAttackTime;
 
     public int DamageAmount => damageAmount;
@@ -18,10 +19,10 @@ public class MeleeDamageDealer : MonoBehaviour
     public float NextAttackTime => nextAttackTime;
 
     [Inject]
-    public void Construct(IClock gameClock, DamageService damage)
+    public void Construct(IClock gameClock, HitService hits)
     {
         clock = gameClock ?? UnityClock.Shared;
-        damageService = damage;
+        hitService = hits;
     }
 
     public void Initialize(MobConfig config)
@@ -34,6 +35,7 @@ public class MeleeDamageDealer : MonoBehaviour
         damageAmount = Mathf.Max(0, config.attackDamage);
         attackInterval = Mathf.Max(0f, config.attackInterval);
         damageType = config.attackDamageType;
+        statuses = config.attackStatuses;
     }
 
     public void ResetCooldown(bool readyImmediately = true)
@@ -48,9 +50,9 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
-        if (damageService == null)
+        if (hitService == null)
         {
-            Debug.LogError($"{nameof(MeleeDamageDealer)} was not injected with a {nameof(DamageService)}.", this);
+            Debug.LogError($"{nameof(MeleeDamageDealer)} was not injected with a {nameof(HitService)}.", this);
             return false;
         }
 
@@ -60,7 +62,7 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
-        DamageResult result = damageService.ApplyDamage(receiver, damageAmount, damageType, gameObject);
+        DamageResult result = hitService.ApplyHit(receiver, new Hit(damageAmount, damageType, statuses), gameObject);
         if (!result.Resolved)
         {
             return false;

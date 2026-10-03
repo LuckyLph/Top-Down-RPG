@@ -34,6 +34,11 @@ public class NetworkMobsPlayModeTests
         Assert.That(hostMob, Is.Not.Null);
         Assert.That(hostMob.GetComponent<NetworkObject>().IsSpawned, Is.True, "The host should spawn area mobs as network objects.");
 
+        StatusEffectService hostStatuses = gameplay.Resolve<StatusEffectService>();
+        StatusEffectDefinition fortify = SceneBootTestHelper.FindStatus("Fortify");
+        StatusEffectDefinition burn = SceneBootTestHelper.FindStatus("Burn");
+        Assert.That(hostStatuses.Apply(hostMob.GetComponent<DamageReceiver>(), fortify), Is.EqualTo(StatusApplyOutcome.Landed));
+
         client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
         yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
         client.SendReady();
@@ -45,6 +50,10 @@ public class NetworkMobsPlayModeTests
         client.DisableColliders();
 
         Assert.That(clientMob.enabled, Is.False, "Mob AI only runs on the host.");
+        StatusEffects clientMobStatuses = clientMob.GetComponent<StatusEffects>();
+        yield return SceneBootTestHelper.WaitUntil(() => clientMobStatuses.GetStacks(fortify) == 1, "a late joiner to receive the mob's active status");
+        Assert.That(clientMobStatuses.GetSnapshot(0).Remaining, Is.GreaterThan(0f).And.LessThanOrEqualTo(fortify.Duration));
+        Assert.That(clientMob.GetComponent<DamageReceiver>().GetDefense(DamageType.Fire).ResistancePercent, Is.EqualTo(30), "The mirror changes the copy's defence too.");
         Assert.That(clientMob.GetComponent<Rigidbody2D>().bodyType, Is.EqualTo(RigidbodyType2D.Kinematic));
 
         Rigidbody2D hostBody = hostMob.GetComponent<Rigidbody2D>();
@@ -76,7 +85,7 @@ public class NetworkMobsPlayModeTests
         Assert.That(lastClientReport.Type, Is.EqualTo(DamageType.Fire), "The hit's damage type reaches the client.");
 
         CombatProfile mobProfile = hostMobReceiver.Profile;
-        CombatProfile frostImmune = CombatProfile.Create(Faction.Mobs, DamageTypeMask.Frost);
+        CombatProfile frostImmune = CombatProfile.Create(Faction.Mobs, DamageTypeMask.Frost, StatusTags.Burn);
         hostMobReceiver.SetProfile(frostImmune);
         int healthBeforeImmuneHit = hostMobHealth.CurrentHealth;
         hostDamage.ApplyDamage(hostMobReceiver, 5, DamageType.Frost);
@@ -84,6 +93,10 @@ public class NetworkMobsPlayModeTests
         Assert.That(lastClientReport.IsImmune, Is.True, "An immune hit reaches the client for its Immune popup.");
         Assert.That(lastClientReport.Amount, Is.Zero);
         Assert.That(clientMobHealth.CurrentHealth, Is.EqualTo(healthBeforeImmuneHit));
+        int clientBlocks = 0;
+        clientEvents.StatusBlocked += _ => clientBlocks++;
+        Assert.That(hostStatuses.Apply(hostMobReceiver, burn), Is.EqualTo(StatusApplyOutcome.Immune));
+        yield return SceneBootTestHelper.WaitUntil(() => clientBlocks == 1, "the blocked status to reach the client for its Immune popup");
         hostMobReceiver.SetProfile(mobProfile);
         Object.Destroy(frostImmune);
 
@@ -103,16 +116,33 @@ public class NetworkMobsPlayModeTests
             "the client's own player to receive the host's heal");
         Assert.That(clientHeals, Is.EqualTo(1), "The client should publish the replicated heal for its popup.");
 
+        StatusEffects clientPlayerStatuses = client.LocalPlayer.Current.Handle.Transform.GetComponent<StatusEffects>();
+        int healthBeforeBurn = clientPlayerHealth.CurrentHealth;
+        int periodicReports = 0;
+        clientEvents.DamageApplied += report =>
+        {
+            if (report.Target == clientPlayerHealth && (report.Flags & DamageFlags.Periodic) != 0)
+            {
+                periodicReports++;
+            }
+        };
+        Assert.That(hostStatuses.Apply(hostCopyHealth.GetComponent<DamageReceiver>(), burn), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return SceneBootTestHelper.WaitUntil(() => clientPlayerStatuses.GetStacks(burn) == 1, "the client's own player to show the host's Burn");
+        yield return SceneBootTestHelper.WaitUntil(
+            () => periodicReports > 0 && clientPlayerHealth.CurrentHealth < healthBeforeBurn,
+            "the Burn's ticks to reach the client's player");
+
         hostDamage.ApplyDamage(hostCopyHealth.GetComponent<DamageReceiver>(), hostCopyHealth.MaxHealth);
         yield return SceneBootTestHelper.WaitUntil(() => clientPlayerHealth.IsDead, "the client's player to die with the host's copy");
         Assert.That(client.LocalPlayer.Current.Controller.enabled, Is.False, "A dead player stops responding to input on its owner too.");
+        yield return SceneBootTestHelper.WaitUntil(() => clientPlayerStatuses.Count == 0, "death to clear the player's statuses on the client too");
         yield return SceneBootTestHelper.WaitUntil(
             () => !clientPlayerHealth.IsDead && clientPlayerHealth.CurrentHealth == clientPlayerHealth.MaxHealth,
             "the host to respawn the client's player");
         Assert.That(client.LocalPlayer.Current.Controller.enabled, Is.True);
 
         int deathAnimationsBefore = Object.FindObjectsByType<MobDeathAnimation>().Length;
-        hostDamage.ApplyDamage(hostMob.GetComponent<DamageReceiver>(), hostMobHealth.CurrentHealth);
+        hostDamage.ApplyDamage(hostMob.GetComponent<DamageReceiver>(), hostMobHealth.CurrentHealth, DamageType.True);
         yield return SceneBootTestHelper.WaitUntil(() => clientMob == null, "the client's mob copy to be despawned by the host");
         Assert.That(hostMob == null, Is.True);
         Assert.That(Object.FindObjectsByType<MobDeathAnimation>().Length, Is.GreaterThanOrEqualTo(deathAnimationsBefore + 2), "Both the host and the client should play the death animation.");

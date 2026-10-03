@@ -21,6 +21,7 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
     {
         combatEvents.DamageApplied += HandleDamageApplied;
         combatEvents.HealApplied += HandleHealApplied;
+        combatEvents.StatusBlocked += HandleStatusBlocked;
     }
 
     public void Tick()
@@ -43,6 +44,7 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
     {
         combatEvents.DamageApplied -= HandleDamageApplied;
         combatEvents.HealApplied -= HandleHealApplied;
+        combatEvents.StatusBlocked -= HandleStatusBlocked;
     }
 
     private void HandleDamageApplied(DamageReport report)
@@ -59,6 +61,14 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
         }
 
         popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera);
+    }
+
+    private void HandleStatusBlocked(StatusReport report)
+    {
+        if (popupLayer != null)
+        {
+            popupLayer.Spawn(settings.ImmuneText, settings.ImmuneColor, report.PopupWorldPosition, camera);
+        }
     }
 
     private void HandleHealApplied(HealReport report)

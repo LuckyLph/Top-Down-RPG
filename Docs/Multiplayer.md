@@ -26,6 +26,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Player attack | Owning client decides to swing, host resolves hits on mobs | Attack event (every client plays the slash visual) |
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
 | `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
+| Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
 | Current area | Host | Area change message; each client loads and fades locally |

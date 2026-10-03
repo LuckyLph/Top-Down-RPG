@@ -141,9 +141,9 @@ New code follows the existing layout: decisions in plain C# classes driven by `I
 | `DamageResult` | Struct | Type, raw and final amounts, flags |
 | `StatusEffectDefinition` | ScriptableObject | The fields in the Status effects table. Assets in `Assets/Data/StatusEffects` |
 | `StatusEffectCatalog` | ScriptableObject | Every status definition, in a fixed order; index to definition and back. Can merge into the content catalog for classes and weapons when that exists |
-| `StatusEffectSet` | Plain class | One unit's active instances: `Apply`, `Remove`, `Clear`, `Tick(deltaTime)` returning due periodic ticks and expiries into a caller-owned buffer, the combined values, and `Changed`/`Landed`/`Ended` events. Timers count remaining seconds down by the delta the service passes in (taken from `IClock`), so one unit can be held frozen by passing nothing. No engine lookups; no allocation once warm. On clients it is rebuilt from replicated entries and never ticks. |
-| `StatusEffects` | Component | On players and mobs next to `Health`. Owns the set, exposes `Controls`, `MoveSpeedMultiplier`, `DamageDealtMultiplier` and `Defense` (combined with the receiver's profile), registers with `StatusEffectService` in `OnEnable` and unregisters in `OnDisable`, and clears on `Health.Died` |
-| `NetworkStatusEffects` | NetworkBehaviour | Host: writes a server-only `NetworkList<StatusEntry>` (catalog index, stacks, duration, remaining seconds when written, instance id) whenever the set changes. Remaining time rather than an end timestamp, because each machine's game clock stops during its own transitions. Clients: rebuild their set from the list on spawn and on every change, which raises the same events for HUD and visuals, and count the remaining time down locally for display only |
+| `StatusEffectSet` | Plain class | One unit's active instances: `Apply` (with the unit's base status immunities), `Remove`, `Clear`, `Tick(deltaTime, dueTicks)` adding due periodic ticks to a caller-owned buffer and removing expired instances, the combined values, and a `Changed` event. Timers count remaining seconds down by the delta the service passes in (taken from `IClock`), so one unit can be held frozen by passing nothing. No engine lookups; no allocation once warm. On clients it is rebuilt from replicated entries with `SyncFrom` and never ticks. |
+| `StatusEffects` | Component | On players and mobs next to `Health`. Owns the set and exposes `Changed`, `Blocked`, the damage multipliers and whether the unit is held (`IStatusHold`, set by `NetworkStatusEffects`). Needs no injection: `DamageReceiver` finds it to combine statuses into `GetDefense` and `DamageDealtMultiplier`, and the service tracks units as statuses land on them. Phase 3 adds controls and move speed |
+| `NetworkStatusEffects` | NetworkBehaviour | Host: rewrites a server-only `NetworkList<StatusEntry>` (catalog index, instance id, stacks, remaining seconds when written, and the server time of the write) whenever the set changes, forwards blocked statuses as `BlockedRpc`, and is the unit's `IStatusHold`: a player owned by a client that is not ready for the current area is held. Remaining time rather than an end timestamp, because each machine's game clock stops during its own transitions; a client subtracts the server time elapsed since the write. Clients: rebuild their mirror set from the list on spawn and once per frame after changes, which raises the same `Changed` event for HUD and visuals |
 
 Existing types that change:
 
@@ -153,7 +153,7 @@ Existing types that change:
 | `Health` | `ApplyDamage` takes the type and flags, which `DamageEvent` carries. Gains `Heal(amount)` and a `Healed` event |
 | `DamageService` | `ApplyDamage(receiver, amount, type, source, flags)` resolves through `DamageMath` with the target's `Defense` and the source's damage-dealt multiplier; `ApplyHeal(receiver, amount, source)`; `ApplyReplicatedHit` / `ApplyReplicatedHeal` replay the host's results on clients. Its three callers move to the new signature; no compatibility overload |
 | `DamageReport` | Gains type and flags |
-| `CombatEvents` | Gains `HealApplied`, `StatusLanded`, `StatusEnded`, `StatusBlocked` |
+| `CombatEvents` | Gains `HealApplied` and `StatusBlocked` (for the Immune popup). Landed and ended events wait for Phase 4, which has the first listener |
 | `NetworkHealth` | Forwards `Health.Damaged` and `DamageReceiver.ImmuneHit` as `HitRpc(amount, type, flags, healthAfter)` so types and immune hits reach clients, plus `Health.Healed` as `HealedRpc`. It stays on `Health.Damaged` because that fires before `Died`, so the RPC leaves before a dying mob despawns |
 | `PlayerOrders`, `PlayerAbilities`, `PlayerMotor2D`, `PlayerController` | Read the local player's controls and move speed multiplier as described above. New `CastOutcome` values `Stunned`, `Silenced`, `Rooted` |
 | `MobController`, `MobMotor2D` | Stun, root and slow as described above |
@@ -163,7 +163,7 @@ Existing types that change:
 | Service | Role |
 |---|---|
 | `DamageService` (existing) | The only path that changes HP: damage and heals |
-| `StatusEffectService` (new) | The only path that changes statuses: `Apply(target, definition, source)`, `Remove(target, definition)`, `ClearAll(target)`. Entry point (`ITickable`) that ticks every registered unit with active statuses on the host, turning periodic ticks into `DamageService` calls flagged `Periodic`. Skips a client's player until that client is ready for the current area (`NetworkSession.IsClientReady`, through a small interface so tests can fake it). Depends on `DamageService` |
+| `StatusEffectService` (new) | The only path that changes statuses: `Apply(target, definition, source)`, `Remove(target, definition)`, `ClearAll(target)`. Entry point (`ITickable`) that tracks every unit a status landed on and ticks it on the host with the `IClock` delta, turning periodic ticks into `DamageService.ApplyPeriodicDamage` (flagged `Periodic`, with the captured multiplier) or `ApplyHeal`. Clears a tracked unit's statuses when it dies. Skips held units (a client's player until that client is ready for the current area, through `IClientReadiness`, which `NetworkSession` implements). Depends on `DamageService` |
 | `HitService` (new) | `ApplyHit(receiver, hit, source)`: the damage through `DamageService`, then the hit's statuses through `StatusEffectService` if the target survived. What swings, mob attacks and abilities call. It exists so the other two services do not depend on each other |
 
 Mobs live in the Area scope, whose container is a child of Gameplay, so their components inject the Gameplay-scope services like `DamageService` today.
@@ -227,12 +227,12 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] `Health.Heal`, `DamageService.ApplyHeal`, `HealedRpc`, heal popups.
 
 ### Phase 2: status core and replication
-- [ ] `StatusEffectDefinition`, `StatusEffectCatalog`, `StatusEffectSet` with all three stacking modes, periodic damage and heals, and the stat modifiers (damage dealt and taken, resistances, granted immunities).
-- [ ] `Hit` (amount, type, statuses) for the sword and mob attacks; `StatusEffects` component on the player and Weasel prefabs, `StatusEffectService`, `HitService`; swings and mob attacks go through `HitService`.
-- [ ] Clearing on death; statuses kept across area changes.
-- [ ] `TransitionTimeFreeze`, and the host holding a loading client's player's statuses until it is ready.
-- [ ] `NetworkStatusEffects` and late-join sync.
-- [ ] Test statuses: Burn (Fire damage over time, `AddStack`), Poison (`Independent`), Fortify (resistances, buff), Vulnerable (damage taken), Empower (damage dealt), Invulnerable (immune to all damage).
+- [x] `StatusEffectDefinition`, `StatusEffectCatalog`, `StatusEffectSet` with all three stacking modes, periodic damage and heals, and the stat modifiers (damage dealt and taken, resistances, granted immunities).
+- [x] `Hit` (amount, type, statuses) for the sword and mob attacks; `StatusEffects` component on the player and Weasel prefabs, `StatusEffectService`, `HitService`; swings and mob attacks go through `HitService`.
+- [x] Clearing on death; statuses kept across area changes.
+- [x] `TransitionTimeFreeze`, and the host holding a loading client's player's statuses until it is ready. Netcode (messaging, despawns, announcements, ready reports) keeps working at a time scale of 0: the hosted area-change tests pass with it.
+- [x] `NetworkStatusEffects` and late-join sync.
+- [x] Test statuses in `Assets/Data/StatusEffects`: Burn (Fire damage over time, `AddStack`), Poison (`Independent`), Regeneration (heal over time), Fortify (resistances, buff), Vulnerable (damage taken), Empower (damage dealt), Invulnerable (immune to all damage). Nothing applies them in play until Phase 5.
 
 ### Phase 3: movement and crowd control
 - [ ] Slow on `PlayerMotor2D` (owner) and `MobMotor2D`.

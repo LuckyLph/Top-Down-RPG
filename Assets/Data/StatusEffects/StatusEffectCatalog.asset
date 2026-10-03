@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c674f48d379d23145b8a8b7951f1c561, type: 3}
+  m_Name: StatusEffectCatalog
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffectCatalog
+  effects:
+  - {fileID: 11400000, guid: c16b77af74851104996166f994e9a867, type: 2}
+  - {fileID: 11400000, guid: 24bb6a8d5135d9c439a276a5a8b3f08c, type: 2}
+  - {fileID: 11400000, guid: 7e03aa29d64fd1e4a9cbbfe6665a3849, type: 2}
+  - {fileID: 11400000, guid: 029898867bc502e46bbdf2c2ddae68e6, type: 2}
+  - {fileID: 11400000, guid: d9e386f4c787334489c8fe072c9bead9, type: 2}
+  - {fileID: 11400000, guid: be66f7d80f370064e8063f6eed50fa65, type: 2}
+  - {fileID: 11400000, guid: 5352b6e00fe92554e98411f9390abbc0, type: 2}

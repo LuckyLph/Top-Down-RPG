@@ -68,6 +68,27 @@ public static class SceneBootTestHelper
         return scope != null && scope.Container != null ? scope.Container.Resolve<T>() : default;
     }
 
+    public static T ResolveFromGameplay<T>()
+    {
+        GameplayLifetimeScope scope = UnityEngine.Object.FindAnyObjectByType<GameplayLifetimeScope>();
+        return scope != null && scope.Container != null ? scope.Container.Resolve<T>() : default;
+    }
+
+    public static StatusEffectDefinition FindStatus(string displayName)
+    {
+        StatusEffectCatalog catalog = ResolveFromGameplay<CombatSettings>().StatusCatalog;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            if (catalog.Get(i).DisplayName == displayName)
+            {
+                return catalog.Get(i);
+            }
+        }
+
+        Assert.Fail($"The status catalog has no '{displayName}'.");
+        return null;
+    }
+
     // GameFlow flips IsTransitioning synchronously when a transition starts.
     public static IEnumerator WaitForTransition(GameFlow gameFlow)
     {

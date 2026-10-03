@@ -331,7 +331,7 @@ public class DamageResolutionTests
         int reports = 0;
         events.DamageApplied += _ => reports++;
         ManualClock clock = new();
-        dealer.Construct(clock, TestCombat.CreateDamageService(FixedGameAuthority.Authoritative, events));
+        dealer.Construct(clock, TestCombat.CreateHitService(FixedGameAuthority.Authoritative, events));
         dealer.ResetCooldown();
 
         Assert.That(dealer.TryDealDamage(target.transform), Is.True, "An immune hit still lands as an attack.");
@@ -350,7 +350,7 @@ public class DamageResolutionTests
         DamageReceiver attacker = CreateUnit("Attacker", null);
         MeleeDamageDealer dealer = attacker.gameObject.AddComponent<MeleeDamageDealer>();
         DamageReceiver target = CreateUnit("Target", Profile(Faction.Players, DamageTypeMask.None, new DamageResistance(DamageType.Poison, 50)));
-        dealer.Construct(new ManualClock(), TestCombat.CreateDamageService(FixedGameAuthority.Authoritative));
+        dealer.Construct(new ManualClock(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
         dealer.Initialize(config);
         dealer.ResetCooldown();
 
@@ -450,7 +450,7 @@ public class DamageResolutionTests
 
     private CombatProfile Profile(Faction faction, DamageTypeMask immunities = DamageTypeMask.None, params DamageResistance[] resistances)
     {
-        CombatProfile profile = CombatProfile.Create(faction, immunities, resistances);
+        CombatProfile profile = CombatProfile.Create(faction, immunities, StatusTags.None, resistances);
         created.Add(profile);
         return profile;
     }

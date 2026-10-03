@@ -173,7 +173,7 @@ public class CombatComponentTests
         visuals.transform.SetParent(target.transform);
 
         ManualClock clock = new();
-        dealer.Construct(clock, TestCombat.CreateDamageService(FixedGameAuthority.Authoritative));
+        dealer.Construct(clock, TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         bool firstHit = dealer.TryDealDamage(visuals.transform);
@@ -213,7 +213,7 @@ public class CombatComponentTests
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
 
-        dealer.Construct(new ManualClock(), TestCombat.CreateDamageService(FixedGameAuthority.Authoritative));
+        dealer.Construct(new ManualClock(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
@@ -231,7 +231,7 @@ public class CombatComponentTests
         target.AddComponent<DamageReceiver>();
         dealer.ResetCooldown();
 
-        LogAssert.Expect(LogType.Error, "MeleeDamageDealer was not injected with a DamageService.");
+        LogAssert.Expect(LogType.Error, "MeleeDamageDealer was not injected with a HitService.");
         Assert.That(dealer.TryDealDamage(target.transform), Is.False);
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
     }

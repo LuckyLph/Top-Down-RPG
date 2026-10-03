@@ -9,6 +9,8 @@ public sealed class PlayerWeapon : ScriptableObject
     [SerializeField] private string displayName = "Sword";
     [SerializeField, Min(0)] private int damage = 1;
     [SerializeField] private DamageType damageType = DamageType.Physical;
+    [SerializeField, Tooltip("Statuses each swing applies to a target that survives it.")]
+    private StatusEffectDefinition[] onHitStatuses = new StatusEffectDefinition[0];
     [SerializeField, Min(0.01f)] private float attackCooldown = 0.35f;
     [SerializeField, Min(0f), Tooltip("Collider-to-collider distance within which an attack order stops chasing and swings.")]
     private float attackRange = 0.3f;
@@ -23,6 +25,7 @@ public sealed class PlayerWeapon : ScriptableObject
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
     public DamageType DamageType => damageType;
+    public Hit Hit => new(Damage, damageType, onHitStatuses);
     public float AttackCooldown => Mathf.Max(0.01f, attackCooldown);
     public float AttackRange => Mathf.Max(0f, attackRange);
     public float SlashSpawnDistance => Mathf.Max(0f, slashSpawnDistance);
@@ -56,12 +59,14 @@ public sealed class PlayerWeapon : ScriptableObject
         Sprite icon = null,
         float range = 0.3f,
         AbilityDefinition[] weaponAbilities = null,
-        DamageType type = DamageType.Physical)
+        DamageType type = DamageType.Physical,
+        StatusEffectDefinition[] statuses = null)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
         weapon.damage = attackDamage;
         weapon.damageType = type;
+        weapon.onHitStatuses = statuses ?? new StatusEffectDefinition[0];
         weapon.attackCooldown = cooldown;
         weapon.slashSpawnDistance = spawnDistance;
         weapon.slashSpawnOffsets = NormalizeDirectionalSpawnOffsets(spawnOffsets);

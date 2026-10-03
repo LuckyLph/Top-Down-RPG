@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Rules for resolving hits and how their popups look. Registered in the Gameplay scope.
+/// Rules for resolving hits, the status catalog, and how popups look. Registered in the Gameplay scope.
 /// </summary>
 [CreateAssetMenu(fileName = "CombatSettings", menuName = "TopDownRPG/Combat/Combat Settings")]
 public sealed class CombatSettings : ScriptableObject
@@ -13,6 +13,10 @@ public sealed class CombatSettings : ScriptableObject
     private int resistanceCap = 80;
     [SerializeField, Min(0), Tooltip("Least damage a hit that is not immune deals.")]
     private int minimumDamage = 1;
+
+    [Header("Statuses")]
+    [SerializeField, Tooltip("Every status definition; a status is identified on the wire by its index here.")]
+    private StatusEffectCatalog statusCatalog;
 
     [Header("Popups")]
     [SerializeField] private Color physicalColor = new(0.7f, 0.12f, 0.12f, 1f);
@@ -28,9 +32,18 @@ public sealed class CombatSettings : ScriptableObject
     public int ResistanceFloor => resistanceFloor;
     public int ResistanceCap => resistanceCap;
     public int MinimumDamage => minimumDamage;
+    public StatusEffectCatalog StatusCatalog => statusCatalog;
     public Color HealColor => healColor;
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;
+
+    public static CombatSettings Create(StatusEffectCatalog catalog)
+    {
+        CombatSettings settings = CreateInstance<CombatSettings>();
+        settings.statusCatalog = catalog;
+        settings.hideFlags = HideFlags.HideAndDontSave;
+        return settings;
+    }
 
     public Color GetColor(DamageType type)
     {

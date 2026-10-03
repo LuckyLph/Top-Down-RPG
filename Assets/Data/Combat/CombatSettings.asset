@@ -15,6 +15,7 @@ MonoBehaviour:
   resistanceFloor: -100
   resistanceCap: 80
   minimumDamage: 1
+  statusCatalog: {fileID: 11400000, guid: 2b2fcf817767b444dbaa724ed46512b2, type: 2}
   physicalColor: {r: 0.7, g: 0.12, b: 0.12, a: 1}
   fireColor: {r: 1, g: 0.5, b: 0.1, a: 1}
   frostColor: {r: 0.45, g: 0.8, b: 1, a: 1}

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// A unit's faction, base resistances and damage immunities, referenced by its <see cref="DamageReceiver"/>.
+/// A unit's faction, base resistances, damage immunities and status immunities, referenced by its <see cref="DamageReceiver"/>.
 /// </summary>
 [CreateAssetMenu(fileName = "Combat Profile", menuName = "TopDownRPG/Combat/Combat Profile")]
 public sealed class CombatProfile : ScriptableObject
@@ -11,9 +11,12 @@ public sealed class CombatProfile : ScriptableObject
     private DamageResistance[] resistances = new DamageResistance[0];
     [SerializeField, Tooltip("Damage types that deal nothing to this unit.")]
     private DamageTypeMask damageImmunities;
+    [SerializeField, Tooltip("Statuses with any of these tags never land on this unit.")]
+    private StatusTags statusImmunities;
 
     public Faction Faction => faction;
     public DamageTypeMask DamageImmunities => damageImmunities;
+    public StatusTags StatusImmunities => statusImmunities;
 
     /// <summary>
     /// The base resistance percentage against <paramref name="type"/>, before any clamping.
@@ -37,11 +40,16 @@ public sealed class CombatProfile : ScriptableObject
         return total;
     }
 
-    public static CombatProfile Create(Faction faction, DamageTypeMask immunities = DamageTypeMask.None, params DamageResistance[] resistances)
+    public static CombatProfile Create(
+        Faction faction,
+        DamageTypeMask immunities = DamageTypeMask.None,
+        StatusTags statusImmunities = StatusTags.None,
+        params DamageResistance[] resistances)
     {
         CombatProfile profile = CreateInstance<CombatProfile>();
         profile.faction = faction;
         profile.damageImmunities = immunities;
+        profile.statusImmunities = statusImmunities;
         profile.resistances = resistances ?? new DamageResistance[0];
         profile.hideFlags = HideFlags.HideAndDontSave;
         return profile;

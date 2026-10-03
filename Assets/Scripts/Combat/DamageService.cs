@@ -29,24 +29,18 @@ public sealed class DamageService
         GameObject source = null,
         DamageFlags flags = DamageFlags.None)
     {
-        if (target == null || amount <= 0 || !authority.IsAuthoritative)
-        {
-            return default;
-        }
+        DamageReceiver sourceUnit = CombatFactions.UnitOf(source);
+        float dealt = sourceUnit != null ? sourceUnit.DamageDealtMultiplier : 1f;
+        return Resolve(target, amount, type, source, sourceUnit, dealt, flags);
+    }
 
-        Health health = target.Health;
-        if (health == null || health.IsDead || SameFaction(source, target))
-        {
-            return default;
-        }
-
-        DamageResult result = DamageMath.Resolve(amount, type, 1f, target.GetDefense(type), settings, flags);
-        if (result.IsImmune)
-        {
-            target.NotifyImmuneHit(result.Type, result.Flags);
-        }
-
-        return ApplyAndPublish(target, health, result, source);
+    /// <summary>
+    /// Applies a damage-over-time tick with the source's damage-dealt multiplier captured when its status landed,
+    /// so ticks keep working after the source dies. Flagged <see cref="DamageFlags.Periodic"/>.
+    /// </summary>
+    public DamageResult ApplyPeriodicDamage(DamageReceiver target, int amount, DamageType type, GameObject source, float dealtMultiplier)
+    {
+        return Resolve(target, amount, type, source, CombatFactions.UnitOf(source), dealtMultiplier, DamageFlags.Periodic);
     }
 
     /// <summary>
@@ -73,7 +67,7 @@ public sealed class DamageService
             return 0;
         }
 
-        if (OtherFaction(source, target))
+        if (CombatFactions.OtherFaction(CombatFactions.UnitOf(source), target))
         {
             return 0;
         }
@@ -92,6 +86,35 @@ public sealed class DamageService
         }
 
         return HealAndPublish(target, amount, null);
+    }
+
+    private DamageResult Resolve(
+        DamageReceiver target,
+        int amount,
+        DamageType type,
+        GameObject source,
+        DamageReceiver sourceUnit,
+        float dealtMultiplier,
+        DamageFlags flags)
+    {
+        if (target == null || amount <= 0 || !authority.IsAuthoritative)
+        {
+            return default;
+        }
+
+        Health health = target.Health;
+        if (health == null || health.IsDead || CombatFactions.SameFaction(sourceUnit, target))
+        {
+            return default;
+        }
+
+        DamageResult result = DamageMath.Resolve(amount, type, dealtMultiplier, target.GetDefense(type), settings, flags);
+        if (result.IsImmune)
+        {
+            target.NotifyImmuneHit(result.Type, result.Flags);
+        }
+
+        return ApplyAndPublish(target, health, result, source);
     }
 
     private DamageResult ApplyAndPublish(DamageReceiver target, Health health, DamageResult result, GameObject source)
@@ -117,28 +140,5 @@ public sealed class DamageService
         }
 
         return healed;
-    }
-
-    private static bool SameFaction(GameObject source, DamageReceiver target)
-    {
-        Faction sourceFaction = FactionOf(source);
-        return sourceFaction != Faction.None && sourceFaction == target.Faction;
-    }
-
-    private static bool OtherFaction(GameObject source, DamageReceiver target)
-    {
-        Faction sourceFaction = FactionOf(source);
-        return sourceFaction != Faction.None && target.Faction != Faction.None && sourceFaction != target.Faction;
-    }
-
-    private static Faction FactionOf(GameObject source)
-    {
-        if (source == null)
-        {
-            return Faction.None;
-        }
-
-        DamageReceiver receiver = source.GetComponentInParent<DamageReceiver>();
-        return receiver != null ? receiver.Faction : Faction.None;
     }
 }

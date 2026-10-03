@@ -10,6 +10,8 @@ public class DamageReceiver : MonoBehaviour
     private CombatProfile profile;
 
     private Health health;
+    private StatusEffects statuses;
+    private bool statusesResolved;
 
     /// <summary>
     /// Raised on the authoritative machine for a hit this unit was immune to, which changes no HP.
@@ -28,6 +30,24 @@ public class DamageReceiver : MonoBehaviour
     public Vector3 PopupWorldPosition => transform.position + floatingTextOffset;
     public CombatProfile Profile => profile;
     public Faction Faction => profile != null ? profile.Faction : Faction.None;
+    public StatusTags StatusImmunities => profile != null ? profile.StatusImmunities : StatusTags.None;
+
+    /// <summary>
+    /// This unit's status effects, or null when it cannot carry any.
+    /// </summary>
+    public StatusEffects Statuses
+    {
+        get
+        {
+            if (!statusesResolved)
+            {
+                statuses = GetComponent<StatusEffects>();
+                statusesResolved = true;
+            }
+
+            return statuses;
+        }
+    }
 
     private void Awake()
     {
@@ -40,16 +60,36 @@ public class DamageReceiver : MonoBehaviour
     }
 
     /// <summary>
-    /// This unit's defence against <paramref name="type"/> right now.
+    /// This unit's defence against <paramref name="type"/> right now: its profile combined with its statuses.
     /// </summary>
     public DefenseSnapshot GetDefense(DamageType type)
     {
-        if (profile == null)
+        int resistance = profile != null ? profile.GetResistance(type) : 0;
+        DamageTypeMask immunities = profile != null ? profile.DamageImmunities : DamageTypeMask.None;
+        float taken = 1f;
+
+        StatusEffects unitStatuses = Statuses;
+        if (unitStatuses != null)
         {
-            return DefenseSnapshot.None;
+            StatusEffectSet set = unitStatuses.Set;
+            resistance += set.GetResistanceDelta(type);
+            immunities |= set.GrantedDamageImmunity;
+            taken = set.DamageTakenMultiplier;
         }
 
-        return new DefenseSnapshot(profile.GetResistance(type), profile.DamageImmunities.Includes(type), 1f);
+        return new DefenseSnapshot(resistance, immunities.Includes(type), taken);
+    }
+
+    /// <summary>
+    /// The multiplier this unit's statuses apply to the damage it deals.
+    /// </summary>
+    public float DamageDealtMultiplier
+    {
+        get
+        {
+            StatusEffects unitStatuses = Statuses;
+            return unitStatuses != null ? unitStatuses.DamageDealtMultiplier : 1f;
+        }
     }
 
     internal void SetProfile(CombatProfile combatProfile)

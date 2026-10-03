@@ -388,6 +388,8 @@ GameObject:
   - component: {fileID: 1641266329617742726}
   - component: {fileID: 8586058728653972581}
   - component: {fileID: 2301469598971305627}
+  - component: {fileID: 5765872902589839087}
+  - component: {fileID: 815592576249426901}
   m_Layer: 10
   m_Name: Weasel
   m_TagString: Untagged
@@ -730,4 +732,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33489b272c71d8d42b7d40cf4c26a6a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobNetworkSync
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &5765872902589839087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8304804741037770803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1c4a86a280ad164d87de2f0d3b7bc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffects
+--- !u!114 &815592576249426901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8304804741037770803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f88032812eb72754da45559476d00194, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::NetworkStatusEffects
   ShowTopMostFoldoutHeaderGroup: 1

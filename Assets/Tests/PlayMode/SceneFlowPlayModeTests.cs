@@ -43,6 +43,47 @@ public class SceneFlowPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator ChangeArea_FreezesTimeAndKeepsThePlayersStatuses()
+    {
+        yield return SceneBootTestHelper.BootIntoStartingArea();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        PlayerController player = Object.FindAnyObjectByType<PlayerController>();
+        StatusEffects statuses = player.GetComponent<StatusEffects>();
+        StatusEffectDefinition burn = SceneBootTestHelper.FindStatus("Burn");
+        Assert.That(Time.timeScale, Is.EqualTo(1f));
+        Assert.That(
+            SceneBootTestHelper.ResolveFromGameplay<StatusEffectService>().Apply(player.GetComponent<DamageReceiver>(), burn),
+            Is.EqualTo(StatusApplyOutcome.Landed));
+        float remainingBefore = statuses.GetSnapshot(0).Remaining;
+
+        int periodicHitsDuringTransition = 0;
+        bool transitioning = true;
+        SceneBootTestHelper.ResolveFromGameplay<CombatEvents>().DamageApplied += report =>
+        {
+            if (transitioning && (report.Flags & DamageFlags.Periodic) != 0)
+            {
+                periodicHitsDuringTransition++;
+            }
+        };
+
+        gameFlow.ChangeAreaAsync(gameFlow.Scenes.StartingArea, gameFlow.Scenes.StartingSpawnId);
+        float deadline = Time.realtimeSinceStartup + 30f;
+        while (gameFlow.IsTransitioning)
+        {
+            Assert.That(Time.timeScale, Is.Zero, "Game time stands still for the whole transition.");
+            Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The transition should finish.");
+            yield return null;
+        }
+
+        transitioning = false;
+        Assert.That(Time.timeScale, Is.EqualTo(1f), "Game time runs again once the transition finished.");
+        Assert.That(periodicHitsDuringTransition, Is.Zero, "Nothing ticks behind the fade.");
+        Assert.That(statuses.GetStacks(burn), Is.EqualTo(1), "Statuses survive an area change.");
+        Assert.That(statuses.GetSnapshot(0).Remaining, Is.GreaterThan(remainingBefore - 0.2f), "The status did not run down during the transition.");
+    }
+
+    [UnityTest]
     public IEnumerator ChangeArea_ReloadsAreaAndPlacesPlayerAtSpawn()
     {
         yield return SceneBootTestHelper.BootIntoStartingArea();

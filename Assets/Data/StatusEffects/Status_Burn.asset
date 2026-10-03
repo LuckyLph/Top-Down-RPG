@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3174669bc6097f0449fd7cfd6f12aa3b, type: 3}
+  m_Name: Status_Burn
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffectDefinition
+  displayName: Burn
+  icon: {fileID: 0}
+  description: Fire damage every second. Stacks up to 5; each stack adds damage and
+    resets the duration.
+  kind: 1
+  tags: 16
+  duration: 4
+  stacking: 1
+  maxStacks: 5
+  periodic: 1
+  periodicAmount: 3
+  periodicDamageType: 1
+  tickInterval: 1
+  damageDealtMultiplier: 1
+  damageTakenMultiplier: 1
+  resistanceDeltas: []
+  grantsDamageImmunity: 0
+  grantsStatusImmunity: 0

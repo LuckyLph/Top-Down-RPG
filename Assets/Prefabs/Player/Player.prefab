@@ -155,6 +155,8 @@ GameObject:
   - component: {fileID: 7658512828760025517}
   - component: {fileID: 734304616056688651}
   - component: {fileID: 8509953176593211654}
+  - component: {fileID: 5536093131250035782}
+  - component: {fileID: 67881486438069074}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -452,3 +454,28 @@ MonoBehaviour:
   drawCastGizmos: 1
   drawRangeGizmos: 1
   castGizmoSeconds: 1
+--- !u!114 &5536093131250035782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1c4a86a280ad164d87de2f0d3b7bc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffects
+--- !u!114 &67881486438069074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f88032812eb72754da45559476d00194, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::NetworkStatusEffects
+  ShowTopMostFoldoutHeaderGroup: 1

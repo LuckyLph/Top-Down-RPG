@@ -62,6 +62,9 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance(combatSettings);
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
+        builder.Register<StatusEffectService>(Lifetime.Singleton);
+        builder.Register<HitService>(Lifetime.Singleton);
+        builder.RegisterInstance<IClientReadiness>(new ReadyClients());
         builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
@@ -208,6 +211,14 @@ public sealed class InProcessClient : IDisposable
         {
             Vector3 screen = Camera.WorldToScreenPoint(new Vector3(worldPoint.x, worldPoint.y, 0f));
             PointerScreenPosition = new Vector2(screen.x, screen.y);
+        }
+    }
+
+    private sealed class ReadyClients : IClientReadiness
+    {
+        public bool IsClientReady(ulong clientId)
+        {
+            return true;
         }
     }
 

@@ -20,8 +20,8 @@ public class SwordSlashAttack : MonoBehaviour
     private Transform ownerRoot;
     private Transform ownerAnchor;
     private GameObject damageSource;
-    private DamageService damageService;
-    private DamageType damageType = DamageType.Physical;
+    private HitService hitService;
+    private Hit hit;
     private Vector2 direction = Vector2.down;
     private Vector2 spawnOffset;
     private float spawnDistance;
@@ -94,16 +94,16 @@ public class SwordSlashAttack : MonoBehaviour
         }
     }
 
-    public void Initialize(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, DamageService damage, SpriteRenderer ownerSpriteRenderer = null)
+    public void Initialize(Transform owner, PlayerWeapon weapon, Vector2 attackDirection, HitService hits, SpriteRenderer ownerSpriteRenderer = null)
     {
         ResolveReferences();
 
-        damageService = damage;
+        hitService = hits;
         ownerRoot = owner;
         damageSource = owner != null ? owner.gameObject : gameObject;
         direction = attackDirection.sqrMagnitude > 0.0001f ? attackDirection.normalized : Vector2.down;
         damageAmount = weapon != null ? weapon.Damage : damageAmount;
-        damageType = weapon != null ? weapon.DamageType : damageType;
+        hit = weapon != null ? weapon.Hit : new Hit(damageAmount, DamageType.Physical);
         activeLifetime = ResolveLifetime();
         spawnOffset = weapon != null ? weapon.GetSlashSpawnOffset(direction) : Vector2.zero;
         spawnDistance = weapon != null ? weapon.SlashSpawnDistance : 0f;
@@ -129,7 +129,7 @@ public class SwordSlashAttack : MonoBehaviour
 
     public bool TryDamageCollider(Collider2D other)
     {
-        if (other == null || damageService == null)
+        if (other == null || hitService == null)
         {
             return false;
         }
@@ -148,7 +148,7 @@ public class SwordSlashAttack : MonoBehaviour
             return false;
         }
 
-        DamageResult result = damageService.ApplyDamage(receiver, damageAmount, damageType, damageSource);
+        DamageResult result = hitService.ApplyHit(receiver, hit, damageSource);
         if (!result.Resolved)
         {
             return false;

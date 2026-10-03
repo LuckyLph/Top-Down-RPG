@@ -153,7 +153,7 @@ Existing types that change:
 | `Health` | `ApplyDamage` takes the type and flags, which `DamageEvent` carries. Gains `Heal(amount)` and a `Healed` event |
 | `DamageService` | `ApplyDamage(receiver, amount, type, source, flags)` resolves through `DamageMath` with the target's `Defense` and the source's damage-dealt multiplier; `ApplyHeal(receiver, amount, source)`; `ApplyReplicatedHit` / `ApplyReplicatedHeal` replay the host's results on clients. Its three callers move to the new signature; no compatibility overload |
 | `DamageReport` | Gains type and flags |
-| `CombatEvents` | Gains `HealApplied` and `StatusBlocked` (for the Immune popup). Landed and ended events wait for Phase 4, which has the first listener |
+| `CombatEvents` | Gains `HealApplied` and `StatusBlocked` (for the Immune popup). No landed or ended events: the HUD, world icons and visuals all reconcile on `StatusEffects.Changed` |
 | `NetworkHealth` | Forwards `Health.Damaged` and `DamageReceiver.ImmuneHit` as `HitRpc(amount, type, flags, healthAfter)` so types and immune hits reach clients, plus `Health.Healed` as `HealedRpc`. It stays on `Health.Damaged` because that fires before `Died`, so the RPC leaves before a dying mob despawns |
 | `PlayerOrders`, `PlayerAbilities`, `PlayerMotor2D`, `PlayerController` | Read the local player's controls and move speed multiplier as described above. New `CastOutcome` values `Stunned`, `Silenced`, `Rooted` |
 | `MobController`, `MobMotor2D` | Stun, root and slow as described above |
@@ -212,7 +212,7 @@ flowchart LR
 
 - Damage popups take the damage type's colour from `CombatSettings`, show "Immune" for immune hits and blocked statuses, use a smaller size for periodic ticks, and show heals in green with a plus sign. They stay pooled.
 - Local player: a status row on `PlayerHudCanvas` above the ability bar, buffs then debuffs, each with its icon, a radial timer and a stack count. A passive view and a presenter bound through `LocalPlayerTracker`, like the health HUD.
-- Every unit: up to four small debuff icons above its `WorldHealthBar`, updated from the set's `Changed` event rather than polled.
+- Every unit with a `WorldHealthBar` (mobs): up to four small debuff icons above it, updated from the set's `Changed` event rather than polled.
 - Each status's visual prefab is attached to the unit while it is active, pooled per definition, on every machine.
 
 ## Phases
@@ -241,9 +241,9 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Test statuses: Chill (slow, `Refresh`), Stun, Root, Silence, Unstoppable (immune to `Stun`, `Root`, `Slow`).
 
 ### Phase 4: feedback
-- [ ] Local player status row on the HUD.
-- [ ] Debuff icons above world health bars.
-- [ ] Pooled per-status visuals.
+- [x] Local player status row on the HUD. Damage-over-time popups are drawn smaller (`CombatSettings.PeriodicPopupScale`).
+- [x] Debuff icons above world health bars (mobs; players have no world bar).
+- [x] Pooled per-status visuals: one `StatusAura` ring prefab, tinted per status, on the statuses that change how a unit fights or moves. Statuses carry a colour; none has an icon sprite yet, so icons show abbreviations. No landed or ended events were needed: every view reconciles on `Changed`, and clients count remaining time down locally.
 
 ### Phase 5: exercising it in play
 - [ ] Dev tool: apply any catalog status to the unit under the cursor, or to yourself (DevTools assembly).

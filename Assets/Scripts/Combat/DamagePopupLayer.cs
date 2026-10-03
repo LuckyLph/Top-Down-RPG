@@ -27,7 +27,7 @@ public class DamagePopupLayer : MonoBehaviour
         pool?.Dispose();
     }
 
-    public FloatingDamageText Spawn(string message, Color color, Vector3 worldPosition, Camera camera)
+    public FloatingDamageText Spawn(string message, Color color, Vector3 worldPosition, Camera camera, float scale = 1f)
     {
         EnsurePool();
         if (popupPrefab == null)
@@ -37,7 +37,7 @@ public class DamagePopupLayer : MonoBehaviour
         }
 
         FloatingDamageText popup = pool.Get();
-        popup.Show(message, color, worldPosition, camera, canvasRect);
+        popup.Show(message, color, worldPosition, camera, canvasRect, scale);
         active.Add(popup);
         return popup;
     }

@@ -15,6 +15,8 @@ MonoBehaviour:
   displayName: Root
   icon: {fileID: 0}
   description: Cannot move. Can still attack and cast in place.
+  color: {r: 0.6, g: 0.42, b: 0.2, a: 1}
+  visual: {fileID: 6280413224351501224, guid: b243a8319628b02469ae51d1e313da6d, type: 3}
   kind: 1
   tags: 2
   duration: 2

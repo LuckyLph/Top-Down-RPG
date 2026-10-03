@@ -141,6 +141,37 @@ public class PlayerControlsPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator Statuses_ShowOnTheHud_OnTheMobsBar_AndAsVisuals()
+    {
+        yield return Boot();
+        StatusEffectService statuses = SceneBootTestHelper.ResolveFromGameplay<StatusEffectService>();
+        StatusEffectDefinition burn = SceneBootTestHelper.FindStatus("Burn");
+        StatusEffectDefinition fortify = SceneBootTestHelper.FindStatus("Fortify");
+        StatusBarView bar = Object.FindAnyObjectByType<StatusBarView>();
+        Assert.That(bar, Is.Not.Null);
+
+        Assert.That(statuses.Apply(player.GetComponent<DamageReceiver>(), fortify, player.gameObject), Is.EqualTo(StatusApplyOutcome.Landed));
+        Assert.That(statuses.Apply(player.GetComponent<DamageReceiver>(), burn), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return null;
+        Assert.That(bar.Icon(0).gameObject.activeSelf && bar.Icon(0).Shown == fortify, Is.True, "Buffs come first on the HUD.");
+        Assert.That(bar.Icon(1).gameObject.activeSelf && bar.Icon(1).Shown == burn, Is.True);
+        Assert.That(bar.Icon(2).gameObject.activeSelf, Is.False);
+        Assert.That(player.GetComponent<StatusVisuals>().ShownCount, Is.EqualTo(1), "Burn has a visual, Fortify does not.");
+        StatusVisual aura = player.GetComponent<StatusVisuals>().GetShown(0);
+        Assert.That(Vector2.Distance(aura.transform.position, player.transform.position), Is.LessThan(0.01f), "The visual follows the player.");
+
+        MobController mob = Object.FindAnyObjectByType<MobController>();
+        Assert.That(statuses.Apply(mob.GetComponent<DamageReceiver>(), burn, player.gameObject), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return null;
+        Assert.That(mob.GetComponentInChildren<WorldStatusIcons>().ShownCount, Is.EqualTo(1), "The mob shows its debuff above its health bar.");
+
+        statuses.ClearAll(player.GetComponent<DamageReceiver>());
+        yield return null;
+        Assert.That(bar.Icon(0).gameObject.activeSelf, Is.False);
+        Assert.That(aura.gameObject.activeSelf, Is.False, "The visual returns to the pool.");
+    }
+
+    [UnityTest]
     public IEnumerator Death_ClearsTheOrders()
     {
         yield return Boot();

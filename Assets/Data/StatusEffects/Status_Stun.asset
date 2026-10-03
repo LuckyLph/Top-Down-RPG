@@ -15,6 +15,8 @@ MonoBehaviour:
   displayName: Stun
   icon: {fileID: 0}
   description: Cannot move, attack or cast.
+  color: {r: 1, g: 0.92, b: 0.2, a: 1}
+  visual: {fileID: 6280413224351501224, guid: b243a8319628b02469ae51d1e313da6d, type: 3}
   kind: 1
   tags: 1
   duration: 1.5

@@ -24,7 +24,7 @@ public class FloatingDamageText : MonoBehaviour
         ResolveReferences();
     }
 
-    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas)
+    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, float scale = 1f)
     {
         ResolveReferences();
 
@@ -36,6 +36,7 @@ public class FloatingDamageText : MonoBehaviour
         text.text = message;
         text.color = color;
         canvasGroup.alpha = 1f;
+        rectTransform.localScale = Vector3.one * scale;
         Refresh();
     }
 

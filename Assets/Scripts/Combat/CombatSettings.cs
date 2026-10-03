@@ -28,6 +28,8 @@ public sealed class CombatSettings : ScriptableObject
     [SerializeField] private Color healColor = new(0.3f, 0.9f, 0.4f, 1f);
     [SerializeField] private Color immuneColor = new(0.75f, 0.75f, 0.75f, 1f);
     [SerializeField] private string immuneText = "Immune";
+    [SerializeField, Range(0.3f, 1f), Tooltip("Size of damage-over-time popups relative to direct hits.")]
+    private float periodicPopupScale = 0.75f;
 
     public int ResistanceFloor => resistanceFloor;
     public int ResistanceCap => resistanceCap;
@@ -36,6 +38,7 @@ public sealed class CombatSettings : ScriptableObject
     public Color HealColor => healColor;
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;
+    public float PeriodicPopupScale => periodicPopupScale;
 
     public static CombatSettings Create(StatusEffectCatalog catalog)
     {

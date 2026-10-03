@@ -56,11 +56,13 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterInstance(combatSettings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
         builder.RegisterComponentInHierarchy<AbilityBarView>();
+        builder.RegisterComponentInHierarchy<StatusBarView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
         builder.RegisterEntryPoint<StatusEffectService>().AsSelf();
         builder.Register<HitService>(Lifetime.Singleton);
+        builder.Register<StatusVisualPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
         builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
@@ -71,6 +73,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();
         builder.RegisterEntryPoint<AbilityBarPresenter>();
+        builder.RegisterEntryPoint<StatusBarPresenter>();
 
         if (pointerFeedbackLayer == null)
         {

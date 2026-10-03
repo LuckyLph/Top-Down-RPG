@@ -361,7 +361,7 @@ public class DamageResolutionTests
     }
 
     [Test]
-    public void DamagePopupPresenter_ColoursByTypeAndShowsImmuneAndHeals()
+    public void DamagePopupPresenter_ColoursByTypeShowsImmuneAndHeals_AndShrinksPeriodicHits()
     {
         GameObject cameraObject = Track(new GameObject("Camera"));
         Camera camera = cameraObject.AddComponent<Camera>();
@@ -375,10 +375,17 @@ public class DamageResolutionTests
         events.Publish(new DamageReport(null, 20, DamageType.Fire, DamageFlags.None, null, Vector3.zero));
         events.Publish(new DamageReport(null, 0, DamageType.Frost, DamageFlags.Immune, null, Vector3.zero));
         events.Publish(new HealReport(null, 5, null, Vector3.zero));
+        events.Publish(new DamageReport(null, 3, DamageType.Poison, DamageFlags.Periodic, null, Vector3.zero));
         presenter.Dispose();
 
         TextMeshProUGUI[] texts = layer.GetComponentsInChildren<TextMeshProUGUI>();
-        Assert.That(texts.Length, Is.EqualTo(3));
+        Assert.That(texts.Length, Is.EqualTo(4));
+        foreach (TextMeshProUGUI text in texts)
+        {
+            float expectedScale = text.text == "3" ? settings.PeriodicPopupScale : 1f;
+            Assert.That(text.transform.localScale.x, Is.EqualTo(expectedScale), $"Popup '{text.text}' scale.");
+        }
+
         AssertPopup(texts, "20", settings.GetColor(DamageType.Fire));
         AssertPopup(texts, settings.ImmuneText, settings.ImmuneColor);
         AssertPopup(texts, "+5", settings.HealColor);

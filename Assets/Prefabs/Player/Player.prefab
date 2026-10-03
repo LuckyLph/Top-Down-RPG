@@ -157,6 +157,7 @@ GameObject:
   - component: {fileID: 8509953176593211654}
   - component: {fileID: 5536093131250035782}
   - component: {fileID: 67881486438069074}
+  - component: {fileID: 1096586978713402061}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -479,3 +480,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NetworkStatusEffects
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &1096586978713402061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb61f42c68c428f43b1f555ccd129842, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusVisuals
+  offset: {x: 0, y: 0, z: 0}

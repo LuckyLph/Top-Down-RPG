@@ -64,6 +64,7 @@ public sealed class InProcessClient : IDisposable
         builder.Register<DamageService>(Lifetime.Singleton);
         builder.Register<StatusEffectService>(Lifetime.Singleton);
         builder.Register<HitService>(Lifetime.Singleton);
+        builder.Register<StatusVisualPool>(Lifetime.Singleton).WithParameter(default(UnityEngine.SceneManagement.Scene));
         builder.RegisterInstance<IClientReadiness>(new ReadyClients());
         builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<SlashSpawner>(Lifetime.Singleton);

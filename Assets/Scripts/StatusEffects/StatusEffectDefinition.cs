@@ -12,6 +12,8 @@ public sealed class StatusEffectDefinition : ScriptableObject
     [SerializeField] private string displayName = "Status";
     [SerializeField] private Sprite icon;
     [SerializeField, TextArea] private string description;
+    [SerializeField, Tooltip("Tints the HUD icon, the world icon and the visual.")] private Color color = Color.white;
+    [SerializeField, Tooltip("Optional looping effect shown on the unit while the status is active.")] private StatusVisual visual;
 
     [Header("Rules")]
     [SerializeField] private StatusKind kind = StatusKind.Debuff;
@@ -42,9 +44,30 @@ public sealed class StatusEffectDefinition : ScriptableObject
     [SerializeField, Tooltip("Landing this status removes active statuses with these tags.")]
     private StatusTags grantsStatusImmunity;
 
+    private string abbreviation;
+
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
     public Sprite Icon => icon;
     public string Description => description;
+    public Color Color => color;
+    public StatusVisual Visual => visual;
+
+    /// <summary>
+    /// Up to two letters of the display name, shown on a HUD icon when the status has no icon sprite.
+    /// </summary>
+    public string Abbreviation
+    {
+        get
+        {
+            if (abbreviation == null)
+            {
+                string shown = DisplayName;
+                abbreviation = shown.Length <= 2 ? shown : shown.Substring(0, 2);
+            }
+
+            return abbreviation;
+        }
+    }
     public StatusKind Kind => kind;
     public StatusTags Tags => tags;
     public float Duration => Mathf.Max(0.05f, duration);
@@ -61,6 +84,11 @@ public sealed class StatusEffectDefinition : ScriptableObject
     public StatusTags GrantsStatusImmunity => grantsStatusImmunity;
     public StatusControls Controls => controls;
     public bool HasPeriodicEffect => periodic != StatusPeriodic.None && PeriodicAmount > 0;
+
+    private void OnValidate()
+    {
+        abbreviation = null;
+    }
 
     /// <summary>
     /// The resistance percentage points one stack adds against <paramref name="type"/>.
@@ -101,7 +129,9 @@ public sealed class StatusEffectDefinition : ScriptableObject
         DamageTypeMask grantsDamageImmunity = DamageTypeMask.None,
         StatusTags grantsStatusImmunity = StatusTags.None,
         float moveSpeedMultiplier = 1f,
-        StatusControls controls = StatusControls.None)
+        StatusControls controls = StatusControls.None,
+        Color? color = null,
+        StatusVisual visual = null)
     {
         StatusEffectDefinition definition = CreateInstance<StatusEffectDefinition>();
         definition.name = name;
@@ -122,6 +152,8 @@ public sealed class StatusEffectDefinition : ScriptableObject
         definition.grantsStatusImmunity = grantsStatusImmunity;
         definition.moveSpeedMultiplier = moveSpeedMultiplier;
         definition.controls = controls;
+        definition.color = color ?? Color.white;
+        definition.visual = visual;
         definition.hideFlags = HideFlags.HideAndDontSave;
         return definition;
     }

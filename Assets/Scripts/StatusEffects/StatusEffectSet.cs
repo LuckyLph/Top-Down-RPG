@@ -185,6 +185,42 @@ public sealed class StatusEffectSet
     }
 
     /// <summary>
+    /// Runs every remaining time down by <paramref name="deltaTime"/> (never below 0) without ticking or expiring
+    /// anything, so a client's mirror shows countdowns between the host's updates.
+    /// </summary>
+    public void CountDown(float deltaTime)
+    {
+        if (deltaTime <= 0f)
+        {
+            return;
+        }
+
+        for (int i = 0; i < instances.Count; i++)
+        {
+            Instance instance = instances[i];
+            instance.Remaining = Mathf.Max(0f, instance.Remaining - deltaTime);
+            instances[i] = instance;
+        }
+    }
+
+    /// <summary>
+    /// The longest remaining time among the instances of <paramref name="definition"/>, or 0 when it is not active.
+    /// </summary>
+    public float GetRemaining(StatusEffectDefinition definition)
+    {
+        float remaining = 0f;
+        for (int i = 0; i < instances.Count; i++)
+        {
+            if (instances[i].Definition == definition && instances[i].Remaining > remaining)
+            {
+                remaining = instances[i].Remaining;
+            }
+        }
+
+        return remaining;
+    }
+
+    /// <summary>
     /// Replaces the instances with <paramref name="snapshots"/>, as a client mirroring the host does.
     /// </summary>
     public void SyncFrom(IReadOnlyList<StatusSnapshot> snapshots)

@@ -60,7 +60,8 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
             return;
         }
 
-        popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera);
+        float scale = (report.Flags & DamageFlags.Periodic) != 0 ? settings.PeriodicPopupScale : 1f;
+        popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera, scale);
     }
 
     private void HandleStatusBlocked(StatusReport report)

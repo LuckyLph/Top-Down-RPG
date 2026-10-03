@@ -16,6 +16,8 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: Poison damage every second. Up to 3 separate doses, each with its
     own timer.
+  color: {r: 0.45, g: 0.85, b: 0.25, a: 1}
+  visual: {fileID: 6280413224351501224, guid: b243a8319628b02469ae51d1e313da6d, type: 3}
   kind: 1
   tags: 64
   duration: 6

@@ -16,6 +16,8 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: Fire damage every second. Stacks up to 5; each stack adds damage and
     resets the duration.
+  color: {r: 1, g: 0.45, b: 0.1, a: 1}
+  visual: {fileID: 6280413224351501224, guid: b243a8319628b02469ae51d1e313da6d, type: 3}
   kind: 1
   tags: 16
   duration: 4

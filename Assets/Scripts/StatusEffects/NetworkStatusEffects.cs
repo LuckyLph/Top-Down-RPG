@@ -7,7 +7,7 @@ using VContainer;
 /// Replicates a unit's statuses. Host: rewrites a server-only list of <see cref="StatusEntry"/> whenever the set
 /// changes, forwards blocked statuses for Immune popups, and holds a client's player while that client loads.
 /// Clients: rebuild their mirror set from the list on spawn and after every change, counting remaining time down
-/// from the server time of each write.
+/// from the server time of each write and then every frame for display.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(StatusEffects))]
@@ -72,6 +72,10 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         if (mirrorDirty)
         {
             RebuildMirror();
+        }
+        else if (IsSpawned && !IsServer)
+        {
+            statuses.Set.CountDown(Time.deltaTime);
         }
     }
 

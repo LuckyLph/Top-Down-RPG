@@ -51,6 +51,11 @@ public class StatusEffects : MonoBehaviour
         return set.GetStacks(definition);
     }
 
+    public float GetRemaining(StatusEffectDefinition definition)
+    {
+        return set.GetRemaining(definition);
+    }
+
     internal void SetHold(IStatusHold statusHold)
     {
         hold = statusHold;

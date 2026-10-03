@@ -36,7 +36,8 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 ### Serialization and inspector
 - Expose fields as `[SerializeField] private`, not `public`. Expose read access via properties.
 - Use `[Header]`, `[Tooltip]`, `[Min]`/`[Range]` so inspector data is self-documenting and validated. Add `[RequireComponent]` for hard dependencies and `[DisallowMultipleComponent]` where appropriate.
-- Put tunable data in ScriptableObjects (e.g. `MobConfig`, `GameplaySettings`), not magic numbers in code. Treat ScriptableObject assets as immutable at runtime.
+- Put tunable data in ScriptableObjects (e.g. `MobConfig`, `GameplaySettings`), not magic numbers in code.
+- Runtime code never writes to an asset: ScriptableObjects, prefabs, input action assets, materials, settings. Expose assets read-only (private serialized fields, getters, no public setters or mutating methods outside `#if UNITY_EDITOR`). When runtime state has to diverge from the asset, work on a copy the owning scope creates with `Object.Instantiate` and destroys on dispose, as `RuntimeInputActions` does for the input asset. Change prefabs only on their instances. Tests build their own instances (`CreateInstance` or a static `Create` factory) instead of changing project assets.
 - Never rename or move a serialized field, class, or script file without `[FormerlySerializedAs]` or moving the `.meta` with it: GUIDs and field names are what scenes and prefabs reference.
 - Use `OnValidate` for cheap inspector validation only; no scene lookups or asset writes there.
 - Keep one `MonoBehaviour` per file, and the file name must match the class name.

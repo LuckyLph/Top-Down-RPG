@@ -40,7 +40,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 - Plain C# logic stays free of networking types so EditMode tests keep working with fakes.
 - Things that exist per player or per mob are spawned at runtime from a prefab, not placed in scenes. Scenes hold markers (spawn points).
 - Timers go through `IClock` and randomness through an injected source, so the host's simulation is not tied to `Time`/`UnityEngine.Random` statics.
-- Persistent state goes through `GameSave` and is written only where `IGameAuthority.IsAuthoritative`. Add fields to `GameSaveData` and bump `CurrentVersion` instead of writing new files; identify assets in saves by GUID, not path.
+- Persistent state goes through `GameSave` and is written only where `IGameAuthority.IsAuthoritative`. Add fields to `GameSaveData` and bump `CurrentVersion` instead of writing new files; identify assets in saves by GUID, not path. Per-machine preferences (key bindings, later audio and video) are not game state: they go through `UserSettings` (`settings.json`) on every machine, clients included, and are never replicated (see [KeyBindings.md](KeyBindings.md#saving)).
 
 ## Where the current code assumes one local player
 

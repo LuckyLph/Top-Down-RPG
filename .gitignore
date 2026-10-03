@@ -65,3 +65,7 @@ ServerData/
 
 # Play mode test generated scenes
 [Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Unity crash recovery scenes
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta

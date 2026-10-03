@@ -31,6 +31,14 @@ internal static class TestCombat
         return new StatusEffectService(damageService, combatEvents, authority, clock ?? new ManualClock());
     }
 
+    public static AbilityService CreateAbilityService(IGameAuthority authority, CombatEvents combatEvents = null)
+    {
+        combatEvents ??= new CombatEvents();
+        DamageService damageService = CreateDamageService(authority, combatEvents);
+        HitService hitService = new(damageService, CreateStatusService(damageService, authority, combatEvents));
+        return new AbilityService(authority, damageService, hitService);
+    }
+
     public static HitService CreateHitService(IGameAuthority authority, CombatEvents combatEvents = null)
     {
         combatEvents ??= new CombatEvents();

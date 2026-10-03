@@ -198,7 +198,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Hover highlight, attack cursor and pooled move marker.
 
 ### Later
-- Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine.
+- Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine. Started by [DamageAndStatusEffects.md](DamageAndStatusEffects.md) Phase 5: `Unit` abilities can carry a `Hit` and a heal (Blank Smite and Blank Mend use them); other targeting, cast visuals and effects that land at the end of the cast are still to come.
 - Class selection; replicating the loadout (a content catalog of classes and weapons, identified by GUID); saving each player's class in `GameSaveData` behind a version bump.
 - Optional cast modes (indicator on hold, click to confirm) as a player setting.
 - Attack-move and a gamepad scheme.

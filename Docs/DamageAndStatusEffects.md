@@ -246,8 +246,8 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Pooled per-status visuals: one `StatusAura` ring prefab, tinted per status, on the statuses that change how a unit fights or moves. Statuses carry a colour; none has an icon sprite yet, so icons show abbreviations. No landed or ended events were needed: every view reconciles on `Changed`, and clients count remaining time down locally.
 
 ### Phase 5: exercising it in play
-- [ ] Dev tool: apply any catalog status to the unit under the cursor, or to yourself (DevTools assembly).
-- [ ] First real ability effects through `AbilityService` + `HitService`, enough to play with the system: Blank Smite deals damage and stuns, Blank Mend heals and applies Fortify. This starts the "Real ability effects" item in [PlayerControls.md](PlayerControls.md#later).
+- [x] Dev tool: apply any catalog status to the unit under the cursor, or to yourself (DevTools assembly). `StatusDebugPanel`: F2 opens it, F3 applies to the unit under the cursor, F4 to yourself.
+- [x] First real ability effects through `AbilityService` + `HitService`, enough to play with the system: Blank Smite deals damage and stuns, Blank Mend heals and applies Fortify. Effects are a `Hit` and a heal on `Unit` abilities, applied when the cast starts. This starts the "Real ability effects" item in [PlayerControls.md](PlayerControls.md#later).
 
 ## Testing
 

@@ -172,6 +172,47 @@ public class PlayerControlsPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator DevPanel_AppliesStatuses_AndSmiteAndMendHaveEffects()
+    {
+        yield return Boot();
+        StatusDebugPanel panel = Object.FindAnyObjectByType<StatusDebugPanel>();
+        Assert.That(panel, Is.Not.Null, "Every play session gets the dev status panel.");
+        Assert.That(panel.IsOpen, Is.False, "It starts hidden.");
+
+        StatusEffectDefinition chill = SceneBootTestHelper.FindStatus("Chill");
+        Assert.That(panel.ApplyToSelf(chill), Is.EqualTo(StatusApplyOutcome.Landed));
+        Assert.That(player.GetComponent<StatusEffects>().GetStacks(chill), Is.EqualTo(1));
+
+        MobController mob = Object.FindAnyObjectByType<MobController>();
+        mob.enabled = false;
+        Collider2D mobCollider = mob.GetComponent<Collider2D>();
+        Vector2 mobScreenPoint = gameplay.Resolve<Camera>().WorldToScreenPoint(mobCollider.bounds.center);
+        Assert.That(panel.ApplyToUnitAt(mobScreenPoint, SceneBootTestHelper.FindStatus("Vulnerable")), Is.EqualTo(StatusApplyOutcome.Landed));
+        Assert.That(panel.ApplyToUnitAt(mobScreenPoint + new Vector2(5000f, 0f), chill), Is.EqualTo(StatusApplyOutcome.Invalid), "Nothing under the cursor.");
+
+        PlayerAbilities abilities = player.GetComponent<PlayerAbilities>();
+        Health mobHealth = mob.GetComponent<Health>();
+        CastAim atMob = new(mob.transform.position, Vector2.right, new UnitTarget(mobHealth, mobCollider, UnitTeam.Enemy));
+        Assert.That(abilities.GetAbility(3).DisplayName, Is.EqualTo("Blank Smite"));
+        int mobHealthBefore = mobHealth.CurrentHealth;
+        Assert.That(abilities.TryCast(3, atMob), Is.EqualTo(CastOutcome.Started));
+        abilities.EndCast(3);
+        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealthBefore - 18), "15 damage, 1.2x on a Vulnerable mob.");
+        Assert.That(mob.IsStunned, Is.True, "Smite stuns.");
+
+        Health playerHealth = player.GetComponent<Health>();
+        int playerHealthBefore = playerHealth.CurrentHealth;
+        gameplay.Resolve<DamageService>().ApplyDamage(player.GetComponent<DamageReceiver>(), 40);
+        CastAim atSelf = new(player.transform.position, Vector2.zero, new UnitTarget(playerHealth, player.GetComponent<Collider2D>(), UnitTeam.Ally));
+        Assert.That(abilities.GetAbility(2).DisplayName, Is.EqualTo("Blank Mend"));
+        Assert.That(abilities.TryCast(2, atSelf), Is.EqualTo(CastOutcome.Started));
+        abilities.EndCast(2);
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealthBefore - 15), "Mend heals 25.");
+        Assert.That(player.GetComponent<StatusEffects>().GetStacks(SceneBootTestHelper.FindStatus("Fortify")), Is.EqualTo(1), "And fortifies.");
+        yield return null;
+    }
+
+    [UnityTest]
     public IEnumerator Death_ClearsTheOrders()
     {
         yield return Boot();

@@ -21,3 +21,8 @@ MonoBehaviour:
   range: 0
   castMovement: 1
   bufferable: 1
+  hit:
+    amount: 0
+    type: 0
+    statuses: []
+  heal: 0

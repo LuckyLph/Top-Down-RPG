@@ -86,6 +86,15 @@ public class NetworkAbilitiesPlayModeTests
         Assert.That(applied[1].Cast.Aim.Target.Health, Is.SameAs(hostMob.GetComponent<Health>()), "The mob reference resolves to the host's mob.");
         Assert.That(applied[1].Cast.Aim.Target.Team, Is.EqualTo(UnitTeam.Enemy));
         Assert.That(clientApplied, Is.Zero);
+
+        Health hostMobHealth = hostMob.GetComponent<Health>();
+        Assert.That(hostMobHealth.CurrentHealth, Is.LessThan(hostMobHealth.MaxHealth), "The client's Smite damages the host's mob.");
+        Assert.That(hostMob.IsStunned, Is.True, "And stuns it.");
+        StatusEffects clientMobStatuses = mobOnClient.GetComponent<StatusEffects>();
+        Health clientMobHealth = mobOnClient.GetComponent<Health>();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => (clientMobStatuses.Controls & StatusControls.Stun) != 0 && clientMobHealth.CurrentHealth == hostMobHealth.CurrentHealth,
+            "the Smite's damage and stun to reach the client's copy of the mob");
     }
 
     [UnityTest]
@@ -140,6 +149,7 @@ public class NetworkAbilitiesPlayModeTests
         Assert.That(applied[1].Caster, Is.SameAs(clientPlayerOnHost.GetComponent<PlayerAbilities>()));
         Assert.That(applied[1].Cast.Slot, Is.EqualTo(AllySlot));
         Assert.That(applied[1].Cast.Aim.Target.Health, Is.SameAs(hostPlayer.GetComponent<Health>()), "The target arrives as the host's own player.");
+        Assert.That(hostPlayer.GetComponent<StatusEffects>().GetStacks(SceneBootTestHelper.FindStatus("Fortify")), Is.EqualTo(1), "The client's Mend fortifies the host's player.");
         Assert.That(applied[1].Cast.Aim.Target.Team, Is.EqualTo(UnitTeam.Ally));
 
         Vector2 aim = applied[1].Cast.Aim.Direction;

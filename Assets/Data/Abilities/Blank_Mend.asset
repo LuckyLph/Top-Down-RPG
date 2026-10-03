@@ -21,3 +21,9 @@ MonoBehaviour:
   range: 4
   castMovement: 0
   bufferable: 0
+  hit:
+    amount: 0
+    type: 0
+    statuses:
+    - {fileID: 11400000, guid: 029898867bc502e46bbdf2c2ddae68e6, type: 2}
+  heal: 25

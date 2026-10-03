@@ -323,7 +323,7 @@ public class PlayerAbilitiesTests
         weapon = player.AddComponent<PlayerWeaponController>();
         weapon.Construct(new SlashSpawner(new ContainerBuilder().Build(), TestCombat.CreateHitService(authority)), clock);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.55f, new Vector2[4], weaponAbilities: weaponAbilities)));
-        service = new AbilityService(authority);
+        service = TestCombat.CreateAbilityService(authority);
         service.CastApplied += (_, _) => applied++;
         PlayerAbilities playerAbilities = player.AddComponent<PlayerAbilities>();
         playerAbilities.Construct(clock, service);

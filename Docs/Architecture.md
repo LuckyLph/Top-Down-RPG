@@ -270,6 +270,8 @@ Click-to-move, specified in [PlayerControls.md](PlayerControls.md). Mouse only f
 | [MoveMarker](../Assets/Scripts/UI/MoveMarker.cs) | Pooled ring (`Assets/Prefabs/UI/MoveMarker.prefab`, `GroundRing` sprite on `Terrain` order 10) that shrinks and fades over 0.45 s. |
 | [PlayerHudPresenter](../Assets/Scripts/UI/PlayerHudPresenter.cs) | Entry point; binds to whichever player `LocalPlayerTracker` holds (rebinding when it changes) and listens to its `Health.Damaged`/`Died`/`Restored` and `PlayerWeaponController.EquippedWeaponChanged`, pushing into the view; clears the health display while there is no local player. |
 
+UI text uses the static `LiberationSans SDF` font asset, which is also TMP's default for new text. Its dynamic `LiberationSans SDF - Fallback` only gains glyphs (and a git diff) when text uses characters outside the static atlas; nothing should reference the fallback directly.
+
 Damage popups are under Combat.
 
 ## Player

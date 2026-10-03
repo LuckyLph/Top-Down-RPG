@@ -16,6 +16,7 @@ public class OptionsMenuControllerTests : InputTestFixture
     private InputBindings bindings;
     private OptionsMenuView view;
     private FakeMenuInput menuInput;
+    private MenuStack menus;
     private OptionsMenuController controller;
     private Keyboard keyboard;
     private int closedCount;
@@ -29,7 +30,8 @@ public class OptionsMenuControllerTests : InputTestFixture
         bindings.Initialize();
         view = Object.Instantiate(AssetDatabase.LoadAssetAtPath<OptionsMenuView>(OptionsMenuPath));
         menuInput = new FakeMenuInput();
-        controller = new OptionsMenuController(view, bindings, menuInput, new UISelection(null));
+        menus = new MenuStack(menuInput);
+        controller = new OptionsMenuController(view, bindings, menus, new UISelection(null));
         controller.Start();
         closedCount = 0;
     }
@@ -57,19 +59,17 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     [Test]
-    public void Back_ClosesTheScreenOnALaterTick_AndRunsTheCallbackOnce()
+    public void Back_ClosesTheScreen_TakesItOffTheMenuStack_AndRunsTheCallbackOnce()
     {
         controller.Open(() => closedCount++);
-        menuInput.BackPressedThisFrame = true;
+        Assert.That(menus.Top, Is.SameAs(controller));
 
-        controller.Tick();
-        Assert.That(view.IsShown, Is.True, "The press that opened the screen is not also Back.");
-
-        controller.Tick();
+        TickWith(back: true);
         Assert.That(view.IsShown, Is.False);
+        Assert.That(menus.Count, Is.Zero);
         Assert.That(closedCount, Is.EqualTo(1));
 
-        controller.Tick();
+        TickWith(back: true);
         Assert.That(closedCount, Is.EqualTo(1));
     }
 
@@ -127,15 +127,28 @@ public class OptionsMenuControllerTests : InputTestFixture
         controller.Tick();
 
         PressAndSettle(keyboard.escapeKey);
-        menuInput.BackPressedThisFrame = true;
-        controller.Tick();
 
         Assert.That(controller.IsListening, Is.False);
         Assert.That(view.IsShown, Is.True);
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("X"));
 
-        controller.Tick();
+        TickWith(back: true);
         Assert.That(view.IsShown, Is.False, "A later Back closes it.");
+    }
+
+    [Test]
+    public void Back_WhileARebindIsPendingOrListening_DoesNothing()
+    {
+        OpenAndSettle();
+        controller.GetRow(StopRow).BindingButton.onClick.Invoke();
+
+        menus.Top.HandleBack();
+        Assert.That(view.IsShown, Is.True, "Pending: listening starts on the next tick.");
+
+        controller.Tick();
+        menus.Top.HandleBack();
+        Assert.That(controller.IsListening, Is.True);
+        Assert.That(view.IsShown, Is.True);
     }
 
     [Test]
@@ -177,11 +190,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.IsConfirmShown, Is.True);
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("F"));
 
-        menuInput.BackPressedThisFrame = true;
-        controller.Tick();
+        TickWith(back: true);
         Assert.That(view.IsConfirmShown, Is.False);
         Assert.That(view.IsShown, Is.True);
-        menuInput.BackPressedThisFrame = false;
 
         view.ResetAllButton.onClick.Invoke();
         view.ConfirmYesButton.onClick.Invoke();
@@ -221,6 +232,14 @@ public class OptionsMenuControllerTests : InputTestFixture
     {
         controller.Open(() => closedCount++);
         controller.Tick();
+    }
+
+    private void TickWith(bool back)
+    {
+        menuInput.BackPressedThisFrame = back;
+        menus.Tick();
+        controller.Tick();
+        menuInput.BackPressedThisFrame = false;
     }
 
     private void PressAndSettle(ButtonControl button)

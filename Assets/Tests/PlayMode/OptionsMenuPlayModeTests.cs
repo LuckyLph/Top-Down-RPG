@@ -2,6 +2,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 
 public class OptionsMenuPlayModeTests
@@ -33,5 +34,19 @@ public class OptionsMenuPlayModeTests
         Assert.That(options.IsShown, Is.False);
         Assert.That(menu.ButtonsPanel.activeSelf, Is.True);
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.OptionsButton.gameObject));
+    }
+
+    [UnityTest]
+    public IEnumerator EveryInputReader_UsesTheSessionsCopyOfTheInputAsset()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+        RuntimeInputActions runtime = SceneBootTestHelper.ResolveFromMain<RuntimeInputActions>();
+        InputBindings bindings = SceneBootTestHelper.ResolveFromMain<InputBindings>();
+        InputSystemUIInputModule module = Object.FindAnyObjectByType<InputSystemUIInputModule>();
+
+        Assert.That(runtime.Actions, Is.Not.Null);
+        Assert.That(module.actionsAsset, Is.SameAs(runtime.Actions));
+        Assert.That(module.cancel.action.enabled, Is.True, "The UI module enabled the copy's UI actions.");
+        Assert.That(bindings.GetAction(0).actionMap.asset, Is.SameAs(runtime.Actions));
     }
 }

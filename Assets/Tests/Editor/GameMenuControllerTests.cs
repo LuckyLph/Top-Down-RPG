@@ -19,6 +19,7 @@ public class GameMenuControllerTests
     private OptionsMenuView optionsView;
     private FakeMenuInput menuInput;
     private FakeSessionStatus session;
+    private MenuStack menus;
     private OptionsMenuController options;
     private GameMenuController controller;
 
@@ -37,9 +38,10 @@ public class GameMenuControllerTests
         optionsView = canvas.GetComponentInChildren<OptionsMenuView>(true);
         menuInput = new FakeMenuInput();
         session = new FakeSessionStatus();
-        options = new OptionsMenuController(optionsView, bindings, menuInput, new UISelection(null));
+        menus = new MenuStack(menuInput);
+        options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null));
         options.Start();
-        controller = new GameMenuController(menuView, options, menuInput, inputGate, timeFreeze, gameFlow, session, new UISelection(null));
+        controller = new GameMenuController(menuView, options, menus, inputGate, timeFreeze, gameFlow, session, new UISelection(null));
         controller.Start();
     }
 
@@ -81,7 +83,7 @@ public class GameMenuControllerTests
     [Test]
     public void Online_ItBlocksGameplayInput_ButPausesNothing()
     {
-        session.IsOnline = true;
+        session.IsActive = true;
         session.IsHost = true;
 
         TickWith(menu: true);
@@ -93,20 +95,20 @@ public class GameMenuControllerTests
     }
 
     [Test]
-    public void BackOrTheMenuKey_ClosesItOnALaterTick_AndGivesEverythingBack()
+    public void BackOrTheMenuKey_ClosesIt_AndGivesEverythingBack()
     {
         TickWith(menu: true, back: true);
         Assert.That(controller.IsOpen, Is.True, "Escape is both keys; the press that opened it does not also close it.");
+        Assert.That(menus.Top, Is.SameAs(controller));
 
-        TickWith();
         TickWith(back: true);
         Assert.That(controller.IsOpen, Is.False);
         Assert.That(menuView.IsShown, Is.False);
         Assert.That(inputGate.IsBlocked, Is.False);
         Assert.That(Time.timeScale, Is.EqualTo(1f));
+        Assert.That(menus.Count, Is.Zero);
 
         TickWith(menu: true);
-        TickWith();
         TickWith(menu: true);
         Assert.That(controller.IsOpen, Is.False, "The menu key (gamepad Start) toggles it.");
     }
@@ -131,13 +133,14 @@ public class GameMenuControllerTests
         menuView.OptionsButton.onClick.Invoke();
         Assert.That(menuView.IsShown, Is.False);
         Assert.That(options.IsOpen, Is.True);
+        Assert.That(menus.Top, Is.SameAs(options));
         Assert.That(Time.timeScale, Is.Zero, "Still paused while in the options.");
 
-        TickWith();
         TickWith(back: true);
         Assert.That(options.IsOpen, Is.False);
         Assert.That(menuView.IsShown, Is.True);
         Assert.That(controller.IsOpen, Is.True, "The Back that closed the options does not also close the menu.");
+        Assert.That(menus.Top, Is.SameAs(controller));
 
         TickWith(back: true);
         Assert.That(controller.IsOpen, Is.False);
@@ -154,15 +157,15 @@ public class GameMenuControllerTests
         Assert.That(options.IsOpen, Is.False);
         Assert.That(menuView.IsShown, Is.False);
         Assert.That(inputGate.IsBlocked, Is.False);
+        Assert.That(menus.Count, Is.Zero);
     }
 
     [Test]
     public void AHost_IsAskedBeforeLeavingOrQuitting_AndBackOnlyClosesTheQuestion()
     {
-        session.IsOnline = true;
+        session.IsActive = true;
         session.IsHost = true;
         TickWith(menu: true);
-        TickWith();
 
         menuView.LeaveButton.onClick.Invoke();
         Assert.That(menuView.IsConfirmShown, Is.True);
@@ -190,14 +193,18 @@ public class GameMenuControllerTests
 
         Assert.That(inputGate.IsBlocked, Is.False);
         Assert.That(Time.timeScale, Is.EqualTo(1f));
+        Assert.That(menus.Count, Is.Zero);
+
+        TickWith(menu: true);
+        Assert.That(controller.IsOpen, Is.False, "A disposed menu no longer answers the menu key.");
     }
 
     private void TickWith(bool menu = false, bool back = false)
     {
         menuInput.MenuPressedThisFrame = menu;
         menuInput.BackPressedThisFrame = back;
+        menus.Tick();
         options.Tick();
-        controller.Tick();
         menuInput.MenuPressedThisFrame = false;
         menuInput.BackPressedThisFrame = false;
     }

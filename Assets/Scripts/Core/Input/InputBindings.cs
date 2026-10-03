@@ -8,8 +8,8 @@ using VContainer.Unity;
 /// Owns the player's key bindings on the shared <see cref="InputActionAsset"/>: applies the saved overrides at boot,
 /// assigns keys to the actions in the <see cref="RebindableActionList"/> (swapping with the action that had the key),
 /// resets them, saves every change through <see cref="UserSettings"/>, and gives labels for the HUD and the options
-/// screen, and runs interactive rebinds. Removes every override when disposed, so the asset is clean between editor
-/// play sessions.
+/// screen, and runs interactive rebinds. It works on the session's <see cref="RuntimeInputActions"/> copy, never on the
+/// project asset.
 /// </summary>
 public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLabels
 {
@@ -280,10 +280,6 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     {
         CancelRebind();
         InputSystem.onDeviceChange -= HandleDeviceChange;
-        if (actions != null)
-        {
-            actions.RemoveAllBindingOverrides();
-        }
     }
 
     private void Load()

@@ -226,18 +226,6 @@ public class InputBindingsTests
     }
 
     [Test]
-    public void Dispose_RemovesEveryOverrideFromTheAsset()
-    {
-        Create();
-        bindings.TryAssign(Action("Stop"), "<Keyboard>/f", out _);
-
-        bindings.Dispose();
-        bindings = null;
-
-        Assert.That(Action("Stop").bindings[0].overridePath, Is.Null);
-    }
-
-    [Test]
     public void SavedDuplicate_IsDroppedWithAWarning_AndTheFileRewritten()
     {
         SaveOverrides(("Stop", "<Keyboard>/q"));

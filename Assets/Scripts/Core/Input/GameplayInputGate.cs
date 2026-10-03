@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using VContainer.Unity;
 
 /// <summary>
@@ -10,7 +9,7 @@ public sealed class GameplayInputGate : IStartable, IDisposable
 {
     private readonly GameFlow gameFlow;
     private readonly PlayerInputService playerInput;
-    private readonly HashSet<object> blockers = new();
+    private readonly HoldSet blockers = new();
 
     public GameplayInputGate(GameFlow gameFlow, PlayerInputService playerInput)
     {
@@ -18,7 +17,7 @@ public sealed class GameplayInputGate : IStartable, IDisposable
         this.playerInput = playerInput;
     }
 
-    public bool IsBlocked => blockers.Count > 0;
+    public bool IsBlocked => blockers.IsHeld;
 
     public void Start()
     {
@@ -38,7 +37,7 @@ public sealed class GameplayInputGate : IStartable, IDisposable
     /// </summary>
     public void Block(object owner)
     {
-        if (owner != null && blockers.Add(owner))
+        if (blockers.Hold(owner))
         {
             Refresh();
         }
@@ -46,7 +45,7 @@ public sealed class GameplayInputGate : IStartable, IDisposable
 
     public void Unblock(object owner)
     {
-        if (owner != null && blockers.Remove(owner))
+        if (blockers.Release(owner))
         {
             Refresh();
         }
@@ -55,7 +54,7 @@ public sealed class GameplayInputGate : IStartable, IDisposable
     private void Refresh()
     {
         bool inGame = !gameFlow.IsTransitioning && gameFlow.IsInGame;
-        playerInput.SetGameplayEnabled(inGame && blockers.Count == 0);
+        playerInput.SetGameplayEnabled(inGame && !blockers.IsHeld);
         playerInput.SetMenusEnabled(inGame);
     }
 }

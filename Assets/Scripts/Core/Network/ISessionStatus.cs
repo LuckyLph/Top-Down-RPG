@@ -4,6 +4,6 @@
 /// </summary>
 public interface ISessionStatus
 {
-    bool IsOnline { get; }
+    bool IsActive { get; }
     bool IsHost { get; }
 }

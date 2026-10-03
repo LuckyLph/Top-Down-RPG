@@ -61,7 +61,6 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public NetworkManager NetworkManager => networkManager;
     public NetworkSettings Settings => settings;
     public bool IsActive => networkManager.IsListening;
-    public bool IsOnline => IsActive;
     public bool IsHost => networkManager.IsHost;
     public bool IsServer => networkManager.IsServer;
     public bool IsConnectedClient => networkManager.IsConnectedClient;

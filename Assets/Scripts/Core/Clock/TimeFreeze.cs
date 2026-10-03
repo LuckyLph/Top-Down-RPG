@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -8,13 +7,13 @@ using UnityEngine;
 /// </summary>
 public sealed class TimeFreeze : IDisposable
 {
-    private readonly HashSet<object> holders = new();
+    private readonly HoldSet holders = new();
 
-    public bool IsFrozen => holders.Count > 0;
+    public bool IsFrozen => holders.IsHeld;
 
     public void Hold(object owner)
     {
-        if (owner != null && holders.Add(owner))
+        if (holders.Hold(owner))
         {
             Apply();
         }
@@ -22,7 +21,7 @@ public sealed class TimeFreeze : IDisposable
 
     public void Release(object owner)
     {
-        if (owner != null && holders.Remove(owner))
+        if (holders.Release(owner))
         {
             Apply();
         }
@@ -36,6 +35,6 @@ public sealed class TimeFreeze : IDisposable
 
     private void Apply()
     {
-        Time.timeScale = holders.Count > 0 ? 0f : 1f;
+        Time.timeScale = holders.IsHeld ? 0f : 1f;
     }
 }

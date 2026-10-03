@@ -37,14 +37,18 @@ public class MainLifetimeScope : LifetimeScope
         }
 
         builder.Register<UISelection>(Lifetime.Singleton).WithParameter(eventSystem);
-        builder.Register<PlayerInputService>(Lifetime.Singleton)
+        builder.Register<RuntimeInputActions>(Lifetime.Singleton)
             .WithParameter(inputActions)
+            .WithParameter(eventSystem);
+        builder.Register<PlayerInputService>(Lifetime.Singleton)
+            .WithParameter<InputActionAsset>(resolver => resolver.Resolve<RuntimeInputActions>().Actions)
             .WithParameter(eventSystem)
             .As<IPlayerInput>()
             .As<IMenuInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>().AsSelf();
         builder.Register<TimeFreeze>(Lifetime.Singleton);
+        builder.RegisterEntryPoint<MenuStack>().AsSelf();
         builder.RegisterEntryPoint<TransitionTimeFreeze>();
 
         builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, FileSaveStore.DefaultFileName)));
@@ -54,7 +58,7 @@ public class MainLifetimeScope : LifetimeScope
         builder.Register<UserSettings>(Lifetime.Singleton);
 
         builder.RegisterEntryPoint<InputBindings>()
-            .WithParameter(inputActions)
+            .WithParameter<InputActionAsset>(resolver => resolver.Resolve<RuntimeInputActions>().Actions)
             .WithParameter(rebindableActions)
             .AsSelf();
 

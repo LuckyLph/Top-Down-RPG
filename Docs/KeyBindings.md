@@ -107,16 +107,18 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 
 ### Bindings (Core, `Assets/Scripts/Core/Input`)
 
-- `InputBindings`: Main-scope singleton and entry point over the same `InputActionAsset` as `PlayerInputService`, so `InputActionReference`s in assets keep pointing at the live actions.
+- `RuntimeInputActions`: Main-scope singleton holding this session's copy of the project input asset (`Instantiate` keeps action ids). `PlayerInputService`, `InputBindings` and the `EventSystem`'s UI module all use the copy, so overrides never touch the project asset (CLAUDE.md treats ScriptableObject assets as immutable at runtime), and `InputActionReference`s in assets resolve to the copy by id.
+- `InputBindings`: Main-scope singleton and entry point over the session's copy.
   - On initialize: loads the overrides from `UserSettings`, applies them, and resolves duplicates.
   - `IsRebindable(action)`, `GetShortLabel(action)`, `GetLabel(action)` (for the options screen: the layout's full key name).
   - `TryAssign(action, controlPath, out InputAction swappedWith)`: the rule in one place. Refuses non-rebindable actions and disallowed paths, swaps on conflict, applies the override (or removes it when the path is the default), saves and raises `BindingsChanged`.
   - `StartRebind(action)`: wraps `PerformInteractiveRebinding` with the allowed paths (`WithControlsHavingToMatchPath` for `<Keyboard>` and the mouse buttons), Escape as the cancel control, the `Keyboard&Mouse` binding group, and an `OnApplyBinding` that routes the result through `TryAssign`. Returns a handle that reports completion or cancellation and disposes the operation. Logs an error and does nothing if the action is enabled.
   - `Reset(action, out swappedWith)` assigns the default through `TryAssign`, so a default another action took is swapped back; `ResetAll()` removes every override. Both save and raise `BindingsChanged`.
   - Raises `BindingsChanged` also when a keyboard's layout changes (`InputSystem.onDeviceChange`, `ConfigurationChanged`), so labels follow it.
-  - On dispose: cancels a running rebind and removes every override from the asset, so the editor's in-memory asset is clean between play sessions and tests.
+  - On dispose: cancels a running rebind. The copy is destroyed with the Main scope.
 - `GameplayInputGate` gains `Block(object owner)` and `Unblock(object owner)`. The `Player` map is enabled when in game, not transitioning, and nothing holds a block.
-- `IMenuInput` (implemented by `PlayerInputService`): `BackPressedThisFrame` from the `UI` map's `Cancel` (Phase 2), and `MenuPressedThisFrame` from the `Menu` action (Phase 3). The menu key is not a player command, so it stays off `IPlayerInput`, and menus are testable with a fake. The `Menu` action lives in its own `Menus` map, enabled whenever the game is in a session, because the `Player` map is disabled while the in-game menu is open.
+- `IMenuInput` (implemented by `PlayerInputService`): `BackPressedThisFrame` from the `UI` map's `Cancel` and `MenuPressedThisFrame` from the `Menu` action. The menu key is not a player command, so it stays off `IPlayerInput`. The `Menu` action lives in its own `Menus` map, enabled whenever the game is in a session, because the `Player` map is disabled while the in-game menu is open.
+- `MenuStack` (Main scope) is the only reader of `IMenuInput`: open menus push themselves as `IMenuLayer`s, and each tick at most one press is handled, by the top layer (Back or the Menu key) or, with nothing open, as a request to open the in-game menu. Escape is both keys and still counts once, so no menu keeps its own frame bookkeeping; a rebind consumes its own Escape.
 - `RebindableActionList` ScriptableObject (`Assets/Data/Input/RebindableActions.asset`): ordered entries of an `InputActionReference`, a name and a section. It is assigned on `MainLifetimeScope` and given to `InputBindings`, which exposes each action's name and section, so the options screen builds its rows from `InputBindings` alone.
 
 ### UI (Gameplay, `Assets/Scripts/UI`)
@@ -170,6 +172,13 @@ Nothing is replicated. Bindings only change which device control drives the loca
 - [x] `GameMenu` prefab and `GameMenuController`: Resume, Options, Leave game, Quit, host confirmations, pause in single player.
 - [ ] Checked in Multiplayer Play Mode: a client and the host each rebind and play; the menu pauses no one, the host included when it is alone; a client leaving and the host leaving.
 
+### Review follow-ups
+
+- [x] A settings file from a newer build is never overwritten; a shared default input is reported once; HUD labels by slot; one `UISelection`.
+- [x] `HoldSet` shared by `TimeFreeze` and `GameplayInputGate`; `ISessionStatus` exposes `IsActive`.
+- [x] `MenuStack` routes Back and the Menu key once per frame instead of per-menu frame counters.
+- [x] `RuntimeInputActions`: rebinding works on a session copy of the input asset.
+
 ### Later
 
 - A second binding per action, and modifier combinations.
@@ -183,7 +192,7 @@ Nothing is replicated. Bindings only change which device control drives the loca
 - EditMode, interactive rebinding through `InputTestFixture` (`Unity.InputSystem.TestFramework` is referenced by the test assembly; the package already builds it, so no `testables` entry is needed): a key press binds, Escape cancels, a mouse click binds, the pointer moving does not.
 - EditMode, content: `RebindableActions.asset` matches the map; the project asset's default bindings have no duplicates among rebindable actions; the `Player` and `Menus` maps hold only the expected actions.
 - EditMode, pause: `TimeFreeze` is 0 while any owner holds it and 1 after the last release or on dispose; a transition during a pause keeps it at 0 until both end; `GameMenuController` holds it only with no active session, releases it on close and on destroy.
-- EditMode, gate and menus: the `Player` map stays disabled while a block is held and comes back when the last one is released; `GameMenuController` with a fake `IMenuInput` opens, closes, never handles two levels in one frame, and ignores input during transitions; `AbilityBarPresenter` labels follow `BindingsChanged`.
+- EditMode, gate and menus: the `Player` map stays disabled while a block is held and comes back when the last one is released; `GameMenuController` on a `MenuStack` with a fake `IMenuInput` opens, closes, never handles two levels in one frame, and ignores input during transitions; `AbilityBarPresenter` labels follow `BindingsChanged`.
 - Manual: rebind every action from the main menu and in game, restart and check they stuck; AZERTY labels; in single player the menu freezes mobs, cooldowns and statuses and Leave game from a pause reaches the menu; Multiplayer Play Mode with 2 and 4 players as in Phase 3.
 
 ## Open questions

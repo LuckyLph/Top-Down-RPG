@@ -4,6 +4,7 @@
     "TopDownRPG.Gameplay",
     "VContainer",
     "TopDownRPG.Core",
+    "Unity.InputSystem",
     "TopDownRPG.DevTools",
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime",

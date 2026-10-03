@@ -2,14 +2,15 @@ using System;
 using VContainer.Unity;
 
 /// <summary>
-/// The in-game menu: the Menu key opens it, Back or the Menu key closes it (or its confirmation) one level per tick,
-/// and nothing opens or reacts during a transition or once leaving. While open it blocks gameplay input through
+/// The in-game menu: <see cref="MenuStack.MenuRequested"/> (the Menu key with no menu open) opens it as a layer on the
+/// stack, Back or the Menu key on top of it closes its confirmation or else the menu, and nothing opens or reacts during
+/// a transition or once leaving. While open it blocks gameplay input through
 /// <see cref="GameplayInputGate"/> and, with no online session, holds the <see cref="TimeFreeze"/>; it lets go of both
 /// when it closes or is disposed with the Gameplay scope. Options opens the options screen in its place. Leave game
 /// returns to the main menu and Quit closes the application, each after a confirmation for a host, since a host
 /// leaving ends the game for everyone.
 /// </summary>
-public sealed class GameMenuController : IStartable, ITickable, IDisposable
+public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
 {
     public const string LeaveQuestion = "Leaving ends the game for everyone in it.";
     public const string QuitQuestion = "Quitting ends the game for everyone in it.";
@@ -25,7 +26,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
 
     private readonly GameMenuView view;
     private readonly OptionsMenuController options;
-    private readonly IMenuInput menuInput;
+    private readonly MenuStack menus;
     private readonly GameplayInputGate inputGate;
     private readonly TimeFreeze timeFreeze;
     private readonly GameFlow gameFlow;
@@ -35,13 +36,11 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
     private bool isOpen;
     private bool isPaused;
     private bool isLeaving;
-    private int ticks;
-    private int ignoreInputUntilTick;
 
     public GameMenuController(
         GameMenuView view,
         OptionsMenuController options,
-        IMenuInput menuInput,
+        MenuStack menus,
         GameplayInputGate inputGate,
         TimeFreeze timeFreeze,
         GameFlow gameFlow,
@@ -50,7 +49,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
     {
         this.view = view;
         this.options = options;
-        this.menuInput = menuInput;
+        this.menus = menus;
         this.inputGate = inputGate;
         this.timeFreeze = timeFreeze;
         this.gameFlow = gameFlow;
@@ -72,38 +71,22 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         view.QuitButton.onClick.AddListener(RequestQuit);
         view.ConfirmYesButton.onClick.AddListener(Confirm);
         view.ConfirmNoButton.onClick.AddListener(CancelConfirm);
+        menus.MenuRequested += HandleMenuRequested;
     }
 
     public void Dispose()
     {
+        menus.MenuRequested -= HandleMenuRequested;
+        menus.Remove(this);
         inputGate.Unblock(this);
         timeFreeze.Release(this);
+        isOpen = false;
+        isPaused = false;
     }
 
-    public void Tick()
+    public void HandleBack()
     {
-        ticks++;
         if (gameFlow.IsTransitioning || isLeaving)
-        {
-            return;
-        }
-
-        if (!isOpen)
-        {
-            if (menuInput.MenuPressedThisFrame)
-            {
-                Open();
-            }
-
-            return;
-        }
-
-        if (options.IsOpen || ticks <= ignoreInputUntilTick)
-        {
-            return;
-        }
-
-        if (!menuInput.BackPressedThisFrame && !menuInput.MenuPressedThisFrame)
         {
             return;
         }
@@ -132,14 +115,14 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         pending = PendingAction.None;
         view.HideConfirm();
         view.SetShown(true);
+        menus.Push(this);
         inputGate.Block(this);
-        isPaused = !session.IsOnline;
+        isPaused = !session.IsActive;
         if (isPaused)
         {
             timeFreeze.Hold(this);
         }
 
-        ignoreInputUntilTick = ticks + 1;
         selection.Select(view.ResumeButton);
     }
 
@@ -162,10 +145,19 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
 
         view.HideConfirm();
         view.SetShown(false);
+        menus.Remove(this);
         inputGate.Unblock(this);
         timeFreeze.Release(this);
         isPaused = false;
         selection.Select(null);
+    }
+
+    private void HandleMenuRequested()
+    {
+        if (!gameFlow.IsTransitioning && !isLeaving)
+        {
+            Open();
+        }
     }
 
     private void OpenOptions()
@@ -187,7 +179,6 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         }
 
         view.SetShown(true);
-        ignoreInputUntilTick = ticks + 1;
         selection.Select(view.OptionsButton);
     }
 
@@ -208,7 +199,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
             return;
         }
 
-        if (session.IsOnline && session.IsHost)
+        if (session.IsActive && session.IsHost)
         {
             pending = action;
             bool leaving = action == PendingAction.Leave;

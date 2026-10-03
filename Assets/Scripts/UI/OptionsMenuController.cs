@@ -7,10 +7,10 @@ using VContainer.Unity;
 /// Drives the <see cref="OptionsMenuView"/>: builds a row per rebindable action of <see cref="InputBindings"/> under
 /// its section, rebinds a row when its binding is selected (listening starts on the next tick, so the click itself is
 /// never captured), names the action that moved on a swap, resets one row or all of them after a confirmation, and
-/// closes on Back. The Back key never closes more than one level in a tick, and is ignored on the tick a rebind ends,
-/// since Escape both cancels the rebind and reads as Back.
+/// closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back closes the confirmation, or else the
+/// screen, and does nothing while a rebind is pending or listening (the rebind itself takes Escape as cancel).
 /// </summary>
-public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
+public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, IMenuLayer
 {
     public const string ListeningPromptFormat = "Press a key or mouse button for {0}.\nEsc to cancel.";
     public const string MovedNoticeFormat = "{0} moved to {1}.";
@@ -18,20 +18,18 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
-    private readonly IMenuInput menuInput;
+    private readonly MenuStack menus;
     private readonly UISelection selection;
     private readonly List<KeyBindingRowView> rows = new();
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
-    private int ticks;
-    private int ignoreBackUntilTick;
 
-    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, IMenuInput menuInput, UISelection selection)
+    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection)
     {
         this.view = view;
         this.bindings = bindings;
-        this.menuInput = menuInput;
+        this.menus = menus;
         this.selection = selection;
     }
 
@@ -80,6 +78,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
     public void Dispose()
     {
         bindings.BindingsChanged -= RefreshRows;
+        menus.Remove(this);
         if (IsListening)
         {
             bindings.CancelRebind();
@@ -98,7 +97,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         view.HideListening();
         RefreshRows();
         view.SetShown(true);
-        ignoreBackUntilTick = ticks + 1;
+        menus.Push(this);
         selection.Select(rows.Count > 0 ? rows[0].BindingButton : view.BackButton);
     }
 
@@ -121,6 +120,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         view.SetConfirmShown(false);
         view.HideListening();
         view.SetShown(false);
+        menus.Remove(this);
         Action closed = onClosed;
         onClosed = null;
         closed?.Invoke();
@@ -128,21 +128,17 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
 
     public void Tick()
     {
-        ticks++;
-        if (!IsOpen)
-        {
-            return;
-        }
-
-        if (pendingRebind >= 0)
+        if (IsOpen && pendingRebind >= 0)
         {
             int row = pendingRebind;
             pendingRebind = -1;
             BeginListening(row);
-            return;
         }
+    }
 
-        if (IsListening || ticks <= ignoreBackUntilTick || !menuInput.BackPressedThisFrame)
+    public void HandleBack()
+    {
+        if (IsListening || pendingRebind >= 0)
         {
             return;
         }
@@ -184,7 +180,6 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
     {
         int row = listeningRow;
         listeningRow = -1;
-        ignoreBackUntilTick = ticks + 1;
         view.HideListening();
         if (outcome == RebindOutcome.Assigned)
         {

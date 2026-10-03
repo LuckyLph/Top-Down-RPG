@@ -19,6 +19,19 @@ public enum StatusTags
 }
 
 /// <summary>
+/// What a status stops its unit from doing. Stun: no movement, auto attacks or casts. Root: no movement. Silence:
+/// no casts.
+/// </summary>
+[Flags]
+public enum StatusControls
+{
+    None = 0,
+    Stun = 1 << 0,
+    Root = 1 << 1,
+    Silence = 1 << 2,
+}
+
+/// <summary>
 /// Whether a status helps (lands on the source's own faction) or harms (lands on the other faction).
 /// </summary>
 public enum StatusKind : byte

@@ -27,6 +27,7 @@ public class MobMotor2D : MonoBehaviour
     private Vector2 lastMoveDirection = Vector2.down;
     private bool isAttackAnimationActive;
     private bool isMoving;
+    private float speedScale = 1f;
     private bool remoteDriven;
     private bool remoteMoving;
     private float attackAnimationEndTime;
@@ -38,6 +39,11 @@ public class MobMotor2D : MonoBehaviour
 
     public Vector2 Position => rb != null ? rb.position : (Vector2)transform.position;
     public float MoveSpeed => moveSpeed;
+
+    /// <summary>
+    /// The speed the mob can move at right now: its move speed times the speed scale.
+    /// </summary>
+    public float CurrentMoveSpeed => moveSpeed * speedScale;
     public bool IsMoving => isMoving;
     public Vector2 FacingDirection => lastMoveDirection;
 
@@ -92,7 +98,15 @@ public class MobMotor2D : MonoBehaviour
 
     public void SetDesiredVelocity(Vector2 velocity)
     {
-        desiredVelocity = Vector2.ClampMagnitude(velocity, moveSpeed);
+        desiredVelocity = Vector2.ClampMagnitude(velocity, CurrentMoveSpeed);
+    }
+
+    /// <summary>
+    /// Scales the move speed: below 1 slows the mob, 0 holds it still (separation included).
+    /// </summary>
+    public void SetSpeedScale(float scale)
+    {
+        speedScale = Mathf.Max(0f, scale);
     }
 
     public void Stop()
@@ -173,7 +187,7 @@ public class MobMotor2D : MonoBehaviour
         }
 
         float step = acceleration * Time.fixedDeltaTime;
-        Vector2 targetVelocity = Vector2.ClampMagnitude(desiredVelocity + steeringVelocity, moveSpeed);
+        Vector2 targetVelocity = Vector2.ClampMagnitude(desiredVelocity + steeringVelocity, CurrentMoveSpeed);
         rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, targetVelocity, step);
 
         if (spriteRenderer != null)

@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// A timed buff or debuff: how it stacks, what it does each tick and how it changes the unit's combat values.
+/// A timed buff or debuff: how it stacks, what it does each tick, how it changes the unit's combat values and
+/// movement, and what it stops the unit from doing.
 /// See Docs/DamageAndStatusEffects.md.
 /// </summary>
 [CreateAssetMenu(fileName = "Status", menuName = "TopDownRPG/Combat/Status Effect")]
@@ -26,10 +27,15 @@ public sealed class StatusEffectDefinition : ScriptableObject
     [SerializeField, Min(0.05f)] private float tickInterval = 1f;
 
     [Header("Modifiers (per stack)")]
+    [SerializeField, Min(0f), Tooltip("Below 1 slows the unit.")] private float moveSpeedMultiplier = 1f;
     [SerializeField, Min(0f)] private float damageDealtMultiplier = 1f;
     [SerializeField, Min(0f)] private float damageTakenMultiplier = 1f;
     [SerializeField, Tooltip("Percentage points added to the unit's resistances.")]
     private DamageResistance[] resistanceDeltas = new DamageResistance[0];
+
+    [Header("Control")]
+    [SerializeField, Tooltip("Stun: no movement, auto attacks or casts. Root: no movement. Silence: no casts.")]
+    private StatusControls controls;
 
     [Header("Immunities")]
     [SerializeField] private DamageTypeMask grantsDamageImmunity;
@@ -48,10 +54,12 @@ public sealed class StatusEffectDefinition : ScriptableObject
     public int PeriodicAmount => Mathf.Max(0, periodicAmount);
     public DamageType PeriodicDamageType => periodicDamageType;
     public float TickInterval => Mathf.Max(0.05f, tickInterval);
+    public float MoveSpeedMultiplier => Mathf.Max(0f, moveSpeedMultiplier);
     public float DamageDealtMultiplier => Mathf.Max(0f, damageDealtMultiplier);
     public float DamageTakenMultiplier => Mathf.Max(0f, damageTakenMultiplier);
     public DamageTypeMask GrantsDamageImmunity => grantsDamageImmunity;
     public StatusTags GrantsStatusImmunity => grantsStatusImmunity;
+    public StatusControls Controls => controls;
     public bool HasPeriodicEffect => periodic != StatusPeriodic.None && PeriodicAmount > 0;
 
     /// <summary>
@@ -91,7 +99,9 @@ public sealed class StatusEffectDefinition : ScriptableObject
         float damageTakenMultiplier = 1f,
         DamageResistance[] resistanceDeltas = null,
         DamageTypeMask grantsDamageImmunity = DamageTypeMask.None,
-        StatusTags grantsStatusImmunity = StatusTags.None)
+        StatusTags grantsStatusImmunity = StatusTags.None,
+        float moveSpeedMultiplier = 1f,
+        StatusControls controls = StatusControls.None)
     {
         StatusEffectDefinition definition = CreateInstance<StatusEffectDefinition>();
         definition.name = name;
@@ -110,6 +120,8 @@ public sealed class StatusEffectDefinition : ScriptableObject
         definition.resistanceDeltas = resistanceDeltas ?? new DamageResistance[0];
         definition.grantsDamageImmunity = grantsDamageImmunity;
         definition.grantsStatusImmunity = grantsStatusImmunity;
+        definition.moveSpeedMultiplier = moveSpeedMultiplier;
+        definition.controls = controls;
         definition.hideFlags = HideFlags.HideAndDontSave;
         return definition;
     }

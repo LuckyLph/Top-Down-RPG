@@ -43,7 +43,10 @@ public enum CastOutcome
     NoTarget,
     Dead,
     Expired,
-    Cancelled
+    Cancelled,
+    Stunned,
+    Silenced,
+    Rooted
 }
 
 /// <summary>

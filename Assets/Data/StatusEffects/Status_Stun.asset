@@ -10,25 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3174669bc6097f0449fd7cfd6f12aa3b, type: 3}
-  m_Name: Status_Poison
+  m_Name: Status_Stun
   m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffectDefinition
-  displayName: Poison
+  displayName: Stun
   icon: {fileID: 0}
-  description: Poison damage every second. Up to 3 separate doses, each with its
-    own timer.
+  description: Cannot move, attack or cast.
   kind: 1
-  tags: 64
-  duration: 6
-  stacking: 2
-  maxStacks: 3
-  periodic: 1
-  periodicAmount: 2
-  periodicDamageType: 4
+  tags: 1
+  duration: 1.5
+  stacking: 0
+  maxStacks: 1
+  periodic: 0
+  periodicAmount: 0
+  periodicDamageType: 0
   tickInterval: 1
   moveSpeedMultiplier: 1
   damageDealtMultiplier: 1
   damageTakenMultiplier: 1
   resistanceDeltas: []
-  controls: 0
+  controls: 1
   grantsDamageImmunity: 0
   grantsStatusImmunity: 0

@@ -7,8 +7,8 @@ using UnityEditor;
 /// <summary>
 /// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/>, weapon and
 /// <see cref="PlayerAbilities"/>: each frame it reads a command, ticks the orders (which start casts) and applies
-/// their motor, facing and swing requests. Remote copies only show
-/// replicated movement. Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach
+/// their motor, facing and swing requests. Feeds the player's status crowd control into the orders and its slow,
+/// stun or root into the motor's speed scale. Remote copies only show replicated movement. Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach
 /// and a buffered cast.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
@@ -28,6 +28,7 @@ public class PlayerController : MonoBehaviour
     private IPlayerCommandSource commandSource;
     private IClock clock = UnityClock.Shared;
     private PlayerOrders orders;
+    private StatusEffects statuses;
     private bool simulatesMovement = true;
 
     public PlayerControlSettings ControlSettings => controlSettings;
@@ -157,12 +158,15 @@ public class PlayerController : MonoBehaviour
 
         PlayerCommand command = commandSource != null ? commandSource.ReadCommand() : default;
         PlayerMotor2D playerMotor = Motor;
+        StatusControls controls = statuses != null ? statuses.Controls : StatusControls.None;
+        playerMotor.SetSpeedScale(statuses != null ? statuses.MovementScale : 1f);
         PlayerOrderContext context = new(
             playerMotor.Position,
             clock.Time,
             playerMotor.ReachedDestination,
             playerMotor.StalledTime,
-            AttackRange());
+            AttackRange(),
+            controls);
         Apply(orders.Tick(command, context));
     }
 
@@ -204,6 +208,7 @@ public class PlayerController : MonoBehaviour
             abilities = GetComponent<PlayerAbilities>();
         }
 
+        statuses = GetComponent<StatusEffects>();
         IAbilityCaster caster = abilities != null ? abilities : null;
         orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), caster);
     }

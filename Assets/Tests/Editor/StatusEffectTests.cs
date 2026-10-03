@@ -182,6 +182,51 @@ public class StatusEffectTests
     }
 
     [Test]
+    public void Set_CombinesMoveSpeedAndControls()
+    {
+        StatusEffectDefinition chill = Definition("Chill", StatusKind.Debuff, 3f, StatusStacking.AddStack, maxStacks: 3, moveSpeed: 0.8f);
+        StatusEffectDefinition cripple = Definition("Cripple", StatusKind.Debuff, 3f, moveSpeed: 0.5f);
+        StatusEffectDefinition stun = Definition("Stun", StatusKind.Debuff, 1f, controls: StatusControls.Stun);
+        StatusEffectDefinition silence = Definition("Silence", StatusKind.Debuff, 2f, controls: StatusControls.Silence);
+        StatusEffectSet set = new();
+
+        set.Apply(chill, null, 1f);
+        set.Apply(chill, null, 1f);
+        set.Apply(cripple, null, 1f);
+        set.Apply(stun, null, 1f);
+        set.Apply(silence, null, 1f);
+
+        Assert.That(set.MoveSpeedMultiplier, Is.EqualTo(0.32f).Within(0.0001f), "0.8 x 0.8 x 0.5.");
+        Assert.That(set.Controls, Is.EqualTo(StatusControls.Stun | StatusControls.Silence));
+
+        set.Tick(1f, null);
+        Assert.That(set.Controls, Is.EqualTo(StatusControls.Silence), "The stun expired.");
+        set.Clear();
+        Assert.That(set.MoveSpeedMultiplier, Is.EqualTo(1f));
+        Assert.That(set.Controls, Is.EqualTo(StatusControls.None));
+    }
+
+    [Test]
+    public void Component_MovementScale_IsZeroWhileStunnedOrRooted_AndTheSlowOtherwise()
+    {
+        StatusEffects statuses = Unit("Unit", Faction.Mobs).Statuses;
+        StatusEffectDefinition chill = Definition("Chill", StatusKind.Debuff, 3f, moveSpeed: 0.6f);
+        StatusEffectDefinition root = Definition("Root", StatusKind.Debuff, 3f, controls: StatusControls.Root);
+        StatusEffectDefinition stun = Definition("Stun", StatusKind.Debuff, 3f, controls: StatusControls.Stun);
+        StatusEffectDefinition silence = Definition("Silence", StatusKind.Debuff, 3f, controls: StatusControls.Silence);
+
+        Assert.That(statuses.MovementScale, Is.EqualTo(1f));
+        statuses.Set.Apply(chill, null, 1f);
+        statuses.Set.Apply(silence, null, 1f);
+        Assert.That(statuses.MovementScale, Is.EqualTo(0.6f).Within(0.0001f), "A silence does not stop movement.");
+        statuses.Set.Apply(root, null, 1f);
+        Assert.That(statuses.MovementScale, Is.Zero);
+        statuses.Set.Remove(root);
+        statuses.Set.Apply(stun, null, 1f);
+        Assert.That(statuses.MovementScale, Is.Zero);
+    }
+
+    [Test]
     public void Set_StatusImmunities_BlockByTagAndAGrantRemovesWhatItNowBlocks()
     {
         StatusEffectDefinition stun = Definition("Stun", StatusKind.Debuff, 2f, tags: StatusTags.Stun);
@@ -526,7 +571,7 @@ public class StatusEffectTests
             Assert.That(listed.Contains(definition), Is.True, $"{definition.name} is not in the catalog.");
         }
 
-        string[] expected = { "Burn", "Poison", "Regeneration", "Fortify", "Vulnerable", "Empower", "Invulnerable" };
+        string[] expected = { "Burn", "Poison", "Regeneration", "Fortify", "Vulnerable", "Empower", "Invulnerable", "Chill", "Stun", "Root", "Silence", "Unstoppable" };
         foreach (string displayName in expected)
         {
             Assert.That(FindByName(catalog, displayName), Is.Not.Null, $"Missing test status {displayName}.");
@@ -535,6 +580,20 @@ public class StatusEffectTests
         Assert.That(FindByName(catalog, "Burn").Stacking, Is.EqualTo(StatusStacking.AddStack));
         Assert.That(FindByName(catalog, "Poison").Stacking, Is.EqualTo(StatusStacking.Independent));
         Assert.That(FindByName(catalog, "Invulnerable").GrantsDamageImmunity, Is.EqualTo(DamageTypeMask.All));
+        Assert.That(FindByName(catalog, "Chill").MoveSpeedMultiplier, Is.LessThan(1f));
+        Assert.That(FindByName(catalog, "Chill").Tags & StatusTags.Slow, Is.EqualTo(StatusTags.Slow));
+        Assert.That(FindByName(catalog, "Stun").Controls, Is.EqualTo(StatusControls.Stun));
+        Assert.That(FindByName(catalog, "Root").Controls, Is.EqualTo(StatusControls.Root));
+        Assert.That(FindByName(catalog, "Silence").Controls, Is.EqualTo(StatusControls.Silence));
+
+        StatusEffectSet set = new();
+        set.Apply(FindByName(catalog, "Stun"), null, 1f);
+        set.Apply(FindByName(catalog, "Chill"), null, 1f);
+        set.Apply(FindByName(catalog, "Silence"), null, 1f);
+        set.Apply(FindByName(catalog, "Unstoppable"), null, 1f);
+        Assert.That(set.Controls, Is.EqualTo(StatusControls.Silence), "Unstoppable removes stuns and slows but not silences.");
+        Assert.That(set.MoveSpeedMultiplier, Is.EqualTo(1f));
+        Assert.That(set.Apply(FindByName(catalog, "Root"), null, 1f), Is.EqualTo(StatusApplyOutcome.Immune));
     }
 
     [Test]
@@ -588,10 +647,12 @@ public class StatusEffectTests
         float damageTaken = 1f,
         DamageResistance[] resistances = null,
         DamageTypeMask damageImmunity = DamageTypeMask.None,
-        StatusTags statusImmunity = StatusTags.None)
+        StatusTags statusImmunity = StatusTags.None,
+        float moveSpeed = 1f,
+        StatusControls controls = StatusControls.None)
     {
         StatusEffectDefinition definition = StatusEffectDefinition.Create(name, kind, duration, stacking, maxStacks, tags, periodic, periodicAmount,
-            periodicType, tickInterval, damageDealt, damageTaken, resistances, damageImmunity, statusImmunity);
+            periodicType, tickInterval, damageDealt, damageTaken, resistances, damageImmunity, statusImmunity, moveSpeed, controls);
         created.Add(definition);
         return definition;
     }

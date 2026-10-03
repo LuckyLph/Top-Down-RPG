@@ -82,7 +82,7 @@ public class MobPathAgent2D : MonoBehaviour
             return;
         }
 
-        Vector2 desiredVelocity = follower.Tick(motor.Position, motor.MoveSpeed, Time.fixedDeltaTime);
+        Vector2 desiredVelocity = follower.Tick(motor.Position, motor.CurrentMoveSpeed, Time.fixedDeltaTime);
         if (follower.HasPath)
         {
             motor.SetDesiredVelocity(desiredVelocity);

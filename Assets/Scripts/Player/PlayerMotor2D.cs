@@ -3,8 +3,9 @@ using VContainer;
 
 /// <summary>
 /// Moves the player's <see cref="Rigidbody2D"/> along a <see cref="PathFollower2D"/> path on the current area's
-/// grid (a straight line when there is none), tracks facing and stall time, and drives the animator. Remote copies
-/// show the owner's replicated movement instead.
+/// grid (a straight line when there is none) at the settings' speed times a speed scale (slows; 0 while stunned or
+/// rooted, which also keeps stall time from growing), tracks facing and stall time, and drives the animator. Remote
+/// copies show the owner's replicated movement instead.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
@@ -32,6 +33,7 @@ public class PlayerMotor2D : MonoBehaviour
     private Vector2 facing = Vector2.down;
     private bool simulatesMovement = true;
     private bool aiming;
+    private float speedScale = 1f;
 
     public Vector2 CurrentMove => currentMove;
     public Vector2 FacingDirection => facing;
@@ -41,6 +43,7 @@ public class PlayerMotor2D : MonoBehaviour
     public Vector2 Position => Body != null ? Body.position : (Vector2)transform.position;
 
     internal PathFollower2D Follower => follower;
+    internal float SpeedScale => speedScale;
 
     private Rigidbody2D Body
     {
@@ -147,6 +150,14 @@ public class PlayerMotor2D : MonoBehaviour
     /// <summary>
     /// While aiming, the player faces <paramref name="direction"/> and movement no longer turns it.
     /// </summary>
+    /// <summary>
+    /// Scales the move speed: below 1 slows the player, 0 holds it still while its path and order are kept.
+    /// </summary>
+    public void SetSpeedScale(float scale)
+    {
+        speedScale = Mathf.Max(0f, scale);
+    }
+
     public void SetAim(bool aim, Vector2 direction)
     {
         aiming = aim;
@@ -191,7 +202,7 @@ public class PlayerMotor2D : MonoBehaviour
             return;
         }
 
-        float speed = settings.MoveSpeed;
+        float speed = settings.MoveSpeed * speedScale;
         Vector2 velocity = follower.Tick(Position, speed, deltaTime);
         Body.linearVelocity = velocity;
         currentMove = speed > 0f ? velocity / speed : Vector2.zero;

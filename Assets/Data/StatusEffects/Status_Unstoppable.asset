@@ -10,20 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3174669bc6097f0449fd7cfd6f12aa3b, type: 3}
-  m_Name: Status_Poison
+  m_Name: Status_Unstoppable
   m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusEffectDefinition
-  displayName: Poison
+  displayName: Unstoppable
   icon: {fileID: 0}
-  description: Poison damage every second. Up to 3 separate doses, each with its
-    own timer.
-  kind: 1
-  tags: 64
-  duration: 6
-  stacking: 2
-  maxStacks: 3
-  periodic: 1
-  periodicAmount: 2
-  periodicDamageType: 4
+  description: Immune to stuns, roots and slows; removes active ones.
+  kind: 0
+  tags: 0
+  duration: 4
+  stacking: 0
+  maxStacks: 1
+  periodic: 0
+  periodicAmount: 0
+  periodicDamageType: 0
   tickInterval: 1
   moveSpeedMultiplier: 1
   damageDealtMultiplier: 1
@@ -31,4 +30,4 @@ MonoBehaviour:
   resistanceDeltas: []
   controls: 0
   grantsDamageImmunity: 0
-  grantsStatusImmunity: 0
+  grantsStatusImmunity: 11

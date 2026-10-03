@@ -4,7 +4,9 @@ using UnityEngine;
 /// The player's order state machine: Idle, Move, Attack, CastWhenInRange and Casting, plus at most one paused order
 /// while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and the player's
 /// state into motor requests, a facing direction and swing requests, and starts casts through the
-/// <see cref="IAbilityCaster"/>. No engine lookups: targets are queried through <see cref="IUnitQueries"/>.
+/// <see cref="IAbilityCaster"/>. Crowd control from statuses arrives in the context: a stun clears every order and
+/// ignores commands, a silence ends a running cast and fails casts, a root fails casts that move the caster. No
+/// engine lookups: targets are queried through <see cref="IUnitQueries"/>.
 /// </summary>
 public sealed class PlayerOrders
 {
@@ -30,6 +32,9 @@ public sealed class PlayerOrders
     private int bufferedSlot;
     private CastAim bufferedAim;
     private float bufferedTime;
+
+    private bool wasStunned;
+    private bool wasSilenced;
 
     private PlayerMotorRequest motorRequest;
     private Vector2 destination;
@@ -62,6 +67,11 @@ public sealed class PlayerOrders
         motorRequest = PlayerMotorRequest.None;
         hasAim = false;
         swing = false;
+
+        if (ApplyControls(command, context))
+        {
+            return new PlayerOrderOutput(motorRequest, destination, false, Vector2.zero, false);
+        }
 
         if (command.StopPressed)
         {
@@ -110,6 +120,84 @@ public sealed class PlayerOrders
         paused = default;
         chasing = false;
         fresh = false;
+    }
+
+    /// <summary>
+    /// Reacts to crowd control starting: a stun clears every order (the cast ends) and stops the motor, a silence ends
+    /// a running cast and drops a buffered one. Returns true while stunned, when the tick does nothing else and an
+    /// ability press only reports <see cref="CastOutcome.Stunned"/>.
+    /// </summary>
+    private bool ApplyControls(in PlayerCommand command, in PlayerOrderContext context)
+    {
+        bool stunned = (context.Controls & StatusControls.Stun) != 0;
+        bool silenced = (context.Controls & StatusControls.Silence) != 0;
+        if (stunned)
+        {
+            if (!wasStunned)
+            {
+                Clear();
+                motorRequest = PlayerMotorRequest.Stop;
+            }
+
+            if (command.HasAbility && caster != null)
+            {
+                caster.ReportFailure(command.AbilitySlot, CastOutcome.Stunned);
+            }
+        }
+        else if (silenced && !wasSilenced)
+        {
+            InterruptCast();
+        }
+
+        wasStunned = stunned;
+        wasSilenced = silenced;
+        return stunned;
+    }
+
+    /// <summary>
+    /// Ends a running cast early (its cooldown stays spent), drops a buffered cast and resumes the paused order.
+    /// </summary>
+    private void InterruptCast()
+    {
+        DropBuffered(CastOutcome.Cancelled);
+        if (current.Kind != PlayerOrderKind.Casting)
+        {
+            return;
+        }
+
+        if (caster != null)
+        {
+            caster.EndCast(current.Slot);
+        }
+
+        current = paused;
+        paused = default;
+        fresh = true;
+        chasing = false;
+        if (current.Kind == PlayerOrderKind.Idle)
+        {
+            motorRequest = PlayerMotorRequest.Stop;
+        }
+    }
+
+    private static CastOutcome ControlFailure(AbilityDefinition ability, StatusControls controls)
+    {
+        if ((controls & StatusControls.Stun) != 0)
+        {
+            return CastOutcome.Stunned;
+        }
+
+        if ((controls & StatusControls.Silence) != 0)
+        {
+            return CastOutcome.Silenced;
+        }
+
+        if ((controls & StatusControls.Root) != 0 && ability.CastMovement == CastMovement.Ability)
+        {
+            return CastOutcome.Rooted;
+        }
+
+        return CastOutcome.Started;
     }
 
     private void Stop()
@@ -182,6 +270,13 @@ public sealed class PlayerOrders
         }
 
         AbilityDefinition ability = caster.GetAbility(slot);
+        CastOutcome blocked = ControlFailure(ability, context.Controls);
+        if (blocked != CastOutcome.Started)
+        {
+            caster.ReportFailure(slot, blocked);
+            return;
+        }
+
         if (!TryAim(ability, command, context, out CastAim aim))
         {
             caster.ReportFailure(slot, CastOutcome.NoTarget);
@@ -255,6 +350,13 @@ public sealed class PlayerOrders
             fresh = true;
             chasing = false;
             return true;
+        }
+
+        CastOutcome blocked = ControlFailure(ability, context.Controls);
+        if (blocked != CastOutcome.Started)
+        {
+            caster.ReportFailure(slot, blocked);
+            return false;
         }
 
         if (caster.TryCast(slot, aim) != CastOutcome.Started)

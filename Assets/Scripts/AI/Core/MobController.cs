@@ -42,6 +42,7 @@ public class MobController : MonoBehaviour
     private Transform cachedTarget;
     private Collider2D cachedTargetCollider;
     private MobSeparation2D separation;
+    private StatusEffects statuses;
     private IMobState currentState;
     private bool initialized;
     private float deltaTime;
@@ -58,6 +59,7 @@ public class MobController : MonoBehaviour
     public MobSeparation2D Separation => separation;
     public MobStateId CurrentStateId => currentState != null ? currentState.StateId : MobStateId.Idle;
     public float DeltaTime => deltaTime;
+    public bool IsStunned => statuses != null && (statuses.Controls & StatusControls.Stun) != 0;
 
     private void Awake()
     {
@@ -137,15 +139,27 @@ public class MobController : MonoBehaviour
 
         deltaTime = Mathf.Max(0f, dt);
         perception.Tick(deltaTime);
-        currentState?.Tick();
+        if (!IsStunned)
+        {
+            currentState?.Tick();
+        }
     }
 
     public void FixedTickStateMachine()
     {
         EnsureInitialized();
 
+        motor.SetSpeedScale(statuses != null ? statuses.MovementScale : 1f);
         separation.Sense(motor.Position);
-        currentState?.FixedTick();
+        if (IsStunned)
+        {
+            motor.Stop();
+        }
+        else
+        {
+            currentState?.FixedTick();
+        }
+
         motor.SetSteeringVelocity(separation.Velocity);
         motor.FixedTick();
     }
@@ -252,6 +266,11 @@ public class MobController : MonoBehaviour
         if (selfCollider == null)
         {
             selfCollider = GetComponent<Collider2D>();
+        }
+
+        if (statuses == null)
+        {
+            statuses = GetComponent<StatusEffects>();
         }
     }
 

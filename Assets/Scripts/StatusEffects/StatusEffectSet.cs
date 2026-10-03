@@ -19,10 +19,12 @@ public sealed class StatusEffectSet
     public event Action Changed;
 
     public int Count => instances.Count;
+    public float MoveSpeedMultiplier { get; private set; } = 1f;
     public float DamageDealtMultiplier { get; private set; } = 1f;
     public float DamageTakenMultiplier { get; private set; } = 1f;
     public DamageTypeMask GrantedDamageImmunity { get; private set; }
     public StatusTags GrantedStatusImmunity { get; private set; }
+    public StatusControls Controls { get; private set; }
 
     public int GetResistanceDelta(DamageType type)
     {
@@ -318,8 +320,10 @@ public sealed class StatusEffectSet
 
     private void Recompute()
     {
+        float moveSpeed = 1f;
         float dealt = 1f;
         float taken = 1f;
+        StatusControls controls = StatusControls.None;
         DamageTypeMask damageImmunity = DamageTypeMask.None;
         StatusTags statusImmunity = StatusTags.None;
         Array.Clear(resistanceDeltas, 0, resistanceDeltas.Length);
@@ -328,7 +332,9 @@ public sealed class StatusEffectSet
         {
             StatusEffectDefinition definition = instances[i].Definition;
             int stacks = instances[i].Stacks;
+            moveSpeed *= Mathf.Pow(definition.MoveSpeedMultiplier, stacks);
             dealt *= Mathf.Pow(definition.DamageDealtMultiplier, stacks);
+            controls |= definition.Controls;
             taken *= Mathf.Pow(definition.DamageTakenMultiplier, stacks);
             damageImmunity |= definition.GrantsDamageImmunity;
             statusImmunity |= definition.GrantsStatusImmunity;
@@ -338,7 +344,9 @@ public sealed class StatusEffectSet
             }
         }
 
+        MoveSpeedMultiplier = moveSpeed;
         DamageDealtMultiplier = dealt;
+        Controls = controls;
         DamageTakenMultiplier = taken;
         GrantedDamageImmunity = damageImmunity;
         GrantedStatusImmunity = statusImmunity;

@@ -112,7 +112,7 @@ Sources say what they deal through a `Hit`: amount, damage type and the statuses
 
 - Stun starts: `PlayerOrders.Clear` (as on death), the motor stops, and new commands are ignored until it ends. The player is Idle afterwards.
 - Silence starts: a running cast ends, the buffered cast is dropped and the paused order resumes. Cast attempts fail with a new `CastOutcome.Silenced` (and `Stunned` while stunned), which flashes the slot like any failure.
-- Root: the motor holds still while Move, Attack and CastWhenInRange orders keep their targets; stall time does not grow, so a rooted move never ends as stuck. Casts with `CastMovement.Ability` fail with `Rooted`.
+- Root: the motor holds still while Move, Attack and CastWhenInRange orders keep their targets; stall time does not grow (the path follower is ticked at the scaled speed of 0), so a rooted move never ends as stuck. Casts with `CastMovement.Ability` fail with `Rooted`.
 - Slow: `PlayerMotor2D` multiplies `PlayerControlSettings.MoveSpeed` by the combined move speed multiplier.
 
 ### Crowd control on mobs (host)
@@ -235,10 +235,10 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Test statuses in `Assets/Data/StatusEffects`: Burn (Fire damage over time, `AddStack`), Poison (`Independent`), Regeneration (heal over time), Fortify (resistances, buff), Vulnerable (damage taken), Empower (damage dealt), Invulnerable (immune to all damage). Nothing applies them in play until Phase 5.
 
 ### Phase 3: movement and crowd control
-- [ ] Slow on `PlayerMotor2D` (owner) and `MobMotor2D`.
-- [ ] Stun, root and silence in `PlayerOrders`, `PlayerAbilities` and `PlayerController`; new cast outcomes.
-- [ ] Stun and root in `MobController`.
-- [ ] Test statuses: Chill (slow, `Refresh`), Stun, Root, Silence, Unstoppable (immune to `Stun`, `Root`, `Slow`).
+- [x] Slow on `PlayerMotor2D` (owner) and `MobMotor2D`, as a speed scale that is also 0 while stunned or rooted.
+- [x] Stun, root and silence in `PlayerOrders` and `PlayerController`; new cast outcomes. The orders own the control checks (they see every cast attempt), so `PlayerAbilities` needed no change.
+- [x] Stun and root in `MobController`.
+- [x] Test statuses: Chill (slow, `Refresh`), Stun, Root, Silence, Unstoppable (immune to `Stun`, `Root`, `Slow`).
 
 ### Phase 4: feedback
 - [ ] Local player status row on the HUD.

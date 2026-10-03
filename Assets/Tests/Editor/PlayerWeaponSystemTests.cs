@@ -177,6 +177,57 @@ public class PlayerWeaponSystemTests
     }
 
     [Test]
+    public void PlayerController_FeedsStatusCrowdControlToItsOrdersAndMotor()
+    {
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        PlayerController playerController = root.AddComponent<PlayerController>();
+        StatusEffects statuses = root.AddComponent<StatusEffects>();
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+        weaponController.Construct(CreateSpawner(), new ManualClock());
+        weaponController.Equip(CreateTestWeapon("Sword"));
+        settings = TestPlayerControlSettings.Create();
+        TestPlayerControlSettings.Assign(playerController, settings);
+        enemyRoot = new GameObject("EnemyRoot");
+        GameObject enemy = CreateDamageable("Enemy", new Vector2(-0.5f, 0f), enemyRoot.transform);
+        enemy.GetComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        Physics2D.SyncTransforms();
+        FakeCommandSource commands = new();
+        playerController.SetCommandSource(commands);
+        StatusEffectDefinition stun = StatusEffectDefinition.Create("Stun", StatusKind.Debuff, 5f, controls: StatusControls.Stun);
+        StatusEffectDefinition chill = StatusEffectDefinition.Create("Chill", StatusKind.Debuff, 5f, moveSpeedMultiplier: 0.6f);
+        PlayerMotor2D motor = root.GetComponent<PlayerMotor2D>();
+
+        try
+        {
+            statuses.Set.Apply(stun, null, 1f);
+            commands.Next = new PlayerCommand(
+                enemy.transform.position,
+                new UnitTarget(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy),
+                movePressed: true,
+                moveHeld: true,
+                stopPressed: false);
+            playerController.Tick();
+
+            Assert.That(playerController.CurrentOrder, Is.EqualTo(PlayerOrderKind.Idle), "A stunned player takes no orders.");
+            Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Null, "Nor swings.");
+            Assert.That(motor.SpeedScale, Is.Zero);
+
+            statuses.Set.Remove(stun);
+            statuses.Set.Apply(chill, null, 1f);
+            commands.Next = default;
+            playerController.Tick();
+            Assert.That(motor.SpeedScale, Is.EqualTo(0.6f).Within(0.0001f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(stun);
+            Object.DestroyImmediate(chill);
+        }
+    }
+
+    [Test]
     public void TryAttack_RaisesAttacked_ButRemoteAttacksDoNot()
     {
         root = new GameObject("PlayerRoot");

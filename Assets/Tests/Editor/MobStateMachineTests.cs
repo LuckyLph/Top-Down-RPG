@@ -19,6 +19,7 @@ public class MobStateMachineTests
     private TerrainType2D groundTerrain;
     // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
     private readonly List<GameObject> sceneObjects = new();
+    private readonly List<StatusEffectDefinition> statusDefinitions = new();
 
     [TearDown]
     public void TearDown()
@@ -32,6 +33,13 @@ public class MobStateMachineTests
         }
 
         sceneObjects.Clear();
+
+        foreach (StatusEffectDefinition definition in statusDefinitions)
+        {
+            Object.DestroyImmediate(definition);
+        }
+
+        statusDefinitions.Clear();
 
         if (root != null)
         {
@@ -308,6 +316,66 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    [Test]
+    public void AStunnedMob_NeitherDecidesNorMoves_AndResumesInTheSameState()
+    {
+        SetupWorld();
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        StatusEffectDefinition stun = Status("Stun", controls: StatusControls.Stun);
+        brain.GetComponent<StatusEffects>().Set.Apply(stun, null, 1f);
+
+        for (int i = 0; i < 5; i++)
+        {
+            brain.TickStateMachine(0.1f);
+            brain.FixedTickStateMachine();
+        }
+
+        Assert.That(brain.IsStunned, Is.True);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle), "A stunned mob makes no decisions.");
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth), "Nor attacks.");
+        Assert.That(brain.Motor.DesiredVelocity, Is.EqualTo(Vector2.zero));
+
+        brain.GetComponent<StatusEffects>().Set.Remove(stun);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Idle), "It reacts to the player as soon as the stun ends.");
+    }
+
+    [Test]
+    public void ARootedMob_HoldsStillButStillAttacksInRange()
+    {
+        SetupWorld();
+        player.position = new Vector3(4f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.GetComponent<StatusEffects>().Set.Apply(Status("Root", controls: StatusControls.Root), null, 1f);
+
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase), "A rooted mob still decides.");
+        Assert.That(brain.Motor.DesiredVelocity, Is.EqualTo(Vector2.zero), "But cannot move.");
+        Assert.That(brain.Motor.CurrentMoveSpeed, Is.Zero);
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        brain.Perception.Tick(0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        Assert.That(playerHealth.CurrentHealth, Is.LessThan(playerHealth.MaxHealth));
+    }
+
+    [Test]
+    public void ASlowedMob_ChasesAtTheScaledSpeed()
+    {
+        SetupWorld();
+        player.position = new Vector3(4.5f, 0.5f, 0f);
+        brain.GetComponent<StatusEffects>().Set.Apply(Status("Chill", moveSpeed: 0.5f), null, 1f);
+
+        brain.ChangeState(MobStateId.Chase);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+
+        Assert.That(brain.Motor.CurrentMoveSpeed, Is.EqualTo(brain.Motor.MoveSpeed * 0.5f).Within(0.0001f));
+        Assert.That(brain.Motor.DesiredVelocity.magnitude, Is.GreaterThan(0f).And.LessThanOrEqualTo(brain.Motor.MoveSpeed * 0.5f + 0.0001f));
     }
 
     [Test]
@@ -759,6 +827,13 @@ public class MobStateMachineTests
         brain = CreateMob(spawnPosition ?? Vector3.zero);
     }
 
+    private StatusEffectDefinition Status(string name, float moveSpeed = 1f, StatusControls controls = StatusControls.None)
+    {
+        StatusEffectDefinition definition = StatusEffectDefinition.Create(name, StatusKind.Debuff, 10f, moveSpeedMultiplier: moveSpeed, controls: controls);
+        statusDefinitions.Add(definition);
+        return definition;
+    }
+
     private MobController CreateMob(Vector3 position)
     {
         GameObject mob = new("Mob");
@@ -772,6 +847,7 @@ public class MobStateMachineTests
         mob.AddComponent<Health>();
         mob.AddComponent<DamageReceiver>();
         mob.AddComponent<DisableOnDeath>();
+        mob.AddComponent<StatusEffects>();
         mob.AddComponent<MeleeDamageDealer>();
         mob.AddComponent<MobMotor2D>();
         mob.AddComponent<MobPerception2D>();

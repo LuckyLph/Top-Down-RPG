@@ -54,6 +54,11 @@ public class NetworkMobsPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => clientMobStatuses.GetStacks(fortify) == 1, "a late joiner to receive the mob's active status");
         Assert.That(clientMobStatuses.GetSnapshot(0).Remaining, Is.GreaterThan(0f).And.LessThanOrEqualTo(fortify.Duration));
         Assert.That(clientMob.GetComponent<DamageReceiver>().GetDefense(DamageType.Fire).ResistancePercent, Is.EqualTo(30), "The mirror changes the copy's defence too.");
+        Assert.That(hostStatuses.Apply(hostMob.GetComponent<DamageReceiver>(), SceneBootTestHelper.FindStatus("Stun")), Is.EqualTo(StatusApplyOutcome.Landed));
+        Assert.That(hostMob.IsStunned, Is.True);
+        yield return SceneBootTestHelper.WaitUntil(
+            () => (clientMobStatuses.Controls & StatusControls.Stun) != 0 && clientMobStatuses.MovementScale == 0f,
+            "the client's copy to show the mob as stunned");
         Assert.That(clientMob.GetComponent<Rigidbody2D>().bodyType, Is.EqualTo(RigidbodyType2D.Kinematic));
 
         Rigidbody2D hostBody = hostMob.GetComponent<Rigidbody2D>();

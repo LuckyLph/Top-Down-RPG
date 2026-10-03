@@ -210,6 +210,33 @@ public class PlayerMotor2DTests
     }
 
     [Test]
+    public void ASpeedScale_SlowsTheBody_AndZeroHoldsItWithoutStalling()
+    {
+        Place(Vector2.zero);
+        motor.MoveTo(new Vector2(0f, -10f));
+
+        motor.SetSpeedScale(0.5f);
+        motor.FixedTick(FixedDelta);
+        Assert.That(body.linearVelocity, Is.EqualTo(new Vector2(0f, -Speed * 0.5f)));
+        Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.down));
+
+        motor.SetSpeedScale(0f);
+        for (int i = 0; i < 5; i++)
+        {
+            motor.FixedTick(FixedDelta);
+        }
+
+        Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
+        Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.zero));
+        Assert.That(motor.StalledTime, Is.Zero, "A rooted player is not stuck, so its move order is kept.");
+        Assert.That(motor.ReachedDestination, Is.False);
+
+        motor.SetSpeedScale(1f);
+        motor.FixedTick(FixedDelta);
+        Assert.That(body.linearVelocity, Is.EqualTo(new Vector2(0f, -Speed)), "The path resumes once the root ends.");
+    }
+
+    [Test]
     public void StalledTime_GrowsWhileTheBodyDoesNotMove()
     {
         Place(Vector2.zero);

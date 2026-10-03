@@ -32,7 +32,14 @@ public class StatusEffects : MonoBehaviour
     public int Count => set.Count;
     public float DamageDealtMultiplier => set.DamageDealtMultiplier;
     public float DamageTakenMultiplier => set.DamageTakenMultiplier;
+    public StatusControls Controls => set.Controls;
+    public float MoveSpeedMultiplier => set.MoveSpeedMultiplier;
     public bool IsHeld => hold != null && hold.IsHeld;
+
+    /// <summary>
+    /// The factor to apply to the unit's move speed: 0 while stunned or rooted, otherwise the combined slow.
+    /// </summary>
+    public float MovementScale => (set.Controls & (StatusControls.Stun | StatusControls.Root)) != 0 ? 0f : set.MoveSpeedMultiplier;
 
     public StatusSnapshot GetSnapshot(int index)
     {

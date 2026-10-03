@@ -814,9 +814,136 @@ public class PlayerOrdersTests
         Assert.That(output.AimDirection, Is.EqualTo(Vector2.zero), "The weapon falls back to the facing instead of an old aim.");
     }
 
+    [Test]
+    public void Stun_ClearsEveryOrderEndsTheCastAndStopsTheMotor()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.right));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Move));
+
+        PlayerOrderOutput output = Tick(default, StatusControls.Stun);
+
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(orders.HasBufferedCast, Is.False);
+        Assert.That(caster.Ended, Is.EqualTo(1), "The running cast ends; its cooldown stays spent.");
+        Assert.That(Tick(default, StatusControls.Stun).Motor, Is.EqualTo(PlayerMotorRequest.None), "The motor is stopped once.");
+    }
+
+    [Test]
+    public void Stun_IgnoresCommandsAndFailsCastsWithStunned_ThenThePlayerIsIdle()
+    {
+        caster.Set(0, Ability());
+        Tick(default, StatusControls.Stun);
+
+        PlayerOrderOutput click = Tick(Click(new Vector2(3f, 0f)), StatusControls.Stun);
+        Assert.That(click.Motor, Is.EqualTo(PlayerMotorRequest.None));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+
+        Tick(Press(0, Vector2.right), StatusControls.Stun);
+        Assert.That(caster.Started, Is.Zero);
+        Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.Stunned)));
+
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None), "The order that was running before the stun does not come back.");
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Tick(Click(new Vector2(3f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move), "Orders work again once the stun ends.");
+    }
+
+    [Test]
+    public void Stun_StopsAutoAttacks()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0.2f, 0f), distance: 0.1f);
+        Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy)).Swing, Is.True);
+
+        Assert.That(Tick(default, StatusControls.Stun).Swing, Is.False);
+        Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy), StatusControls.Stun).Swing, Is.False);
+    }
+
+    [Test]
+    public void Silence_EndsARunningCast_AndResumesThePausedOrder()
+    {
+        Tick(Click(new Vector2(5f, 0f)));
+        reachedDestination = false;
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(castTime: 0.5f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+        Tick(Press(1, Vector2.up));
+
+        PlayerOrderOutput output = Tick(default, StatusControls.Silence);
+
+        Assert.That(caster.Ended, Is.EqualTo(1));
+        Assert.That(orders.HasBufferedCast, Is.False);
+        Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(output.Destination, Is.EqualTo(new Vector2(5f, 0f)));
+    }
+
+    [Test]
+    public void Silence_FailsCastsWithSilenced_ButAutoAttacksGoOn()
+    {
+        caster.Set(0, Ability());
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0.2f, 0f), distance: 0.1f);
+
+        Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy), StatusControls.Silence).Swing, Is.True);
+        Tick(Press(0, Vector2.right), StatusControls.Silence);
+
+        Assert.That(caster.Started, Is.Zero);
+        Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.Silenced)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
+    }
+
+    [Test]
+    public void Silence_StopsAnApproachFromCastingOnceInRange()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(6f, 0f), distance: 5.5f);
+        caster.Set(3, Ability(targeting: AbilityTargeting.Unit, range: 3f));
+        Tick(Press(3, new Vector2(6f, 0f), enemy));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.CastWhenInRange));
+
+        units.SetDistance(enemy, 1f);
+        Tick(default, StatusControls.Silence);
+
+        Assert.That(caster.Started, Is.Zero);
+        Assert.That(caster.LastFailure, Is.EqualTo((3, CastOutcome.Silenced)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+    }
+
+    [Test]
+    public void Root_KeepsTheMoveOrder_AndFailsOnlyCastsThatMoveTheCaster()
+    {
+        Tick(Click(new Vector2(5f, 0f)), StatusControls.Root);
+        reachedDestination = false;
+        for (int i = 0; i < 10; i++)
+        {
+            time += 0.1f;
+            Tick(default, StatusControls.Root);
+        }
+
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move), "The motor does not stall while rooted, so the order waits.");
+
+        caster.Set(0, Ability(movement: CastMovement.Ability));
+        caster.Set(1, Ability(movement: CastMovement.Stop));
+        Tick(Press(0, Vector2.right), StatusControls.Root);
+        Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.Rooted)));
+        Tick(Press(1, Vector2.right), StatusControls.Root);
+        Assert.That(caster.Started, Is.EqualTo(1));
+    }
+
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
         return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange));
+    }
+
+    private PlayerOrderOutput Tick(PlayerCommand command, StatusControls controls)
+    {
+        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange, controls));
     }
 
     private static PlayerCommand Click(Vector2 point, UnitTarget target = default)

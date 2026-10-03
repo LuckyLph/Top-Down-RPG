@@ -24,6 +24,7 @@ MonoBehaviour:
   periodicAmount: 0
   periodicDamageType: 0
   tickInterval: 1
+  moveSpeedMultiplier: 1
   damageDealtMultiplier: 1
   damageTakenMultiplier: 1
   resistanceDeltas:
@@ -37,5 +38,6 @@ MonoBehaviour:
     percent: 30
   - type: 4
     percent: 30
+  controls: 0
   grantsDamageImmunity: 0
   grantsStatusImmunity: 0

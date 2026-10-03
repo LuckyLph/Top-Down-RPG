@@ -27,13 +27,20 @@ public enum PlayerMotorRequest
 /// </summary>
 public readonly struct PlayerOrderContext
 {
-    public PlayerOrderContext(Vector2 position, float time, bool reachedDestination, float stalledTime, float attackRange)
+    public PlayerOrderContext(
+        Vector2 position,
+        float time,
+        bool reachedDestination,
+        float stalledTime,
+        float attackRange,
+        StatusControls controls = StatusControls.None)
     {
         Position = position;
         Time = time;
         ReachedDestination = reachedDestination;
         StalledTime = stalledTime;
         AttackRange = attackRange;
+        Controls = controls;
     }
 
     public Vector2 Position { get; }
@@ -41,6 +48,7 @@ public readonly struct PlayerOrderContext
     public bool ReachedDestination { get; }
     public float StalledTime { get; }
     public float AttackRange { get; }
+    public StatusControls Controls { get; }
 }
 
 /// <summary>

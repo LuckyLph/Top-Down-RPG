@@ -65,6 +65,26 @@ public class NetworkPlayersPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => hostCopy.transform.position.x > startX + 0.5f, "the client's movement to reach the host");
         Assert.That(hostCopy.FacingDirection.x, Is.GreaterThan(0.9f));
         Assert.That(hostCopy.CurrentMove.x, Is.GreaterThan(0.9f), "The host's copy should show the client walking.");
+
+        float fullSpeed = clientOwned.ControlSettings.MoveSpeed;
+        StatusEffectService hostStatuses = gameplay.Resolve<StatusEffectService>();
+        DamageReceiver hostCopyReceiver = hostCopy.GetComponent<DamageReceiver>();
+        Assert.That(hostStatuses.Apply(hostCopyReceiver, SceneBootTestHelper.FindStatus("Chill")), Is.EqualTo(StatusApplyOutcome.Landed));
+        PlayerMotor2D ownerMotor = clientOwned.GetComponent<PlayerMotor2D>();
+        yield return SceneBootTestHelper.WaitUntil(() => ownerMotor.SpeedScale < 1f, "the owner to apply the host's slow to its own movement");
+        yield return new WaitForSeconds(0.3f);
+        float slowedStartX = hostCopy.transform.position.x;
+        yield return new WaitForSeconds(1f);
+        float slowedSpeed = hostCopy.transform.position.x - slowedStartX;
+        Assert.That(slowedSpeed, Is.GreaterThan(0.2f * fullSpeed), "A slowed client still walks.");
+        Assert.That(slowedSpeed, Is.LessThan(0.8f * fullSpeed), "The host's copy moves at the slowed speed.");
+
+        Assert.That(hostStatuses.Apply(hostCopyReceiver, SceneBootTestHelper.FindStatus("Stun")), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return SceneBootTestHelper.WaitUntil(() => clientOwned.CurrentOrder == PlayerOrderKind.Idle, "the stun to clear the owner's orders");
+        yield return new WaitForSeconds(0.4f);
+        float stunnedX = hostCopy.transform.position.x;
+        yield return new WaitForSeconds(0.5f);
+        Assert.That(Mathf.Abs(hostCopy.transform.position.x - stunnedX), Is.LessThan(0.05f), "A stunned client's player stands still on the host too.");
         client.Input.StopPressedThisFrame = true;
         yield return null;
         client.Input.StopPressedThisFrame = false;

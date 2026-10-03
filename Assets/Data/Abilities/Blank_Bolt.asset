@@ -18,11 +18,13 @@ MonoBehaviour:
   castTime: 0.25
   targeting: 1
   unitFilter: 0
-  range: 0
+  range: 6
   castMovement: 0
   bufferable: 0
   hit:
-    amount: 0
-    type: 0
-    statuses: []
+    amount: 12
+    type: 2
+    statuses:
+    - {fileID: 11400000, guid: 51f49cd362e199047af95ee552cb3345, type: 2}
   heal: 0
+  areaRadius: 0.35

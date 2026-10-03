@@ -8,7 +8,7 @@ using UnityEditor;
 /// <summary>
 /// The player's six ability slots, built from its <see cref="PlayerClass"/> (Q W E R) and equipped weapon (A S).
 /// Checks and starts casts on the clock-driven cooldowns, hands each started cast to <see cref="AbilityService"/>
-/// and raises cast events. Which cast runs when is decided by <see cref="PlayerOrders"/>. Draws gizmos for recent
+/// and, when it completes, has the service resolve its effect; raises cast events. Which cast runs when is decided by <see cref="PlayerOrders"/>. Draws gizmos for recent
 /// casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
 /// </summary>
 [DisallowMultipleComponent]
@@ -49,11 +49,13 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     private AbilityService abilityService;
     private Health health;
     private int runningSlot = -1;
+    private AbilityCast runningCast;
     private readonly CastRecord[] recentCasts = new CastRecord[RecentCastCapacity];
     private int nextRecentCast;
 
     public event Action<AbilityCast> CastStarted;
     public event Action<int> CastEnded;
+    public event Action<AbilityCast> CastCompleted;
     public event Action<int, CastOutcome> CastFailed;
     public event Action SlotsChanged;
 
@@ -180,6 +182,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         cooldowns.Start(slot, clock.Time, ability.Cooldown);
         runningSlot = slot;
         AbilityCast cast = new(slot, ability, aim);
+        runningCast = cast;
         RecordCast(cast, false);
         CastStarted?.Invoke(cast);
         if (abilityService != null)
@@ -190,7 +193,33 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         return CastOutcome.Started;
     }
 
-    public void EndCast(int slot)
+    /// <summary>
+    /// Ends the running cast in <paramref name="slot"/> as finished: raises <see cref="CastEnded"/> and
+    /// <see cref="CastCompleted"/> and has the <see cref="AbilityService"/> resolve its effect (only the authority
+    /// applies it; a client's owner forwards the completion to the host).
+    /// </summary>
+    public void CompleteCast(int slot)
+    {
+        if (runningSlot != slot)
+        {
+            return;
+        }
+
+        AbilityCast cast = runningCast;
+        runningSlot = -1;
+        runningCast = default;
+        CastEnded?.Invoke(slot);
+        CastCompleted?.Invoke(cast);
+        if (abilityService != null)
+        {
+            abilityService.Resolve(this, cast);
+        }
+    }
+
+    /// <summary>
+    /// Ends the running cast in <paramref name="slot"/> early, without its effect: raises <see cref="CastEnded"/>.
+    /// </summary>
+    public void CancelCast(int slot)
     {
         if (runningSlot != slot)
         {
@@ -198,6 +227,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
 
         runningSlot = -1;
+        runningCast = default;
         CastEnded?.Invoke(slot);
     }
 
@@ -230,6 +260,31 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         if (abilityService != null)
         {
             abilityService.Apply(this, cast);
+        }
+    }
+
+    /// <summary>
+    /// Resolves the effect of a cast another machine completed for this player, if this machine is the authority.
+    /// Ignored under the same rules as <see cref="PlayRemoteCast"/>: a caster seen as dead, or a
+    /// <see cref="AbilityTargeting.Unit"/> cast whose target is gone or dead here.
+    /// </summary>
+    public void ResolveRemoteCast(int slot, in CastAim aim)
+    {
+        AbilityDefinition ability = GetAbility(slot);
+        if (ability == null || (health != null && health.IsDead))
+        {
+            return;
+        }
+
+        Health target = aim.Target.Health;
+        if (ability.Targeting == AbilityTargeting.Unit && (target == null || target.IsDead))
+        {
+            return;
+        }
+
+        if (abilityService != null)
+        {
+            abilityService.Resolve(this, new AbilityCast(slot, ability, aim));
         }
     }
 

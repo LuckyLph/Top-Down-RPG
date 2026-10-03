@@ -247,7 +247,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 5: exercising it in play
 - [x] Dev tool: apply any catalog status to the unit under the cursor, or to yourself (DevTools assembly). `StatusDebugPanel`: F2 opens it, F3 applies to the unit under the cursor, F4 to yourself.
-- [x] First real ability effects through `AbilityService` + `HitService`, enough to play with the system: Blank Smite deals damage and stuns, Blank Mend heals and applies Fortify. Effects are a `Hit` and a heal on `Unit` abilities, applied when the cast starts. This starts the "Real ability effects" item in [PlayerControls.md](PlayerControls.md#later).
+- [x] First real ability effects through `AbilityService` + `HitService`, enough to play with the system: Blank Smite deals damage and stuns, Blank Mend heals and applies Fortify. Effects are a `Hit`, a heal and an area radius, applied when the cast completes (an interrupted cast never lands) to the target, the caster, a circle around the caster or the aimed point, or a line along the aimed direction. Blank Bolt and Blank Whirl got effects too. This starts the "Real ability effects" item in [PlayerControls.md](PlayerControls.md#later).
 
 ## Testing
 

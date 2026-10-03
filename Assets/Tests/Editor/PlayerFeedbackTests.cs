@@ -65,7 +65,7 @@ public class PlayerFeedbackTests
         localPlayer.Assign(new LocalPlayer(abilities.GetComponent<PlayerController>()));
 
         abilities.TryCast(0, default);
-        abilities.EndCast(0);
+        abilities.CompleteCast(0);
         clock.Advance(1f);
         barPresenter.Tick();
 

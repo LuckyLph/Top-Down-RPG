@@ -22,7 +22,8 @@ MonoBehaviour:
   castMovement: 1
   bufferable: 1
   hit:
-    amount: 0
+    amount: 10
     type: 0
     statuses: []
   heal: 0
+  areaRadius: 1.5

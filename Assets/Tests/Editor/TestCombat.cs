@@ -36,7 +36,7 @@ internal static class TestCombat
         combatEvents ??= new CombatEvents();
         DamageService damageService = CreateDamageService(authority, combatEvents);
         HitService hitService = new(damageService, CreateStatusService(damageService, authority, combatEvents));
-        return new AbilityService(authority, damageService, hitService);
+        return new AbilityService(authority, damageService, hitService, Settings);
     }
 
     public static HitService CreateHitService(IGameAuthority authority, CombatEvents combatEvents = null)

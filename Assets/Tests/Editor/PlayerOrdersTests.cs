@@ -832,6 +832,7 @@ public class PlayerOrdersTests
         Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.Idle));
         Assert.That(orders.HasBufferedCast, Is.False);
         Assert.That(caster.Ended, Is.EqualTo(1), "The running cast ends; its cooldown stays spent.");
+        Assert.That(caster.Cancelled, Is.EqualTo(1), "A stunned cast is cancelled, so its effect never lands.");
         Assert.That(Tick(default, StatusControls.Stun).Motor, Is.EqualTo(PlayerMotorRequest.None), "The motor is stopped once.");
     }
 
@@ -878,6 +879,7 @@ public class PlayerOrdersTests
         PlayerOrderOutput output = Tick(default, StatusControls.Silence);
 
         Assert.That(caster.Ended, Is.EqualTo(1));
+        Assert.That(caster.Cancelled, Is.EqualTo(1), "A silenced cast is cancelled, so its effect never lands.");
         Assert.That(orders.HasBufferedCast, Is.False);
         Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
@@ -934,6 +936,34 @@ public class PlayerOrdersTests
         Assert.That(caster.LastFailure, Is.EqualTo((0, CastOutcome.Rooted)));
         Tick(Press(1, Vector2.right), StatusControls.Root);
         Assert.That(caster.Started, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ACastThatRunsItsCastTime_Completes_AndOneThatIsCleared_IsCancelled()
+    {
+        caster.Set(0, Ability(castTime: 0.5f));
+        caster.Set(1, Ability(castTime: 0f));
+        Tick(Press(0, Vector2.right));
+        time = 0.5f;
+        Tick(default);
+        Assert.That(caster.Completed, Is.EqualTo(1));
+        Assert.That(caster.Cancelled, Is.Zero);
+
+        Tick(Press(1, Vector2.right));
+        Assert.That(caster.Completed, Is.EqualTo(2), "An instant cast completes on the tick it starts.");
+
+        time = 1f;
+        Tick(Press(0, Vector2.right));
+        orders.Clear();
+        Assert.That(caster.Completed, Is.EqualTo(2));
+        Assert.That(caster.Cancelled, Is.EqualTo(1), "Death or a teleport cancels the cast.");
+
+        time = 2f;
+        Tick(Press(0, Vector2.right));
+        Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+        time = 2.5f;
+        Tick(default);
+        Assert.That(caster.Completed, Is.EqualTo(3), "Stop lets the started cast run to its end.");
     }
 
     private PlayerOrderOutput Tick(PlayerCommand command)
@@ -993,6 +1023,8 @@ public class PlayerOrdersTests
         public CastOutcome? Failure { get; set; }
         public int Started { get; private set; }
         public int Ended { get; private set; }
+        public int Completed { get; private set; }
+        public int Cancelled { get; private set; }
         public int FailureCount { get; private set; }
         public CastAim LastAim { get; private set; }
         public (int, CastOutcome) LastFailure { get; private set; }
@@ -1032,9 +1064,16 @@ public class PlayerOrdersTests
             return CastOutcome.Started;
         }
 
-        public void EndCast(int slot)
+        public void CompleteCast(int slot)
         {
             Ended++;
+            Completed++;
+        }
+
+        public void CancelCast(int slot)
+        {
+            Ended++;
+            Cancelled++;
         }
 
         public void ReportFailure(int slot, CastOutcome reason)

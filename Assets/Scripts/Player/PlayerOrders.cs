@@ -112,7 +112,7 @@ public sealed class PlayerOrders
     {
         if (current.Kind == PlayerOrderKind.Casting && caster != null)
         {
-            caster.EndCast(current.Slot);
+            caster.CancelCast(current.Slot);
         }
 
         DropBuffered(CastOutcome.Cancelled);
@@ -167,7 +167,7 @@ public sealed class PlayerOrders
 
         if (caster != null)
         {
-            caster.EndCast(current.Slot);
+            caster.CancelCast(current.Slot);
         }
 
         current = paused;
@@ -522,7 +522,7 @@ public sealed class PlayerOrders
 
     private void FinishCast(in PlayerOrderContext context)
     {
-        caster.EndCast(current.Slot);
+        caster.CompleteCast(current.Slot);
         current = default;
 
         if (hasBuffered && TryFireBuffered(context))

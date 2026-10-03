@@ -46,7 +46,7 @@ public class NetworkAbilitiesPlayModeTests
 
         PlayerAbilities hostAbilities = hostPlayer.GetComponent<PlayerAbilities>();
         Assert.That(hostAbilities.TryCast(0, new CastAim(Vector2.zero, Vector2.right, default)), Is.EqualTo(CastOutcome.Started));
-        hostAbilities.EndCast(0);
+        hostAbilities.CompleteCast(0);
         yield return SceneBootTestHelper.WaitUntil(
             () => hostPlayerOnClient.TryGetRecentCast(0, out AbilityCast remoteCast, out bool remote) && remote && remoteCast.Slot == 0,
             "the host's cast to reach the client's copy of the host's player");
@@ -88,8 +88,10 @@ public class NetworkAbilitiesPlayModeTests
         Assert.That(clientApplied, Is.Zero);
 
         Health hostMobHealth = hostMob.GetComponent<Health>();
-        Assert.That(hostMobHealth.CurrentHealth, Is.LessThan(hostMobHealth.MaxHealth), "The client's Smite damages the host's mob.");
-        Assert.That(hostMob.IsStunned, Is.True, "And stuns it.");
+        Assert.That(hostMobHealth.CurrentHealth, Is.EqualTo(hostMobHealth.MaxHealth), "Smite lands when its cast completes, not when it starts.");
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostMobHealth.CurrentHealth < hostMobHealth.MaxHealth && hostMob.IsStunned,
+            "the client's completed Smite to damage and stun the host's mob");
         StatusEffects clientMobStatuses = mobOnClient.GetComponent<StatusEffects>();
         Health clientMobHealth = mobOnClient.GetComponent<Health>();
         yield return SceneBootTestHelper.WaitUntil(
@@ -114,7 +116,7 @@ public class NetworkAbilitiesPlayModeTests
 
         PlayerAbilities hostAbilities = hostPlayer.GetComponent<PlayerAbilities>();
         Assert.That(hostAbilities.TryCast(0, new CastAim(Vector2.zero, Vector2.right, default)), Is.EqualTo(CastOutcome.Started));
-        hostAbilities.EndCast(0);
+        hostAbilities.CompleteCast(0);
         Assert.That(applied.Count, Is.EqualTo(1), "The host's own cast is applied directly.");
         Assert.That(applied[0].Caster, Is.SameAs(hostAbilities));
 
@@ -149,8 +151,12 @@ public class NetworkAbilitiesPlayModeTests
         Assert.That(applied[1].Caster, Is.SameAs(clientPlayerOnHost.GetComponent<PlayerAbilities>()));
         Assert.That(applied[1].Cast.Slot, Is.EqualTo(AllySlot));
         Assert.That(applied[1].Cast.Aim.Target.Health, Is.SameAs(hostPlayer.GetComponent<Health>()), "The target arrives as the host's own player.");
-        Assert.That(hostPlayer.GetComponent<StatusEffects>().GetStacks(SceneBootTestHelper.FindStatus("Fortify")), Is.EqualTo(1), "The client's Mend fortifies the host's player.");
         Assert.That(applied[1].Cast.Aim.Target.Team, Is.EqualTo(UnitTeam.Ally));
+
+        StatusEffects hostPlayerStatuses = hostPlayer.GetComponent<StatusEffects>();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostPlayerStatuses.GetStacks(SceneBootTestHelper.FindStatus("Fortify")) == 1,
+            "the client's completed Mend to fortify the host's player");
 
         Vector2 aim = applied[1].Cast.Aim.Direction;
         Assert.That(aim.x, Is.LessThan(-0.9f), "The client aimed left, at the host's player.");

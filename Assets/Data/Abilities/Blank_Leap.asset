@@ -26,3 +26,4 @@ MonoBehaviour:
     type: 0
     statuses: []
   heal: 0
+  areaRadius: 0

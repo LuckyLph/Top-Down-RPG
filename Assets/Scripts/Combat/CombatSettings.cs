@@ -14,6 +14,9 @@ public sealed class CombatSettings : ScriptableObject
     [SerializeField, Min(0), Tooltip("Least damage a hit that is not immune deals.")]
     private int minimumDamage = 1;
 
+    [SerializeField, Tooltip("Layers that area effects look for units on.")]
+    private LayerMask unitLayers = ~0;
+
     [Header("Statuses")]
     [SerializeField, Tooltip("Every status definition; a status is identified on the wire by its index here.")]
     private StatusEffectCatalog statusCatalog;
@@ -35,6 +38,7 @@ public sealed class CombatSettings : ScriptableObject
     public int ResistanceCap => resistanceCap;
     public int MinimumDamage => minimumDamage;
     public StatusEffectCatalog StatusCatalog => statusCatalog;
+    public LayerMask UnitLayers => unitLayers;
     public Color HealColor => healColor;
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;

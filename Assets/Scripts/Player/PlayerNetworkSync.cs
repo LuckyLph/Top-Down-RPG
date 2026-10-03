@@ -58,6 +58,7 @@ public class PlayerNetworkSync : NetworkBehaviour
             if (abilities != null)
             {
                 abilities.CastStarted += HandleLocalCast;
+                abilities.CastCompleted += HandleLocalCastCompleted;
             }
 
             return;
@@ -89,6 +90,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (abilities != null)
         {
             abilities.CastStarted -= HandleLocalCast;
+            abilities.CastCompleted -= HandleLocalCastCompleted;
         }
 
         if (binder != null)
@@ -146,10 +148,37 @@ public class PlayerNetworkSync : NetworkBehaviour
 
     private void HandleLocalCast(AbilityCast cast)
     {
-        Health target = cast.Aim.Target.Health;
+        bool hasTarget = TryReference(cast.Aim, out NetworkObjectReference target);
+        CastRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
+    }
+
+    private void HandleLocalCastCompleted(AbilityCast cast)
+    {
+        if (IsServer)
+        {
+            return;
+        }
+
+        bool hasTarget = TryReference(cast.Aim, out NetworkObjectReference target);
+        CastCompletedRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void CastCompletedRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget)
+    {
+        if (abilities != null)
+        {
+            abilities.ResolveRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default));
+        }
+    }
+
+    private static bool TryReference(in CastAim aim, out NetworkObjectReference reference)
+    {
+        Health target = aim.Target.Health;
         NetworkObject targetObject = target != null ? target.GetComponent<NetworkObject>() : null;
         bool hasTarget = targetObject != null && targetObject.IsSpawned;
-        CastRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, hasTarget ? new NetworkObjectReference(targetObject) : default, hasTarget);
+        reference = hasTarget ? new NetworkObjectReference(targetObject) : default;
+        return hasTarget;
     }
 
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]

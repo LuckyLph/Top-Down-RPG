@@ -1,6 +1,6 @@
 /// <summary>
-/// What <see cref="PlayerOrders"/> needs from the player's abilities: the slots, readiness, and starting, ending
-/// and reporting casts. Whether a cast is already running is decided by the orders.
+/// What <see cref="PlayerOrders"/> needs from the player's abilities: the slots, readiness, and starting,
+/// completing, cancelling and reporting casts. Whether a cast is already running is decided by the orders.
 /// </summary>
 public interface IAbilityCaster
 {
@@ -12,12 +12,20 @@ public interface IAbilityCaster
     bool CanCast(int slot, out CastOutcome failure);
 
     /// <summary>
-    /// Starts the cast (cooldown, events, effect) and returns <see cref="CastOutcome.Started"/>, or reports and
-    /// returns why it cannot.
+    /// Starts the cast (cooldown, events) and returns <see cref="CastOutcome.Started"/>, or reports and returns why
+    /// it cannot.
     /// </summary>
     CastOutcome TryCast(int slot, in CastAim aim);
 
-    void EndCast(int slot);
+    /// <summary>
+    /// Ends the running cast because its cast time ran out: its effect lands.
+    /// </summary>
+    void CompleteCast(int slot);
+
+    /// <summary>
+    /// Ends the running cast early (death, a stun or silence, a teleport): no effect, the cooldown stays spent.
+    /// </summary>
+    void CancelCast(int slot);
 
     void ReportFailure(int slot, CastOutcome reason);
 }

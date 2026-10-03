@@ -127,7 +127,7 @@ public class PlayerControlsPlayModeTests
         }
 
         Assert.That(abilities.TryCast(0, new CastAim(Vector2.zero, Vector2.right, default)), Is.EqualTo(CastOutcome.Started));
-        abilities.EndCast(0);
+        abilities.CompleteCast(0);
         yield return null;
         yield return null;
 
@@ -196,7 +196,7 @@ public class PlayerControlsPlayModeTests
         Assert.That(abilities.GetAbility(3).DisplayName, Is.EqualTo("Blank Smite"));
         int mobHealthBefore = mobHealth.CurrentHealth;
         Assert.That(abilities.TryCast(3, atMob), Is.EqualTo(CastOutcome.Started));
-        abilities.EndCast(3);
+        abilities.CompleteCast(3);
         Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealthBefore - 18), "15 damage, 1.2x on a Vulnerable mob.");
         Assert.That(mob.IsStunned, Is.True, "Smite stuns.");
 
@@ -206,7 +206,7 @@ public class PlayerControlsPlayModeTests
         CastAim atSelf = new(player.transform.position, Vector2.zero, new UnitTarget(playerHealth, player.GetComponent<Collider2D>(), UnitTeam.Ally));
         Assert.That(abilities.GetAbility(2).DisplayName, Is.EqualTo("Blank Mend"));
         Assert.That(abilities.TryCast(2, atSelf), Is.EqualTo(CastOutcome.Started));
-        abilities.EndCast(2);
+        abilities.CompleteCast(2);
         Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealthBefore - 15), "Mend heals 25.");
         Assert.That(player.GetComponent<StatusEffects>().GetStacks(SceneBootTestHelper.FindStatus("Fortify")), Is.EqualTo(1), "And fortifies.");
         yield return null;

@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Describes how an ability is cast (cooldown, cast time, targeting, range, movement during the cast) and, for
-/// <see cref="AbilityTargeting.Unit"/> abilities, its effect on the target: a <see cref="Hit"/> (damage and
-/// statuses) and a heal, applied by <see cref="AbilityService"/> on the host when the cast starts.
+/// Describes how an ability is cast (cooldown, cast time, targeting, range, movement during the cast) and its
+/// effect: a <see cref="Hit"/> (damage and statuses) and a heal, applied by <see cref="AbilityService"/> on the host
+/// when the cast completes, to the units its targeting and <see cref="AreaRadius"/> select.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Abilities/Ability Definition", fileName = "Ability")]
 public sealed class AbilityDefinition : ScriptableObject
@@ -25,7 +25,7 @@ public sealed class AbilityDefinition : ScriptableObject
     [SerializeField, Tooltip("Units a Unit-targeted cast accepts. Ignored for other targeting.")]
     private AbilityUnitFilter unitFilter = AbilityUnitFilter.Enemy;
 
-    [SerializeField, Min(0f), Tooltip("Maximum range for Point and Unit targeting (collider distance for units).")]
+    [SerializeField, Min(0f), Tooltip("Maximum range for Point and Unit targeting (collider distance for units), and the length of a Direction ability's line.")]
     private float range = 3f;
 
     [Header("Casting")]
@@ -35,12 +35,15 @@ public sealed class AbilityDefinition : ScriptableObject
     [SerializeField, Tooltip("Pressing it while another cast runs queues it instead of failing.")]
     private bool bufferable;
 
-    [Header("Effect (Unit targeting only)")]
-    [SerializeField, Tooltip("Damage and statuses applied to the target. Damage only lands on enemies, debuffs on enemies, buffs on allies.")]
+    [Header("Effect")]
+    [SerializeField, Tooltip("Damage and statuses applied to each affected unit. Damage and debuffs only land on enemies, buffs on allies.")]
     private Hit hit;
 
-    [SerializeField, Min(0), Tooltip("HP restored to the target. Only lands on allies.")]
+    [SerializeField, Min(0), Tooltip("HP restored to each affected unit. Only lands on allies.")]
     private int heal;
+
+    [SerializeField, Min(0f), Tooltip("None: radius around the caster (0 = the caster only). Point: radius around the point. Direction: half-width of the line, which is Range long. Unused for Unit.")]
+    private float areaRadius;
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
     public Sprite Icon => icon;
@@ -53,6 +56,7 @@ public sealed class AbilityDefinition : ScriptableObject
     public bool Bufferable => bufferable;
     public Hit Hit => hit;
     public int Heal => Mathf.Max(0, heal);
+    public float AreaRadius => Mathf.Max(0f, areaRadius);
 
     /// <summary>
     /// Whether casting it does anything to its target: damage, statuses or a heal.
@@ -82,7 +86,8 @@ public sealed class AbilityDefinition : ScriptableObject
         CastMovement castMovement = CastMovement.Stop,
         bool bufferable = false,
         Hit hit = default,
-        int heal = 0)
+        int heal = 0,
+        float areaRadius = 0f)
     {
         AbilityDefinition ability = CreateInstance<AbilityDefinition>();
         ability.name = name;
@@ -96,6 +101,7 @@ public sealed class AbilityDefinition : ScriptableObject
         ability.bufferable = bufferable;
         ability.hit = hit;
         ability.heal = heal;
+        ability.areaRadius = areaRadius;
         ability.hideFlags = HideFlags.HideAndDontSave;
         return ability;
     }

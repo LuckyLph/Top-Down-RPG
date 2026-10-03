@@ -11,6 +11,7 @@ public class PlayerAbilitiesTests
     private ManualClock clock;
     private AbilityService service;
     private int applied;
+    private int resolved;
     private PlayerAbilities abilities;
     private PlayerWeaponController weapon;
     private Health health;
@@ -22,6 +23,7 @@ public class PlayerAbilitiesTests
     {
         clock = new ManualClock();
         applied = 0;
+        resolved = 0;
         classAbilities = new[] { Ability("Q", cooldown: 2f), Ability("W"), Ability("E"), null };
         weaponAbilities = new[] { Ability("A"), Ability("S") };
         abilities = CreatePlayer(FixedGameAuthority.Authoritative);
@@ -99,13 +101,13 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.TryCast(3, default), Is.EqualTo(CastOutcome.EmptySlot));
 
         abilities.TryCast(0, default);
-        abilities.EndCast(0);
+        abilities.CompleteCast(0);
         clock.Advance(1f);
         Assert.That(abilities.TryCast(0, default), Is.EqualTo(CastOutcome.OnCooldown));
 
         abilities.TryCast(1, default);
         Assert.That(abilities.TryCast(2, default), Is.EqualTo(CastOutcome.CastInProgress));
-        abilities.EndCast(1);
+        abilities.CompleteCast(1);
 
         health.ApplyDamage(health.MaxHealth);
         Assert.That(abilities.TryCast(4, default), Is.EqualTo(CastOutcome.Dead));
@@ -118,18 +120,53 @@ public class PlayerAbilitiesTests
     }
 
     [Test]
-    public void EndCast_RaisesCastEnded_OnlyForTheRunningSlot()
+    public void CompleteAndCancel_EndOnlyTheRunningSlot_AndOnlyACompletedCastResolves()
     {
         List<int> ended = new();
+        List<AbilityCast> completed = new();
         abilities.CastEnded += ended.Add;
-        abilities.TryCast(1, default);
+        abilities.CastCompleted += completed.Add;
+        abilities.TryCast(1, new CastAim(Vector2.one, Vector2.up, default));
 
-        abilities.EndCast(0);
-        abilities.EndCast(1);
-        abilities.EndCast(1);
+        abilities.CompleteCast(0);
+        abilities.CompleteCast(1);
+        abilities.CompleteCast(1);
 
         Assert.That(ended, Is.EqualTo(new[] { 1 }));
+        Assert.That(completed.Count, Is.EqualTo(1));
+        Assert.That(completed[0].Aim.Point, Is.EqualTo(Vector2.one), "The completed cast keeps the aim it started with.");
+        Assert.That(resolved, Is.EqualTo(1));
         Assert.That(abilities.IsCasting, Is.False);
+
+        clock.Advance(10f);
+        abilities.TryCast(1, default);
+        abilities.CancelCast(1);
+        abilities.CancelCast(1);
+        Assert.That(ended, Is.EqualTo(new[] { 1, 1 }));
+        Assert.That(completed.Count, Is.EqualTo(1), "A cancelled cast does not complete.");
+        Assert.That(resolved, Is.EqualTo(1), "Nor resolve its effect.");
+        Assert.That(abilities.IsCasting, Is.False);
+    }
+
+    [Test]
+    public void ResolveRemoteCast_ResolvesOnTheAuthority_UnderThePlayRemoteCastRules()
+    {
+        abilities.Configure(Track(PlayerClass.Create("Unit", Track(AbilityDefinition.Create("Mend", targeting: AbilityTargeting.Unit, unitFilter: AbilityUnitFilter.Ally)))));
+        Health target = Track(new GameObject("Target")).AddComponent<Health>();
+        CastAim aimed = new(Vector2.zero, Vector2.up, new UnitTarget(target, null, UnitTeam.Ally));
+
+        abilities.ResolveRemoteCast(0, default);
+        Assert.That(resolved, Is.Zero, "The target did not resolve on this machine.");
+        abilities.ResolveRemoteCast(3, aimed);
+        Assert.That(resolved, Is.Zero, "An empty slot.");
+
+        abilities.ResolveRemoteCast(0, aimed);
+        Assert.That(resolved, Is.EqualTo(1));
+        Assert.That(applied, Is.Zero, "Resolving is not starting.");
+
+        health.ApplyDamage(health.MaxHealth);
+        abilities.ResolveRemoteCast(0, aimed);
+        Assert.That(resolved, Is.EqualTo(1), "This machine sees the caster as dead.");
     }
 
     [Test]
@@ -215,7 +252,7 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.RecentCastCount, Is.Zero);
 
         abilities.TryCast(0, new CastAim(Vector2.one, Vector2.up, default));
-        abilities.EndCast(0);
+        abilities.CompleteCast(0);
         abilities.PlayRemoteCast(1, default);
         abilities.PlayRemoteCast(3, default);
 
@@ -325,6 +362,7 @@ public class PlayerAbilitiesTests
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.55f, new Vector2[4], weaponAbilities: weaponAbilities)));
         service = TestCombat.CreateAbilityService(authority);
         service.CastApplied += (_, _) => applied++;
+        service.CastResolved += (_, _) => resolved++;
         PlayerAbilities playerAbilities = player.AddComponent<PlayerAbilities>();
         playerAbilities.Construct(clock, service);
         playerAbilities.Configure(Track(PlayerClass.Create("Test", classAbilities)));

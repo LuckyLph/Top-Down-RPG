@@ -31,96 +31,209 @@ public class AbilityEffectTests
     }
 
     [Test]
-    public void AUnitAbility_DamagesItsEnemyTarget_AndAppliesItsStatuses()
+    public void StartingACast_HasNoEffect_ResolvingItDoes()
     {
-        PlayerAbilities caster = Caster();
-        DamageReceiver mob = Unit("Mob", Faction.Mobs);
-        StatusEffectDefinition stun = Status("Stun", StatusKind.Debuff, StatusControls.Stun);
-        AbilityDefinition smite = Ability(AbilityTargeting.Unit, AbilityUnitFilter.Enemy, new Hit(15, DamageType.Physical, new[] { stun }));
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(2f, 0f));
+        AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical));
+        int resolved = 0;
+        service.CastResolved += (_, _) => resolved++;
 
         Assert.That(service.Apply(caster, Cast(smite, mob, UnitTeam.Enemy)), Is.True);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth), "Effects wait for the cast to complete.");
+
+        Assert.That(service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy)), Is.True);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
+        Assert.That(resolved, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AUnitAbility_DamagesItsEnemyTarget_AndAppliesItsStatuses()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(2f, 0f));
+        StatusEffectDefinition stun = Status("Stun", StatusKind.Debuff, StatusControls.Stun);
+        AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical, new[] { stun }));
+
+        service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy));
 
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
-        Assert.That(mob.Statuses.GetStacks(stun), Is.EqualTo(1));
         Assert.That(mob.Statuses.Controls, Is.EqualTo(StatusControls.Stun));
     }
 
     [Test]
     public void AUnitAbility_HealsAndBuffsAnAlly_ButNeverHurtsOne()
     {
-        PlayerAbilities caster = Caster();
-        DamageReceiver ally = Unit("Ally", Faction.Players);
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver ally = Unit("Ally", Faction.Players, new Vector2(2f, 0f));
         ally.Health.ApplyDamage(40);
         StatusEffectDefinition fortify = Status("Fortify", StatusKind.Buff, StatusControls.None);
-        AbilityDefinition mend = Ability(AbilityTargeting.Unit, AbilityUnitFilter.Ally, new Hit(0, DamageType.Physical, new[] { fortify }), heal: 25);
+        AbilityDefinition mend = Ability(AbilityTargeting.Unit, new Hit(0, DamageType.Physical, new[] { fortify }), heal: 25);
         int heals = 0;
         events.HealApplied += _ => heals++;
 
-        service.Apply(caster, Cast(mend, ally, UnitTeam.Ally));
+        service.Resolve(caster, Cast(mend, ally, UnitTeam.Ally));
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 15));
         Assert.That(ally.Statuses.GetStacks(fortify), Is.EqualTo(1));
         Assert.That(heals, Is.EqualTo(1));
 
-        AbilityDefinition smite = Ability(AbilityTargeting.Unit, AbilityUnitFilter.Any, new Hit(15, DamageType.Physical));
-        service.Apply(caster, Cast(smite, ally, UnitTeam.Ally));
+        service.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), ally, UnitTeam.Ally));
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 15), "No friendly fire from abilities either.");
     }
 
     [Test]
-    public void AbilitiesWithoutAUnitTargetOrWithoutAuthority_HaveNoEffect()
+    public void ASelfAbility_WithoutARadius_AffectsOnlyTheCaster()
     {
-        PlayerAbilities caster = Caster();
-        DamageReceiver mob = Unit("Mob", Faction.Mobs);
-        Hit hit = new(15, DamageType.Physical);
-        int applied = 0;
-        service.CastApplied += (_, _) => applied++;
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver casterUnit = caster.GetComponent<DamageReceiver>();
+        DamageReceiver ally = Unit("Ally", Faction.Players, new Vector2(0.5f, 0f));
+        casterUnit.Health.ApplyDamage(30);
+        ally.Health.ApplyDamage(30);
+        StatusEffectDefinition fortify = Status("Fortify", StatusKind.Buff, StatusControls.None);
 
-        Assert.That(service.Apply(caster, Cast(Ability(AbilityTargeting.Direction, AbilityUnitFilter.Enemy, hit), mob, UnitTeam.Enemy)), Is.True);
-        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth), "Only Unit targeting has effects for now.");
-        Assert.That(applied, Is.EqualTo(1), "The cast itself is still applied once.");
+        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(0, DamageType.Physical, new[] { fortify }), heal: 20)));
 
+        Assert.That(casterUnit.Health.CurrentHealth, Is.EqualTo(casterUnit.Health.MaxHealth - 10));
+        Assert.That(casterUnit.Statuses.GetStacks(fortify), Is.EqualTo(1));
+        Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 30), "Only the caster.");
+        Assert.That(ally.Statuses.Count, Is.Zero);
+    }
+
+    [Test]
+    public void ASelfAbility_WithARadius_HitsTheEnemiesAroundTheCaster()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver near = Unit("Near", Faction.Mobs, new Vector2(1f, 0f));
+        DamageReceiver behind = Unit("Behind", Faction.Mobs, new Vector2(-1f, 0.5f));
+        DamageReceiver far = Unit("Far", Faction.Mobs, new Vector2(3f, 0f));
+        DamageReceiver ally = Unit("Ally", Faction.Players, new Vector2(0f, 1f));
+        Physics2D.SyncTransforms();
+
+        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(10, DamageType.Physical), areaRadius: 1.5f)));
+
+        Assert.That(near.Health.CurrentHealth, Is.EqualTo(near.Health.MaxHealth - 10));
+        Assert.That(behind.Health.CurrentHealth, Is.EqualTo(behind.Health.MaxHealth - 10));
+        Assert.That(far.Health.CurrentHealth, Is.EqualTo(far.Health.MaxHealth), "Outside the radius.");
+        Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth), "Allies are not hurt.");
+        Assert.That(caster.GetComponent<Health>().CurrentHealth, Is.EqualTo(caster.GetComponent<Health>().MaxHealth));
+    }
+
+    [Test]
+    public void APointAbility_AffectsTheUnitsAroundThePoint_HealingAlliesAndHittingEnemies()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(4f, 0f));
+        DamageReceiver ally = Unit("Ally", Faction.Players, new Vector2(4.5f, 0.5f));
+        DamageReceiver elsewhere = Unit("Elsewhere", Faction.Mobs, new Vector2(0f, 4f));
+        ally.Health.ApplyDamage(30);
+        Physics2D.SyncTransforms();
+        AbilityDefinition quake = Ability(AbilityTargeting.Point, new Hit(10, DamageType.Physical), heal: 5, areaRadius: 1.25f);
+
+        service.Resolve(caster, new AbilityCast(1, quake, new CastAim(new Vector2(4f, 0f), Vector2.right, default)));
+
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 10));
+        Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 25), "Healed, and never damaged.");
+        Assert.That(elsewhere.Health.CurrentHealth, Is.EqualTo(elsewhere.Health.MaxHealth));
+    }
+
+    [Test]
+    public void ADirectionAbility_HitsTheEnemiesOnItsLine_UpToItsRange()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver first = Unit("First", Faction.Mobs, new Vector2(2f, 0.1f));
+        DamageReceiver second = Unit("Second", Faction.Mobs, new Vector2(5f, -0.2f));
+        DamageReceiver beyond = Unit("Beyond", Faction.Mobs, new Vector2(8f, 0f));
+        DamageReceiver beside = Unit("Beside", Faction.Mobs, new Vector2(3f, 2f));
+        DamageReceiver behind = Unit("Behind", Faction.Mobs, new Vector2(-3f, 0f));
+        Physics2D.SyncTransforms();
+        AbilityDefinition bolt = Ability(AbilityTargeting.Direction, new Hit(12, DamageType.Frost), range: 6f, areaRadius: 0.35f);
+
+        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(new Vector2(10f, 0f), Vector2.right, default)));
+
+        Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 12));
+        Assert.That(second.Health.CurrentHealth, Is.EqualTo(second.Health.MaxHealth - 12), "The line pierces.");
+        Assert.That(beyond.Health.CurrentHealth, Is.EqualTo(beyond.Health.MaxHealth), "Past the range.");
+        Assert.That(beside.Health.CurrentHealth, Is.EqualTo(beside.Health.MaxHealth), "Off the line.");
+        Assert.That(behind.Health.CurrentHealth, Is.EqualTo(behind.Health.MaxHealth));
+
+        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(Vector2.zero, Vector2.zero, default)));
+        Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 12), "No direction, no line.");
+    }
+
+    [Test]
+    public void ResolvingWithoutAuthority_DoesNothing()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(2f, 0f));
         AbilityService client = TestCombat.CreateAbilityService(new FixedGameAuthority(false));
-        Assert.That(client.Apply(caster, Cast(Ability(AbilityTargeting.Unit, AbilityUnitFilter.Enemy, hit), mob, UnitTeam.Enemy)), Is.False);
+
+        Assert.That(client.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), mob, UnitTeam.Enemy)), Is.False);
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth));
     }
 
     [Test]
-    public void ACastWhoseTargetHasNoReceiver_DoesNothingButStillApplies()
+    public void ACastWhoseTargetHasNoReceiver_DoesNothingButStillResolves()
     {
-        PlayerAbilities caster = Caster();
-        GameObject bare = Track(new GameObject("Bare"));
-        Health bareHealth = bare.AddComponent<Health>();
-        AbilityDefinition smite = Ability(AbilityTargeting.Unit, AbilityUnitFilter.Enemy, new Hit(15, DamageType.Physical));
+        PlayerAbilities caster = Caster(Vector2.zero);
+        Health bareHealth = Track(new GameObject("Bare")).AddComponent<Health>();
+        AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical));
 
-        Assert.That(service.Apply(caster, new AbilityCast(3, smite, new CastAim(Vector2.zero, Vector2.right, new UnitTarget(bareHealth, null, UnitTeam.Enemy)))), Is.True);
+        Assert.That(service.Resolve(caster, new AbilityCast(3, smite, new CastAim(Vector2.zero, Vector2.right, new UnitTarget(bareHealth, null, UnitTeam.Enemy)))), Is.True);
         Assert.That(bareHealth.CurrentHealth, Is.EqualTo(bareHealth.MaxHealth));
     }
 
     [Test]
-    public void Content_SmiteDamagesAndStuns_MendHealsAndFortifies_TheOtherBlanksDoNothing()
+    public void ThroughPlayerAbilities_OnlyACompletedCastLands()
     {
-        AbilityDefinition smite = AssetDatabase.LoadAssetAtPath<AbilityDefinition>("Assets/Data/Abilities/Blank_Smite.asset");
-        AbilityDefinition mend = AssetDatabase.LoadAssetAtPath<AbilityDefinition>("Assets/Data/Abilities/Blank_Mend.asset");
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(2f, 0f));
+        AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical));
+        ManualClock clock = new();
+        caster.Construct(clock, service);
+        caster.Configure(Track(PlayerClass.Create("Test", smite)));
+        CastAim aim = new(mob.transform.position, Vector2.right, new UnitTarget(mob.Health, null, UnitTeam.Enemy));
+
+        Assert.That(caster.TryCast(0, aim), Is.EqualTo(CastOutcome.Started));
+        caster.CancelCast(0);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth), "An interrupted cast never lands.");
+
+        clock.Advance(5f);
+        Assert.That(caster.TryCast(0, aim), Is.EqualTo(CastOutcome.Started));
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth), "Not while it is being cast.");
+        caster.CompleteCast(0);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
+    }
+
+    [Test]
+    public void Content_TheAbilitiesWithEffects_AndTheMovementBlanks()
+    {
+        AbilityDefinition bolt = Load("Blank_Bolt");
+        AbilityDefinition whirl = Load("Blank_Whirl");
+        AbilityDefinition smite = Load("Blank_Smite");
+        AbilityDefinition mend = Load("Blank_Mend");
+
+        Assert.That(bolt.Hit.Amount, Is.EqualTo(12));
+        Assert.That(bolt.Hit.Type, Is.EqualTo(DamageType.Frost));
+        Assert.That(bolt.Hit.GetStatus(0).DisplayName, Is.EqualTo("Chill"));
+        Assert.That(bolt.Range, Is.EqualTo(6f));
+        Assert.That(bolt.AreaRadius, Is.GreaterThan(0f));
+
+        Assert.That(whirl.Hit.Amount, Is.EqualTo(10));
+        Assert.That(whirl.Targeting, Is.EqualTo(AbilityTargeting.None));
+        Assert.That(whirl.AreaRadius, Is.EqualTo(1.5f));
 
         Assert.That(smite.Hit.Amount, Is.EqualTo(15));
-        Assert.That(smite.Hit.Type, Is.EqualTo(DamageType.Physical));
-        Assert.That(smite.Hit.StatusCount, Is.EqualTo(1));
         Assert.That(smite.Hit.GetStatus(0).Controls, Is.EqualTo(StatusControls.Stun));
-        Assert.That(smite.Heal, Is.Zero);
-
         Assert.That(mend.Heal, Is.EqualTo(25));
-        Assert.That(mend.Hit.Amount, Is.Zero);
-        Assert.That(mend.Hit.StatusCount, Is.EqualTo(1));
         Assert.That(mend.Hit.GetStatus(0).DisplayName, Is.EqualTo("Fortify"));
 
-        foreach (string guid in AssetDatabase.FindAssets("t:AbilityDefinition", new[] { "Assets/Data/Abilities" }))
-        {
-            AbilityDefinition ability = AssetDatabase.LoadAssetAtPath<AbilityDefinition>(AssetDatabase.GUIDToAssetPath(guid));
-            if (ability != smite && ability != mend)
-            {
-                Assert.That(ability.HasEffect, Is.False, $"{ability.name} is still a blank.");
-            }
-        }
+        Assert.That(Load("Blank_Leap").HasEffect, Is.False, "Leap and Lunge wait for abilities that move the caster.");
+        Assert.That(Load("Blank_Lunge").HasEffect, Is.False);
+    }
+
+    private static AbilityDefinition Load(string name)
+    {
+        return AssetDatabase.LoadAssetAtPath<AbilityDefinition>($"Assets/Data/Abilities/{name}.asset");
     }
 
     private static AbilityCast Cast(AbilityDefinition ability, DamageReceiver target, UnitTeam team)
@@ -128,15 +241,22 @@ public class AbilityEffectTests
         return new AbilityCast(3, ability, new CastAim(target.transform.position, Vector2.right, new UnitTarget(target.Health, null, team)));
     }
 
-    private PlayerAbilities Caster()
+    private static AbilityCast SelfCast(AbilityDefinition ability)
     {
-        DamageReceiver caster = Unit("Caster", Faction.Players);
+        return new AbilityCast(4, ability, new CastAim(Vector2.zero, Vector2.zero, default));
+    }
+
+    private PlayerAbilities Caster(Vector2 position)
+    {
+        DamageReceiver caster = Unit("Caster", Faction.Players, position);
         return caster.gameObject.AddComponent<PlayerAbilities>();
     }
 
-    private DamageReceiver Unit(string name, Faction faction)
+    private DamageReceiver Unit(string name, Faction faction, Vector2 position)
     {
         GameObject unit = Track(new GameObject(name));
+        unit.transform.position = position;
+        unit.AddComponent<BoxCollider2D>().size = new Vector2(0.5f, 0.5f);
         SerializedObject health = new(unit.AddComponent<Health>());
         health.FindProperty("maxHealth").intValue = 100;
         health.ApplyModifiedPropertiesWithoutUndo();
@@ -146,9 +266,9 @@ public class AbilityEffectTests
         return receiver;
     }
 
-    private AbilityDefinition Ability(AbilityTargeting targeting, AbilityUnitFilter filter, Hit hit, int heal = 0)
+    private AbilityDefinition Ability(AbilityTargeting targeting, Hit hit, int heal = 0, float range = 3f, float areaRadius = 0f)
     {
-        return Track(AbilityDefinition.Create("Test", targeting: targeting, unitFilter: filter, hit: hit, heal: heal));
+        return Track(AbilityDefinition.Create("Test", targeting: targeting, unitFilter: AbilityUnitFilter.Any, range: range, hit: hit, heal: heal, areaRadius: areaRadius));
     }
 
     private StatusEffectDefinition Status(string name, StatusKind kind, StatusControls controls)

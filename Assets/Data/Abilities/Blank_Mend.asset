@@ -27,3 +27,4 @@ MonoBehaviour:
     statuses:
     - {fileID: 11400000, guid: 029898867bc502e46bbdf2c2ddae68e6, type: 2}
   heal: 25
+  areaRadius: 0

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 211694d3044cf0746817c41d32a67270, type: 3}
+  m_Name: RebindableActions
+  m_EditorClassIdentifier: TopDownRPG.Core::RebindableActionList
+  entries:
+  - action: {fileID: 2775607151954716846, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Move / attack
+    section: Movement
+  - action: {fileID: 380077077918752802, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Stop
+    section: Movement
+  - action: {fileID: -7147937859873032432, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Class ability 1
+    section: Class abilities
+  - action: {fileID: -5506120038718382649, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Class ability 2
+    section: Class abilities
+  - action: {fileID: -7753353285363710004, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Class ability 3
+    section: Class abilities
+  - action: {fileID: 5308568178682399807, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Class ability 4
+    section: Class abilities
+  - action: {fileID: 4124645297494837991, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Weapon ability 1
+    section: Weapon abilities
+  - action: {fileID: -7678081435606228788, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Weapon ability 2
+    section: Weapon abilities

@@ -276,20 +276,6 @@ public class PlayerAbilitiesTests
     }
 
     [Test]
-    public void SlotKeyNames_FollowTheBar()
-    {
-        string[] keys = new string[AbilitySlots.Count];
-        for (int i = 0; i < keys.Length; i++)
-        {
-            keys[i] = AbilitySlots.KeyName(i);
-        }
-
-        Assert.That(keys, Is.EqualTo(new[] { "Q", "W", "E", "R", "A", "S" }));
-        Assert.That(AbilitySlots.KeyName(-1), Is.Empty);
-        Assert.That(AbilitySlots.KeyName(AbilitySlots.Count), Is.Empty);
-    }
-
-    [Test]
     public void Cooldowns_TrackReadinessAndRemainingTime()
     {
         AbilityCooldowns cooldowns = new(2);

@@ -381,7 +381,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
             Handles.color = color;
             string timing = sinceEnd < 0f ? $" {-sinceEnd:0.0}s" : string.Empty;
             string source = remote ? " (remote)" : string.Empty;
-            Handles.Label(origin + Vector3.up * (LabelHeight + shown * LabelSpacing), $"{AbilitySlots.KeyName(cast.Slot)} {cast.Ability.DisplayName}{timing}{source}");
+            Handles.Label(origin + Vector3.up * (LabelHeight + shown * LabelSpacing), $"{cast.Slot + 1} {cast.Ability.DisplayName}{timing}{source}");
 #endif
             shown++;
         }
@@ -410,7 +410,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
 #if UNITY_EDITOR
             Handles.color = color;
-            Handles.Label(origin + Vector3.right * ability.Range, $"{AbilitySlots.KeyName(slot)} {ability.Range:0.#}");
+            Handles.Label(origin + Vector3.right * ability.Range, $"{slot + 1} {ability.Range:0.#}");
 #endif
         }
     }

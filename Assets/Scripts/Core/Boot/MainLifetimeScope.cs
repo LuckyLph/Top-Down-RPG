@@ -10,6 +10,7 @@ public class MainLifetimeScope : LifetimeScope
 {
     [SerializeField] private GameScenes gameScenes;
     [SerializeField] private InputActionAsset inputActions;
+    [SerializeField] private RebindableActionList rebindableActions;
     [SerializeField] private EventSystem eventSystem;
     [SerializeField] private ScreenFader screenFader;
     [SerializeField] private CameraFollow2D cameraFollow;
@@ -45,6 +46,23 @@ public class MainLifetimeScope : LifetimeScope
 
         builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, FileSaveStore.DefaultFileName)));
         builder.Register<GameSave>(Lifetime.Singleton);
+        builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, UserSettings.FileName)))
+            .Keyed(UserSettings.FileName);
+        builder.Register<UserSettings>(Lifetime.Singleton);
+
+        if (rebindableActions == null)
+        {
+            Debug.LogError($"{name} has no {nameof(RebindableActionList)} assigned; key bindings cannot be changed or loaded.", this);
+        }
+        else
+        {
+            builder.RegisterInstance(rebindableActions);
+        }
+
+        builder.RegisterEntryPoint<InputBindings>()
+            .WithParameter(inputActions)
+            .WithParameter(rebindableActions)
+            .AsSelf();
 
         if (networkManagerPrefab == null || networkSettings == null)
         {

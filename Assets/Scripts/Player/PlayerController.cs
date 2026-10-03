@@ -236,14 +236,14 @@ public class PlayerController : MonoBehaviour
         {
             AbilityDefinition approaching = abilities.GetAbility(approachingSlot);
             string abilityName = approaching != null ? approaching.DisplayName : string.Empty;
-            Handles.Label(target.transform.position + Vector3.up * 0.6f, $"{AbilitySlots.KeyName(approachingSlot)} {abilityName}: approaching");
+            Handles.Label(target.transform.position + Vector3.up * 0.6f, $"{approachingSlot + 1} {abilityName}: approaching");
         }
 
         if (orders.HasBufferedCast)
         {
             AbilityDefinition buffered = abilities.GetAbility(orders.BufferedSlot);
             string abilityName = buffered != null ? buffered.DisplayName : string.Empty;
-            Handles.Label(origin + Vector3.down * 0.4f, $"buffered: {AbilitySlots.KeyName(orders.BufferedSlot)} {abilityName}");
+            Handles.Label(origin + Vector3.down * 0.4f, $"buffered: {orders.BufferedSlot + 1} {abilityName}");
         }
 #endif
     }

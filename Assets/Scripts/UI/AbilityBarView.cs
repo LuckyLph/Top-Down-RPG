@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Passive ability bar on the player HUD: six <see cref="AbilitySlotView"/>s labelled Q W E R | A S.
+/// Passive ability bar on the player HUD: six <see cref="AbilitySlotView"/>s, each labelled with its bound key.
 /// </summary>
 [DisallowMultipleComponent]
 public class AbilityBarView : MonoBehaviour
@@ -15,10 +15,7 @@ public class AbilityBarView : MonoBehaviour
         if (slots == null || slots.Length != AbilitySlots.Count)
         {
             Debug.LogError($"{name} needs exactly {AbilitySlots.Count} ability slot views.", this);
-            return;
         }
-
-        LabelKeys();
     }
 
     public void SetAbility(int slot, AbilityDefinition ability)
@@ -36,6 +33,15 @@ public class AbilityBarView : MonoBehaviour
         if (view != null)
         {
             view.SetCooldown(fraction, seconds);
+        }
+    }
+
+    public void SetKey(int slot, string key)
+    {
+        AbilitySlotView view = Slot(slot);
+        if (view != null)
+        {
+            view.SetKey(key);
         }
     }
 
@@ -62,22 +68,10 @@ public class AbilityBarView : MonoBehaviour
     internal void ConfigureReferences(AbilitySlotView[] slotViews)
     {
         slots = slotViews;
-        LabelKeys();
     }
 
     private AbilitySlotView Slot(int slot)
     {
         return slots != null && slot >= 0 && slot < slots.Length ? slots[slot] : null;
-    }
-
-    private void LabelKeys()
-    {
-        for (int i = 0; i < slots.Length; i++)
-        {
-            if (slots[i] != null)
-            {
-                slots[i].SetKey(AbilitySlots.KeyName(i));
-            }
-        }
     }
 }

@@ -16,12 +16,14 @@ public class PlayerFeedbackTests
     private AbilityBarView bar;
     private AbilitySlotView[] slots;
     private AbilityBarPresenter barPresenter;
+    private FakeInputBindingLabels keyLabels;
 
     [SetUp]
     public void SetUp()
     {
         clock = new ManualClock();
         localPlayer = new LocalPlayerTracker();
+        keyLabels = new FakeInputBindingLabels();
     }
 
     [TearDown]
@@ -55,6 +57,27 @@ public class PlayerFeedbackTests
         Assert.That(slots[0].IsEmpty, Is.False);
         Assert.That(slots[3].NameText.text, Is.Empty);
         Assert.That(slots[0].Icon.enabled, Is.False);
+    }
+
+    [Test]
+    public void AbilityBar_LabelsSlotsWithTheBoundKeys_AndFollowsRebinding()
+    {
+        keyLabels.Set(PlayerInputService.AbilityActionName(0), "Q");
+        keyLabels.Set(PlayerInputService.AbilityActionName(5), "S");
+        CreateBar();
+
+        Assert.That(slots[0].KeyText.text, Is.EqualTo("Q"));
+        Assert.That(slots[5].KeyText.text, Is.EqualTo("S"));
+
+        keyLabels.Set(PlayerInputService.AbilityActionName(0), "MMB");
+
+        Assert.That(slots[0].KeyText.text, Is.EqualTo("MMB"));
+
+        barPresenter.Dispose();
+        keyLabels.Set(PlayerInputService.AbilityActionName(0), "F");
+
+        Assert.That(slots[0].KeyText.text, Is.EqualTo("MMB"), "A disposed presenter stops listening.");
+        barPresenter = null;
     }
 
     [Test]
@@ -264,7 +287,7 @@ public class PlayerFeedbackTests
 
         bar = barObject.AddComponent<AbilityBarView>();
         bar.ConfigureReferences(slots);
-        barPresenter = new AbilityBarPresenter(localPlayer, bar, clock);
+        barPresenter = new AbilityBarPresenter(localPlayer, bar, clock, keyLabels);
         barPresenter.Start();
     }
 

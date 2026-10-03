@@ -28,6 +28,7 @@ public class AbilitySlotView : MonoBehaviour
     internal TextMeshProUGUI NameText => nameText;
     internal Image CooldownFill => cooldownFill;
     internal TextMeshProUGUI CooldownText => cooldownText;
+    internal TextMeshProUGUI KeyText => keyText;
     internal Image Flash => flash;
     internal bool IsEmpty { get; private set; } = true;
 

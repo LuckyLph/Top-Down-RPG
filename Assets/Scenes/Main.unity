@@ -734,6 +734,7 @@ MonoBehaviour:
   autoInjectGameObjects: []
   gameScenes: {fileID: 11400000, guid: d4d21378ba9714c4ea1815ca90e450c6, type: 2}
   inputActions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  rebindableActions: {fileID: 11400000, guid: 037bc0e34bf50ba4fb22d1711a4c02a8, type: 2}
   eventSystem: {fileID: 288796573}
   screenFader: {fileID: 953731977}
   cameraFollow: {fileID: 519420034}

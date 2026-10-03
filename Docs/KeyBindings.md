@@ -102,8 +102,8 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 ### Settings (Core)
 
 - `UserSettingsData`: serialized form (`JsonUtility`): `version` (`CurrentVersion` 1) and `inputBindingOverrides` (the Input System's JSON as a string). `TryParse` returns false on malformed JSON.
-- `UserSettings`: reads and writes the data through its own `ISaveStore`. `InputBindingOverrides` get and set; setting it writes the file. Later options add fields here.
-- Main scope: `UserSettings` as a singleton, given a `FileSaveStore` at `Application.persistentDataPath/settings.json` as a parameter, so the existing `ISaveStore` registration for `save.json` is untouched.
+- `UserSettings`: reads the data once through its own `ISaveStore` and writes it on every change. `InputBindingOverrides`, and `SetInputBindingOverrides`, which writes the file. Later options add fields here.
+- Main scope: a second `ISaveStore` (a `FileSaveStore` at `Application.persistentDataPath/settings.json`) registered under the `UserSettings.FileName` key, which `UserSettings` asks for, so the unkeyed registration for `save.json` is untouched and tests can swap either store.
 
 ### Bindings (Core, `Assets/Scripts/Core/Input`)
 
@@ -112,7 +112,7 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
   - `IsRebindable(action)`, `GetShortLabel(action)`, `GetLabel(action)` (for the options screen: the layout's full key name).
   - `TryAssign(action, controlPath, out InputAction swappedWith)`: the rule in one place. Refuses non-rebindable actions and disallowed paths, swaps on conflict, applies the override (or removes it when the path is the default), saves and raises `BindingsChanged`.
   - `StartRebind(action)`: wraps `PerformInteractiveRebinding` with the allowed paths (`WithControlsHavingToMatchPath` for `<Keyboard>` and the mouse buttons), Escape as the cancel control, the `Keyboard&Mouse` binding group, and an `OnApplyBinding` that routes the result through `TryAssign`. Returns a handle that reports completion or cancellation and disposes the operation. Logs an error and does nothing if the action is enabled.
-  - `Reset(action)`, `ResetAll()`: remove overrides, save, raise `BindingsChanged`.
+  - `Reset(action, out swappedWith)` assigns the default through `TryAssign`, so a default another action took is swapped back; `ResetAll()` removes every override. Both save and raise `BindingsChanged`.
   - Raises `BindingsChanged` also when a keyboard's layout changes (`InputSystem.onDeviceChange`, `ConfigurationChanged`), so labels follow it.
   - On dispose: cancels a running rebind and removes every override from the asset, so the editor's in-memory asset is clean between play sessions and tests.
 - `GameplayInputGate` gains `Block(object owner)` and `Unblock(object owner)`. The `Player` map is enabled when in game, not transitioning, and nothing holds a block.
@@ -128,7 +128,7 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 | `OptionsMenuController` | Builds rows from `RebindableActionList`, starts and cancels rebinds through `InputBindings`, refreshes rows on `BindingsChanged`, shows swap notices, handles Back and Reset all. `Open(onClosed)`, `Close()`. |
 | `GameMenuController` | In-game menu on a `GameMenu` prefab under the Gameplay HUD: opens on `MenuPressedThisFrame`, closes on Back; holds a `GameplayInputGate` block while open, and a `TimeFreeze` hold too when no network session is active; releases both when it closes or is destroyed; Resume, Options, Leave game, Quit with the host confirmation. Ignores input during transitions and while the options screen is listening. |
 | `MainMenuController` | Gains the Options button handler. |
-| `AbilityBarPresenter` | Sets slot labels from `InputBindings.GetShortLabel` at bind and on `BindingsChanged`, instead of `AbilitySlots.KeyName`. |
+| `AbilityBarPresenter` | Sets slot labels from `IInputBindingLabels` (implemented by `InputBindings`) at start and on `BindingsChanged`, instead of `AbilitySlots.KeyName`. |
 
 Scopes: `MenuLifetimeScope` and `GameplayLifetimeScope` each register their scene's `OptionsMenuController` (component in hierarchy); `GameplayLifetimeScope` also registers `GameMenuController`.
 
@@ -154,14 +154,14 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 ### Phase 1: settings file and binding service
 
-- [ ] `UserSettingsData`, `UserSettings` and `settings.json` in the Main scope.
-- [ ] `InputBindings` (load, assign with swap, reset, labels, `BindingsChanged`, dispose) and `RebindableActionList` with its asset.
-- [ ] Unused template actions removed; `Menus` map with the `Menu` action (Escape, gamepad Start).
-- [ ] Ability bar labels from the bindings; gizmos by slot number; `AbilitySlots.KeyName` removed.
+- [x] `UserSettingsData`, `UserSettings` and `settings.json` in the Main scope.
+- [x] `InputBindings` (load, assign with swap, reset, labels, `BindingsChanged`, dispose) and `RebindableActionList` with its asset.
+- [x] Unused template actions removed; `Menus` map with the `Menu` action (Escape, gamepad Start).
+- [x] Ability bar labels from the bindings; gizmos by slot number; `AbilitySlots.KeyName` removed.
 
 ### Phase 2: options screen from the main menu
 
-- [ ] `OptionsMenu` and row prefabs, `OptionsMenuController`, listening panel, swap notice, reset and reset all.
+- [ ] `OptionsMenu` and row prefabs, `OptionsMenuController`, `StartRebind`, listening panel, swap notice, reset and reset all.
 - [ ] Options button on the main menu; mouse, keyboard and gamepad navigation.
 
 ### Phase 3: in-game menu

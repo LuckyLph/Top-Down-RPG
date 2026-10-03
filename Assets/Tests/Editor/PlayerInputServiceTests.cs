@@ -127,31 +127,21 @@ public class PlayerInputServiceTests
     }
 
     [Test]
-    public void ProjectAsset_HasNoWasdMovementOrOldAttack_AndNoOtherActionOnTheGameplayKeys()
+    public void ProjectAsset_PlayerMapHoldsOnlyTheGameplayActions_AndMenusMapOnlyTheMenuKey()
     {
         InputActionAsset projectActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ProjectActionsPath);
         InputActionMap playerMap = projectActions.FindActionMap(PlayerInputService.PlayerMapName, true);
-
-        Assert.That(playerMap.FindAction("Move"), Is.Null, "WASD movement is replaced by click-to-move.");
-        Assert.That(playerMap.FindAction("Attack"), Is.Null, "Auto attacks come from right clicking an enemy.");
-
-        string[] gameplayPaths = AbilityKeys.Select(key => $"<Keyboard>/{key}")
-            .Append("<Keyboard>/x")
-            .Append("<Keyboard>/d")
-            .Append("<Mouse>/rightButton")
+        string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName }
+            .Concat(Enumerable.Range(0, AbilitySlots.Count).Select(PlayerInputService.AbilityActionName))
             .ToArray();
-        foreach (InputBinding binding in playerMap.bindings)
-        {
-            if (!gameplayPaths.Contains(binding.path))
-            {
-                continue;
-            }
 
-            bool isGameplayAction = binding.action == PlayerInputService.MoveClickActionName
-                || binding.action == PlayerInputService.StopActionName
-                || binding.action.StartsWith(PlayerInputService.AbilityActionPrefix);
-            Assert.That(isGameplayAction, Is.True, $"'{binding.path}' is also bound to '{binding.action}'.");
-        }
+        Assert.That(playerMap.actions.Select(action => action.name), Is.EquivalentTo(expected));
+        Assert.That(playerMap.bindings.Count, Is.EqualTo(expected.Length), "One binding per gameplay action.");
+
+        InputActionMap menusMap = projectActions.FindActionMap("Menus", true);
+        Assert.That(menusMap.actions.Select(action => action.name), Is.EqualTo(new[] { "Menu" }));
+        AssertBoundTo(menusMap, "Menu", InputBindings.ReservedKeyPath);
+        AssertBoundTo(menusMap, "Menu", "<Gamepad>/start");
     }
 
     private static void AssertBoundTo(InputActionMap map, string actionName, string path)

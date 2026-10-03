@@ -5,7 +5,7 @@ using VContainer.Unity;
 /// <summary>
 /// Binds the <see cref="AbilityBarView"/> to the local player's <see cref="PlayerAbilities"/> (rebinding when
 /// <see cref="LocalPlayerTracker"/> changes): slot contents on <c>SlotsChanged</c>, a flash on <c>CastFailed</c>,
-/// and cooldowns every frame, pushed only when they change.
+/// and cooldowns every frame, pushed only when they change. Key labels follow <see cref="IInputBindingLabels"/>.
 /// </summary>
 public sealed class AbilityBarPresenter : IStartable, ITickable, IDisposable
 {
@@ -14,27 +14,32 @@ public sealed class AbilityBarPresenter : IStartable, ITickable, IDisposable
     private readonly LocalPlayerTracker localPlayer;
     private readonly AbilityBarView view;
     private readonly IClock clock;
+    private readonly IInputBindingLabels keyLabels;
     private readonly float[] shownFraction = new float[AbilitySlots.Count];
     private readonly int[] shownSeconds = new int[AbilitySlots.Count];
     private readonly float[] flashEndTimes = new float[AbilitySlots.Count];
     private PlayerAbilities abilities;
 
-    public AbilityBarPresenter(LocalPlayerTracker localPlayer, AbilityBarView view, IClock clock)
+    public AbilityBarPresenter(LocalPlayerTracker localPlayer, AbilityBarView view, IClock clock, IInputBindingLabels keyLabels)
     {
         this.localPlayer = localPlayer;
         this.view = view;
         this.clock = clock;
+        this.keyLabels = keyLabels;
     }
 
     public void Start()
     {
         localPlayer.Changed += Bind;
+        keyLabels.BindingsChanged += RefreshKeys;
+        RefreshKeys();
         Bind(localPlayer.Current);
     }
 
     public void Dispose()
     {
         localPlayer.Changed -= Bind;
+        keyLabels.BindingsChanged -= RefreshKeys;
         Unbind();
     }
 
@@ -81,6 +86,14 @@ public sealed class AbilityBarPresenter : IStartable, ITickable, IDisposable
         }
 
         abilities = null;
+    }
+
+    private void RefreshKeys()
+    {
+        for (int slot = 0; slot < AbilitySlots.Count; slot++)
+        {
+            view.SetKey(slot, keyLabels.GetShortLabel(PlayerInputService.AbilityActionName(slot)));
+        }
     }
 
     private void RefreshSlots()

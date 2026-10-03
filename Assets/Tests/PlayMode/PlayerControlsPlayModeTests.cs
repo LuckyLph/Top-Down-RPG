@@ -124,6 +124,7 @@ public class PlayerControlsPlayModeTests
         for (int i = 0; i < slots.Length; i++)
         {
             Assert.That(slots[i].NameText.text, Is.EqualTo(abilities.GetAbility(i).DisplayName), "Blanks have no icon, so their names show.");
+            Assert.That(slots[i].KeyText.text, Is.Not.Empty, "Each slot is labelled with its bound key.");
         }
 
         Assert.That(abilities.TryCast(0, new CastAim(Vector2.zero, Vector2.right, default)), Is.EqualTo(CastOutcome.Started));

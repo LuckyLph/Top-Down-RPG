@@ -112,7 +112,11 @@ public static class SceneBootTestHelper
     private static IEnumerator LoadMainScene(ISaveStore saveStore)
     {
         ISaveStore store = saveStore ?? new MemorySaveStore();
-        using (LifetimeScope.Enqueue(builder => builder.RegisterInstance<ISaveStore>(store)))
+        using (LifetimeScope.Enqueue(builder =>
+               {
+                   builder.RegisterInstance<ISaveStore>(store);
+                   builder.RegisterInstance<ISaveStore>(new MemorySaveStore()).Keyed(UserSettings.FileName);
+               }))
         {
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(

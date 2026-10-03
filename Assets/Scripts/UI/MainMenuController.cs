@@ -11,20 +11,26 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Button continueButton;
     [SerializeField] private TMP_InputField joinAddressField;
     [SerializeField] private TMP_Text statusText;
+    [SerializeField] private GameObject buttonsPanel;
+    [SerializeField] private Button optionsButton;
 
     private GameFlow gameFlow;
     private NetworkSession session;
     private GameSave gameSave;
+    private OptionsMenuController options;
     private bool isJoining;
 
     internal Button ContinueButton => continueButton;
+    internal Button OptionsButton => optionsButton;
+    internal GameObject ButtonsPanel => buttonsPanel;
 
     [Inject]
-    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save)
+    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save, OptionsMenuController optionsMenu)
     {
         gameFlow = flow;
         session = networkSession;
         gameSave = save;
+        options = optionsMenu;
     }
 
     private void Awake()
@@ -32,6 +38,11 @@ public class MainMenuController : MonoBehaviour
         if (continueButton == null)
         {
             Debug.LogError($"{nameof(MainMenuController)} has no Continue button assigned.", this);
+        }
+
+        if (buttonsPanel == null || optionsButton == null)
+        {
+            Debug.LogError($"{nameof(MainMenuController)} needs its buttons panel and Options button assigned.", this);
         }
     }
 
@@ -138,6 +149,38 @@ public class MainMenuController : MonoBehaviour
         else
         {
             SetStatus(session.JoinRefusal != null ? $"The host refused to let you in: {session.JoinRefusal}" : "Could not connect to the host.");
+        }
+    }
+
+    /// <summary>
+    /// Swaps the menu buttons for the options screen, unless a transition runs; they come back, with Options
+    /// selected, when it closes.
+    /// </summary>
+    public void OpenOptions()
+    {
+        if (options == null || gameFlow == null || gameFlow.IsTransitioning || options.IsOpen)
+        {
+            return;
+        }
+
+        SetButtonsShown(false);
+        options.Open(HandleOptionsClosed);
+    }
+
+    private void HandleOptionsClosed()
+    {
+        SetButtonsShown(true);
+        if (optionsButton != null && EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(optionsButton.gameObject);
+        }
+    }
+
+    private void SetButtonsShown(bool shown)
+    {
+        if (buttonsPanel != null)
+        {
+            buttonsPanel.SetActive(shown);
         }
     }
 

@@ -5,6 +5,7 @@
     "TopDownRPG.Core",
     "VContainer",
     "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework",
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime"
   ],

@@ -8,14 +8,16 @@ using VContainer.Unity;
 /// Owns the player's key bindings on the shared <see cref="InputActionAsset"/>: applies the saved overrides at boot,
 /// assigns keys to the actions in the <see cref="RebindableActionList"/> (swapping with the action that had the key),
 /// resets them, saves every change through <see cref="UserSettings"/>, and gives labels for the HUD and the options
-/// screen. Removes every override when disposed, so the asset is clean between editor play sessions.
+/// screen, and runs interactive rebinds. Removes every override when disposed, so the asset is clean between editor
+/// play sessions.
 /// </summary>
 public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLabels
 {
     public const string BindingGroup = "Keyboard&Mouse";
     public const string ReservedKeyPath = "<Keyboard>/escape";
 
-    private const string KeyboardPrefix = "<Keyboard>/";
+    private const string KeyboardPath = "<Keyboard>";
+    private const string KeyboardPrefix = KeyboardPath + "/";
     private const string AnyKeyPath = "<Keyboard>/anyKey";
 
     private static readonly string[] MousePaths =
@@ -34,6 +36,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     private readonly UserSettings settings;
     private readonly List<InputAction> rebindable = new();
     private readonly List<int> bindingIndices = new();
+    private readonly List<string> displayNames = new();
+    private readonly List<string> sections = new();
+    private InputActionRebindingExtensions.RebindingOperation rebinding;
+    private Action<RebindOutcome, InputAction> rebindFinished;
 
     public InputBindings(InputActionAsset actions, RebindableActionList rebindableActions, UserSettings settings)
     {
@@ -59,12 +65,16 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
 
             rebindable.Add(action);
             bindingIndices.Add(bindingIndex);
+            displayNames.Add(rebindableActions[i].Label);
+            sections.Add(rebindableActions[i].Section);
         }
     }
 
     public event Action BindingsChanged;
 
     public int Count => rebindable.Count;
+
+    public bool IsRebinding => rebinding != null;
 
     public InputAction GetAction(int index)
     {
@@ -74,6 +84,25 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     public bool IsRebindable(InputAction action)
     {
         return IndexOf(action) >= 0;
+    }
+
+    /// <summary>
+    /// The name the options screen gives <paramref name="action"/>, such as "Class ability 1", or an empty string
+    /// when it is not rebindable.
+    /// </summary>
+    public string GetDisplayName(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index >= 0 ? displayNames[index] : string.Empty;
+    }
+
+    /// <summary>
+    /// The options screen section <paramref name="action"/> is listed under, or an empty string when it is not rebindable.
+    /// </summary>
+    public string GetSection(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index >= 0 ? sections[index] : string.Empty;
     }
 
     /// <summary>
@@ -176,6 +205,54 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return TryAssign(action, DefaultPath(index), out swappedWith);
     }
 
+    /// <summary>
+    /// Listens for the next key or mouse button and assigns it to <paramref name="action"/> through
+    /// <see cref="TryAssign"/>. Escape cancels. <paramref name="finished"/> gets the outcome and the action that
+    /// swapped inputs with this one, if any. Returns false, without listening, for an action that is not rebindable or
+    /// is enabled, or while another rebind runs.
+    /// </summary>
+    public bool StartRebind(InputAction action, Action<RebindOutcome, InputAction> finished)
+    {
+        int index = IndexOf(action);
+        if (index < 0 || rebinding != null)
+        {
+            return false;
+        }
+
+        if (action.enabled)
+        {
+            Debug.LogError($"Cannot rebind '{action.name}' while it is enabled; gameplay input must be off while the options screen listens.");
+            return false;
+        }
+
+        bool assigned = false;
+        InputAction swappedWith = null;
+        rebindFinished = finished;
+        rebinding = action.PerformInteractiveRebinding(bindingIndices[index])
+            .WithCancelingThrough(ReservedKeyPath)
+            .WithControlsHavingToMatchPath(KeyboardPath)
+            .WithControlsExcluding(AnyKeyPath);
+        for (int i = 0; i < MousePaths.Length; i++)
+        {
+            rebinding.WithControlsHavingToMatchPath(MousePaths[i]);
+        }
+
+        rebinding
+            .OnApplyBinding((_, path) => assigned = TryAssign(action, path, out swappedWith))
+            .OnComplete(_ => FinishRebind(assigned ? RebindOutcome.Assigned : RebindOutcome.Cancelled, swappedWith))
+            .OnCancel(_ => FinishRebind(RebindOutcome.Cancelled, null))
+            .Start();
+        return true;
+    }
+
+    public void CancelRebind()
+    {
+        if (rebinding != null)
+        {
+            rebinding.Cancel();
+        }
+    }
+
     public void ResetAll()
     {
         if (actions == null)
@@ -195,6 +272,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
 
     public void Dispose()
     {
+        CancelRebind();
         InputSystem.onDeviceChange -= HandleDeviceChange;
         if (actions != null)
         {
@@ -310,6 +388,15 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         {
             rebindable[index].ApplyBindingOverride(bindingIndices[index], path);
         }
+    }
+
+    private void FinishRebind(RebindOutcome outcome, InputAction swappedWith)
+    {
+        rebinding.Dispose();
+        rebinding = null;
+        Action<RebindOutcome, InputAction> finished = rebindFinished;
+        rebindFinished = null;
+        finished?.Invoke(outcome, swappedWith);
     }
 
     private void SaveAndNotify()

@@ -116,8 +116,8 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
   - Raises `BindingsChanged` also when a keyboard's layout changes (`InputSystem.onDeviceChange`, `ConfigurationChanged`), so labels follow it.
   - On dispose: cancels a running rebind and removes every override from the asset, so the editor's in-memory asset is clean between play sessions and tests.
 - `GameplayInputGate` gains `Block(object owner)` and `Unblock(object owner)`. The `Player` map is enabled when in game, not transitioning, and nothing holds a block.
-- `IMenuInput` (implemented by `PlayerInputService`): `MenuPressedThisFrame` from the `Menu` action and `BackPressedThisFrame` from the `UI` map's `Cancel`. The menu key is not a player command, so it stays off `IPlayerInput`, and menus are testable with a fake. The `Menu` action lives in its own `Menus` map, enabled whenever the game is in a session, because the `Player` map is disabled while the in-game menu is open.
-- `RebindableActionList` ScriptableObject (`Assets/Data/Input/RebindableActions.asset`): ordered entries of an `InputActionReference`, a label and a section. `InputBindings` takes it as its set of rebindable actions, and the options screen builds its rows from it. It is assigned on `MainLifetimeScope` and registered there, so both menu scopes resolve the same instance.
+- `IMenuInput` (implemented by `PlayerInputService`): `BackPressedThisFrame` from the `UI` map's `Cancel` (Phase 2), and `MenuPressedThisFrame` from the `Menu` action (Phase 3). The menu key is not a player command, so it stays off `IPlayerInput`, and menus are testable with a fake. The `Menu` action lives in its own `Menus` map, enabled whenever the game is in a session, because the `Player` map is disabled while the in-game menu is open.
+- `RebindableActionList` ScriptableObject (`Assets/Data/Input/RebindableActions.asset`): ordered entries of an `InputActionReference`, a name and a section. It is assigned on `MainLifetimeScope` and given to `InputBindings`, which exposes each action's name and section, so the options screen builds its rows from `InputBindings` alone.
 
 ### UI (Gameplay, `Assets/Scripts/UI`)
 
@@ -125,12 +125,12 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 |---|---|
 | `OptionsMenuView` | Passive view on the `OptionsMenu` prefab: rows container, footer buttons, listening panel, notice line, reset confirmation. |
 | `KeyBindingRowView` | One row: label, binding button, reset button. Instantiated from a row prefab when the screen is built (once, not per open). |
-| `OptionsMenuController` | Builds rows from `RebindableActionList`, starts and cancels rebinds through `InputBindings`, refreshes rows on `BindingsChanged`, shows swap notices, handles Back and Reset all. `Open(onClosed)`, `Close()`. |
+| `OptionsMenuController` | Plain entry point next to the view. Builds rows from `InputBindings`, starts and cancels rebinds through it, refreshes rows on `BindingsChanged`, shows swap notices, handles Back and Reset all. `Open(onClosed)`, `Close()`. |
 | `GameMenuController` | In-game menu on a `GameMenu` prefab under the Gameplay HUD: opens on `MenuPressedThisFrame`, closes on Back; holds a `GameplayInputGate` block while open, and a `TimeFreeze` hold too when no network session is active; releases both when it closes or is destroyed; Resume, Options, Leave game, Quit with the host confirmation. Ignores input during transitions and while the options screen is listening. |
 | `MainMenuController` | Gains the Options button handler. |
 | `AbilityBarPresenter` | Sets slot labels from `IInputBindingLabels` (implemented by `InputBindings`) at start and on `BindingsChanged`, instead of `AbilitySlots.KeyName`. |
 
-Scopes: `MenuLifetimeScope` and `GameplayLifetimeScope` each register their scene's `OptionsMenuController` (component in hierarchy); `GameplayLifetimeScope` also registers `GameMenuController`.
+Scopes: `MenuLifetimeScope` and `GameplayLifetimeScope` each register their scene's `OptionsMenuView` (component in hierarchy) and an `OptionsMenuController` entry point; `GameplayLifetimeScope` also registers `GameMenuController`.
 
 ### Pause (Core, Main scope)
 
@@ -161,12 +161,12 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 ### Phase 2: options screen from the main menu
 
-- [ ] `OptionsMenu` and row prefabs, `OptionsMenuController`, `StartRebind`, listening panel, swap notice, reset and reset all.
-- [ ] Options button on the main menu; mouse, keyboard and gamepad navigation.
+- [x] `OptionsMenu` and row prefabs, `OptionsMenuController`, `StartRebind`, `IMenuInput.BackPressedThisFrame`, listening panel, swap notice, reset and reset all.
+- [x] Options button on the main menu; mouse, keyboard and gamepad navigation.
 
 ### Phase 3: in-game menu
 
-- [ ] `IMenuInput`, `GameplayInputGate` blocks, `TimeFreeze` with `TransitionTimeFreeze` moved onto it.
+- [ ] `IMenuInput.MenuPressedThisFrame` and enabling the `Menus` map, `GameplayInputGate` blocks, `TimeFreeze` with `TransitionTimeFreeze` moved onto it.
 - [ ] `GameMenu` prefab and `GameMenuController`: Resume, Options, Leave game, Quit, host confirmations, pause in single player.
 - [ ] Checked in Multiplayer Play Mode: a client and the host each rebind and play; the menu pauses no one, the host included when it is alone; a client leaving and the host leaving.
 
@@ -180,7 +180,7 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 - EditMode, `UserSettings` with a fake `ISaveStore`: missing file gives defaults, round trip, malformed and other-version files ignored with a warning, writes on change.
 - EditMode, `InputBindings` on a copy of the project asset: load applies overrides; `TryAssign` applies, swaps on conflict (both actions reported), refuses Escape, the pointer, scroll and gamepad paths and non-rebindable actions, and removes the override when assigning the default; reset one and all; duplicates after load dropped with a warning; `BindingsChanged` raised once per change; short labels for keys and mouse buttons; dispose removes every override; rebinding an enabled action logs an error.
-- EditMode, interactive rebinding through `InputTestFixture` (adds `Unity.InputSystem.TestFramework` to the test assembly and `com.unity.inputsystem` to the manifest's `testables`): a key press binds, Escape cancels, a mouse click binds, the pointer moving does not.
+- EditMode, interactive rebinding through `InputTestFixture` (`Unity.InputSystem.TestFramework` is referenced by the test assembly; the package already builds it, so no `testables` entry is needed): a key press binds, Escape cancels, a mouse click binds, the pointer moving does not.
 - EditMode, content: `RebindableActions.asset` matches the map; the project asset's default bindings have no duplicates among rebindable actions; the `Player` and `Menus` maps hold only the expected actions.
 - EditMode, pause: `TimeFreeze` is 0 while any owner holds it and 1 after the last release or on dispose; a transition during a pause keeps it at 0 until both end; `GameMenuController` holds it only with no active session, releases it on close and on destroy.
 - EditMode, gate and menus: the `Player` map stays disabled while a block is held and comes back when the last one is released; `GameMenuController` with a fake `IMenuInput` opens, closes, never handles two levels in one frame, and ignores input during transitions; `AbilityBarPresenter` labels follow `BindingsChanged`.

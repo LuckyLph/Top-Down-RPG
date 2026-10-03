@@ -15,6 +15,8 @@ public class MenuLifetimeScope : LifetimeScope
             return;
         }
 
+        builder.RegisterComponentInHierarchy<OptionsMenuView>();
+        builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
         builder.RegisterComponentInHierarchy<MainMenuController>();
     }
 }

@@ -25,7 +25,9 @@ public class PlayerInputServiceTests
             playerMap.AddAction(PlayerInputService.AbilityActionName(slot), InputActionType.Button, $"<Keyboard>/{AbilityKeys[slot]}");
         }
 
-        actions.AddActionMap("UI").AddAction("Submit", InputActionType.Button, "<Keyboard>/enter");
+        InputActionMap uiMap = actions.AddActionMap(PlayerInputService.UIMapName);
+        uiMap.AddAction("Submit", InputActionType.Button, "<Keyboard>/enter");
+        uiMap.AddAction(PlayerInputService.CancelActionName, InputActionType.Button, "<Keyboard>/escape");
     }
 
     [TearDown]
@@ -65,6 +67,17 @@ public class PlayerInputServiceTests
         {
             Assert.That(service.WasAbilityPressedThisFrame(slot), Is.False);
         }
+    }
+
+    [Test]
+    public void Back_IsNeverPressedWhileTheUIMapIsDisabled_OrWithoutAPress()
+    {
+        PlayerInputService service = new(actions, null);
+
+        Assert.That(service.BackPressedThisFrame, Is.False);
+
+        actions.FindActionMap(PlayerInputService.UIMapName).Enable();
+        Assert.That(service.BackPressedThisFrame, Is.False);
     }
 
     [Test]

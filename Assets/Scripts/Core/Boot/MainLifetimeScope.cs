@@ -40,6 +40,7 @@ public class MainLifetimeScope : LifetimeScope
             .WithParameter(inputActions)
             .WithParameter(eventSystem)
             .As<IPlayerInput>()
+            .As<IMenuInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>();
         builder.RegisterEntryPoint<TransitionTimeFreeze>();
@@ -49,15 +50,6 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, UserSettings.FileName)))
             .Keyed(UserSettings.FileName);
         builder.Register<UserSettings>(Lifetime.Singleton);
-
-        if (rebindableActions == null)
-        {
-            Debug.LogError($"{name} has no {nameof(RebindableActionList)} assigned; key bindings cannot be changed or loaded.", this);
-        }
-        else
-        {
-            builder.RegisterInstance(rebindableActions);
-        }
 
         builder.RegisterEntryPoint<InputBindings>()
             .WithParameter(inputActions)

@@ -5,21 +5,24 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Reads the <c>Player</c> action map for the local player and answers whether the pointer is over UI through
-/// the Main scope's <see cref="EventSystem"/>.
+/// the Main scope's <see cref="EventSystem"/>. Also reads the <c>UI</c> map's Cancel for menus.
 /// </summary>
-public sealed class PlayerInputService : IPlayerInput, IDisposable
+public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
 {
     public const string PlayerMapName = "Player";
     public const string MoveClickActionName = "MoveClick";
     public const string PointActionName = "Point";
     public const string StopActionName = "Stop";
     public const string AbilityActionPrefix = "Ability";
+    public const string UIMapName = "UI";
+    public const string CancelActionName = "Cancel";
 
     private readonly InputActionMap playerMap;
     private readonly InputAction moveClickAction;
     private readonly InputAction pointAction;
     private readonly InputAction stopAction;
     private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
+    private readonly InputAction cancelAction;
     private readonly EventSystem eventSystem;
 
     public PlayerInputService(InputActionAsset actions, EventSystem eventSystem)
@@ -29,6 +32,7 @@ public sealed class PlayerInputService : IPlayerInput, IDisposable
         moveClickAction = playerMap?.FindAction(MoveClickActionName, false);
         pointAction = playerMap?.FindAction(PointActionName, false);
         stopAction = playerMap?.FindAction(StopActionName, false);
+        cancelAction = actions != null ? actions.FindAction($"{UIMapName}/{CancelActionName}", false) : null;
 
         bool hasAllAbilities = true;
         for (int i = 0; i < abilityActions.Length; i++)
@@ -37,12 +41,13 @@ public sealed class PlayerInputService : IPlayerInput, IDisposable
             hasAllAbilities &= abilityActions[i] != null;
         }
 
-        if (moveClickAction == null || pointAction == null || stopAction == null || !hasAllAbilities)
+        if (moveClickAction == null || pointAction == null || stopAction == null || !hasAllAbilities || cancelAction == null)
         {
             Debug.LogError(
                 $"{nameof(PlayerInputService)} needs an input asset with a '{PlayerMapName}' map containing " +
                 $"'{MoveClickActionName}', '{PointActionName}', '{StopActionName}' and " +
-                $"'{AbilityActionName(0)}' to '{AbilityActionName(AbilitySlots.Count - 1)}' actions.");
+                $"'{AbilityActionName(0)}' to '{AbilityActionName(AbilitySlots.Count - 1)}' actions, " +
+                $"and a '{UIMapName}' map with a '{CancelActionName}' action.");
         }
     }
 
@@ -52,6 +57,7 @@ public sealed class PlayerInputService : IPlayerInput, IDisposable
     public bool MovePressedThisFrame => GameplayEnabled && moveClickAction != null && moveClickAction.WasPressedThisFrame();
     public bool MoveHeld => GameplayEnabled && moveClickAction != null && moveClickAction.IsPressed();
     public bool StopPressedThisFrame => GameplayEnabled && stopAction != null && stopAction.WasPressedThisFrame();
+    public bool BackPressedThisFrame => cancelAction != null && cancelAction.enabled && cancelAction.WasPressedThisFrame();
 
     public bool WasAbilityPressedThisFrame(int slot)
     {

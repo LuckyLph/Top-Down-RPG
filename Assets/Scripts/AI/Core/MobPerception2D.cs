@@ -29,7 +29,7 @@ public class MobPerception2D : MonoBehaviour
     public bool HasLineOfSight => hasLineOfSight;
     public float DistanceToTarget => distanceToTarget;
     public Vector2 LastKnownTargetPosition => lastKnownTargetPosition;
-    public bool IsTargetHiddenInRange => config != null && !hasLineOfSight && distanceToTarget <= config.loseTargetDistance;
+    public bool IsTargetHiddenInRange => config != null && !hasLineOfSight && distanceToTarget <= config.LoseTargetDistance;
 
     public void Initialize(IPlayerRegistry playerRegistry, MobConfig mobConfig)
     {
@@ -72,7 +72,7 @@ public class MobPerception2D : MonoBehaviour
 
         if (castLine)
         {
-            losTimer = Mathf.Max(0.01f, config.lineOfSightInterval);
+            losTimer = Mathf.Max(0.01f, config.LineOfSightInterval);
         }
 
         if (hasDetectedTarget)
@@ -86,13 +86,13 @@ public class MobPerception2D : MonoBehaviour
         Vector2 targetPosition = target.Transform.position;
         distanceToTarget = Vector2.Distance(origin, targetPosition);
 
-        if (distanceToTarget > config.loseTargetDistance)
+        if (distanceToTarget > config.LoseTargetDistance)
         {
             ClearTarget();
             return false;
         }
 
-        float range = hasDetectedTarget ? config.loseTargetDistance : config.detectionRadius;
+        float range = hasDetectedTarget ? config.LoseTargetDistance : config.DetectionRadius;
         if (distanceToTarget > range)
         {
             hasDetectedTarget = false;
@@ -131,7 +131,7 @@ public class MobPerception2D : MonoBehaviour
 
             Vector2 candidatePosition = candidate.Transform.position;
             float distance = Vector2.Distance(origin, candidatePosition);
-            if (distance > config.detectionRadius || distance >= nearestDistance)
+            if (distance > config.DetectionRadius || distance >= nearestDistance)
             {
                 continue;
             }
@@ -165,13 +165,13 @@ public class MobPerception2D : MonoBehaviour
         lastLinecastOrigin = origin;
         lastLinecastTarget = targetPosition;
 
-        if (config == null || config.obstacleLayerMask.value == 0)
+        if (config == null || config.ObstacleLayerMask.value == 0)
         {
             lastLineOfSightBlocked = false;
             return true;
         }
 
-        RaycastHit2D hit = Physics2D.Linecast(origin, targetPosition, config.obstacleLayerMask);
+        RaycastHit2D hit = Physics2D.Linecast(origin, targetPosition, config.ObstacleLayerMask);
         lastLineOfSightBlocked = hit.collider != null;
         return !lastLineOfSightBlocked;
     }
@@ -191,8 +191,8 @@ public class MobPerception2D : MonoBehaviour
             return;
         }
 
-        float detectionRadius = config != null ? config.detectionRadius : 0f;
-        float loseRadius = config != null ? config.loseTargetDistance : 0f;
+        float detectionRadius = config != null ? config.DetectionRadius : 0f;
+        float loseRadius = config != null ? config.LoseTargetDistance : 0f;
         Vector3 position = transform.position;
 
         if (detectionRadius > 0f)

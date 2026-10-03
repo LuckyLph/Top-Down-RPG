@@ -49,7 +49,7 @@ public class ChaseState : MobStateBase
             }
 
             bool pathFound = PathAgent.BuildPathToWorld(targetPosition, allowPartial: true);
-            repathTimer = Config.repathInterval;
+            repathTimer = Config.RepathInterval;
 
             if (!pathFound || !PathAgent.ReachedResolvedGoal || PathAgent.GoalWasAdjusted)
             {
@@ -80,7 +80,7 @@ public class ChaseState : MobStateBase
         }
 
         Vector2 targetPosition = target.position;
-        return Vector2.Distance(Motor.Position, targetPosition) <= Config.crowdWaitDistance * rangeFactor
-            && Brain.Separation.HasNeighborToward(targetPosition, Config.separationRadius * rangeFactor);
+        return Vector2.Distance(Motor.Position, targetPosition) <= Config.CrowdWaitDistance * rangeFactor
+            && Brain.Separation.HasNeighborToward(targetPosition, Config.SeparationRadius * rangeFactor);
     }
 }

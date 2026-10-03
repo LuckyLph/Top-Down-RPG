@@ -300,8 +300,7 @@ public class PlayerMotor2DTests
             tilemap.SetTile(cell, fillTile);
         }
 
-        TerrainType2D ground = Track(ScriptableObject.CreateInstance<TerrainType2D>());
-        ground.Configure("ground");
+        TerrainType2D ground = Track(TerrainType2D.Create("ground"));
         layer.AddComponent<NavigationTerrainSource2D>().Configure(tilemap, null, null, ground);
         NavigationGrid2D grid = root.AddComponent<NavigationGrid2D>();
         grid.BuildGrid();

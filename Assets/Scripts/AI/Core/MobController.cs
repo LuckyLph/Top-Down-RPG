@@ -191,12 +191,12 @@ public class MobController : MonoBehaviour
 
     public bool IsTargetInAttackRange()
     {
-        return TryGetAttackDistanceToTarget(out float distance) && distance <= Config.attackStopDistance;
+        return TryGetAttackDistanceToTarget(out float distance) && distance <= Config.AttackStopDistance;
     }
 
     public bool ShouldExitAttackRange()
     {
-        return !TryGetAttackDistanceToTarget(out float distance) || distance > Config.attackStopDistance + Config.attackExitBuffer;
+        return !TryGetAttackDistanceToTarget(out float distance) || distance > Config.AttackStopDistance + Config.AttackExitBuffer;
     }
 
     private void EnsureInitialized()

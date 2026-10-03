@@ -84,9 +84,9 @@ public class MobPathAgent2DTests
         AddTerrainLayer("Ground", ground, Rect(0, 0, 4, 2));
         AddTerrainLayer("Water", water, waterCells);
 
-        TerrainMovementProfile2D wadingProfile = CreateProfile();
-        wadingProfile.SetTerrainRule(ground, true, 10);
-        wadingProfile.SetTerrainRule(water, true, 45);
+        TerrainMovementProfile2D wadingProfile = CreateProfile(
+            new TerrainMovementProfile2D.TerrainRule(ground, true, 10),
+            new TerrainMovementProfile2D.TerrainRule(water, true, 45));
         BuildGridAndAgent(wadingProfile);
 
         Vector3Int startCell = new(0, 1, 0);
@@ -185,10 +185,7 @@ public class MobPathAgent2DTests
         navigationGrid = root.AddComponent<NavigationGrid2D>();
         navigationGrid.BuildGrid();
 
-        config = Track(ScriptableObject.CreateInstance<MobConfig>());
-        config.waypointReachDistance = 0.05f;
-        config.arrivalDistance = 0.15f;
-        config.movementProfile = profile;
+        config = Track(MobConfig.Create(waypointReachDistance: 0.05f, arrivalDistance: 0.15f, movementProfile: profile));
 
         GameObject mob = Track(new GameObject("Mob"));
         body = mob.AddComponent<Rigidbody2D>();
@@ -206,16 +203,12 @@ public class MobPathAgent2DTests
 
     private TerrainType2D CreateTerrain(string id)
     {
-        TerrainType2D terrain = Track(ScriptableObject.CreateInstance<TerrainType2D>());
-        terrain.Configure(id);
-        return terrain;
+        return Track(TerrainType2D.Create(id));
     }
 
-    private TerrainMovementProfile2D CreateProfile()
+    private TerrainMovementProfile2D CreateProfile(params TerrainMovementProfile2D.TerrainRule[] rules)
     {
-        TerrainMovementProfile2D profile = Track(ScriptableObject.CreateInstance<TerrainMovementProfile2D>());
-        profile.Configure(isWalkableByDefault: false, traversalCostByDefault: 10);
-        return profile;
+        return Track(TerrainMovementProfile2D.Create(false, 10, rules));
     }
 
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)

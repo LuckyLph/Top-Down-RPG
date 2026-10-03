@@ -548,14 +548,8 @@ public class StatusEffectTests
     public void MeleeDamageDealer_AppliesTheConfiguredStatuses()
     {
         StatusEffectDefinition poison = Definition("Poison", StatusKind.Debuff, 6f);
-        MobConfig config = ScriptableObject.CreateInstance<MobConfig>();
+        MobConfig config = MobConfig.Create(attackDamage: 10, attackStatuses: new[] { poison });
         created.Add(config);
-        config.attackDamage = 10;
-        SerializedObject serializedConfig = new(config);
-        SerializedProperty statuses = serializedConfig.FindProperty("attackStatuses");
-        statuses.arraySize = 1;
-        statuses.GetArrayElementAtIndex(0).objectReferenceValue = poison;
-        serializedConfig.ApplyModifiedPropertiesWithoutUndo();
         DamageReceiver mob = Unit("Mob", Faction.Mobs);
         DamageReceiver player = Unit("Player", Faction.Players);
         MeleeDamageDealer dealer = mob.gameObject.AddComponent<MeleeDamageDealer>();

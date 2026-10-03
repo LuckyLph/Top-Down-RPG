@@ -29,7 +29,7 @@ public class PatrolRoamState : MobStateBase
             return;
         }
 
-        if (PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.stuckTimeout)
+        if (PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.StuckTimeout)
         {
             Brain.ChangeState(MobStateId.Idle);
         }

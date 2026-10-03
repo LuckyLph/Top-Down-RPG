@@ -107,8 +107,7 @@ public class PathfindingBenchmarkTests
 
         BuildGrid(cell => cell.x % 8 == 4 && (cell.y < gapByColumn[cell.x] || cell.y > gapByColumn[cell.x] + 1));
 
-        MobConfig config = Track(ScriptableObject.CreateInstance<MobConfig>());
-        config.movementProfile = profile;
+        MobConfig config = Track(MobConfig.Create(movementProfile: profile));
         GameObject mob = Track(new GameObject("BenchmarkMob"));
         Rigidbody2D body = mob.AddComponent<Rigidbody2D>();
         MobMotor2D motor = mob.AddComponent<MobMotor2D>();
@@ -229,20 +228,18 @@ public class PathfindingBenchmarkTests
         Tilemap groundMap = CreateTilemap("Ground", groundCells, tile);
         Tilemap collisionMap = CreateTilemap("Collision", blockedCells, tile);
 
-        ground = Track(ScriptableObject.CreateInstance<TerrainType2D>());
-        ground.Configure("ground");
+        ground = Track(TerrainType2D.Create("ground"));
         groundMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(groundMap, collisionMap, null, ground);
 
         // A handful of rules, like a profile covering several terrain types.
-        profile = Track(ScriptableObject.CreateInstance<TerrainMovementProfile2D>());
-        profile.Configure(isWalkableByDefault: false, traversalCostByDefault: 10);
-        profile.SetTerrainRule(ground, true, 10);
+        TerrainMovementProfile2D.TerrainRule[] rules = new TerrainMovementProfile2D.TerrainRule[5];
+        rules[0] = new TerrainMovementProfile2D.TerrainRule(ground, true, 10);
         for (int i = 0; i < 4; i++)
         {
-            TerrainType2D unused = Track(ScriptableObject.CreateInstance<TerrainType2D>());
-            unused.Configure($"unused{i}");
-            profile.SetTerrainRule(unused, true, 20 + i * 5);
+            rules[i + 1] = new TerrainMovementProfile2D.TerrainRule(Track(TerrainType2D.Create($"unused{i}")), true, 20 + i * 5);
         }
+
+        profile = Track(TerrainMovementProfile2D.Create(false, 10, rules));
 
         navigationGrid = root.AddComponent<NavigationGrid2D>();
         navigationGrid.BuildGrid();

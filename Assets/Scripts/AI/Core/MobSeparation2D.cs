@@ -36,7 +36,7 @@ public sealed class MobSeparation2D
         neighborCount = 0;
         velocity = Vector2.zero;
 
-        float radius = config.separationRadius;
+        float radius = config.SeparationRadius;
         if (self == null || radius <= 0f)
         {
             return;
@@ -62,7 +62,7 @@ public sealed class MobSeparation2D
             push += (distance > 0.0001f ? away / distance : CoincidentDirection(other)) * (1f - distance / radius);
         }
 
-        velocity = ClampToWalkable(push * config.separationStrength);
+        velocity = ClampToWalkable(push * config.SeparationStrength);
     }
 
     public bool HasNeighborToward(Vector2 target, float maxDistance)
@@ -115,7 +115,7 @@ public sealed class MobSeparation2D
             return push;
         }
 
-        float lookAhead = config.separationRadius * 0.5f;
+        float lookAhead = config.SeparationRadius * 0.5f;
         Vector2 horizontal = new(push.x, 0f);
         Vector2 vertical = new(0f, push.y);
         return (IsWalkableToward(horizontal, lookAhead) ? horizontal : Vector2.zero)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "TopDownRPG/Scenes/Game Scenes", fileName = "GameScenes")]
@@ -13,7 +14,7 @@ public class GameScenes : ScriptableObject
     public SceneDefinition Gameplay => gameplay;
     public SceneDefinition StartingArea => startingArea;
     public string StartingSpawnId => startingSpawnId;
-    public SceneDefinition[] Areas => areas;
+    public IReadOnlyList<SceneDefinition> Areas => areas;
 
     public SceneDefinition FindArea(string scenePath)
     {

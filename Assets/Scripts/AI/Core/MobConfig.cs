@@ -1,61 +1,128 @@
+using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A mob type's tuning: movement, perception, search, combat, crowd, patrol and navigation. Read-only at runtime;
+/// tests build their own with <see cref="Create"/>.
+/// </summary>
 [CreateAssetMenu(menuName = "AI/Mob Config", fileName = "MobConfig")]
 public class MobConfig : ScriptableObject
 {
     [Header("Movement")]
-    [Min(0f)] public float moveSpeed = 2.5f;
-    [Min(0f)] public float acceleration = 20f;
-    [Min(0.01f)] public float waypointReachDistance = 0.05f;
-    [Min(0.01f)] public float arrivalDistance = 0.15f;
+    [SerializeField, Min(0f)] private float moveSpeed = 2.5f;
+    [SerializeField, Min(0f)] private float acceleration = 20f;
+    [SerializeField, Min(0.01f)] private float waypointReachDistance = 0.05f;
+    [SerializeField, Min(0.01f)] private float arrivalDistance = 0.15f;
 
     [Header("Perception")]
-    [Min(0f)] public float detectionRadius = 6f;
-    [Min(0f)] public float loseTargetDistance = 8f;
-    [Min(0.01f)] public float lineOfSightInterval = 0.2f;
-    public LayerMask obstacleLayerMask = 1 << 8;
-    // How long a mob waits at the last known position of a target that slipped out of sight in range.
-    // The walk there is not included.
-    [Min(0f)] public float searchDuration = 3f;
+    [SerializeField, Min(0f)] private float detectionRadius = 6f;
+    [SerializeField, Min(0f)] private float loseTargetDistance = 8f;
+    [SerializeField, Min(0.01f)] private float lineOfSightInterval = 0.2f;
+    [SerializeField] private LayerMask obstacleLayerMask = 1 << 8;
+    [SerializeField, Min(0f), Tooltip("How long a mob waits at the last known position of a target that slipped out of sight in range. The walk there is not included.")]
+    private float searchDuration = 3f;
 
     [Header("Combat")]
-    [Min(0f)] public float attackStopDistance = 1.25f;
-    [Min(0f)] public float attackExitBuffer = 0.25f;
-    [Min(0)] public int attackDamage = 1;
+    [SerializeField, Min(0f)] private float attackStopDistance = 1.25f;
+    [SerializeField, Min(0f)] private float attackExitBuffer = 0.25f;
+    [SerializeField, Min(0)] private int attackDamage = 1;
     [SerializeField] private DamageType attackDamageType = DamageType.Physical;
     [SerializeField] private StatusEffectDefinition[] attackStatuses = new StatusEffectDefinition[0];
-    [Min(0f)] public float attackInterval = 0.75f;
+    [SerializeField, Min(0f)] private float attackInterval = 0.75f;
 
     [Header("Crowd")]
-    // Mobs closer than this (center to center) steer apart; 0 disables separation.
-    [Min(0f)] public float separationRadius = 0.8f;
-    // Push speed at full overlap, in units per second. Keep it above moveSpeed: a mob pushing into a
-    // crowd settles at about separationRadius * (1 - moveSpeed / separationStrength) from its neighbors.
-    [Min(0f)] public float separationStrength = 4f;
-    // Within this distance of its target, a chasing mob with another mob directly ahead waits instead of pushing.
-    [Min(0f)] public float crowdWaitDistance = 2f;
+    [SerializeField, Min(0f), Tooltip("Mobs closer than this (center to center) steer apart; 0 disables separation.")]
+    private float separationRadius = 0.8f;
+    [SerializeField, Min(0f), Tooltip("Push speed at full overlap, in units per second. Keep it above the move speed: a mob pushing into a crowd settles at about separation radius x (1 - move speed / this) from its neighbours.")]
+    private float separationStrength = 4f;
+    [SerializeField, Min(0f), Tooltip("Within this distance of its target, a chasing mob with another mob directly ahead waits instead of pushing.")]
+    private float crowdWaitDistance = 2f;
 
     [Header("Patrol")]
-    [Min(0f)] public float patrolRoamRadius = 4f;
-    [Min(1)] public int patrolSampleAttempts = 12;
-    public Vector2 idleDurationRange = new(0.5f, 1.5f);
+    [SerializeField, Min(0f)] private float patrolRoamRadius = 4f;
+    [SerializeField, Min(1)] private int patrolSampleAttempts = 12;
+    [SerializeField] private Vector2 idleDurationRange = new(0.5f, 1.5f);
 
     [Header("Navigation")]
-    [Min(0.01f)] public float repathInterval = 0.25f;
-    [Min(1)] public int nearestCellSearchRadius = 8;
-    // Patrol and return give up after following a path this long without making headway.
-    [Min(0.1f)] public float stuckTimeout = 1f;
-    public TerrainMovementProfile2D movementProfile;
+    [SerializeField, Min(0.01f)] private float repathInterval = 0.25f;
+    [SerializeField, Min(1)] private int nearestCellSearchRadius = 8;
+    [SerializeField, Min(0.1f), Tooltip("Patrol and return give up after following a path this long without making headway.")]
+    private float stuckTimeout = 1f;
+    [SerializeField] private TerrainMovementProfile2D movementProfile;
 
-    public TerrainMovementProfile2D MovementProfile => movementProfile;
-
+    public float MoveSpeed => moveSpeed;
+    public float Acceleration => acceleration;
+    public float WaypointReachDistance => waypointReachDistance;
+    public float ArrivalDistance => arrivalDistance;
+    public float DetectionRadius => detectionRadius;
+    public float LoseTargetDistance => loseTargetDistance;
+    public float LineOfSightInterval => lineOfSightInterval;
+    public LayerMask ObstacleLayerMask => obstacleLayerMask;
+    public float SearchDuration => searchDuration;
+    public float AttackStopDistance => attackStopDistance;
+    public float AttackExitBuffer => attackExitBuffer;
+    public int AttackDamage => attackDamage;
     public DamageType AttackDamageType => attackDamageType;
-    public StatusEffectDefinition[] AttackStatuses => attackStatuses;
+    public IReadOnlyList<StatusEffectDefinition> AttackStatuses => attackStatuses;
+    public float AttackInterval => attackInterval;
+    public float SeparationRadius => separationRadius;
+    public float SeparationStrength => separationStrength;
+    public float CrowdWaitDistance => crowdWaitDistance;
+    public float PatrolRoamRadius => patrolRoamRadius;
+    public int PatrolSampleAttempts => patrolSampleAttempts;
+    public Vector2 IdleDurationRange => idleDurationRange;
+    public float RepathInterval => repathInterval;
+    public int NearestCellSearchRadius => nearestCellSearchRadius;
+    public float StuckTimeout => stuckTimeout;
+    public TerrainMovementProfile2D MovementProfile => movementProfile;
 
     public float NextIdleDuration(IRandom random)
     {
         float min = Mathf.Min(idleDurationRange.x, idleDurationRange.y);
         float max = Mathf.Max(idleDurationRange.x, idleDurationRange.y);
         return random.Range(min, max);
+    }
+
+    /// <summary>
+    /// Builds a config in code, for tests. Every value left out keeps the asset's default.
+    /// </summary>
+    public static MobConfig Create(
+        float? moveSpeed = null,
+        float? waypointReachDistance = null,
+        float? arrivalDistance = null,
+        float? detectionRadius = null,
+        float? loseTargetDistance = null,
+        float? attackStopDistance = null,
+        float? attackExitBuffer = null,
+        int? attackDamage = null,
+        DamageType? attackDamageType = null,
+        StatusEffectDefinition[] attackStatuses = null,
+        float? attackInterval = null,
+        float? patrolRoamRadius = null,
+        Vector2? idleDurationRange = null,
+        float? repathInterval = null,
+        TerrainMovementProfile2D movementProfile = null)
+    {
+        MobConfig config = CreateInstance<MobConfig>();
+        config.moveSpeed = moveSpeed ?? config.moveSpeed;
+        config.waypointReachDistance = waypointReachDistance ?? config.waypointReachDistance;
+        config.arrivalDistance = arrivalDistance ?? config.arrivalDistance;
+        config.detectionRadius = detectionRadius ?? config.detectionRadius;
+        config.loseTargetDistance = loseTargetDistance ?? config.loseTargetDistance;
+        config.attackStopDistance = attackStopDistance ?? config.attackStopDistance;
+        config.attackExitBuffer = attackExitBuffer ?? config.attackExitBuffer;
+        config.attackDamage = attackDamage ?? config.attackDamage;
+        config.attackDamageType = attackDamageType ?? config.attackDamageType;
+        config.attackStatuses = attackStatuses ?? config.attackStatuses;
+        config.attackInterval = attackInterval ?? config.attackInterval;
+        config.patrolRoamRadius = patrolRoamRadius ?? config.patrolRoamRadius;
+        config.idleDurationRange = idleDurationRange ?? config.idleDurationRange;
+        config.repathInterval = repathInterval ?? config.repathInterval;
+        if (movementProfile != null)
+        {
+            config.movementProfile = movementProfile;
+        }
+
+        return config;
     }
 }

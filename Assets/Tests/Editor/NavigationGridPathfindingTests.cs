@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.TestTools.Constraints;
@@ -221,11 +222,8 @@ public class NavigationGridPathfindingTests
 
         groundTerrain = CreateTerrain("ground");
         waterTerrain = CreateTerrain("water");
-        landProfile = CreateProfile(defaultWalkable: false);
-        landProfile.SetTerrainRule(groundTerrain, true, 10);
-        amphibiousProfile = CreateProfile(defaultWalkable: false);
-        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
-        amphibiousProfile.SetTerrainRule(waterTerrain, true, 16);
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10));
+        amphibiousProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, true, 16));
 
         Tilemap groundMap = CreateTilemapObject("Ground");
         Tilemap waterMap = CreateTilemapObject("Water");
@@ -256,9 +254,7 @@ public class NavigationGridPathfindingTests
 
         groundTerrain = CreateTerrain("ground");
         waterTerrain = CreateTerrain("water");
-        landProfile = CreateProfile(defaultWalkable: false);
-        landProfile.SetTerrainRule(groundTerrain, true, 10);
-        landProfile.SetTerrainRule(waterTerrain, true, 45);
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, true, 45));
 
         Tilemap groundMap = CreateTilemapObject("Ground");
         Tilemap waterMap = CreateTilemapObject("Water");
@@ -297,12 +293,8 @@ public class NavigationGridPathfindingTests
 
         groundTerrain = CreateTerrain("ground");
         waterTerrain = CreateTerrain("water");
-        landProfile = CreateProfile(defaultWalkable: false);
-        landProfile.SetTerrainRule(groundTerrain, true, 10);
-        landProfile.SetTerrainRule(waterTerrain, false, 25);
-        amphibiousProfile = CreateProfile(defaultWalkable: false);
-        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
-        amphibiousProfile.SetTerrainRule(waterTerrain, true, 35);
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, false, 25));
+        amphibiousProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, true, 35));
 
         Tilemap groundMap = CreateTilemapObject("Ground");
         Tilemap waterMap = CreateTilemapObject("Water");
@@ -338,18 +330,15 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
-    public void AreCellsConnected_RespectsProfileRulesAndRuleChanges()
+    public void AreCellsConnected_RespectsProfileRules_AndRefreshesWhenTheProfileIsEdited()
     {
         root = CreateGridRoot("ConnectivityProfileRoot");
         fillTile = ScriptableObject.CreateInstance<Tile>();
 
         groundTerrain = CreateTerrain("ground");
         waterTerrain = CreateTerrain("water");
-        landProfile = CreateProfile(defaultWalkable: false);
-        landProfile.SetTerrainRule(groundTerrain, true, 10);
-        amphibiousProfile = CreateProfile(defaultWalkable: false);
-        amphibiousProfile.SetTerrainRule(groundTerrain, true, 10);
-        amphibiousProfile.SetTerrainRule(waterTerrain, true, 16);
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10));
+        amphibiousProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, true, 16));
 
         Tilemap groundMap = CreateTilemapObject("Ground");
         Tilemap waterMap = CreateTilemapObject("Water");
@@ -368,23 +357,22 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.False);
         Assert.That(navigationGrid.AreCellsConnected(west, east, amphibiousProfile), Is.True);
 
-        landProfile.SetTerrainRule(waterTerrain, true, 20);
-        Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.True, "Cached regions must refresh when profile rules change.");
+        EditRule(landProfile, waterTerrain, true, 20);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.True, "Cached regions must refresh when the profile is edited.");
     }
 
     [Test]
-    public void MinimumTraversalCost_RefreshesWhenRulesChange()
+    public void MinimumTraversalCost_RefreshesWhenTheProfileIsEdited()
     {
         groundTerrain = CreateTerrain("ground");
         waterTerrain = CreateTerrain("water");
-        landProfile = CreateProfile(defaultWalkable: false);
-        landProfile.SetTerrainRule(groundTerrain, true, 10);
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10));
         Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(10));
 
-        landProfile.SetTerrainRule(waterTerrain, true, 4);
+        EditRule(landProfile, waterTerrain, true, 4);
         Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(4));
 
-        landProfile.SetTerrainRule(waterTerrain, false, 4);
+        EditRule(landProfile, waterTerrain, false, 4);
         Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(10));
     }
 
@@ -503,15 +491,45 @@ public class NavigationGridPathfindingTests
 
     private static TerrainType2D CreateTerrain(string id)
     {
-        TerrainType2D terrain = ScriptableObject.CreateInstance<TerrainType2D>();
-        terrain.Configure(id);
-        return terrain;
+        return TerrainType2D.Create(id);
     }
 
-    private static TerrainMovementProfile2D CreateProfile(bool defaultWalkable, int defaultCost = 10)
+    private static TerrainMovementProfile2D CreateProfile(bool defaultWalkable, params TerrainMovementProfile2D.TerrainRule[] rules)
     {
-        TerrainMovementProfile2D profile = ScriptableObject.CreateInstance<TerrainMovementProfile2D>();
-        profile.Configure(defaultWalkable, defaultCost);
-        return profile;
+        return TerrainMovementProfile2D.Create(defaultWalkable, 10, rules);
+    }
+
+    private static TerrainMovementProfile2D.TerrainRule Rule(TerrainType2D terrain, bool isWalkable, int traversalCost)
+    {
+        return new TerrainMovementProfile2D.TerrainRule(terrain, isWalkable, traversalCost);
+    }
+
+    /// <summary>
+    /// Sets or adds the rule for <paramref name="terrain"/> the way the inspector does, through the serialized data.
+    /// </summary>
+    private static void EditRule(TerrainMovementProfile2D profile, TerrainType2D terrain, bool isWalkable, int traversalCost)
+    {
+        SerializedObject serialized = new(profile);
+        SerializedProperty rules = serialized.FindProperty("terrainRules");
+        SerializedProperty rule = null;
+        for (int i = 0; i < rules.arraySize && rule == null; i++)
+        {
+            SerializedProperty candidate = rules.GetArrayElementAtIndex(i);
+            if (candidate.FindPropertyRelative("terrainType").objectReferenceValue == terrain)
+            {
+                rule = candidate;
+            }
+        }
+
+        if (rule == null)
+        {
+            rules.arraySize++;
+            rule = rules.GetArrayElementAtIndex(rules.arraySize - 1);
+            rule.FindPropertyRelative("terrainType").objectReferenceValue = terrain;
+        }
+
+        rule.FindPropertyRelative("isWalkable").boolValue = isWalkable;
+        rule.FindPropertyRelative("traversalCost").intValue = traversalCost;
+        serialized.ApplyModifiedProperties();
     }
 }

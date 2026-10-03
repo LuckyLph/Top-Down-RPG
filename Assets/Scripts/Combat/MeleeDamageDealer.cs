@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 
@@ -32,10 +33,15 @@ public class MeleeDamageDealer : MonoBehaviour
             return;
         }
 
-        damageAmount = Mathf.Max(0, config.attackDamage);
-        attackInterval = Mathf.Max(0f, config.attackInterval);
+        damageAmount = Mathf.Max(0, config.AttackDamage);
+        attackInterval = Mathf.Max(0f, config.AttackInterval);
         damageType = config.AttackDamageType;
-        statuses = config.AttackStatuses;
+        IReadOnlyList<StatusEffectDefinition> attackStatuses = config.AttackStatuses;
+        statuses = new StatusEffectDefinition[attackStatuses.Count];
+        for (int i = 0; i < statuses.Length; i++)
+        {
+            statuses[i] = attackStatuses[i];
+        }
     }
 
     public void ResetCooldown(bool readyImmediately = true)

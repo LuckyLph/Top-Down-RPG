@@ -106,7 +106,7 @@ public class MobPathAgent2D : MonoBehaviour
     private static PathFollowerSettings2D CreateSettings(MobConfig mobConfig)
     {
         return mobConfig != null
-            ? new PathFollowerSettings2D(mobConfig.waypointReachDistance, mobConfig.arrivalDistance, mobConfig.nearestCellSearchRadius)
+            ? new PathFollowerSettings2D(mobConfig.WaypointReachDistance, mobConfig.ArrivalDistance, mobConfig.NearestCellSearchRadius)
             : default;
     }
 

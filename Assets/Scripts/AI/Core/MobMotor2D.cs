@@ -79,8 +79,8 @@ public class MobMotor2D : MonoBehaviour
     {
         if (config != null)
         {
-            moveSpeed = config.moveSpeed;
-            acceleration = config.acceleration;
+            moveSpeed = config.MoveSpeed;
+            acceleration = config.Acceleration;
         }
 
         if (rb == null)

@@ -8,7 +8,7 @@ public class SearchState : MobStateBase
 
     public override void Enter()
     {
-        searchTimer = Config.searchDuration;
+        searchTimer = Config.SearchDuration;
         if (!PathAgent.BuildPathToWorld(Perception.LastKnownTargetPosition, allowPartial: false))
         {
             Brain.ChangeState(MobStateId.Return);
@@ -42,6 +42,6 @@ public class SearchState : MobStateBase
 
     private bool HasArrived()
     {
-        return PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.stuckTimeout;
+        return PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.StuckTimeout;
     }
 }

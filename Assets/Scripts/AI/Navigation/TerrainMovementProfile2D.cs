@@ -2,15 +2,36 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A mob's movement rules per terrain type: whether it can walk there and at what cost, with defaults for terrain it
+/// has no rule for. Read-only at runtime; tests build their own with <see cref="Create"/>. <see cref="Version"/> changes
+/// when the asset is edited, so region caches refresh.
+/// </summary>
 [CreateAssetMenu(menuName = "AI/Navigation/Terrain Movement Profile", fileName = "TerrainMovementProfile2D")]
 public class TerrainMovementProfile2D : ScriptableObject
 {
+    /// <summary>Whether one terrain type is walkable, and its traversal cost.</summary>
     [Serializable]
     public class TerrainRule
     {
-        public TerrainType2D terrainType;
-        public bool isWalkable = true;
-        [Min(1)] public int traversalCost = 10;
+        [SerializeField] private TerrainType2D terrainType;
+        [SerializeField] private bool isWalkable = true;
+        [SerializeField, Min(1)] private int traversalCost = 10;
+
+        public TerrainRule()
+        {
+        }
+
+        public TerrainRule(TerrainType2D terrainType, bool isWalkable, int traversalCost)
+        {
+            this.terrainType = terrainType;
+            this.isWalkable = isWalkable;
+            this.traversalCost = Mathf.Max(1, traversalCost);
+        }
+
+        public TerrainType2D TerrainType => terrainType;
+        public bool IsWalkable => isWalkable;
+        public int TraversalCost => Mathf.Max(1, traversalCost);
     }
 
     [SerializeField] private bool defaultIsWalkable = true;
@@ -23,40 +44,13 @@ public class TerrainMovementProfile2D : ScriptableObject
     public int Version => version;
     public bool DefaultIsWalkable => defaultIsWalkable;
     public int DefaultTraversalCost => Mathf.Max(1, defaultTraversalCost);
-    public IReadOnlyList<TerrainRule> TerrainRules => terrainRules;
-
-    public void Configure(bool isWalkableByDefault, int traversalCostByDefault)
-    {
-        defaultIsWalkable = isWalkableByDefault;
-        defaultTraversalCost = Mathf.Max(1, traversalCostByDefault);
-        InvalidateRules();
-    }
-
-    public void SetTerrainRule(TerrainType2D terrainType, bool isWalkable, int traversalCost)
-    {
-        if (terrainType == null)
-        {
-            return;
-        }
-
-        TerrainRule rule = FindRule(terrainType);
-        if (rule == null)
-        {
-            rule = new TerrainRule { terrainType = terrainType };
-            terrainRules.Add(rule);
-        }
-
-        rule.isWalkable = isWalkable;
-        rule.traversalCost = Mathf.Max(1, traversalCost);
-        InvalidateRules();
-    }
 
     public bool TryGetTraversal(TerrainType2D terrainType, out bool isWalkable, out int traversalCost)
     {
         if (terrainType != null && TryGetRule(terrainType, out TerrainRule rule))
         {
-            isWalkable = rule.isWalkable;
-            traversalCost = Mathf.Max(1, rule.traversalCost);
+            isWalkable = rule.IsWalkable;
+            traversalCost = rule.TraversalCost;
             return true;
         }
 
@@ -75,6 +69,22 @@ public class TerrainMovementProfile2D : ScriptableObject
         return minimumTraversalCost;
     }
 
+    /// <summary>
+    /// Builds a profile in code, for tests. A later rule for the same terrain type wins.
+    /// </summary>
+    public static TerrainMovementProfile2D Create(bool isWalkableByDefault, int traversalCostByDefault, params TerrainRule[] rules)
+    {
+        TerrainMovementProfile2D profile = CreateInstance<TerrainMovementProfile2D>();
+        profile.defaultIsWalkable = isWalkableByDefault;
+        profile.defaultTraversalCost = Mathf.Max(1, traversalCostByDefault);
+        if (rules != null)
+        {
+            profile.terrainRules.AddRange(rules);
+        }
+
+        return profile;
+    }
+
     private int CalculateMinimumTraversalCost()
     {
         int minimum = int.MaxValue;
@@ -86,29 +96,15 @@ public class TerrainMovementProfile2D : ScriptableObject
         for (int i = 0; i < terrainRules.Count; i++)
         {
             TerrainRule rule = terrainRules[i];
-            if (rule == null || !rule.isWalkable)
+            if (rule == null || !rule.IsWalkable)
             {
                 continue;
             }
 
-            minimum = Mathf.Min(minimum, Mathf.Max(1, rule.traversalCost));
+            minimum = Mathf.Min(minimum, rule.TraversalCost);
         }
 
         return minimum == int.MaxValue ? Mathf.Max(1, defaultTraversalCost) : minimum;
-    }
-
-    private TerrainRule FindRule(TerrainType2D terrainType)
-    {
-        for (int i = 0; i < terrainRules.Count; i++)
-        {
-            TerrainRule rule = terrainRules[i];
-            if (rule != null && rule.terrainType == terrainType)
-            {
-                return rule;
-            }
-        }
-
-        return null;
     }
 
     private bool TryGetRule(TerrainType2D terrainType, out TerrainRule rule)
@@ -128,20 +124,13 @@ public class TerrainMovementProfile2D : ScriptableObject
         for (int i = 0; i < terrainRules.Count; i++)
         {
             TerrainRule rule = terrainRules[i];
-            if (rule == null || rule.terrainType == null)
+            if (rule == null || rule.TerrainType == null)
             {
                 continue;
             }
 
-            ruleLookup[rule.terrainType] = rule;
+            ruleLookup[rule.TerrainType] = rule;
         }
-    }
-
-    private void InvalidateRules()
-    {
-        ruleLookup = null;
-        minimumTraversalCost = -1;
-        version++;
     }
 
     private void OnEnable()
@@ -154,18 +143,9 @@ public class TerrainMovementProfile2D : ScriptableObject
     private void OnValidate()
     {
         defaultTraversalCost = Mathf.Max(1, defaultTraversalCost);
-        for (int i = 0; i < terrainRules.Count; i++)
-        {
-            TerrainRule rule = terrainRules[i];
-            if (rule == null)
-            {
-                continue;
-            }
-
-            rule.traversalCost = Mathf.Max(1, rule.traversalCost);
-        }
-
-        InvalidateRules();
+        ruleLookup = null;
+        minimumTraversalCost = -1;
+        version++;
     }
 #endif
 }

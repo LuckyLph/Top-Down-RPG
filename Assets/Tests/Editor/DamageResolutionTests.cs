@@ -343,12 +343,8 @@ public class DamageResolutionTests
     [Test]
     public void MeleeDamageDealer_DealsTheConfiguredDamageType()
     {
-        MobConfig config = ScriptableObject.CreateInstance<MobConfig>();
+        MobConfig config = MobConfig.Create(attackDamage: 10, attackDamageType: DamageType.Poison);
         created.Add(config);
-        config.attackDamage = 10;
-        SerializedObject serializedConfig = new(config);
-        serializedConfig.FindProperty("attackDamageType").enumValueIndex = (int)DamageType.Poison;
-        serializedConfig.ApplyModifiedPropertiesWithoutUndo();
         DamageReceiver attacker = CreateUnit("Attacker", null);
         MeleeDamageDealer dealer = attacker.gameObject.AddComponent<MeleeDamageDealer>();
         DamageReceiver target = CreateUnit("Target", Profile(Faction.Players, DamageTypeMask.None, new DamageResistance(DamageType.Poison, 50)));
@@ -420,7 +416,7 @@ public class DamageResolutionTests
         Assert.That(weasel.GetComponent<DamageReceiver>().Faction, Is.EqualTo(Faction.Mobs));
         Assert.That(sword.Damage, Is.EqualTo(20));
         Assert.That(sword.DamageType, Is.EqualTo(DamageType.Physical));
-        Assert.That(mob.attackDamage, Is.EqualTo(10));
+        Assert.That(mob.AttackDamage, Is.EqualTo(10));
         Assert.That(mob.AttackDamageType, Is.EqualTo(DamageType.Physical));
     }
 

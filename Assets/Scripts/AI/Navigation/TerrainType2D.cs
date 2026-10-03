@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// A terrain tag that navigation sources put on cells and movement profiles give rules for. Read-only at runtime;
+/// tests build their own with <see cref="Create"/>.
+/// </summary>
 [CreateAssetMenu(menuName = "AI/Navigation/Terrain Type", fileName = "TerrainType2D")]
 public class TerrainType2D : ScriptableObject
 {
@@ -7,9 +11,14 @@ public class TerrainType2D : ScriptableObject
 
     public string TerrainId => string.IsNullOrWhiteSpace(terrainId) ? name : terrainId;
 
-    public void Configure(string id)
+    /// <summary>
+    /// Builds a terrain type in code, for tests.
+    /// </summary>
+    public static TerrainType2D Create(string id)
     {
-        terrainId = string.IsNullOrWhiteSpace(id) ? "terrain" : id;
+        TerrainType2D terrain = CreateInstance<TerrainType2D>();
+        terrain.terrainId = string.IsNullOrWhiteSpace(id) ? "terrain" : id;
+        return terrain;
     }
 
 #if UNITY_EDITOR

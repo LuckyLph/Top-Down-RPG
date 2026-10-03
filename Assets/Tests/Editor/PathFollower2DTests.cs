@@ -217,9 +217,9 @@ public class PathFollower2DTests
         TerrainType2D mud = CreateTerrain("mud");
         AddTerrainLayer("Ground", ground, Rect(0, 0, 6, 2));
         AddTerrainLayer("Mud", mud, Rect(3, 0, 3, 1));
-        TerrainMovementProfile2D profile = CreateProfile();
-        profile.SetTerrainRule(ground, true, 10);
-        profile.SetTerrainRule(mud, true, 25);
+        TerrainMovementProfile2D profile = CreateProfile(
+            new TerrainMovementProfile2D.TerrainRule(ground, true, 10),
+            new TerrainMovementProfile2D.TerrainRule(mud, true, 25));
         BuildGrid();
         PathFollower2D shortcutFollower = CreateFollower(profile, useStraightLineShortcut: true);
         PathFollower2D plainFollower = CreateFollower(profile);
@@ -331,9 +331,9 @@ public class PathFollower2DTests
 
         AddTerrainLayer("Ground", ground, groundCells);
         AddTerrainLayer("Mud", mud, mudCells);
-        TerrainMovementProfile2D profile = CreateProfile();
-        profile.SetTerrainRule(ground, true, 10);
-        profile.SetTerrainRule(mud, true, 25);
+        TerrainMovementProfile2D profile = CreateProfile(
+            new TerrainMovementProfile2D.TerrainRule(ground, true, 10),
+            new TerrainMovementProfile2D.TerrainRule(mud, true, 25));
         BuildGrid();
         return profile;
     }
@@ -353,11 +353,11 @@ public class PathFollower2DTests
 
     private (MobPathAgent2D, Rigidbody2D) CreateMobAgent(TerrainMovementProfile2D profile)
     {
-        MobConfig config = Track(ScriptableObject.CreateInstance<MobConfig>());
-        config.waypointReachDistance = WaypointReachDistance;
-        config.arrivalDistance = ArrivalDistance;
-        config.moveSpeed = MoveSpeed;
-        config.movementProfile = profile;
+        MobConfig config = Track(MobConfig.Create(
+            moveSpeed: MoveSpeed,
+            waypointReachDistance: WaypointReachDistance,
+            arrivalDistance: ArrivalDistance,
+            movementProfile: profile));
 
         GameObject mob = Track(new GameObject("Mob"));
         Rigidbody2D body = mob.AddComponent<Rigidbody2D>();
@@ -406,16 +406,12 @@ public class PathFollower2DTests
 
     private TerrainType2D CreateTerrain(string id)
     {
-        TerrainType2D terrain = Track(ScriptableObject.CreateInstance<TerrainType2D>());
-        terrain.Configure(id);
-        return terrain;
+        return Track(TerrainType2D.Create(id));
     }
 
-    private TerrainMovementProfile2D CreateProfile()
+    private TerrainMovementProfile2D CreateProfile(params TerrainMovementProfile2D.TerrainRule[] rules)
     {
-        TerrainMovementProfile2D profile = Track(ScriptableObject.CreateInstance<TerrainMovementProfile2D>());
-        profile.Configure(isWalkableByDefault: false, traversalCostByDefault: 10);
-        return profile;
+        return Track(TerrainMovementProfile2D.Create(false, 10, rules));
     }
 
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)

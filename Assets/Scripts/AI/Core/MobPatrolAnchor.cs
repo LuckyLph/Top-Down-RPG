@@ -42,15 +42,15 @@ public class MobPatrolAnchor : MonoBehaviour
             return false;
         }
 
-        int attempts = Mathf.Max(1, config.patrolSampleAttempts);
+        int attempts = Mathf.Max(1, config.PatrolSampleAttempts);
         for (int i = 0; i < attempts; i++)
         {
-            Vector2 offset = random.InsideUnitCircle() * config.patrolRoamRadius;
+            Vector2 offset = random.InsideUnitCircle() * config.PatrolRoamRadius;
             Vector2 candidateWorld = spawnPosition + offset;
             Vector3Int candidateCell = navigationGrid.WorldToCell(candidateWorld);
 
             if (!navigationGrid.IsCellWalkable(candidateCell, config.MovementProfile)
-                && !navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.nearestCellSearchRadius))
+                && !navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.NearestCellSearchRadius))
             {
                 continue;
             }
@@ -80,7 +80,7 @@ public class MobPatrolAnchor : MonoBehaviour
         }
 
         Gizmos.color = patrolRadiusColor;
-        float radius = config != null ? config.patrolRoamRadius : 0f;
+        float radius = config != null ? config.PatrolRoamRadius : 0f;
         if (radius > 0f)
         {
             Gizmos.DrawWireSphere(center, radius);

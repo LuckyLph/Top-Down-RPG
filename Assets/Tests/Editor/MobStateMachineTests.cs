@@ -195,7 +195,7 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
 
         BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
         Assert.That(brain.PathAgent.HasPath, Is.True, "The mob should head for where it last saw the target.");
@@ -209,11 +209,11 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Idle);
         brain.TickStateMachine(0.1f);
         GameObject pillar = BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
 
         Object.DestroyImmediate(pillar);
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
     }
@@ -226,13 +226,13 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Idle);
         brain.TickStateMachine(0.1f);
         GameObject pillar = BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
 
         // In plain view, beyond detectionRadius (8) but within loseTargetDistance (10).
         Object.DestroyImmediate(pillar);
         player.position = new Vector3(9f, 0f, 0f);
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Aggro range must not widen while searching.");
     }
@@ -243,7 +243,7 @@ public class MobStateMachineTests
         EnterSearchWithTargetGone();
 
         // Still walking to the last known position (edit mode runs no physics, so it never gets there).
-        brain.TickStateMachine(config.searchDuration + 0.1f);
+        brain.TickStateMachine(config.SearchDuration + 0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Walking there must not use up the search time.");
 
         Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
@@ -252,7 +252,7 @@ public class MobStateMachineTests
         brain.FixedTickStateMachine();
         Assert.That(brain.PathAgent.ReachedDestination, Is.True);
 
-        brain.TickStateMachine(config.searchDuration - 0.1f);
+        brain.TickStateMachine(config.SearchDuration - 0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "It should wait the full search time at the spot.");
 
         brain.TickStateMachine(0.2f);
@@ -265,7 +265,7 @@ public class MobStateMachineTests
         EnterSearchWithTargetGone();
 
         TickBlockedPastStuckTimeout();
-        brain.TickStateMachine(config.searchDuration);
+        brain.TickStateMachine(config.SearchDuration);
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
@@ -456,7 +456,7 @@ public class MobStateMachineTests
         other.Transform.position = new Vector3(0f, 2f, 0f);
         for (int i = 0; i < 5; i++)
         {
-            brain.TickStateMachine(config.lineOfSightInterval);
+            brain.TickStateMachine(config.LineOfSightInterval);
             Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
         }
     }
@@ -472,7 +472,7 @@ public class MobStateMachineTests
         Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
 
         playerHealth.ApplyDamage(playerHealth.MaxHealth);
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(other));
         Assert.That(brain.Perception.HasDetectedTarget, Is.True);
@@ -490,7 +490,7 @@ public class MobStateMachineTests
         Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
 
         BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(other));
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase), "Another player in view means no search.");
@@ -506,7 +506,7 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
 
         players.Remove(playerHandle);
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
 
         Assert.That(brain.Perception.CurrentTarget, Is.Null);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
@@ -588,9 +588,7 @@ public class MobStateMachineTests
     [Test]
     public void PatrolState_OnlyRoamsToReachableCells_WhenRoamRadiusSpansAWall()
     {
-        SetupWorld(addHorizontalBarrier: true);
-        // The barrier row sits one cell north of spawn, so a large share of samples land on or past it.
-        config.patrolRoamRadius = 4f;
+        SetupWorld(addHorizontalBarrier: true, patrolRoamRadius: 4f);
 
         int patrols = 0;
         for (int attempt = 0; attempt < 30; attempt++)
@@ -697,7 +695,7 @@ public class MobStateMachineTests
         Object.DestroyImmediate(ally.gameObject);
         Physics2D.SyncTransforms();
         brain.FixedTickStateMachine();
-        brain.TickStateMachine(config.repathInterval);
+        brain.TickStateMachine(config.RepathInterval);
         brain.FixedTickStateMachine();
 
         Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
@@ -724,7 +722,7 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Idle);
         brain.TickStateMachine(0.1f);
         BlockLineOfSightAt(new Vector2(1.5f, 0f));
-        brain.TickStateMachine(config.lineOfSightInterval);
+        brain.TickStateMachine(config.LineOfSightInterval);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
 
         player.position = new Vector3(100f, 0f, 0f);
@@ -744,7 +742,7 @@ public class MobStateMachineTests
 
     private void TickBlockedPastStuckTimeout()
     {
-        int fixedTicks = Mathf.CeilToInt(config.stuckTimeout / Time.fixedDeltaTime) + 1;
+        int fixedTicks = Mathf.CeilToInt(config.StuckTimeout / Time.fixedDeltaTime) + 1;
         for (int i = 0; i < fixedTicks; i++)
         {
             brain.FixedTickStateMachine();
@@ -753,7 +751,7 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
     }
 
-    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null)
+    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f)
     {
         root = new GameObject("MobStateMachineTestRoot");
         Grid grid = root.AddComponent<Grid>();
@@ -771,8 +769,7 @@ public class MobStateMachineTests
 
         walkTile = ScriptableObject.CreateInstance<Tile>();
         blockTile = ScriptableObject.CreateInstance<Tile>();
-        groundTerrain = ScriptableObject.CreateInstance<TerrainType2D>();
-        groundTerrain.Configure("ground");
+        groundTerrain = TerrainType2D.Create("ground");
         for (int x = -10; x <= 10; x++)
         {
             for (int y = -10; y <= 10; y++)
@@ -813,16 +810,16 @@ public class MobStateMachineTests
         players = new PlayerRegistry();
         players.Add(playerHandle);
 
-        config = ScriptableObject.CreateInstance<MobConfig>();
-        config.idleDurationRange = new Vector2(10f, 10f);
-        config.detectionRadius = 8f;
-        config.loseTargetDistance = 10f;
-        config.attackStopDistance = 1f;
-        config.attackExitBuffer = 0.25f;
-        config.attackDamage = 1;
-        config.attackInterval = 0.75f;
-        config.repathInterval = 0.1f;
-        config.patrolRoamRadius = 2f;
+        config = MobConfig.Create(
+            idleDurationRange: new Vector2(10f, 10f),
+            detectionRadius: 8f,
+            loseTargetDistance: 10f,
+            attackStopDistance: 1f,
+            attackExitBuffer: 0.25f,
+            attackDamage: 1,
+            attackInterval: 0.75f,
+            repathInterval: 0.1f,
+            patrolRoamRadius: patrolRoamRadius);
 
         brain = CreateMob(spawnPosition ?? Vector3.zero);
     }

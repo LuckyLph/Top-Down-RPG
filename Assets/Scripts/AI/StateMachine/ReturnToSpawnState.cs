@@ -53,7 +53,7 @@ public class ReturnToSpawnState : MobStateBase
             return;
         }
 
-        if (PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.stuckTimeout)
+        if (PathAgent.ReachedDestination || PathAgent.StalledTime >= Config.StuckTimeout)
         {
             Brain.ChangeState(MobStateId.Idle);
         }
@@ -80,7 +80,7 @@ public class ReturnToSpawnState : MobStateBase
             return true;
         }
 
-        if (PathAgent.NavigationGrid.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.nearestCellSearchRadius))
+        if (PathAgent.NavigationGrid.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.NearestCellSearchRadius))
         {
             destination = PathAgent.NavigationGrid.CellToWorldCenter(nearest);
             return true;

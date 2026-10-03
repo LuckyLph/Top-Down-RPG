@@ -1,19 +1,20 @@
 using System;
-using UnityEngine;
 using VContainer.Unity;
 
 /// <summary>
-/// Stops game time while a <see cref="GameFlow"/> transition runs: <see cref="Time.timeScale"/> is 0 from
+/// Stops game time while a <see cref="GameFlow"/> transition runs: it holds the <see cref="TimeFreeze"/> from
 /// <see cref="GameFlow.TransitionStarted"/> to <see cref="GameFlow.TransitionFinished"/>, so nothing ticks, moves
 /// or expires behind the fade. The fader runs on unscaled time.
 /// </summary>
 public sealed class TransitionTimeFreeze : IStartable, IDisposable
 {
     private readonly GameFlow gameFlow;
+    private readonly TimeFreeze timeFreeze;
 
-    public TransitionTimeFreeze(GameFlow gameFlow)
+    public TransitionTimeFreeze(GameFlow gameFlow, TimeFreeze timeFreeze)
     {
         this.gameFlow = gameFlow;
+        this.timeFreeze = timeFreeze;
     }
 
     public void Start()
@@ -27,11 +28,18 @@ public sealed class TransitionTimeFreeze : IStartable, IDisposable
     {
         gameFlow.TransitionStarted -= Refresh;
         gameFlow.TransitionFinished -= Refresh;
-        Time.timeScale = 1f;
+        timeFreeze.Release(this);
     }
 
     private void Refresh()
     {
-        Time.timeScale = gameFlow.IsTransitioning ? 0f : 1f;
+        if (gameFlow.IsTransitioning)
+        {
+            timeFreeze.Hold(this);
+        }
+        else
+        {
+            timeFreeze.Release(this);
+        }
     }
 }

@@ -42,7 +42,8 @@ public class MainLifetimeScope : LifetimeScope
             .As<IPlayerInput>()
             .As<IMenuInput>()
             .AsSelf();
-        builder.RegisterEntryPoint<GameplayInputGate>();
+        builder.RegisterEntryPoint<GameplayInputGate>().AsSelf();
+        builder.Register<TimeFreeze>(Lifetime.Singleton);
         builder.RegisterEntryPoint<TransitionTimeFreeze>();
 
         builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, FileSaveStore.DefaultFileName)));
@@ -66,6 +67,7 @@ public class MainLifetimeScope : LifetimeScope
                 .As<IGameAuthority>()
                 .As<INetworkObjectSpawner>()
                 .As<IClientReadiness>()
+                .As<ISessionStatus>()
                 .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);

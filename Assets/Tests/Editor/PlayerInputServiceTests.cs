@@ -28,6 +28,7 @@ public class PlayerInputServiceTests
         InputActionMap uiMap = actions.AddActionMap(PlayerInputService.UIMapName);
         uiMap.AddAction("Submit", InputActionType.Button, "<Keyboard>/enter");
         uiMap.AddAction(PlayerInputService.CancelActionName, InputActionType.Button, "<Keyboard>/escape");
+        actions.AddActionMap(PlayerInputService.MenusMapName).AddAction(PlayerInputService.MenuActionName, InputActionType.Button, "<Keyboard>/escape");
     }
 
     [TearDown]
@@ -81,6 +82,21 @@ public class PlayerInputServiceTests
     }
 
     [Test]
+    public void SetMenusEnabled_TogglesOnlyTheMenusMap_AndTheMenuKeyIsNeutralWhileOff()
+    {
+        PlayerInputService service = new(actions, null);
+
+        service.SetMenusEnabled(true);
+        Assert.That(service.MenusEnabled, Is.True);
+        Assert.That(service.GameplayEnabled, Is.False);
+        Assert.That(service.MenuPressedThisFrame, Is.False);
+
+        service.SetMenusEnabled(false);
+        Assert.That(service.MenusEnabled, Is.False);
+        Assert.That(service.MenuPressedThisFrame, Is.False);
+    }
+
+    [Test]
     public void AbilitySlotsOutsideTheBar_AreNeverPressed()
     {
         PlayerInputService service = new(actions, null);
@@ -115,10 +131,12 @@ public class PlayerInputServiceTests
     {
         PlayerInputService service = new(actions, null);
         service.SetGameplayEnabled(true);
+        service.SetMenusEnabled(true);
 
         service.Dispose();
 
         Assert.That(service.GameplayEnabled, Is.False);
+        Assert.That(service.MenusEnabled, Is.False);
     }
 
     [Test]

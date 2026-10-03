@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using VContainer;
 using Object = UnityEngine.Object;
 
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, ISessionStatus, IDisposable
 {
     public const string ClientReadyMessage = "TopDownRPG.ClientReady";
     public const string AreaAnnouncementMessage = "TopDownRPG.AreaAnnouncement";
@@ -61,6 +61,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public NetworkManager NetworkManager => networkManager;
     public NetworkSettings Settings => settings;
     public bool IsActive => networkManager.IsListening;
+    public bool IsOnline => IsActive;
     public bool IsHost => networkManager.IsHost;
     public bool IsServer => networkManager.IsServer;
     public bool IsConnectedClient => networkManager.IsConnectedClient;

@@ -5,7 +5,8 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Reads the <c>Player</c> action map for the local player and answers whether the pointer is over UI through
-/// the Main scope's <see cref="EventSystem"/>. Also reads the <c>UI</c> map's Cancel for menus.
+/// the Main scope's <see cref="EventSystem"/>. Also reads the <c>UI</c> map's Cancel and the <c>Menus</c> map's
+/// Menu key for menus.
 /// </summary>
 public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
 {
@@ -16,6 +17,8 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     public const string AbilityActionPrefix = "Ability";
     public const string UIMapName = "UI";
     public const string CancelActionName = "Cancel";
+    public const string MenusMapName = "Menus";
+    public const string MenuActionName = "Menu";
 
     private readonly InputActionMap playerMap;
     private readonly InputAction moveClickAction;
@@ -23,6 +26,8 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     private readonly InputAction stopAction;
     private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
     private readonly InputAction cancelAction;
+    private readonly InputActionMap menusMap;
+    private readonly InputAction menuAction;
     private readonly EventSystem eventSystem;
 
     public PlayerInputService(InputActionAsset actions, EventSystem eventSystem)
@@ -33,6 +38,8 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         pointAction = playerMap?.FindAction(PointActionName, false);
         stopAction = playerMap?.FindAction(StopActionName, false);
         cancelAction = actions != null ? actions.FindAction($"{UIMapName}/{CancelActionName}", false) : null;
+        menusMap = actions != null ? actions.FindActionMap(MenusMapName, false) : null;
+        menuAction = menusMap?.FindAction(MenuActionName, false);
 
         bool hasAllAbilities = true;
         for (int i = 0; i < abilityActions.Length; i++)
@@ -41,23 +48,25 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
             hasAllAbilities &= abilityActions[i] != null;
         }
 
-        if (moveClickAction == null || pointAction == null || stopAction == null || !hasAllAbilities || cancelAction == null)
+        if (moveClickAction == null || pointAction == null || stopAction == null || !hasAllAbilities || cancelAction == null || menuAction == null)
         {
             Debug.LogError(
                 $"{nameof(PlayerInputService)} needs an input asset with a '{PlayerMapName}' map containing " +
                 $"'{MoveClickActionName}', '{PointActionName}', '{StopActionName}' and " +
                 $"'{AbilityActionName(0)}' to '{AbilityActionName(AbilitySlots.Count - 1)}' actions, " +
-                $"and a '{UIMapName}' map with a '{CancelActionName}' action.");
+                $"a '{UIMapName}' map with a '{CancelActionName}' action and a '{MenusMapName}' map with a '{MenuActionName}' action.");
         }
     }
 
     public bool GameplayEnabled => playerMap != null && playerMap.enabled;
+    public bool MenusEnabled => menusMap != null && menusMap.enabled;
     public Vector2 PointerScreenPosition => GameplayEnabled && pointAction != null ? pointAction.ReadValue<Vector2>() : Vector2.zero;
     public bool IsPointerOverUI => eventSystem != null && eventSystem.IsPointerOverGameObject();
     public bool MovePressedThisFrame => GameplayEnabled && moveClickAction != null && moveClickAction.WasPressedThisFrame();
     public bool MoveHeld => GameplayEnabled && moveClickAction != null && moveClickAction.IsPressed();
     public bool StopPressedThisFrame => GameplayEnabled && stopAction != null && stopAction.WasPressedThisFrame();
     public bool BackPressedThisFrame => cancelAction != null && cancelAction.enabled && cancelAction.WasPressedThisFrame();
+    public bool MenuPressedThisFrame => menuAction != null && menuAction.enabled && menuAction.WasPressedThisFrame();
 
     public bool WasAbilityPressedThisFrame(int slot)
     {
@@ -95,8 +104,26 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         }
     }
 
+    public void SetMenusEnabled(bool enabled)
+    {
+        if (menusMap == null)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            menusMap.Enable();
+        }
+        else
+        {
+            menusMap.Disable();
+        }
+    }
+
     public void Dispose()
     {
         SetGameplayEnabled(false);
+        SetMenusEnabled(false);
     }
 }

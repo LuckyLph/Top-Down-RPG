@@ -74,6 +74,10 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerHudPresenter>();
         builder.RegisterEntryPoint<AbilityBarPresenter>();
         builder.RegisterEntryPoint<StatusBarPresenter>();
+        builder.RegisterComponentInHierarchy<OptionsMenuView>();
+        builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
+        builder.RegisterComponentInHierarchy<GameMenuView>();
+        builder.RegisterEntryPoint<GameMenuController>().AsSelf();
 
         if (pointerFeedbackLayer == null)
         {

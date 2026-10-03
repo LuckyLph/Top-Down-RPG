@@ -166,8 +166,8 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 ### Phase 3: in-game menu
 
-- [ ] `IMenuInput.MenuPressedThisFrame` and enabling the `Menus` map, `GameplayInputGate` blocks, `TimeFreeze` with `TransitionTimeFreeze` moved onto it.
-- [ ] `GameMenu` prefab and `GameMenuController`: Resume, Options, Leave game, Quit, host confirmations, pause in single player.
+- [x] `IMenuInput.MenuPressedThisFrame` and enabling the `Menus` map, `GameplayInputGate` blocks, `TimeFreeze` with `TransitionTimeFreeze` moved onto it.
+- [x] `GameMenu` prefab and `GameMenuController`: Resume, Options, Leave game, Quit, host confirmations, pause in single player.
 - [ ] Checked in Multiplayer Play Mode: a client and the host each rebind and play; the menu pauses no one, the host included when it is alone; a client leaving and the host leaving.
 
 ### Later

@@ -38,6 +38,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     private readonly List<int> bindingIndices = new();
     private readonly List<string> displayNames = new();
     private readonly List<string> sections = new();
+    private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
     private InputActionRebindingExtensions.RebindingOperation rebinding;
     private Action<RebindOutcome, InputAction> rebindFinished;
 
@@ -45,6 +46,11 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     {
         this.actions = actions;
         this.settings = settings;
+        for (int slot = 0; slot < abilityActions.Length && actions != null; slot++)
+        {
+            abilityActions[slot] = actions.FindAction($"{PlayerInputService.PlayerMapName}/{PlayerInputService.AbilityActionName(slot)}", false);
+        }
+
         if (actions == null || rebindableActions == null)
         {
             Debug.LogError($"{nameof(InputBindings)} needs an input asset and a {nameof(RebindableActionList)}; nothing can be rebound.");
@@ -114,9 +120,9 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return index >= 0 ? EffectivePath(index) : null;
     }
 
-    public string GetShortLabel(string actionName)
+    public string GetAbilityKeyLabel(int slot)
     {
-        return actions != null ? GetShortLabel(actions.FindAction(actionName)) : string.Empty;
+        return slot >= 0 && slot < abilityActions.Length ? GetShortLabel(abilityActions[slot]) : string.Empty;
     }
 
     /// <summary>
@@ -282,12 +288,28 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
 
     private void Load()
     {
-        string overrides = settings.InputBindingOverrides;
-        if (actions == null || string.IsNullOrEmpty(overrides))
+        if (actions == null)
         {
             return;
         }
 
+        string overrides = settings.InputBindingOverrides;
+        if (!string.IsNullOrEmpty(overrides))
+        {
+            ApplySaved(overrides);
+        }
+
+        bool dropped = DropInvalidOverrides();
+        dropped |= DropDuplicateOverrides();
+        if (dropped)
+        {
+            Debug.LogWarning("Some saved key bindings could not be used and were reset to their defaults.");
+            settings.SetInputBindingOverrides(actions.SaveBindingOverridesAsJson());
+        }
+    }
+
+    private void ApplySaved(string overrides)
+    {
         try
         {
             actions.LoadBindingOverridesFromJson(overrides);
@@ -297,15 +319,6 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
             Debug.LogWarning($"The saved key bindings could not be read ({exception.Message}); using the defaults.");
             actions.RemoveAllBindingOverrides();
             settings.SetInputBindingOverrides(string.Empty);
-            return;
-        }
-
-        bool dropped = DropInvalidOverrides();
-        dropped |= DropDuplicateOverrides();
-        if (dropped)
-        {
-            Debug.LogWarning("Some saved key bindings could not be used and were reset to their defaults.");
-            settings.SetInputBindingOverrides(actions.SaveBindingOverridesAsJson());
         }
     }
 
@@ -348,7 +361,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
             for (int i = 0; i < rebindable.Count && !found; i++)
             {
                 int other = IndexOfPath(EffectivePath(i), i);
-                if (other < 0)
+                if (other < i)
                 {
                     continue;
                 }

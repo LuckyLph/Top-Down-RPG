@@ -86,7 +86,7 @@ Short labels for the ability bar: the layout's key name for keys ("Q", "Space", 
 
 - `settings.json` holds a format version and the binding overrides as written by `InputActionAsset.SaveBindingOverridesAsJson()`, which keys each override by action and binding id. Renaming an action keeps its override; an override for a binding that no longer exists is ignored.
 - It is loaded once at boot, before any menu shows, and written after every change, through the same atomic `FileSaveStore` as the save.
-- A missing file means defaults. A malformed file, or one with another format version, is ignored with a warning and replaced on the next change.
+- A missing file means defaults. A malformed file, or one with an older format version, is ignored with a warning and replaced on the next change. A file written by a newer build is ignored with a warning and never overwritten: changes made in this session apply but are not saved.
 - After loading, if two rebindable actions end up on the same input (possible only when a later build changes a default), the overrides involved are dropped with a warning and the file is rewritten.
 - Multiplayer Play Mode virtual players share `persistentDataPath`, so they share `settings.json`: each reads it at boot and the last change wins on disk, while each keeps its own bindings in memory for the session.
 

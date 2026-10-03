@@ -62,19 +62,19 @@ public class PlayerFeedbackTests
     [Test]
     public void AbilityBar_LabelsSlotsWithTheBoundKeys_AndFollowsRebinding()
     {
-        keyLabels.Set(PlayerInputService.AbilityActionName(0), "Q");
-        keyLabels.Set(PlayerInputService.AbilityActionName(5), "S");
+        keyLabels.Set(0, "Q");
+        keyLabels.Set(5, "S");
         CreateBar();
 
         Assert.That(slots[0].KeyText.text, Is.EqualTo("Q"));
         Assert.That(slots[5].KeyText.text, Is.EqualTo("S"));
 
-        keyLabels.Set(PlayerInputService.AbilityActionName(0), "MMB");
+        keyLabels.Set(0, "MMB");
 
         Assert.That(slots[0].KeyText.text, Is.EqualTo("MMB"));
 
         barPresenter.Dispose();
-        keyLabels.Set(PlayerInputService.AbilityActionName(0), "F");
+        keyLabels.Set(0, "F");
 
         Assert.That(slots[0].KeyText.text, Is.EqualTo("MMB"), "A disposed presenter stops listening.");
         barPresenter = null;

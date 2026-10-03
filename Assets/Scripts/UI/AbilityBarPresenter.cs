@@ -92,7 +92,7 @@ public sealed class AbilityBarPresenter : IStartable, ITickable, IDisposable
     {
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
-            view.SetKey(slot, keyLabels.GetShortLabel(PlayerInputService.AbilityActionName(slot)));
+            view.SetKey(slot, keyLabels.GetAbilityKeyLabel(slot));
         }
     }
 

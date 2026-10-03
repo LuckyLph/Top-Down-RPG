@@ -30,6 +30,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
     private readonly TimeFreeze timeFreeze;
     private readonly GameFlow gameFlow;
     private readonly ISessionStatus session;
+    private readonly UISelection selection;
     private PendingAction pending;
     private bool isOpen;
     private bool isPaused;
@@ -44,7 +45,8 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         GameplayInputGate inputGate,
         TimeFreeze timeFreeze,
         GameFlow gameFlow,
-        ISessionStatus session)
+        ISessionStatus session,
+        UISelection selection)
     {
         this.view = view;
         this.options = options;
@@ -53,6 +55,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         this.timeFreeze = timeFreeze;
         this.gameFlow = gameFlow;
         this.session = session;
+        this.selection = selection;
     }
 
     public bool IsOpen => isOpen;
@@ -137,7 +140,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         }
 
         ignoreInputUntilTick = ticks + 1;
-        view.Select(view.ResumeButton);
+        selection.Select(view.ResumeButton);
     }
 
     /// <summary>
@@ -162,7 +165,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         inputGate.Unblock(this);
         timeFreeze.Release(this);
         isPaused = false;
-        view.Select(null);
+        selection.Select(null);
     }
 
     private void OpenOptions()
@@ -185,7 +188,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
 
         view.SetShown(true);
         ignoreInputUntilTick = ticks + 1;
-        view.Select(view.OptionsButton);
+        selection.Select(view.OptionsButton);
     }
 
     private void RequestLeave()
@@ -210,7 +213,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
             pending = action;
             bool leaving = action == PendingAction.Leave;
             view.ShowConfirm(leaving ? LeaveQuestion : QuitQuestion, leaving ? LeaveLabel : QuitLabel);
-            view.Select(view.ConfirmNoButton);
+            selection.Select(view.ConfirmNoButton);
             return;
         }
 
@@ -230,7 +233,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable
         PendingAction action = pending;
         pending = PendingAction.None;
         view.HideConfirm();
-        view.Select(action == PendingAction.Quit ? view.QuitButton : view.LeaveButton);
+        selection.Select(action == PendingAction.Quit ? view.QuitButton : view.LeaveButton);
     }
 
     private void Run(PendingAction action)

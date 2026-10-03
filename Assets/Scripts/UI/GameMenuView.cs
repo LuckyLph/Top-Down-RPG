@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -72,18 +71,6 @@ public class GameMenuView : MonoBehaviour
         if (confirmPanel != null)
         {
             confirmPanel.SetActive(false);
-        }
-    }
-
-    /// <summary>
-    /// Selects <paramref name="selectable"/> for keyboard and gamepad navigation, or clears the selection when it is null.
-    /// </summary>
-    public void Select(Selectable selectable)
-    {
-        EventSystem eventSystem = EventSystem.current;
-        if (eventSystem != null)
-        {
-            eventSystem.SetSelectedGameObject(selectable != null ? selectable.gameObject : null);
         }
     }
 }

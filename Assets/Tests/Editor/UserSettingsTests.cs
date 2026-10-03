@@ -53,6 +53,36 @@ public class UserSettingsTests
     }
 
     [Test]
+    public void AFileFromANewerBuild_IsNeverOverwritten()
+    {
+        string newer = "{\"version\":2,\"inputBindingOverrides\":\"x\"}";
+        MemorySaveStore store = new() { Contents = newer };
+        LogAssert.Expect(LogType.Warning, new Regex("newer build"));
+
+        UserSettings settings = new(store);
+
+        Assert.That(settings.IsReadOnly, Is.True);
+        Assert.That(settings.InputBindingOverrides, Is.Empty);
+        Assert.That(settings.SetInputBindingOverrides("y"), Is.False);
+        Assert.That(settings.InputBindingOverrides, Is.EqualTo("y"), "The change still applies for this session.");
+        Assert.That(store.WriteCount, Is.Zero);
+        Assert.That(store.Contents, Is.EqualTo(newer));
+    }
+
+    [Test]
+    public void AFileFromAnOlderFormat_IsReplacedOnTheNextChange()
+    {
+        MemorySaveStore store = new() { Contents = "{\"version\":0,\"inputBindingOverrides\":\"x\"}" };
+        LogAssert.Expect(LogType.Warning, new Regex("format version 0"));
+
+        UserSettings settings = new(store);
+
+        Assert.That(settings.IsReadOnly, Is.False);
+        Assert.That(settings.SetInputBindingOverrides("y"), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public void SettingsFile_IsSeparateFromTheGameSave()
     {
         Assert.That(UserSettings.FileName, Is.Not.EqualTo(FileSaveStore.DefaultFileName));

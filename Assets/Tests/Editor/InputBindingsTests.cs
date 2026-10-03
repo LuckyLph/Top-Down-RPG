@@ -165,18 +165,20 @@ public class InputBindingsTests
         Assert.That(bindings.TryAssign(Action("Ability3"), path, out _), Is.True);
 
         Assert.That(bindings.GetShortLabel(Action("Ability3")), Is.EqualTo(shortLabel));
-        Assert.That(bindings.GetShortLabel("Ability3"), Is.EqualTo(shortLabel));
+        Assert.That(bindings.GetAbilityKeyLabel(2), Is.EqualTo(shortLabel));
         Assert.That(bindings.GetLabel(Action("Ability3")), Is.EqualTo(label));
     }
 
     [Test]
-    public void KeyLabels_ComeFromTheKeyboard_AndUnknownActionsHaveNone()
+    public void KeyLabels_ComeFromTheKeyboard_AndSlotsOutsideTheBarHaveNone()
     {
         Create();
 
-        Assert.That(bindings.GetShortLabel("Stop"), Is.EqualTo("X"));
-        Assert.That(bindings.GetShortLabel("MoveClick"), Is.EqualTo("RMB"));
-        Assert.That(bindings.GetShortLabel("NoSuchAction"), Is.Empty);
+        Assert.That(bindings.GetShortLabel(Action("Stop")), Is.EqualTo("X"));
+        Assert.That(bindings.GetShortLabel(Action("MoveClick")), Is.EqualTo("RMB"));
+        Assert.That(bindings.GetAbilityKeyLabel(4), Is.EqualTo("A"));
+        Assert.That(bindings.GetAbilityKeyLabel(-1), Is.Empty);
+        Assert.That(bindings.GetAbilityKeyLabel(AbilitySlots.Count), Is.Empty);
     }
 
     [Test]
@@ -271,6 +273,17 @@ public class InputBindingsTests
 
         Assert.That(RebindableNames.Select(name => bindings.GetPath(Action(name))), Is.EqualTo(DefaultPaths));
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.Empty);
+    }
+
+    [Test]
+    public void TwoActionsSharingADefault_AreReportedOnce()
+    {
+        Action("Stop").ChangeBinding(0).WithPath("<Keyboard>/q");
+        LogAssert.Expect(LogType.Error, new Regex("share the default input"));
+
+        Create();
+
+        LogAssert.NoUnexpectedReceived();
     }
 
     [Test]

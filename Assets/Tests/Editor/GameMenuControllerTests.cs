@@ -37,9 +37,9 @@ public class GameMenuControllerTests
         optionsView = canvas.GetComponentInChildren<OptionsMenuView>(true);
         menuInput = new FakeMenuInput();
         session = new FakeSessionStatus();
-        options = new OptionsMenuController(optionsView, bindings, menuInput);
+        options = new OptionsMenuController(optionsView, bindings, menuInput, new UISelection(null));
         options.Start();
-        controller = new GameMenuController(menuView, options, menuInput, inputGate, timeFreeze, gameFlow, session);
+        controller = new GameMenuController(menuView, options, menuInput, inputGate, timeFreeze, gameFlow, session, new UISelection(null));
         controller.Start();
     }
 

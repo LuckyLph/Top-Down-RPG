@@ -29,7 +29,7 @@ public class OptionsMenuControllerTests : InputTestFixture
         bindings.Initialize();
         view = Object.Instantiate(AssetDatabase.LoadAssetAtPath<OptionsMenuView>(OptionsMenuPath));
         menuInput = new FakeMenuInput();
-        controller = new OptionsMenuController(view, bindings, menuInput);
+        controller = new OptionsMenuController(view, bindings, menuInput, new UISelection(null));
         controller.Start();
         closedCount = 0;
     }

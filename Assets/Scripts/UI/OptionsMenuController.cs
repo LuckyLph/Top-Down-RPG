@@ -19,6 +19,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
     private readonly IMenuInput menuInput;
+    private readonly UISelection selection;
     private readonly List<KeyBindingRowView> rows = new();
     private Action onClosed;
     private int pendingRebind = -1;
@@ -26,11 +27,12 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
     private int ticks;
     private int ignoreBackUntilTick;
 
-    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, IMenuInput menuInput)
+    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, IMenuInput menuInput, UISelection selection)
     {
         this.view = view;
         this.bindings = bindings;
         this.menuInput = menuInput;
+        this.selection = selection;
     }
 
     public bool IsOpen => view.IsShown;
@@ -97,7 +99,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         RefreshRows();
         view.SetShown(true);
         ignoreBackUntilTick = ticks + 1;
-        view.Select(rows.Count > 0 ? rows[0].BindingButton : view.BackButton);
+        selection.Select(rows.Count > 0 ? rows[0].BindingButton : view.BackButton);
     }
 
     /// <summary>
@@ -169,12 +171,12 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         listeningRow = index;
         view.SetNotice(string.Empty);
         view.ShowListening(string.Format(ListeningPromptFormat, bindings.GetDisplayName(action)));
-        view.Select(null);
+        selection.Select(null);
         if (!bindings.StartRebind(action, HandleRebindFinished))
         {
             listeningRow = -1;
             view.HideListening();
-            view.Select(rows[index].BindingButton);
+            selection.Select(rows[index].BindingButton);
         }
     }
 
@@ -191,7 +193,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
 
         if (IsOpen && row >= 0)
         {
-            view.Select(rows[row].BindingButton);
+            selection.Select(rows[row].BindingButton);
         }
     }
 
@@ -214,7 +216,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         }
 
         view.SetConfirmShown(true);
-        view.Select(view.ConfirmNoButton);
+        selection.Select(view.ConfirmNoButton);
     }
 
     private void ConfirmResetAll()
@@ -222,13 +224,13 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable
         bindings.ResetAll();
         view.SetConfirmShown(false);
         view.SetNotice(ResetAllNotice);
-        view.Select(view.ResetAllButton);
+        selection.Select(view.ResetAllButton);
     }
 
     private void CancelResetAll()
     {
         view.SetConfirmShown(false);
-        view.Select(view.ResetAllButton);
+        selection.Select(view.ResetAllButton);
     }
 
     private void ShowMoved(InputAction swappedWith)

@@ -3,18 +3,18 @@ using System.Collections.Generic;
 
 public sealed class FakeInputBindingLabels : IInputBindingLabels
 {
-    private readonly Dictionary<string, string> labels = new();
+    private readonly Dictionary<int, string> labels = new();
 
     public event Action BindingsChanged;
 
-    public string GetShortLabel(string actionName)
+    public string GetAbilityKeyLabel(int slot)
     {
-        return labels.TryGetValue(actionName, out string label) ? label : string.Empty;
+        return labels.TryGetValue(slot, out string label) ? label : string.Empty;
     }
 
-    public void Set(string actionName, string label)
+    public void Set(int slot, string label)
     {
-        labels[actionName] = label;
+        labels[slot] = label;
         BindingsChanged?.Invoke();
     }
 }

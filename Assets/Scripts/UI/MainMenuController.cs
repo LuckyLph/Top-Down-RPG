@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using VContainer;
 
@@ -18,6 +17,7 @@ public class MainMenuController : MonoBehaviour
     private NetworkSession session;
     private GameSave gameSave;
     private OptionsMenuController options;
+    private UISelection selection;
     private bool isJoining;
 
     internal Button ContinueButton => continueButton;
@@ -25,12 +25,13 @@ public class MainMenuController : MonoBehaviour
     internal GameObject ButtonsPanel => buttonsPanel;
 
     [Inject]
-    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save, OptionsMenuController optionsMenu)
+    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save, OptionsMenuController optionsMenu, UISelection uiSelection)
     {
         gameFlow = flow;
         session = networkSession;
         gameSave = save;
         options = optionsMenu;
+        selection = uiSelection;
     }
 
     private void Awake()
@@ -55,9 +56,9 @@ public class MainMenuController : MonoBehaviour
         }
 
         Selectable selected = hasSave && continueButton != null ? continueButton : firstSelected;
-        if (selected != null && EventSystem.current != null)
+        if (selection != null)
         {
-            EventSystem.current.SetSelectedGameObject(selected.gameObject);
+            selection.Select(selected);
         }
 
         if (joinAddressField != null && session != null && string.IsNullOrEmpty(joinAddressField.text))
@@ -170,9 +171,9 @@ public class MainMenuController : MonoBehaviour
     private void HandleOptionsClosed()
     {
         SetButtonsShown(true);
-        if (optionsButton != null && EventSystem.current != null)
+        if (selection != null)
         {
-            EventSystem.current.SetSelectedGameObject(optionsButton.gameObject);
+            selection.Select(optionsButton);
         }
     }
 

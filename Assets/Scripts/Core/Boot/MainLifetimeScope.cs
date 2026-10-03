@@ -36,6 +36,7 @@ public class MainLifetimeScope : LifetimeScope
             Debug.LogError($"{name} has no EventSystem assigned; clicks over UI will reach gameplay.", this);
         }
 
+        builder.Register<UISelection>(Lifetime.Singleton).WithParameter(eventSystem);
         builder.Register<PlayerInputService>(Lifetime.Singleton)
             .WithParameter(inputActions)
             .WithParameter(eventSystem)

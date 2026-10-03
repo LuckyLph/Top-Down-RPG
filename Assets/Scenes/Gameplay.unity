@@ -255,6 +255,7 @@ MonoBehaviour:
   damagePopupLayer: {fileID: 11293221}
   pointerFeedbackLayer: {fileID: 1598283671}
   settings: {fileID: 11400000, guid: 1b67014f06f5f6645825b52856b87320, type: 2}
+  combatSettings: {fileID: 11400000, guid: 418926d2b15a1a544b4edc782443c711, type: 2}
 --- !u!4 &1350234814
 Transform:
   m_ObjectHideFlags: 0

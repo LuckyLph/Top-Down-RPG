@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Sword
   m_EditorClassIdentifier: 
   displayName: Sword
-  damage: 2
+  damage: 20
+  damageType: 0
   attackCooldown: 0.35
   attackRange: 0.3
   slashSpawnDistance: 0.55

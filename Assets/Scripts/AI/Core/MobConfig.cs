@@ -22,6 +22,7 @@ public class MobConfig : ScriptableObject
     [Min(0f)] public float attackStopDistance = 1.25f;
     [Min(0f)] public float attackExitBuffer = 0.25f;
     [Min(0)] public int attackDamage = 1;
+    public DamageType attackDamageType = DamageType.Physical;
     [Min(0f)] public float attackInterval = 0.75f;
 
     [Header("Crowd")]

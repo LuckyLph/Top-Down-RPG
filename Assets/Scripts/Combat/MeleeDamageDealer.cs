@@ -9,9 +9,11 @@ public class MeleeDamageDealer : MonoBehaviour
 
     private IClock clock = UnityClock.Shared;
     private DamageService damageService;
+    private DamageType damageType = DamageType.Physical;
     private float nextAttackTime;
 
     public int DamageAmount => damageAmount;
+    public DamageType DamageType => damageType;
     public float AttackInterval => attackInterval;
     public float NextAttackTime => nextAttackTime;
 
@@ -31,6 +33,7 @@ public class MeleeDamageDealer : MonoBehaviour
 
         damageAmount = Mathf.Max(0, config.attackDamage);
         attackInterval = Mathf.Max(0f, config.attackInterval);
+        damageType = config.attackDamageType;
     }
 
     public void ResetCooldown(bool readyImmediately = true)
@@ -57,8 +60,8 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
-        int appliedDamage = damageService.ApplyDamage(receiver, damageAmount, gameObject);
-        if (appliedDamage <= 0)
+        DamageResult result = damageService.ApplyDamage(receiver, damageAmount, damageType, gameObject);
+        if (!result.Resolved)
         {
             return false;
         }

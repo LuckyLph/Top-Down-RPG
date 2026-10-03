@@ -7,17 +7,20 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
     private readonly CombatEvents combatEvents;
     private readonly DamagePopupLayer popupLayer;
     private readonly Camera camera;
+    private readonly CombatSettings settings;
 
-    public DamagePopupPresenter(CombatEvents combatEvents, DamagePopupLayer popupLayer, Camera camera)
+    public DamagePopupPresenter(CombatEvents combatEvents, DamagePopupLayer popupLayer, Camera camera, CombatSettings settings)
     {
         this.combatEvents = combatEvents;
         this.popupLayer = popupLayer;
         this.camera = camera;
+        this.settings = settings;
     }
 
     public void Start()
     {
         combatEvents.DamageApplied += HandleDamageApplied;
+        combatEvents.HealApplied += HandleHealApplied;
     }
 
     public void Tick()
@@ -39,13 +42,30 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
     public void Dispose()
     {
         combatEvents.DamageApplied -= HandleDamageApplied;
+        combatEvents.HealApplied -= HandleHealApplied;
     }
 
     private void HandleDamageApplied(DamageReport report)
     {
+        if (popupLayer == null)
+        {
+            return;
+        }
+
+        if (report.IsImmune)
+        {
+            popupLayer.Spawn(settings.ImmuneText, settings.ImmuneColor, report.PopupWorldPosition, camera);
+            return;
+        }
+
+        popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera);
+    }
+
+    private void HandleHealApplied(HealReport report)
+    {
         if (popupLayer != null)
         {
-            popupLayer.Spawn(report.Amount, report.PopupWorldPosition, camera);
+            popupLayer.Spawn("+" + report.Amount, settings.HealColor, report.PopupWorldPosition, camera);
         }
     }
 }

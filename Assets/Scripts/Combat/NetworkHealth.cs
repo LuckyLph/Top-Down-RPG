@@ -33,7 +33,9 @@ public class NetworkHealth : NetworkBehaviour
         {
             current.Value = health.CurrentHealth;
             health.Damaged += HandleServerDamaged;
+            health.Healed += HandleServerHealed;
             health.Restored += HandleServerRestored;
+            receiver.ImmuneHit += HandleServerImmuneHit;
             return;
         }
 
@@ -51,13 +53,26 @@ public class NetworkHealth : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         health.Damaged -= HandleServerDamaged;
+        health.Healed -= HandleServerHealed;
         health.Restored -= HandleServerRestored;
+        receiver.ImmuneHit -= HandleServerImmuneHit;
     }
 
     private void HandleServerDamaged(Health.DamageEvent damage)
     {
         current.Value = damage.CurrentHealth;
-        DamagedRpc(damage.Amount, damage.CurrentHealth);
+        HitRpc(damage.Amount, damage.Type, damage.Flags, damage.CurrentHealth);
+    }
+
+    private void HandleServerImmuneHit(DamageType type, DamageFlags flags)
+    {
+        HitRpc(0, type, flags, health.CurrentHealth);
+    }
+
+    private void HandleServerHealed(Health _, int amount)
+    {
+        current.Value = health.CurrentHealth;
+        HealedRpc(amount, health.CurrentHealth);
     }
 
     private void HandleServerRestored(Health _)
@@ -67,11 +82,25 @@ public class NetworkHealth : NetworkBehaviour
     }
 
     [Rpc(SendTo.NotServer)]
-    private void DamagedRpc(int amount, int healthAfter)
+    private void HitRpc(int amount, DamageType type, DamageFlags flags, int healthAfter)
     {
         if (damageService != null)
         {
-            damageService.ApplyReplicatedDamage(receiver, amount);
+            damageService.ApplyReplicatedHit(receiver, amount, type, flags);
+        }
+
+        if (health.CurrentHealth != healthAfter)
+        {
+            health.SyncTo(healthAfter);
+        }
+    }
+
+    [Rpc(SendTo.NotServer)]
+    private void HealedRpc(int amount, int healthAfter)
+    {
+        if (damageService != null)
+        {
+            damageService.ApplyReplicatedHeal(receiver, amount);
         }
 
         if (health.CurrentHealth != healthAfter)

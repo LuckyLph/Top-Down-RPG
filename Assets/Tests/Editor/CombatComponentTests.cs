@@ -121,14 +121,16 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         DamageReport? published = null;
         combatEvents.DamageApplied += report => published = report;
-        DamageService damageService = new(combatEvents, new FixedGameAuthority(false));
+        DamageService damageService = TestCombat.CreateDamageService(new FixedGameAuthority(false), combatEvents);
 
-        Assert.That(damageService.ApplyDamage(receiver, 3), Is.EqualTo(0), "A client never decides damage itself.");
-        Assert.That(damageService.ApplyReplicatedDamage(receiver, 3), Is.EqualTo(3), "Damage the host already decided is mirrored.");
+        Assert.That(damageService.ApplyDamage(receiver, 3).Resolved, Is.False, "A client never decides damage itself.");
+        Assert.That(damageService.ApplyReplicatedHit(receiver, 3, DamageType.Fire, DamageFlags.Resisted).Amount, Is.EqualTo(3), "Damage the host already decided is mirrored.");
 
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth - 3));
         Assert.That(published.HasValue, Is.True);
         Assert.That(published.Value.Amount, Is.EqualTo(3));
+        Assert.That(published.Value.Type, Is.EqualTo(DamageType.Fire));
+        Assert.That(published.Value.Flags, Is.EqualTo(DamageFlags.Resisted));
         Assert.That(published.Value.PopupWorldPosition, Is.EqualTo(receiver.PopupWorldPosition));
     }
 
@@ -141,16 +143,16 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         int publishedCount = 0;
         combatEvents.DamageApplied += _ => publishedCount++;
-        DamageService damageService = new(combatEvents, FixedGameAuthority.Authoritative);
+        DamageService damageService = TestCombat.CreateDamageService(FixedGameAuthority.Authoritative, combatEvents);
 
-        Assert.That(damageService.ApplyDamage(null, 5), Is.EqualTo(0));
-        Assert.That(damageService.ApplyDamage(receiver, 0), Is.EqualTo(0));
-        Assert.That(damageService.ApplyDamage(receiver, -5), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(null, 5).Resolved, Is.False);
+        Assert.That(damageService.ApplyDamage(receiver, 0).Resolved, Is.False);
+        Assert.That(damageService.ApplyDamage(receiver, -5).Resolved, Is.False);
         Assert.That(health.CurrentHealth, Is.EqualTo(10));
 
-        Assert.That(damageService.ApplyDamage(receiver, 10), Is.EqualTo(10));
+        Assert.That(damageService.ApplyDamage(receiver, 10).Amount, Is.EqualTo(10));
         Assert.That(health.IsDead, Is.True);
-        Assert.That(damageService.ApplyDamage(receiver, 1), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(receiver, 1).Resolved, Is.False);
         Assert.That(publishedCount, Is.EqualTo(1), "Only damage that was applied is reported.");
     }
 
@@ -171,7 +173,7 @@ public class CombatComponentTests
         visuals.transform.SetParent(target.transform);
 
         ManualClock clock = new();
-        dealer.Construct(clock, new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
+        dealer.Construct(clock, TestCombat.CreateDamageService(FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         bool firstHit = dealer.TryDealDamage(visuals.transform);
@@ -211,7 +213,7 @@ public class CombatComponentTests
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
 
-        dealer.Construct(new ManualClock(), new DamageService(new CombatEvents(), FixedGameAuthority.Authoritative));
+        dealer.Construct(new ManualClock(), TestCombat.CreateDamageService(FixedGameAuthority.Authoritative));
         dealer.ResetCooldown();
 
         Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
@@ -241,7 +243,7 @@ public class CombatComponentTests
         Camera camera = CreateCamera();
         DamagePopupLayer layer = CreatePopupLayer();
 
-        FloatingDamageText popup = layer.Spawn(5, new Vector3(0f, 2f, 0f), camera);
+        FloatingDamageText popup = layer.Spawn("5", Color.red, new Vector3(0f, 2f, 0f), camera);
 
         RectTransform popupRect = popup.GetComponent<RectTransform>();
         Canvas parentCanvas = popup.GetComponentInParent<Canvas>();
@@ -266,7 +268,7 @@ public class CombatComponentTests
         Camera camera = CreateCamera();
         DamagePopupLayer layer = CreatePopupLayer();
 
-        FloatingDamageText first = layer.Spawn(1, Vector3.zero, camera);
+        FloatingDamageText first = layer.Spawn("1", Color.red, Vector3.zero, camera);
         layer.Tick(first.Lifetime * 0.5f);
 
         Assert.That(first.gameObject.activeSelf, Is.True);
@@ -277,7 +279,7 @@ public class CombatComponentTests
         Assert.That(first.gameObject.activeSelf, Is.False, "Finished popup should be released to the pool.");
         Assert.That(layer.ActiveCount, Is.EqualTo(0));
 
-        FloatingDamageText second = layer.Spawn(2, Vector3.zero, camera);
+        FloatingDamageText second = layer.Spawn("2", Color.red, Vector3.zero, camera);
 
         Assert.That(second, Is.SameAs(first), "Spawning again should reuse the pooled popup.");
         Assert.That(second.gameObject.activeSelf, Is.True);
@@ -298,9 +300,9 @@ public class CombatComponentTests
         CombatEvents combatEvents = new();
         DamageReport? published = null;
         combatEvents.DamageApplied += report => published = report;
-        DamageService damageService = new(combatEvents, FixedGameAuthority.Authoritative);
+        DamageService damageService = TestCombat.CreateDamageService(FixedGameAuthority.Authoritative, combatEvents);
 
-        damageService.ApplyDamage(receiver, 2, source);
+        damageService.ApplyDamage(receiver, 2, DamageType.Physical, source);
 
         Assert.That(published.HasValue, Is.True);
         Assert.That(published.Value.Target, Is.SameAs(health));
@@ -317,8 +319,8 @@ public class CombatComponentTests
         Camera camera = CreateCamera();
         DamagePopupLayer layer = CreatePopupLayer();
         CombatEvents combatEvents = new();
-        DamagePopupPresenter presenter = new(combatEvents, layer, camera);
-        DamageReport report = new(null, 3, null, Vector3.zero);
+        DamagePopupPresenter presenter = new(combatEvents, layer, camera, TestCombat.Settings);
+        DamageReport report = new(null, 3, DamageType.Physical, DamageFlags.None, null, Vector3.zero);
 
         presenter.Start();
         combatEvents.Publish(report);

@@ -90,9 +90,9 @@ public class PlayerBinderTests
         CombatEvents combatEvents = new();
         int published = 0;
         combatEvents.DamageApplied += _ => published++;
-        DamageService damageService = new(combatEvents, new FixedGameAuthority(false));
+        DamageService damageService = TestCombat.CreateDamageService(new FixedGameAuthority(false), combatEvents);
 
-        Assert.That(damageService.ApplyDamage(receiver, 3), Is.EqualTo(0));
+        Assert.That(damageService.ApplyDamage(receiver, 3).Resolved, Is.False);
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
         Assert.That(published, Is.EqualTo(0));
     }

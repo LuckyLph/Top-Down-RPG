@@ -61,12 +61,31 @@ public class NetworkMobsPlayModeTests
 
         CombatEvents clientEvents = client.Resolve<CombatEvents>();
         int clientReports = 0;
-        clientEvents.DamageApplied += _ => clientReports++;
+        DamageReport lastClientReport = default;
+        clientEvents.DamageApplied += report =>
+        {
+            clientReports++;
+            lastClientReport = report;
+        };
         Health hostMobHealth = hostMob.GetComponent<Health>();
         Health clientMobHealth = clientMob.GetComponent<Health>();
-        hostDamage.ApplyDamage(hostMob.GetComponent<DamageReceiver>(), 1);
+        DamageReceiver hostMobReceiver = hostMob.GetComponent<DamageReceiver>();
+        hostDamage.ApplyDamage(hostMobReceiver, 1, DamageType.Fire);
         yield return SceneBootTestHelper.WaitUntil(() => clientMobHealth.CurrentHealth == hostMobHealth.CurrentHealth, "the mob's health to reach the client");
         Assert.That(clientReports, Is.EqualTo(1), "The client should publish the replicated hit for its damage popup.");
+        Assert.That(lastClientReport.Type, Is.EqualTo(DamageType.Fire), "The hit's damage type reaches the client.");
+
+        CombatProfile mobProfile = hostMobReceiver.Profile;
+        CombatProfile frostImmune = CombatProfile.Create(Faction.Mobs, DamageTypeMask.Frost);
+        hostMobReceiver.SetProfile(frostImmune);
+        int healthBeforeImmuneHit = hostMobHealth.CurrentHealth;
+        hostDamage.ApplyDamage(hostMobReceiver, 5, DamageType.Frost);
+        yield return SceneBootTestHelper.WaitUntil(() => clientReports == 2, "the immune hit to reach the client");
+        Assert.That(lastClientReport.IsImmune, Is.True, "An immune hit reaches the client for its Immune popup.");
+        Assert.That(lastClientReport.Amount, Is.Zero);
+        Assert.That(clientMobHealth.CurrentHealth, Is.EqualTo(healthBeforeImmuneHit));
+        hostMobReceiver.SetProfile(mobProfile);
+        Object.Destroy(frostImmune);
 
         Health clientPlayerHealth = client.LocalPlayer.Current.Handle.Health;
         Health hostCopyHealth = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId).GetComponent<Health>();
@@ -74,6 +93,15 @@ public class NetworkMobsPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(
             () => clientPlayerHealth.CurrentHealth == hostCopyHealth.CurrentHealth && clientPlayerHealth.CurrentHealth < clientPlayerHealth.MaxHealth,
             "the client's own player to take the damage the host applied");
+
+        int clientHeals = 0;
+        clientEvents.HealApplied += _ => clientHeals++;
+        int healthBeforeHeal = hostCopyHealth.CurrentHealth;
+        Assert.That(hostDamage.ApplyHeal(hostCopyHealth.GetComponent<DamageReceiver>(), 1), Is.EqualTo(1));
+        yield return SceneBootTestHelper.WaitUntil(
+            () => clientPlayerHealth.CurrentHealth == healthBeforeHeal + 1,
+            "the client's own player to receive the host's heal");
+        Assert.That(clientHeals, Is.EqualTo(1), "The client should publish the replicated heal for its popup.");
 
         hostDamage.ApplyDamage(hostCopyHealth.GetComponent<DamageReceiver>(), hostCopyHealth.MaxHealth);
         yield return SceneBootTestHelper.WaitUntil(() => clientPlayerHealth.IsDead, "the client's player to die with the host's copy");

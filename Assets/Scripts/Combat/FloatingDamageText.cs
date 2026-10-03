@@ -11,7 +11,6 @@ public class FloatingDamageText : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField, Min(0.01f)] private float lifetime = 1f;
     [SerializeField] private Vector3 riseOffset = new(0f, 0.9f, 0f);
-    [SerializeField] private Color textColor = new(0.7f, 0.12f, 0.12f, 1f);
 
     private RectTransform canvasRect;
     private Camera targetCamera;
@@ -25,7 +24,7 @@ public class FloatingDamageText : MonoBehaviour
         ResolveReferences();
     }
 
-    public void Show(int amount, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas)
+    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas)
     {
         ResolveReferences();
 
@@ -34,8 +33,8 @@ public class FloatingDamageText : MonoBehaviour
         canvasRect = parentCanvas;
         elapsed = 0f;
 
-        text.text = amount.ToString();
-        text.color = textColor;
+        text.text = message;
+        text.color = color;
         canvasGroup.alpha = 1f;
         Refresh();
     }

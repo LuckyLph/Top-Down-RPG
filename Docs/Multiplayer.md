@@ -15,6 +15,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. |
 | Areas | The party is always in the same area. The host decides area changes. |
 | Death | A dead player respawns at the area's spawn point after a delay while a teammate is alive. Everyone dead at once restarts the area. |
+| Friendly fire | Off. Hostile effects only land on the other faction and helpful ones within a faction, enforced by `DamageService` (see [DamageAndStatusEffects.md](DamageAndStatusEffects.md#decisions)). |
 | Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
 
 ## Authority model
@@ -24,7 +25,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Player movement and facing | Owning client | Transform + facing/animation state |
 | Player attack | Owning client decides to swing, host resolves hits on mobs | Attack event (every client plays the slash visual) |
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
-| `Health` of players and mobs | Host | Current HP + damage events |
+| `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
 | Current area | Host | Area change message; each client loads and fades locally |
@@ -167,5 +168,4 @@ During Play Mode, select `NetworkManager` under `DontDestroyOnLoad` in the Hiera
 ## Open questions
 
 - Does difficulty scale with player count (mob HP, damage, spawn count)?
-- Friendly fire: off by default for co-op?
 - Should each player's camera stay independent, or should the game keep the party on one screen?

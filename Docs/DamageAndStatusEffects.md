@@ -38,7 +38,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Resistances | A percentage per damage type. Positive reduces damage, negative increases it. The effective value (base plus statuses) is clamped to [-100%, +80%]: weaknesses can at most double damage, and stacking resistance never reaches immunity. |
 | Immunities | Separate from resistance and binary. A unit is immune to a set of damage types (the hit deals 0 and shows "Immune") and to a set of status tags (the status does not land and shows "Immune"). |
 | Rounding | The final amount is rounded half away from zero, with a minimum of 1 for any hit that is not immune. |
-| Teams | Hostile effects (damage, debuffs) only land on the other faction; helpful effects (heals, buffs) only on the same faction. The services enforce it, so friendly fire is off. This answers the friendly fire question in Multiplayer.md. |
+| Teams | Hostile effects (damage, debuffs) only land on the other faction; helpful effects (heals, buffs) only on the same faction. The services enforce it, so friendly fire is off. A unit without a profile, or a source that is not a unit, has no faction and is exempt from both rules. This answers the friendly fire question in Multiplayer.md. |
 | Stacking | Per status: `Refresh` (one instance, reapplying resets its duration), `AddStack` (one instance with a stack count up to a maximum, each application adds a stack and resets the duration) or `Independent` (each application is its own instance with its own timer, up to a maximum; at the cap the instance closest to expiring is replaced). Two different status assets never interact, so "Slow I" and "Slow II" both apply. |
 | Damage over time | Ticks every interval after it lands (not on landing), and on the expiry instant when the duration is a multiple of the interval (3 s at 1 s per tick deals 3 ticks). Reapplying never resets the tick phase, so spamming a refresh cannot stall ticks. The source's damage-dealt multiplier is captured when the status lands, so ticks keep working after the source dies or despawns. The target's resistances apply at each tick. |
 | Crowd control | Stun: no movement, auto attacks or casts, and it ends any running cast and every order. Root: no movement, but the current order is kept and resumes when the root ends; attacks and casts in range still happen. Silence: no casts, and it ends a running cast; movement and auto attacks continue. Slow is a move speed multiplier, not a control flag. |
@@ -64,7 +64,7 @@ Applied on the host in this order:
    - `resistance` is the target's base resistance for the type plus every status delta, clamped to [-100, 80], and 0 for `True` damage,
    - `taken` is the product of the target's damage-taken multipliers.
 4. Rounding and floor: round half away from zero, minimum 1.
-5. Apply to `Health` and report: target, source, type, raw and final amounts, and flags (`Immune`, `Resisted` when resistance was above 0, `Weakness` when below 0, `Periodic` for damage over time).
+5. Apply to `Health` and report: target, source, type, the HP actually lost, and flags (`Immune`, `Resisted` when resistance was above 0, `Weakness` when below 0, `Periodic` for damage over time).
 6. On-hit statuses: applied after the damage, and only if the target survived, so a debuff that raises damage taken does not amplify the hit that carried it. Periodic hits never carry on-hit statuses.
 
 Worked example: a 20 Fire hit from a source under a +25% damage buff, on a Weasel with 50% Fire resistance and a 20% "Vulnerable" debuff: 20 × 1.25 × 0.5 × 1.2 = 15.
@@ -132,8 +132,8 @@ New code follows the existing layout: decisions in plain C# classes driven by `I
 |---|---|---|
 | `DamageType`, `DamageTypeMask` | Enums | The types above, and a flags set of them for immunities |
 | `StatusTags`, `StatusControls` | Flags enums | Status tags for immunities; `Stun`, `Root`, `Silence` |
-| `Faction` | Enum | `Players`, `Mobs` |
-| `Hit` | Serializable struct | Amount, damage type, statuses to apply. Used by `PlayerWeapon` and `MobConfig` (which keep their existing `damage`/`attackDamage` fields and gain the type and statuses next to them, so serialized data survives) and later by abilities |
+| `Faction` | Enum | `None` (a unit without a profile, or a source without a receiver: takes part in neither faction rule), `Players`, `Mobs` |
+| `Hit` | Serializable struct | Amount, damage type, statuses to apply. Arrives with statuses in Phase 2; until then `PlayerWeapon` and `MobConfig` only gain a damage type next to their existing `damage`/`attackDamage` fields, so serialized data survives. Used later by abilities |
 | `CombatProfile` | ScriptableObject | Faction, base resistances, damage immunities, status immunity tags. Assets `Assets/Data/Combat/Profile_Player.asset`, `Profile_Weasel.asset` |
 | `CombatSettings` | ScriptableObject | Resistance floor and cap, minimum damage, per-type popup colours, the status catalog. Asset `Assets/Data/Combat/CombatSettings.asset`, registered in the Gameplay scope |
 | `DamageMath` | Static, pure | `Resolve(raw, type, dealt, DefenseSnapshot, CombatSettings)` returning a `DamageResult`. All the arithmetic of "Resolving a hit", nothing else |
@@ -149,12 +149,12 @@ Existing types that change:
 
 | Piece | Change |
 |---|---|
-| `DamageReceiver` | Gains its `CombatProfile` reference and a `HitTaken(DamageResult)` event raised by `DamageService` for every resolved hit, immune ones included |
-| `Health` | Gains `Heal(amount)` and a `Healed` event |
+| `DamageReceiver` | Gains its `CombatProfile` reference, `Faction`, `GetDefense(type)`, and an `ImmuneHit(type, flags)` event raised by `DamageService` for hits it was immune to (they change no HP, so `Health` raises nothing) |
+| `Health` | `ApplyDamage` takes the type and flags, which `DamageEvent` carries. Gains `Heal(amount)` and a `Healed` event |
 | `DamageService` | `ApplyDamage(receiver, amount, type, source, flags)` resolves through `DamageMath` with the target's `Defense` and the source's damage-dealt multiplier; `ApplyHeal(receiver, amount, source)`; `ApplyReplicatedHit` / `ApplyReplicatedHeal` replay the host's results on clients. Its three callers move to the new signature; no compatibility overload |
-| `DamageReport` | Gains type, raw amount and flags |
+| `DamageReport` | Gains type and flags |
 | `CombatEvents` | Gains `HealApplied`, `StatusLanded`, `StatusEnded`, `StatusBlocked` |
-| `NetworkHealth` | Forwards `DamageReceiver.HitTaken` (instead of `Health.Damaged`) as `HitRpc(final, type, flags, healthAfter)` so immune hits and types reach clients, plus `HealedRpc` |
+| `NetworkHealth` | Forwards `Health.Damaged` and `DamageReceiver.ImmuneHit` as `HitRpc(amount, type, flags, healthAfter)` so types and immune hits reach clients, plus `Health.Healed` as `HealedRpc`. It stays on `Health.Damaged` because that fires before `Died`, so the RPC leaves before a dying mob despawns |
 | `PlayerOrders`, `PlayerAbilities`, `PlayerMotor2D`, `PlayerController` | Read the local player's controls and move speed multiplier as described above. New `CastOutcome` values `Stunned`, `Silenced`, `Rooted` |
 | `MobController`, `MobMotor2D` | Stun, root and slow as described above |
 
@@ -182,7 +182,8 @@ flowchart LR
         Slash[SwordSlashAttack / MeleeDamageDealer / AbilityService] --> HitService
         HitService --> DamageService --> DamageMath
         DamageService --> Health
-        DamageService -- HitTaken --> NetworkHealthHost[NetworkHealth]
+        Health -- Damaged / Healed --> NetworkHealthHost[NetworkHealth]
+        DamageService -- ImmuneHit --> NetworkHealthHost
         DamageService -- DamageApplied --> Events[CombatEvents]
         HitService --> StatusEffectService --> Set[StatusEffects / StatusEffectSet]
         StatusEffectService -- periodic ticks --> DamageService
@@ -219,15 +220,15 @@ flowchart LR
 Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests.
 
 ### Phase 1: typed damage, resistances, immunities
-- [ ] Scale HP and damage values ×10 (Player and Weasel prefabs, sword, `Mob_Default`, `Mob_StressTest`, tests).
-- [ ] `DamageType`, `Faction`, `CombatProfile`, `CombatSettings`, `DamageMath`, the faction rule, and `DamageService` resolving through them. Profiles for the player and the Weasel (no resistances yet).
-- [ ] `Hit` on `PlayerWeapon` and `MobConfig`; slash and melee pass their type.
-- [ ] `HitTaken`, `HitRpc`, typed popups and "Immune".
-- [ ] `Health.Heal`, `DamageService.ApplyHeal`, `HealedRpc`, heal popups.
+- [x] Scale HP and damage values ×10 (Player and Weasel prefabs, sword, `Mob_Default`; `Mob_StressTest` deals 0 and stays so).
+- [x] `DamageType`, `Faction`, `CombatProfile`, `CombatSettings`, `DamageMath`, the faction rule, and `DamageService` resolving through them. Profiles for the player and the Weasel (no resistances yet).
+- [x] A damage type on `PlayerWeapon` and `MobConfig`; slash and melee pass it. An immune hit counts as a landed swing or attack, so it is reported once and starts the cooldown.
+- [x] `ImmuneHit`, `HitRpc`, typed popups and "Immune".
+- [x] `Health.Heal`, `DamageService.ApplyHeal`, `HealedRpc`, heal popups.
 
 ### Phase 2: status core and replication
 - [ ] `StatusEffectDefinition`, `StatusEffectCatalog`, `StatusEffectSet` with all three stacking modes, periodic damage and heals, and the stat modifiers (damage dealt and taken, resistances, granted immunities).
-- [ ] `StatusEffects` component on the player and Weasel prefabs, `StatusEffectService`, `HitService`; swings and mob attacks go through `HitService`.
+- [ ] `Hit` (amount, type, statuses) for the sword and mob attacks; `StatusEffects` component on the player and Weasel prefabs, `StatusEffectService`, `HitService`; swings and mob attacks go through `HitService`.
 - [ ] Clearing on death; statuses kept across area changes.
 - [ ] `TransitionTimeFreeze`, and the host holding a loading client's player's statuses until it is ready.
 - [ ] `NetworkStatusEffects` and late-join sync.

@@ -8,6 +8,7 @@ public sealed class PlayerWeapon : ScriptableObject
 
     [SerializeField] private string displayName = "Sword";
     [SerializeField, Min(0)] private int damage = 1;
+    [SerializeField] private DamageType damageType = DamageType.Physical;
     [SerializeField, Min(0.01f)] private float attackCooldown = 0.35f;
     [SerializeField, Min(0f), Tooltip("Collider-to-collider distance within which an attack order stops chasing and swings.")]
     private float attackRange = 0.3f;
@@ -21,6 +22,7 @@ public sealed class PlayerWeapon : ScriptableObject
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
+    public DamageType DamageType => damageType;
     public float AttackCooldown => Mathf.Max(0.01f, attackCooldown);
     public float AttackRange => Mathf.Max(0f, attackRange);
     public float SlashSpawnDistance => Mathf.Max(0f, slashSpawnDistance);
@@ -53,11 +55,13 @@ public sealed class PlayerWeapon : ScriptableObject
         GameObject prefab = null,
         Sprite icon = null,
         float range = 0.3f,
-        AbilityDefinition[] weaponAbilities = null)
+        AbilityDefinition[] weaponAbilities = null,
+        DamageType type = DamageType.Physical)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
         weapon.damage = attackDamage;
+        weapon.damageType = type;
         weapon.attackCooldown = cooldown;
         weapon.slashSpawnDistance = spawnDistance;
         weapon.slashSpawnOffsets = NormalizeDirectionalSpawnOffsets(spawnOffsets);

@@ -40,6 +40,7 @@ public sealed class InProcessClient : IDisposable
         NavigationGrid2D navigationGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
         Camera camera = Camera.main;
         PlayerControlSettings controlSettings = playerPrefab.GetComponent<PlayerController>().ControlSettings;
+        CombatSettings combatSettings = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<CombatSettings>();
 
         TestInput input = new();
         PlayerRegistry players = new();
@@ -58,6 +59,7 @@ public sealed class InProcessClient : IDisposable
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
+        builder.RegisterInstance(combatSettings);
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
         builder.Register<AbilityService>(Lifetime.Singleton);

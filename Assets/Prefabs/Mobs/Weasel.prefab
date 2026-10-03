@@ -589,7 +589,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 635defc0facf5fc4e9210377ae6a1f79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::Health
-  maxHealth: 10
+  maxHealth: 100
 --- !u!114 &2450481122165686430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -603,6 +603,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::DamageReceiver
   floatingTextOffset: {x: 0, y: 1.1, z: 0}
+  profile: {fileID: 11400000, guid: 7630fcd826152bd4a82327a7664339e8, type: 2}
 --- !u!114 &6297355658967816007
 MonoBehaviour:
   m_ObjectHideFlags: 0

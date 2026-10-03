@@ -111,11 +111,12 @@ public class MobPlayModeBehaviorTests
 
         Vector3 originalPlayerPosition = player.transform.position;
         int startingHealth = health.CurrentHealth;
+        int hit = brain.GetComponent<MeleeDamageDealer>().DamageAmount;
 
         player.transform.position = brain.transform.position + Vector3.right * 0.1f;
-        yield return WaitForHealthChange(health, startingHealth - 1, 30);
+        yield return WaitForHealthChange(health, startingHealth - hit, 30);
 
-        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1));
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - hit));
 
         FloatingDamageText popup = Object.FindAnyObjectByType<FloatingDamageText>();
         Assert.That(popup, Is.Not.Null, "A floating damage popup should be spawned when damage is applied.");
@@ -146,16 +147,17 @@ public class MobPlayModeBehaviorTests
 
         Vector3 originalPlayerPosition = player.transform.position;
         int startingHealth = health.CurrentHealth;
+        int hit = brain.GetComponent<MeleeDamageDealer>().DamageAmount;
 
         player.transform.position = brain.transform.position + Vector3.right * 0.1f;
-        yield return WaitForHealthChange(health, startingHealth - 1, 30);
-        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1));
+        yield return WaitForHealthChange(health, startingHealth - hit, 30);
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - hit));
 
         yield return new WaitForSeconds(0.2f);
-        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - 1), "Health should not drop again before the attack interval elapses.");
+        Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - hit), "Health should not drop again before the attack interval elapses.");
 
         yield return new WaitForSeconds(0.7f);
-        Assert.That(health.CurrentHealth, Is.LessThanOrEqualTo(startingHealth - 2), "Health should drop again after the configured attack interval.");
+        Assert.That(health.CurrentHealth, Is.LessThanOrEqualTo(startingHealth - 2 * hit), "Health should drop again after the configured attack interval.");
 
         player.transform.position = originalPlayerPosition;
     }

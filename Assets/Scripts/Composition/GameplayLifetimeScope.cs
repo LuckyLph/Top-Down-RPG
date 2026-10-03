@@ -8,6 +8,7 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private DamagePopupLayer damagePopupLayer;
     [SerializeField] private PointerFeedbackLayer pointerFeedbackLayer;
     [SerializeField] private GameplaySettings settings;
+    [SerializeField] private CombatSettings combatSettings;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -32,6 +33,12 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
+        if (combatSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(CombatSettings)} assigned; hits cannot be resolved.", this);
+            return;
+        }
+
         builder.RegisterInstance(playerPrefab.ControlSettings);
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
@@ -46,6 +53,7 @@ public class GameplayLifetimeScope : LifetimeScope
             .WithParameter(gameObject.scene);
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
+        builder.RegisterInstance(combatSettings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
         builder.RegisterComponentInHierarchy<AbilityBarView>();
 

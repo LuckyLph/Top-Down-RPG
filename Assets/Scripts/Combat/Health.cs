@@ -7,13 +7,15 @@ public class Health : MonoBehaviour
     [Serializable]
     public readonly struct DamageEvent
     {
-        public DamageEvent(Health target, int amount, GameObject source, int previousHealth, int currentHealth)
+        public DamageEvent(Health target, int amount, GameObject source, int previousHealth, int currentHealth, DamageType type, DamageFlags flags)
         {
             Target = target;
             Amount = amount;
             Source = source;
             PreviousHealth = previousHealth;
             CurrentHealth = currentHealth;
+            Type = type;
+            Flags = flags;
         }
 
         public Health Target { get; }
@@ -21,6 +23,8 @@ public class Health : MonoBehaviour
         public GameObject Source { get; }
         public int PreviousHealth { get; }
         public int CurrentHealth { get; }
+        public DamageType Type { get; }
+        public DamageFlags Flags { get; }
     }
 
     [SerializeField, Min(1)] private int maxHealth = 10;
@@ -31,6 +35,7 @@ public class Health : MonoBehaviour
     public event Action<DamageEvent> Damaged;
     public event Action<Health> Died;
     public event Action<Health> Restored;
+    public event Action<Health, int> Healed;
 
     public int MaxHealth => maxHealth;
 
@@ -55,7 +60,7 @@ public class Health : MonoBehaviour
         maxHealth = Mathf.Max(1, maxHealth);
     }
 
-    public int ApplyDamage(int amount, GameObject source = null)
+    public int ApplyDamage(int amount, GameObject source = null, DamageType type = DamageType.Physical, DamageFlags flags = DamageFlags.None)
     {
         InitializeIfNeeded();
 
@@ -73,7 +78,7 @@ public class Health : MonoBehaviour
             return 0;
         }
 
-        Damaged?.Invoke(new DamageEvent(this, appliedDamage, source, previousHealth, currentHealth));
+        Damaged?.Invoke(new DamageEvent(this, appliedDamage, source, previousHealth, currentHealth, type, flags));
 
         if (currentHealth == 0)
         {
@@ -81,6 +86,30 @@ public class Health : MonoBehaviour
         }
 
         return appliedDamage;
+    }
+
+    /// <summary>
+    /// Adds up to <paramref name="amount"/> HP without exceeding the maximum and raises <see cref="Healed"/> with
+    /// what was added. Never brings a dead unit back; that is <see cref="Restore"/>.
+    /// </summary>
+    public int Heal(int amount)
+    {
+        InitializeIfNeeded();
+
+        if (amount <= 0 || currentHealth <= 0)
+        {
+            return 0;
+        }
+
+        int previousHealth = currentHealth;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        int healed = currentHealth - previousHealth;
+        if (healed > 0)
+        {
+            Healed?.Invoke(this, healed);
+        }
+
+        return healed;
     }
 
     /// <summary>

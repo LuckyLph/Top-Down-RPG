@@ -22,13 +22,19 @@ MonoBehaviour:
   obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 256
+  searchDuration: 3
   attackStopDistance: 0.375
   attackExitBuffer: 0.25
-  attackDamage: 1
+  attackDamage: 10
+  attackDamageType: 0
   attackInterval: 0.75
+  separationRadius: 0.8
+  separationStrength: 4
+  crowdWaitDistance: 2
   patrolRoamRadius: 12
   patrolSampleAttempts: 12
   idleDurationRange: {x: 0.5, y: 1.5}
   repathInterval: 0.25
   nearestCellSearchRadius: 8
+  stuckTimeout: 1
   movementProfile: {fileID: 11400000, guid: 55e5271f71628e1bf0c34e5cd4a56789, type: 2}

@@ -21,6 +21,7 @@ public class SwordSlashAttack : MonoBehaviour
     private Transform ownerAnchor;
     private GameObject damageSource;
     private DamageService damageService;
+    private DamageType damageType = DamageType.Physical;
     private Vector2 direction = Vector2.down;
     private Vector2 spawnOffset;
     private float spawnDistance;
@@ -102,6 +103,7 @@ public class SwordSlashAttack : MonoBehaviour
         damageSource = owner != null ? owner.gameObject : gameObject;
         direction = attackDirection.sqrMagnitude > 0.0001f ? attackDirection.normalized : Vector2.down;
         damageAmount = weapon != null ? weapon.Damage : damageAmount;
+        damageType = weapon != null ? weapon.DamageType : damageType;
         activeLifetime = ResolveLifetime();
         spawnOffset = weapon != null ? weapon.GetSlashSpawnOffset(direction) : Vector2.zero;
         spawnDistance = weapon != null ? weapon.SlashSpawnDistance : 0f;
@@ -146,8 +148,8 @@ public class SwordSlashAttack : MonoBehaviour
             return false;
         }
 
-        int appliedDamage = damageService.ApplyDamage(receiver, damageAmount, damageSource);
-        if (appliedDamage <= 0)
+        DamageResult result = damageService.ApplyDamage(receiver, damageAmount, damageType, damageSource);
+        if (!result.Resolved)
         {
             return false;
         }

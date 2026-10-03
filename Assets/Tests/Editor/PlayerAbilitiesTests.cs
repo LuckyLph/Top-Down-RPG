@@ -155,17 +155,17 @@ public class PlayerAbilitiesTests
         Health target = Track(new GameObject("Target")).AddComponent<Health>();
         CastAim aimed = new(Vector2.zero, Vector2.up, new UnitTarget(target, null, UnitTeam.Ally));
 
-        abilities.ResolveRemoteCast(0, default);
+        abilities.ResolveRemoteCast(0, default, Vector2.zero);
         Assert.That(resolved, Is.Zero, "The target did not resolve on this machine.");
-        abilities.ResolveRemoteCast(3, aimed);
+        abilities.ResolveRemoteCast(3, aimed, Vector2.zero);
         Assert.That(resolved, Is.Zero, "An empty slot.");
 
-        abilities.ResolveRemoteCast(0, aimed);
+        abilities.ResolveRemoteCast(0, aimed, Vector2.zero);
         Assert.That(resolved, Is.EqualTo(1));
         Assert.That(applied, Is.Zero, "Resolving is not starting.");
 
         health.ApplyDamage(health.MaxHealth);
-        abilities.ResolveRemoteCast(0, aimed);
+        abilities.ResolveRemoteCast(0, aimed, Vector2.zero);
         Assert.That(resolved, Is.EqualTo(1), "This machine sees the caster as dead.");
     }
 

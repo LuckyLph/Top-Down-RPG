@@ -212,7 +212,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         CastCompleted?.Invoke(cast);
         if (abilityService != null)
         {
-            abilityService.Resolve(this, cast);
+            abilityService.Resolve(this, cast, transform.position);
         }
     }
 
@@ -264,11 +264,12 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Resolves the effect of a cast another machine completed for this player, if this machine is the authority.
-    /// Ignored under the same rules as <see cref="PlayRemoteCast"/>: a caster seen as dead, or a
+    /// Resolves the effect of a cast another machine completed for this player at <paramref name="casterPosition"/>
+    /// (the owner's own position, which this machine's copy trails), if this machine is the authority. Ignored under
+    /// the same rules as <see cref="PlayRemoteCast"/>: a caster seen as dead, or a
     /// <see cref="AbilityTargeting.Unit"/> cast whose target is gone or dead here.
     /// </summary>
-    public void ResolveRemoteCast(int slot, in CastAim aim)
+    public void ResolveRemoteCast(int slot, in CastAim aim, Vector2 casterPosition)
     {
         AbilityDefinition ability = GetAbility(slot);
         if (ability == null || (health != null && health.IsDead))
@@ -284,7 +285,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
         if (abilityService != null)
         {
-            abilityService.Resolve(this, new AbilityCast(slot, ability, aim));
+            abilityService.Resolve(this, new AbilityCast(slot, ability, aim), casterPosition);
         }
     }
 

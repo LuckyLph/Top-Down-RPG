@@ -309,7 +309,11 @@ public sealed class StatusEffectSet
         }
         else
         {
-            instances[closestToExpiring] = NewInstance(definition, source, dealtMultiplier);
+            Instance replaced = instances[closestToExpiring];
+            replaced.Remaining = definition.Duration;
+            replaced.Source = source;
+            replaced.DealtMultiplier = dealtMultiplier;
+            instances[closestToExpiring] = replaced;
         }
 
         return StatusApplyOutcome.Landed;

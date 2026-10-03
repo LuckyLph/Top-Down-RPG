@@ -102,6 +102,9 @@ public class PlayerWeaponSystemTests
         Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.CurrentHealth}"));
         Assert.That(hud.HealthFill.fillAmount, Is.EqualTo((float)health.CurrentHealth / health.MaxHealth).Within(0.001f));
 
+        health.Heal(2);
+        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth - 1}"), "Heals show too.");
+
         hudPresenter.Dispose();
         hudPresenter = null;
         string textAfterDispose = hud.HealthText.text;

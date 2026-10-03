@@ -50,10 +50,11 @@ public sealed class AbilityService
     }
 
     /// <summary>
-    /// Applies the effect of <paramref name="cast"/>, which <paramref name="caster"/> completed, on the
+    /// Applies the effect of <paramref name="cast"/>, which <paramref name="caster"/> completed at
+    /// <paramref name="casterPosition"/> (where areas around the caster and lines from it start), on the
     /// authoritative machine; does nothing elsewhere. Returns whether it resolved.
     /// </summary>
-    public bool Resolve(PlayerAbilities caster, in AbilityCast cast)
+    public bool Resolve(PlayerAbilities caster, in AbilityCast cast, Vector2 casterPosition)
     {
         if (!authority.IsAuthoritative || caster == null || cast.Ability == null)
         {
@@ -62,7 +63,7 @@ public sealed class AbilityService
 
         if (cast.Ability.HasEffect)
         {
-            CollectAffected(caster, cast);
+            CollectAffected(caster, cast, casterPosition);
             for (int i = 0; i < affected.Count; i++)
             {
                 ApplyTo(affected[i], cast.Ability, caster.gameObject);
@@ -75,11 +76,10 @@ public sealed class AbilityService
         return true;
     }
 
-    private void CollectAffected(PlayerAbilities caster, in AbilityCast cast)
+    private void CollectAffected(PlayerAbilities caster, in AbilityCast cast, Vector2 origin)
     {
         affected.Clear();
         AbilityDefinition ability = cast.Ability;
-        Vector2 origin = caster.transform.position;
         switch (ability.Targeting)
         {
             case AbilityTargeting.Unit:

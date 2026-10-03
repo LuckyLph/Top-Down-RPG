@@ -15,12 +15,16 @@ public class StatusDebugPanel : MonoBehaviour
     private const KeyCode HoveredKey = KeyCode.F3;
     private const KeyCode SelfKey = KeyCode.F4;
     private const float Width = 260f;
+    private const float ScopeLookupInterval = 1f;
 
     private bool open;
     private int selected;
     private string lastResult = string.Empty;
     private Vector2 scroll;
     private GameplayLifetimeScope gameplayScope;
+    private float nextScopeLookup;
+    private StatusEffectCatalog labelledCatalog;
+    private string[] labels = new string[0];
 
     public bool IsOpen => open;
 
@@ -91,8 +95,7 @@ public class StatusDebugPanel : MonoBehaviour
         for (int i = 0; i < catalog.Count; i++)
         {
             StatusEffectDefinition definition = catalog.Get(i);
-            string label = definition.Kind == StatusKind.Buff ? "+ " + definition.DisplayName : "- " + definition.DisplayName;
-            if (GUILayout.Toggle(i == selected, label, GUI.skin.button))
+            if (GUILayout.Toggle(i == selected, Label(catalog, i), GUI.skin.button))
             {
                 selected = i;
             }
@@ -160,11 +163,28 @@ public class StatusDebugPanel : MonoBehaviour
         return gameplay != null ? gameplay.Resolve<CombatSettings>().StatusCatalog : null;
     }
 
+    private string Label(StatusEffectCatalog catalog, int index)
+    {
+        if (labelledCatalog != catalog || labels.Length != catalog.Count)
+        {
+            labelledCatalog = catalog;
+            labels = new string[catalog.Count];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                StatusEffectDefinition definition = catalog.Get(i);
+                labels[i] = (definition.Kind == StatusKind.Buff ? "+ " : "- ") + definition.DisplayName;
+            }
+        }
+
+        return labels[index];
+    }
+
     private IObjectResolver Gameplay()
     {
-        if (gameplayScope == null)
+        if (gameplayScope == null && Time.unscaledTime >= nextScopeLookup)
         {
             gameplayScope = FindAnyObjectByType<GameplayLifetimeScope>();
+            nextScopeLookup = Time.unscaledTime + ScopeLookupInterval;
         }
 
         return gameplayScope != null ? gameplayScope.Container : null;

@@ -160,15 +160,15 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
 
         bool hasTarget = TryReference(cast.Aim, out NetworkObjectReference target);
-        CastCompletedRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
+        CastCompletedRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget, transform.position);
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-    private void CastCompletedRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget)
+    private void CastCompletedRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget, Vector2 casterPosition)
     {
         if (abilities != null)
         {
-            abilities.ResolveRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default));
+            abilities.ResolveRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default), casterPosition);
         }
     }
 

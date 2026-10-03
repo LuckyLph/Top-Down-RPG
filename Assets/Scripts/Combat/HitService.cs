@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Applies a <see cref="Hit"/>: its damage through <see cref="DamageService"/>, then its statuses through
-/// <see cref="StatusEffectService"/> if the hit reached a target that survived it. What swings, mob attacks and
+/// Applies a <see cref="Hit"/>: its damage through <see cref="DamageService"/>, then, if the target survived, its
+/// statuses through <see cref="StatusEffectService"/>, each under its own faction rule (so a hit's debuffs land
+/// with its damage on enemies and its buffs on allies, whose damage is refused). What swings, mob attacks and
 /// abilities call. Keeps the two services independent of each other.
 /// </summary>
 public sealed class HitService
@@ -17,36 +18,29 @@ public sealed class HitService
     }
 
     /// <summary>
-    /// Applies <paramref name="hit"/> to <paramref name="target"/>. A hit without damage only applies its statuses.
-    /// Returns the damage result, which is <c>default</c> when the damage was rejected or there was none.
+    /// Applies <paramref name="hit"/> to <paramref name="target"/>. Returns whether it reached the target: its damage
+    /// resolved (an immune hit included) or one of its statuses landed, stacked, refreshed or was blocked by an
+    /// immunity. A refused hit (no authority, the wrong faction, a dead target) returns false.
     /// </summary>
-    public DamageResult ApplyHit(DamageReceiver target, in Hit hit, GameObject source = null)
+    public bool ApplyHit(DamageReceiver target, in Hit hit, GameObject source = null)
     {
         if (target == null)
         {
-            return default;
+            return false;
         }
 
-        DamageResult result = default;
-        if (hit.Amount > 0)
-        {
-            result = damageService.ApplyDamage(target, hit.Amount, hit.Type, source);
-            if (!result.Resolved)
-            {
-                return result;
-            }
-        }
-
+        bool reached = hit.Amount > 0 && damageService.ApplyDamage(target, hit.Amount, hit.Type, source).Resolved;
         if (target.Health == null || target.Health.IsDead)
         {
-            return result;
+            return reached;
         }
 
         for (int i = 0; i < hit.StatusCount; i++)
         {
-            statusService.Apply(target, hit.GetStatus(i), source);
+            StatusApplyOutcome outcome = statusService.Apply(target, hit.GetStatus(i), source);
+            reached |= outcome is StatusApplyOutcome.Landed or StatusApplyOutcome.Stacked or StatusApplyOutcome.Refreshed or StatusApplyOutcome.Immune;
         }
 
-        return result;
+        return reached;
     }
 }

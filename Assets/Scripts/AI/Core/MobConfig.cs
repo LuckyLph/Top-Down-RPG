@@ -22,8 +22,8 @@ public class MobConfig : ScriptableObject
     [Min(0f)] public float attackStopDistance = 1.25f;
     [Min(0f)] public float attackExitBuffer = 0.25f;
     [Min(0)] public int attackDamage = 1;
-    public DamageType attackDamageType = DamageType.Physical;
-    public StatusEffectDefinition[] attackStatuses = new StatusEffectDefinition[0];
+    [SerializeField] private DamageType attackDamageType = DamageType.Physical;
+    [SerializeField] private StatusEffectDefinition[] attackStatuses = new StatusEffectDefinition[0];
     [Min(0f)] public float attackInterval = 0.75f;
 
     [Header("Crowd")]
@@ -48,6 +48,9 @@ public class MobConfig : ScriptableObject
     public TerrainMovementProfile2D movementProfile;
 
     public TerrainMovementProfile2D MovementProfile => movementProfile;
+
+    public DamageType AttackDamageType => attackDamageType;
+    public StatusEffectDefinition[] AttackStatuses => attackStatuses;
 
     public float NextIdleDuration(IRandom random)
     {

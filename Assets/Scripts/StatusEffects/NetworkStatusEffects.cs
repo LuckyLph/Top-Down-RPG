@@ -136,8 +136,9 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
 
         mirror.Clear();
         double now = NetworkManager.ServerTime.Time;
-        foreach (StatusEntry entry in entries)
+        for (int i = 0; i < entries.Count; i++)
         {
+            StatusEntry entry = entries[i];
             StatusEffectDefinition definition = catalog.Get(entry.CatalogIndex);
             if (definition == null)
             {

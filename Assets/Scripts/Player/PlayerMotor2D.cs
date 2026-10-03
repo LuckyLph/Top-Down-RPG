@@ -148,9 +148,6 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// While aiming, the player faces <paramref name="direction"/> and movement no longer turns it.
-    /// </summary>
-    /// <summary>
     /// Scales the move speed: below 1 slows the player, 0 holds it still while its path and order are kept.
     /// </summary>
     public void SetSpeedScale(float scale)
@@ -158,6 +155,9 @@ public class PlayerMotor2D : MonoBehaviour
         speedScale = Mathf.Max(0f, scale);
     }
 
+    /// <summary>
+    /// While aiming, the player faces <paramref name="direction"/> and movement no longer turns it.
+    /// </summary>
     public void SetAim(bool aim, Vector2 direction)
     {
         aiming = aim;

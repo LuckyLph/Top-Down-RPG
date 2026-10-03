@@ -486,11 +486,12 @@ public class StatusEffectTests
         Services services = new(true);
         Hit fireHit = new(20, DamageType.Fire, new[] { burn });
 
-        Assert.That(services.Hits.ApplyHit(mob, fireHit, player.gameObject).Amount, Is.EqualTo(20));
+        Assert.That(services.Hits.ApplyHit(mob, fireHit, player.gameObject), Is.True);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 20));
         Assert.That(mob.Statuses.GetStacks(burn), Is.EqualTo(1));
 
-        services.Hits.ApplyHit(teammate, fireHit, player.gameObject);
-        Assert.That(teammate.Statuses.Count, Is.Zero, "No friendly fire, so no statuses either.");
+        Assert.That(services.Hits.ApplyHit(teammate, fireHit, player.gameObject), Is.False, "No friendly fire.");
+        Assert.That(teammate.Statuses.Count, Is.Zero, "Nor its debuffs.");
 
         services.Hits.ApplyHit(golem, fireHit, player.gameObject);
         Assert.That(golem.Statuses.GetStacks(burn), Is.EqualTo(1), "An immune hit still tries its statuses.");
@@ -500,9 +501,47 @@ public class StatusEffectTests
         Assert.That(weak.Statuses.Count, Is.Zero, "A target the hit killed gets no statuses.");
 
         DamageReceiver other = Unit("Other", Faction.Mobs);
-        Assert.That(services.Hits.ApplyHit(other, new Hit(0, DamageType.Physical, new[] { burn }), player.gameObject).Resolved, Is.False);
+        Assert.That(services.Hits.ApplyHit(other, new Hit(0, DamageType.Physical, new[] { burn }), player.gameObject), Is.True, "A statuses-only hit that landed reached its target.");
         Assert.That(other.Statuses.GetStacks(burn), Is.EqualTo(1), "A hit without damage only applies its statuses.");
         Assert.That(other.Health.CurrentHealth, Is.EqualTo(other.Health.MaxHealth));
+        Assert.That(services.Hits.ApplyHit(teammate, new Hit(0, DamageType.Physical, new[] { burn }), player.gameObject), Is.False, "A refused statuses-only hit did not.");
+    }
+
+    [Test]
+    public void HitService_ADamagingHitStillBuffsTheAlliesItCannotHurt()
+    {
+        DamageReceiver player = Unit("Player", Faction.Players);
+        DamageReceiver teammate = Unit("Teammate", Faction.Players);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs);
+        StatusEffectDefinition empower = Definition("Empower", StatusKind.Buff, 5f, damageDealt: 1.25f);
+        Services services = new(true);
+        Hit rally = new(10, DamageType.Physical, new[] { empower });
+
+        Assert.That(services.Hits.ApplyHit(teammate, rally, player.gameObject), Is.True);
+        Assert.That(teammate.Health.CurrentHealth, Is.EqualTo(teammate.Health.MaxHealth), "Allies take no damage.");
+        Assert.That(teammate.Statuses.GetStacks(empower), Is.EqualTo(1), "But get the buff.");
+
+        Assert.That(services.Hits.ApplyHit(mob, rally, player.gameObject), Is.True);
+        Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 10), "Enemies take the damage.");
+        Assert.That(mob.Statuses.Count, Is.Zero, "But never the buff.");
+    }
+
+    [Test]
+    public void Set_Independent_ReapplyingAtTheCapKeepsTheTickPhase()
+    {
+        StatusEffectDefinition poison = Definition("Poison", StatusKind.Debuff, 6f, StatusStacking.Independent, maxStacks: 3,
+            periodic: StatusPeriodic.Damage, periodicAmount: 2, tickInterval: 1f);
+        StatusEffectSet set = new();
+        List<StatusTick> ticks = new();
+
+        for (int i = 0; i < 20; i++)
+        {
+            set.Apply(poison, null, 1f);
+            set.Tick(0.3f, ticks);
+        }
+
+        Assert.That(set.Count, Is.EqualTo(3));
+        Assert.That(ticks.Count, Is.GreaterThanOrEqualTo(15), "Spamming at the cap must not stall the ticks (6 s of three doses ticking every second).");
     }
 
     [Test]
@@ -512,7 +551,11 @@ public class StatusEffectTests
         MobConfig config = ScriptableObject.CreateInstance<MobConfig>();
         created.Add(config);
         config.attackDamage = 10;
-        config.attackStatuses = new[] { poison };
+        SerializedObject serializedConfig = new(config);
+        SerializedProperty statuses = serializedConfig.FindProperty("attackStatuses");
+        statuses.arraySize = 1;
+        statuses.GetArrayElementAtIndex(0).objectReferenceValue = poison;
+        serializedConfig.ApplyModifiedPropertiesWithoutUndo();
         DamageReceiver mob = Unit("Mob", Faction.Mobs);
         DamageReceiver player = Unit("Player", Faction.Players);
         MeleeDamageDealer dealer = mob.gameObject.AddComponent<MeleeDamageDealer>();

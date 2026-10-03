@@ -39,7 +39,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Immunities | Separate from resistance and binary. A unit is immune to a set of damage types (the hit deals 0 and shows "Immune") and to a set of status tags (the status does not land and shows "Immune"). |
 | Rounding | The final amount is rounded half away from zero, with a minimum of 1 for any hit that is not immune. |
 | Teams | Hostile effects (damage, debuffs) only land on the other faction; helpful effects (heals, buffs) only on the same faction. The services enforce it, so friendly fire is off. A unit without a profile, or a source that is not a unit, has no faction and is exempt from both rules. This answers the friendly fire question in Multiplayer.md. |
-| Stacking | Per status: `Refresh` (one instance, reapplying resets its duration), `AddStack` (one instance with a stack count up to a maximum, each application adds a stack and resets the duration) or `Independent` (each application is its own instance with its own timer, up to a maximum; at the cap the instance closest to expiring is replaced). Two different status assets never interact, so "Slow I" and "Slow II" both apply. |
+| Stacking | Per status: `Refresh` (one instance, reapplying resets its duration), `AddStack` (one instance with a stack count up to a maximum, each application adds a stack and resets the duration) or `Independent` (each application is its own instance with its own timer, up to a maximum; at the cap the instance closest to expiring is renewed, keeping its tick phase). Two different status assets never interact, so "Slow I" and "Slow II" both apply. |
 | Damage over time | Ticks every interval after it lands (not on landing), and on the expiry instant when the duration is a multiple of the interval (3 s at 1 s per tick deals 3 ticks). Reapplying never resets the tick phase, so spamming a refresh cannot stall ticks. The source's damage-dealt multiplier is captured when the status lands, so ticks keep working after the source dies or despawns. The target's resistances apply at each tick. |
 | Crowd control | Stun: no movement, auto attacks or casts, and it ends any running cast and every order. Root: no movement, but the current order is kept and resumes when the root ends; attacks and casts in range still happen. Silence: no casts, and it ends a running cast; movement and auto attacks continue. Slow is a move speed multiplier, not a control flag. |
 | Interrupted casts | An ended cast keeps its cooldown spent. |
@@ -65,7 +65,7 @@ Applied on the host in this order:
    - `taken` is the product of the target's damage-taken multipliers.
 4. Rounding and floor: round half away from zero, minimum 1.
 5. Apply to `Health` and report: target, source, type, the HP actually lost, and flags (`Immune`, `Resisted` when resistance was above 0, `Weakness` when below 0, `Periodic` for damage over time).
-6. On-hit statuses: applied after the damage, and only if the target survived, so a debuff that raises damage taken does not amplify the hit that carried it. Periodic hits never carry on-hit statuses.
+6. On-hit statuses: applied after the damage, and only if the target survived, so a debuff that raises damage taken does not amplify the hit that carried it. Each status goes through its own faction rule, even when the damage was refused, so a hit's buffs still reach allies. Periodic hits never carry on-hit statuses.
 
 Worked example: a 20 Fire hit from a source under a +25% damage buff, on a Weasel with 50% Fire resistance and a 20% "Vulnerable" debuff: 20 × 1.25 × 0.5 × 1.2 = 15.
 
@@ -164,7 +164,7 @@ Existing types that change:
 |---|---|
 | `DamageService` (existing) | The only path that changes HP: damage and heals |
 | `StatusEffectService` (new) | The only path that changes statuses: `Apply(target, definition, source)`, `Remove(target, definition)`, `ClearAll(target)`. Entry point (`ITickable`) that tracks every unit a status landed on and ticks it on the host with the `IClock` delta, turning periodic ticks into `DamageService.ApplyPeriodicDamage` (flagged `Periodic`, with the captured multiplier) or `ApplyHeal`. Clears a tracked unit's statuses when it dies. Skips held units (a client's player until that client is ready for the current area, through `IClientReadiness`, which `NetworkSession` implements). Depends on `DamageService` |
-| `HitService` (new) | `ApplyHit(receiver, hit, source)`: the damage through `DamageService`, then the hit's statuses through `StatusEffectService` if the target survived. What swings, mob attacks and abilities call. It exists so the other two services do not depend on each other |
+| `HitService` (new) | `ApplyHit(receiver, hit, source)`: the damage through `DamageService`, then the hit's statuses through `StatusEffectService` if the target survived, each under its own faction rule; returns whether the hit reached the target. What swings, mob attacks and abilities call. It exists so the other two services do not depend on each other |
 
 Mobs live in the Area scope, whose container is a child of Gameplay, so their components inject the Gameplay-scope services like `DamageService` today.
 

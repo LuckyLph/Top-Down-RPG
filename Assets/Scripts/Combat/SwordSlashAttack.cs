@@ -148,8 +148,7 @@ public class SwordSlashAttack : MonoBehaviour
             return false;
         }
 
-        DamageResult result = hitService.ApplyHit(receiver, hit, damageSource);
-        if (!result.Resolved)
+        if (!hitService.ApplyHit(receiver, hit, damageSource))
         {
             return false;
         }

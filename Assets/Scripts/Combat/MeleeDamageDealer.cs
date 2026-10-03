@@ -34,8 +34,8 @@ public class MeleeDamageDealer : MonoBehaviour
 
         damageAmount = Mathf.Max(0, config.attackDamage);
         attackInterval = Mathf.Max(0f, config.attackInterval);
-        damageType = config.attackDamageType;
-        statuses = config.attackStatuses;
+        damageType = config.AttackDamageType;
+        statuses = config.AttackStatuses;
     }
 
     public void ResetCooldown(bool readyImmediately = true)
@@ -62,8 +62,7 @@ public class MeleeDamageDealer : MonoBehaviour
             return false;
         }
 
-        DamageResult result = hitService.ApplyHit(receiver, new Hit(damageAmount, damageType, statuses), gameObject);
-        if (!result.Resolved)
+        if (!hitService.ApplyHit(receiver, new Hit(damageAmount, damageType, statuses), gameObject))
         {
             return false;
         }

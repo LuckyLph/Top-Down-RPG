@@ -42,7 +42,7 @@ public class AbilityEffectTests
         Assert.That(service.Apply(caster, Cast(smite, mob, UnitTeam.Enemy)), Is.True);
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth), "Effects wait for the cast to complete.");
 
-        Assert.That(service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy)), Is.True);
+        Assert.That(service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy), caster.transform.position), Is.True);
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
         Assert.That(resolved, Is.EqualTo(1));
     }
@@ -55,7 +55,7 @@ public class AbilityEffectTests
         StatusEffectDefinition stun = Status("Stun", StatusKind.Debuff, StatusControls.Stun);
         AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical, new[] { stun }));
 
-        service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy));
+        service.Resolve(caster, Cast(smite, mob, UnitTeam.Enemy), caster.transform.position);
 
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
         Assert.That(mob.Statuses.Controls, Is.EqualTo(StatusControls.Stun));
@@ -72,12 +72,12 @@ public class AbilityEffectTests
         int heals = 0;
         events.HealApplied += _ => heals++;
 
-        service.Resolve(caster, Cast(mend, ally, UnitTeam.Ally));
+        service.Resolve(caster, Cast(mend, ally, UnitTeam.Ally), caster.transform.position);
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 15));
         Assert.That(ally.Statuses.GetStacks(fortify), Is.EqualTo(1));
         Assert.That(heals, Is.EqualTo(1));
 
-        service.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), ally, UnitTeam.Ally));
+        service.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), ally, UnitTeam.Ally), caster.transform.position);
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 15), "No friendly fire from abilities either.");
     }
 
@@ -91,7 +91,7 @@ public class AbilityEffectTests
         ally.Health.ApplyDamage(30);
         StatusEffectDefinition fortify = Status("Fortify", StatusKind.Buff, StatusControls.None);
 
-        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(0, DamageType.Physical, new[] { fortify }), heal: 20)));
+        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(0, DamageType.Physical, new[] { fortify }), heal: 20)), caster.transform.position);
 
         Assert.That(casterUnit.Health.CurrentHealth, Is.EqualTo(casterUnit.Health.MaxHealth - 10));
         Assert.That(casterUnit.Statuses.GetStacks(fortify), Is.EqualTo(1));
@@ -109,7 +109,7 @@ public class AbilityEffectTests
         DamageReceiver ally = Unit("Ally", Faction.Players, new Vector2(0f, 1f));
         Physics2D.SyncTransforms();
 
-        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(10, DamageType.Physical), areaRadius: 1.5f)));
+        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(10, DamageType.Physical), areaRadius: 1.5f)), caster.transform.position);
 
         Assert.That(near.Health.CurrentHealth, Is.EqualTo(near.Health.MaxHealth - 10));
         Assert.That(behind.Health.CurrentHealth, Is.EqualTo(behind.Health.MaxHealth - 10));
@@ -129,7 +129,7 @@ public class AbilityEffectTests
         Physics2D.SyncTransforms();
         AbilityDefinition quake = Ability(AbilityTargeting.Point, new Hit(10, DamageType.Physical), heal: 5, areaRadius: 1.25f);
 
-        service.Resolve(caster, new AbilityCast(1, quake, new CastAim(new Vector2(4f, 0f), Vector2.right, default)));
+        service.Resolve(caster, new AbilityCast(1, quake, new CastAim(new Vector2(4f, 0f), Vector2.right, default)), caster.transform.position);
 
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 10));
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 25), "Healed, and never damaged.");
@@ -148,7 +148,7 @@ public class AbilityEffectTests
         Physics2D.SyncTransforms();
         AbilityDefinition bolt = Ability(AbilityTargeting.Direction, new Hit(12, DamageType.Frost), range: 6f, areaRadius: 0.35f);
 
-        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(new Vector2(10f, 0f), Vector2.right, default)));
+        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(new Vector2(10f, 0f), Vector2.right, default)), caster.transform.position);
 
         Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 12));
         Assert.That(second.Health.CurrentHealth, Is.EqualTo(second.Health.MaxHealth - 12), "The line pierces.");
@@ -156,8 +156,22 @@ public class AbilityEffectTests
         Assert.That(beside.Health.CurrentHealth, Is.EqualTo(beside.Health.MaxHealth), "Off the line.");
         Assert.That(behind.Health.CurrentHealth, Is.EqualTo(behind.Health.MaxHealth));
 
-        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(Vector2.zero, Vector2.zero, default)));
+        service.Resolve(caster, new AbilityCast(0, bolt, new CastAim(Vector2.zero, Vector2.zero, default)), caster.transform.position);
         Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 12), "No direction, no line.");
+    }
+
+    [Test]
+    public void AreasAroundTheCaster_StartWhereTheOwnerSawTheCaster_NotAtThisMachinesCopy()
+    {
+        PlayerAbilities caster = Caster(Vector2.zero);
+        DamageReceiver ahead = Unit("Ahead", Faction.Mobs, new Vector2(3f, 0f));
+        DamageReceiver atCopy = Unit("AtCopy", Faction.Mobs, new Vector2(-1f, 0f));
+        Physics2D.SyncTransforms();
+
+        service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(10, DamageType.Physical), areaRadius: 1.25f)), new Vector2(2.5f, 0f));
+
+        Assert.That(ahead.Health.CurrentHealth, Is.EqualTo(ahead.Health.MaxHealth - 10), "The circle is centred on the owner's position.");
+        Assert.That(atCopy.Health.CurrentHealth, Is.EqualTo(atCopy.Health.MaxHealth), "Not on this machine's lagging copy.");
     }
 
     [Test]
@@ -167,7 +181,7 @@ public class AbilityEffectTests
         DamageReceiver mob = Unit("Mob", Faction.Mobs, new Vector2(2f, 0f));
         AbilityService client = TestCombat.CreateAbilityService(new FixedGameAuthority(false));
 
-        Assert.That(client.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), mob, UnitTeam.Enemy)), Is.False);
+        Assert.That(client.Resolve(caster, Cast(Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical)), mob, UnitTeam.Enemy), caster.transform.position), Is.False);
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth));
     }
 
@@ -178,7 +192,7 @@ public class AbilityEffectTests
         Health bareHealth = Track(new GameObject("Bare")).AddComponent<Health>();
         AbilityDefinition smite = Ability(AbilityTargeting.Unit, new Hit(15, DamageType.Physical));
 
-        Assert.That(service.Resolve(caster, new AbilityCast(3, smite, new CastAim(Vector2.zero, Vector2.right, new UnitTarget(bareHealth, null, UnitTeam.Enemy)))), Is.True);
+        Assert.That(service.Resolve(caster, new AbilityCast(3, smite, new CastAim(Vector2.zero, Vector2.right, new UnitTarget(bareHealth, null, UnitTeam.Enemy))), caster.transform.position), Is.True);
         Assert.That(bareHealth.CurrentHealth, Is.EqualTo(bareHealth.MaxHealth));
     }
 

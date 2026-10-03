@@ -36,6 +36,7 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
         if (health != null)
         {
             health.Damaged += HandleDamaged;
+            health.Healed += HandleHealed;
             health.Died += HandleDied;
             health.Restored += HandleRestored;
         }
@@ -54,6 +55,7 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
         if (health != null)
         {
             health.Damaged -= HandleDamaged;
+            health.Healed -= HandleHealed;
             health.Died -= HandleDied;
             health.Restored -= HandleRestored;
         }
@@ -68,6 +70,11 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
     }
 
     private void HandleDamaged(Health.DamageEvent _)
+    {
+        RefreshHealth();
+    }
+
+    private void HandleHealed(Health _, int amount)
     {
         RefreshHealth();
     }

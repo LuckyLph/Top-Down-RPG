@@ -36,7 +36,7 @@ public sealed class AbilityDefinition : ScriptableObject
     private bool bufferable;
 
     [Header("Effect")]
-    [SerializeField, Tooltip("Damage and statuses applied to each affected unit. Damage and debuffs only land on enemies, buffs on allies.")]
+    [SerializeField, Tooltip("Damage and statuses applied to each affected unit. Damage and debuffs only land on enemies, buffs on allies (a buff still lands on an ally whose damage is refused).")]
     private Hit hit;
 
     [SerializeField, Min(0), Tooltip("HP restored to each affected unit. Only lands on allies.")]

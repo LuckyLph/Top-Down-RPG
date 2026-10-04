@@ -14,7 +14,7 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 
 | Package | Used for |
 |---|---|
-| `jp.hadashikick.vcontainer` (OpenUPM) | Dependency injection, `LifetimeScope`s, entry points |
+| `jp.hadashikick.vcontainer` (git, pinned to tag `1.19.0`) | Dependency injection, `LifetimeScope`s, entry points |
 | `com.unity.inputsystem` | `InputSystem_Actions.inputactions`, `PlayerInputService`, `InputBindings` (rebinding), UI input module |
 | `com.unity.render-pipelines.universal` | URP 2D renderer, `Light2D` |
 | `com.skner.dualgrid` (git) | `DualGridTilemapModule` for dual-grid terrain rendering |

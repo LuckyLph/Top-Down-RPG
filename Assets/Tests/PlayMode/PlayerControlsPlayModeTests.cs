@@ -272,7 +272,13 @@ public class PlayerControlsPlayModeTests
         }
 
         Assert.That(terrain.TrySetCells(collision, wall, filled: true), Is.True);
-        collision.GetComponent<TilemapCollider2D>().ProcessTilemapChanges();
+        TilemapCollider2D wallCollider = collision.GetComponent<TilemapCollider2D>();
+        wallCollider.ProcessTilemapChanges();
+        Assert.That(wallCollider.shapeCount, Is.GreaterThanOrEqualTo(wall.Length), "Every wall cell gets a grid collider.");
+        DualGridTilemapModule wallArt = collision.GetComponent<DualGridTilemapModule>();
+        Assert.That(wallArt, Is.Not.Null, "The collision tilemap is a dual-grid wall tilemap.");
+        Assert.That(wallArt.RenderTilemap.HasTile(DualGridUtils.GetRenderTilePosition(wall[0], 3)), Is.True, "Its render tilemap draws the new wall.");
+        Assert.That(wallArt.RenderTilemap.gameObject.layer, Is.Not.EqualTo(collision.gameObject.layer), "The wall art is on a layer the camera draws.");
         Physics2D.SyncTransforms();
 
         Vector3Int goal = new(start.x + 4, start.y, start.z);

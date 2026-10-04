@@ -38,6 +38,16 @@ public static class DualGridUtils
     }
 
     /// <summary>
+    /// True when <paramref name="tilemapTransform"/> is the render tilemap of a <see cref="DualGridTilemapModule"/>
+    /// (its parent carries the module), whose cells sit half a cell off the data cells.
+    /// </summary>
+    public static bool IsRenderTilemap(Transform tilemapTransform)
+    {
+        Transform parent = tilemapTransform.parent;
+        return parent != null && parent.TryGetComponent(out DualGridTilemapModule _);
+    }
+
+    /// <summary>
     /// Converts a valid data tile offset, used to offset a RenderTilePosition into a DataTilePosition,
     /// into a valid neighbor offset, used by Unity's Tilemap to calculate neighbors and apply rule tiles.
     /// </summary>

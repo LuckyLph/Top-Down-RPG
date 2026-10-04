@@ -556,6 +556,46 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void BlockingTilemap_OnADualGridRenderTilemap_IsIgnored()
+    {
+        root = CreateGridRoot("DualGridBlockerRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        groundMap.SetTile(Vector3Int.zero, fillTile);
+        AttachTerrainSource(groundMap, groundTerrain);
+
+        Tilemap wallData = CreateTilemapObject("Walls");
+        dualGridTile = ScriptableObject.CreateInstance<DualGridRuleTile>();
+        dualGridTile.RefreshDataTile();
+        wallData.gameObject.AddComponent<DualGridTilemapModule>().RenderTile = dualGridTile;
+        GameObject renderObject = new("WallsRender");
+        renderObject.transform.SetParent(wallData.transform);
+        Tilemap wallRender = renderObject.AddComponent<Tilemap>();
+        wallRender.SetTile(Vector3Int.zero, fillTile);
+
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.ConfigureBlockingTilemaps(wallRender);
+        LogAssert.Expect(LogType.Error, new Regex("dual-grid render tilemap"));
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(Vector3Int.zero), Is.True);
+    }
+
+    [Test]
+    public void OutsidePlayMode_PaintingATile_UpdatesABuiltGrid()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        Vector3Int gap = new(2, 2, 0);
+        int versionBefore = navigationGrid.Version;
+
+        navigationGrid.BlockingTilemaps[0].SetTile(gap, blockTile);
+
+        Assert.That(navigationGrid.IsCellWalkable(gap), Is.False, "The editor listener refreshes the grid without a RefreshCells call.");
+        Assert.That(navigationGrid.Version, Is.GreaterThan(versionBefore));
+    }
+
+    [Test]
     public void AreCellsConnected_FollowsBarrierLayout()
     {
         SetupNavigationGrid(addGapInBarrier: false);

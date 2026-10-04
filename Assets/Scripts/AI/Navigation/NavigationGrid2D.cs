@@ -68,6 +68,7 @@ public class NavigationGrid2D : MonoBehaviour
     private int[] regionQueue = Array.Empty<int>();
     private CostField defaultField;
     private GridAStarPathfinder2D pathfinder;
+    private bool gizmoGridIsStale;
     private BoundsInt walkableBounds;
     private int width;
     private int height;
@@ -227,10 +228,20 @@ public class NavigationGrid2D : MonoBehaviour
 
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
-            if (blockingTilemaps[i] != null)
+            Tilemap blockingTilemap = blockingTilemaps[i];
+            if (blockingTilemap == null)
             {
-                watchedTilemaps.Add(blockingTilemaps[i]);
+                continue;
             }
+
+            if (DualGridUtils.IsRenderTilemap(blockingTilemap.transform))
+            {
+                Debug.LogError($"NavigationGrid2D ignores blocking tilemap '{blockingTilemap.name}' because it is a dual-grid render tilemap, " +
+                    "which sits half a cell off the data cells. List the data tilemap that has the DualGridTilemapModule instead.", blockingTilemap);
+                continue;
+            }
+
+            watchedTilemaps.Add(blockingTilemap);
         }
 
         RemoveBlockedCells();
@@ -560,7 +571,11 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
-    private void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
+    /// <summary>
+    /// Re-reads the changed cells when <paramref name="tilemap"/> is one of this grid's source or blocking tilemaps.
+    /// Called by the grid itself while enabled, and by an editor listener outside Play Mode so the gizmos stay current.
+    /// </summary>
+    internal void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
         if (!IsBuilt || !watchedTilemaps.Contains(tilemap))
         {
@@ -629,7 +644,7 @@ public class NavigationGrid2D : MonoBehaviour
     {
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
-            if (blockingTilemaps[i] != null && blockingTilemaps[i].HasTile(cell))
+            if (blockingTilemaps[i] != null && watchedTilemaps.Contains(blockingTilemaps[i]) && blockingTilemaps[i].HasTile(cell))
             {
                 return true;
             }
@@ -661,7 +676,7 @@ public class NavigationGrid2D : MonoBehaviour
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
             Tilemap blockingTilemap = blockingTilemaps[i];
-            if (blockingTilemap == null)
+            if (blockingTilemap == null || !watchedTilemaps.Contains(blockingTilemap))
             {
                 continue;
             }
@@ -900,8 +915,28 @@ public class NavigationGrid2D : MonoBehaviour
         return referenceTilemap;
     }
 
+    /// <summary>
+    /// Rebuilds the grid before its next gizmo draw outside Play Mode, after an inspector change to it or to one of its
+    /// terrain sources. Tile painting is followed cell by cell instead.
+    /// </summary>
+    internal void MarkGizmoGridStale()
+    {
+        gizmoGridIsStale = true;
+    }
+
+    private void OnValidate()
+    {
+        gizmoGridIsStale = true;
+    }
+
     private void OnDrawGizmosSelected()
     {
+        if (!Application.isPlaying && (drawGridBoundsGizmo || drawWalkableCellGizmos) && (!IsBuilt || gizmoGridIsStale))
+        {
+            gizmoGridIsStale = false;
+            BuildGrid();
+        }
+
         if (drawGridBoundsGizmo)
         {
             DrawGridBoundsGizmo();
@@ -910,11 +945,6 @@ public class NavigationGrid2D : MonoBehaviour
         if (!drawWalkableCellGizmos)
         {
             return;
-        }
-
-        if (!Application.isPlaying && !IsBuilt)
-        {
-            BuildGrid();
         }
 
         Gizmos.color = walkableCellColor;

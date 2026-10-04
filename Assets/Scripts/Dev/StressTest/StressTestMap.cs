@@ -16,10 +16,8 @@ public class StressTestMap : MonoBehaviour
     }
 
     [SerializeField] private DualGridTilemapModule ground;
-    [SerializeField] private Tilemap walls;
-    [Tooltip("Render-only copy of the walls: the collision tilemap sits on the Obstacles layer, which the camera culls.")]
-    [SerializeField] private Tilemap wallVisuals;
-    [SerializeField] private TileBase wallTile;
+    [Tooltip("Dual-grid walls: the data tilemap is the collision tilemap, its render tilemap draws them.")]
+    [SerializeField] private DualGridTilemapModule walls;
     [SerializeField] private NavigationGrid2D navigationGrid;
 
     [Header("Layout")]
@@ -70,30 +68,20 @@ public class StressTestMap : MonoBehaviour
 
         wallCells.RemoveWhere(cell => Mathf.Abs(cell.x) < clearRadius && Mathf.Abs(cell.y) < clearRadius);
 
-        PaintGround(groundCells);
-
-        Vector3Int[] wallPositions = new Vector3Int[wallCells.Count];
-        wallCells.CopyTo(wallPositions);
-        TileBase[] wallTiles = Fill(wallPositions.Length, wallTile);
-        walls.ClearAllTiles();
-        walls.SetTiles(wallPositions, wallTiles);
-        if (wallVisuals != null)
-        {
-            wallVisuals.ClearAllTiles();
-            wallVisuals.SetTiles(wallPositions, wallTiles);
-        }
+        Paint(ground, groundCells);
+        Paint(walls, new List<Vector3Int>(wallCells));
 
         navigationGrid.BuildGrid();
 
-        Debug.Log($"[StressTest] Generated a {width}x{height} {layout} map with {wallPositions.Length} wall cells " +
+        Debug.Log($"[StressTest] Generated a {width}x{height} {layout} map with {wallCells.Count} wall cells " +
             $"in {stopwatch.ElapsedMilliseconds} ms.", this);
     }
 
-    private void PaintGround(List<Vector3Int> groundCells)
+    private static void Paint(DualGridTilemapModule layer, List<Vector3Int> cells)
     {
-        ground.DataTilemap.ClearAllTiles();
-        ground.RenderTilemap.ClearAllTiles();
-        ground.SetDataTiles(groundCells);
+        layer.DataTilemap.ClearAllTiles();
+        layer.RenderTilemap.ClearAllTiles();
+        layer.SetDataTiles(cells);
     }
 
     private void AddBorder(HashSet<Vector3Int> cells, int minX, int minY)
@@ -146,12 +134,5 @@ public class StressTestMap : MonoBehaviour
                 }
             }
         }
-    }
-
-    private static TileBase[] Fill(int count, TileBase tile)
-    {
-        TileBase[] tiles = new TileBase[count];
-        System.Array.Fill(tiles, tile);
-        return tiles;
     }
 }

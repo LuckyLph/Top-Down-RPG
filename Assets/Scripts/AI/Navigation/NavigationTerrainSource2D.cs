@@ -37,12 +37,14 @@ public class NavigationTerrainSource2D : MonoBehaviour
     /// True when this tilemap is the render tilemap of a dual-grid terrain, whose cells sit half a cell off the
     /// data cells and must not feed navigation.
     /// </summary>
-    public bool IsDualGridRenderTilemap
+    public bool IsDualGridRenderTilemap => DualGridUtils.IsRenderTilemap(transform);
+
+    private void OnValidate()
     {
-        get
+        NavigationGrid2D grid = GetComponentInParent<NavigationGrid2D>();
+        if (grid != null)
         {
-            Transform parent = transform.parent;
-            return parent != null && parent.TryGetComponent(out DualGridTilemapModule _);
+            grid.MarkGizmoGridStale();
         }
     }
 

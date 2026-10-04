@@ -1,0 +1,94 @@
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Tilemaps;
+
+[CanEditMultipleObjects]
+[CustomEditor(typeof(Tilemap))]
+public class RestrictedTilemapEditor : UnityEditor.Editor
+{
+    private bool showInfoFoldout = true;
+
+    public override void OnInspectorGUI()
+    {
+        Tilemap tilemap = (Tilemap)target;
+
+        SerializedProperty animationFrameRate = serializedObject.FindProperty("m_AnimationFrameRate");
+        SerializedProperty color = serializedObject.FindProperty("m_Color");
+
+        EditorGUILayout.PropertyField(animationFrameRate, new GUIContent("Animation Frame Rate"));
+        EditorGUILayout.PropertyField(color, new GUIContent("Color"));
+
+        bool isRenderTilemap = tilemap.GetComponentInImmediateParent<DualGridTilemapModule>() != null;
+        if (isRenderTilemap)
+        {
+            GUILayout.Space(2);
+            EditorGUILayout.HelpBox("Editing the position and orientation of a RenderTilemap is restricted.", MessageType.Info);
+            GUILayout.Space(2);
+        }
+
+        using (new EditorGUI.DisabledScope(isRenderTilemap))
+        {
+            EditorGUILayout.Vector3Field("Tile Anchor", tilemap.tileAnchor);
+            EditorGUILayout.EnumPopup("Orientation", tilemap.orientation);
+        }
+
+        using (new EditorGUI.DisabledScope(true))
+        {
+            EditorGUILayout.Vector3Field("Offset", tilemap.tileAnchor);
+            EditorGUILayout.Vector3Field("Rotation", tilemap.transform.rotation.eulerAngles);
+            EditorGUILayout.Vector3Field("Scale", tilemap.transform.localScale);
+
+            showInfoFoldout = EditorGUILayout.Foldout(showInfoFoldout, "Info");
+            if (showInfoFoldout)
+            {
+                DisplayTilemapInfo(tilemap);
+            }
+        }
+
+        serializedObject.ApplyModifiedProperties();
+    }
+
+    private void DisplayTilemapInfo(Tilemap tilemap)
+    {
+        TileBase[] uniqueTiles = GetUniqueTilesFromTilemap(tilemap);
+        Sprite[] uniqueSprites = GetUniqueSpritesFromTilemap(tilemap);
+
+        EditorGUILayout.LabelField("Tiles", EditorStyles.boldLabel);
+        foreach (var tile in uniqueTiles)
+        {
+            EditorGUILayout.ObjectField(tile, typeof(TileBase), false);
+        }
+
+        EditorGUILayout.LabelField("Sprites", EditorStyles.boldLabel);
+        foreach (var sprite in uniqueSprites)
+        {
+            EditorGUILayout.ObjectField(sprite, typeof(Sprite), false);
+        }
+    }
+
+    private TileBase[] usedTilesCache;
+    private TileBase[] GetUniqueTilesFromTilemap(Tilemap tilemap)
+    {
+        int usedTilesCount = tilemap.GetUsedTilesCount();
+        if (usedTilesCache == null || usedTilesCache.Length != usedTilesCount)
+        {
+            usedTilesCache = new TileBase[usedTilesCount];
+        }
+        tilemap.GetUsedTilesNonAlloc(usedTilesCache);
+
+        return usedTilesCache;
+    }
+
+    private Sprite[] usedSpritesCache;
+    private Sprite[] GetUniqueSpritesFromTilemap(Tilemap tilemap)
+    {
+        int usedSpritesCount = tilemap.GetUsedSpritesCount();
+        if (usedSpritesCache == null || usedSpritesCache.Length != usedSpritesCount)
+        {
+            usedSpritesCache = new Sprite[usedSpritesCount];
+        }
+        tilemap.GetUsedSpritesNonAlloc(usedSpritesCache);
+
+        return usedSpritesCache;
+    }
+}

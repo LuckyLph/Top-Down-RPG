@@ -4643,9 +4643,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b152cdadb37e7464081d2bb9b6e8bc65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: skner.DualGrid::skner.DualGrid.DualGridTilemapModule
-  _renderTile: {fileID: 11400000, guid: a5e4e863827cb05479e7a30ba449016d, type: 2}
-  _enableTilemapCollider: 0
-  _gameObjectOrigin: 0
+  renderTile: {fileID: 11400000, guid: a5e4e863827cb05479e7a30ba449016d, type: 2}
+  enableTilemapCollider: 0
+  gameObjectOrigin: 0
 --- !u!1839735485 &1315498085
 Tilemap:
   m_ObjectHideFlags: 0

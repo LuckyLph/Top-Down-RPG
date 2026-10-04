@@ -3,7 +3,10 @@
   "references": [
     "TopDownRPG.Core",
     "TopDownRPG.Gameplay",
-    "VContainer"
+    "VContainer",
+    "Unity.2D.Tilemap.Editor",
+    "Unity.2D.Tilemap.Extras",
+    "Unity.2D.Tilemap.Extras.Editor"
   ],
   "includePlatforms": [
     "Editor"

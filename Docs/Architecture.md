@@ -17,8 +17,7 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 | `jp.hadashikick.vcontainer` (git, pinned to tag `1.19.0`) | Dependency injection, `LifetimeScope`s, entry points |
 | `com.unity.inputsystem` | `InputSystem_Actions.inputactions`, `PlayerInputService`, `InputBindings` (rebinding), UI input module |
 | `com.unity.render-pipelines.universal` | URP 2D renderer, `Light2D` |
-| `com.skner.dualgrid` (embedded in `Packages/com.skner.dualgrid`, from upstream 2.1.0) | `DualGridTilemapModule` for dual-grid terrain rendering |
-| `com.unity.2d.tilemap` / `.extras` | Tilemaps for terrain, collision and navigation data |
+| `com.unity.2d.tilemap` / `.extras` | Tilemaps for terrain, collision and navigation data; `RuleTile` base of the dual-grid terrain tile |
 | `com.unity.2d.aseprite`, `com.unity.2d.animation` | Sprite import and animation |
 | `com.unity.ugui` + TextMesh Pro | Menu, HUD, damage popups |
 | `com.unity.test-framework` | EditMode and PlayMode tests |
@@ -33,13 +32,13 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 | Assembly | Folder | References | Notes |
 |---|---|---|---|
 | `TopDownRPG.Core` | `Assets/Scripts/Core` | VContainer, Unity.InputSystem, UnityEngine.UI (for the `EventSystem` pointer-over-UI check), Unity.Netcode.Runtime, Unity.Networking.Transport | Boot, scene flow, input, clock, randomness, network session, camera follow, screen fader. Must not reference Gameplay. |
-| `TopDownRPG.Gameplay` | `Assets/Scripts` (everything outside `Core` and `Dev`) | Core, VContainer, Unity.InputSystem, Unity.TextMeshPro | AI, navigation, combat, player, UI, effects, world, composition roots. |
-| `TopDownRPG.DevTools` | `Assets/Scripts/Dev` | Gameplay, Core, VContainer, skner.DualGrid, Unity.2D.Tilemap.Extras | `defineConstraints: UNITY_EDITOR \|\| DEVELOPMENT_BUILD`; not auto-referenced. |
-| `TopDownRPG.Editor` | `Assets/Editor` | Core, Gameplay, VContainer | Editor-only platform. |
-| `TopDownRPG.EditModeTests` | `Assets/Tests/Editor` | Gameplay, Core, VContainer, Unity.InputSystem, Unity.InputSystem.TestFramework, Unity.TextMeshPro, Unity.Netcode.Runtime | Editor-only test assembly. |
+| `TopDownRPG.Gameplay` | `Assets/Scripts` (everything outside `Core` and `Dev`) | Core, VContainer, Unity.InputSystem, Unity.TextMeshPro, Unity.Netcode.Runtime, Unity.2D.Tilemap.Extras | AI, navigation, combat, player, UI, effects, world (including the dual-grid terrain), composition roots. |
+| `TopDownRPG.DevTools` | `Assets/Scripts/Dev` | Gameplay, Core, VContainer, Unity.2D.Tilemap.Extras | `defineConstraints: UNITY_EDITOR \|\| DEVELOPMENT_BUILD`; not auto-referenced. |
+| `TopDownRPG.Editor` | `Assets/Editor` | Core, Gameplay, VContainer, Unity.2D.Tilemap.Editor, Unity.2D.Tilemap.Extras, Unity.2D.Tilemap.Extras.Editor | Editor-only platform. Includes the dual-grid tooling. |
+| `TopDownRPG.EditModeTests` | `Assets/Tests/Editor` | Gameplay, Core, VContainer, Unity.InputSystem, Unity.InputSystem.TestFramework, Unity.TextMeshPro, Unity.Netcode.Runtime, Unity.2D.Tilemap.Extras | Editor-only test assembly. |
 | `TopDownRPG.PlayModeTests` | `Assets/Tests/PlayMode` | Gameplay, Core, DevTools, VContainer, Unity.InputSystem, Unity.TextMeshPro, Unity.Netcode.Runtime | Needs DevTools for the stress-scene test. |
 
-Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both test assemblies on top. Core and Gameplay each have an `AssemblyInfo.cs` ([Core](../Assets/Scripts/Core/AssemblyInfo.cs), [Gameplay](../Assets/Scripts/AssemblyInfo.cs)) granting `InternalsVisibleTo` to both test assemblies; `internal` members are test seams.
+Dependency direction: `Core <- Gameplay <- DevTools`, with `Editor` and both test assemblies on top. Core and Gameplay each have an `AssemblyInfo.cs` ([Core](../Assets/Scripts/Core/AssemblyInfo.cs), [Gameplay](../Assets/Scripts/AssemblyInfo.cs)) granting `InternalsVisibleTo` to both test assemblies; `internal` members are test seams. Gameplay also grants it to `TopDownRPG.Editor`, whose dual-grid tools set `internal` members of the dual-grid types.
 
 ## Scenes and boot flow
 
@@ -551,6 +550,7 @@ Costs: 10 per straight step by default, diagonals x1.4.
 - Areas are separate scenes with a `Grid`, a DualGrid terrain tilemap (`DualGridTilemapModule` data + render tilemaps), a `CollisionTilemap` on the `Obstacles` layer, `NavigationGrid2D` + `NavigationTerrainSource2D`, one or more [SpawnPoint](../Assets/Scripts/World/SpawnPoint.cs)s (string `spawnId`, `partySpacing`, `GetSlotPosition(index)`: slot 0 on the point, then alternating right/left, gizmo), [MobSpawnPoint](../Assets/Scripts/World/MobSpawnPoint.cs)s (mob prefab, gizmo) and an `AreaLifetimeScope`.
 - [AreaMobSpawner](../Assets/Scripts/World/AreaMobSpawner.cs): area entry point over `INetworkObjectSpawner`. `Start` (offline or host): `SpawnAll` instantiates each spawn point's mob prefab through the area container at the point's position, moves it into the area scene, and when hosting spawns it as a network object; spawn points without a prefab log an error. On a client it spawns nothing; `RegisterNetworkPrefabs` instead registers each distinct mob prefab so the host's mobs arrive injected from this area's container and in this area's scene, and `Dispose` unregisters them. Mobs are never placed in area scenes directly; the stress-test spawner's mobs stay local (offline tool).
 - Project layers include `Obstacles` (collision tilemaps; `MobConfig.obstacleLayerMask` uses it for line of sight), `Player` and `Enemy`. Separation only senses colliders on the mob's own layer. `Player` vs `Player` collisions are off in the 2D physics matrix, so players walk through each other; everything else collides.
+- Dual-grid terrain ([Assets/Scripts/World/DualGrid](../Assets/Scripts/World/DualGrid), editor tools in [Assets/Editor/DualGrid](../Assets/Editor/DualGrid)): a `DualGridTilemapModule` on the painted data tilemap keeps a half-cell-offset render tilemap of `DualGridRuleTile`s in sync, each render cell picking its sprite from the four data cells around its corner. Adopted from skner's DualGrid 2.1.0 (MIT, license kept beside the code). Full description, authoring steps and editor behaviour in [DualGrid.md](DualGrid.md).
 - Adding an area: create from the area template, add a `SceneDefinition`, list it in `GameScenes.areas`, enable it in build settings (enforced by `SceneBuildValidator`).
 
 ## Dev tools
@@ -586,6 +586,7 @@ Menu root: `Tools/TopDownRPG/`.
 | [VContainerDiagnosticsBuildGuard](../Assets/Editor/VContainerDiagnosticsBuildGuard.cs) | Turns off VContainer diagnostics for non-development builds and restores it afterwards. |
 | [PixelArtTextureDefaults](../Assets/Editor/PixelArtTextureDefaults.cs) | `AssetPostprocessor` for `Assets/Sprites/`: sprite, 32 PPU, point filter, no mips, uncompressed RGBA32; menu `Tools/Textures/Apply Pixel Art Defaults To Sprites`. |
 | [PixelArtEditorSnapSettings](../Assets/Editor/PixelArtEditorSnapSettings.cs) | Sets editor move snap to 1/32; menu `Tools/Pixel Art/Apply Move Snap (1/32)`. |
+| [DualGrid/](../Assets/Editor/DualGrid) | Dual-grid tooling: inspectors for the module, rule tile and data tile, the Dual Grid Brush, the rule tile preview, automatic tiling rules, `Assets/Create/2D/Tiles/Dual Grid Rule Tile` and `GameObject/2D Object/Tilemap/Dual Grid Tilemap`, and `DualGridTilemapPersistentListener` (edit-mode render refresh). `RestrictedTransformEditor`/`RestrictedTilemapEditor` replace every `Transform` and `Tilemap` inspector to lock render tilemaps. See [DualGrid.md](DualGrid.md). |
 
 ## ScriptableObject configs
 
@@ -693,6 +694,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | File | Covers |
 |---|---|
 | [AreaEntryTests.cs](../Assets/Tests/Editor/AreaEntryTests.cs) | Spawn point slots, every registered player placed in its own slot at the requested spawn (and recorded as the active spawn point), `PlayerRespawner` rules and placement |
+| [DualGridTilemapModuleTests.cs](../Assets/Tests/Editor/DualGridTilemapModuleTests.cs) | Render/data corner positions are inverses; a data tile fills the four render cells around it; clearing one keeps render cells a neighbouring data tile still uses; `RefreshRenderTilemap` rebuilds the render tilemap |
 | [GameSaveTests.cs](../Assets/Tests/Editor/GameSaveTests.cs) | Save/load round trip by scene GUID and format version, areas outside `GameScenes` not saved, missing/malformed/other-version/unknown-area saves ignored with a warning, `GetSavedOrStartingArea` fallback, `FileSaveStore` round trip and replace without a leftover temp file (in a temp folder) |
 | [JoinApprovalTests.cs](../Assets/Tests/Editor/JoinApprovalTests.cs) | Same version with room approved; full party and other or missing versions refused (version checked first); refusal round trip through a disconnect reason, other reasons not taken for refusals |
 | [AreaAnnouncementTests.cs](../Assets/Tests/Editor/AreaAnnouncementTests.cs) | Announcement round trip through Netcode buffers; null strings become empty |
@@ -785,4 +787,5 @@ Factual observations against CLAUDE.md; nothing here has been changed.
 - **Client status timers can read short after a host transition**: a client derives remaining time from the server time elapsed since the host last wrote the list, but the host's game clock (and so its statuses) stood still during its own transition while server time ran on. The host's removal is still authoritative; only the shown countdown is off until the next change rewrites the list.
 - **Status icons are placeholders**: no status has an icon sprite, so the HUD shows two-letter abbreviations on coloured squares and the world icons are plain coloured squares; every visual is the same tinted ring.
 - **The Clearing has no walls**: its collision tilemap is empty and its edges are only missing ground, so nothing physical stops a body at the edge; paths keep players and mobs inside. `PlayerControlsPlayModeTests` builds its own wall at runtime.
+- **Dual-grid leftovers from upstream**: the scenes and the grass rule tile still carry `m_EditorClassIdentifier: skner.DualGrid::skner.DualGrid.*` strings. Unity keeps them across re-saves; references resolve by script GUID, so they only matter for missing-script recovery. `DualGridRuleTile`'s create-menu path is `Scriptable Objects/DualGridRuleTile` rather than `TopDownRPG/...`. `DualGridRuleTile.DataTile` logs an error and throws when the data tile sub-asset is missing.
 - **Folder naming**: `YPositionSorter` lives under `Assets/Scripts/Camera` although it handles sprite sorting; the camera follow script is in `Core/Camera`.

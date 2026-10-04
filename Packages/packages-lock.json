@@ -17,15 +17,6 @@
       },
       "hash": "aa5fc638d623f56178d50329d9ad8c541a57fe66"
     },
-    "com.skner.dualgrid": {
-      "version": "file:com.skner.dualgrid",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.2d.tilemap.extras": "3.1.2",
-        "com.unity.2d.tilemap": "1.0.0"
-      }
-    },
     "com.unity.2d.animation": {
       "version": "14.0.4",
       "depth": 0,

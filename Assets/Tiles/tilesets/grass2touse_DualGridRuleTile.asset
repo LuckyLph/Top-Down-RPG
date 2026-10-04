@@ -322,5 +322,5 @@ MonoBehaviour:
     - {x: -1, y: -1, z: 0}
     - {x: 1, y: -1, z: 0}
     m_RuleTransform: 0
-  _originalTexture: {fileID: 2800000, guid: 33dcb5afe4b80b144ac6c5a5d6db5a3b, type: 3}
-  _dataTile: {fileID: -4013293864163857653}
+  originalTexture: {fileID: 2800000, guid: 33dcb5afe4b80b144ac6c5a5d6db5a3b, type: 3}
+  dataTile: {fileID: -4013293864163857653}

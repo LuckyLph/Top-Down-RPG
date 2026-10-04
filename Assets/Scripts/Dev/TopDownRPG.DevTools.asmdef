@@ -4,7 +4,6 @@
     "TopDownRPG.Gameplay",
     "TopDownRPG.Core",
     "VContainer",
-    "skner.DualGrid",
     "Unity.2D.Tilemap.Extras"
   ],
   "includePlatforms": [],

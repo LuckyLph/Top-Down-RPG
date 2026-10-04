@@ -407,6 +407,77 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void EdgeCost_KeepsPathsOffTheEdgeOfTheGround()
+    {
+        root = CreateGridRoot("EdgeCostRoot");
+        Tilemap dataTilemap = CreateTilemapObject("GroundData");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        for (int x = 0; x < 10; x++)
+        {
+            for (int y = 0; y < 3; y++)
+            {
+                dataTilemap.SetTile(new Vector3Int(x, y, 0), fillTile);
+            }
+        }
+
+        AttachTerrainSource(dataTilemap, groundTerrain);
+        landProfile = TerrainMovementProfile2D.Create(false, 10, 5, Rule(groundTerrain, true, 10));
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(1, 1, 0), new Vector3Int(2, 1, 0), landProfile), Is.EqualTo(10));
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(1, 0, 0), new Vector3Int(2, 0, 0), landProfile), Is.EqualTo(15));
+
+        Vector3Int start = new(0, 0, 0);
+        Vector3Int goal = new(9, 0, 0);
+        PathResult withoutEdgeCost = navigationGrid.Pathfinder.FindPath(new PathRequest(start, goal, allowPartial: false));
+        Assert.That(withoutEdgeCost.Cells.All(cell => cell.y == 0), Is.True, "Without an edge cost the cheapest route runs along the edge.");
+
+        PathResult withEdgeCost = navigationGrid.Pathfinder.FindPath(new PathRequest(start, goal, false, landProfile));
+        Assert.That(withEdgeCost.Success, Is.True);
+        Assert.That(withEdgeCost.Cells.Where(cell => cell.x >= 2 && cell.x <= 7).All(cell => cell.y == 1), Is.True,
+            "With an edge cost the route moves to the inner row.");
+    }
+
+    [Test]
+    public void EdgeCost_CountsCellsNextToTerrainTheProfileCannotWalk()
+    {
+        root = CreateGridRoot("EdgeCostTerrainRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        landProfile = TerrainMovementProfile2D.Create(false, 10, 5, Rule(groundTerrain, true, 10), Rule(waterTerrain, false, 10));
+        amphibiousProfile = TerrainMovementProfile2D.Create(false, 10, 5, Rule(groundTerrain, true, 10), Rule(waterTerrain, true, 10));
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+        for (int x = 0; x < 5; x++)
+        {
+            for (int y = 0; y < 5; y++)
+            {
+                if (x == 2 && y == 2)
+                {
+                    waterMap.SetTile(new Vector3Int(x, y, 0), fillTile);
+                }
+                else
+                {
+                    groundMap.SetTile(new Vector3Int(x, y, 0), fillTile);
+                }
+            }
+        }
+
+        AttachTerrainSource(groundMap, groundTerrain);
+        AttachTerrainSource(waterMap, waterTerrain);
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Vector3Int besideWater = new(1, 1, 0);
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(0, 1, 0), besideWater, landProfile), Is.EqualTo(15));
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(0, 1, 0), besideWater, amphibiousProfile), Is.EqualTo(10));
+    }
+
+    [Test]
     public void AreCellsConnected_FollowsBarrierLayout()
     {
         SetupNavigationGrid(addGapInBarrier: false);

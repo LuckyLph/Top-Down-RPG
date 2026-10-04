@@ -37,6 +37,9 @@ public class TerrainMovementProfile2D : ScriptableObject
     [SerializeField] private bool defaultIsWalkable = true;
     [SerializeField, Min(1)] private int defaultTraversalCost = 10;
     [SerializeField] private List<TerrainRule> terrainRules = new();
+    [Tooltip("Extra cost for entering a walkable cell that touches (8 neighbours) a cell this profile cannot walk, " +
+        "so paths keep off ground edges and wall corners. 0 turns it off.")]
+    [SerializeField, Min(0)] private int edgeCost;
 
     private Dictionary<TerrainType2D, TerrainRule> ruleLookup;
     private int minimumTraversalCost = -1;
@@ -44,6 +47,7 @@ public class TerrainMovementProfile2D : ScriptableObject
     public int Version => version;
     public bool DefaultIsWalkable => defaultIsWalkable;
     public int DefaultTraversalCost => Mathf.Max(1, defaultTraversalCost);
+    public int EdgeCost => Mathf.Max(0, edgeCost);
 
     public bool TryGetTraversal(TerrainType2D terrainType, out bool isWalkable, out int traversalCost)
     {
@@ -74,9 +78,18 @@ public class TerrainMovementProfile2D : ScriptableObject
     /// </summary>
     public static TerrainMovementProfile2D Create(bool isWalkableByDefault, int traversalCostByDefault, params TerrainRule[] rules)
     {
+        return Create(isWalkableByDefault, traversalCostByDefault, 0, rules);
+    }
+
+    /// <summary>
+    /// Builds a profile with an <see cref="EdgeCost"/> in code, for tests. A later rule for the same terrain type wins.
+    /// </summary>
+    public static TerrainMovementProfile2D Create(bool isWalkableByDefault, int traversalCostByDefault, int edgeCost, params TerrainRule[] rules)
+    {
         TerrainMovementProfile2D profile = CreateInstance<TerrainMovementProfile2D>();
         profile.defaultIsWalkable = isWalkableByDefault;
         profile.defaultTraversalCost = Mathf.Max(1, traversalCostByDefault);
+        profile.edgeCost = Mathf.Max(0, edgeCost);
         if (rules != null)
         {
             profile.terrainRules.AddRange(rules);
@@ -143,6 +156,7 @@ public class TerrainMovementProfile2D : ScriptableObject
     private void OnValidate()
     {
         defaultTraversalCost = Mathf.Max(1, defaultTraversalCost);
+        edgeCost = Mathf.Max(0, edgeCost);
         ruleLookup = null;
         minimumTraversalCost = -1;
         version++;

@@ -537,16 +537,67 @@ public class NavigationGrid2D : MonoBehaviour
 
     private void BakeCostField(CostField field, TerrainMovementProfile2D movementProfile)
     {
+        int[] costs = field.Costs;
         for (int i = 0; i < cells.Length; i++)
         {
-            int cost = ResolveTraversalCost(cells[i], movementProfile);
-            field.Costs[i] = cost;
-            field.DiagonalCosts[i] = cost > 0 ? ScaleDiagonalCost(cost) : 0;
+            costs[i] = ResolveTraversalCost(cells[i], movementProfile);
+        }
+
+        int edgeCost = movementProfile != null ? movementProfile.EdgeCost : 0;
+        if (edgeCost > 0)
+        {
+            AddEdgeCost(costs, edgeCost);
+        }
+
+        for (int i = 0; i < costs.Length; i++)
+        {
+            field.DiagonalCosts[i] = costs[i] > 0 ? ScaleDiagonalCost(costs[i]) : 0;
         }
 
         field.MinimumCost = movementProfile != null ? movementProfile.GetMinimumTraversalCost() : DefaultTraversalCost;
         field.MinimumDiagonalCost = ScaleDiagonalCost(field.MinimumCost);
         LabelRegions(field);
+    }
+
+    /// <summary>
+    /// Adds <paramref name="edgeCost"/> to every walkable cell with a blocked or missing cell among its 8 neighbours.
+    /// Costs only grow, so a cell's walkability does not change while the pass runs.
+    /// </summary>
+    private void AddEdgeCost(int[] costs, int edgeCost)
+    {
+        for (int index = 0; index < costs.Length; index++)
+        {
+            if (costs[index] > 0 && TouchesBlockedCell(costs, index))
+            {
+                costs[index] += edgeCost;
+            }
+        }
+    }
+
+    private bool TouchesBlockedCell(int[] costs, int index)
+    {
+        int x = index % width;
+        int y = (index / width) % height;
+        int layerStart = index - ((y * width) + x);
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int neighborX = x + dx;
+                int neighborY = y + dy;
+                if (neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height)
+                {
+                    return true;
+                }
+
+                if (costs[layerStart + (neighborY * width) + neighborX] == 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static int ResolveTraversalCost(CellData cellData, TerrainMovementProfile2D movementProfile)

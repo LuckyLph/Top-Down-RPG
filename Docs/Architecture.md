@@ -17,7 +17,7 @@ Notable entries in [Packages/manifest.json](../Packages/manifest.json):
 | `jp.hadashikick.vcontainer` (git, pinned to tag `1.19.0`) | Dependency injection, `LifetimeScope`s, entry points |
 | `com.unity.inputsystem` | `InputSystem_Actions.inputactions`, `PlayerInputService`, `InputBindings` (rebinding), UI input module |
 | `com.unity.render-pipelines.universal` | URP 2D renderer, `Light2D` |
-| `com.skner.dualgrid` (git) | `DualGridTilemapModule` for dual-grid terrain rendering |
+| `com.skner.dualgrid` (embedded in `Packages/com.skner.dualgrid`, from upstream 2.1.0) | `DualGridTilemapModule` for dual-grid terrain rendering |
 | `com.unity.2d.tilemap` / `.extras` | Tilemaps for terrain, collision and navigation data |
 | `com.unity.2d.aseprite`, `com.unity.2d.animation` | Sprite import and animation |
 | `com.unity.ugui` + TextMesh Pro | Menu, HUD, damage popups |

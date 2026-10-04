@@ -1,20 +1,39 @@
+using System;
 using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine;
 
+/// <summary>
+/// A* over a <see cref="NavigationGrid2D"/>'s cost field, with 8 neighbours and no corner cutting. Search state lives
+/// in flat arrays indexed like the grid and stamped per search, so nothing is cleared or allocated between searches.
+/// </summary>
 public class GridAStarPathfinder2D : IPathfinder2D
 {
     private static readonly ProfilerMarker FindPathMarker = new("GridAStarPathfinder2D.FindPath");
+    private static readonly int[] NeighborDx = { 1, -1, 0, 0, 1, 1, -1, -1 };
+    private static readonly int[] NeighborDy = { 0, 0, 1, -1, 1, -1, 1, -1 };
 
     private readonly NavigationGrid2D navigationGrid;
-
     private readonly OpenHeap openHeap = new();
-    private readonly Dictionary<Vector3Int, SearchNode> nodes = new();
-    private readonly Vector3Int[] neighborBuffer = new Vector3Int[8];
+    private readonly int[] costSoFar;
+    private readonly int[] estimatedTotal;
+    private readonly int[] parents;
+    private readonly int[] discoveryOrder;
+    private readonly int[] knownStamps;
+    private readonly int[] closedStamps;
+    private int searchStamp;
+    private int knownCount;
 
     public GridAStarPathfinder2D(NavigationGrid2D navGrid)
     {
         navigationGrid = navGrid;
+        int cellCount = navGrid != null ? navGrid.CellCount : 0;
+        costSoFar = new int[cellCount];
+        estimatedTotal = new int[cellCount];
+        parents = new int[cellCount];
+        discoveryOrder = new int[cellCount];
+        knownStamps = new int[cellCount];
+        closedStamps = new int[cellCount];
     }
 
     internal int LastExpandedCount { get; private set; }
@@ -43,21 +62,21 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
         TerrainMovementProfile2D movementProfile = request.MovementProfile;
 
-        if (!navigationGrid.TryGetNearestWalkableCell(request.StartCell, movementProfile, out Vector3Int start))
+        if (!navigationGrid.TryGetNearestWalkableCell(request.StartCell, movementProfile, out Vector3Int startCell))
         {
             return PathResult.Failure;
         }
 
-        Vector3Int goal = request.GoalCell;
+        Vector3Int goalCell = request.GoalCell;
         bool adjustedGoalToNearestWalkable = false;
-        if (!navigationGrid.IsCellWalkable(goal, movementProfile))
+        if (!navigationGrid.IsCellWalkable(goalCell, movementProfile))
         {
             if (!request.AllowPartial)
             {
                 return PathResult.Failure;
             }
 
-            if (!navigationGrid.TryGetNearestWalkableCell(goal, movementProfile, out goal))
+            if (!navigationGrid.TryGetNearestWalkableCell(goalCell, movementProfile, out goalCell))
             {
                 return PathResult.Failure;
             }
@@ -65,29 +84,37 @@ public class GridAStarPathfinder2D : IPathfinder2D
             adjustedGoalToNearestWalkable = true;
         }
 
-        bool goalIsReachable = navigationGrid.AreCellsConnected(start, goal, movementProfile);
+        bool goalIsReachable = navigationGrid.AreCellsConnected(startCell, goalCell, movementProfile);
         if (!goalIsReachable && !request.AllowPartial)
         {
             return PathResult.Failure;
         }
 
+        NavigationGrid2D.CostField field = navigationGrid.GetCostField(movementProfile);
+        navigationGrid.TryGetIndex(startCell, out int start);
+        navigationGrid.TryGetIndex(goalCell, out int goal);
+        int width = navigationGrid.Width;
+        int height = navigationGrid.Height;
+        int goalX = goal % width;
+        int goalY = (goal / width) % height;
+        int[] costs = field.Costs;
+        int[] diagonalCosts = field.DiagonalCosts;
+
         int maxExpanded = goalIsReachable ? int.MaxValue : navigationGrid.MaxSearchCells;
-        openHeap.Clear();
-        nodes.Clear();
+        BeginSearch();
 
-        int startHeuristic = navigationGrid.HeuristicCost(start, goal, movementProfile);
-        nodes[start] = new SearchNode(0, startHeuristic, start, 0);
-        openHeap.Push(new OpenEntry(start, startHeuristic, startHeuristic, 0));
+        int startHeuristic = Heuristic(start % width, (start / width) % height, goalX, goalY, field);
+        Discover(start, 0, startHeuristic, start);
+        openHeap.Push(new OpenEntry(start, startHeuristic, startHeuristic, discoveryOrder[start]));
 
-        Vector3Int closestToGoal = start;
+        int closestToGoal = start;
         int closestHeuristic = startHeuristic;
 
         while (openHeap.Count > 0 && LastExpandedCount < maxExpanded)
         {
             OpenEntry entry = openHeap.Pop();
-            Vector3Int current = entry.Cell;
-            SearchNode currentNode = nodes[current];
-            if (currentNode.Closed || entry.F != currentNode.F)
+            int current = entry.Index;
+            if (closedStamps[current] == searchStamp || entry.F != estimatedTotal[current])
             {
                 continue;
             }
@@ -103,8 +130,7 @@ public class GridAStarPathfinder2D : IPathfinder2D
                     cells: cells);
             }
 
-            currentNode.Closed = true;
-            nodes[current] = currentNode;
+            closedStamps[current] = searchStamp;
             LastExpandedCount++;
 
             if (entry.H < closestHeuristic)
@@ -113,27 +139,50 @@ public class GridAStarPathfinder2D : IPathfinder2D
                 closestToGoal = current;
             }
 
-            int neighborCount = navigationGrid.GetNeighbors8(current, movementProfile, neighborBuffer);
-            for (int i = 0; i < neighborCount; i++)
+            int x = current % width;
+            int y = (current / width) % height;
+            int layerStart = current - ((y * width) + x);
+            for (int i = 0; i < NeighborDx.Length; i++)
             {
-                Vector3Int neighbor = neighborBuffer[i];
-                bool isKnown = nodes.TryGetValue(neighbor, out SearchNode neighborNode);
-                if (isKnown && neighborNode.Closed)
+                int neighborX = x + NeighborDx[i];
+                int neighborY = y + NeighborDy[i];
+                if (neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height)
                 {
                     continue;
                 }
 
-                int tentativeG = currentNode.G + navigationGrid.MovementCost(current, neighbor, movementProfile);
-                if (isKnown && tentativeG >= neighborNode.G)
+                int neighbor = layerStart + (neighborY * width) + neighborX;
+                if (costs[neighbor] == 0)
                 {
                     continue;
                 }
 
-                int neighborHeuristic = navigationGrid.HeuristicCost(neighbor, goal, movementProfile);
-                int order = isKnown ? neighborNode.Order : nodes.Count;
-                int f = tentativeG + neighborHeuristic;
-                nodes[neighbor] = new SearchNode(tentativeG, f, current, order);
-                openHeap.Push(new OpenEntry(neighbor, f, neighborHeuristic, order));
+                int stepCost = costs[neighbor];
+                if (NeighborDx[i] != 0 && NeighborDy[i] != 0)
+                {
+                    if (costs[layerStart + (y * width) + neighborX] == 0 || costs[layerStart + (neighborY * width) + x] == 0)
+                    {
+                        continue;
+                    }
+
+                    stepCost = diagonalCosts[neighbor];
+                }
+
+                bool isKnown = knownStamps[neighbor] == searchStamp;
+                if (isKnown && closedStamps[neighbor] == searchStamp)
+                {
+                    continue;
+                }
+
+                int tentativeCost = costSoFar[current] + stepCost;
+                if (isKnown && tentativeCost >= costSoFar[neighbor])
+                {
+                    continue;
+                }
+
+                int neighborHeuristic = Heuristic(neighborX, neighborY, goalX, goalY, field);
+                Discover(neighbor, tentativeCost, neighborHeuristic, current);
+                openHeap.Push(new OpenEntry(neighbor, estimatedTotal[neighbor], neighborHeuristic, discoveryOrder[neighbor]));
             }
         }
 
@@ -151,48 +200,62 @@ public class GridAStarPathfinder2D : IPathfinder2D
             cells: cells);
     }
 
-    private void ReconstructPath(Vector3Int start, Vector3Int end, List<Vector3Int> cells)
+    private void BeginSearch()
     {
-        Vector3Int current = end;
-        cells.Add(current);
+        if (searchStamp == int.MaxValue)
+        {
+            Array.Clear(knownStamps, 0, knownStamps.Length);
+            Array.Clear(closedStamps, 0, closedStamps.Length);
+            searchStamp = 0;
+        }
+
+        searchStamp++;
+        knownCount = 0;
+        openHeap.Clear();
+    }
+
+    private void Discover(int index, int cost, int heuristic, int parent)
+    {
+        if (knownStamps[index] != searchStamp)
+        {
+            knownStamps[index] = searchStamp;
+            discoveryOrder[index] = knownCount++;
+        }
+
+        costSoFar[index] = cost;
+        estimatedTotal[index] = cost + heuristic;
+        parents[index] = parent;
+    }
+
+    private static int Heuristic(int x, int y, int goalX, int goalY, NavigationGrid2D.CostField field)
+    {
+        return NavigationGrid2D.OctileCost(Mathf.Abs(x - goalX), Mathf.Abs(y - goalY), field.MinimumCost, field.MinimumDiagonalCost);
+    }
+
+    private void ReconstructPath(int start, int end, List<Vector3Int> cells)
+    {
+        int current = end;
+        cells.Add(navigationGrid.GetCell(current));
         while (current != start)
         {
-            current = nodes[current].Parent;
-            cells.Add(current);
+            current = parents[current];
+            cells.Add(navigationGrid.GetCell(current));
         }
 
         cells.Reverse();
     }
 
-    private struct SearchNode
-    {
-        public SearchNode(int g, int f, Vector3Int parent, int order)
-        {
-            G = g;
-            F = f;
-            Parent = parent;
-            Order = order;
-            Closed = false;
-        }
-
-        public int G;
-        public int F;
-        public Vector3Int Parent;
-        public int Order;
-        public bool Closed;
-    }
-
     private readonly struct OpenEntry
     {
-        public OpenEntry(Vector3Int cell, int f, int h, int order)
+        public OpenEntry(int index, int f, int h, int order)
         {
-            Cell = cell;
+            Index = index;
             F = f;
             H = h;
             Order = order;
         }
 
-        public Vector3Int Cell { get; }
+        public int Index { get; }
         public int F { get; }
         public int H { get; }
         public int Order { get; }

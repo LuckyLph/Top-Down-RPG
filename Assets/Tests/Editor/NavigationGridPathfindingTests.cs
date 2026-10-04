@@ -325,6 +325,27 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void BuildGrid_AfterTheTilemapsChange_RebakesCellsAndRegions()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        Vector3Int gap = new(2, 2, 0);
+        Vector3Int west = new(0, 2, 0);
+        Vector3Int east = new(4, 2, 0);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, null), Is.True);
+
+        Tilemap collisionTilemap = navigationGrid.BlockingTilemaps[0];
+        collisionTilemap.SetTile(gap, blockTile);
+        Tilemap dataTilemap = navigationGrid.GetComponentInChildren<NavigationTerrainSource2D>().DataTilemap;
+        dataTilemap.SetTile(new Vector3Int(6, 6, 0), fillTile);
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(gap), Is.False);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, null), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(6, 6, 0)), Is.True);
+        Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(west, east, allowPartial: false)).Success, Is.False);
+    }
+
+    [Test]
     public void BlockingTilemap_BlocksTheCellForEveryTerrainLayer()
     {
         root = CreateGridRoot("BlockingLayersRoot");

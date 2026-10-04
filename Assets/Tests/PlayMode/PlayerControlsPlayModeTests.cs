@@ -265,8 +265,8 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// Builds a seven-cell collision wall two cells to the right of the player (the Clearing has no walls of its own),
-    /// rebuilds the grid, and returns a point straight behind it.
+    /// Builds a seven-cell collision wall two cells to the right of the player (the Clearing has no walls of its own)
+    /// and returns a point straight behind it. The grid picks the new tiles up by itself.
     /// </summary>
     private Vector2 BuildWallInFrontOfThePlayer()
     {
@@ -281,7 +281,6 @@ public class PlayerControlsPlayModeTests
         }
 
         collision.GetComponent<TilemapCollider2D>().ProcessTilemapChanges();
-        grid.BuildGrid();
         Physics2D.SyncTransforms();
 
         Vector3Int goal = new(start.x + 4, start.y, start.z);

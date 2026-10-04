@@ -478,6 +478,84 @@ public class NavigationGridPathfindingTests
     }
 
     [Test]
+    public void Priority_TheTopLayerDecidesOverlappingCells()
+    {
+        root = CreateGridRoot("PriorityRoot");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        waterTerrain = CreateTerrain("water");
+        TerrainType2D bridgeTerrain = CreateTerrain("bridge");
+        landProfile = CreateProfile(false, Rule(groundTerrain, true, 10), Rule(waterTerrain, false, 10), Rule(bridgeTerrain, true, 12));
+
+        Tilemap groundMap = CreateTilemapObject("Ground");
+        Tilemap waterMap = CreateTilemapObject("Water");
+        Tilemap bridgeMap = CreateTilemapObject("Bridge");
+        Vector3Int west = new(0, 0, 0);
+        Vector3Int river = new(1, 0, 0);
+        Vector3Int east = new(2, 0, 0);
+        groundMap.SetTile(west, fillTile);
+        groundMap.SetTile(river, fillTile);
+        groundMap.SetTile(east, fillTile);
+        waterMap.SetTile(river, fillTile);
+
+        AttachTerrainSource(groundMap, groundTerrain);
+        AttachTerrainSource(waterMap, waterTerrain);
+        bridgeMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(bridgeTerrain, layerPriority: 1);
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(river, landProfile), Is.False, "Equal priorities keep the most restrictive rule.");
+
+        bridgeMap.SetTile(river, fillTile);
+        navigationGrid.RefreshCells(new[] { river });
+
+        Assert.That(navigationGrid.IsCellWalkable(river, landProfile), Is.True, "The bridge on top decides the cell.");
+        Assert.That(navigationGrid.MovementCost(west, river, landProfile), Is.EqualTo(12));
+        Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.True);
+        Object.DestroyImmediate(bridgeTerrain);
+    }
+
+    [Test]
+    public void RefreshCells_UpdatesOnlyThoseCells_AndBumpsTheVersion()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        Vector3Int gap = new(2, 2, 0);
+        Vector3Int west = new(0, 2, 0);
+        Vector3Int east = new(4, 2, 0);
+        int versionBefore = navigationGrid.Version;
+        BoundsInt boundsBefore = navigationGrid.WalkableBounds;
+
+        navigationGrid.BlockingTilemaps[0].SetTile(gap, blockTile);
+        navigationGrid.RefreshCells(new[] { gap });
+
+        Assert.That(navigationGrid.Version, Is.GreaterThan(versionBefore));
+        Assert.That(navigationGrid.WalkableBounds, Is.EqualTo(boundsBefore));
+        Assert.That(navigationGrid.IsCellWalkable(gap), Is.False);
+        Assert.That(navigationGrid.AreCellsConnected(west, east, null), Is.False);
+        Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(west, east, allowPartial: false)).Success, Is.False);
+
+        navigationGrid.BlockingTilemaps[0].SetTile(gap, null);
+        navigationGrid.RefreshCells(new[] { gap });
+
+        Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(west, east, allowPartial: false)).Success, Is.True);
+    }
+
+    [Test]
+    public void RefreshCells_OutsideTheBounds_RebuildsTheGrid()
+    {
+        SetupNavigationGrid(addGapInBarrier: true);
+        Vector3Int outside = new(5, 0, 0);
+        Tilemap dataTilemap = navigationGrid.GetComponentInChildren<NavigationTerrainSource2D>().DataTilemap;
+
+        dataTilemap.SetTile(outside, fillTile);
+        navigationGrid.RefreshCells(new[] { outside });
+
+        Assert.That(navigationGrid.IsCellWalkable(outside), Is.True);
+        Assert.That(navigationGrid.WalkableBounds.xMax, Is.EqualTo(6));
+        Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(Vector3Int.zero, outside, allowPartial: false)).Success, Is.True);
+    }
+
+    [Test]
     public void AreCellsConnected_FollowsBarrierLayout()
     {
         SetupNavigationGrid(addGapInBarrier: false);

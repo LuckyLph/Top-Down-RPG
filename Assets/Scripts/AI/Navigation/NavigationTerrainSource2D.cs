@@ -11,6 +11,9 @@ using UnityEngine.Tilemaps;
 public class NavigationTerrainSource2D : MonoBehaviour
 {
     [SerializeField] private TerrainType2D terrainType;
+    [Tooltip("Where terrain layers overlap, only the highest priority decides walkability and cost, like a road or a " +
+        "bridge drawn over other terrain. Layers of equal priority combine: most restrictive walkability, highest cost.")]
+    [SerializeField] private int priority;
 
     private Tilemap dataTilemap;
 
@@ -28,6 +31,7 @@ public class NavigationTerrainSource2D : MonoBehaviour
     }
 
     public TerrainType2D TerrainType => terrainType;
+    public int Priority => priority;
 
     /// <summary>
     /// True when this tilemap is the render tilemap of a dual-grid terrain, whose cells sit half a cell off the
@@ -42,8 +46,9 @@ public class NavigationTerrainSource2D : MonoBehaviour
         }
     }
 
-    public void Configure(TerrainType2D type)
+    public void Configure(TerrainType2D type, int layerPriority = 0)
     {
         terrainType = type;
+        priority = layerPriority;
     }
 }

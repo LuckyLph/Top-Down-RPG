@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
 /// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps. Each movement profile
 /// gets a cost field: flat arrays over <see cref="WalkableBounds"/> holding every cell's traversal cost and connected
-/// region, baked on first use and rebaked when the profile is edited.
+/// region, baked on first use and rebaked when the profile is edited or the grid changes. While enabled it follows
+/// tile changes on its source and blocking tilemaps, updating just those cells and bumping <see cref="Version"/>.
 /// </summary>
 public class NavigationGrid2D : MonoBehaviour
 {
@@ -16,6 +18,7 @@ public class NavigationGrid2D : MonoBehaviour
     private sealed class CellData
     {
         public readonly List<TerrainType2D> TerrainTypes = new();
+        public int Priority = int.MinValue;
     }
 
     /// <summary>
@@ -37,6 +40,7 @@ public class NavigationGrid2D : MonoBehaviour
         public int MinimumCost;
         public int MinimumDiagonalCost;
         public int ProfileVersion;
+        public int GridVersion;
         public bool IsBaked;
     }
 
@@ -57,6 +61,8 @@ public class NavigationGrid2D : MonoBehaviour
 
     private readonly Dictionary<Vector3Int, CellData> cellsByPosition = new();
     private readonly List<NavigationTerrainSource2D> resolvedSources = new();
+    private readonly List<NavigationTerrainSource2D> terrainLayers = new();
+    private readonly List<Tilemap> watchedTilemaps = new();
     private readonly Dictionary<TerrainMovementProfile2D, CostField> fieldsByProfile = new();
     private CellData[] cells = Array.Empty<CellData>();
     private int[] regionQueue = Array.Empty<int>();
@@ -68,6 +74,11 @@ public class NavigationGrid2D : MonoBehaviour
     private Tilemap referenceTilemap;
 
     public IPathfinder2D Pathfinder => pathfinder;
+    /// <summary>
+    /// Changes whenever cells change: a full <see cref="BuildGrid"/>, or tiles changing on a source or blocking
+    /// tilemap. Path followers compare it to the version their path was built on.
+    /// </summary>
+    public int Version { get; private set; }
     public BoundsInt WalkableBounds => walkableBounds;
     public bool IsBuilt => pathfinder != null;
 
@@ -86,6 +97,16 @@ public class NavigationGrid2D : MonoBehaviour
     private void Awake()
     {
         BuildGrid();
+    }
+
+    private void OnEnable()
+    {
+        Tilemap.tilemapPositionsChanged += HandleTilemapPositionsChanged;
+    }
+
+    private void OnDisable()
+    {
+        Tilemap.tilemapPositionsChanged -= HandleTilemapPositionsChanged;
     }
 
     public void ConfigureSources(params NavigationTerrainSource2D[] sources)
@@ -127,6 +148,8 @@ public class NavigationGrid2D : MonoBehaviour
     {
         cellsByPosition.Clear();
         resolvedSources.Clear();
+        terrainLayers.Clear();
+        watchedTilemaps.Clear();
         fieldsByProfile.Clear();
         defaultField = null;
         cells = Array.Empty<CellData>();
@@ -135,6 +158,7 @@ public class NavigationGrid2D : MonoBehaviour
         width = 0;
         height = 0;
         referenceTilemap = null;
+        Version++;
 
         ResolveTerrainSources();
         if (resolvedSources.Count == 0)
@@ -176,6 +200,8 @@ public class NavigationGrid2D : MonoBehaviour
                 referenceTilemap = dataTilemap;
             }
 
+            terrainLayers.Add(source);
+            watchedTilemaps.Add(dataTilemap);
             foreach (Vector3Int cell in dataTilemap.cellBounds.allPositionsWithin)
             {
                 if (!dataTilemap.HasTile(cell))
@@ -189,7 +215,7 @@ public class NavigationGrid2D : MonoBehaviour
                     cellsByPosition[cell] = cellData;
                 }
 
-                cellData.TerrainTypes.Add(source.TerrainType);
+                AddTerrain(cellData, source);
             }
         }
 
@@ -199,11 +225,43 @@ public class NavigationGrid2D : MonoBehaviour
             return;
         }
 
+        for (int i = 0; i < blockingTilemaps.Count; i++)
+        {
+            if (blockingTilemaps[i] != null)
+            {
+                watchedTilemaps.Add(blockingTilemaps[i]);
+            }
+        }
+
         RemoveBlockedCells();
         walkableBounds = CalculateBounds();
         BakeCells();
         cellsByPosition.Clear();
         pathfinder = new GridAStarPathfinder2D(this);
+    }
+
+    /// <summary>
+    /// Re-reads <paramref name="changedCells"/> from the source and blocking tilemaps after their tiles changed, and
+    /// bumps <see cref="Version"/>. A cell outside <see cref="WalkableBounds"/> that gained terrain rebuilds the grid.
+    /// Tile changes on those tilemaps already arrive here on their own while the grid is enabled.
+    /// </summary>
+    public void RefreshCells(IReadOnlyList<Vector3Int> changedCells)
+    {
+        if (!IsBuilt)
+        {
+            return;
+        }
+
+        for (int i = 0; i < changedCells.Count; i++)
+        {
+            if (!RefreshCell(changedCells[i]))
+            {
+                BuildGrid();
+                return;
+            }
+        }
+
+        Version++;
     }
 
     public bool IsCellWalkable(Vector3Int cell)
@@ -318,7 +376,7 @@ public class NavigationGrid2D : MonoBehaviour
         }
 
         int profileVersion = movementProfile != null ? movementProfile.Version : 0;
-        return field != null && field.IsBaked && field.ProfileVersion == profileVersion;
+        return field != null && field.IsBaked && field.ProfileVersion == profileVersion && field.GridVersion == Version;
     }
 
     public bool TryGetLineCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile, out int cost)
@@ -414,11 +472,12 @@ public class NavigationGrid2D : MonoBehaviour
         }
 
         int profileVersion = movementProfile != null ? movementProfile.Version : 0;
-        if (!field.IsBaked || field.ProfileVersion != profileVersion)
+        if (!field.IsBaked || field.ProfileVersion != profileVersion || field.GridVersion != Version)
         {
             BakeCostField(field, movementProfile);
             field.IsBaked = true;
             field.ProfileVersion = profileVersion;
+            field.GridVersion = Version;
         }
 
         return field;
@@ -498,6 +557,102 @@ public class NavigationGrid2D : MonoBehaviour
             {
                 resolvedSources.Add(source);
             }
+        }
+    }
+
+    private void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
+    {
+        if (!IsBuilt || !watchedTilemaps.Contains(tilemap))
+        {
+            return;
+        }
+
+        for (int i = 0; i < positions.Length; i++)
+        {
+            if (!RefreshCell(positions[i]))
+            {
+                BuildGrid();
+                return;
+            }
+        }
+
+        Version++;
+    }
+
+    /// <summary>
+    /// Re-reads one cell into the baked array. False when the cell lies outside the baked bounds and now has terrain,
+    /// which needs a full rebuild.
+    /// </summary>
+    private bool RefreshCell(Vector3Int cell)
+    {
+        bool isInBounds = TryGetIndex(cell, out int index);
+        CellData cellData = ReadCell(cell, isInBounds ? cells[index] : null);
+        if (!isInBounds)
+        {
+            return cellData == null;
+        }
+
+        cells[index] = cellData;
+        return true;
+    }
+
+    private CellData ReadCell(Vector3Int cell, CellData reuse)
+    {
+        if (IsBlocked(cell))
+        {
+            return null;
+        }
+
+        CellData cellData = reuse;
+        if (cellData != null)
+        {
+            cellData.TerrainTypes.Clear();
+            cellData.Priority = int.MinValue;
+        }
+
+        for (int i = 0; i < terrainLayers.Count; i++)
+        {
+            NavigationTerrainSource2D source = terrainLayers[i];
+            if (source == null || !source.DataTilemap.HasTile(cell))
+            {
+                continue;
+            }
+
+            cellData ??= new CellData();
+            AddTerrain(cellData, source);
+        }
+
+        return cellData != null && cellData.TerrainTypes.Count > 0 ? cellData : null;
+    }
+
+    private bool IsBlocked(Vector3Int cell)
+    {
+        for (int i = 0; i < blockingTilemaps.Count; i++)
+        {
+            if (blockingTilemaps[i] != null && blockingTilemaps[i].HasTile(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds the terrain of <paramref name="source"/> to a cell: a higher priority replaces what is there, an equal one
+    /// joins it, a lower one is hidden under it.
+    /// </summary>
+    private static void AddTerrain(CellData cellData, NavigationTerrainSource2D source)
+    {
+        if (source.Priority > cellData.Priority)
+        {
+            cellData.TerrainTypes.Clear();
+            cellData.Priority = source.Priority;
+        }
+
+        if (source.Priority == cellData.Priority)
+        {
+            cellData.TerrainTypes.Add(source.TerrainType);
         }
     }
 

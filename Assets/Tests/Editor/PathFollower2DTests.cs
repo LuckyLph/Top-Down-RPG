@@ -49,6 +49,77 @@ public class PathFollower2DTests
     }
 
     [Test]
+    public void Tick_RebuildsThePath_WhenTheGridBlocksACellOnIt()
+    {
+        CreateGridRoot();
+        Tilemap ground = AddTerrainLayer("Ground", CreateTerrain("ground"), Rect(0, 0, 6, 2));
+        BuildGrid();
+        PathFollower2D follower = CreateFollower(null);
+        Vector2 start = new(0.5f, 1.5f);
+        Vector2 goal = new(6.5f, 1.5f);
+        Assert.That(follower.BuildPath(start, goal, allowPartial: false), Is.True);
+        Assert.That(follower.Waypoints, Is.EqualTo(new[] { goal }), "On open ground the path is one straight segment.");
+
+        Vector3Int blocked = new(3, 1, 0);
+        ground.SetTile(blocked, null);
+        navigationGrid.RefreshCells(new[] { blocked });
+        Vector2 velocity = follower.Tick(start, MoveSpeed, FixedDelta);
+
+        Assert.That(follower.HasPath, Is.True);
+        Assert.That(velocity, Is.Not.EqualTo(Vector2.zero));
+        Assert.That(follower.Waypoints[^1], Is.EqualTo(goal));
+        Assert.That(follower.Waypoints.Count, Is.GreaterThan(1), "The rebuilt path detours around the blocked cell.");
+        Vector3Int from = navigationGrid.WorldToCell(start);
+        foreach (Vector2 waypoint in follower.Waypoints)
+        {
+            Vector3Int to = navigationGrid.WorldToCell(waypoint);
+            Assert.That(navigationGrid.TryGetLineCost(from, to, null, out _), Is.True, $"Segment {from} -> {to} should be walkable.");
+            from = to;
+        }
+    }
+
+    [Test]
+    public void Tick_KeepsThePath_WhenTheGridChangesOffIt()
+    {
+        CreateGridRoot();
+        Tilemap ground = AddTerrainLayer("Ground", CreateTerrain("ground"), Rect(0, 0, 6, 2));
+        BuildGrid();
+        PathFollower2D follower = CreateFollower(null);
+        Vector2 start = new(0.5f, 1.5f);
+        Vector2 goal = new(6.5f, 1.5f);
+        follower.BuildPath(start, goal, allowPartial: false);
+
+        Vector3Int offPath = new(3, 0, 0);
+        ground.SetTile(offPath, null);
+        navigationGrid.RefreshCells(new[] { offPath });
+        follower.Tick(start, MoveSpeed, FixedDelta);
+
+        Assert.That(follower.Waypoints, Is.EqualTo(new[] { goal }));
+    }
+
+    [Test]
+    public void Tick_StopsWhenTheGridLeavesNoRoute()
+    {
+        CreateGridRoot();
+        Tilemap ground = AddTerrainLayer("Ground", CreateTerrain("ground"), Rect(0, 0, 6, 2));
+        BuildGrid();
+        PathFollower2D follower = CreateFollower(null);
+        Vector2 start = new(0.5f, 1.5f);
+        follower.BuildPath(start, new Vector2(6.5f, 1.5f), allowPartial: false);
+
+        Vector3Int[] wall = { new(3, 0, 0), new(3, 1, 0), new(3, 2, 0) };
+        foreach (Vector3Int cell in wall)
+        {
+            ground.SetTile(cell, null);
+        }
+
+        navigationGrid.RefreshCells(wall);
+
+        Assert.That(follower.Tick(start, MoveSpeed, FixedDelta), Is.EqualTo(Vector2.zero));
+        Assert.That(follower.HasPath, Is.False);
+    }
+
+    [Test]
     public void BuildPath_TowardAnUnreachableGoal_EndsAtTheClosestCellWhenPartial_AndFailsWhenStrict()
     {
         CreateGridRoot();
@@ -384,7 +455,7 @@ public class PathFollower2DTests
         }
     }
 
-    private void AddTerrainLayer(string name, TerrainType2D terrain, IEnumerable<Vector3Int> cells)
+    private Tilemap AddTerrainLayer(string name, TerrainType2D terrain, IEnumerable<Vector3Int> cells)
     {
         GameObject layerObject = new(name);
         layerObject.transform.SetParent(root.transform);
@@ -396,6 +467,7 @@ public class PathFollower2DTests
         }
 
         layerObject.AddComponent<NavigationTerrainSource2D>().Configure(terrain);
+        return tilemap;
     }
 
     private void BuildGrid()

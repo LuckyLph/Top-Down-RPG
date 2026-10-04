@@ -3,7 +3,9 @@ using UnityEngine;
 
 /// <summary>
 /// Builds smoothed paths on a <see cref="NavigationGrid2D"/> and follows their waypoints, returning the velocity
-/// its owner should move at each fixed tick. Shared by mobs and players; it owns no engine objects.
+/// its owner should move at each fixed tick. When the grid changes under a path (its <see cref="NavigationGrid2D.Version"/>
+/// moves on), the rest of the path is checked once and rebuilt toward the same goal if a cell on it was blocked.
+/// Shared by mobs and players; it owns no engine objects.
 /// </summary>
 public sealed class PathFollower2D
 {
@@ -26,6 +28,10 @@ public sealed class PathFollower2D
     private bool hasGoalCell;
     private float stalledTime;
     private Vector2 lastProgressPosition;
+    private bool pathFollowsGrid;
+    private int pathGridVersion;
+    private Vector2 pathGoal;
+    private bool pathAllowsPartial;
 
     public NavigationGrid2D NavigationGrid => navigationGrid;
     public TerrainMovementProfile2D MovementProfile => movementProfile;
@@ -72,6 +78,7 @@ public sealed class PathFollower2D
             BuildStraightPath(start, worldGoal);
             hasGoalCell = true;
             lastGoalCell = goalCell;
+            RememberGridPath(worldGoal, allowPartial);
             return true;
         }
 
@@ -111,6 +118,7 @@ public sealed class PathFollower2D
         }
 
         FinishPath(start, result.IsPartial, result.ReachedResolvedGoal, result.GoalWasAdjusted);
+        RememberGridPath(worldGoal, allowPartial);
         return true;
     }
 
@@ -121,6 +129,7 @@ public sealed class PathFollower2D
     public void BuildStraightPath(Vector2 start, Vector2 worldGoal)
     {
         hasGoalCell = false;
+        pathFollowsGrid = false;
         waypoints.Clear();
         waypoints.Add(worldGoal);
         FinishPath(start, false, true, false);
@@ -159,6 +168,11 @@ public sealed class PathFollower2D
             return Vector2.zero;
         }
 
+        if (pathFollowsGrid && navigationGrid.Version != pathGridVersion && !RevalidatePath(position))
+        {
+            return Vector2.zero;
+        }
+
         TrackProgress(position, moveSpeed, deltaTime);
 
         while (waypointIndex < waypoints.Count && Vector2.Distance(position, waypoints[waypointIndex]) <= GetReachThreshold(waypointIndex))
@@ -191,6 +205,48 @@ public sealed class PathFollower2D
         goalWasAdjusted = false;
         hasGoalCell = false;
         stalledTime = 0f;
+        pathFollowsGrid = false;
+    }
+
+    private void RememberGridPath(Vector2 worldGoal, bool allowPartial)
+    {
+        pathFollowsGrid = true;
+        pathGridVersion = navigationGrid.Version;
+        pathGoal = worldGoal;
+        pathAllowsPartial = allowPartial;
+    }
+
+    /// <summary>
+    /// After the grid changed: keeps the path when every remaining segment can still be walked, otherwise rebuilds it
+    /// from <paramref name="position"/> toward the same goal. False when no path is left.
+    /// </summary>
+    private bool RevalidatePath(Vector2 position)
+    {
+        pathGridVersion = navigationGrid.Version;
+        if (IsRemainingPathWalkable(position))
+        {
+            return true;
+        }
+
+        BuildPath(position, pathGoal, pathAllowsPartial);
+        return hasPath;
+    }
+
+    private bool IsRemainingPathWalkable(Vector2 position)
+    {
+        Vector3Int from = navigationGrid.WorldToCell(position);
+        for (int i = waypointIndex; i < waypoints.Count; i++)
+        {
+            Vector3Int to = navigationGrid.WorldToCell(waypoints[i]);
+            if (to != from && !navigationGrid.TryGetLineCost(from, to, movementProfile, out _))
+            {
+                return false;
+            }
+
+            from = to;
+        }
+
+        return true;
     }
 
     private bool IsStraightLineOptimal(Vector3Int startCell, Vector3Int goalCell)

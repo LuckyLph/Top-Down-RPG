@@ -1,32 +1,49 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Marks the tilemap on this GameObject as terrain of one <see cref="TerrainType2D"/> for the
+/// <see cref="NavigationGrid2D"/> above it. On dual-grid terrain it belongs on the data tilemap (the one carrying the
+/// <see cref="DualGridTilemapModule"/>), never on the half-cell-offset render tilemap below it.
+/// </summary>
+[RequireComponent(typeof(Tilemap))]
+[DisallowMultipleComponent]
 public class NavigationTerrainSource2D : MonoBehaviour
 {
-    [SerializeField] private Tilemap dataTilemap;
-    [SerializeField] private Tilemap collisionTilemap;
-    [SerializeField] private Tilemap renderTilemap;
     [SerializeField] private TerrainType2D terrainType;
 
-    public Tilemap DataTilemap => dataTilemap;
-    public Tilemap CollisionTilemap => collisionTilemap;
-    public Tilemap RenderTilemap => renderTilemap;
-    public TerrainType2D TerrainType => terrainType;
-    public bool IsConfigured => dataTilemap != null && terrainType != null;
+    private Tilemap dataTilemap;
 
-    public void Configure(Tilemap dataMap, Tilemap collisionMap, Tilemap renderMap, TerrainType2D type)
+    public Tilemap DataTilemap
     {
-        dataTilemap = dataMap;
-        collisionTilemap = collisionMap;
-        renderTilemap = renderMap;
-        terrainType = type;
+        get
+        {
+            if (dataTilemap == null)
+            {
+                dataTilemap = GetComponent<Tilemap>();
+            }
+
+            return dataTilemap;
+        }
     }
 
-    private void Reset()
+    public TerrainType2D TerrainType => terrainType;
+
+    /// <summary>
+    /// True when this tilemap is the render tilemap of a dual-grid terrain, whose cells sit half a cell off the
+    /// data cells and must not feed navigation.
+    /// </summary>
+    public bool IsDualGridRenderTilemap
     {
-        if (dataTilemap == null)
+        get
         {
-            dataTilemap = GetComponent<Tilemap>();
+            Transform parent = transform.parent;
+            return parent != null && parent.TryGetComponent(out DualGridTilemapModule _);
         }
+    }
+
+    public void Configure(TerrainType2D type)
+    {
+        terrainType = type;
     }
 }

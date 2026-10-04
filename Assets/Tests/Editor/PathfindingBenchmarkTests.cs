@@ -229,7 +229,7 @@ public class PathfindingBenchmarkTests
         Tilemap collisionMap = CreateTilemap("Collision", blockedCells, tile);
 
         ground = Track(TerrainType2D.Create("ground"));
-        groundMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(groundMap, collisionMap, null, ground);
+        groundMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(ground);
 
         // A handful of rules, like a profile covering several terrain types.
         TerrainMovementProfile2D.TerrainRule[] rules = new TerrainMovementProfile2D.TerrainRule[5];
@@ -242,6 +242,7 @@ public class PathfindingBenchmarkTests
         profile = Track(TerrainMovementProfile2D.Create(false, 10, rules));
 
         navigationGrid = root.AddComponent<NavigationGrid2D>();
+        navigationGrid.ConfigureBlockingTilemaps(collisionMap);
         navigationGrid.BuildGrid();
     }
 

@@ -40,6 +40,8 @@ The editor code sets `internal` members of the runtime types (for example `DualG
 
 Rules: one rule tile per data tilemap, and never share a data tilemap between modules. Several modules can share a `Grid`.
 
+Navigation reads the data tilemap, never the render tilemap: put the `NavigationTerrainSource2D` on the data tilemap (the one with the module). A source on a render tilemap would shift every path by half a cell, so `NavigationGrid2D` skips it with an error. Walls go on a separate collision tilemap listed in the grid's `blockingTilemaps`, which blocks those cells for every terrain layer.
+
 ## Editor behaviour to know about
 
 - `RestrictedTransformEditor` and `RestrictedTilemapEditor` replace the inspector for **every** `Transform` and `Tilemap` in the project. Both draw Unity's default inspector, but turn editing off on a render tilemap (one whose parent has a `DualGridTilemapModule`), because the module manages its position.

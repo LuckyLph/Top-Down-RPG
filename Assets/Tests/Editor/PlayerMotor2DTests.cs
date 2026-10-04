@@ -301,7 +301,7 @@ public class PlayerMotor2DTests
         }
 
         TerrainType2D ground = Track(TerrainType2D.Create("ground"));
-        layer.AddComponent<NavigationTerrainSource2D>().Configure(tilemap, null, null, ground);
+        layer.AddComponent<NavigationTerrainSource2D>().Configure(ground);
         NavigationGrid2D grid = root.AddComponent<NavigationGrid2D>();
         grid.BuildGrid();
         return grid;

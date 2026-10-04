@@ -794,8 +794,9 @@ public class MobStateMachineTests
             }
         }
 
-        terrainSource.Configure(dataTilemap, collisionTilemap, null, groundTerrain);
+        terrainSource.Configure(groundTerrain);
         navGrid = root.AddComponent<NavigationGrid2D>();
+        navGrid.ConfigureBlockingTilemaps(collisionTilemap);
         navGrid.BuildGrid();
 
         GameObject playerObject = new("Player");

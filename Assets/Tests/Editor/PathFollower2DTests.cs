@@ -395,7 +395,7 @@ public class PathFollower2DTests
             tilemap.SetTile(cell, fillTile);
         }
 
-        layerObject.AddComponent<NavigationTerrainSource2D>().Configure(tilemap, null, null, terrain);
+        layerObject.AddComponent<NavigationTerrainSource2D>().Configure(terrain);
     }
 
     private void BuildGrid()

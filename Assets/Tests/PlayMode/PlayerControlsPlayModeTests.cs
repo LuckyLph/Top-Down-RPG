@@ -270,16 +270,7 @@ public class PlayerControlsPlayModeTests
     /// </summary>
     private Vector2 BuildWallInFrontOfThePlayer()
     {
-        Tilemap collision = null;
-        foreach (NavigationTerrainSource2D source in grid.GetComponentsInChildren<NavigationTerrainSource2D>())
-        {
-            if (source.CollisionTilemap != null)
-            {
-                collision = source.CollisionTilemap;
-                break;
-            }
-        }
-
+        Tilemap collision = grid.BlockingTilemaps.Count > 0 ? grid.BlockingTilemaps[0] : null;
         Assert.That(collision, Is.Not.Null, "The Clearing should have a collision tilemap.");
         wallTile = ScriptableObject.CreateInstance<Tile>();
         wallTile.colliderType = Tile.ColliderType.Grid;

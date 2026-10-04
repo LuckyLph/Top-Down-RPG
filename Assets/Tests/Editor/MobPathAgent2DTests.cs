@@ -177,7 +177,7 @@ public class MobPathAgent2DTests
             tilemap.SetTile(cell, fillTile);
         }
 
-        layerObject.AddComponent<NavigationTerrainSource2D>().Configure(tilemap, null, null, terrain);
+        layerObject.AddComponent<NavigationTerrainSource2D>().Configure(terrain);
     }
 
     private void BuildGridAndAgent(TerrainMovementProfile2D profile)

@@ -41,6 +41,8 @@ public class NavigationGrid2D : MonoBehaviour
 
     [SerializeField] private List<NavigationTerrainSource2D> terrainSources = new();
     [SerializeField] private bool discoverSourcesInChildren = true;
+    [Tooltip("Tilemaps whose cells are blocked for every terrain layer, such as the collision tilemap.")]
+    [SerializeField] private List<Tilemap> blockingTilemaps = new();
     [SerializeField] private int nearestCellSearchRadius = 8;
     [Tooltip("Upper bound on cells a partial A* search toward an unreachable goal may expand before returning " +
         "the closest cell found so far. Searches toward reachable goals are never capped.")]
@@ -70,6 +72,7 @@ public class NavigationGrid2D : MonoBehaviour
         set => maxSearchCells = Mathf.Max(1, value);
     }
     public IReadOnlyList<NavigationTerrainSource2D> TerrainSources => terrainSources;
+    public IReadOnlyList<Tilemap> BlockingTilemaps => blockingTilemaps;
 
     private void Awake()
     {
@@ -90,6 +93,23 @@ public class NavigationGrid2D : MonoBehaviour
             if (source != null)
             {
                 terrainSources.Add(source);
+            }
+        }
+    }
+
+    public void ConfigureBlockingTilemaps(params Tilemap[] tilemaps)
+    {
+        blockingTilemaps.Clear();
+        if (tilemaps == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < tilemaps.Length; i++)
+        {
+            if (tilemaps[i] != null)
+            {
+                blockingTilemaps.Add(tilemaps[i]);
             }
         }
     }
@@ -132,18 +152,23 @@ public class NavigationGrid2D : MonoBehaviour
                 continue;
             }
 
-            referenceTilemap ??= dataTilemap;
-            Tilemap collisionTilemap = source.CollisionTilemap;
+            if (source.IsDualGridRenderTilemap)
+            {
+                Debug.LogError($"NavigationGrid2D skipped terrain source '{source.name}' because it is on a dual-grid render tilemap, " +
+                    "which sits half a cell off the data cells. Move it to the data tilemap that has the DualGridTilemapModule.", source);
+                continue;
+            }
+
+            if (referenceTilemap == null)
+            {
+                referenceTilemap = dataTilemap;
+            }
+
             BoundsInt bounds = dataTilemap.cellBounds;
 
             foreach (Vector3Int cell in bounds.allPositionsWithin)
             {
                 if (!dataTilemap.HasTile(cell))
-                {
-                    continue;
-                }
-
-                if (collisionTilemap != null && collisionTilemap.HasTile(cell))
                 {
                     continue;
                 }
@@ -164,6 +189,7 @@ public class NavigationGrid2D : MonoBehaviour
             return;
         }
 
+        RemoveBlockedCells();
         walkableBounds = CalculateBounds();
         pathfinder = new GridAStarPathfinder2D(this);
     }
@@ -458,6 +484,26 @@ public class NavigationGrid2D : MonoBehaviour
             if (source != null && uniqueSources.Add(source))
             {
                 resolvedSources.Add(source);
+            }
+        }
+    }
+
+    private void RemoveBlockedCells()
+    {
+        for (int i = 0; i < blockingTilemaps.Count; i++)
+        {
+            Tilemap blockingTilemap = blockingTilemaps[i];
+            if (blockingTilemap == null)
+            {
+                continue;
+            }
+
+            foreach (Vector3Int cell in blockingTilemap.cellBounds.allPositionsWithin)
+            {
+                if (blockingTilemap.HasTile(cell))
+                {
+                    cellsByPosition.Remove(cell);
+                }
             }
         }
     }

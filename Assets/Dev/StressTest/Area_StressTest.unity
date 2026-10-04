@@ -661,9 +661,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33c305fd5f406cf9dfa12c3ab2e34567, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
-  dataTilemap: {fileID: 1315498085}
-  collisionTilemap: {fileID: 2106214074}
-  renderTilemap: {fileID: 592365229}
   terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
 --- !u!1 &1350234812
 GameObject:
@@ -808,6 +805,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationGrid2D
   terrainSources: []
   discoverSourcesInChildren: 1
+  blockingTilemaps:
+  - {fileID: 2106214074}
   nearestCellSearchRadius: 8
   maxSearchCells: 4096
   drawGridBoundsGizmo: 1

@@ -167,8 +167,6 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
     /// <para></para>
     /// This is done because in key moments, the <see cref="StartUp"/> method has not yet been called, but the tile is being updated -> Unity messing this up and is not fixable externally.
     /// If the data tilemap would be null, the rule matching will not work properly.
-    /// <para></para>
-    /// See GitHub issue 5: https://github.com/skner-dev/DualGrid/issues/5.
     /// </summary>
     private Tilemap GetDataTilemap(ITilemap tilemap)
     {

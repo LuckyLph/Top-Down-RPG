@@ -70,7 +70,7 @@ public class StressTestMap : MonoBehaviour
 
         wallCells.RemoveWhere(cell => Mathf.Abs(cell.x) < clearRadius && Mathf.Abs(cell.y) < clearRadius);
 
-        PaintGround(groundCells, minX, minY);
+        PaintGround(groundCells);
 
         Vector3Int[] wallPositions = new Vector3Int[wallCells.Count];
         wallCells.CopyTo(wallPositions);
@@ -89,26 +89,11 @@ public class StressTestMap : MonoBehaviour
             $"in {stopwatch.ElapsedMilliseconds} ms.", this);
     }
 
-    private void PaintGround(List<Vector3Int> groundCells, int minX, int minY)
+    private void PaintGround(List<Vector3Int> groundCells)
     {
-        bool moduleWasEnabled = ground.enabled;
-        ground.enabled = false;
-
         ground.DataTilemap.ClearAllTiles();
-        ground.DataTilemap.SetTiles(groundCells.ToArray(), Fill(groundCells.Count, ground.DataTile));
-
-        List<Vector3Int> renderCells = new((width + 1) * (height + 1));
-        for (int x = minX; x <= minX + width; x++)
-        {
-            for (int y = minY; y <= minY + height; y++)
-            {
-                renderCells.Add(new Vector3Int(x, y, 0));
-            }
-        }
-
         ground.RenderTilemap.ClearAllTiles();
-        ground.RenderTilemap.SetTiles(renderCells.ToArray(), Fill(renderCells.Count, ground.RenderTile));
-        ground.enabled = moduleWasEnabled;
+        ground.SetDataTiles(groundCells);
     }
 
     private void AddBorder(HashSet<Vector3Int> cells, int minX, int minY)

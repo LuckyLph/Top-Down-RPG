@@ -7,6 +7,8 @@ public class DualGridDataTile : Tile
 {
     private DualGridTilemapModule dualGridTilemapModule;
 
+    private Tilemap lastOriginTilemap;
+
     public override void GetTileData(Vector3Int position, ITilemap tilemap, ref TileData tileData)
     {
         SetDataTilemap(tilemap);
@@ -21,7 +23,11 @@ public class DualGridDataTile : Tile
 
     private void SetDataTilemap(ITilemap tilemap)
     {
-        var originTilemap = tilemap.GetComponent<Tilemap>();
-        dualGridTilemapModule = originTilemap.GetComponent<DualGridTilemapModule>();
+        Tilemap originTilemap = tilemap.GetComponent<Tilemap>();
+        if (originTilemap != lastOriginTilemap || dualGridTilemapModule == null)
+        {
+            lastOriginTilemap = originTilemap;
+            dualGridTilemapModule = originTilemap != null ? originTilemap.GetComponent<DualGridTilemapModule>() : null;
+        }
     }
 }

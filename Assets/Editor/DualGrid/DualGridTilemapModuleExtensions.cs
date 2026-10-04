@@ -20,8 +20,9 @@ public static class DualGridTilemapModuleExtensions
         bool hasPreviewDataTile = dualGridTilemapModule.DataTilemap.HasEditorPreviewTile(previewDataTilePosition);
         bool isPreviewDataTileVisible = dualGridTilemapModule.DataTilemap.GetEditorPreviewTile<DualGridPreviewTile>(previewDataTilePosition) is DualGridPreviewTile previewTile && previewTile.IsFilled;
 
-        foreach (Vector3Int renderTilePosition in DualGridUtils.GetRenderTilePositions(previewDataTilePosition))
+        for (int corner = 0; corner < DualGridUtils.CornerCount; corner++)
         {
+            Vector3Int renderTilePosition = DualGridUtils.GetRenderTilePosition(previewDataTilePosition, corner);
             if (hasPreviewDataTile && isPreviewDataTileVisible)
             {
                 SetPreviewRenderTile(dualGridTilemapModule, renderTilePosition);

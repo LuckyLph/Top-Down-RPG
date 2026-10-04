@@ -3,37 +3,38 @@ using UnityEngine;
 public static class DualGridUtils
 {
     /// <summary>
-    /// Gets the 4 render tile positions from a <paramref name="dataTilePosition"/>.
+    /// The number of render tiles around a data tile, and of data tiles around a render tile.
+    /// </summary>
+    public const int CornerCount = 4;
+
+    private static readonly Vector3Int[] CornerOffsets =
+    {
+        new(0, 0, 0),
+        new(1, 0, 0),
+        new(0, 1, 0),
+        new(1, 1, 0)
+    };
+
+    /// <summary>
+    /// The render tile at one of the 4 corners (0 to <see cref="CornerCount"/> - 1) of a data tile.
     /// </summary>
     /// <remarks>
     /// Assumes that the render tilemap offset is always (-0.5, -0.5).
     /// </remarks>
-    public static Vector3Int[] GetRenderTilePositions(Vector3Int dataTilePosition)
+    public static Vector3Int GetRenderTilePosition(Vector3Int dataTilePosition, int corner)
     {
-        return new Vector3Int[]
-        {
-            dataTilePosition + new Vector3Int(0, 0, 0),
-            dataTilePosition + new Vector3Int(1, 0, 0),
-            dataTilePosition + new Vector3Int(0, 1, 0),
-            dataTilePosition + new Vector3Int(1, 1, 0)
-        };
+        return dataTilePosition + CornerOffsets[corner];
     }
 
     /// <summary>
-    /// Gets the 4 data tile positions from a <paramref name="renderTilePosition"/>.
+    /// One of the 4 data tiles (0 to <see cref="CornerCount"/> - 1) whose shared corner a render tile draws.
     /// </summary>
     /// <remarks>
     /// Assumes that the render tilemap offset is always (-0.5, -0.5).
     /// </remarks>
-    public static Vector3Int[] GetDataTilePositions(Vector3Int renderTilePosition)
+    public static Vector3Int GetDataTilePosition(Vector3Int renderTilePosition, int corner)
     {
-        return new Vector3Int[]
-        {
-            renderTilePosition - new Vector3Int(0, 0, 0),
-            renderTilePosition - new Vector3Int(1, 0, 0),
-            renderTilePosition - new Vector3Int(0, 1, 0),
-            renderTilePosition - new Vector3Int(1, 1, 0)
-        };
+        return renderTilePosition - CornerOffsets[corner];
     }
 
     /// <summary>

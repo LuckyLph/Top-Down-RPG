@@ -1,3 +1,4 @@
+using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -10,10 +11,10 @@ public static class DualGridTilemapPersistentListener
 {
     static DualGridTilemapPersistentListener()
     {
-        Tilemap.tilemapTileChanged += HandleTilemapChange;
+        Tilemap.tilemapPositionsChanged += HandleTilemapPositionsChanged;
     }
 
-    private static void HandleTilemapChange(Tilemap tilemap, Tilemap.SyncTile[] tiles)
+    private static void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isPlaying)
             return;
@@ -22,7 +23,7 @@ public static class DualGridTilemapPersistentListener
         foreach (var module in dualGridModules)
         {
             if (module.DataTilemap == tilemap)
-                module.HandleTilemapChange(tilemap, tiles);
+                module.HandleTilemapPositionsChanged(tilemap, positions);
         }
     }
 }

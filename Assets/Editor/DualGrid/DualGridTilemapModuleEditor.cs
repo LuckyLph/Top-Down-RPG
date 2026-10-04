@@ -266,10 +266,9 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
     {
         if (dataTilemap == null || renderTilemap == null) return;
 
-        Vector3Int[] dataTilemapPositions = DualGridUtils.GetDataTilePositions(renderTilePosition);
-
-        foreach (Vector3Int dataTilePosition in dataTilemapPositions)
+        for (int cornerIndex = 0; cornerIndex < DualGridUtils.CornerCount; cornerIndex++)
         {
+            Vector3Int dataTilePosition = DualGridUtils.GetDataTilePosition(renderTilePosition, cornerIndex);
             if (dataTilemap.HasTile(dataTilePosition))
             {
                 Vector3Int dataTileOffset = dataTilePosition - renderTilePosition;

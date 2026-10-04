@@ -41,6 +41,8 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
 
     private Tilemap dataTilemap;
 
+    private Tilemap lastOriginTilemap;
+
     public class DualGridNeighbor
     {
         /// <summary>
@@ -116,10 +118,9 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
     {
         if (GetDataTilemap(tilemap) == null) return false;
 
-        Vector3Int[] dataTilemapPositions = DualGridUtils.GetDataTilePositions(renderTilePosition);
-
-        foreach (Vector3Int dataTilePosition in dataTilemapPositions)
+        for (int corner = 0; corner < DualGridUtils.CornerCount; corner++)
         {
+            Vector3Int dataTilePosition = DualGridUtils.GetDataTilePosition(renderTilePosition, corner);
             if (!DoesRuleMatchWithDataTile(ruleToValidate, dataTilePosition, renderTilePosition))
             {
                 return false;
@@ -178,15 +179,19 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
         return dataTilemap;
     }
 
+    /// <summary>
+    /// Finds the module of the render tilemap being updated. The last tilemap and its module are kept, so repeated
+    /// updates on the same tilemap skip the parent search; a tilemap without a module leaves no data tilemap.
+    /// </summary>
     private void SetDataTilemap(ITilemap tilemap)
     {
-        var originTilemap = tilemap.GetComponent<Tilemap>();
-
-        dualGridTilemapModule = originTilemap.GetComponentInParent<DualGridTilemapModule>();
-
-        if (dualGridTilemapModule != null)
+        Tilemap originTilemap = tilemap.GetComponent<Tilemap>();
+        if (originTilemap != lastOriginTilemap || dualGridTilemapModule == null)
         {
-            dataTilemap = dualGridTilemapModule.DataTilemap;
+            lastOriginTilemap = originTilemap;
+            dualGridTilemapModule = originTilemap != null ? originTilemap.GetComponentInParent<DualGridTilemapModule>() : null;
         }
+
+        dataTilemap = dualGridTilemapModule != null ? dualGridTilemapModule.DataTilemap : null;
     }
 }

@@ -565,7 +565,7 @@ Assembly `TopDownRPG.DevTools`, scene `Area_StressTest.unity`, mob variant `Weas
 
 | Type | Role |
 |---|---|
-| [StressTestMap](../Assets/Scripts/Dev/StressTest/StressTestMap.cs) | `[DefaultExecutionOrder(-1000)]`; in `Awake` generates a seeded map (Open / Scattered / Corridors walls), paints DualGrid ground, walls and a render-only wall copy, then rebuilds the `NavigationGrid2D`. |
+| [StressTestMap](../Assets/Scripts/Dev/StressTest/StressTestMap.cs) | `[DefaultExecutionOrder(-1000)]`; in `Awake` generates a seeded map (Open / Scattered / Corridors walls), paints DualGrid ground through `DualGridTilemapModule.SetDataTiles`, walls and a render-only wall copy, then rebuilds the `NavigationGrid2D`. |
 | [StressTestSpawner](../Assets/Scripts/Dev/StressTest/StressTestSpawner.cs) | Seeded spawner using `resolver.Instantiate` on reachable cells near the player or across the map; `Mobs`, `MobCount`, `ClearMobs`. |
 | [StressTestOverlay](../Assets/Scripts/Dev/StressTest/StressTestOverlay.cs) | IMGUI overlay: FPS, mob counts per state, `ProfilerRecorder` stats for FindPath/BuildPath and GC alloc per frame, spawn/clear buttons. |
 
@@ -694,7 +694,7 @@ Run through UnityMCP `run_tests` (see CLAUDE.md). Tests build their own grids, t
 | File | Covers |
 |---|---|
 | [AreaEntryTests.cs](../Assets/Tests/Editor/AreaEntryTests.cs) | Spawn point slots, every registered player placed in its own slot at the requested spawn (and recorded as the active spawn point), `PlayerRespawner` rules and placement |
-| [DualGridTilemapModuleTests.cs](../Assets/Tests/Editor/DualGridTilemapModuleTests.cs) | Render/data corner positions are inverses; a data tile fills the four render cells around it; clearing one keeps render cells a neighbouring data tile still uses; `RefreshRenderTilemap` rebuilds the render tilemap |
+| [DualGridTilemapModuleTests.cs](../Assets/Tests/Editor/DualGridTilemapModuleTests.cs) | Render/data corner positions are inverses; a data tile fills the four render cells around it; clearing one keeps render cells a neighbouring data tile still uses; bulk `SetDataTiles` gives the same render cells as painting one cell at a time, bulk `ClearDataTiles` removes only unused render cells; writing the data tilemap directly updates the render tilemap; `RefreshRenderTilemap` rebuilds the render tilemap |
 | [GameSaveTests.cs](../Assets/Tests/Editor/GameSaveTests.cs) | Save/load round trip by scene GUID and format version, areas outside `GameScenes` not saved, missing/malformed/other-version/unknown-area saves ignored with a warning, `GetSavedOrStartingArea` fallback, `FileSaveStore` round trip and replace without a leftover temp file (in a temp folder) |
 | [JoinApprovalTests.cs](../Assets/Tests/Editor/JoinApprovalTests.cs) | Same version with room approved; full party and other or missing versions refused (version checked first); refusal round trip through a disconnect reason, other reasons not taken for refusals |
 | [AreaAnnouncementTests.cs](../Assets/Tests/Editor/AreaAnnouncementTests.cs) | Announcement round trip through Netcode buffers; null strings become empty |

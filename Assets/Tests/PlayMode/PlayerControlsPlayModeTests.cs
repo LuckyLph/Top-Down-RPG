@@ -14,16 +14,6 @@ public class PlayerControlsPlayModeTests
     private NavigationGrid2D grid;
     private TerrainMovementProfile2D profile;
     private ScriptedCommands commands;
-    private Tile wallTile;
-
-    [TearDown]
-    public void TearDown()
-    {
-        if (wallTile != null)
-        {
-            Object.Destroy(wallTile);
-        }
-    }
 
     [UnityTest]
     public IEnumerator EnteringTheClearing_MakesItsGridTheActiveOne()
@@ -265,21 +255,23 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// Builds a seven-cell collision wall two cells to the right of the player (the Clearing has no walls of its own)
-    /// and returns a point straight behind it. The grid picks the new tiles up by itself.
+    /// Builds a seven-cell collision wall two cells to the right of the player through the area's
+    /// <see cref="AreaTerrain"/> (the Clearing has no walls of its own) and returns a point straight behind it. The
+    /// grid picks the new tiles up by itself.
     /// </summary>
     private Vector2 BuildWallInFrontOfThePlayer()
     {
         Tilemap collision = grid.BlockingTilemaps.Count > 0 ? grid.BlockingTilemaps[0] : null;
         Assert.That(collision, Is.Not.Null, "The Clearing should have a collision tilemap.");
-        wallTile = ScriptableObject.CreateInstance<Tile>();
-        wallTile.colliderType = Tile.ColliderType.Grid;
+        AreaTerrain terrain = Object.FindAnyObjectByType<AreaTerrain>();
         Vector3Int start = grid.WorldToCell(player.transform.position);
+        Vector3Int[] wall = new Vector3Int[7];
         for (int dy = -3; dy <= 3; dy++)
         {
-            collision.SetTile(new Vector3Int(start.x + 2, start.y + dy, start.z), wallTile);
+            wall[dy + 3] = new Vector3Int(start.x + 2, start.y + dy, start.z);
         }
 
+        Assert.That(terrain.TrySetCells(collision, wall, filled: true), Is.True);
         collision.GetComponent<TilemapCollider2D>().ProcessTilemapChanges();
         Physics2D.SyncTransforms();
 

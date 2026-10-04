@@ -29,6 +29,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
+| Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list (`NetworkAreaTerrain`); each client applies it and its grid follows |
 | Current area | Host | Area change message; each client loads and fades locally |
 | Save data | Host | Not replicated. The host saves on area entry and continues from its own save. |
 | Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |

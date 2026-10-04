@@ -83,27 +83,4 @@ public class AreaMobSpawnerTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return spawnPoint;
     }
-
-    private sealed class FakeNetworkObjects : INetworkObjectSpawner
-    {
-        public bool IsActive { get; set; }
-        public bool IsServer { get; set; }
-        public List<NetworkObject> Registered { get; } = new();
-        public List<NetworkObject> Spawned { get; } = new();
-
-        public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver, Scene targetScene)
-        {
-            Registered.Add(prefab);
-        }
-
-        public void UnregisterPrefab(NetworkObject prefab)
-        {
-            Registered.Remove(prefab);
-        }
-
-        public void Spawn(NetworkObject instance)
-        {
-            Spawned.Add(instance);
-        }
-    }
 }

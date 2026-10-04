@@ -38,6 +38,7 @@ public sealed class InProcessClient : IDisposable
     public static InProcessClient Start(NetworkSession session, NetworkObject playerPrefab)
     {
         NavigationGrid2D navigationGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
+        AreaTerrain areaTerrain = Object.FindAnyObjectByType<AreaTerrain>();
         Camera camera = Camera.main;
         PlayerControlSettings controlSettings = playerPrefab.GetComponent<PlayerController>().ControlSettings;
         CombatSettings combatSettings = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<CombatSettings>();
@@ -75,6 +76,8 @@ public sealed class InProcessClient : IDisposable
             builder.RegisterInstance(navigationGrid);
         }
 
+        builder.Register(_ => Object.FindAnyObjectByType<AreaTerrain>(), Lifetime.Transient);
+
         IObjectResolver container = builder.Build();
 
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
@@ -90,6 +93,11 @@ public sealed class InProcessClient : IDisposable
             {
                 manager.PrefabHandler.AddHandler(mobPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(mobPrefab, container)));
             }
+        }
+
+        if (areaTerrain != null && areaTerrain.SyncPrefab != null)
+        {
+            manager.PrefabHandler.AddHandler(areaTerrain.SyncPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(areaTerrain.SyncPrefab, container)));
         }
 
         Assert.That(manager.StartClient(), Is.True, "The in-process client should start.");

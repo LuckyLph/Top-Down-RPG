@@ -27,6 +27,16 @@ public class AreaLifetimeScope : LifetimeScope
             .WithParameter(navigationGrid);
         builder.RegisterEntryPoint<AreaClientReady>();
 
+        AreaTerrain areaTerrain = SceneQuery.FindFirst<AreaTerrain>(gameObject.scene);
+        if (areaTerrain != null)
+        {
+            builder.RegisterComponent(areaTerrain);
+            builder.RegisterEntryPoint<AreaTerrainSync>()
+                .WithParameter(gameObject.scene)
+                .AsSelf();
+            builder.RegisterBuildCallback(resolver => resolver.Resolve<AreaTerrainSync>().RegisterNetworkPrefab());
+        }
+
         MobSpawnPoint[] mobSpawnPoints = SceneQuery.FindAll<MobSpawnPoint>(gameObject.scene);
         if (navigationGrid == null)
         {

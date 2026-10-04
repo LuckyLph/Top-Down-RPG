@@ -20,7 +20,7 @@ namespace skner.DualGrid.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isPlaying)
                 return;
 
-            var dualGridModules = Object.FindObjectsByType<DualGridTilemapModule>(FindObjectsSortMode.None);
+            var dualGridModules = Object.FindObjectsByType<DualGridTilemapModule>();
             foreach (var module in dualGridModules)
             {
                 if (module.DataTilemap == tilemap)

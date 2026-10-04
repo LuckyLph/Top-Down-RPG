@@ -239,7 +239,7 @@ namespace skner.DualGrid.Editor
                 _targetDualGridRuleTile.RefreshDataTile();
 
                 // Update all Tilemap using updated Dual Grid Rule Tiles
-                var dualGridModules = UnityEngine.Object.FindObjectsByType<DualGridTilemapModule>(FindObjectsSortMode.None);
+                var dualGridModules = UnityEngine.Object.FindObjectsByType<DualGridTilemapModule>();
                 foreach (var module in dualGridModules)
                 {
                     if (_targetDualGridRuleTiles.Contains(module.RenderTile))

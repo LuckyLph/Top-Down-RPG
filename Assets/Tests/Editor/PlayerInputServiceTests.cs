@@ -12,7 +12,7 @@ using UnityEngine.TestTools;
 public class PlayerInputServiceTests
 {
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
-    private static readonly string[] AbilityKeys = { "q", "w", "e", "r", "a", "s" };
+    private static readonly string[] AbilityKeys = { "q", "w", "e", "r", "1", "2" };
 
     private InputActionAsset actions;
 
@@ -27,7 +27,7 @@ public class PlayerInputServiceTests
         InputActionMap playerMap = actions.AddActionMap(PlayerInputService.PlayerMapName);
         playerMap.AddAction(PlayerInputService.MoveClickActionName, InputActionType.Button, "<Mouse>/rightButton");
         playerMap.AddAction(PlayerInputService.PointActionName, InputActionType.Value, "<Pointer>/position");
-        playerMap.AddAction(PlayerInputService.StopActionName, InputActionType.Button, "<Keyboard>/x");
+        playerMap.AddAction(PlayerInputService.StopActionName, InputActionType.Button, "<Keyboard>/s");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
             playerMap.AddAction(PlayerInputService.AbilityActionName(slot), InputActionType.Button, $"<Keyboard>/{AbilityKeys[slot]}");
@@ -176,8 +176,8 @@ public class PlayerInputServiceTests
     }
 
     /// <summary>
-    /// The project input asset binds move to the right mouse button, point to the pointer position, stop to X and
-    /// the ability slots to Q, W, E, R, A and S, and the service accepts it without logging an error.
+    /// The project input asset binds move to the right mouse button, point to the pointer position, stop to S and
+    /// the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without logging an error.
     /// </summary>
     [Test]
     public void ProjectAsset_BindsMouseMoveStopAndAbilityKeys()
@@ -188,7 +188,7 @@ public class PlayerInputServiceTests
 
         AssertBoundTo(playerMap, PlayerInputService.MoveClickActionName, "<Mouse>/rightButton");
         AssertBoundTo(playerMap, PlayerInputService.PointActionName, "<Pointer>/position");
-        AssertBoundTo(playerMap, PlayerInputService.StopActionName, "<Keyboard>/x");
+        AssertBoundTo(playerMap, PlayerInputService.StopActionName, "<Keyboard>/s");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
             AssertBoundTo(playerMap, PlayerInputService.AbilityActionName(slot), $"<Keyboard>/{AbilityKeys[slot]}");

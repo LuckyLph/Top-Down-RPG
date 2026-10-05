@@ -19,7 +19,7 @@ public class InputBindingsTests
 
     private static readonly string[] DefaultPaths =
     {
-        "<Mouse>/rightButton", "<Keyboard>/x", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/a", "<Keyboard>/s",
+        "<Mouse>/rightButton", "<Keyboard>/s", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/1", "<Keyboard>/2",
     };
 
     private InputActionAsset actions;
@@ -119,7 +119,7 @@ public class InputBindingsTests
 
         Assert.That(swapped, Is.SameAs(Action("Ability1")));
         Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/q"));
-        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/x"));
+        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/s"));
         Assert.That(changes, Is.EqualTo(1));
     }
 
@@ -133,7 +133,7 @@ public class InputBindingsTests
         Create();
         bindings.TryAssign(Action("Stop"), "<Keyboard>/q", out _);
 
-        bindings.TryAssign(Action("Stop"), "<Keyboard>/x", out InputAction swapped);
+        bindings.TryAssign(Action("Stop"), "<Keyboard>/s", out InputAction swapped);
 
         Assert.That(swapped, Is.SameAs(Action("Ability1")));
         Assert.That(Action("Stop").bindings[0].overridePath, Is.Null);
@@ -149,7 +149,7 @@ public class InputBindingsTests
     {
         Create();
 
-        Assert.That(bindings.TryAssign(Action("Stop"), "<Keyboard>/x", out _), Is.True);
+        Assert.That(bindings.TryAssign(Action("Stop"), "<Keyboard>/s", out _), Is.True);
 
         Assert.That(changes, Is.Zero);
         Assert.That(store.WriteCount, Is.Zero);
@@ -222,9 +222,9 @@ public class InputBindingsTests
     {
         Create();
 
-        Assert.That(bindings.GetShortLabel(Action("Stop")), Is.EqualTo("X"));
+        Assert.That(bindings.GetShortLabel(Action("Stop")), Is.EqualTo("S"));
         Assert.That(bindings.GetShortLabel(Action("MoveClick")), Is.EqualTo("RMB"));
-        Assert.That(bindings.GetAbilityKeyLabel(4), Is.EqualTo("A"));
+        Assert.That(bindings.GetAbilityKeyLabel(4), Is.EqualTo("1"));
         Assert.That(bindings.GetAbilityKeyLabel(-1), Is.Empty);
         Assert.That(bindings.GetAbilityKeyLabel(AbilitySlots.Count), Is.Empty);
     }
@@ -279,7 +279,7 @@ public class InputBindingsTests
         Create();
 
         Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/q"));
-        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/x"));
+        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/s"));
         Assert.That(store.WriteCount, Is.EqualTo(1), "Loading valid bindings does not rewrite the file.");
     }
 
@@ -295,7 +295,7 @@ public class InputBindingsTests
 
         Create();
 
-        Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/x"));
+        Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/s"));
         Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/q"));
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.Empty);
     }

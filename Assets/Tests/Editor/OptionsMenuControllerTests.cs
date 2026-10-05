@@ -69,7 +69,7 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
-        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("X"));
+        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(controller.GetRow(7).Label.text, Is.EqualTo("Weapon ability 2"));
     }
 
@@ -145,8 +145,8 @@ public class OptionsMenuControllerTests : InputTestFixture
         PressAndSettle(keyboard.qKey);
 
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("Q"));
-        Assert.That(controller.GetRow(Ability1Row).BindingText.text, Is.EqualTo("X"));
-        Assert.That(view.NoticeText.text, Is.EqualTo("Class ability 1 moved to X."));
+        Assert.That(controller.GetRow(Ability1Row).BindingText.text, Is.EqualTo("S"));
+        Assert.That(view.NoticeText.text, Is.EqualTo("Class ability 1 moved to S."));
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public class OptionsMenuControllerTests : InputTestFixture
 
         Assert.That(controller.IsListening, Is.False);
         Assert.That(view.IsShown, Is.True);
-        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("X"));
+        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
 
         TickWith(back: true);
         Assert.That(view.IsShown, Is.False, "A later Back closes it.");
@@ -215,14 +215,14 @@ public class OptionsMenuControllerTests : InputTestFixture
     public void ResettingARow_PutsItsDefaultBack_AndRowsFollowEveryChange()
     {
         OpenAndSettle();
-        bindings.TryAssign(actions.FindAction("Ability1", true), "<Keyboard>/x", out _);
+        bindings.TryAssign(actions.FindAction("Ability1", true), "<Keyboard>/s", out _);
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("Q"));
 
         controller.GetRow(Ability1Row).ResetButton.onClick.Invoke();
 
         Assert.That(controller.GetRow(Ability1Row).BindingText.text, Is.EqualTo("Q"));
-        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("X"));
-        Assert.That(view.NoticeText.text, Is.EqualTo("Stop moved to X."));
+        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
+        Assert.That(view.NoticeText.text, Is.EqualTo("Stop moved to S."));
     }
 
     /// <summary>
@@ -247,7 +247,7 @@ public class OptionsMenuControllerTests : InputTestFixture
         view.ConfirmYesButton.onClick.Invoke();
 
         Assert.That(view.IsConfirmShown, Is.False);
-        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("X"));
+        Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(view.NoticeText.text, Is.EqualTo(OptionsMenuController.ResetAllNotice));
     }
 

@@ -49,9 +49,9 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Action | Label in the menu | Section | Default | Rebindable |
 |---|---|---|---|---|
 | `MoveClick` | Move / attack | Movement | Right mouse button | Yes |
-| `Stop` | Stop | Movement | X | Yes |
+| `Stop` | Stop | Movement | S | Yes |
 | `Ability1`…`Ability4` | Class ability 1…4 | Class abilities | Q W E R | Yes |
-| `Ability5`, `Ability6` | Weapon ability 1, 2 | Weapon abilities | A S | Yes |
+| `Ability5`, `Ability6` | Weapon ability 1, 2 | Weapon abilities | 1 2 | Yes |
 | `Point` | – | – | Pointer position | No |
 | `Menu` | – | – | Escape, gamepad Start | No |
 

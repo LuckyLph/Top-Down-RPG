@@ -79,7 +79,7 @@ public class InputRebindingTests : InputTestFixture
 
         Assert.That(outcome, Is.EqualTo(RebindOutcome.Assigned));
         Assert.That(swapped, Is.SameAs(Action("Ability1")));
-        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/x"));
+        Assert.That(bindings.GetPath(Action("Ability1")), Is.EqualTo("<Keyboard>/s"));
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public class InputRebindingTests : InputTestFixture
 
         Assert.That(finishedCount, Is.EqualTo(1));
         Assert.That(outcome, Is.EqualTo(RebindOutcome.Cancelled));
-        Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/x"));
+        Assert.That(bindings.GetPath(Action("Stop")), Is.EqualTo("<Keyboard>/s"));
         Assert.That(bindings.IsRebinding, Is.False);
     }
 
@@ -127,7 +127,7 @@ public class InputRebindingTests : InputTestFixture
 
         Assert.That(finishedCount, Is.Zero);
         Assert.That(bindings.IsRebinding, Is.True);
-        Assert.That(bindings.GetPath(Action("Ability6")), Is.EqualTo("<Keyboard>/s"));
+        Assert.That(bindings.GetPath(Action("Ability6")), Is.EqualTo("<Keyboard>/2"));
     }
 
     /// <summary>

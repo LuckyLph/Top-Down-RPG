@@ -24,7 +24,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 |---|---|
 | Movement | Mouse only. Right click on the ground gives a move order, and holding the button keeps updating the destination. WASD movement is removed. |
 | Auto attack | Right click on an enemy gives an attack order: chase into the weapon's attack range, then swing the weapon's slash at the target whenever its cooldown allows. |
-| Ability keys | Q W E R for the four class abilities, A S for the two weapon abilities (Lost Ark layout). D and F stay free for later. |
+| Ability keys | Q W E R for the four class abilities, 1 2 for the two weapon abilities. A, D and F stay free for later. |
 | Cast style | Quick cast: the ability fires on key press, aimed at the cursor. There is no indicator and no confirm click. |
 | Casting and orders | A cast pauses the current order. Each ability decides how the caster moves during its cast time (stand still, keep moving, or the ability moves the caster). When the cast ends, the paused order resumes. |
 | Gamepad | Not supported in gameplay for now. |
@@ -43,8 +43,8 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Right mouse button, pressed on an ally | Move order to the clicked point (the same as clicking the ground) |
 | Right mouse button, held | Re-evaluated at a throttled rate: the order follows the cursor, attacking an enemy under the cursor or moving to the ground under it. A hold only steers: it never cancels a buffered cast or a CastWhenInRange approach; a new click does. |
 | Q, W, E, R | Class abilities 1–4 |
-| A, S | Weapon abilities 1–2 |
-| X | Stop: cancel the current order, any order waiting to resume, and any buffered cast. It uses X because LoL's S belongs to a weapon ability here. |
+| 1, 2 | Weapon abilities 1–2 |
+| S | Stop: cancel the current order, any order waiting to resume, and any buffered cast (LoL's stop key). |
 | Left mouse button | No gameplay action. Reserved for UI, and later for selecting or interacting. |
 
 Clicks over UI never reach gameplay. Bindings live in the `Player` map of `InputSystem_Actions.inputactions`; the unused template actions (Look, Interact, Crouch, Jump, Previous, Next, Sprint) can stay until something needs them.
@@ -160,7 +160,7 @@ The host's own player takes the same path: offline and host-owned casts call `Ab
 
 ### HUD and feedback (local only)
 
-- Ability bar: six slots labelled Q W E R | A S, each with the ability icon (or an empty state), a radial cooldown fill with seconds remaining, and a flash on failed casts. It is a passive `AbilityBarView` with an `AbilityBarPresenter` bound to the local player through `LocalPlayerTracker`, in the same shape as the health HUD. It goes on `PlayerHudCanvas`.
+- Ability bar: six slots labelled Q W E R | 1 2, each with the ability icon (or an empty state), a radial cooldown fill with seconds remaining, and a flash on failed casts. It is a passive `AbilityBarView` with an `AbilityBarPresenter` bound to the local player through `LocalPlayerTracker`, in the same shape as the health HUD. It goes on `PlayerHudCanvas`.
 - Hover feedback on the targetable enemy under the cursor: highlight (a red ring on the ground under it, so the mob's sprite and its death animation are untouched) and an attack cursor.
 - A pooled click marker at move destinations.
 - Nothing here is a networked object.

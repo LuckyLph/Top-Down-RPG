@@ -70,7 +70,7 @@ public class RuntimeInputActionsTests
         bindings.TryAssign(runtime.Actions.FindAction("Player/Stop", true), "<Keyboard>/f", out _);
 
         Assert.That(runtime.Actions.FindAction("Player/Stop", true).bindings[0].effectivePath, Is.EqualTo("<Keyboard>/f"));
-        Assert.That(project.FindAction("Player/Stop", true).bindings[0].effectivePath, Is.EqualTo("<Keyboard>/x"));
+        Assert.That(project.FindAction("Player/Stop", true).bindings[0].effectivePath, Is.EqualTo("<Keyboard>/s"));
         bindings.Dispose();
     }
 

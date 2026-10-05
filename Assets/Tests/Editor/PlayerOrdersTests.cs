@@ -5,8 +5,8 @@ using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for <see cref="PlayerOrders"/>: move and attack orders, ability casts with buffering and approach, and
-/// crowd control, driven tick by tick against fake units and a fake caster.
+/// Tests for <see cref="PlayerOrders"/>: move, attack and attack move orders, ability casts with buffering and
+/// approach, and crowd control, driven tick by tick against fake units and a fake caster.
 /// </summary>
 public class PlayerOrdersTests
 {
@@ -326,6 +326,128 @@ public class PlayerOrdersTests
 
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
         Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.None), "Re-evaluating onto the same target must not restart the chase.");
+    }
+
+    /// <summary>
+    /// An attack move with no enemy within the acquire range walks to its point like a move, ignoring the motor's
+    /// stale arrival on the tick it is issued, and goes idle once the motor arrives.
+    /// </summary>
+    [Test]
+    public void AttackMove_WithNoEnemyInRange_WalksToItsPoint_AndEndsOnArrival()
+    {
+        CreateUnit(UnitTeam.Enemy, new Vector2(10f, 0f), distance: 9.5f);
+
+        PlayerOrderOutput issued = Tick(AttackMove(new Vector2(5f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+        Assert.That(issued.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(issued.Destination, Is.EqualTo(new Vector2(5f, 0f)));
+        Assert.That(issued.Swing, Is.False);
+        Assert.That(orders.AttackTarget.Exists, Is.False, "An enemy beyond the acquire range is not engaged.");
+
+        reachedDestination = false;
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None));
+
+        reachedDestination = true;
+        PlayerOrderOutput arrived = Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(arrived.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+    }
+
+    /// <summary>
+    /// An attack move engages the living enemy within the acquire range that is closest to its point, ignoring
+    /// allies and enemies beyond the range even when they are closer to the point; it chases that enemy, then stops
+    /// and swings at it in weapon range.
+    /// </summary>
+    [Test]
+    public void AttackMove_EngagesTheEnemyInRangeClosestToItsPoint()
+    {
+        CreateUnit(UnitTeam.Enemy, new Vector2(-1f, 0f), distance: 0.8f);
+        UnitTarget nearPoint = CreateUnit(UnitTeam.Enemy, new Vector2(2f, 0f), distance: 1.5f);
+        CreateUnit(UnitTeam.Enemy, new Vector2(4.9f, 0f), distance: 4f);
+        CreateUnit(UnitTeam.Ally, new Vector2(4.5f, 0f), distance: 0.1f);
+
+        PlayerOrderOutput issued = Tick(AttackMove(new Vector2(5f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+        Assert.That(orders.AttackTarget.IsSameUnit(nearPoint), Is.True);
+        Assert.That(issued.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(issued.Destination, Is.EqualTo(new Vector2(2f, 0f)), "It chases the enemy, not the point.");
+        Assert.That(issued.Swing, Is.False);
+
+        units.SetDistance(nearPoint, AttackRange);
+        PlayerOrderOutput inRange = Tick(default);
+        Assert.That(inRange.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(inRange.AimDirection, Is.EqualTo(Vector2.right));
+        Assert.That(inRange.Swing, Is.True);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+    }
+
+    /// <summary>
+    /// When the engaged enemy dies the attack move walks on to its point at once, ignoring the motor's stale
+    /// arrival, and engages the next enemy that comes within the acquire range on the way.
+    /// </summary>
+    [Test]
+    public void AttackMove_AfterItsTargetDies_WalksOn_AndTakesTheNextEnemyItMeets()
+    {
+        UnitTarget first = CreateUnit(UnitTeam.Enemy, new Vector2(1f, 0f), distance: AttackRange);
+        Assert.That(Tick(AttackMove(new Vector2(6f, 0f))).Swing, Is.True);
+
+        units.SetAlive(first, false);
+        reachedDestination = true;
+        PlayerOrderOutput walkingOn = Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+        Assert.That(walkingOn.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(walkingOn.Destination, Is.EqualTo(new Vector2(6f, 0f)));
+        Assert.That(walkingOn.Swing, Is.False);
+
+        reachedDestination = false;
+        Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None));
+
+        UnitTarget second = CreateUnit(UnitTeam.Enemy, new Vector2(4f, 0f), distance: 2f);
+        PlayerOrderOutput engaged = Tick(default);
+        Assert.That(orders.AttackTarget.IsSameUnit(second), Is.True);
+        Assert.That(engaged.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(engaged.Destination, Is.EqualTo(new Vector2(4f, 0f)));
+    }
+
+    /// <summary>
+    /// Stop ends an attack move, and a click replaces it like any other order.
+    /// </summary>
+    [Test]
+    public void AttackMove_EndsOnStop_AndIsReplacedByAClick()
+    {
+        Tick(AttackMove(new Vector2(5f, 0f)));
+
+        PlayerOrderOutput stopped = Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
+        Assert.That(stopped.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+
+        Tick(AttackMove(new Vector2(5f, 0f)));
+        PlayerOrderOutput clicked = Tick(Click(new Vector2(-3f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(clicked.Destination, Is.EqualTo(new Vector2(-3f, 0f)));
+    }
+
+    /// <summary>
+    /// An attack move given during a cast waits as the paused order; in a cast that lets the caster move it takes
+    /// its target without swinging, and it attacks once the cast ends.
+    /// </summary>
+    [Test]
+    public void AttackMove_DuringACast_IsPaused_AndSwingsOnlyAfterTheCast()
+    {
+        caster.Set(0, Ability(castTime: 1f, movement: CastMovement.Continue));
+        Tick(Press(0, Vector2.right));
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0.2f, 0f), distance: AttackRange);
+
+        PlayerOrderOutput duringCast = Tick(AttackMove(new Vector2(5f, 0f)));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
+        Assert.That(orders.Paused, Is.EqualTo(PlayerOrderKind.AttackMove));
+        Assert.That(duringCast.Swing, Is.False, "A paused attack move never swings.");
+
+        time = 1f;
+        PlayerOrderOutput afterCast = Tick(default);
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+        Assert.That(orders.AttackTarget.IsSameUnit(enemy), Is.True);
+        Assert.That(afterCast.Swing, Is.True);
     }
 
     /// <summary>
@@ -1216,6 +1338,15 @@ public class PlayerOrdersTests
     }
 
     /// <summary>
+    /// A command for the frame the attack-move key is pressed with the cursor at <paramref name="point"/> and the
+    /// move button up.
+    /// </summary>
+    private static PlayerCommand AttackMove(Vector2 point)
+    {
+        return new PlayerCommand(point, default, movePressed: false, moveHeld: false, stopPressed: false, attackMovePressed: true);
+    }
+
+    /// <summary>
     /// Creates a tracked test ability with a one-second cooldown and the given cast time, targeting, filter,
     /// range, cast movement and bufferability.
     /// </summary>
@@ -1346,7 +1477,7 @@ public class PlayerOrdersTests
     }
 
     /// <summary>
-    /// An <see cref="IUnitQueries"/> backed by per-unit state the test sets directly: alive, position and
+    /// An <see cref="IUnitQueries"/> backed by per-unit state the test sets directly: team, alive, position and
     /// distance from the player, keyed by the unit's <see cref="Health"/>.
     /// </summary>
     private sealed class FakeUnits : IUnitQueries
@@ -1359,7 +1490,7 @@ public class PlayerOrdersTests
         /// </summary>
         public void Add(UnitTarget target, Vector2 unitPosition, float distance)
         {
-            states[target.Health] = new UnitState { Alive = true, Position = unitPosition, Distance = distance };
+            states[target.Health] = new UnitState { Target = target, Alive = true, Position = unitPosition, Distance = distance };
         }
 
         /// <summary>
@@ -1411,10 +1542,32 @@ public class PlayerOrdersTests
         }
 
         /// <summary>
+        /// The registered living enemy within <paramref name="range"/> whose position is closest to
+        /// <paramref name="point"/>, or an empty target.
+        /// </summary>
+        public UnitTarget NearestEnemyInRange(Vector2 point, float range)
+        {
+            UnitTarget best = default;
+            float bestDistance = float.MaxValue;
+            foreach (UnitState state in states.Values)
+            {
+                float distance = (state.Position - point).sqrMagnitude;
+                if (state.Target.Team == UnitTeam.Enemy && state.Alive && state.Distance <= range && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = state.Target;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
         /// Mutable per-unit state behind the fake queries.
         /// </summary>
         private sealed class UnitState
         {
+            public UnitTarget Target;
             public bool Alive;
             public Vector2 Position;
             public float Distance;

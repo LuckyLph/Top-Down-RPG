@@ -18,4 +18,10 @@ public interface IUnitQueries
     /// Collider-to-collider distance from the player to <paramref name="target"/>, zero when they overlap.
     /// </summary>
     float DistanceTo(UnitTarget target);
+
+    /// <summary>
+    /// The living enemy closest to <paramref name="point"/> among those within <paramref name="range"/> of the player
+    /// (collider to collider), or an empty target when there is none; an attack move engages it.
+    /// </summary>
+    UnitTarget NearestEnemyInRange(Vector2 point, float range);
 }

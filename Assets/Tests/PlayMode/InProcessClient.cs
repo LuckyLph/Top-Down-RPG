@@ -256,6 +256,7 @@ public sealed class InProcessClient : IDisposable
         public bool IsPointerOverUI => false;
         public bool MovePressedThisFrame { get; set; }
         public bool MoveHeld { get; set; }
+        public bool AttackMovePressedThisFrame { get; set; }
         public bool StopPressedThisFrame { get; set; }
 
         public int AbilityPressedThisFrame { get; set; } = -1;

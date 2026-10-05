@@ -15,7 +15,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 - Real ability effects, class selection, weapon pickups, and saving the loadout.
 - Gamepad gameplay. The gamepad keeps working in menus, and a stick-based scheme can be specced later as a separate input mode.
-- Cast indicators (show on hold, cast on release) and attack-move.
+- Cast indicators (show on hold, cast on release).
 - Camera changes: the camera keeps following the local player.
 
 ## Decisions
@@ -24,7 +24,8 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 |---|---|
 | Movement | Mouse only. Right click on the ground gives a move order, and holding the button keeps updating the destination. WASD movement is removed. |
 | Auto attack | Right click on an enemy gives an attack order: chase into the weapon's attack range, then swing the weapon's slash at the target whenever its cooldown allows. |
-| Ability keys | Q W E R for the four class abilities, 1 2 for the two weapon abilities. A, D and F stay free for later. |
+| Attack move | League of Legends' attack move on A: walk to the cursor's point and fight the enemies met on the way. It is given at once on the key press, like a quick cast (LoL's "attack move click"), with no confirm click, since the left mouse button stays reserved. |
+| Ability keys | Q W E R for the four class abilities, 1 2 for the two weapon abilities. D and F stay free for later. |
 | Cast style | Quick cast: the ability fires on key press, aimed at the cursor. There is no indicator and no confirm click. |
 | Casting and orders | A cast pauses the current order. Each ability decides how the caster moves during its cast time (stand still, keep moving, or the ability moves the caster). When the cast ends, the paused order resumes. |
 | Gamepad | Not supported in gameplay for now. |
@@ -42,6 +43,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Right mouse button, pressed on an enemy | Attack order on that enemy |
 | Right mouse button, pressed on an ally | Move order to the clicked point (the same as clicking the ground) |
 | Right mouse button, held | Re-evaluated at a throttled rate: the order follows the cursor, attacking an enemy under the cursor or moving to the ground under it. A hold only steers: it never cancels a buffered cast or a CastWhenInRange approach; a new click does. |
+| A | Attack move to the cursor's point |
 | Q, W, E, R | Class abilities 1–4 |
 | 1, 2 | Weapon abilities 1–2 |
 | S | Stop: cancel the current order, any order waiting to resume, and any buffered cast (LoL's stop key). |
@@ -60,6 +62,7 @@ The player always has exactly one current order, plus at most one paused order w
 | Idle | Stand still. | Any new order. |
 | Move(point) | Follow a path to the point. A click on an unwalkable cell moves to the nearest walkable cell. | Arrived, or stuck for longer than the stuck timeout, then Idle. |
 | Attack(target) | Out of range: path toward the target, repathing when the target moves more than a threshold or at a fixed interval. In range: stop, face the target and swing whenever the weapon cooldown allows. Falls back to chasing if the target leaves range. Walls between the player and the target do not cancel the order; the path goes around them. There is no leash: distance never cancels the order. | The target dies or despawns, then Idle. |
+| AttackMove(point) | Walk to the point like Move. Whenever it has no target, it takes the living enemy within the acquire range of the player (collider distance, set in `PlayerControlSettings`) that is closest to the point, and attacks it exactly like Attack, with no leash. When that enemy dies it takes the next one in range, or walks on. Allies are never taken. | Arrived, or stuck for longer than the stuck timeout, with nothing in range, then Idle. |
 | CastWhenInRange(slot, target) | Unit-targeted cast out of range: walk toward the target, then cast once in range. | Cast started, target lost (Idle), or another order. |
 | Casting(slot, aim) | Runs the cast time with the ability's movement mode, keeping the order it interrupted as the paused order. | Cast time over: the paused order resumes (Idle if there was none). |
 
@@ -108,13 +111,13 @@ New code follows the existing layout: device input in Core, intent and logic in 
 
 ### Input (Core)
 
-- `IPlayerInput` is reworked around the mouse: pointer screen position, move button pressed this frame and held, stop pressed, ability pressed this frame by slot index, and whether the pointer is over UI. `AttackPressedThisFrame` and the vector `Move` go away.
-- `PlayerInputService` binds the new actions (`MoveClick`, `Point`, `Stop`, `Ability1`…`Ability6`) and gets the Main-scope `EventSystem` injected to answer "pointer over UI".
+- `IPlayerInput` is reworked around the mouse: pointer screen position, move button pressed this frame and held, attack move pressed, stop pressed, ability pressed this frame by slot index, and whether the pointer is over UI. `AttackPressedThisFrame` and the vector `Move` go away.
+- `PlayerInputService` binds the new actions (`MoveClick`, `AttackMove`, `Point`, `Stop`, `Ability1`…`Ability6`) and gets the Main-scope `EventSystem` injected to answer "pointer over UI".
 - `GameplayInputGate` is unchanged.
 
 ### Commands (Gameplay)
 
-- `PlayerCommand` becomes one frame of mouse intent in world space: pointer world point, the target under the pointer (if any), move pressed and held, stop, and the ability slot pressed (none, or 0–5).
+- `PlayerCommand` becomes one frame of mouse intent in world space: pointer world point, the target under the pointer (if any), move pressed and held, stop, the ability slot pressed (none, or 0–5), and attack move pressed. The attack-move key, like the ability keys, counts wherever the pointer is.
 - `LocalPlayerCommandSource` builds it with the Main-scope `Camera` (screen to world) and a target picker.
 - Target picker: a non-allocating `Physics2D` overlap at the pointer on inspector-set layer masks (`Enemy` for mobs, `Player` for allies), with a forgiveness radius. It returns the closest living unit and its team (enemy or ally); allies are matched against `IPlayerRegistry`. There is no line-of-sight test: being under the cursor is enough. It is also used for hover feedback.
 - Remote players no longer read commands. `PlayerNetworkSync` stops implementing `IPlayerCommandSource` and drives a remote copy's animation from the replicated move and facing, the same way `MobMotor2D.ShowRemoteMovement` does for mobs.
@@ -123,7 +126,7 @@ New code follows the existing layout: device input in Core, intent and logic in 
 
 | Piece | Kind | Role |
 |---|---|---|
-| `PlayerOrders` | Plain class | The order state machine above. Inputs are commands, the clock, the player position, the weapon range, target queries and the caster's answers. Outputs are a destination for the motor, swing requests with a direction, and cast requests. It has no engine lookups, like the mob states. |
+| `PlayerOrders` | Plain class | The order state machine above. Inputs are commands, the clock, the player position, the weapon range, target queries (including the nearest enemy in range for attack moves) and the caster's answers. Outputs are a destination for the motor, swing requests with a direction, and cast requests. It has no engine lookups, like the mob states. |
 | `PlayerMotor2D` | Component | Moves the `Rigidbody2D` along the current path in `FixedUpdate`, drives animator parameters (same ones as today) and reports stuck time. |
 | Path following | Plain class, shared | Path building, smoothing and waypoint following extracted from `MobPathAgent2D` so players and mobs use one implementation. `MobPathAgent2D` keeps its public API and wraps it. A straight line is used when it is clear, so short clicks skip A*. |
 | `ActiveNavigationGrid` | Gameplay-scope holder | The current area's `NavigationGrid2D`, set by `AreaEntry` and cleared when the area unloads (the same pattern as `ActiveSpawnPoint`). The player lives in the Gameplay scope and cannot inject the area's grid directly. Without a grid, movement falls back to straight lines. |
@@ -132,7 +135,7 @@ New code follows the existing layout: device input in Core, intent and logic in 
 
 Players pass through each other through the physics layer collision matrix (`Player` vs `Player` off). This is a project setting, so mob separation and mob collisions are unaffected.
 
-Tuning (move speed, repath interval, hold re-evaluation interval, target move threshold, arrival distance, stuck timeout, pick radius, cast buffer window, terrain profile) moves into a `PlayerControlSettings` ScriptableObject referenced by the player prefab. `PlayerController.moveSpeed` moves into it as well.
+Tuning (move speed, repath interval, hold re-evaluation interval, target move threshold, arrival distance, stuck timeout, pick radius, cast buffer window, attack-move acquire range, terrain profile) moves into a `PlayerControlSettings` ScriptableObject referenced by the player prefab. `PlayerController.moveSpeed` moves into it as well.
 
 ### Abilities (Gameplay)
 
@@ -162,7 +165,7 @@ The host's own player takes the same path: offline and host-owned casts call `Ab
 
 - Ability bar: six slots labelled Q W E R | 1 2, each with the ability icon (or an empty state), a radial cooldown fill with seconds remaining, and a flash on failed casts. It is a passive `AbilityBarView` with an `AbilityBarPresenter` bound to the local player through `LocalPlayerTracker`, in the same shape as the health HUD. It goes on `PlayerHudCanvas`.
 - Hover feedback on the targetable enemy under the cursor: highlight (a red ring on the ground under it, so the mob's sprite and its death animation are untouched) and an attack cursor.
-- A pooled click marker at move destinations.
+- A pooled click marker at move destinations, in red at attack-move points.
 - Nothing here is a networked object.
 
 ## Removals and migrations
@@ -197,17 +200,22 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Ability bar view and presenter.
 - [x] Hover highlight, attack cursor and pooled move marker.
 
+### Phase 5: attack move
+- [x] `AttackMove` action on A (rebindable), `IPlayerInput.AttackMovePressedThisFrame` and `PlayerCommand.AttackMovePressed`.
+- [x] The AttackMove order, `IUnitQueries.NearestEnemyInRange` and the acquire range in `PlayerControlSettings`; the red attack-move marker.
+- [ ] Checked in Multiplayer Play Mode: the host and a client attack-move into the same pack.
+
 ### Later
 - Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine. Started by [DamageAndStatusEffects.md](DamageAndStatusEffects.md) Phase 5: every targeting mode can carry a `Hit`, a heal and an area, resolved on the host when the cast completes (Bolt, Whirl, Smite and Mend use them). Abilities that move the caster (Leap, Lunge) and cast visuals are still to come.
 - Class selection; replicating the loadout (a content catalog of classes and weapons, identified by GUID); saving each player's class in `GameSaveData` behind a version bump.
-- Optional cast modes (indicator on hold, click to confirm) as a player setting.
-- Attack-move and a gamepad scheme.
+- Optional cast modes (indicator on hold, click to confirm) as a player setting, with the same choice for attack move (LoL's default: the key arms it and a left click gives it).
+- A gamepad scheme.
 
 ## Testing
 
-- EditMode (with `ManualClock` and fakes): every `PlayerOrders` transition, including pause and resume around casts and Stop clearing the paused order; range checks; target loss; cooldowns and each failure reason; each targeting and movement mode; unit filters (enemy, ally, the caster as an ally); buffering (non-bufferable fails, bufferable fires after the running cast, newest press wins, expiry, dropped on a new order or Stop, re-validated when it fires); target picker rules (closest living unit, the dead ignored, right team, no line-of-sight test); input service bindings and the UI-blocking check; path follower parity with the old mob agent.
-- PlayMode: in the Clearing, a right click behind a wall paths around it; clicking a mob behind a wall gives an attack order that paths around and kills it; two players walk through each other; a client's cast reaches the host's `AbilityService` exactly once (including one aimed at the host's player as an ally) and the client's facing reaches the host's copy; a dead player's orders are cleared.
-- Manual: Multiplayer Play Mode with 2 and 4 players, moving, attacking the same mob and casting every blank, plus a late join during combat.
+- EditMode (with `ManualClock` and fakes): every `PlayerOrders` transition, including pause and resume around casts and Stop clearing the paused order; range checks; target loss; cooldowns and each failure reason; each targeting and movement mode; unit filters (enemy, ally, the caster as an ally); buffering (non-bufferable fails, bufferable fires after the running cast, newest press wins, expiry, dropped on a new order or Stop, re-validated when it fires); target picker rules (closest living unit, the dead ignored, right team, no line-of-sight test); attack move (walks to its point with nothing in range, takes the enemy in range closest to its point, walks on after a kill, Stop, clicks, paused by casts) and the nearest-enemy query (collider range, the dead, props and players ignored); input service bindings and the UI-blocking check; path follower parity with the old mob agent.
+- PlayMode: in the Clearing, a right click behind a wall paths around it; clicking a mob behind a wall gives an attack order that paths around and kills it; two players walk through each other; a client's cast reaches the host's `AbilityService` exactly once (including one aimed at the host's player as an ally) and the client's facing reaches the host's copy; a dead player's orders are cleared; an attack move past a mob kills it and walks on to its point.
+- Manual: Multiplayer Play Mode with 2 and 4 players, moving, attacking the same mob, attack-moving into the same pack and casting every blank, plus a late join during combat.
 
 ## Open questions
 

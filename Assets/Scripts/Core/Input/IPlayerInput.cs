@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// The local player's mouse-driven input for one frame: pointer, move button, stop and ability keys.
+/// The local player's mouse-driven input for one frame: pointer, move button, attack move, stop and ability keys.
 /// Every read is neutral while gameplay input is disabled.
 /// </summary>
 public interface IPlayerInput
@@ -11,6 +11,7 @@ public interface IPlayerInput
     bool IsPointerOverUI { get; }
     bool MovePressedThisFrame { get; }
     bool MoveHeld { get; }
+    bool AttackMovePressedThisFrame { get; }
     bool StopPressedThisFrame { get; }
 
     /// <summary>

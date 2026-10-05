@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// One frame of player intent in world space: where the pointer is, the unit under it, the move button, stop,
-/// and the ability slot pressed (if any).
+/// the ability slot pressed (if any) and the attack-move key.
 /// </summary>
 public readonly struct PlayerCommand
 {
@@ -12,7 +12,8 @@ public readonly struct PlayerCommand
 
     /// <summary>
     /// Creates a command; a negative <paramref name="abilitySlot"/> means no ability was pressed, so
-    /// <c>default</c> is a command with no intent at all.
+    /// <c>default</c> is a command with no intent at all. <paramref name="attackMovePressed"/> gives an attack move
+    /// to <paramref name="pointerWorld"/>.
     /// </summary>
     public PlayerCommand(
         Vector2 pointerWorld,
@@ -20,13 +21,15 @@ public readonly struct PlayerCommand
         bool movePressed,
         bool moveHeld,
         bool stopPressed,
-        int abilitySlot = NoAbility)
+        int abilitySlot = NoAbility,
+        bool attackMovePressed = false)
     {
         PointerWorld = pointerWorld;
         Target = target;
         MovePressed = movePressed;
         MoveHeld = moveHeld;
         StopPressed = stopPressed;
+        AttackMovePressed = attackMovePressed;
         abilitySlotPlusOne = abilitySlot >= 0 ? abilitySlot + 1 : 0;
     }
 
@@ -35,6 +38,7 @@ public readonly struct PlayerCommand
     public bool MovePressed { get; }
     public bool MoveHeld { get; }
     public bool StopPressed { get; }
+    public bool AttackMovePressed { get; }
     public bool HasAbility => abilitySlotPlusOne > 0;
     public int AbilitySlot => abilitySlotPlusOne - 1;
 }

@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// The player's order state machine: Idle, Move, Attack, CastWhenInRange and Casting, plus at most one paused order
-/// while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and the player's
-/// state into motor requests, a facing direction and swing requests, and starts casts through the
+/// The player's order state machine: Idle, Move, Attack, AttackMove, CastWhenInRange and Casting, plus at most one
+/// paused order while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and
+/// the player's state into motor requests, a facing direction and swing requests, and starts casts through the
 /// <see cref="IAbilityCaster"/>. Crowd control from statuses arrives in the context: a stun clears every order and
 /// ignores commands, a silence ends a running cast and fails casts, a root fails casts that move the caster. No
 /// engine lookups: targets are queried through <see cref="IUnitQueries"/>.
@@ -63,8 +63,8 @@ public sealed class PlayerOrders
     public int BufferedSlot => hasBuffered ? bufferedSlot : -1;
 
     /// <summary>
-    /// Applies the command (stop, a new order, a throttled re-evaluation while the move button is held, an ability
-    /// press), then runs the current order.
+    /// Applies the command (stop, a new order, a throttled re-evaluation while the move button is held, an attack
+    /// move, an ability press), then runs the current order.
     /// </summary>
     public PlayerOrderOutput Tick(in PlayerCommand command, in PlayerOrderContext context)
     {
@@ -84,13 +84,18 @@ public sealed class PlayerOrders
 
         if (command.MovePressed)
         {
-            IssueFrom(command, true);
+            Issue(OrderFrom(command), true);
             nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
         }
         else if (command.MoveHeld && context.Time >= nextHoldEvaluationTime)
         {
-            IssueFrom(command, false);
+            Issue(OrderFrom(command), false);
             nextHoldEvaluationTime = context.Time + settings.HoldReevaluateInterval;
+        }
+
+        if (command.AttackMovePressed)
+        {
+            Issue(Order.AttackMove(command.PointerWorld), true);
         }
 
         if (command.HasAbility)
@@ -226,12 +231,12 @@ public sealed class PlayerOrders
     }
 
     /// <summary>
-    /// Gives the order under the cursor. A held button only keeps steering a move or attack: unlike a press, it never
-    /// replaces a CastWhenInRange approach or drops a buffered cast.
+    /// Gives <paramref name="order"/> in place of the current order, or of the paused one during a cast. A held
+    /// button only keeps steering a move or attack: unlike a press, it never replaces a CastWhenInRange approach or
+    /// drops a buffered cast.
     /// </summary>
-    private void IssueFrom(in PlayerCommand command, bool pressed)
+    private void Issue(in Order order, bool pressed)
     {
-        Order order = OrderFrom(command);
         bool casting = current.Kind == PlayerOrderKind.Casting;
         Order replaced = casting ? paused : current;
         if (order.SameAs(replaced) || (!pressed && replaced.Kind == PlayerOrderKind.CastWhenInRange))
@@ -418,6 +423,9 @@ public sealed class PlayerOrders
             case PlayerOrderKind.Attack:
                 RunAttack(ref current, context, true);
                 break;
+            case PlayerOrderKind.AttackMove:
+                RunAttackMove(ref current, context, true);
+                break;
             case PlayerOrderKind.CastWhenInRange:
                 RunCastWhenInRange(context);
                 break;
@@ -447,8 +455,7 @@ public sealed class PlayerOrders
     }
 
     /// <summary>
-    /// Ends <paramref name="order"/> and stops when its target died, chases while it is out of weapon range, and
-    /// otherwise stops chasing and, when <paramref name="act"/> is set, aims at it and swings. A paused attack runs
+    /// Ends <paramref name="order"/> and stops when its target died, and otherwise engages it. A paused attack runs
     /// with <paramref name="act"/> false so it only keeps up.
     /// </summary>
     private void RunAttack(ref Order order, in PlayerOrderContext context, bool act)
@@ -461,8 +468,52 @@ public sealed class PlayerOrders
             return;
         }
 
-        Vector2 targetPosition = units.PositionOf(order.Target);
-        if (units.DistanceTo(order.Target) > context.AttackRange)
+        Engage(order.Target, context, act);
+    }
+
+    /// <summary>
+    /// Walks to an attack move's point and fights on the way. Without a target it takes the living enemy within the
+    /// acquire range that is closest to the point, and engages it like an Attack order until it dies; then it looks
+    /// again or walks on. Taking or losing a target restarts the order's movement. With nothing to fight it runs
+    /// like a move, ending on arrival or when stuck. A paused attack move runs with <paramref name="act"/> false, so
+    /// it moves and takes targets but never swings.
+    /// </summary>
+    private void RunAttackMove(ref Order order, in PlayerOrderContext context, bool act)
+    {
+        if (!ReferenceEquals(order.Target.Health, null) && !units.IsAlive(order.Target))
+        {
+            order.Target = default;
+            fresh = true;
+            chasing = false;
+        }
+
+        if (!order.Target.Exists)
+        {
+            order.Target = units.NearestEnemyInRange(order.Destination, settings.AttackMoveAcquireRange);
+            if (order.Target.Exists)
+            {
+                fresh = true;
+                chasing = false;
+            }
+        }
+
+        if (order.Target.Exists)
+        {
+            Engage(order.Target, context, act);
+            return;
+        }
+
+        RunMove(ref order, context);
+    }
+
+    /// <summary>
+    /// Chases <paramref name="target"/> while it is out of weapon range, and otherwise stops chasing and, when
+    /// <paramref name="act"/> is set, aims at it and swings.
+    /// </summary>
+    private void Engage(UnitTarget target, in PlayerOrderContext context, bool act)
+    {
+        Vector2 targetPosition = units.PositionOf(target);
+        if (units.DistanceTo(target) > context.AttackRange)
         {
             Chase(targetPosition, context);
             return;
@@ -544,7 +595,8 @@ public sealed class PlayerOrders
 
     /// <summary>
     /// Moves for the paused order during a cast that allows it: a move keeps walking, an attack keeps chasing without
-    /// swinging, and a CastWhenInRange approach keeps closing in until in range.
+    /// swinging, an attack move keeps walking and chasing without swinging, and a CastWhenInRange approach keeps
+    /// closing in until in range.
     /// </summary>
     private void RunPausedMovement(in PlayerOrderContext context)
     {
@@ -555,6 +607,9 @@ public sealed class PlayerOrders
                 break;
             case PlayerOrderKind.Attack:
                 RunAttack(ref paused, context, false);
+                break;
+            case PlayerOrderKind.AttackMove:
+                RunAttackMove(ref paused, context, false);
                 break;
             case PlayerOrderKind.CastWhenInRange:
                 AbilityDefinition ability = caster.GetAbility(paused.Slot);
@@ -717,7 +772,8 @@ public sealed class PlayerOrders
     }
 
     /// <summary>
-    /// One order: its kind plus the destination, target or ability slot that kind uses; <c>default</c> is Idle.
+    /// One order: its kind plus the destination, target or ability slot that kind uses (an attack move uses a
+    /// destination and the target it is fighting, if any); <c>default</c> is Idle.
     /// </summary>
     private struct Order
     {
@@ -740,6 +796,14 @@ public sealed class PlayerOrders
         public static Order Attack(UnitTarget target)
         {
             return new Order { Kind = PlayerOrderKind.Attack, Target = target };
+        }
+
+        /// <summary>
+        /// A walk to <paramref name="point"/> that fights the enemies it meets, with no target yet.
+        /// </summary>
+        public static Order AttackMove(Vector2 point)
+        {
+            return new Order { Kind = PlayerOrderKind.AttackMove, Destination = point };
         }
 
         /// <summary>

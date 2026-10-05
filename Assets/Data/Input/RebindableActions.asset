@@ -16,6 +16,9 @@ MonoBehaviour:
   - action: {fileID: 2775607151954716846, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Move / attack
     section: Movement
+  - action: {fileID: 7872609846883157701, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    label: Attack move
+    section: Movement
   - action: {fileID: 380077077918752802, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Stop
     section: Movement

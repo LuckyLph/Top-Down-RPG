@@ -5,8 +5,9 @@ using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for picking the unit under the pointer with <see cref="PointerTargetPicker"/> and for turning raw input
-/// into commands with <see cref="LocalPlayerCommandSource"/>.
+/// Tests for picking the unit under the pointer with <see cref="PointerTargetPicker"/>, finding the enemy an attack
+/// move engages with <see cref="PlayerUnitQueries"/>, and turning raw input into commands with
+/// <see cref="LocalPlayerCommandSource"/>.
 /// </summary>
 public class PlayerTargetingTests
 {
@@ -134,6 +135,69 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
+    /// The nearest-enemy query keeps the living enemies whose colliders are within range of the player's collider and
+    /// returns the one closest to the given point, even when an enemy beyond the range is closer to it; with no enemy
+    /// layers it finds nothing.
+    /// </summary>
+    [Test]
+    public void UnitQueries_NearestEnemyInRange_TakesTheEnemyInRangeClosestToThePoint()
+    {
+        Collider2D self = CreatePlayerBody(Vector2.zero, register: false).GetComponent<Collider2D>();
+        Health ahead = CreateMob(new Vector2(1f, 0f));
+        Health behind = CreateMob(new Vector2(-1.5f, 0f));
+        CreateMob(new Vector2(3.5f, 0f));
+        Physics2D.SyncTransforms();
+        PlayerUnitQueries queries = new(self, LayerMask.GetMask("Enemy"));
+
+        UnitTarget towardPoint = queries.NearestEnemyInRange(new Vector2(5f, 0f), 2f);
+        Assert.That(towardPoint.Health, Is.SameAs(ahead), "The enemy at 3.5 is closer to the point but out of range.");
+        Assert.That(towardPoint.Team, Is.EqualTo(UnitTeam.Enemy));
+        Assert.That(towardPoint.Collider, Is.SameAs(ahead.GetComponent<Collider2D>()));
+        Assert.That(queries.NearestEnemyInRange(new Vector2(-5f, 0f), 2f).Health, Is.SameAs(behind));
+        Assert.That(queries.NearestEnemyInRange(Vector2.zero, 0.5f).Exists, Is.False, "The range is measured between colliders.");
+        Assert.That(new PlayerUnitQueries(self).NearestEnemyInRange(Vector2.zero, 2f).Exists, Is.False);
+    }
+
+    /// <summary>
+    /// The nearest-enemy query skips dead enemies, enemy-layer colliders without a <see cref="DamageReceiver"/> and
+    /// players, however close they are.
+    /// </summary>
+    [Test]
+    public void UnitQueries_NearestEnemyInRange_IgnoresTheDeadPropsAndPlayers()
+    {
+        Collider2D self = CreatePlayerBody(Vector2.zero, register: true).GetComponent<Collider2D>();
+        Health dead = CreateMob(new Vector2(0.5f, 0f));
+        dead.ApplyDamage(dead.MaxHealth);
+        GameObject prop = Track(new GameObject("EnemyLayerProp"));
+        prop.layer = LayerMask.NameToLayer("Enemy");
+        prop.transform.position = new Vector2(0.6f, 0f);
+        prop.AddComponent<BoxCollider2D>().size = Vector2.one * 0.3f;
+        CreatePlayerBody(new Vector2(0.7f, 0f), register: true);
+        Health alive = CreateMob(new Vector2(1.5f, 0f));
+        Physics2D.SyncTransforms();
+
+        Assert.That(new PlayerUnitQueries(self, LayerMask.GetMask("Enemy")).NearestEnemyInRange(new Vector2(0.6f, 0f), 2f).Health, Is.SameAs(alive));
+    }
+
+    /// <summary>
+    /// The nearest-enemy query allocates no managed memory once warm.
+    /// </summary>
+    [Test]
+    public void UnitQueries_NearestEnemyInRange_DoesNotAllocate()
+    {
+        Collider2D self = CreatePlayerBody(Vector2.zero, register: false).GetComponent<Collider2D>();
+        CreateMob(new Vector2(1f, 0f));
+        CreateMob(new Vector2(-1f, 0f));
+        Physics2D.SyncTransforms();
+        PlayerUnitQueries queries = new(self, LayerMask.GetMask("Enemy"));
+        queries.NearestEnemyInRange(Vector2.zero, 2f);
+
+        TestDelegate query = () => queries.NearestEnemyInRange(Vector2.zero, 2f);
+
+        Assert.That(query, Is.Not.AllocatingGCMemory());
+    }
+
+    /// <summary>
     /// A move press converts the pointer's screen position to world space through the camera and carries the
     /// enemy picked under it.
     /// </summary>
@@ -217,6 +281,25 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
+    /// An attack-move press is passed on with the pointer's world point, even with the pointer over UI, like the
+    /// ability keys.
+    /// </summary>
+    [Test]
+    public void CommandSource_ForwardsAnAttackMove_WithThePointersWorldPoint()
+    {
+        FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), AttackMovePressedThisFrame = true, IsPointerOverUI = true };
+        LocalPlayerCommandSource source = new(input, CreateCamera(new Vector2(10f, 20f)), picker);
+
+        PlayerCommand command = source.ReadCommand();
+
+        Assert.That(command.AttackMovePressed, Is.True);
+        Assert.That(command.PointerWorld.x, Is.EqualTo(10f).Within(0.001f));
+        Assert.That(command.PointerWorld.y, Is.EqualTo(20f).Within(0.001f));
+        Assert.That(command.MovePressed, Is.False);
+        Assert.That(default(PlayerCommand).AttackMovePressed, Is.False);
+    }
+
+    /// <summary>
     /// An ability press without the move button still picks the unit under the cursor as the command's target.
     /// </summary>
     [Test]
@@ -235,17 +318,18 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
-    /// While gameplay input is disabled the command carries no move, stop or ability press.
+    /// While gameplay input is disabled the command carries no move, attack move, stop or ability press.
     /// </summary>
     [Test]
     public void CommandSource_GivesNothingWhileGameplayInputIsDisabled()
     {
-        FakePlayerInput input = new() { GameplayEnabled = false, MovePressedThisFrame = true, MoveHeld = true, StopPressedThisFrame = true, AbilityPressed = 0 };
+        FakePlayerInput input = new() { GameplayEnabled = false, MovePressedThisFrame = true, MoveHeld = true, AttackMovePressedThisFrame = true, StopPressedThisFrame = true, AbilityPressed = 0 };
         LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker);
 
         PlayerCommand command = source.ReadCommand();
 
         Assert.That(command.MovePressed, Is.False);
+        Assert.That(command.AttackMovePressed, Is.False);
         Assert.That(command.StopPressed, Is.False);
         Assert.That(command.HasAbility, Is.False);
     }

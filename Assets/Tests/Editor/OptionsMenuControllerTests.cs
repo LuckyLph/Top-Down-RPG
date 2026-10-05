@@ -13,8 +13,9 @@ public class OptionsMenuControllerTests : InputTestFixture
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
     private const string RebindableActionsPath = "Assets/Data/Input/RebindableActions.asset";
     private const string OptionsMenuPath = "Assets/Prefabs/UI/OptionsMenu.prefab";
-    private const int StopRow = 1;
-    private const int Ability1Row = 2;
+    private const int AttackMoveRow = 1;
+    private const int StopRow = 2;
+    private const int Ability1Row = 3;
 
     private InputActionAsset actions;
     private InputBindings bindings;
@@ -57,20 +58,22 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// Starting builds eight binding rows under three section headers, labelled with each action and its current
+    /// Starting builds nine binding rows under three section headers, labelled with each action and its current
     /// binding, and leaves the screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
         Assert.That(view.IsShown, Is.False);
-        Assert.That(controller.RowCount, Is.EqualTo(8));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(11), "Three section headers and eight rows.");
+        Assert.That(controller.RowCount, Is.EqualTo(9));
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(12), "Three section headers and nine rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
+        Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
+        Assert.That(controller.GetRow(AttackMoveRow).BindingText.text, Is.EqualTo("A"));
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
-        Assert.That(controller.GetRow(7).Label.text, Is.EqualTo("Weapon ability 2"));
+        Assert.That(controller.GetRow(8).Label.text, Is.EqualTo("Weapon ability 2"));
     }
 
     /// <summary>

@@ -17,8 +17,8 @@ public class PlayerInputServiceTests
     private InputActionAsset actions;
 
     /// <summary>
-    /// Builds an action asset with the player map (move click, point, stop and one action per ability slot), a UI
-    /// map with submit and cancel, and a menus map with the menu key.
+    /// Builds an action asset with the player map (move click, attack move, point, stop and one action per ability
+    /// slot), a UI map with submit and cancel, and a menus map with the menu key.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -26,6 +26,7 @@ public class PlayerInputServiceTests
         actions = ScriptableObject.CreateInstance<InputActionAsset>();
         InputActionMap playerMap = actions.AddActionMap(PlayerInputService.PlayerMapName);
         playerMap.AddAction(PlayerInputService.MoveClickActionName, InputActionType.Button, "<Mouse>/rightButton");
+        playerMap.AddAction(PlayerInputService.AttackMoveActionName, InputActionType.Button, "<Keyboard>/a");
         playerMap.AddAction(PlayerInputService.PointActionName, InputActionType.Value, "<Pointer>/position");
         playerMap.AddAction(PlayerInputService.StopActionName, InputActionType.Button, "<Keyboard>/s");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
@@ -69,7 +70,7 @@ public class PlayerInputServiceTests
     }
 
     /// <summary>
-    /// With gameplay disabled, the pointer reads zero and no move, stop or ability press is reported.
+    /// With gameplay disabled, the pointer reads zero and no move, attack move, stop or ability press is reported.
     /// </summary>
     [Test]
     public void DisabledGameplay_ReadsNeutralInput()
@@ -80,6 +81,7 @@ public class PlayerInputServiceTests
         Assert.That(service.PointerScreenPosition, Is.EqualTo(Vector2.zero));
         Assert.That(service.MovePressedThisFrame, Is.False);
         Assert.That(service.MoveHeld, Is.False);
+        Assert.That(service.AttackMovePressedThisFrame, Is.False);
         Assert.That(service.StopPressedThisFrame, Is.False);
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
@@ -176,8 +178,8 @@ public class PlayerInputServiceTests
     }
 
     /// <summary>
-    /// The project input asset binds move to the right mouse button, point to the pointer position, stop to S and
-    /// the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without logging an error.
+    /// The project input asset binds move to the right mouse button, attack move to A, point to the pointer position,
+    /// stop to S and the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without logging an error.
     /// </summary>
     [Test]
     public void ProjectAsset_BindsMouseMoveStopAndAbilityKeys()
@@ -187,6 +189,7 @@ public class PlayerInputServiceTests
         InputActionMap playerMap = projectActions.FindActionMap(PlayerInputService.PlayerMapName, true);
 
         AssertBoundTo(playerMap, PlayerInputService.MoveClickActionName, "<Mouse>/rightButton");
+        AssertBoundTo(playerMap, PlayerInputService.AttackMoveActionName, "<Keyboard>/a");
         AssertBoundTo(playerMap, PlayerInputService.PointActionName, "<Pointer>/position");
         AssertBoundTo(playerMap, PlayerInputService.StopActionName, "<Keyboard>/s");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
@@ -206,7 +209,7 @@ public class PlayerInputServiceTests
     {
         InputActionAsset projectActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ProjectActionsPath);
         InputActionMap playerMap = projectActions.FindActionMap(PlayerInputService.PlayerMapName, true);
-        string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName }
+        string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.AttackMoveActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName }
             .Concat(Enumerable.Range(0, AbilitySlots.Count).Select(PlayerInputService.AbilityActionName))
             .ToArray();
 

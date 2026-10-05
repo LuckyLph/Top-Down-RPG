@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Turns the local <see cref="IPlayerInput"/> into world-space <see cref="PlayerCommand"/>s with the main camera
 /// and the <see cref="PointerTargetPicker"/> (picking only on move presses, holds and ability presses). A move press
-/// over UI is dropped, and so is the hold that follows it.
+/// over UI is dropped, and so is the hold that follows it. The attack-move key, like the ability keys, is passed on
+/// wherever the pointer is.
 /// </summary>
 public sealed class LocalPlayerCommandSource : IPlayerCommandSource
 {
@@ -53,7 +54,7 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
         bool wantsTarget = movePressed || moveHeld || abilitySlot != PlayerCommand.NoAbility;
         UnitTarget target = wantsTarget && picker != null ? picker.Pick(pointerWorld) : default;
 
-        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot);
+        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot, input.AttackMovePressedThisFrame);
     }
 
     /// <summary>

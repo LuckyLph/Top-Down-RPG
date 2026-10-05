@@ -36,6 +36,9 @@ public sealed class PlayerControlSettings : ScriptableObject
     [SerializeField, Min(0f), Tooltip("Seconds a buffered cast waits for the running cast to end before it is dropped.")]
     private float castBufferWindow = 0.4f;
 
+    [SerializeField, Min(0f), Tooltip("Distance from the player (collider to collider) within which an attack move engages enemies.")]
+    private float attackMoveAcquireRange = 3f;
+
     [Header("Targeting")]
     [SerializeField, Min(0f), Tooltip("Radius around the cursor in which a unit can be clicked.")]
     private float pickRadius = 0.35f;
@@ -55,6 +58,7 @@ public sealed class PlayerControlSettings : ScriptableObject
     public float RepathInterval => repathInterval;
     public float TargetMoveRepathDistance => targetMoveRepathDistance;
     public float CastBufferWindow => castBufferWindow;
+    public float AttackMoveAcquireRange => attackMoveAcquireRange;
     public float PickRadius => pickRadius;
     public LayerMask EnemyLayers => enemyLayers;
     public LayerMask AllyLayers => allyLayers;

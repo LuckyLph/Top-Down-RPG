@@ -21,6 +21,7 @@ MonoBehaviour:
   repathInterval: 0.5
   targetMoveRepathDistance: 0.5
   castBufferWindow: 0.4
+  attackMoveAcquireRange: 3
   pickRadius: 0.35
   enemyLayers:
     serializedVersion: 2

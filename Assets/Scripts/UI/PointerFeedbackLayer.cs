@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.Pool;
 
 /// <summary>
-/// Local-only pointer feedback in the Gameplay scene: a pooled <see cref="MoveMarker"/> per move click, a ring under
-/// the hovered enemy and the attack cursor. Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
+/// Local-only pointer feedback in the Gameplay scene: a pooled <see cref="MoveMarker"/> per move click or attack move,
+/// a ring under the hovered enemy and the attack cursor. Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PointerFeedbackLayer : MonoBehaviour
@@ -61,9 +61,10 @@ public class PointerFeedbackLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows a pooled move marker at <paramref name="position"/>. Does nothing without a marker prefab.
+    /// Shows a pooled move marker at <paramref name="position"/>, in the attack move colour when
+    /// <paramref name="attackMove"/> is set. Does nothing without a marker prefab.
     /// </summary>
-    public void SpawnMarker(Vector2 position)
+    public void SpawnMarker(Vector2 position, bool attackMove = false)
     {
         EnsurePool();
         if (markerPrefab == null)
@@ -72,7 +73,7 @@ public class PointerFeedbackLayer : MonoBehaviour
         }
 
         MoveMarker marker = pool.Get();
-        marker.Show(position);
+        marker.Show(position, attackMove);
         active.Add(marker);
     }
 

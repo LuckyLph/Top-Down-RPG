@@ -258,6 +258,26 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
+    /// An attack move drops a marker in the attack move colour at the cursor, even over an enemy.
+    /// </summary>
+    [Test]
+    public void Feedback_DropsAnAttackMoveMarker_EvenOverAnEnemy()
+    {
+        (PointerFeedbackPresenter presenter, PointerFeedbackLayer layer, FakePlayerInput input) = CreateFeedback(alive: true);
+        CreateMob(new Vector2(10f, 20f));
+        Physics2D.SyncTransforms();
+        input.AttackMovePressedThisFrame = true;
+
+        presenter.Tick(0.016f);
+
+        Assert.That(layer.ActiveMarkerCount, Is.EqualTo(1));
+        MoveMarker marker = layer.GetComponentInChildren<MoveMarker>();
+        Assert.That((Vector2)marker.transform.position, Is.EqualTo(new Vector2(10f, 20f)));
+        Color color = marker.GetComponent<SpriteRenderer>().color;
+        Assert.That(color.r, Is.GreaterThan(color.g), "Attack move markers are red, move markers green.");
+    }
+
+    /// <summary>
     /// A dead local player gets no hover highlight and no move markers.
     /// </summary>
     [Test]

@@ -31,7 +31,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 | Topic | Decision |
 |---|---|
-| Rebindable actions | `MoveClick`, `Stop`, `Ability1`…`Ability6`. `Point` (the pointer) and the new `Menu` action are fixed. |
+| Rebindable actions | `MoveClick`, `AttackMove`, `Stop`, `Ability1`…`Ability6`. `Point` (the pointer) and the new `Menu` action are fixed. |
 | Bindings per action | One, in the `Keyboard&Mouse` group. |
 | Allowed inputs | Any keyboard key except Escape, and the mouse buttons (left, right, middle, back, forward). Not the pointer, its delta, the scroll wheel, or other devices. |
 | Reserved keys | Escape opens and closes menus and cancels a rebind, so it can never be bound. |
@@ -49,6 +49,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Action | Label in the menu | Section | Default | Rebindable |
 |---|---|---|---|---|
 | `MoveClick` | Move / attack | Movement | Right mouse button | Yes |
+| `AttackMove` | Attack move | Movement | A | Yes |
 | `Stop` | Stop | Movement | S | Yes |
 | `Ability1`…`Ability4` | Class ability 1…4 | Class abilities | Q W E R | Yes |
 | `Ability5`, `Ability6` | Weapon ability 1, 2 | Weapon abilities | 1 2 | Yes |
@@ -148,7 +149,7 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 - The unused template actions in the `Player` map (Look, Interact, Crouch, Jump, Previous, Next, Sprint) and their bindings.
 - `AbilitySlots.KeyName` and its uses in the ability bar and the gizmos.
-- `PlayerInputServiceTests`: the "no other Player action on those keys" check becomes "the `Player` map holds only `MoveClick`, `Point`, `Stop` and `Ability1`…`Ability6`, and the `Menus` map only `Menu`".
+- `PlayerInputServiceTests`: the "no other Player action on those keys" check becomes "the `Player` map holds only `MoveClick`, `AttackMove`, `Point`, `Stop` and `Ability1`…`Ability6`, and the `Menus` map only `Menu`".
 - [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now): the persistence rule covers game state; per-machine preferences go through `UserSettings` on every machine.
 - Architecture.md: the Input, UI, Save data, scopes, configs, events and tests sections change with each phase.
 

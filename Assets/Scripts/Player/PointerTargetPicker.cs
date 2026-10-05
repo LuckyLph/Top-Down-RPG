@@ -4,16 +4,15 @@ using UnityEngine;
 /// <summary>
 /// Finds the living unit under a world point: a non-allocating overlap within the pick radius on the enemy and
 /// ally layers. Enemies need a <see cref="DamageReceiver"/>; allies must be registered players. There is no
-/// line-of-sight test. The collider-to-receiver lookup is cached, so picking every frame does no component lookups
-/// once warm.
+/// line-of-sight test. The collider-to-receiver lookup is cached (<see cref="EnemyHealthLookup"/>), so picking every
+/// frame does no component lookups once warm.
 /// </summary>
 public sealed class PointerTargetPicker
 {
     private const int MaxHits = 16;
-    private const int MaxCachedColliders = 64;
 
     private readonly Collider2D[] hits = new Collider2D[MaxHits];
-    private readonly Dictionary<Collider2D, Health> enemyHealthByCollider = new(MaxCachedColliders);
+    private readonly EnemyHealthLookup enemies = new();
     private readonly PlayerControlSettings settings;
     private readonly IPlayerRegistry players;
 
@@ -77,7 +76,7 @@ public sealed class PointerTargetPicker
         int layerBit = 1 << hit.gameObject.layer;
         if ((settings.EnemyLayers.value & layerBit) != 0)
         {
-            Health enemy = EnemyHealth(hit);
+            Health enemy = enemies.Find(hit);
             if (enemy != null && !enemy.IsDead)
             {
                 return new UnitTarget(enemy, hit, UnitTeam.Enemy);
@@ -98,27 +97,5 @@ public sealed class PointerTargetPicker
         }
 
         return default;
-    }
-
-    /// <summary>
-    /// The health of the <see cref="DamageReceiver"/> behind <paramref name="hit"/>, or null, cached per collider. A
-    /// destroyed cached health is looked up again, and the cache is cleared whenever it fills up.
-    /// </summary>
-    private Health EnemyHealth(Collider2D hit)
-    {
-        if (enemyHealthByCollider.TryGetValue(hit, out Health cached) && (ReferenceEquals(cached, null) || cached != null))
-        {
-            return cached;
-        }
-
-        if (enemyHealthByCollider.Count >= MaxCachedColliders)
-        {
-            enemyHealthByCollider.Clear();
-        }
-
-        DamageReceiver receiver = DamageReceiver.FindFor(hit.transform);
-        Health health = receiver != null && receiver.Health != null ? receiver.Health : null;
-        enemyHealthByCollider[hit] = health;
-        return health;
     }
 }

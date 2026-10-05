@@ -7,7 +7,7 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for the click-to-move controls in the booted starting area, driven by scripted commands: pathing,
-/// attack orders, player overlap, the ability and status HUD, the dev status panel and death.
+/// attack orders, attack moves, player overlap, the ability and status HUD, the dev status panel and death.
 /// </summary>
 public class PlayerControlsPlayModeTests
 {
@@ -85,6 +85,46 @@ public class PlayerControlsPlayModeTests
 
         yield return null;
         Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Idle), "The order ends with its target.");
+    }
+
+    /// <summary>
+    /// An attack move past a mob standing beside the way engages it, kills it, then walks on to its point and ends
+    /// there.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AttackMove_PastAMob_KillsIt_ThenWalksOnToItsPoint()
+    {
+        yield return Boot();
+        MobController mob = Object.FindAnyObjectByType<MobController>();
+        Assert.That(mob, Is.Not.Null);
+        foreach (MobController other in Object.FindObjectsByType<MobController>())
+        {
+            other.gameObject.SetActive(other == mob);
+        }
+
+        Vector2 start = player.transform.position;
+        Vector2 goal = FindClearGoal(start, 5);
+        Vector2 along = (goal - start).normalized;
+        Vector2 roadside = Vector2.Lerp(start, goal, 0.6f) + new Vector2(along.y, along.x);
+        mob.GetComponent<Rigidbody2D>().position = roadside;
+        mob.transform.position = roadside;
+        Physics2D.SyncTransforms();
+        Health mobHealth = mob.GetComponent<Health>();
+
+        commands.AttackMove(goal);
+        yield return null;
+        Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.AttackMove));
+
+        float deadline = Time.realtimeSinceStartup + 20f;
+        while (mobHealth != null && !mobHealth.IsDead)
+        {
+            Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The attack move should kill the mob on its way.");
+            Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.AttackMove));
+            yield return null;
+        }
+
+        yield return WaitUntilIdle();
+        Assert.That(Vector2.Distance(player.transform.position, goal), Is.LessThan(0.2f), "The player should walk on to the point.");
     }
 
     /// <summary>
@@ -372,7 +412,7 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// <see cref="IPlayerCommandSource"/> that the test feeds one click at a time.
+    /// <see cref="IPlayerCommandSource"/> that the test feeds one click or attack move at a time.
     /// </summary>
     private sealed class ScriptedCommands : IPlayerCommandSource
     {
@@ -384,6 +424,14 @@ public class PlayerControlsPlayModeTests
         public void Click(Vector2 point, UnitTarget target)
         {
             next = new PlayerCommand(point, target, movePressed: true, moveHeld: false, stopPressed: false);
+        }
+
+        /// <summary>
+        /// Queues a single attack-move press at <paramref name="point"/> for the next read.
+        /// </summary>
+        public void AttackMove(Vector2 point)
+        {
+            next = new PlayerCommand(point, default, movePressed: false, moveHeld: false, stopPressed: false, attackMovePressed: true);
         }
 
         /// <summary>

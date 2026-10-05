@@ -238,8 +238,8 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// Builds the orders on first use (Awake, or a test tick before it): configures the motor, finds the abilities
-    /// and statuses, and creates <see cref="PlayerOrders"/> over this body's collider. Waits while settings are
-    /// missing.
+    /// and statuses, and creates <see cref="PlayerOrders"/> over this body's collider and the settings' enemy layers.
+    /// Waits while settings are missing.
     /// </summary>
     private void EnsureInitialized()
     {
@@ -256,7 +256,7 @@ public class PlayerController : MonoBehaviour
 
         statuses = GetComponent<StatusEffects>();
         IAbilityCaster caster = abilities != null ? abilities : null;
-        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>()), caster);
+        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>(), controlSettings.EnemyLayers), caster);
     }
 
     /// <summary>

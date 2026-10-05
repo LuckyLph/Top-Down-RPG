@@ -17,6 +17,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
     public const string LeaveLabel = "Leave";
     public const string QuitLabel = "Quit";
 
+    /// <summary>
+    /// The action waiting on the host's confirmation, or <see cref="PendingAction.None"/>.
+    /// </summary>
     private enum PendingAction
     {
         None,
@@ -37,6 +40,10 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
     private bool isPaused;
     private bool isLeaving;
 
+    /// <summary>
+    /// Creates a closed menu controller over <paramref name="view"/>, opening <paramref name="options"/> in its place
+    /// and asking <paramref name="session"/> whether to pause and whether to confirm leaving.
+    /// </summary>
     public GameMenuController(
         GameMenuView view,
         OptionsMenuController options,
@@ -61,6 +68,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
     public bool IsPaused => isPaused;
     public bool IsLeaving => isLeaving;
 
+    /// <summary>
+    /// Hides the menu and its confirmation, wires the buttons and starts listening for menu requests.
+    /// </summary>
     public void Start()
     {
         view.SetShown(false);
@@ -74,6 +84,10 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         menus.MenuRequested += HandleMenuRequested;
     }
 
+    /// <summary>
+    /// Stops listening for menu requests, leaves the menu stack and releases the input block and the time freeze,
+    /// so nothing stays held when the Gameplay scope goes away.
+    /// </summary>
     public void Dispose()
     {
         menus.MenuRequested -= HandleMenuRequested;
@@ -84,6 +98,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         isPaused = false;
     }
 
+    /// <summary>
+    /// Cancels the open confirmation, or else closes the menu. Ignored during a transition or once leaving.
+    /// </summary>
     public void HandleBack()
     {
         if (gameFlow.IsTransitioning || isLeaving)
@@ -152,6 +169,10 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         selection.Select(null);
     }
 
+    /// <summary>
+    /// Opens the menu when the Menu key is pressed with no menu open, unless a transition is running or the
+    /// player is leaving.
+    /// </summary>
     private void HandleMenuRequested()
     {
         if (!gameFlow.IsTransitioning && !isLeaving)
@@ -160,6 +181,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         }
     }
 
+    /// <summary>
+    /// Hides the menu panel and opens the options screen in its place. Ignored while closed or confirming.
+    /// </summary>
     private void OpenOptions()
     {
         if (!isOpen || view.IsConfirmShown)
@@ -171,6 +195,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         options.Open(HandleOptionsClosed);
     }
 
+    /// <summary>
+    /// Shows the menu again with Options selected when the options screen closes while the menu is still open.
+    /// </summary>
     private void HandleOptionsClosed()
     {
         if (!isOpen)
@@ -182,16 +209,26 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         selection.Select(view.OptionsButton);
     }
 
+    /// <summary>
+    /// Leave game button: returns to the main menu, after a confirmation for a host.
+    /// </summary>
     private void RequestLeave()
     {
         Request(PendingAction.Leave);
     }
 
+    /// <summary>
+    /// Quit button: closes the application, after a confirmation for a host.
+    /// </summary>
     private void RequestQuit()
     {
         Request(PendingAction.Quit);
     }
 
+    /// <summary>
+    /// Runs <paramref name="action"/> straight away, or, for the host of an online session, shows the confirmation
+    /// with Cancel selected and keeps the action pending. Ignored while closed, leaving or already confirming.
+    /// </summary>
     private void Request(PendingAction action)
     {
         if (!isOpen || isLeaving || view.IsConfirmShown)
@@ -211,6 +248,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         Run(action);
     }
 
+    /// <summary>
+    /// Confirmation accepted: hides it and runs the pending action.
+    /// </summary>
     private void Confirm()
     {
         PendingAction action = pending;
@@ -219,6 +259,9 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         Run(action);
     }
 
+    /// <summary>
+    /// Confirmation declined: hides it, drops the pending action and reselects the button that asked for it.
+    /// </summary>
     private void CancelConfirm()
     {
         PendingAction action = pending;
@@ -227,6 +270,10 @@ public sealed class GameMenuController : IStartable, IDisposable, IMenuLayer
         selection.Select(action == PendingAction.Quit ? view.QuitButton : view.LeaveButton);
     }
 
+    /// <summary>
+    /// Quits the application, or marks the menu as leaving and starts the return to the main menu unless a
+    /// transition is already running. <see cref="PendingAction.None"/> does nothing.
+    /// </summary>
     private void Run(PendingAction action)
     {
         if (action == PendingAction.Quit)

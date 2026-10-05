@@ -9,6 +9,11 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using VContainer;
 
+/// <summary>
+/// Tests for the player's weapon and HUD: equipping and the weapon icon, the HUD presenter, swings and their
+/// cooldown, the controller's attack orders under crowd control, sword slash hits and placement, and the Main
+/// scope's input asset.
+/// </summary>
 public class PlayerWeaponSystemTests
 {
     private GameObject root;
@@ -16,6 +21,10 @@ public class PlayerWeaponSystemTests
     private PlayerControlSettings settings;
     private GameObject enemyRoot;
 
+    /// <summary>
+    /// Disposes the HUD presenter and destroys every slash, the test HUD canvases, the player and enemy roots
+    /// and the control settings the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -51,6 +60,9 @@ public class PlayerWeaponSystemTests
         }
     }
 
+    /// <summary>
+    /// Equipping a weapon with an icon sets the weapon name and shows the icon sprite fully opaque on the HUD.
+    /// </summary>
     [Test]
     public void Equip_UpdatesEquippedWeaponIcon()
     {
@@ -69,6 +81,9 @@ public class PlayerWeaponSystemTests
         Assert.That(iconImage.color.a, Is.EqualTo(1f).Within(0.001f));
     }
 
+    /// <summary>
+    /// Equipping a weapon without an icon clears the HUD icon sprite and dims it to the fallback alpha.
+    /// </summary>
     [Test]
     public void Equip_WithoutIcon_UsesHudFallbackTintAndClearsSprite()
     {
@@ -85,6 +100,10 @@ public class PlayerWeaponSystemTests
         Assert.That(iconImage.color.a, Is.EqualTo(0.25f).Within(0.001f));
     }
 
+    /// <summary>
+    /// The HUD presenter shows the local player's health text and fill on damage and heals, and stops updating
+    /// once disposed.
+    /// </summary>
     [Test]
     public void HudPresenter_ShowsHealthChangesUntilDisposed()
     {
@@ -112,6 +131,11 @@ public class PlayerWeaponSystemTests
         Assert.That(hud.HealthText.text, Is.EqualTo(textAfterDispose), "A disposed presenter should stop listening.");
     }
 
+    /// <summary>
+    /// <see cref="PlayerWeaponController.TryAttack"/> swings toward the given direction rather than the facing,
+    /// spawning the slash on that side, and refuses further swings until the weapon cooldown has passed on the
+    /// clock.
+    /// </summary>
     [Test]
     public void TryAttack_SwingsTowardTheGivenDirection_AndRespectsCooldown()
     {
@@ -145,6 +169,10 @@ public class PlayerWeaponSystemTests
         Assert.That(slashAttack.transform.position.x, Is.GreaterThan(root.transform.position.x));
     }
 
+    /// <summary>
+    /// A click on an enemy in range makes the <see cref="PlayerController"/> take an attack order, face the enemy
+    /// and spawn a slash toward it on the same tick.
+    /// </summary>
     [Test]
     public void PlayerController_AttackOrderOnAnEnemyInRange_FacesItAndSwingsTowardIt()
     {
@@ -179,6 +207,10 @@ public class PlayerWeaponSystemTests
         Assert.That(slashAttack.Direction.x, Is.LessThan(-0.9f));
     }
 
+    /// <summary>
+    /// The <see cref="PlayerController"/> passes its statuses to its orders and motor: a stun refuses orders and
+    /// swings and zeroes the motor speed scale, and a slow scales the motor speed.
+    /// </summary>
     [Test]
     public void PlayerController_FeedsStatusCrowdControlToItsOrdersAndMotor()
     {
@@ -230,6 +262,10 @@ public class PlayerWeaponSystemTests
         }
     }
 
+    /// <summary>
+    /// A local swing raises <see cref="PlayerWeaponController.Attacked"/> (a zero direction swings where the
+    /// player faces), while replaying a remote player's attack spawns the slash without raising it.
+    /// </summary>
     [Test]
     public void TryAttack_RaisesAttacked_ButRemoteAttacksDoNot()
     {
@@ -252,6 +288,10 @@ public class PlayerWeaponSystemTests
         Assert.That(attacked, Is.EqualTo(Vector2.up), "A zero direction swings where the player faces.");
     }
 
+    /// <summary>
+    /// When the local player is reassigned, the HUD presenter shows the new player's health and ignores the
+    /// previous one.
+    /// </summary>
     [Test]
     public void HudPresenter_FollowsTheLocalPlayerWhenItChanges()
     {
@@ -280,6 +320,9 @@ public class PlayerWeaponSystemTests
         Assert.That(hud.HealthText.text, Is.EqualTo($"HP {secondHealth.CurrentHealth}"));
     }
 
+    /// <summary>
+    /// A <see cref="PlayerController"/> ticked without a command source does nothing and keeps facing down.
+    /// </summary>
     [Test]
     public void PlayerController_WithoutCommandSource_StaysIdle()
     {
@@ -292,6 +335,10 @@ public class PlayerWeaponSystemTests
         Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.down));
     }
 
+    /// <summary>
+    /// A slash damages an overlapping target when spawned, refuses to hit the same target again, and never hits
+    /// its owner.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_DamagesTargetOnlyOnceAndIgnoresOwner()
     {
@@ -315,6 +362,10 @@ public class PlayerWeaponSystemTests
         Assert.That(targetHealth.CurrentHealth, Is.EqualTo(targetHealth.MaxHealth - 3));
     }
 
+    /// <summary>
+    /// A slash touching a wall collider with no receiver of its own damages nothing, not even another receiver
+    /// that shares the wall's root.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_HittingWallDoesNotDamageUnrelatedReceiverUnderSameRoot()
     {
@@ -338,6 +389,9 @@ public class PlayerWeaponSystemTests
         Assert.That(ownerHealth.CurrentHealth, Is.EqualTo(ownerHealth.MaxHealth));
     }
 
+    /// <summary>
+    /// One slash damages every target inside its hitbox, each exactly once.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_CanDamageMultipleTargetsOnceEach()
     {
@@ -357,6 +411,10 @@ public class PlayerWeaponSystemTests
         Assert.That(secondHealth.CurrentHealth, Is.EqualTo(secondHealth.MaxHealth - 2));
     }
 
+    /// <summary>
+    /// A slash spawned with the owner's sprite renderer as anchor keeps its offset from that visual when the
+    /// owner moves.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_FollowsOwnerVisualAnchorForLifetime()
     {
@@ -385,6 +443,10 @@ public class PlayerWeaponSystemTests
         Assert.That(Vector3.Distance(followedOffset, initialOffset), Is.LessThan(0.001f));
     }
 
+    /// <summary>
+    /// A slash spawns at the weapon's spawn distance along the swing direction plus that direction's spawn
+    /// offset, for each of down, up, left and right.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_UsesDirectionalSpawnOffsets()
     {
@@ -411,6 +473,10 @@ public class PlayerWeaponSystemTests
         AssertSpawnPosition(owner.transform, weapon, Vector2.right, new Vector3(1.2f, 0.15f, 0f));
     }
 
+    /// <summary>
+    /// An eastward slash flips its root's x scale while a westward one does not, and the hitbox sits on that
+    /// root so it mirrors too.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_MirrorsRootWhenFacingEast()
     {
@@ -430,6 +496,10 @@ public class PlayerWeaponSystemTests
         Assert.That(eastSlash.Hitbox.transform, Is.SameAs(eastSlash.transform));
     }
 
+    /// <summary>
+    /// A slash sorts one below the owner's sprite when the swing points mostly up and one above it for every
+    /// other direction.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_DrawsBehindTheOwnerWhenSwingingUp_AndInFrontOtherwise()
     {
@@ -453,6 +523,9 @@ public class PlayerWeaponSystemTests
         Assert.That(spawner.Spawn(owner.transform, weapon, new Vector2(0.8f, 0.6f), ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
     }
 
+    /// <summary>
+    /// A freshly spawned slash already shows the first sprite of its animation clip.
+    /// </summary>
     [Test]
     public void PlayerSlashAttack_AppliesOpeningSpriteFromAnimationClip()
     {
@@ -470,6 +543,10 @@ public class PlayerWeaponSystemTests
         Assert.That(slashAttack.SpriteRenderer.sprite, Is.Not.Null);
     }
 
+    /// <summary>
+    /// The <see cref="MainLifetimeScope"/> in the Main scene references the project's input action asset, which
+    /// is the only one builds use; the scene is opened additively and closed again.
+    /// </summary>
     [Test]
     public void MainScope_AssignsProjectInputActionAsset()
     {
@@ -498,21 +575,35 @@ public class PlayerWeaponSystemTests
         }
     }
 
+    /// <summary>
+    /// An <see cref="IPlayerCommandSource"/> that hands out whatever command the test put in <see cref="Next"/>.
+    /// </summary>
     private sealed class FakeCommandSource : IPlayerCommandSource
     {
         public PlayerCommand Next { get; set; }
 
+        /// <summary>
+        /// Returns <see cref="Next"/> every time, without clearing it.
+        /// </summary>
         public PlayerCommand ReadCommand()
         {
             return Next;
         }
     }
 
+    /// <summary>
+    /// Creates a <see cref="SlashSpawner"/> over an empty container and an authoritative hit service, so slashes
+    /// deal damage.
+    /// </summary>
     private static SlashSpawner CreateSpawner()
     {
         return new SlashSpawner(new ContainerBuilder().Build(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
     }
 
+    /// <summary>
+    /// Creates a weapon with the given stats and a test slash prefab that plays the project's slash animation;
+    /// spawn offsets default to zero and the hitbox to 0.9 by 0.9.
+    /// </summary>
     private static PlayerWeapon CreateTestWeapon(
         string name,
         int damage = 1,
@@ -535,6 +626,10 @@ public class PlayerWeaponSystemTests
             icon);
     }
 
+    /// <summary>
+    /// Spawns a slash from <paramref name="owner"/> toward <paramref name="direction"/>, asserts it lands at
+    /// <paramref name="expectedPosition"/>, and destroys it.
+    /// </summary>
     private static void AssertSpawnPosition(Transform owner, PlayerWeapon weapon, Vector2 direction, Vector3 expectedPosition)
     {
         SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner, weapon, direction);
@@ -542,6 +637,10 @@ public class PlayerWeaponSystemTests
         Object.DestroyImmediate(slashAttack.gameObject);
     }
 
+    /// <summary>
+    /// Builds an inactive in-memory slash prefab: an animator, a trigger hitbox of <paramref name="hitboxSize"/>
+    /// and a <see cref="SwordSlashAttack"/> on the root, with a child sprite renderer as its visual.
+    /// </summary>
     private static GameObject CreateTestSlashPrefab(Vector2 hitboxSize, AnimationClip slashAnimation)
     {
         GameObject root = new("SlashPrefab");
@@ -564,6 +663,10 @@ public class PlayerWeaponSystemTests
         return root;
     }
 
+    /// <summary>
+    /// Creates a damageable unit under <paramref name="parent"/> at <paramref name="position"/>: box collider,
+    /// kinematic body, <see cref="Health"/> and <see cref="DamageReceiver"/>.
+    /// </summary>
     private static GameObject CreateDamageable(string name, Vector2 position, Transform parent)
     {
         GameObject target = new(name);
@@ -576,8 +679,14 @@ public class PlayerWeaponSystemTests
         return target;
     }
 
+    /// <summary>
+    /// The HUD widgets a test HUD canvas exposes for assertions.
+    /// </summary>
     private readonly struct HudElements
     {
+        /// <summary>
+        /// Captures the health fill, health text and weapon icon of a test HUD.
+        /// </summary>
         public HudElements(Image healthFill, TextMeshProUGUI healthText, Image weaponIcon)
         {
             HealthFill = healthFill;
@@ -590,6 +699,11 @@ public class PlayerWeaponSystemTests
         public Image WeaponIcon { get; }
     }
 
+    /// <summary>
+    /// Builds a "PlayerHudCanvas" with a <see cref="PlayerHudView"/> and starts a <see cref="PlayerHudPresenter"/>
+    /// (kept in <see cref="hudPresenter"/>) bound to a local player tracker that points at the controller's
+    /// player.
+    /// </summary>
     private HudElements CreatePlayerHudCanvas(PlayerWeaponController weaponController)
     {
         GameObject canvasObject = new("PlayerHudCanvas");
@@ -633,6 +747,10 @@ public class PlayerWeaponSystemTests
         return new HudElements(healthFill, healthText, weaponIcon);
     }
 
+    /// <summary>
+    /// Loads the first sprite of the project's static slash texture to use as a weapon icon, failing the test
+    /// when there is none.
+    /// </summary>
     private static Sprite LoadWeaponHudIconSprite()
     {
         Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Weapons/StaticSlash.png");

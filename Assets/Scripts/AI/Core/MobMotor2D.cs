@@ -2,6 +2,11 @@ using System;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// Moves a mob's Rigidbody2D toward its desired (path) velocity plus a steering velocity, clamped to
+/// <see cref="CurrentMoveSpeed"/> and reached at the configured acceleration. Drives the animator's movement
+/// parameters and an optional timed attack animation, or, on clients, shows replicated movement instead.
+/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class MobMotor2D : MonoBehaviour
 {
@@ -51,6 +56,9 @@ public class MobMotor2D : MonoBehaviour
     internal bool SupportsAttackAnimation => supportsAttackAnimation;
     internal bool IsAttackAnimationActive => isAttackAnimationActive;
 
+    /// <summary>
+    /// Caches the rigidbody and finds the sprite renderer and animator in the children when they are not assigned.
+    /// </summary>
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -58,23 +66,36 @@ public class MobMotor2D : MonoBehaviour
         ResolveAnimator();
     }
 
+    /// <summary>
+    /// Fills in the sprite renderer and animator from the children when they are not assigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveSpriteRenderer();
         ResolveAnimator();
     }
 
+    /// <summary>
+    /// Advances the attack animation: ends it once its duration has passed on the clock.
+    /// </summary>
     private void Update()
     {
         UpdateAttackAnimation();
     }
 
+    /// <summary>
+    /// Injects the game clock that times attack animations; falls back to <see cref="UnityClock.Shared"/> when null.
+    /// </summary>
     [Inject]
     public void Construct(IClock gameClock)
     {
         clock = gameClock ?? UnityClock.Shared;
     }
 
+    /// <summary>
+    /// Takes the move speed and acceleration from <paramref name="config"/> (when given) and sets the body up for
+    /// top-down movement: no gravity, no rotation, interpolated.
+    /// </summary>
     public void Initialize(MobConfig config)
     {
         if (config != null)
@@ -96,6 +117,10 @@ public class MobMotor2D : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
+    /// <summary>
+    /// Sets the velocity the mob wants to move at, clamped to <see cref="CurrentMoveSpeed"/>. It also decides the
+    /// facing and whether the walk animation plays.
+    /// </summary>
     public void SetDesiredVelocity(Vector2 velocity)
     {
         desiredVelocity = Vector2.ClampMagnitude(velocity, CurrentMoveSpeed);
@@ -109,16 +134,27 @@ public class MobMotor2D : MonoBehaviour
         speedScale = Mathf.Max(0f, scale);
     }
 
+    /// <summary>
+    /// Clears the desired velocity; the body slows down at the acceleration, and the steering velocity still applies.
+    /// </summary>
     public void Stop()
     {
         desiredVelocity = Vector2.zero;
     }
 
+    /// <summary>
+    /// Sets the extra velocity added to the desired one each fixed tick, such as crowd separation. It changes neither
+    /// the facing nor the walk animation.
+    /// </summary>
     public void SetSteeringVelocity(Vector2 velocity)
     {
         steeringVelocity = velocity;
     }
 
+    /// <summary>
+    /// Turns the facing toward <paramref name="worldPosition"/>, and flips the sprite to match when horizontal flip is
+    /// on and no attack animation is playing.
+    /// </summary>
     public void FaceTowards(Vector2 worldPosition)
     {
         Vector2 direction = worldPosition - Position;
@@ -138,6 +174,10 @@ public class MobMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Faces <paramref name="direction"/> and holds the attack pose for the configured duration on the clock, then
+    /// raises <see cref="AttackAnimationPlayed"/>. Only changes the facing when the mob has no animator.
+    /// </summary>
     public void PlayAttackAnimation(Vector2 direction)
     {
         ResolveAnimator();
@@ -158,6 +198,10 @@ public class MobMotor2D : MonoBehaviour
         AttackAnimationPlayed?.Invoke(lastMoveDirection);
     }
 
+    /// <summary>
+    /// Shows replicated movement on a client: faces <paramref name="facing"/> and, from now on, plays the walk
+    /// animation from <paramref name="moving"/> instead of the body's own velocity.
+    /// </summary>
     public void ShowRemoteMovement(bool moving, Vector2 facing)
     {
         ResolveAnimator();
@@ -179,6 +223,10 @@ public class MobMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Accelerates the body toward the desired plus steering velocity, clamped to <see cref="CurrentMoveSpeed"/>, flips
+    /// the sprite toward the desired direction and updates the animator. Called by the brain each physics step.
+    /// </summary>
     public void FixedTick()
     {
         if (rb == null)
@@ -205,6 +253,10 @@ public class MobMotor2D : MonoBehaviour
         UpdateAnimator(rb.linearVelocity);
     }
 
+    /// <summary>
+    /// Finds the animator in the children when none is assigned and, when the animator or its controller changed,
+    /// checks again whether it has an IsAttacking bool.
+    /// </summary>
     private void ResolveAnimator()
     {
         if (animator == null)
@@ -223,6 +275,10 @@ public class MobMotor2D : MonoBehaviour
         supportsAttackAnimation = CanDriveAnimator() && AnimatorHasBoolParameter(IsAttackingHash);
     }
 
+    /// <summary>
+    /// Updates <see cref="IsMoving"/> and the facing, from the replicated state when remote driven, else from the
+    /// desired velocity and the body's <paramref name="velocity"/>, and writes them to the animator.
+    /// </summary>
     private void UpdateAnimator(Vector2 velocity)
     {
         if (remoteDriven)
@@ -247,6 +303,9 @@ public class MobMotor2D : MonoBehaviour
         ApplyAnimatorMovement(isMoving, lastMoveDirection);
     }
 
+    /// <summary>
+    /// Finds the sprite renderer in the children when none is assigned.
+    /// </summary>
     private void ResolveSpriteRenderer()
     {
         if (spriteRenderer == null)
@@ -255,6 +314,10 @@ public class MobMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ends the attack animation once its end time has passed on the clock, otherwise keeps its pose applied. Runs
+    /// every frame; internal so tests can step it.
+    /// </summary>
     internal void UpdateAttackAnimation()
     {
         if (!isAttackAnimationActive)
@@ -271,6 +334,10 @@ public class MobMotor2D : MonoBehaviour
         ApplyAttackAnimation(lastMoveDirection);
     }
 
+    /// <summary>
+    /// Applies the attack pose: no walking, facing <paramref name="direction"/> (or the last facing when it is zero),
+    /// and IsAttacking set when the controller has it.
+    /// </summary>
     private void ApplyAttackAnimation(Vector2 direction)
     {
         if (!CanDriveAnimator())
@@ -289,6 +356,9 @@ public class MobMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ends the attack animation, clears IsAttacking and puts the animator back on the body's movement.
+    /// </summary>
     private void EndAttackAnimation()
     {
         isAttackAnimationActive = false;
@@ -306,6 +376,10 @@ public class MobMotor2D : MonoBehaviour
         UpdateAnimator(rb != null ? rb.linearVelocity : desiredVelocity);
     }
 
+    /// <summary>
+    /// Writes the movement and last-facing parameters, and sets the animator speed to the walk speed while walking and
+    /// to normal speed otherwise or while attacking.
+    /// </summary>
     private void ApplyAnimatorMovement(bool isMoving, Vector2 animationDirection)
     {
         animator.SetBool(IsMovingHash, isMoving);
@@ -316,6 +390,9 @@ public class MobMotor2D : MonoBehaviour
         animator.speed = isAttackAnimationActive ? 1f : (isMoving ? walkAnimationSpeed : 1f);
     }
 
+    /// <summary>
+    /// Whether the animator has a bool parameter whose name hashes to <paramref name="nameHash"/>.
+    /// </summary>
     private bool AnimatorHasBoolParameter(int nameHash)
     {
         if (animator == null)
@@ -334,6 +411,9 @@ public class MobMotor2D : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Whether there is an animator with a controller to set parameters on.
+    /// </summary>
     private bool CanDriveAnimator()
     {
         return animator != null && animator.runtimeAnimatorController != null;

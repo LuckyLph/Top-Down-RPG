@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Coordinate maths between a dual-grid data tilemap and its render tilemap, which is offset by half a cell so
+/// each render tile sits on the shared corner of 4 data tiles.
+/// </summary>
 public static class DualGridUtils
 {
     /// <summary>

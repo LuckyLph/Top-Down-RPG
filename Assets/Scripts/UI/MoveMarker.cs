@@ -17,16 +17,26 @@ public class MoveMarker : MonoBehaviour
 
     public float Lifetime => lifetime;
 
+    /// <summary>
+    /// Falls back to the sprite renderer on this object when none is assigned.
+    /// </summary>
     private void Awake()
     {
         ResolveRenderer();
     }
 
+    /// <summary>
+    /// Fills in the sprite renderer on this object in the inspector when none is assigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveRenderer();
     }
 
+    /// <summary>
+    /// Moves the marker to <paramref name="position"/>, keeping its z, and restarts the shrink and fade from the
+    /// beginning.
+    /// </summary>
     public void Show(Vector2 position)
     {
         ResolveRenderer();
@@ -46,6 +56,10 @@ public class MoveMarker : MonoBehaviour
         return elapsed >= lifetime;
     }
 
+    /// <summary>
+    /// Sets scale and colour for normalised progress <paramref name="t"/>: from the start scale in the marker
+    /// colour to the end scale fully transparent.
+    /// </summary>
     private void Apply(float t)
     {
         float scale = Mathf.Lerp(startScale, endScale, t);
@@ -55,6 +69,9 @@ public class MoveMarker : MonoBehaviour
         spriteRenderer.color = current;
     }
 
+    /// <summary>
+    /// Uses the sprite renderer on this object when none is assigned.
+    /// </summary>
     private void ResolveRenderer()
     {
         if (spriteRenderer == null)

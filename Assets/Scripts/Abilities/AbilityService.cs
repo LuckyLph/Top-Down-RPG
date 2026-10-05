@@ -23,6 +23,10 @@ public sealed class AbilityService
     private readonly List<Collider2D> overlaps = new();
     private readonly List<DamageReceiver> affected = new();
 
+    /// <summary>
+    /// Captures the services effects go through and builds the overlap filter from the unit layers in
+    /// <paramref name="settings"/> (triggers ignored).
+    /// </summary>
     public AbilityService(IGameAuthority authority, DamageService damageService, HitService hitService, CombatSettings settings)
     {
         this.authority = authority;
@@ -76,6 +80,10 @@ public sealed class AbilityService
         return true;
     }
 
+    /// <summary>
+    /// Fills the affected list with the units the cast's targeting selects, starting areas and lines at
+    /// <paramref name="origin"/>. A Direction cast with no direction or no range selects nothing.
+    /// </summary>
     private void CollectAffected(PlayerAbilities caster, in AbilityCast cast, Vector2 origin)
     {
         affected.Clear();
@@ -117,6 +125,10 @@ public sealed class AbilityService
         }
     }
 
+    /// <summary>
+    /// Adds the <see cref="DamageReceiver"/> behind each of the first <paramref name="count"/> overlap results, then
+    /// clears the overlap buffer.
+    /// </summary>
     private void AddOverlaps(int count)
     {
         for (int i = 0; i < count; i++)
@@ -127,6 +139,9 @@ public sealed class AbilityService
         overlaps.Clear();
     }
 
+    /// <summary>
+    /// Adds <paramref name="unit"/> to the affected list once, ignoring null and units already in it.
+    /// </summary>
     private void AddUnit(DamageReceiver unit)
     {
         if (unit != null && !affected.Contains(unit))
@@ -135,6 +150,10 @@ public sealed class AbilityService
         }
     }
 
+    /// <summary>
+    /// Heals <paramref name="target"/> when the ability has a heal, then applies its hit when it carries damage or
+    /// statuses, both with <paramref name="source"/> as the source.
+    /// </summary>
     private void ApplyTo(DamageReceiver target, AbilityDefinition ability, GameObject source)
     {
         if (ability.Heal > 0)

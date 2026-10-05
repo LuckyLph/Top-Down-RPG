@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A mob's senses: picks its target from <see cref="IPlayerRegistry"/> with range hysteresis (acquire within the
+/// detection radius, keep within the lose distance) and throttled line-of-sight casts against obstacles, and tracks
+/// the target's last known position.
+/// </summary>
 public class MobPerception2D : MonoBehaviour
 {
     [Header("Debug")]
@@ -31,6 +36,10 @@ public class MobPerception2D : MonoBehaviour
     public Vector2 LastKnownTargetPosition => lastKnownTargetPosition;
     public bool IsTargetHiddenInRange => config != null && !hasLineOfSight && distanceToTarget <= config.LoseTargetDistance;
 
+    /// <summary>
+    /// Takes the player registry and config, clears the target, and resets the sight timer and the last known
+    /// position to the mob's position.
+    /// </summary>
     public void Initialize(IPlayerRegistry playerRegistry, MobConfig mobConfig)
     {
         players = playerRegistry;
@@ -43,6 +52,10 @@ public class MobPerception2D : MonoBehaviour
         ClearTarget();
     }
 
+    /// <summary>
+    /// Drops a dead or unregistered target, tracks the current one and, while none is detected, looks for the nearest
+    /// visible player. Sight checks run at most every <see cref="MobConfig.LineOfSightInterval"/>.
+    /// </summary>
     public void Tick(float deltaTime)
     {
         if (config == null)
@@ -81,6 +94,11 @@ public class MobPerception2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates distance and sight for the current target: clears it beyond the lose distance, marks it undetected
+    /// outside its range (the lose distance once detected, the detection radius before), and checks line of sight
+    /// again when <paramref name="sightDue"/>. Returns whether a sight check ran.
+    /// </summary>
     private bool TrackTarget(Vector2 origin, bool sightDue)
     {
         Vector2 targetPosition = target.Transform.position;
@@ -109,6 +127,10 @@ public class MobPerception2D : MonoBehaviour
         return sightDue;
     }
 
+    /// <summary>
+    /// Targets the nearest alive player, other than the current target, inside the detection radius with line of
+    /// sight. Returns whether any sight check ran, whether or not a target was found.
+    /// </summary>
     private bool TryAcquireTarget(Vector2 origin)
     {
         if (players == null)
@@ -155,11 +177,18 @@ public class MobPerception2D : MonoBehaviour
         return castLine;
     }
 
+    /// <summary>
+    /// Whether <paramref name="candidate"/> is alive and still in the player registry.
+    /// </summary>
     private bool IsValidTarget(PlayerHandle candidate)
     {
         return candidate.IsAlive && players != null && players.Contains(candidate);
     }
 
+    /// <summary>
+    /// Linecasts against the config's obstacle layers and records the cast for the gizmos. True when nothing blocks it
+    /// or no obstacle layers are set.
+    /// </summary>
     private bool EvaluateLineOfSight(Vector2 origin, Vector2 targetPosition)
     {
         lastLinecastOrigin = origin;
@@ -176,6 +205,9 @@ public class MobPerception2D : MonoBehaviour
         return !lastLineOfSightBlocked;
     }
 
+    /// <summary>
+    /// Forgets the target and its sight state; the last known position is kept.
+    /// </summary>
     private void ClearTarget()
     {
         target = null;
@@ -184,6 +216,10 @@ public class MobPerception2D : MonoBehaviour
         distanceToTarget = float.PositiveInfinity;
     }
 
+    /// <summary>
+    /// Draws the detection and lose ranges, the last sight line colored by whether it was blocked, and the last known
+    /// target position.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!drawGizmos)

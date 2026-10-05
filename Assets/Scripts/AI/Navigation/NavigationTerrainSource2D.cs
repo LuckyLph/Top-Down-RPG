@@ -39,6 +39,9 @@ public class NavigationTerrainSource2D : MonoBehaviour
     /// </summary>
     public bool IsDualGridRenderTilemap => DualGridUtils.IsRenderTilemap(transform);
 
+    /// <summary>
+    /// Tells the parent grid to rebuild its gizmo grid after an inspector change.
+    /// </summary>
     private void OnValidate()
     {
         NavigationGrid2D grid = GetComponentInParent<NavigationGrid2D>();
@@ -48,6 +51,10 @@ public class NavigationTerrainSource2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the terrain type and layer priority in code, for sources built by tests. The grid reads them on its next
+    /// <see cref="NavigationGrid2D.BuildGrid"/>.
+    /// </summary>
     public void Configure(TerrainType2D type, int layerPriority = 0)
     {
         terrainType = type;

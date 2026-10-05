@@ -10,11 +10,18 @@ using UnityEngine.Tilemaps;
 [InitializeOnLoad]
 public static class NavigationGridEditModeRefresh
 {
+    /// <summary>
+    /// Subscribes to tilemap changes for the whole editor session, on every domain load.
+    /// </summary>
     static NavigationGridEditModeRefresh()
     {
         Tilemap.tilemapPositionsChanged += HandleTilemapPositionsChanged;
     }
 
+    /// <summary>
+    /// Forwards a tilemap change to every <see cref="NavigationGrid2D"/> in the open scenes. Ignored in or while
+    /// entering Play Mode.
+    /// </summary>
     private static void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

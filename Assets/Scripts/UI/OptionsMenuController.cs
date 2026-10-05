@@ -25,6 +25,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private int pendingRebind = -1;
     private int listeningRow = -1;
 
+    /// <summary>
+    /// Creates a closed options controller that edits <paramref name="bindings"/> through <paramref name="view"/>.
+    /// </summary>
     public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection)
     {
         this.view = view;
@@ -37,11 +40,18 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public bool IsListening => listeningRow >= 0;
     internal int RowCount => rows.Count;
 
+    /// <summary>
+    /// The row built for the rebindable action at <paramref name="index"/>, in <see cref="InputBindings"/> order.
+    /// </summary>
     internal KeyBindingRowView GetRow(int index)
     {
         return rows[index];
     }
 
+    /// <summary>
+    /// Hides the screen, builds a section header for each new section and a labelled row per rebindable action,
+    /// wires the buttons, and keeps the rows' binding labels in sync with <see cref="InputBindings.BindingsChanged"/>.
+    /// </summary>
     public void Start()
     {
         view.SetShown(false);
@@ -75,6 +85,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         RefreshRows();
     }
 
+    /// <summary>
+    /// Stops following binding changes, leaves the menu stack and cancels a rebind that is still listening.
+    /// </summary>
     public void Dispose()
     {
         bindings.BindingsChanged -= RefreshRows;
@@ -126,6 +139,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         closed?.Invoke();
     }
 
+    /// <summary>
+    /// Starts listening for the rebind requested on an earlier frame, so the click that asked for it is not
+    /// captured as the new binding.
+    /// </summary>
     public void Tick()
     {
         if (IsOpen && pendingRebind >= 0)
@@ -136,6 +153,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// Closes the Reset all confirmation, or else the screen. Ignored while a rebind is pending or listening.
+    /// </summary>
     public void HandleBack()
     {
         if (IsListening || pendingRebind >= 0)
@@ -153,6 +173,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// Binding button of row <paramref name="index"/>: queues its rebind for the next tick. Ignored while closed,
+    /// listening or confirming.
+    /// </summary>
     private void RequestRebind(int index)
     {
         if (IsOpen && !IsListening && !view.IsConfirmShown)
@@ -161,6 +185,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// Shows the listening prompt for row <paramref name="index"/>, clears the selection and starts the
+    /// interactive rebind; if it cannot start, hides the prompt and reselects the row's binding button.
+    /// </summary>
     private void BeginListening(int index)
     {
         InputAction action = bindings.GetAction(index);
@@ -176,6 +204,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// Ends listening: hides the prompt, names the action that moved when the new input was assigned, and
+    /// reselects the row's binding button if the screen is still open.
+    /// </summary>
     private void HandleRebindFinished(RebindOutcome outcome, InputAction swappedWith)
     {
         int row = listeningRow;
@@ -192,6 +224,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// Reset button of row <paramref name="index"/>: puts that action back on its default input and names the
+    /// action that moved, if any. Ignored while listening or confirming.
+    /// </summary>
     private void ResetRow(int index)
     {
         if (IsListening || view.IsConfirmShown)
@@ -203,6 +239,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         ShowMoved(swappedWith);
     }
 
+    /// <summary>
+    /// Reset all button: shows the confirmation with Cancel selected. Ignored while listening.
+    /// </summary>
     private void AskResetAll()
     {
         if (IsListening)
@@ -214,6 +253,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         selection.Select(view.ConfirmNoButton);
     }
 
+    /// <summary>
+    /// Confirmation accepted: puts every action back on its default, hides the confirmation and says so.
+    /// </summary>
     private void ConfirmResetAll()
     {
         bindings.ResetAll();
@@ -222,12 +264,19 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         selection.Select(view.ResetAllButton);
     }
 
+    /// <summary>
+    /// Confirmation declined: hides it and reselects Reset all.
+    /// </summary>
     private void CancelResetAll()
     {
         view.SetConfirmShown(false);
         selection.Select(view.ResetAllButton);
     }
 
+    /// <summary>
+    /// Shows which action <paramref name="swappedWith"/> moved to which input, or clears the notice when nothing
+    /// was swapped.
+    /// </summary>
     private void ShowMoved(InputAction swappedWith)
     {
         view.SetNotice(swappedWith != null
@@ -235,6 +284,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
             : string.Empty);
     }
 
+    /// <summary>
+    /// Updates every row's binding button with its action's current binding label.
+    /// </summary>
     private void RefreshRows()
     {
         for (int i = 0; i < rows.Count; i++)

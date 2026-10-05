@@ -3,10 +3,17 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// Tests for the core combat components: <see cref="Health"/>, <see cref="DamageService"/>,
+/// <see cref="MeleeDamageDealer"/>, and the damage popup layer and presenter.
+/// </summary>
 public class CombatComponentTests
 {
     private GameObject root;
 
+    /// <summary>
+    /// Destroys any damage popups and popup canvases left in the scene and the test's root object.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -29,6 +36,10 @@ public class CombatComponentTests
         }
     }
 
+    /// <summary>
+    /// Damage is clamped to the remaining health, a hit on a dead unit applies nothing, and the death event fires
+    /// exactly once.
+    /// </summary>
     [Test]
     public void Health_ApplyDamage_ClampsAndDiesOnlyOnce()
     {
@@ -59,6 +70,10 @@ public class CombatComponentTests
         Assert.That(deathEventCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Restoring full health is a no-op, restoring a dead unit refills it and raises one restore event, and a
+    /// restored unit can die again.
+    /// </summary>
     [Test]
     public void Health_Restore_RefillsADeadHealthOnceAndAllowsDyingAgain()
     {
@@ -82,6 +97,10 @@ public class CombatComponentTests
         Assert.That(deathCount, Is.EqualTo(2), "A restored Health can die again.");
     }
 
+    /// <summary>
+    /// Syncing health sets and clamps the value without damage or restore events, and raises the death event only
+    /// when it takes a living unit to zero.
+    /// </summary>
     [Test]
     public void Health_SyncTo_SetsAndClampsWithoutDamaged_AndRaisesDiedOnlyWhenItKills()
     {
@@ -112,6 +131,10 @@ public class CombatComponentTests
         Assert.That(restores, Is.Zero, "Coming back to life goes through Restore, not SyncTo.");
     }
 
+    /// <summary>
+    /// Without authority the service refuses to decide damage, but applies a replicated hit and publishes it with
+    /// the host's amount, type and flags.
+    /// </summary>
     [Test]
     public void DamageService_ReplicatedDamage_AppliesAndPublishesWithoutAuthority()
     {
@@ -134,6 +157,10 @@ public class CombatComponentTests
         Assert.That(published.Value.PopupWorldPosition, Is.EqualTo(receiver.PopupWorldPosition));
     }
 
+    /// <summary>
+    /// The service ignores a missing target, zero or negative amounts and hits on a dead unit, and publishes only
+    /// the damage it applied.
+    /// </summary>
     [Test]
     public void DamageService_IgnoresInvalidDamageMissingTargetsAndHitsAfterDeath()
     {
@@ -156,6 +183,10 @@ public class CombatComponentTests
         Assert.That(publishedCount, Is.EqualTo(1), "Only damage that was applied is reported.");
     }
 
+    /// <summary>
+    /// The melee dealer finds the receiver above a hit child transform, refuses a second hit inside its attack
+    /// interval and hits again once the interval has passed.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_RespectsImmediateCooldownAndFindsReceiverOnRoot()
     {
@@ -187,6 +218,9 @@ public class CombatComponentTests
         Assert.That(health.CurrentHealth, Is.EqualTo(8));
     }
 
+    /// <summary>
+    /// A freshly added health component reports full, living health before anything initialises or damages it.
+    /// </summary>
     [Test]
     public void Health_ReportsFullHealth_BeforeAwakeOrDamage()
     {
@@ -197,6 +231,9 @@ public class CombatComponentTests
         Assert.That(health.IsDead, Is.False);
     }
 
+    /// <summary>
+    /// Hitting a target with no receiver fails and does not damage a sibling object's receiver under the same root.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_DoesNotDamageSiblingReceiver_WhenTargetHasNoReceiver()
     {
@@ -220,6 +257,9 @@ public class CombatComponentTests
         Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
     }
 
+    /// <summary>
+    /// A melee dealer that was never injected with a <see cref="HitService"/> logs an error and deals no damage.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_WithoutDamageService_LogsErrorAndDealsNoDamage()
     {
@@ -236,6 +276,10 @@ public class CombatComponentTests
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
     }
 
+    /// <summary>
+    /// A spawned popup shows its text under the layer's overlay canvas at the projected world position, then rises
+    /// and fades as it ages.
+    /// </summary>
     [Test]
     public void DamagePopupLayer_SpawnsUnderOverlayCanvasAndProjectsWorldPosition()
     {
@@ -261,6 +305,10 @@ public class CombatComponentTests
         Assert.That(popup.GetComponent<CanvasGroup>().alpha, Is.LessThan(1f), "Popup should fade as it ages.");
     }
 
+    /// <summary>
+    /// A popup stays active within its lifetime, is deactivated and released once past it, and is reused by the
+    /// next spawn.
+    /// </summary>
     [Test]
     public void DamagePopupLayer_TickPastLifetime_ReleasesPopupForReuse()
     {
@@ -287,6 +335,9 @@ public class CombatComponentTests
         Assert.That(layer.ActiveCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Applying damage publishes a report with the target, amount, source and a popup position above the receiver.
+    /// </summary>
     [Test]
     public void DamageService_PublishesDamageReport()
     {
@@ -312,6 +363,9 @@ public class CombatComponentTests
         Assert.That(published.Value.PopupWorldPosition.y, Is.GreaterThan(root.transform.position.y));
     }
 
+    /// <summary>
+    /// The presenter spawns a popup for each published damage report after it starts, and stops once disposed.
+    /// </summary>
     [Test]
     public void DamagePopupPresenter_SpawnsPopupsOnlyWhileStarted()
     {
@@ -332,6 +386,9 @@ public class CombatComponentTests
         Assert.That(layer.ActiveCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Creates an orthographic camera under the root, looking at the origin from z = -10.
+    /// </summary>
     private Camera CreateCamera()
     {
         GameObject cameraObject = new("Camera");
@@ -342,6 +399,10 @@ public class CombatComponentTests
         return camera;
     }
 
+    /// <summary>
+    /// Creates a screen-space overlay canvas with a <see cref="DamagePopupLayer"/> configured with an inactive
+    /// text popup template.
+    /// </summary>
     private DamagePopupLayer CreatePopupLayer()
     {
         GameObject canvasObject = new("DamagePopupCanvas", typeof(RectTransform), typeof(Canvas));
@@ -358,6 +419,9 @@ public class CombatComponentTests
         return layer;
     }
 
+    /// <summary>
+    /// Counts the active popups parented under <paramref name="layer"/>.
+    /// </summary>
     private static int CountActivePopups(DamagePopupLayer layer)
     {
         return layer.GetComponentsInChildren<FloatingDamageText>(false).Length;

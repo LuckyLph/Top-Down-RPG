@@ -3,6 +3,9 @@
 /// </summary>
 public readonly struct StatusSnapshot
 {
+    /// <summary>
+    /// Captures one instance's definition, id, stack count and remaining seconds.
+    /// </summary>
     public StatusSnapshot(StatusEffectDefinition definition, int instanceId, int stacks, float remaining)
     {
         Definition = definition;

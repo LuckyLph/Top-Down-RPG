@@ -6,6 +6,9 @@ public sealed class ActiveNavigationGrid
 {
     public NavigationGrid2D Current { get; private set; }
 
+    /// <summary>
+    /// Makes <paramref name="navigationGrid"/> the current area's grid, replacing any previous one.
+    /// </summary>
     public void Set(NavigationGrid2D navigationGrid)
     {
         Current = navigationGrid;

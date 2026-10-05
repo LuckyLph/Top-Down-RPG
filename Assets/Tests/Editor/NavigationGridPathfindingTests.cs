@@ -9,6 +9,10 @@ using UnityEngine.TestTools;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="NavigationGrid2D"/> and its A* pathfinder: shortest and partial paths, search caps and
+/// allocations, terrain rules, costs and layer priority, edge cost, cell refreshes and region connectivity.
+/// </summary>
 public class NavigationGridPathfindingTests
 {
     private GameObject root;
@@ -21,6 +25,9 @@ public class NavigationGridPathfindingTests
     private TerrainMovementProfile2D amphibiousProfile;
     private DualGridRuleTile dualGridTile;
 
+    /// <summary>
+    /// Destroys the grid root and every tile, terrain type, movement profile and dual-grid tile the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -66,6 +73,9 @@ public class NavigationGridPathfindingTests
         }
     }
 
+    /// <summary>
+    /// A* finds a complete, short path from corner to corner through the single gap in a wall.
+    /// </summary>
     [Test]
     public void AStar_ReturnsShortestPath_OnSimpleBlockedGrid()
     {
@@ -80,6 +90,10 @@ public class NavigationGridPathfindingTests
         Assert.That(result.Cells.Any(cell => cell.x == 2 && cell.y == 2), Is.True);
     }
 
+    /// <summary>
+    /// A goal behind a solid wall fails a strict request, while a partial request returns a path that ends on the
+    /// start's side of the wall.
+    /// </summary>
     [Test]
     public void AStar_ReturnsPartial_WhenGoalUnreachableAndPartialAllowed()
     {
@@ -99,6 +113,9 @@ public class NavigationGridPathfindingTests
         Assert.That(partialResult.Cells[^1].x, Is.LessThanOrEqualTo(1));
     }
 
+    /// <summary>
+    /// After one warm-up search, finding a path into a reused cell list allocates no managed memory.
+    /// </summary>
     [Test]
     public void AStar_DoesNotAllocate_OnceWarmedUp()
     {
@@ -112,6 +129,9 @@ public class NavigationGridPathfindingTests
         Assert.That(cells[^1], Is.EqualTo(new Vector3Int(4, 4, 0)));
     }
 
+    /// <summary>
+    /// A strict request to a goal in a different connectivity region fails without expanding any cells.
+    /// </summary>
     [Test]
     public void AStar_FailsWithoutSearching_WhenStrictGoalIsInAnotherRegion()
     {
@@ -123,6 +143,10 @@ public class NavigationGridPathfindingTests
         Assert.That(((GridAStarPathfinder2D)navigationGrid.Pathfinder).LastExpandedCount, Is.Zero);
     }
 
+    /// <summary>
+    /// A partial search toward an unreachable goal stops after <see cref="NavigationGrid2D.MaxSearchCells"/>
+    /// expansions and still returns a partial path.
+    /// </summary>
     [Test]
     public void AStar_CapsPartialSearchTowardUnreachableGoal()
     {
@@ -138,6 +162,9 @@ public class NavigationGridPathfindingTests
         Assert.That(partial.ReachedResolvedGoal, Is.False);
     }
 
+    /// <summary>
+    /// The search cell cap only applies toward unreachable goals, so a reachable goal is still found in full.
+    /// </summary>
     [Test]
     public void AStar_IgnoresSearchCap_WhenGoalIsReachable()
     {
@@ -150,6 +177,10 @@ public class NavigationGridPathfindingTests
         Assert.That(result.ReachedResolvedGoal, Is.True);
     }
 
+    /// <summary>
+    /// A goal outside the walkable grid is moved to a nearby walkable cell, and the partial path reaches that
+    /// adjusted goal.
+    /// </summary>
     [Test]
     public void AStar_ReturnsPartial_WhenGoalIsOutsideWalkableGrid_AndPartialAllowed()
     {
@@ -165,6 +196,9 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.IsCellWalkable(result.Cells[^1]), Is.True);
     }
 
+    /// <summary>
+    /// On open ground with many equal-cost routes, A* expands at most twice as many cells as the path holds.
+    /// </summary>
     [Test]
     public void AStar_ExpandsFewCellsBeyondThePath_OnOpenGround()
     {
@@ -193,6 +227,9 @@ public class NavigationGridPathfindingTests
         Assert.That(expanded, Is.LessThanOrEqualTo(result.Cells.Count * 2));
     }
 
+    /// <summary>
+    /// A diagonal step between two blocked orthogonal neighbors is not allowed, so the path fails.
+    /// </summary>
     [Test]
     public void AStar_DoesNotCutCorners_OnDiagonal()
     {
@@ -224,6 +261,9 @@ public class NavigationGridPathfindingTests
         Assert.That(result.Success, Is.False);
     }
 
+    /// <summary>
+    /// The same water cell is walkable and pathable for an amphibious profile but blocked for a land profile.
+    /// </summary>
     [Test]
     public void TerrainProfiles_CanAllowAndBlockSameCellDifferently()
     {
@@ -256,6 +296,9 @@ public class NavigationGridPathfindingTests
         Assert.That(blockedPath.Success, Is.False);
     }
 
+    /// <summary>
+    /// A* detours over cheaper ground instead of crossing a straight but costly water corridor.
+    /// </summary>
     [Test]
     public void AStar_PrefersCheaperTerrain_WhenMultipleRoutesExist()
     {
@@ -295,6 +338,10 @@ public class NavigationGridPathfindingTests
         Assert.That(result.Cells.Any(cell => cell.y == 1 && cell.x > 0 && cell.x < 4), Is.False, "Expected the chosen path to avoid the expensive water corridor.");
     }
 
+    /// <summary>
+    /// A cell covered by two terrain layers of equal priority is blocked if either layer blocks it and costs the
+    /// higher of the two traversal costs.
+    /// </summary>
     [Test]
     public void Overlap_UsesMostRestrictiveAccessAndHighestCost()
     {
@@ -324,6 +371,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.MovementCost(Vector3Int.zero, overlappedCell, amphibiousProfile), Is.EqualTo(35));
     }
 
+    /// <summary>
+    /// Calling <see cref="NavigationGrid2D.BuildGrid"/> again after editing the tilemaps picks up newly blocked
+    /// and newly painted cells and recomputes connectivity.
+    /// </summary>
     [Test]
     public void BuildGrid_AfterTheTilemapsChange_RebakesCellsAndRegions()
     {
@@ -345,6 +396,9 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(west, east, allowPartial: false)).Success, Is.False);
     }
 
+    /// <summary>
+    /// A tile on a blocking tilemap makes the cell unwalkable for every profile, whatever terrain lies under it.
+    /// </summary>
     [Test]
     public void BlockingTilemap_BlocksTheCellForEveryTerrainLayer()
     {
@@ -376,6 +430,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.IsCellWalkable(wall, amphibiousProfile), Is.False);
     }
 
+    /// <summary>
+    /// A terrain source placed on a dual-grid render tilemap logs an error and contributes no cells; only the
+    /// data tilemap's cells become walkable.
+    /// </summary>
     [Test]
     public void TerrainSource_OnADualGridRenderTilemap_IsSkipped()
     {
@@ -406,6 +464,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 1, 0)), Is.False);
     }
 
+    /// <summary>
+    /// A profile's edge cost makes cells on the edge of the ground dearer, so its paths move to the inner row,
+    /// while a request without a profile still runs along the edge.
+    /// </summary>
     [Test]
     public void EdgeCost_KeepsPathsOffTheEdgeOfTheGround()
     {
@@ -440,6 +502,10 @@ public class NavigationGridPathfindingTests
             "With an edge cost the route moves to the inner row.");
     }
 
+    /// <summary>
+    /// A cell next to terrain the profile cannot walk counts as an edge for that profile only; a profile that can
+    /// walk the terrain pays no edge cost there.
+    /// </summary>
     [Test]
     public void EdgeCost_CountsCellsNextToTerrainTheProfileCannotWalk()
     {
@@ -477,6 +543,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.MovementCost(new Vector3Int(0, 1, 0), besideWater, amphibiousProfile), Is.EqualTo(10));
     }
 
+    /// <summary>
+    /// Equal-priority layers keep the most restrictive rule, while a higher-priority bridge layer painted over
+    /// water alone decides the cell's access and cost.
+    /// </summary>
     [Test]
     public void Priority_TheTopLayerDecidesOverlappingCells()
     {
@@ -515,6 +585,10 @@ public class NavigationGridPathfindingTests
         Object.DestroyImmediate(bridgeTerrain);
     }
 
+    /// <summary>
+    /// Refreshing a single cell inside the bounds updates its walkability, connectivity and paths in place,
+    /// bumps the grid version and leaves the bounds unchanged.
+    /// </summary>
     [Test]
     public void RefreshCells_UpdatesOnlyThoseCells_AndBumpsTheVersion()
     {
@@ -540,6 +614,9 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(west, east, allowPartial: false)).Success, Is.True);
     }
 
+    /// <summary>
+    /// Refreshing a cell outside the current bounds rebuilds the grid so the bounds grow to include it.
+    /// </summary>
     [Test]
     public void RefreshCells_OutsideTheBounds_RebuildsTheGrid()
     {
@@ -555,6 +632,9 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.Pathfinder.FindPath(new PathRequest(Vector3Int.zero, outside, allowPartial: false)).Success, Is.True);
     }
 
+    /// <summary>
+    /// A dual-grid render tilemap configured as a blocking tilemap logs an error and blocks nothing.
+    /// </summary>
     [Test]
     public void BlockingTilemap_OnADualGridRenderTilemap_IsIgnored()
     {
@@ -582,6 +662,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.IsCellWalkable(Vector3Int.zero), Is.True);
     }
 
+    /// <summary>
+    /// Outside play mode, painting a tile on a blocking tilemap updates an already built grid without an
+    /// explicit refresh call.
+    /// </summary>
     [Test]
     public void OutsidePlayMode_PaintingATile_UpdatesABuiltGrid()
     {
@@ -595,6 +679,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.Version, Is.GreaterThan(versionBefore));
     }
 
+    /// <summary>
+    /// Connectivity splits at a solid wall, treats blocked cells as unconnected, and joins both sides once the
+    /// wall has a gap.
+    /// </summary>
     [Test]
     public void AreCellsConnected_FollowsBarrierLayout()
     {
@@ -610,6 +698,10 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.AreCellsConnected(new Vector3Int(0, 0, 0), new Vector3Int(4, 4, 0), null), Is.True);
     }
 
+    /// <summary>
+    /// Connectivity is computed per profile, and a profile's cached regions are relabeled when its rules are
+    /// edited through the inspector data.
+    /// </summary>
     [Test]
     public void AreCellsConnected_RespectsProfileRules_AndRefreshesWhenTheProfileIsEdited()
     {
@@ -642,6 +734,9 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.AreCellsConnected(west, east, landProfile), Is.True, "Cached regions must refresh when the profile is edited.");
     }
 
+    /// <summary>
+    /// A profile's minimum traversal cost follows rule edits, counting only walkable rules.
+    /// </summary>
     [Test]
     public void MinimumTraversalCost_RefreshesWhenTheProfileIsEdited()
     {
@@ -657,6 +752,10 @@ public class NavigationGridPathfindingTests
         Assert.That(landProfile.GetMinimumTraversalCost(), Is.EqualTo(10));
     }
 
+    /// <summary>
+    /// On a seeded random grid, connectivity answers match whether a strict A* search succeeds for every sampled
+    /// pair of walkable cells.
+    /// </summary>
     [Test]
     public void AreCellsConnected_AgreesWithAStar_OnRandomGrid()
     {
@@ -714,6 +813,10 @@ public class NavigationGridPathfindingTests
         Assert.That(unreachablePairs, Is.GreaterThan(0), "Seeded grid should contain disconnected regions to make this test meaningful.");
     }
 
+    /// <summary>
+    /// Builds a 5x5 ground grid split by a wall at x = 2, with a gap at y = 2 when
+    /// <paramref name="addGapInBarrier"/> is true.
+    /// </summary>
     private void SetupNavigationGrid(bool addGapInBarrier)
     {
         root = CreateGridRoot("NavGridTestRoot");
@@ -749,6 +852,9 @@ public class NavigationGridPathfindingTests
         navigationGrid.BuildGrid();
     }
 
+    /// <summary>
+    /// Creates the root object with a <see cref="Grid"/> and stores it as the test's root.
+    /// </summary>
     private GameObject CreateGridRoot(string name)
     {
         root = new GameObject(name);
@@ -756,6 +862,9 @@ public class NavigationGridPathfindingTests
         return root;
     }
 
+    /// <summary>
+    /// Creates an empty tilemap with a renderer under the root.
+    /// </summary>
     private Tilemap CreateTilemapObject(string name)
     {
         GameObject tilemapObject = new(name);
@@ -765,6 +874,10 @@ public class NavigationGridPathfindingTests
         return tilemap;
     }
 
+    /// <summary>
+    /// Marks every tile on <paramref name="dataTilemap"/> as <paramref name="terrainType"/> for the grid, at the
+    /// default layer priority.
+    /// </summary>
     private NavigationTerrainSource2D AttachTerrainSource(Tilemap dataTilemap, TerrainType2D terrainType)
     {
         NavigationTerrainSource2D source = dataTilemap.gameObject.AddComponent<NavigationTerrainSource2D>();
@@ -772,16 +885,25 @@ public class NavigationGridPathfindingTests
         return source;
     }
 
+    /// <summary>
+    /// Creates an in-memory terrain type with the given id; the caller destroys it.
+    /// </summary>
     private static TerrainType2D CreateTerrain(string id)
     {
         return TerrainType2D.Create(id);
     }
 
+    /// <summary>
+    /// Creates an in-memory movement profile with a default traversal cost of 10 and the given terrain rules.
+    /// </summary>
     private static TerrainMovementProfile2D CreateProfile(bool defaultWalkable, params TerrainMovementProfile2D.TerrainRule[] rules)
     {
         return TerrainMovementProfile2D.Create(defaultWalkable, 10, rules);
     }
 
+    /// <summary>
+    /// Shorthand for a terrain rule giving <paramref name="terrain"/> its access and traversal cost.
+    /// </summary>
     private static TerrainMovementProfile2D.TerrainRule Rule(TerrainType2D terrain, bool isWalkable, int traversalCost)
     {
         return new TerrainMovementProfile2D.TerrainRule(terrain, isWalkable, traversalCost);

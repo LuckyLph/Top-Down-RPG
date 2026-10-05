@@ -5,9 +5,17 @@ using UnityEngine.Tilemaps;
 using Debug = UnityEngine.Debug;
 using Random = System.Random;
 
+/// <summary>
+/// Dev-only generator for the stress test area: paints a seeded rectangle of dual-grid ground ringed by a wall
+/// border, adds walls in the chosen <see cref="WallLayout"/>, keeps the centre clear and rebuilds the navigation
+/// grid. Runs early so the map exists before anything spawns on it.
+/// </summary>
 [DefaultExecutionOrder(-1000)]
 public class StressTestMap : MonoBehaviour
 {
+    /// <summary>
+    /// How interior walls are laid out inside the border.
+    /// </summary>
     public enum WallLayout
     {
         Open,
@@ -34,11 +42,18 @@ public class StressTestMap : MonoBehaviour
     public int Width => width;
     public int Height => height;
 
+    /// <summary>
+    /// Generates the map as soon as the area loads.
+    /// </summary>
     private void Awake()
     {
         Generate();
     }
 
+    /// <summary>
+    /// Clears and repaints the ground and wall layers from the current settings and seed, rebuilds the
+    /// <see cref="NavigationGrid2D"/> and logs the size, wall count and time taken.
+    /// </summary>
     public void Generate()
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -77,6 +92,9 @@ public class StressTestMap : MonoBehaviour
             $"in {stopwatch.ElapsedMilliseconds} ms.", this);
     }
 
+    /// <summary>
+    /// Wipes both tilemaps of <paramref name="layer"/> and paints <paramref name="cells"/> as its data tiles.
+    /// </summary>
     private static void Paint(DualGridTilemapModule layer, List<Vector3Int> cells)
     {
         layer.DataTilemap.ClearAllTiles();
@@ -84,6 +102,10 @@ public class StressTestMap : MonoBehaviour
         layer.SetDataTiles(cells);
     }
 
+    /// <summary>
+    /// Adds a one-cell wall ring just outside the ground rectangle that starts at <paramref name="minX"/>,
+    /// <paramref name="minY"/>.
+    /// </summary>
     private void AddBorder(HashSet<Vector3Int> cells, int minX, int minY)
     {
         for (int x = minX - 1; x <= minX + width; x++)
@@ -99,6 +121,10 @@ public class StressTestMap : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Adds seeded random horizontal and vertical wall segments, enough to cover roughly the configured wall
+    /// density, clipped to the ground rectangle.
+    /// </summary>
     private void AddScatteredWalls(HashSet<Vector3Int> cells, int minX, int minY)
     {
         const int averageSegmentLength = 5;
@@ -120,6 +146,9 @@ public class StressTestMap : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Adds full-height wall columns every corridor spacing, each with a two-cell gap at a seeded random height.
+    /// </summary>
     private void AddCorridorWalls(HashSet<Vector3Int> cells, int minX, int minY)
     {
         Random random = new(seed);

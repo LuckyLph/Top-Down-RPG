@@ -5,6 +5,11 @@ using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// Moves the app between the main menu, a new game and area changes by loading and unloading scenes additively under
+/// the right DI scopes (menu and gameplay under Main, the area under gameplay), behind a screen fade. Runs one
+/// transition at a time and ignores requests made while one runs.
+/// </summary>
 public sealed class GameFlow
 {
     private readonly SceneLoader sceneLoader;
@@ -17,6 +22,9 @@ public sealed class GameFlow
     private Scene areaScene;
     private LifetimeScope gameplayScope;
 
+    /// <summary>
+    /// Creates the flow; <paramref name="mainScope"/> is the parent scope for the menu and gameplay scenes.
+    /// </summary>
     public GameFlow(SceneLoader sceneLoader, ScreenFader screenFader, GameScenes gameScenes, LifetimeScope mainScope)
     {
         this.sceneLoader = sceneLoader;
@@ -37,11 +45,19 @@ public sealed class GameFlow
     public Scene GameplayScene => gameplayScene;
     public GameScenes Scenes => gameScenes;
 
+    /// <summary>
+    /// Unloads any area and gameplay scene and shows the main menu, loading it if needed.
+    /// </summary>
     public Awaitable ShowMainMenuAsync(CancellationToken cancellation = default)
     {
         return RunTransitionAsync(ShowMainMenuCoreAsync, cancellation);
     }
 
+    /// <summary>
+    /// Starts a new game session: unloads the menu and any running game, loads a fresh gameplay scene, then enters
+    /// <paramref name="area"/> at <paramref name="spawnId"/> (the starting area and spawn id when omitted). Raises
+    /// <see cref="AreaLoading"/> as a new session once the screen has faded out.
+    /// </summary>
     public Awaitable StartNewGameAsync(
         SceneDefinition area = null,
         string spawnId = null,
@@ -58,6 +74,11 @@ public sealed class GameFlow
             cancellation);
     }
 
+    /// <summary>
+    /// Swaps the current area for <paramref name="area"/>, entering at <paramref name="spawnId"/>, while keeping the
+    /// gameplay scene (and the players in it). Raises <see cref="AreaLoading"/> once the screen has faded out; logs an
+    /// error and does nothing when no game is running.
+    /// </summary>
     public async Awaitable ChangeAreaAsync(SceneDefinition area, string spawnId, CancellationToken cancellation = default)
     {
         if (!IsLoaded(gameplayScene))
@@ -75,6 +96,11 @@ public sealed class GameFlow
             cancellation);
     }
 
+    /// <summary>
+    /// Runs <paramref name="transition"/> between a fade out and a fade in, raising <see cref="TransitionStarted"/>
+    /// and, whatever happens, <see cref="TransitionFinished"/>. Cancellation (also on application exit) ends it
+    /// quietly; other exceptions are logged and rethrown. Warns and does nothing while another transition runs.
+    /// </summary>
     private async Awaitable RunTransitionAsync(Func<CancellationToken, Awaitable> transition, CancellationToken cancellation)
     {
         if (IsTransitioning)
@@ -110,6 +136,10 @@ public sealed class GameFlow
         }
     }
 
+    /// <summary>
+    /// Unloads the area and gameplay scenes and unused assets, loads the menu under the main scope unless it is
+    /// already loaded, and makes it the active scene.
+    /// </summary>
     private async Awaitable ShowMainMenuCoreAsync(CancellationToken cancellation)
     {
         await UnloadAreaAsync(cancellation);
@@ -124,6 +154,10 @@ public sealed class GameFlow
         SceneManager.SetActiveScene(menuScene);
     }
 
+    /// <summary>
+    /// Unloads the menu and any running game, loads the gameplay scene under the main scope, finds its scope, and
+    /// loads <paramref name="area"/> under it.
+    /// </summary>
     private async Awaitable StartNewGameCoreAsync(SceneDefinition area, string spawnId, CancellationToken cancellation)
     {
         if (IsLoaded(menuScene))
@@ -140,6 +174,11 @@ public sealed class GameFlow
         await LoadAreaCoreAsync(area, spawnId, cancellation);
     }
 
+    /// <summary>
+    /// Unloads the current area and unused assets, loads <paramref name="area"/> under the gameplay scope with an
+    /// <see cref="AreaEntryRequest"/> for <paramref name="spawnId"/> registered into its scope, makes it the active
+    /// scene and enters it.
+    /// </summary>
     private async Awaitable LoadAreaCoreAsync(SceneDefinition area, string spawnId, CancellationToken cancellation)
     {
         await UnloadAreaAsync(cancellation);
@@ -157,6 +196,10 @@ public sealed class GameFlow
         EnterArea(areaScene);
     }
 
+    /// <summary>
+    /// Loads <paramref name="definition"/> additively with <paramref name="parent"/> queued as the parent of the
+    /// scopes the scene creates.
+    /// </summary>
     private async Awaitable<Scene> LoadUnderScopeAsync(
         SceneDefinition definition,
         LifetimeScope parent,
@@ -168,6 +211,9 @@ public sealed class GameFlow
         }
     }
 
+    /// <summary>
+    /// Unloads the area scene, if loaded, forgetting it and <see cref="CurrentArea"/> before the unload starts.
+    /// </summary>
     private async Awaitable UnloadAreaAsync(CancellationToken cancellation)
     {
         if (!IsLoaded(areaScene))
@@ -181,6 +227,9 @@ public sealed class GameFlow
         await sceneLoader.UnloadAsync(scene, cancellation);
     }
 
+    /// <summary>
+    /// Unloads the gameplay scene, if loaded, forgetting it and its scope before the unload starts.
+    /// </summary>
     private async Awaitable UnloadGameplayAsync(CancellationToken cancellation)
     {
         if (!IsLoaded(gameplayScene))
@@ -194,6 +243,10 @@ public sealed class GameFlow
         await sceneLoader.UnloadAsync(scene, cancellation);
     }
 
+    /// <summary>
+    /// Calls <see cref="IAreaEntry.Enter"/> from the area scene's scope; warns and leaves the players where they are
+    /// when the scene has no scope providing one.
+    /// </summary>
     private static void EnterArea(Scene scene)
     {
         LifetimeScope scope = LifetimeScope.Find<LifetimeScope>(scene);
@@ -207,6 +260,9 @@ public sealed class GameFlow
         areaEntry.Enter();
     }
 
+    /// <summary>
+    /// Whether <paramref name="scene"/> is a valid, fully loaded scene; false for the default handle.
+    /// </summary>
     private static bool IsLoaded(Scene scene)
     {
         return scene.IsValid() && scene.isLoaded;

@@ -7,6 +7,12 @@ using VContainer;
 using UnityEditor;
 #endif
 
+/// <summary>
+/// A mob's brain: initializes its sibling components from its <see cref="MobConfig"/>, owns the six
+/// <see cref="IMobState"/>s and the <see cref="MobSeparation2D"/>, and runs the state machine from Update and
+/// FixedUpdate. States reach the mob's components, config and attack-range checks through it.
+/// <see cref="MobNetworkSync"/> disables it on clients, so the AI never runs there.
+/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
 [RequireComponent(typeof(MobMotor2D))]
@@ -61,11 +67,18 @@ public class MobController : MonoBehaviour
     public float DeltaTime => deltaTime;
     public bool IsStunned => statuses != null && (statuses.Controls & StatusControls.Stun) != 0;
 
+    /// <summary>
+    /// Caches the components and initializes the mob from its config, disabling the brain when none is assigned.
+    /// </summary>
     private void Awake()
     {
         EnsureInitialized();
     }
 
+    /// <summary>
+    /// Logs an error when the mob was never given its navigation grid, players and random source, then enters Idle
+    /// unless a state is already running.
+    /// </summary>
     private void Start()
     {
         EnsureInitialized();
@@ -81,16 +94,26 @@ public class MobController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ticks perception and the current state with the frame's delta time.
+    /// </summary>
     private void Update()
     {
         TickStateMachine(Time.deltaTime);
     }
 
+    /// <summary>
+    /// Runs the physics-step half of the brain: status speed scale, separation, state movement and the motor.
+    /// </summary>
     private void FixedUpdate()
     {
         FixedTickStateMachine();
     }
 
+    /// <summary>
+    /// Injects the area's navigation grid, the player registry and the random source, and rebuilds the mob with them
+    /// when it has already initialized.
+    /// </summary>
     [Inject]
     public void Construct(NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
@@ -100,6 +123,10 @@ public class MobController : MonoBehaviour
         Reinitialize();
     }
 
+    /// <summary>
+    /// Setup without dependency injection, used by tests: sets the config and dependencies, then rebuilds the mob,
+    /// re-entering Idle when a state was running.
+    /// </summary>
     public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
         config = mobConfig;
@@ -109,6 +136,10 @@ public class MobController : MonoBehaviour
         Rebuild();
     }
 
+    /// <summary>
+    /// Rebuilds the mob when it has already initialized; otherwise the first <see cref="EnsureInitialized"/> picks up
+    /// the new dependencies.
+    /// </summary>
     private void Reinitialize()
     {
         if (!initialized)
@@ -119,6 +150,10 @@ public class MobController : MonoBehaviour
         Rebuild();
     }
 
+    /// <summary>
+    /// Exits the current state, initializes every component again from the current config and dependencies, and
+    /// re-enters Idle when a state was running.
+    /// </summary>
     private void Rebuild()
     {
         bool wasRunning = currentState != null;
@@ -133,6 +168,10 @@ public class MobController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Per-frame step: ticks perception with <paramref name="dt"/> (clamped at 0), then the current state unless the
+    /// mob is stunned. Public so tests can drive the brain.
+    /// </summary>
     public void TickStateMachine(float dt)
     {
         EnsureInitialized();
@@ -145,6 +184,10 @@ public class MobController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Physics step: sets the motor's speed scale from the statuses, senses neighbours, fixed-ticks the current state
+    /// (or stops the motor while stunned), then adds the separation steering and steps the motor.
+    /// </summary>
     public void FixedTickStateMachine()
     {
         EnsureInitialized();
@@ -164,6 +207,10 @@ public class MobController : MonoBehaviour
         motor.FixedTick();
     }
 
+    /// <summary>
+    /// Exits the current state and enters <paramref name="nextStateId"/>. Does nothing when it is already current, and
+    /// logs an error for an id with no registered state.
+    /// </summary>
     public void ChangeState(MobStateId nextStateId)
     {
         EnsureInitialized();
@@ -184,21 +231,38 @@ public class MobController : MonoBehaviour
         currentState.Enter();
     }
 
+    /// <summary>
+    /// Fires the inspector's attack-range-entered event; called when <see cref="AttackRangeState"/> is entered.
+    /// </summary>
     public void InvokeAttackRangeEntered()
     {
         onAttackRangeEntered?.Invoke();
     }
 
+    /// <summary>
+    /// Whether the current target is within <see cref="MobConfig.AttackStopDistance"/>, measured collider to collider
+    /// (center to center when either has no collider). False without a target.
+    /// </summary>
     public bool IsTargetInAttackRange()
     {
         return TryGetAttackDistanceToTarget(out float distance) && distance <= Config.AttackStopDistance;
     }
 
+    /// <summary>
+    /// Whether the mob should leave attack range: it has no target, or the target is farther than
+    /// <see cref="MobConfig.AttackStopDistance"/> plus <see cref="MobConfig.AttackExitBuffer"/>, which keeps the range
+    /// check from flickering at its edge.
+    /// </summary>
     public bool ShouldExitAttackRange()
     {
         return !TryGetAttackDistanceToTarget(out float distance) || distance > Config.AttackStopDistance + Config.AttackExitBuffer;
     }
 
+    /// <summary>
+    /// One-time setup, run again after <see cref="Rebuild"/>: caches the components, builds the grid if needed and
+    /// prewarms its regions for the movement profile, initializes the components and separation, and registers the
+    /// states. Disables the brain when no config is assigned.
+    /// </summary>
     private void EnsureInitialized()
     {
         if (initialized)
@@ -236,6 +300,9 @@ public class MobController : MonoBehaviour
         initialized = true;
     }
 
+    /// <summary>
+    /// Fetches each sibling component not cached yet; <see cref="StatusEffects"/> is optional and may stay null.
+    /// </summary>
     private void CacheComponents()
     {
         if (motor == null)
@@ -274,6 +341,9 @@ public class MobController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a fresh instance of each of the six states, keyed by <see cref="MobStateId"/>.
+    /// </summary>
     private void RegisterStates()
     {
         states.Clear();
@@ -285,6 +355,10 @@ public class MobController : MonoBehaviour
         states[MobStateId.Search] = new SearchState(this);
     }
 
+    /// <summary>
+    /// The gap between the mob and its current target: collider to collider (0 when overlapping) when both have
+    /// colliders, else center to center. False without a config, perception or target.
+    /// </summary>
     private bool TryGetAttackDistanceToTarget(out float distance)
     {
         distance = float.PositiveInfinity;
@@ -312,6 +386,10 @@ public class MobController : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Draws a marker in the current state's color, lines to the current target and to the spawn point, and in the
+    /// editor a label naming the state.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!drawBrainGizmos)
@@ -345,6 +423,9 @@ public class MobController : MonoBehaviour
 #endif
     }
 
+    /// <summary>
+    /// The debug gizmo color for <paramref name="stateId"/>, white for an unknown id.
+    /// </summary>
     private Color GetStateColor(MobStateId stateId)
     {
         return stateId switch

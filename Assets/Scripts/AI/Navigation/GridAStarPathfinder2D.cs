@@ -24,6 +24,10 @@ public class GridAStarPathfinder2D : IPathfinder2D
     private int searchStamp;
     private int knownCount;
 
+    /// <summary>
+    /// Creates a pathfinder for <paramref name="navGrid"/> with search arrays sized to its cell count. The grid creates
+    /// a new one on every <see cref="NavigationGrid2D.BuildGrid"/>.
+    /// </summary>
     public GridAStarPathfinder2D(NavigationGrid2D navGrid)
     {
         navigationGrid = navGrid;
@@ -38,11 +42,18 @@ public class GridAStarPathfinder2D : IPathfinder2D
 
     internal int LastExpandedCount { get; private set; }
 
+    /// <summary>
+    /// Finds a path for <paramref name="request"/> into a newly allocated cell list.
+    /// </summary>
     public PathResult FindPath(PathRequest request)
     {
         return FindPath(request, new List<Vector3Int>());
     }
 
+    /// <summary>
+    /// Finds a path for <paramref name="request"/>, clearing <paramref name="cellsBuffer"/> and filling it with the
+    /// cells from start to end; a successful result's cells are that buffer.
+    /// </summary>
     public PathResult FindPath(PathRequest request, List<Vector3Int> cellsBuffer)
     {
         using (FindPathMarker.Auto())
@@ -52,6 +63,11 @@ public class GridAStarPathfinder2D : IPathfinder2D
         }
     }
 
+    /// <summary>
+    /// The A* search. Strict requests fail when the goal is unwalkable or in another region. Partial ones move an
+    /// unwalkable goal to the nearest walkable cell and, when the goal cannot be reached, return the path to the
+    /// expanded cell closest to it after at most <see cref="NavigationGrid2D.MaxSearchCells"/> expansions.
+    /// </summary>
     private PathResult Search(PathRequest request, List<Vector3Int> cells)
     {
         LastExpandedCount = 0;
@@ -200,6 +216,10 @@ public class GridAStarPathfinder2D : IPathfinder2D
             cells: cells);
     }
 
+    /// <summary>
+    /// Starts a new search stamp, clearing the stamp arrays only when the stamp would overflow, and empties the open
+    /// heap.
+    /// </summary>
     private void BeginSearch()
     {
         if (searchStamp == int.MaxValue)
@@ -214,6 +234,10 @@ public class GridAStarPathfinder2D : IPathfinder2D
         openHeap.Clear();
     }
 
+    /// <summary>
+    /// Records the cell at <paramref name="index"/> as known in this search with its cost, estimated total and parent,
+    /// giving it a discovery order the first time it is seen.
+    /// </summary>
     private void Discover(int index, int cost, int heuristic, int parent)
     {
         if (knownStamps[index] != searchStamp)
@@ -227,11 +251,19 @@ public class GridAStarPathfinder2D : IPathfinder2D
         parents[index] = parent;
     }
 
+    /// <summary>
+    /// The octile distance from a cell to the goal at the field's cheapest straight and diagonal costs, so it never
+    /// overestimates.
+    /// </summary>
     private static int Heuristic(int x, int y, int goalX, int goalY, NavigationGrid2D.CostField field)
     {
         return NavigationGrid2D.OctileCost(Mathf.Abs(x - goalX), Mathf.Abs(y - goalY), field.MinimumCost, field.MinimumDiagonalCost);
     }
 
+    /// <summary>
+    /// Follows the parents back from <paramref name="end"/> to <paramref name="start"/> and appends those cells to
+    /// <paramref name="cells"/> in start-to-end order.
+    /// </summary>
     private void ReconstructPath(int start, int end, List<Vector3Int> cells)
     {
         int current = end;
@@ -245,8 +277,15 @@ public class GridAStarPathfinder2D : IPathfinder2D
         cells.Reverse();
     }
 
+    /// <summary>
+    /// An open-list entry: cell index, estimated total cost (F), heuristic (H) and discovery order. An entry whose F
+    /// no longer matches its cell's is stale and skipped when popped.
+    /// </summary>
     private readonly struct OpenEntry
     {
+        /// <summary>
+        /// Captures a cell's index, scores and discovery order as they are when it is pushed.
+        /// </summary>
         public OpenEntry(int index, int f, int h, int order)
         {
             Index = index;
@@ -259,6 +298,9 @@ public class GridAStarPathfinder2D : IPathfinder2D
         public int F { get; }
         public int H { get; }
         public int Order { get; }
+        /// <summary>
+        /// Heap order: lower F first, then lower H, then earlier discovery, so ties break deterministically.
+        /// </summary>
         public bool IsBefore(OpenEntry other)
         {
             if (F != other.F)
@@ -270,17 +312,26 @@ public class GridAStarPathfinder2D : IPathfinder2D
         }
     }
 
+    /// <summary>
+    /// Binary min-heap of <see cref="OpenEntry"/> values ordered by <see cref="OpenEntry.IsBefore"/>.
+    /// </summary>
     private sealed class OpenHeap
     {
         private readonly List<OpenEntry> entries = new();
 
         public int Count => entries.Count;
 
+        /// <summary>
+        /// Removes every entry, keeping the capacity.
+        /// </summary>
         public void Clear()
         {
             entries.Clear();
         }
 
+        /// <summary>
+        /// Adds <paramref name="entry"/> and sifts it up to its place.
+        /// </summary>
         public void Push(OpenEntry entry)
         {
             entries.Add(entry);
@@ -298,6 +349,9 @@ public class GridAStarPathfinder2D : IPathfinder2D
             }
         }
 
+        /// <summary>
+        /// Removes and returns the first entry in heap order; the heap must not be empty.
+        /// </summary>
         public OpenEntry Pop()
         {
             OpenEntry top = entries[0];

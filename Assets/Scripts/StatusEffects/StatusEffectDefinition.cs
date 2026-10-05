@@ -85,6 +85,9 @@ public sealed class StatusEffectDefinition : ScriptableObject
     public StatusControls Controls => controls;
     public bool HasPeriodicEffect => periodic != StatusPeriodic.None && PeriodicAmount > 0;
 
+    /// <summary>
+    /// Drops the cached abbreviation so a renamed status shows its new letters.
+    /// </summary>
     private void OnValidate()
     {
         abbreviation = null;
@@ -112,6 +115,10 @@ public sealed class StatusEffectDefinition : ScriptableObject
         return total;
     }
 
+    /// <summary>
+    /// Creates an unsaved, hidden definition named <paramref name="name"/> with the given rules, for tests; values
+    /// are stored as given and clamped by the getters.
+    /// </summary>
     public static StatusEffectDefinition Create(
         string name,
         StatusKind kind,

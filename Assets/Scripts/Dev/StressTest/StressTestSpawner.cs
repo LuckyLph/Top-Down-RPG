@@ -4,6 +4,11 @@ using VContainer;
 using VContainer.Unity;
 using Random = System.Random;
 
+/// <summary>
+/// Dev-only seeded mob spawner for the stress test area. Instantiates mobs through the container on walkable cells
+/// reachable from its own position, either in a band around the player or anywhere on the navigation grid, and
+/// tracks them so they can be counted and cleared.
+/// </summary>
 public class StressTestSpawner : MonoBehaviour
 {
     private const int AttemptsPerMob = 30;
@@ -45,6 +50,9 @@ public class StressTestSpawner : MonoBehaviour
 
     public int InitialMobCount => initialNearSpawn + initialAcrossMap;
 
+    /// <summary>
+    /// Receives the area container used to instantiate mobs, the navigation grid and the local player tracker.
+    /// </summary>
     [Inject]
     public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, LocalPlayerTracker localPlayerTracker)
     {
@@ -53,6 +61,10 @@ public class StressTestSpawner : MonoBehaviour
         localPlayer = localPlayerTracker;
     }
 
+    /// <summary>
+    /// Disables itself with an error when it was not injected or has no mob prefab; otherwise creates the mob root
+    /// and spawns the initial mobs around itself and across the map.
+    /// </summary>
     private void Start()
     {
         if (resolver == null || mobPrefab == null)
@@ -70,11 +82,19 @@ public class StressTestSpawner : MonoBehaviour
         SpawnAcrossMap(initialAcrossMap);
     }
 
+    /// <summary>
+    /// Spawns up to <paramref name="count"/> mobs in the near band around the local player (or this spawner when
+    /// there is none). Returns how many were spawned.
+    /// </summary>
     public int SpawnNearPlayer(int count)
     {
         return SpawnAround(PlayerPosition(), count);
     }
 
+    /// <summary>
+    /// Spawns up to <paramref name="count"/> mobs at random distances within the near band around
+    /// <paramref name="center"/>. Returns how many were spawned.
+    /// </summary>
     public int SpawnAround(Vector2 center, int count)
     {
         return Spawn(count, () =>
@@ -85,6 +105,10 @@ public class StressTestSpawner : MonoBehaviour
         });
     }
 
+    /// <summary>
+    /// Spawns up to <paramref name="count"/> mobs on random cells within the navigation grid's walkable bounds.
+    /// Returns how many were spawned.
+    /// </summary>
     public int SpawnAcrossMap(int count)
     {
         BoundsInt bounds = navigationGrid.WalkableBounds;
@@ -94,6 +118,9 @@ public class StressTestSpawner : MonoBehaviour
             0)));
     }
 
+    /// <summary>
+    /// Destroys every tracked mob that still exists and forgets them all.
+    /// </summary>
     public void ClearMobs()
     {
         foreach (MobController mob in mobs)
@@ -107,6 +134,12 @@ public class StressTestSpawner : MonoBehaviour
         mobs.Clear();
     }
 
+    /// <summary>
+    /// Tries up to <see cref="AttemptsPerMob"/> candidates per mob from <paramref name="sampleCandidate"/>, keeping
+    /// walkable cells connected to the walkable cell nearest the spawner and not too close to the player, and
+    /// instantiates a mob on each. Logs a warning when fewer than <paramref name="count"/> spawn, and returns 0
+    /// before <see cref="Start"/> has run or when the spawner is not near any walkable cell.
+    /// </summary>
     private int Spawn(int count, System.Func<Vector2> sampleCandidate)
     {
         if (mobRoot == null)
@@ -150,12 +183,18 @@ public class StressTestSpawner : MonoBehaviour
         return spawned;
     }
 
+    /// <summary>
+    /// The local player's position, or this spawner's when there is no local player.
+    /// </summary>
     private Vector2 PlayerPosition()
     {
         LocalPlayer player = localPlayer != null ? localPlayer.Current : null;
         return player != null && player.Transform != null ? player.Transform.position : transform.position;
     }
 
+    /// <summary>
+    /// Drops tracked mobs that have been destroyed since they spawned.
+    /// </summary>
     private void PruneDestroyed()
     {
         mobs.RemoveAll(mob => mob == null);

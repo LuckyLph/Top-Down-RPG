@@ -19,6 +19,9 @@ public class KeyBindingRowView : MonoBehaviour
     internal TMP_Text Label => label;
     internal TMP_Text BindingText => bindingText;
 
+    /// <summary>
+    /// Logs an error when the label, binding button, binding text or reset button is missing.
+    /// </summary>
     private void Awake()
     {
         if (label == null || bindingButton == null || bindingText == null || resetButton == null)
@@ -27,6 +30,9 @@ public class KeyBindingRowView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the action's display name shown at the start of the row.
+    /// </summary>
     public void SetLabel(string text)
     {
         if (label != null)
@@ -35,6 +41,9 @@ public class KeyBindingRowView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the text on the binding button, the label of the action's current binding.
+    /// </summary>
     public void SetBinding(string text)
     {
         if (bindingText != null)

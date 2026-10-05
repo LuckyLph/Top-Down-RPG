@@ -3,6 +3,10 @@
 /// </summary>
 public readonly struct PathFollowerSettings2D
 {
+    /// <summary>
+    /// Creates settings; a non-positive <paramref name="nearestCellSearchRadius"/> uses the grid's own radius, and the
+    /// straight-line shortcut is off unless asked for.
+    /// </summary>
     public PathFollowerSettings2D(
         float waypointReachDistance,
         float arrivalDistance,

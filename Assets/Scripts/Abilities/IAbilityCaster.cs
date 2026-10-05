@@ -4,6 +4,9 @@
 /// </summary>
 public interface IAbilityCaster
 {
+    /// <summary>
+    /// The ability in <paramref name="slot"/>, or null when the slot is empty or out of range.
+    /// </summary>
     AbilityDefinition GetAbility(int slot);
 
     /// <summary>
@@ -27,5 +30,9 @@ public interface IAbilityCaster
     /// </summary>
     void CancelCast(int slot);
 
+    /// <summary>
+    /// Announces that a cast in <paramref name="slot"/> was refused for <paramref name="reason"/>, so feedback such
+    /// as the ability bar can show it; changes no cast state.
+    /// </summary>
     void ReportFailure(int slot, CastOutcome reason);
 }

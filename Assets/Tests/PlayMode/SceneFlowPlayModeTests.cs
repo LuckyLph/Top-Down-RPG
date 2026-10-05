@@ -7,8 +7,17 @@ using UnityEngine.TestTools;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// PlayMode tests for the scene flow: booting, the Main, Gameplay, area and menu scope hierarchy, area changes, the
+/// main menu, and restarts or respawns after deaths.
+/// </summary>
 public class SceneFlowPlayModeTests
 {
+    /// <summary>
+    /// Booting into the starting area makes it the active scene with one camera, audio listener and event system,
+    /// spawns one local player in the Gameplay scene followed by the camera with input unlocked, and parents the
+    /// scopes Main, Gameplay, area.
+    /// </summary>
     [UnityTest]
     public IEnumerator Boot_LoadsGameplayAndAreaWithSingleCameraListenerAndEventSystem()
     {
@@ -42,6 +51,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameplayScope.Container.Resolve<IPlayerRegistry>().Players, Is.EquivalentTo(new[] { localPlayer.Handle }));
     }
 
+    /// <summary>
+    /// Game time stands still for a whole area change, so a player's Burn neither ticks nor runs down behind the fade,
+    /// and the status is still there afterwards.
+    /// </summary>
     [UnityTest]
     public IEnumerator ChangeArea_FreezesTimeAndKeepsThePlayersStatuses()
     {
@@ -83,6 +96,10 @@ public class SceneFlowPlayModeTests
         Assert.That(statuses.GetSnapshot(0).Remaining, Is.GreaterThan(remainingBefore - 0.2f), "The status did not run down during the transition.");
     }
 
+    /// <summary>
+    /// An area change locks input, unloads the old area before loading the new one, places the player on the requested
+    /// spawn, injects the session's players into area mobs and gives the entry request only to the new area's scope.
+    /// </summary>
     [UnityTest]
     public IEnumerator ChangeArea_ReloadsAreaAndPlacesPlayerAtSpawn()
     {
@@ -122,6 +139,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameplayScope.Container.TryResolve(out AreaEntryRequest _), Is.False, "The entry request should only reach the area's container.");
     }
 
+    /// <summary>
+    /// Returning to the main menu unloads the player and the area, turns gameplay input off and clears the camera
+    /// target; a new game then starts with a fully healed player.
+    /// </summary>
     [UnityTest]
     public IEnumerator ShowMainMenu_UnloadsSessionAndNewGameStartsFresh()
     {
@@ -151,6 +172,9 @@ public class SceneFlowPlayModeTests
         Assert.That(freshHealth.CurrentHealth, Is.EqualTo(maxHealth), "A new game should start with a fresh player.");
     }
 
+    /// <summary>
+    /// When the only player dies, the session reloads in the same area with a fully healed player on the spawn point.
+    /// </summary>
     [UnityTest]
     public IEnumerator PlayerDeath_RestartsCurrentAreaWithFreshPlayer()
     {
@@ -177,6 +201,10 @@ public class SceneFlowPlayModeTests
         Assert.That(Vector2.Distance(freshPlayer.transform.position, spawnPosition), Is.LessThan(0.01f));
     }
 
+    /// <summary>
+    /// A player who dies while a teammate lives is disabled, then respawns at full health on the first spawn slot with
+    /// its controller, collider and body back on, without restarting the area.
+    /// </summary>
     [UnityTest]
     public IEnumerator PlayerDeath_RespawnsAtTheSpawnPointWhileATeammateIsAlive()
     {
@@ -210,6 +238,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameFlow.IsTransitioning, Is.False, "A respawn must not restart the area.");
     }
 
+    /// <summary>
+    /// The session keeps running past the restart delay while a party member is alive, and reloads once the whole
+    /// party is down.
+    /// </summary>
     [UnityTest]
     public IEnumerator PlayerDeath_WaitsUntilTheWholePartyIsDown()
     {
@@ -241,6 +273,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameFlow.IsInGame, Is.True);
     }
 
+    /// <summary>
+    /// Booting without an editor boot request shows the main menu, with its scope parented to Main and a button
+    /// focused for keyboard and gamepad.
+    /// </summary>
     [UnityTest]
     public IEnumerator Boot_WithoutEditorRequest_ShowsMainMenuWithFocusedButton()
     {

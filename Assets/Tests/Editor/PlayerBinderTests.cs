@@ -2,6 +2,10 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
+/// <summary>
+/// Tests for <see cref="PlayerBinder"/> binding local and remote players into the registry and the local player
+/// tracker, plus the damage service's authority check.
+/// </summary>
 public class PlayerBinderTests
 {
     private readonly List<GameObject> createdObjects = new();
@@ -10,6 +14,10 @@ public class PlayerBinderTests
     private ActiveSpawnPoint activeSpawnPoint;
     private PlayerBinder binder;
 
+    /// <summary>
+    /// Creates an empty player registry, local player tracker and active spawn point, and a binder over them with
+    /// a local command source on fake input.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -19,6 +27,9 @@ public class PlayerBinderTests
         binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null), activeSpawnPoint);
     }
 
+    /// <summary>
+    /// Destroys every game object the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -33,6 +44,10 @@ public class PlayerBinderTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Binding the local player registers it, assigns and announces it as the local player, lets it simulate its
+    /// own movement and moves it to the active spawn point.
+    /// </summary>
     [Test]
     public void BindLocal_RegistersTheLocalPlayer_AndPlacesItAtTheActiveSpawnPoint()
     {
@@ -52,6 +67,10 @@ public class PlayerBinderTests
         Assert.That((Vector2)controller.transform.position, Is.EqualTo(new Vector2(4f, -2f)));
     }
 
+    /// <summary>
+    /// Binding a remote player registers it without making it the local player, simulating its movement or
+    /// moving it.
+    /// </summary>
     [Test]
     public void BindRemote_RegistersWithoutTakingOverTheLocalPlayerOrItsMovement()
     {
@@ -66,6 +85,9 @@ public class PlayerBinderTests
         Assert.That(controller.transform.position, Is.EqualTo(position));
     }
 
+    /// <summary>
+    /// Unbinding removes a player from the registry and clears the local player only when it is the one removed.
+    /// </summary>
     [Test]
     public void Unbind_RemovesThePlayer_AndClearsItIfItWasLocal()
     {
@@ -81,6 +103,10 @@ public class PlayerBinderTests
         Assert.That(localPlayer.Current, Is.Null);
     }
 
+    /// <summary>
+    /// A damage service on a machine without authority leaves health untouched, reports the hit as unresolved and
+    /// publishes no damage event.
+    /// </summary>
     [Test]
     public void DamageService_AppliesNothingWithoutAuthority()
     {
@@ -97,6 +123,9 @@ public class PlayerBinderTests
         Assert.That(published, Is.EqualTo(0));
     }
 
+    /// <summary>
+    /// Creates a player with a controller and health, placed away from the origin and any spawn point.
+    /// </summary>
     private PlayerController CreatePlayer()
     {
         GameObject playerObject = Create("Player");
@@ -106,6 +135,9 @@ public class PlayerBinderTests
         return controller;
     }
 
+    /// <summary>
+    /// Creates a named game object that is destroyed on teardown.
+    /// </summary>
     private GameObject Create(string name)
     {
         GameObject created = new(name);

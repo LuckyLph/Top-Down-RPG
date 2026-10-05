@@ -2,6 +2,10 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// The composition root of the Gameplay scene, a child of the Main scope and parent of each area scope: registers
+/// the players, combat, abilities, statuses, HUD, menus and pointer feedback for the session.
+/// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
     [SerializeField] private PlayerController playerPrefab;
@@ -10,6 +14,11 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private GameplaySettings settings;
     [SerializeField] private CombatSettings combatSettings;
 
+    /// <summary>
+    /// Registers the Gameplay services and entry points and, once built, the player network prefabs. Logs an error
+    /// and registers nothing without a parent scope, a player prefab, its control settings or the combat settings;
+    /// skips pointer feedback, with an error, when its layer is missing.
+    /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
         if (Parent == null)

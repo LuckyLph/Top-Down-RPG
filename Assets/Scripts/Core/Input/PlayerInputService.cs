@@ -30,6 +30,10 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     private readonly InputAction menuAction;
     private readonly EventSystem eventSystem;
 
+    /// <summary>
+    /// Looks up the player, UI cancel and menu actions on <paramref name="actions"/> (the session's runtime copy) and
+    /// logs one error listing what the asset must contain when any of them is missing.
+    /// </summary>
     public PlayerInputService(InputActionAsset actions, EventSystem eventSystem)
     {
         this.eventSystem = eventSystem;
@@ -68,6 +72,10 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     public bool BackPressedThisFrame => cancelAction != null && cancelAction.enabled && cancelAction.WasPressedThisFrame();
     public bool MenuPressedThisFrame => menuAction != null && menuAction.enabled && menuAction.WasPressedThisFrame();
 
+    /// <summary>
+    /// Whether the key for ability <paramref name="slot"/> went down this frame; false while gameplay input is off,
+    /// for a slot out of range, or when the action is missing.
+    /// </summary>
     public bool WasAbilityPressedThisFrame(int slot)
     {
         if (!GameplayEnabled || slot < 0 || slot >= abilityActions.Length)
@@ -87,6 +95,9 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         return AbilityActionPrefix + (slot + 1);
     }
 
+    /// <summary>
+    /// Enables or disables the whole <c>Player</c> map; while it is off every gameplay read is neutral.
+    /// </summary>
     public void SetGameplayEnabled(bool enabled)
     {
         if (playerMap == null)
@@ -104,6 +115,9 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         }
     }
 
+    /// <summary>
+    /// Enables or disables the <c>Menus</c> map that carries the in-game menu key.
+    /// </summary>
     public void SetMenusEnabled(bool enabled)
     {
         if (menusMap == null)
@@ -121,6 +135,9 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         }
     }
 
+    /// <summary>
+    /// Disables the <c>Player</c> and <c>Menus</c> maps when the scope ends.
+    /// </summary>
     public void Dispose()
     {
         SetGameplayEnabled(false);

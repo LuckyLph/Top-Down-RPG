@@ -24,10 +24,17 @@ public class AreaTerrain : MonoBehaviour
         [Tooltip("Tile written into filled cells. Leave empty on a dual-grid data tilemap: its module paints its own data tile.")]
         [SerializeField] private TileBase fillTile;
 
+        /// <summary>
+        /// Creates an empty layer, for Unity serialization and the inspector list.
+        /// </summary>
         public Layer()
         {
         }
 
+        /// <summary>
+        /// Creates a layer for <paramref name="tilemap"/> that fills cells with <paramref name="fillTile"/> (null for a
+        /// dual-grid data tilemap).
+        /// </summary>
         public Layer(Tilemap tilemap, TileBase fillTile)
         {
             this.tilemap = tilemap;
@@ -57,6 +64,10 @@ public class AreaTerrain : MonoBehaviour
     public IReadOnlyList<TerrainEdit> Edits => edits;
     public NetworkObject SyncPrefab => syncPrefab;
 
+    /// <summary>
+    /// Logs an error for too many layers, for a layer without a tilemap, and for a plain tilemap layer without a fill
+    /// tile.
+    /// </summary>
     private void Awake()
     {
         if (layers.Count > MaxLayers)
@@ -78,6 +89,9 @@ public class AreaTerrain : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Receives the authority check that gates <see cref="TrySetCells"/>.
+    /// </summary>
     [Inject]
     public void Construct(IGameAuthority gameAuthority)
     {
@@ -143,6 +157,10 @@ public class AreaTerrain : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The layer index of <paramref name="tilemap"/> among the editable layers, or -1 when it is null or not one of
+    /// them.
+    /// </summary>
     private int IndexOf(Tilemap tilemap)
     {
         if (tilemap == null)
@@ -161,6 +179,10 @@ public class AreaTerrain : MonoBehaviour
         return -1;
     }
 
+    /// <summary>
+    /// Fills or empties <paramref name="cells"/> on the layer at <paramref name="layerIndex"/>: through its
+    /// <see cref="DualGridTilemapModule"/> when it is a dual-grid data tilemap, else in one batch with the fill tile.
+    /// </summary>
     private void Write(int layerIndex, IReadOnlyList<Vector3Int> cells, bool filled)
     {
         Layer layer = layers[layerIndex];
@@ -194,6 +216,10 @@ public class AreaTerrain : MonoBehaviour
         layer.Tilemap.SetTiles(positions, tiles);
     }
 
+    /// <summary>
+    /// Adds <paramref name="edit"/> to <see cref="Edits"/>, replacing the earlier edit of the same layer and cell in
+    /// place, and raises <see cref="EditRecorded"/> with its index.
+    /// </summary>
     private void Record(TerrainEdit edit)
     {
         (int, Vector3Int) key = (edit.Layer, edit.Cell);

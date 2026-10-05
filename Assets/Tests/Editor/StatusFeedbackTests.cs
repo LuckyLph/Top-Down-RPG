@@ -6,10 +6,17 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+/// <summary>
+/// Tests for status feedback: client-side countdown and remaining time, the HUD status bar and its icons, the
+/// world debuff icons over units, pooled status visuals, and the project content that carries them.
+/// </summary>
 public class StatusFeedbackTests
 {
     private readonly List<Object> created = new();
 
+    /// <summary>
+    /// Destroys everything the test tracked, taking the whole game object for tracked components.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -24,6 +31,10 @@ public class StatusFeedbackTests
         created.Clear();
     }
 
+    /// <summary>
+    /// <see cref="StatusEffectSet.CountDown"/> runs remaining times down to no lower than zero without removing
+    /// statuses or raising changes, since only the host ends a status.
+    /// </summary>
     [Test]
     public void Set_CountDown_RunsTimersDownWithoutTickingOrExpiring()
     {
@@ -42,6 +53,10 @@ public class StatusFeedbackTests
         Assert.That(changes, Is.Zero);
     }
 
+    /// <summary>
+    /// <see cref="StatusEffectSet.GetRemaining"/> returns the longest remaining time among a status's instances,
+    /// and zero for a status that is not active.
+    /// </summary>
     [Test]
     public void Set_GetRemaining_IsTheLongestInstance()
     {
@@ -56,6 +71,9 @@ public class StatusFeedbackTests
         Assert.That(set.GetRemaining(Definition("Other", StatusKind.Debuff, 1f)), Is.Zero);
     }
 
+    /// <summary>
+    /// A definition's abbreviation is the first two letters of its name, or the whole name when shorter.
+    /// </summary>
     [Test]
     public void Definition_Abbreviation_IsUpToTwoLettersOfTheName()
     {
@@ -63,6 +81,10 @@ public class StatusFeedbackTests
         Assert.That(Definition("X", StatusKind.Debuff, 1f).Abbreviation, Is.EqualTo("X"));
     }
 
+    /// <summary>
+    /// A status icon shows the definition's sprite, or its abbreviation when it has none, frames it in the
+    /// status colour, labels stacks only above one, fills by elapsed fraction, and hides by deactivating.
+    /// </summary>
     [Test]
     public void StatusIcon_ShowsTheIconOrTheAbbreviation_InTheStatusColour_WithStacksAboveOne()
     {
@@ -89,6 +111,11 @@ public class StatusFeedbackTests
         Assert.That(view.gameObject.activeSelf, Is.False);
     }
 
+    /// <summary>
+    /// The status bar presenter shows the local player's statuses as they are bound and change, one icon per
+    /// status with buffs first, updates elapsed fills on tick, and drops the old player when the local player
+    /// is cleared.
+    /// </summary>
     [Test]
     public void StatusBar_FollowsTheLocalPlayer_BuffsFirst_OneIconPerStatus()
     {
@@ -133,6 +160,9 @@ public class StatusFeedbackTests
         presenter.Dispose();
     }
 
+    /// <summary>
+    /// The status bar shows no more icons than it has slots, however many statuses are active.
+    /// </summary>
     [Test]
     public void StatusBar_CapsAtItsCapacity()
     {
@@ -152,6 +182,10 @@ public class StatusFeedbackTests
         presenter.Dispose();
     }
 
+    /// <summary>
+    /// World status icons show one tinted renderer per distinct debuff (buffs are skipped), using the fallback
+    /// sprite for debuffs without an icon, up to the number of renderers, and hide them all when cleared.
+    /// </summary>
     [Test]
     public void WorldIcons_ShowDistinctDebuffsOnly_UpToTheirCount()
     {
@@ -190,6 +224,10 @@ public class StatusFeedbackTests
         Assert.That(renderers[0].enabled, Is.False);
     }
 
+    /// <summary>
+    /// <see cref="StatusVisuals"/> shows one pooled, tinted visual per active status that defines one, layers
+    /// later visuals larger, returns ended ones to the pool for reuse, and releases all of them on demand.
+    /// </summary>
     [Test]
     public void Visuals_ShowOnePooledVisualPerStatusThatHasOne_AndReuseThem()
     {
@@ -245,6 +283,11 @@ public class StatusFeedbackTests
         }
     }
 
+    /// <summary>
+    /// The HUD prefab has an eight-slot status bar whose icons are fully wired and never block clicks, the
+    /// player and weasel carry status visuals, the weasel has four hidden overlay status icons with its health
+    /// bar, and every catalog status has a unique colour and a visual exactly when it should.
+    /// </summary>
     [Test]
     public void Content_HudPlayerAndWeaselCarryTheStatusFeedback()
     {
@@ -301,6 +344,9 @@ public class StatusFeedbackTests
         }
     }
 
+    /// <summary>
+    /// Counts the bar's icon slots whose game object is active.
+    /// </summary>
     private static int ActiveIcons(StatusBarView bar)
     {
         int active = 0;
@@ -315,6 +361,10 @@ public class StatusFeedbackTests
         return active;
     }
 
+    /// <summary>
+    /// Creates a tracked status definition with the given colour and visual, assigning <paramref name="icon"/>
+    /// through serialization because the factory does not take one.
+    /// </summary>
     private StatusEffectDefinition Definition(
         string name,
         StatusKind kind,
@@ -336,6 +386,10 @@ public class StatusFeedbackTests
         return Track(definition);
     }
 
+    /// <summary>
+    /// Creates a tracked unit with a rigidbody, a <see cref="PlayerController"/> and <see cref="StatusEffects"/>,
+    /// and returns its statuses.
+    /// </summary>
     private StatusEffects CreatePlayer(string name)
     {
         GameObject unit = Track(new GameObject(name));
@@ -344,6 +398,10 @@ public class StatusFeedbackTests
         return unit.AddComponent<StatusEffects>();
     }
 
+    /// <summary>
+    /// Creates a tracked scene object with a sprite renderer and a <see cref="StatusVisual"/> to stand in for a
+    /// visual prefab.
+    /// </summary>
     private StatusVisual CreateVisualPrefab()
     {
         GameObject prefab = Track(new GameObject("VisualPrefab"));
@@ -351,6 +409,9 @@ public class StatusFeedbackTests
         return prefab.AddComponent<StatusVisual>();
     }
 
+    /// <summary>
+    /// Creates a tracked canvas holding a <see cref="StatusBarView"/> with <paramref name="capacity"/> icon slots.
+    /// </summary>
     private StatusBarView CreateBar(int capacity)
     {
         GameObject canvas = Track(new GameObject("Canvas", typeof(RectTransform), typeof(Canvas)));
@@ -366,6 +427,9 @@ public class StatusFeedbackTests
         return bar;
     }
 
+    /// <summary>
+    /// Creates a tracked status icon slot with its frame, icon, label, elapsed fill and stacks label wired up.
+    /// </summary>
     private StatusIconView CreateIconView()
     {
         GameObject slot = Track(new GameObject("Status", typeof(RectTransform), typeof(Image)));
@@ -382,6 +446,9 @@ public class StatusFeedbackTests
         return view;
     }
 
+    /// <summary>
+    /// Records <paramref name="instance"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T instance) where T : Object
     {
         created.Add(instance);

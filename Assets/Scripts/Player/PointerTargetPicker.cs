@@ -17,6 +17,10 @@ public sealed class PointerTargetPicker
     private readonly PlayerControlSettings settings;
     private readonly IPlayerRegistry players;
 
+    /// <summary>
+    /// Picks with the radius and layers in <paramref name="settings"/> (null picks nothing), recognising allies
+    /// through <paramref name="players"/>.
+    /// </summary>
     public PointerTargetPicker(PlayerControlSettings settings, IPlayerRegistry players)
     {
         this.settings = settings;
@@ -64,6 +68,10 @@ public sealed class PointerTargetPicker
         return best;
     }
 
+    /// <summary>
+    /// The unit behind <paramref name="hit"/>: a living enemy on an enemy layer, else a living registered player whose
+    /// hierarchy holds the collider on an ally layer, else an empty target.
+    /// </summary>
     private UnitTarget Classify(Collider2D hit)
     {
         int layerBit = 1 << hit.gameObject.layer;
@@ -92,6 +100,10 @@ public sealed class PointerTargetPicker
         return default;
     }
 
+    /// <summary>
+    /// The health of the <see cref="DamageReceiver"/> behind <paramref name="hit"/>, or null, cached per collider. A
+    /// destroyed cached health is looked up again, and the cache is cleared whenever it fills up.
+    /// </summary>
     private Health EnemyHealth(Collider2D hit)
     {
         if (enemyHealthByCollider.TryGetValue(hit, out Health cached) && (ReferenceEquals(cached, null) || cached != null))

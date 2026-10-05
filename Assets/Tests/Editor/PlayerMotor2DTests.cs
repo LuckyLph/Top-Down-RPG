@@ -5,6 +5,10 @@ using UnityEngine.Tilemaps;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="PlayerMotor2D"/>: straight-line and grid-aware move orders, the active grid, arrival and
+/// stop, aim facing, remote copies, speed scaling, stall time, allocations and the player physics layer setup.
+/// </summary>
 public class PlayerMotor2DTests
 {
     private const float FixedDelta = 0.02f;
@@ -16,6 +20,10 @@ public class PlayerMotor2DTests
     private PlayerMotor2D motor;
     private Rigidbody2D body;
 
+    /// <summary>
+    /// Creates a kinematic player body with a <see cref="PlayerMotor2D"/> on an empty active grid holder, using
+    /// test control settings at the test move speed.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -29,6 +37,9 @@ public class PlayerMotor2DTests
         motor.Initialize(Track(TestPlayerControlSettings.Create(moveSpeed: Speed)));
     }
 
+    /// <summary>
+    /// Destroys every object and asset the test tracked.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -43,6 +54,10 @@ public class PlayerMotor2DTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// With no active grid, a move order is a single straight waypoint, and the body heads for it at move speed,
+    /// facing the way it moves.
+    /// </summary>
     [Test]
     public void WithoutAGrid_MovesInAStraightLineAtMoveSpeed_AndFacesTheWayItMoves()
     {
@@ -58,6 +73,10 @@ public class PlayerMotor2DTests
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.down));
     }
 
+    /// <summary>
+    /// On the active grid, a move order past a wall builds a multi-waypoint path over walkable cells that ends at
+    /// the exact destination.
+    /// </summary>
     [Test]
     public void OnTheActiveGrid_PathsAroundAWall()
     {
@@ -77,6 +96,9 @@ public class PlayerMotor2DTests
         }
     }
 
+    /// <summary>
+    /// On open ground, a clear straight line becomes a single waypoint at the exact destination.
+    /// </summary>
     [Test]
     public void AClearStraightLine_SkipsAStar()
     {
@@ -89,6 +111,9 @@ public class PlayerMotor2DTests
         Assert.That(motor.Follower.Waypoints, Is.EqualTo(new[] { new Vector2(7.2f, 3.9f) }));
     }
 
+    /// <summary>
+    /// A destination on an unwalkable cell is replaced by the nearest walkable cell.
+    /// </summary>
     [Test]
     public void AnUnwalkableDestination_EndsAtTheNearestWalkableCell()
     {
@@ -105,6 +130,9 @@ public class PlayerMotor2DTests
         Assert.That(last, Is.EqualTo(new Vector3Int(5, 1, 0)));
     }
 
+    /// <summary>
+    /// A destination far outside the map walks to the map's edge in that direction.
+    /// </summary>
     [Test]
     public void ADestinationFarOutsideTheMap_WalksToTheEdgeTowardIt()
     {
@@ -117,6 +145,10 @@ public class PlayerMotor2DTests
         Assert.That(waypoints[waypoints.Count - 1], Is.EqualTo(new Vector2(6.5f, 1.5f)));
     }
 
+    /// <summary>
+    /// Each move order paths on whichever grid is active at the time, and with none active it falls back to a
+    /// straight line.
+    /// </summary>
     [Test]
     public void ANewActiveGrid_IsUsedForTheNextMove_AndAClearedOneFallsBackToStraightLines()
     {
@@ -143,6 +175,9 @@ public class PlayerMotor2DTests
         Assert.That(motor.Follower.Waypoints, Is.EqualTo(new[] { goal }));
     }
 
+    /// <summary>
+    /// Arriving stops the body and clears the move direction while keeping the last facing.
+    /// </summary>
     [Test]
     public void ReachingTheDestination_StopsTheBody()
     {
@@ -160,6 +195,10 @@ public class PlayerMotor2DTests
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.right), "Facing stays where the player last walked.");
     }
 
+    /// <summary>
+    /// While aiming, the motor faces the aim direction even as it moves another way, and faces its movement again
+    /// once aiming is released.
+    /// </summary>
     [Test]
     public void Aiming_HoldsTheFacingWhileMoving_UntilReleased()
     {
@@ -176,6 +215,9 @@ public class PlayerMotor2DTests
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.right));
     }
 
+    /// <summary>
+    /// Stop drops the path and zeroes the body's velocity and the move direction.
+    /// </summary>
     [Test]
     public void Stop_DropsThePathAndZeroesVelocity()
     {
@@ -190,6 +232,10 @@ public class PlayerMotor2DTests
         Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.zero));
     }
 
+    /// <summary>
+    /// A copy that does not simulate movement refuses move orders, shows the replicated move and facing, and never
+    /// moves its body.
+    /// </summary>
     [Test]
     public void ARemoteCopy_ShowsReplicatedMovement_AndNeverMovesItsBody()
     {
@@ -209,6 +255,10 @@ public class PlayerMotor2DTests
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.up));
     }
 
+    /// <summary>
+    /// A speed scale slows the body in proportion; a zero scale holds it still without counting as stalled or
+    /// dropping the move order, and the path resumes once the scale is back to one.
+    /// </summary>
     [Test]
     public void ASpeedScale_SlowsTheBody_AndZeroHoldsItWithoutStalling()
     {
@@ -236,6 +286,9 @@ public class PlayerMotor2DTests
         Assert.That(body.linearVelocity, Is.EqualTo(new Vector2(0f, -Speed)), "The path resumes once the root ends.");
     }
 
+    /// <summary>
+    /// Stalled time grows by each fixed tick's delta while the body does not move.
+    /// </summary>
     [Test]
     public void StalledTime_GrowsWhileTheBodyDoesNotMove()
     {
@@ -250,6 +303,9 @@ public class PlayerMotor2DTests
         Assert.That(motor.StalledTime, Is.EqualTo(5 * FixedDelta).Within(0.0001f));
     }
 
+    /// <summary>
+    /// Once warm, re-issuing a move order around a wall and ticking allocate no managed memory.
+    /// </summary>
     [Test]
     public void MoveToAndFixedTick_DoNotAllocate_OnceWarm()
     {
@@ -270,6 +326,10 @@ public class PlayerMotor2DTests
         Assert.That(moveAndTick, Is.Not.AllocatingGCMemory());
     }
 
+    /// <summary>
+    /// The project's physics settings let the Player layer pass through itself but not the Enemy or Obstacles
+    /// layers, and leave enemies colliding with each other.
+    /// </summary>
     [Test]
     public void PlayersPassThroughEachOther_ButNotWallsOrMobs()
     {
@@ -281,12 +341,18 @@ public class PlayerMotor2DTests
         Assert.That(Physics2D.GetIgnoreLayerCollision(LayerMask.NameToLayer("Enemy"), LayerMask.NameToLayer("Enemy")), Is.False, "Mob collisions are unchanged.");
     }
 
+    /// <summary>
+    /// Moves the player body and its transform to <paramref name="position"/> at once.
+    /// </summary>
     private void Place(Vector2 position)
     {
         body.position = position;
         body.transform.position = position;
     }
 
+    /// <summary>
+    /// Builds a tracked navigation grid whose only walkable ground is <paramref name="cells"/>.
+    /// </summary>
     private NavigationGrid2D CreateGrid(IEnumerable<Vector3Int> cells)
     {
         GameObject root = Track(new GameObject("Grid"));
@@ -307,6 +373,10 @@ public class PlayerMotor2DTests
         return grid;
     }
 
+    /// <summary>
+    /// Lists every cell of the rectangle from (<paramref name="minX"/>, <paramref name="minY"/>) to
+    /// (<paramref name="maxX"/>, <paramref name="maxY"/>), bounds included.
+    /// </summary>
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)
     {
         List<Vector3Int> cells = new();
@@ -321,6 +391,9 @@ public class PlayerMotor2DTests
         return cells;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction on teardown and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

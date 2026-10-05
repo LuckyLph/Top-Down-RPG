@@ -3,6 +3,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Renders a sample dual-grid tilemap painted with a given rule tile into a texture for the rule tile inspector,
+/// using a hidden preview scene that persists across inspector redraws.
+/// </summary>
 public static class DualGridRuleTilePreviewer
 {
     private static Scene previewScene;
@@ -90,6 +94,10 @@ public static class DualGridRuleTilePreviewer
         return renderTexture;
     }
 
+    /// <summary>
+    /// Creates a new dual-grid tilemap far from the origin, assigns <paramref name="dualGridRuleTile"/> and paints the
+    /// sample layout on it.
+    /// </summary>
     private static DualGridTilemapModule CreateDualGridTilemapModule(DualGridRuleTile dualGridRuleTile)
     {
         var dualGridTilemapModule = DualGridTilemapModuleEditor.CreateNewDualGridTilemap();
@@ -101,6 +109,9 @@ public static class DualGridRuleTilePreviewer
         return dualGridTilemapModule;
     }
 
+    /// <summary>
+    /// Creates the orthographic preview camera framed on the sample layout, with a gray background.
+    /// </summary>
     private static Camera CreateCamera()
     {
         var cameraObject = new GameObject("PreviewCamera");
@@ -118,6 +129,10 @@ public static class DualGridRuleTilePreviewer
         return camera;
     }
 
+    /// <summary>
+    /// Clears the data tilemap and paints a fixed set of sample shapes that exercise the rule tile's corner and edge
+    /// configurations.
+    /// </summary>
     private static void PaintSampleTiles(DualGridTilemapModule module)
     {
         var tile = ScriptableObject.CreateInstance<Tile>();
@@ -185,6 +200,9 @@ public static class DualGridRuleTilePreviewer
         }
     }
 
+    /// <summary>
+    /// Switches the preview module to <paramref name="dualGridRuleTile"/> and rebuilds its render tilemap.
+    /// </summary>
     private static void UpdateDualGridTile(DualGridTilemapModule dualGridTilemapModule, DualGridRuleTile dualGridRuleTile)
     {
         dualGridTilemapModule.RenderTile = dualGridRuleTile;

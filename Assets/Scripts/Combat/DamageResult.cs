@@ -4,6 +4,9 @@
 /// </summary>
 public readonly struct DamageResult
 {
+    /// <summary>
+    /// Creates a result of <paramref name="rawAmount"/> mitigated to <paramref name="amount"/>.
+    /// </summary>
     public DamageResult(DamageType type, int rawAmount, int amount, DamageFlags flags)
     {
         Type = type;
@@ -23,6 +26,9 @@ public readonly struct DamageResult
     /// </summary>
     public bool Resolved => Amount > 0 || IsImmune;
 
+    /// <summary>
+    /// A copy with the dealt amount replaced, e.g. by the HP the target actually lost.
+    /// </summary>
     public DamageResult WithAmount(int amount)
     {
         return new DamageResult(Type, RawAmount, amount, Flags);

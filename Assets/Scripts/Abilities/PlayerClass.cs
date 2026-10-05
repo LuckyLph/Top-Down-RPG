@@ -14,16 +14,26 @@ public sealed class PlayerClass : ScriptableObject
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
 
+    /// <summary>
+    /// Keeps the ability list at exactly <see cref="AbilityCount"/> entries in the inspector.
+    /// </summary>
     private void OnValidate()
     {
         abilities = AbilitySlotArrays.Resize(abilities, AbilityCount);
     }
 
+    /// <summary>
+    /// The ability for class slot <paramref name="index"/> (0 is Q), or null when empty or out of range.
+    /// </summary>
     public AbilityDefinition GetAbility(int index)
     {
         return abilities != null && index >= 0 && index < abilities.Length ? abilities[index] : null;
     }
 
+    /// <summary>
+    /// Builds an unsaved, hidden runtime class with <paramref name="classAbilities"/> truncated or padded to four
+    /// slots, for tests that must not touch project assets.
+    /// </summary>
     public static PlayerClass Create(string name, params AbilityDefinition[] classAbilities)
     {
         PlayerClass playerClass = CreateInstance<PlayerClass>();

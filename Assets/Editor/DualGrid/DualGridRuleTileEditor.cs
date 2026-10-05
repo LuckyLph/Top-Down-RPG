@@ -6,10 +6,17 @@ using UnityEditorInternal;
 using UnityEngine;
 using static UnityEngine.Tilemaps.Tile;
 
+/// <summary>
+/// Inspector for <see cref="DualGridRuleTile"/> assets: texture setup by drag and drop, default tile settings, a live
+/// tilemap preview and a 2x2 neighbor matrix per tiling rule, with multi-object editing.
+/// </summary>
 [CanEditMultipleObjects]
 [CustomEditor(typeof(DualGridRuleTile), true)]
 public class DualGridRuleTileEditor : RuleTileEditor
 {
+    /// <summary>
+    /// Labels, tooltips and text styles used by the inspector.
+    /// </summary>
     private static class Styles
     {
         public static readonly GUIContent DefaultSprite = EditorGUIUtility.TrTextContent("Default Sprite", "The default sprite will be used as a last resort when no tiling rules are valid.");
@@ -63,6 +70,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
     private bool hasMultipleTargets = false;
     private List<DualGridRuleTile> targetDualGridRuleTiles = new();
 
+    /// <summary>
+    /// Caches the selected rule tiles, restores the preview toggle from editor prefs and builds the fixed-size
+    /// reorderable list of tiling rules before the base setup.
+    /// </summary>
     public override void OnEnable()
     {
         targetDualGridRuleTile = (DualGridRuleTile)target;
@@ -82,6 +93,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         base.OnEnable();
     }
 
+    /// <summary>
+    /// Records undo for the selection and draws the inspector sections in order, stopping at the first that asks to.
+    /// On any change, saves the tiles and refreshes each one's data tile, adding it as a sub-asset when it is new.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
@@ -115,6 +130,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         }
     }
 
+    /// <summary>
+    /// Draws the original texture field, or a drop area when a selected tile has neither texture nor rules. A new
+    /// texture is applied to every selected tile, stopping at the first that rejects it.
+    /// </summary>
     /// <returns>If the Inspector should continue the drawing pipeline.</returns>
     protected virtual bool DrawRuleTileOriginalTexture()
     {
@@ -144,6 +163,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         return true;
     }
 
+    /// <summary>
+    /// Draws the texture drop area for a single tile, or an error box when several are selected; the first dropped
+    /// object goes to <see cref="OnDropObjectInTextureArea"/>.
+    /// </summary>
     private void DrawDragAndDropArea()
     {
         if (hasMultipleTargets)
@@ -179,6 +202,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         }
     }
 
+    /// <summary>
+    /// Applies a dropped <see cref="Texture2D"/> to every selected tile and repaints, stopping without a repaint at the
+    /// first tile that rejects it. Other object types are ignored.
+    /// </summary>
     protected virtual void OnDropObjectInTextureArea(UnityEngine.Object draggedObject)
     {
         if (draggedObject is Texture2D texture)
@@ -192,7 +219,11 @@ public class DualGridRuleTileEditor : RuleTileEditor
         }
     }
 
-    /// <returns>If the Inspector should interrupt the drawing pipeline.</returns>
+    /// <summary>
+    /// Draws the default sprite, GameObject and collider for all selected tiles. When one changes, refreshes every
+    /// selected tile's data tile and rebuilds the colliders and render tilemaps of every module using a selected tile.
+    /// </summary>
+    /// <returns>If the Inspector should continue the drawing pipeline.</returns>
     protected virtual bool DrawRuleTileSettings()
     {
         EditorGUILayout.LabelField("Rule Tile Settings", EditorStyles.boldLabel);
@@ -231,7 +262,7 @@ public class DualGridRuleTileEditor : RuleTileEditor
 
         if (shouldUpdateAffectedModules)
         {
-            targetDualGridRuleTile.RefreshDataTile();
+            targetDualGridRuleTiles.ForEach(dualGridRuleTile => dualGridRuleTile.RefreshDataTile());
 
             var dualGridModules = UnityEngine.Object.FindObjectsByType<DualGridTilemapModule>();
             foreach (var module in dualGridModules)
@@ -247,7 +278,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         return true;
     }
 
-    /// <returns>If the Inspector should interrupt the drawing pipeline.</returns>
+    /// <summary>
+    /// Draws the tools section, whose button copies each selected tile's default GameObject onto all its tiling rules.
+    /// </summary>
+    /// <returns>If the Inspector should continue the drawing pipeline.</returns>
     protected virtual bool DrawRuleTileTools()
     {
         EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
@@ -262,7 +296,11 @@ public class DualGridRuleTileEditor : RuleTileEditor
         return true;
     }
 
-    /// <returns>If the Inspector should interrupt the drawing pipeline.</returns>
+    /// <summary>
+    /// Draws the show/hide preview toggle, remembered in editor prefs, and for a single selected tile renders it in the
+    /// preview scene and shows the result scaled to the inspector width.
+    /// </summary>
+    /// <returns>If the Inspector should continue the drawing pipeline.</returns>
     protected virtual bool DrawRuleTilePreview()
     {
         EditorGUILayout.LabelField("Tilemap Preview", EditorStyles.boldLabel);
@@ -318,7 +356,12 @@ public class DualGridRuleTileEditor : RuleTileEditor
         return true;
     }
 
-    /// <returns>If the Inspector should interrupt the drawing pipeline.</returns>
+    /// <summary>
+    /// Draws the undoable button that reapplies the texture and the automatic 16-rule preset to the selection, then the
+    /// tiling rules list. Stops with an error when the tile does not have exactly 16 rules; a multi-selection only gets
+    /// a warning instead of the list.
+    /// </summary>
+    /// <returns>If the Inspector should continue the drawing pipeline.</returns>
     protected virtual bool DrawTilingRulesList()
     {
         EditorGUILayout.LabelField("Dual Grid Tiling Rules", EditorStyles.boldLabel);
@@ -346,6 +389,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         return true;
     }
 
+    /// <summary>
+    /// Applies serialized changes, marks every selected tile dirty, repaints the scene views and updates the override
+    /// tiles that derive from the selection.
+    /// </summary>
     protected virtual void SaveSelectedTiles()
     {
         serializedObject.ApplyModifiedProperties();
@@ -355,6 +402,9 @@ public class DualGridRuleTileEditor : RuleTileEditor
         targetDualGridRuleTiles.ForEach(dualGridRuleTile => UpdateAffectedOverrideTiles(dualGridRuleTile));
     }
 
+    /// <summary>
+    /// Draws a rule's neighbor matrix as a 2x2 grid whose cells are the four diagonal data tile neighbors.
+    /// </summary>
     public override void RuleMatrixOnGUI(RuleTile tile, Rect rect, BoundsInt bounds, RuleTile.TilingRule tilingRule)
     {
         Handles.color = EditorGUIUtility.isProSkin ? new Color(1f, 1f, 1f, 0.2f) : new Color(0f, 0f, 0f, 0.2f);
@@ -387,17 +437,26 @@ public class DualGridRuleTileEditor : RuleTileEditor
         }
     }
 
+    /// <summary>
+    /// Always a 2x2 matrix, whatever neighbors the rule declares.
+    /// </summary>
     public override BoundsInt GetRuleGUIBounds(BoundsInt bounds, RuleTile.TilingRule rule)
     {
         return new BoundsInt(-1, -1, 0, 2, 2, 0);
     }
 
+    /// <summary>
+    /// Sizes the neighbor matrix at 27 pixels per cell.
+    /// </summary>
     public override Vector2 GetMatrixSize(BoundsInt bounds)
     {
         float matrixCellSize = 27;
         return new Vector2(bounds.size.x * matrixCellSize, bounds.size.y * matrixCellSize);
     }
 
+    /// <summary>
+    /// Draws one tiling rule row: the rule fields on the left, then the neighbor matrix and the sprite on the right.
+    /// </summary>
     protected override void OnDrawElement(Rect rect, int index, bool isactive, bool isfocused)
     {
         RuleTile.TilingRule rule = tile.m_TilingRules[index];
@@ -416,6 +475,10 @@ public class DualGridRuleTileEditor : RuleTileEditor
         SpriteOnGUI(spriteRect, rule);
     }
 
+    /// <summary>
+    /// Draws a rule's GameObject, its read-only collider, its output type and the fields of that output: animation
+    /// speeds, random noise and shuffle, and the sprite list.
+    /// </summary>
     protected virtual void DualGridRuleInspectorOnGUI(Rect rect, RuleTile.TilingRule tilingRule)
     {
         float y = rect.yMin;
@@ -471,11 +534,17 @@ public class DualGridRuleTileEditor : RuleTileEditor
         }
     }
 
+    /// <summary>
+    /// Labels the tiling rules list header.
+    /// </summary>
     public new virtual void OnDrawHeader(Rect rect)
     {
         GUI.Label(rect, Styles.TilingRules);
     }
 
+    /// <summary>
+    /// Row height of the tiling rule at <paramref name="index"/>, as the base rule tile editor computes it.
+    /// </summary>
     private float GetElementHeight(int index)
     {
         RuleTile.TilingRule rule = tile.m_TilingRules[index];

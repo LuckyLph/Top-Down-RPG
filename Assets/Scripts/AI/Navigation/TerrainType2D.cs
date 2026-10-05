@@ -22,6 +22,9 @@ public class TerrainType2D : ScriptableObject
     }
 
 #if UNITY_EDITOR
+    /// <summary>
+    /// Fills an empty terrain id with the asset name.
+    /// </summary>
     private void OnValidate()
     {
         if (string.IsNullOrWhiteSpace(terrainId))

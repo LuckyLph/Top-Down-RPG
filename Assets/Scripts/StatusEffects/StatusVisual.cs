@@ -24,6 +24,9 @@ public class StatusVisual : MonoBehaviour
     internal Color Color => color;
     internal int Layer { get; private set; }
 
+    /// <summary>
+    /// Records the base scale, finds the sprite renderer and fails loudly when there is none.
+    /// </summary>
     private void Awake()
     {
         EnsureInitialized();
@@ -33,11 +36,18 @@ public class StatusVisual : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Advances the alpha pulse by the frame time.
+    /// </summary>
     private void Update()
     {
         Advance(Time.deltaTime);
     }
 
+    /// <summary>
+    /// Activates the visual for <paramref name="definition"/>: tints it with the status colour (white without one),
+    /// restarts the pulse and scales it for <paramref name="layer"/>.
+    /// </summary>
     public void Show(StatusEffectDefinition definition, int layer)
     {
         EnsureInitialized();
@@ -48,6 +58,10 @@ public class StatusVisual : MonoBehaviour
         Advance(0f);
     }
 
+    /// <summary>
+    /// Sets how many statuses are shown under this one on the unit (negative counts as 0) and grows the scale by one
+    /// step per layer.
+    /// </summary>
     public void SetLayer(int layer)
     {
         EnsureInitialized();
@@ -55,16 +69,25 @@ public class StatusVisual : MonoBehaviour
         transform.localScale = baseScale * (1f + Layer * layerScaleStep);
     }
 
+    /// <summary>
+    /// Moves the visual to <paramref name="position"/> in world space.
+    /// </summary>
     public void Follow(Vector3 position)
     {
         transform.position = position;
     }
 
+    /// <summary>
+    /// Deactivates the visual so it can wait in the pool.
+    /// </summary>
     public void Hide()
     {
         gameObject.SetActive(false);
     }
 
+    /// <summary>
+    /// Advances the pulse phase by <paramref name="deltaTime"/> and applies the tint with the pulsed alpha.
+    /// </summary>
     internal void Advance(float deltaTime)
     {
         phase += deltaTime * pulseSpeed;
@@ -78,6 +101,10 @@ public class StatusVisual : MonoBehaviour
         spriteRenderer.color = tinted;
     }
 
+    /// <summary>
+    /// On first use, records the current scale as the base for layering and falls back to the sprite renderer on
+    /// this object.
+    /// </summary>
     private void EnsureInitialized()
     {
         if (initialized)

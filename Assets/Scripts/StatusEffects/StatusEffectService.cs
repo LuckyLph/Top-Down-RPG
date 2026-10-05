@@ -19,6 +19,10 @@ public sealed class StatusEffectService : ITickable
     private readonly List<PendingTick> pendingTicks = new();
     private float lastTickTime = float.NaN;
 
+    /// <summary>
+    /// Captures the damage service periodic ticks go through, the combat events blocks are published on, the
+    /// authority and the game clock that times ticks.
+    /// </summary>
     public StatusEffectService(DamageService damageService, CombatEvents combatEvents, IGameAuthority authority, IClock clock)
     {
         this.damageService = damageService;
@@ -82,6 +86,9 @@ public sealed class StatusEffectService : ITickable
         return authority.IsAuthoritative && statuses != null && statuses.Set.Remove(definition);
     }
 
+    /// <summary>
+    /// Removes every status from <paramref name="target"/> on the authoritative machine; does nothing elsewhere.
+    /// </summary>
     public void ClearAll(DamageReceiver target)
     {
         StatusEffects statuses = target != null ? target.Statuses : null;
@@ -102,6 +109,10 @@ public sealed class StatusEffectService : ITickable
         }
     }
 
+    /// <summary>
+    /// Each frame: measures the game-clock time since the last frame and, on the authoritative machine, advances
+    /// every tracked unit by it. The first frame only records the time.
+    /// </summary>
     public void Tick()
     {
         float now = clock.Time;
@@ -115,6 +126,10 @@ public sealed class StatusEffectService : ITickable
         Advance(deltaTime);
     }
 
+    /// <summary>
+    /// Advances every tracked, unheld unit's statuses by <paramref name="deltaTime"/>, untracking units with none
+    /// left, then applies the periodic ticks that came due as heals or damage once every set has been advanced.
+    /// </summary>
     internal void Advance(float deltaTime)
     {
         pendingTicks.Clear();
@@ -163,6 +178,9 @@ public sealed class StatusEffectService : ITickable
         pendingTicks.Clear();
     }
 
+    /// <summary>
+    /// Starts ticking <paramref name="target"/> and listening for its death, once per unit.
+    /// </summary>
     private void Track(DamageReceiver target)
     {
         for (int i = 0; i < units.Count; i++)
@@ -178,12 +196,18 @@ public sealed class StatusEffectService : ITickable
         units.Add(new TrackedUnit(target, health));
     }
 
+    /// <summary>
+    /// Stops ticking the unit at <paramref name="index"/> and listening for its death.
+    /// </summary>
     private void Untrack(int index)
     {
         units[index].Health.Died -= HandleUnitDied;
         units.RemoveAt(index);
     }
 
+    /// <summary>
+    /// Clears every status on a tracked unit that died.
+    /// </summary>
     private void HandleUnitDied(Health health)
     {
         for (int i = 0; i < units.Count; i++)
@@ -195,13 +219,22 @@ public sealed class StatusEffectService : ITickable
         }
     }
 
+    /// <summary>
+    /// Publishes a <see cref="StatusReport"/> of the block at the target's popup position.
+    /// </summary>
     private void PublishBlocked(DamageReceiver target, StatusEffectDefinition definition, GameObject source)
     {
         combatEvents.PublishBlocked(new StatusReport(target.Health, definition, source, target.PopupWorldPosition));
     }
 
+    /// <summary>
+    /// A unit being ticked, with the health captured when tracking started, which the death handler is attached to.
+    /// </summary>
     private readonly struct TrackedUnit
     {
+        /// <summary>
+        /// Pairs <paramref name="receiver"/> with its <paramref name="health"/>.
+        /// </summary>
         public TrackedUnit(DamageReceiver receiver, Health health)
         {
             Receiver = receiver;
@@ -212,8 +245,14 @@ public sealed class StatusEffectService : ITickable
         public Health Health { get; }
     }
 
+    /// <summary>
+    /// A periodic tick that came due on <see cref="Target"/>, held until every unit has advanced and then applied.
+    /// </summary>
     private readonly struct PendingTick
     {
+        /// <summary>
+        /// Pairs <paramref name="tick"/> with the unit it applies to.
+        /// </summary>
         public PendingTick(DamageReceiver target, StatusTick tick)
         {
             Target = target;

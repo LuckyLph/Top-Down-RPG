@@ -5,6 +5,9 @@ using UnityEngine;
 /// </summary>
 public readonly struct StatusReport
 {
+    /// <summary>
+    /// Creates a report; <paramref name="source"/> is null for a block replicated from the host.
+    /// </summary>
     public StatusReport(Health target, StatusEffectDefinition definition, GameObject source, Vector3 popupWorldPosition)
     {
         Target = target;

@@ -18,6 +18,10 @@ public sealed class AreaTerrainSync : IStartable, IDisposable
     private readonly INetworkObjectSpawner networkObjects;
     private NetworkObject registeredPrefab;
 
+    /// <summary>
+    /// Creates the sync for <paramref name="terrain"/> in the area <paramref name="scene"/>, instantiating through
+    /// the area's <paramref name="resolver"/>.
+    /// </summary>
     public AreaTerrainSync(IObjectResolver resolver, AreaTerrain terrain, Scene scene, INetworkObjectSpawner networkObjects)
     {
         this.resolver = resolver;
@@ -26,6 +30,11 @@ public sealed class AreaTerrainSync : IStartable, IDisposable
         this.networkObjects = networkObjects;
     }
 
+    /// <summary>
+    /// Client only: registers the terrain's sync prefab so the host's copy is injected and moved into the area scene.
+    /// Runs from the area scope's build callback; does nothing offline, on the host, without a sync prefab or when
+    /// already registered.
+    /// </summary>
     public void RegisterNetworkPrefab()
     {
         if (!networkObjects.IsActive || networkObjects.IsServer || terrain.SyncPrefab == null || registeredPrefab != null)
@@ -37,6 +46,10 @@ public sealed class AreaTerrainSync : IStartable, IDisposable
         networkObjects.RegisterPrefab(registeredPrefab, resolver, scene);
     }
 
+    /// <summary>
+    /// Host only: instantiates the sync prefab through the area container, moves it into the area scene and
+    /// network-spawns it. Logs an error when the terrain has no sync prefab.
+    /// </summary>
     public void Start()
     {
         if (!networkObjects.IsActive || !networkObjects.IsServer)
@@ -56,6 +69,9 @@ public sealed class AreaTerrainSync : IStartable, IDisposable
         networkObjects.Spawn(instance);
     }
 
+    /// <summary>
+    /// Unregisters the prefab handler added by <see cref="RegisterNetworkPrefab"/>, if any.
+    /// </summary>
     public void Dispose()
     {
         if (registeredPrefab != null)

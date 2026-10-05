@@ -7,10 +7,17 @@ using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// PlayMode tests for <see cref="NetworkSession"/> hosting and joining from the main menu, following a bare remote
+/// host's area announcements, losing the host, join refusals, version checks and join timeouts.
+/// </summary>
 public class NetworkSessionPlayModeTests
 {
     private NetworkManager remoteHost;
 
+    /// <summary>
+    /// Shuts down and destroys the remote host when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -22,6 +29,10 @@ public class NetworkSessionPlayModeTests
         }
     }
 
+    /// <summary>
+    /// Hosting from the main menu starts a session that survives entering the game, saves the entered area once, and
+    /// shuts down when the game returns to the menu.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostFromMenu_EntersTheGame_SavesIt_AndReturningToTheMenuEndsTheSession()
     {
@@ -43,6 +54,11 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the session to shut down in the menu");
     }
 
+    /// <summary>
+    /// A joined client waits in the menu until the host announces an area, then loads it and reports ready for its
+    /// epoch; it reloads just the area for a plain announcement and the whole session for a new-session one, returns
+    /// to the menu when the host leaves, and never saves.
+    /// </summary>
     [UnityTest]
     public IEnumerator JoinFromMenu_FollowsTheHostsAreaAnnouncements_AndReturnsToTheMenuWhenTheHostLeaves()
     {
@@ -101,6 +117,11 @@ public class NetworkSessionPlayModeTests
         Assert.That(saveStore.WriteCount, Is.Zero, "A joined client never saves the host's areas.");
     }
 
+    /// <summary>
+    /// When the host leaves while a client is still loading the announced area, the client stays non-authoritative,
+    /// returns to the menu after the load without saving, and is authoritative again for an offline game that saves
+    /// as usual.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostLeavingWhileAClientLoadsItsArea_ReturnsTheClientToTheMenu_WithoutSaving()
     {
@@ -143,6 +164,9 @@ public class NetworkSessionPlayModeTests
         Assert.That(saveStore.WriteCount, Is.EqualTo(1), "An offline game after the lost session saves as usual.");
     }
 
+    /// <summary>
+    /// Host and Join do nothing while the main menu is still transitioning in, and Host works once it has settled.
+    /// </summary>
     [UnityTest]
     public IEnumerator MenuButtons_DoNothingWhileTheMenuIsStillFading()
     {
@@ -169,6 +193,9 @@ public class NetworkSessionPlayModeTests
         Assert.That(gameFlow.IsInGame, Is.True);
     }
 
+    /// <summary>
+    /// A join the host refuses fails, exposes the host's reason as the join refusal and shuts the client down.
+    /// </summary>
     [UnityTest]
     public IEnumerator Join_ReportsTheHostsRefusal()
     {
@@ -185,6 +212,10 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the refused client to shut down");
     }
 
+    /// <summary>
+    /// The host disconnects a client whose join payload carries another game version, with a refusal naming that
+    /// version.
+    /// </summary>
     [UnityTest]
     public IEnumerator Host_RefusesAClientRunningAnotherVersion()
     {
@@ -212,6 +243,9 @@ public class NetworkSessionPlayModeTests
         }
     }
 
+    /// <summary>
+    /// A join with no host listening fails after its timeout and shuts the client down.
+    /// </summary>
     [UnityTest]
     public IEnumerator Join_GivesUpWhenNoHostAnswers()
     {
@@ -225,6 +259,10 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the failed client to shut down");
     }
 
+    /// <summary>
+    /// Sends <paramref name="announcement"/> from the remote host to <paramref name="clientId"/>, as a real host does
+    /// on join and on each area change.
+    /// </summary>
     private void Announce(ulong clientId, AreaAnnouncement announcement)
     {
         using FastBufferWriter writer = new(1024, Allocator.Temp);
@@ -232,6 +270,10 @@ public class NetworkSessionPlayModeTests
         remoteHost.CustomMessagingManager.SendNamedMessage(NetworkSession.AreaAnnouncementMessage, clientId, writer);
     }
 
+    /// <summary>
+    /// Starts a bare host, cloned from the session's manager, on the session's port with no game scenes behind it.
+    /// It approves every client, or refuses remote ones with <paramref name="refusal"/> when that is given.
+    /// </summary>
     private static NetworkManager StartRemoteHost(NetworkSession session, string refusal = null)
     {
         NetworkManager host = InProcessClient.CloneNetworkManager(session, "RemoteHost");

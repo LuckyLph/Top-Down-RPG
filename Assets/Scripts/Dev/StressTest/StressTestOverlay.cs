@@ -3,6 +3,11 @@ using System.Text;
 using Unity.Profiling;
 using UnityEngine;
 
+/// <summary>
+/// Dev-only IMGUI overlay for the stress test area: smoothed FPS, mob counts per AI state, per-frame pathfinding
+/// cost and GC allocation from profiler recorders, plus buttons to spawn and clear mobs through the
+/// <see cref="StressTestSpawner"/>.
+/// </summary>
 public class StressTestOverlay : MonoBehaviour
 {
     private const int SampleCapacity = 512;
@@ -23,6 +28,9 @@ public class StressTestOverlay : MonoBehaviour
     private float nextRefreshTime;
     private int framesSinceRefresh;
 
+    /// <summary>
+    /// Starts the profiler recorders for pathfinding, path building and per-frame GC allocation.
+    /// </summary>
     private void OnEnable()
     {
         findPathRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "GridAStarPathfinder2D.FindPath", SampleCapacity);
@@ -30,6 +38,9 @@ public class StressTestOverlay : MonoBehaviour
         gcAllocRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", SampleCapacity);
     }
 
+    /// <summary>
+    /// Disposes the profiler recorders.
+    /// </summary>
     private void OnDisable()
     {
         findPathRecorder.Dispose();
@@ -37,6 +48,10 @@ public class StressTestOverlay : MonoBehaviour
         gcAllocRecorder.Dispose();
     }
 
+    /// <summary>
+    /// Smooths the frame time, counts frames and rebuilds the stats text every <see cref="RefreshInterval"/>
+    /// seconds of unscaled time.
+    /// </summary>
     private void Update()
     {
         float frameSeconds = Time.unscaledDeltaTime;
@@ -50,6 +65,10 @@ public class StressTestOverlay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Counts the spawner's mobs per AI state, averages the recorder samples over the frames since the last
+    /// refresh and caches the resulting stats text for <see cref="OnGUI"/>.
+    /// </summary>
     private void RebuildText()
     {
         System.Array.Clear(stateCounts, 0, stateCounts.Length);
@@ -90,6 +109,11 @@ public class StressTestOverlay : MonoBehaviour
         cachedText = text.ToString();
     }
 
+    /// <summary>
+    /// Sums the samples held by <paramref name="recorder"/>, divides by <paramref name="frames"/> to get per-frame
+    /// value and call count, then resets and restarts it. Time values are converted from nanoseconds to
+    /// milliseconds; both outputs are zero when the recorder is invalid.
+    /// </summary>
     private static void ConsumePerFrame(ref ProfilerRecorder recorder, int frames, out double value, out double calls, bool valueIsTime = true)
     {
         value = 0d;
@@ -116,6 +140,10 @@ public class StressTestOverlay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Draws the scaled stats box with the spawn, clear and hide buttons in the bottom-left corner, or only a
+    /// "Show stats" button while hidden.
+    /// </summary>
     private void OnGUI()
     {
         Matrix4x4 previousMatrix = GUI.matrix;

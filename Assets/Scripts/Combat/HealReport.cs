@@ -5,6 +5,9 @@ using UnityEngine;
 /// </summary>
 public readonly struct HealReport
 {
+    /// <summary>
+    /// Creates a report of <paramref name="amount"/> HP added to <paramref name="target"/>.
+    /// </summary>
     public HealReport(Health target, int amount, GameObject source, Vector3 popupWorldPosition)
     {
         Target = target;

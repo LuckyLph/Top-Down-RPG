@@ -7,12 +7,19 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// Tests for <see cref="AreaMobSpawner"/>: invalid spawn points, and network prefab registration on clients and
+/// offline.
+/// </summary>
 public class AreaMobSpawnerTests
 {
     private const string WeaselPrefabPath = "Assets/Prefabs/Mobs/Weasel.prefab";
 
     private readonly List<GameObject> createdObjects = new();
 
+    /// <summary>
+    /// Destroys the spawn point objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -27,6 +34,9 @@ public class AreaMobSpawnerTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Spawning skips a null spawn point and logs an error for a spawn point with no mob prefab, creating no mobs.
+    /// </summary>
     [Test]
     public void SpawnAll_LogsAnErrorAndSkipsSpawnPointsWithoutAPrefab()
     {
@@ -40,6 +50,10 @@ public class AreaMobSpawnerTests
         Assert.That(Object.FindObjectsByType<MobController>().Length, Is.EqualTo(mobsBefore));
     }
 
+    /// <summary>
+    /// On a connected client the spawner registers each distinct mob prefab once, spawns no mobs of its own, and
+    /// unregisters the prefabs when disposed.
+    /// </summary>
     [Test]
     public void OnAClient_RegistersEachMobPrefabOnce_SpawnsNothing_AndUnregistersOnDispose()
     {
@@ -61,6 +75,9 @@ public class AreaMobSpawnerTests
         Assert.That(network.Registered, Is.Empty);
     }
 
+    /// <summary>
+    /// With no active network session the spawner registers no network prefabs.
+    /// </summary>
     [Test]
     public void Offline_RegistersNothing()
     {
@@ -73,6 +90,10 @@ public class AreaMobSpawnerTests
         Assert.That(network.Registered, Is.Empty);
     }
 
+    /// <summary>
+    /// Creates a tracked mob spawn point named <paramref name="name"/> that spawns <paramref name="prefab"/>
+    /// (null for none).
+    /// </summary>
     private MobSpawnPoint CreateSpawnPoint(string name, MobController prefab)
     {
         GameObject spawnObject = new(name);

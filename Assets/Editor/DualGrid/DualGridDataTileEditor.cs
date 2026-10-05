@@ -3,6 +3,10 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Read-only inspector for <see cref="DualGridDataTile"/> sub-assets: shows their collider and GameObject with a
+/// warning not to change them, since they are generated from the owning rule tile.
+/// </summary>
 [CanEditMultipleObjects]
 [CustomEditor(typeof(DualGridDataTile), true)]
 public class DualGridDataTileEditor : UnityEditor.Editor
@@ -12,6 +16,9 @@ public class DualGridDataTileEditor : UnityEditor.Editor
     private bool hasMultipleTargets = false;
     private List<DualGridDataTile> targetDualGridRuleTiles = new();
 
+    /// <summary>
+    /// Caches the inspected data tiles so the inspector can show mixed values across a multi-selection.
+    /// </summary>
     public void OnEnable()
     {
         targetDualGridRuleTile = (DualGridDataTile)target;
@@ -21,6 +28,9 @@ public class DualGridDataTileEditor : UnityEditor.Editor
         else targetDualGridRuleTiles = new List<DualGridDataTile>() { target as DualGridDataTile };
     }
 
+    /// <summary>
+    /// Draws the do-not-edit warning and the disabled collider and GameObject fields of the first selected tile.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         EditorGUILayout.HelpBox("This Dual Grid Data Tile contains important metadata for the correct usage of Dual Grid Tilemaps. Do not update these values.", MessageType.Warning);

@@ -28,6 +28,9 @@ public class StatusDebugPanel : MonoBehaviour
 
     public bool IsOpen => open;
 
+    /// <summary>
+    /// Spawns the panel on a persistent game object after the first scene loads, once per play session.
+    /// </summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateForPlaySession()
     {
@@ -67,6 +70,9 @@ public class StatusDebugPanel : MonoBehaviour
         return Apply(gameplay, target, definition);
     }
 
+    /// <summary>
+    /// Handles the panel's hotkeys and, while open, draws the status list, the clear button and the last result.
+    /// </summary>
     private void OnGUI()
     {
         Event current = Event.current;
@@ -111,6 +117,10 @@ public class StatusDebugPanel : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    /// <summary>
+    /// Toggles the panel on F2; while open, applies the selected status to the hovered unit (F3) or the local
+    /// player (F4) and records the outcome. <paramref name="guiMousePosition"/> is in GUI space (y down).
+    /// </summary>
     private void HandleKey(KeyCode key, Vector2 guiMousePosition)
     {
         if (key == ToggleKey)
@@ -136,6 +146,9 @@ public class StatusDebugPanel : MonoBehaviour
         lastResult = $"{definition.DisplayName}: {outcome}";
     }
 
+    /// <summary>
+    /// Removes every status from the local player. Does nothing outside a game session.
+    /// </summary>
     private void ClearSelf()
     {
         IObjectResolver gameplay = Gameplay();
@@ -147,6 +160,10 @@ public class StatusDebugPanel : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Applies <paramref name="definition"/> to <paramref name="target"/> through the Gameplay scope's
+    /// <see cref="StatusEffectService"/>; <see cref="StatusApplyOutcome.Invalid"/> when either is missing.
+    /// </summary>
     private static StatusApplyOutcome Apply(IObjectResolver gameplay, DamageReceiver target, StatusEffectDefinition definition)
     {
         if (gameplay == null || target == null)
@@ -157,12 +174,19 @@ public class StatusDebugPanel : MonoBehaviour
         return gameplay.Resolve<StatusEffectService>().Apply(target, definition);
     }
 
+    /// <summary>
+    /// The status catalog from the Gameplay scope's <see cref="CombatSettings"/>, or null outside a game session.
+    /// </summary>
     private StatusEffectCatalog Catalog()
     {
         IObjectResolver gameplay = Gameplay();
         return gameplay != null ? gameplay.Resolve<CombatSettings>().StatusCatalog : null;
     }
 
+    /// <summary>
+    /// Button label for the status at <paramref name="index"/>, prefixed with + for buffs and - for debuffs.
+    /// Labels are cached and rebuilt only when the catalog or its size changes.
+    /// </summary>
     private string Label(StatusEffectCatalog catalog, int index)
     {
         if (labelledCatalog != catalog || labels.Length != catalog.Count)
@@ -179,6 +203,10 @@ public class StatusDebugPanel : MonoBehaviour
         return labels[index];
     }
 
+    /// <summary>
+    /// The Gameplay scope's container, or null when no Gameplay scope exists. A missing scope is searched for at
+    /// most once per <see cref="ScopeLookupInterval"/> seconds.
+    /// </summary>
     private IObjectResolver Gameplay()
     {
         if (gameplayScope == null && Time.unscaledTime >= nextScopeLookup)

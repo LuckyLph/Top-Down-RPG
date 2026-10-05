@@ -5,10 +5,17 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for networked players between a host and an in-process client: spawning on readiness,
+/// owner-driven movement under host statuses, attacks, disconnects and late-arriving dead players.
+/// </summary>
 public class NetworkPlayersPlayModeTests
 {
     private InProcessClient client;
 
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -16,6 +23,11 @@ public class NetworkPlayersPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// The host spawns a client's player only once the client reports ready, and the client simulates it. The client's
+    /// walking, a host-applied slow and stun, and its attacks show on the host's copy; a disconnect drops that copy
+    /// while the host keeps its own player.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostedGame_SpawnsAPlayerForAReadyClient_AndReplicatesItsMovementAndAttacks()
     {
@@ -97,6 +109,10 @@ public class NetworkPlayersPlayModeTests
         Assert.That(hostLocal.Current, Is.Not.Null);
     }
 
+    /// <summary>
+    /// A player that dies while hidden from a client arrives there dead, with its colliders and controller off, and
+    /// both come back on when the host respawns it.
+    /// </summary>
     [UnityTest]
     public IEnumerator APlayerThatIsDeadWhenItReachesAClient_ArrivesDead_AndComesBackOnRespawn()
     {
@@ -143,6 +159,9 @@ public class NetworkPlayersPlayModeTests
         Assert.That(copy.enabled, Is.True);
     }
 
+    /// <summary>
+    /// Whether any <see cref="Collider2D"/> on the unit's own object is enabled.
+    /// </summary>
     private static bool AnyColliderEnabled(Component unit)
     {
         foreach (Collider2D unitCollider in unit.GetComponents<Collider2D>())
@@ -156,6 +175,9 @@ public class NetworkPlayersPlayModeTests
         return false;
     }
 
+    /// <summary>
+    /// Whether a sword slash rooted on <paramref name="owner"/> exists in the scene.
+    /// </summary>
     private static bool HasSlashOwnedBy(Transform owner)
     {
         foreach (SwordSlashAttack slash in Object.FindObjectsByType<SwordSlashAttack>())

@@ -5,8 +5,15 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// PlayMode tests for the options screen in the main menu and for input readers sharing the session's input asset copy.
+/// </summary>
 public class OptionsMenuPlayModeTests
 {
+    /// <summary>
+    /// Opening options hides the menu buttons and selects the first binding row; Back restores the buttons with
+    /// Options selected. The screen lists three section headers and eight rows.
+    /// </summary>
     [UnityTest]
     public IEnumerator MainMenuOptions_ReplaceTheButtons_AndBackBringsThemBackWithOptionsSelected()
     {
@@ -36,6 +43,10 @@ public class OptionsMenuPlayModeTests
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.OptionsButton.gameObject));
     }
 
+    /// <summary>
+    /// The UI input module and the key bindings both use the <see cref="RuntimeInputActions"/> copy of the input asset,
+    /// and the module has enabled its UI actions.
+    /// </summary>
     [UnityTest]
     public IEnumerator EveryInputReader_UsesTheSessionsCopyOfTheInputAsset()
     {

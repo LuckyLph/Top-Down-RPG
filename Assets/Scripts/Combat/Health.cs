@@ -1,12 +1,24 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// A unit's hit points, starting full. Raises <see cref="Damaged"/> and <see cref="Died"/> when damage lands,
+/// <see cref="Healed"/> for HP added and <see cref="Restored"/> when refilled. Gameplay damage and heals go through
+/// <see cref="DamageService"/>; <see cref="NetworkHealth"/> mirrors HP to clients.
+/// </summary>
 [DisallowMultipleComponent]
 public class Health : MonoBehaviour
 {
+    /// <summary>
+    /// One application of damage as raised by <see cref="Damaged"/>: the HP actually removed, the source, the HP
+    /// before and after, and the damage type and flags.
+    /// </summary>
     [Serializable]
     public readonly struct DamageEvent
     {
+        /// <summary>
+        /// Creates the event for <paramref name="amount"/> HP removed from <paramref name="target"/>.
+        /// </summary>
         public DamageEvent(Health target, int amount, GameObject source, int previousHealth, int currentHealth, DamageType type, DamageFlags flags)
         {
             Target = target;
@@ -50,16 +62,27 @@ public class Health : MonoBehaviour
 
     public bool IsDead => CurrentHealth <= 0;
 
+    /// <summary>
+    /// Fills HP to the maximum unless something already read or changed it.
+    /// </summary>
     private void Awake()
     {
         InitializeIfNeeded();
     }
 
+    /// <summary>
+    /// Keeps the maximum at 1 or more.
+    /// </summary>
     private void OnValidate()
     {
         maxHealth = Mathf.Max(1, maxHealth);
     }
 
+    /// <summary>
+    /// Removes up to <paramref name="amount"/> HP from a living unit and returns what was removed, raising
+    /// <see cref="Damaged"/> and, when HP reaches zero, <see cref="Died"/>. Does nothing and returns 0 for a
+    /// non-positive amount or a dead unit. Applies no faction or authority rules; that is <see cref="DamageService"/>.
+    /// </summary>
     public int ApplyDamage(int amount, GameObject source = null, DamageType type = DamageType.Physical, DamageFlags flags = DamageFlags.None)
     {
         InitializeIfNeeded();
@@ -128,6 +151,10 @@ public class Health : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Refills HP to the maximum, reviving a dead unit, and raises <see cref="Restored"/>; does nothing when already
+    /// full.
+    /// </summary>
     public void Restore()
     {
         InitializeIfNeeded();
@@ -141,6 +168,9 @@ public class Health : MonoBehaviour
         Restored?.Invoke(this);
     }
 
+    /// <summary>
+    /// Sets HP to the maximum the first time it is needed, so reads and changes before <c>Awake</c> see a full unit.
+    /// </summary>
     private void InitializeIfNeeded()
     {
         if (initialized)

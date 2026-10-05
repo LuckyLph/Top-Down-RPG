@@ -34,6 +34,9 @@ public class OptionsMenuView : MonoBehaviour
     internal TMP_Text ListeningText => listeningText;
     internal Transform RowsContainer => rowsContainer;
 
+    /// <summary>
+    /// Logs an error when any panel, prefab, container, button or text reference is missing.
+    /// </summary>
     private void Awake()
     {
         if (panel == null || rowsContainer == null || sectionHeaderPrefab == null || rowPrefab == null || resetAllButton == null
@@ -44,6 +47,9 @@ public class OptionsMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows or hides the options panel; the component's own object stays active.
+    /// </summary>
     public void SetShown(bool shown)
     {
         if (panel != null)
@@ -52,17 +58,26 @@ public class OptionsMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Appends a section header reading <paramref name="text"/> to the rows container.
+    /// </summary>
     public void AddSectionHeader(string text)
     {
         TMP_Text header = Instantiate(sectionHeaderPrefab, rowsContainer);
         header.text = text;
     }
 
+    /// <summary>
+    /// Appends a new, unlabelled binding row to the rows container and returns it.
+    /// </summary>
     public KeyBindingRowView AddRow()
     {
         return Instantiate(rowPrefab, rowsContainer);
     }
 
+    /// <summary>
+    /// Sets the notice line, used for swap and reset messages; an empty string clears it.
+    /// </summary>
     public void SetNotice(string text)
     {
         if (noticeText != null)
@@ -71,6 +86,9 @@ public class OptionsMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the click-blocking listening panel with <paramref name="prompt"/>.
+    /// </summary>
     public void ShowListening(string prompt)
     {
         if (listeningText != null)
@@ -84,6 +102,9 @@ public class OptionsMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Hides the listening panel.
+    /// </summary>
     public void HideListening()
     {
         if (listeningPanel != null)
@@ -92,6 +113,9 @@ public class OptionsMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows or hides the Reset all confirmation.
+    /// </summary>
     public void SetConfirmShown(bool shown)
     {
         if (confirmPanel != null)

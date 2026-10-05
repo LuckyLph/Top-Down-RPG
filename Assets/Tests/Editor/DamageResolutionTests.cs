@@ -4,10 +4,18 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Tests for typed damage and healing: <see cref="DamageMath"/>, defenses from <see cref="DamageReceiver"/>
+/// profiles, <see cref="DamageService"/> faction and authority rules, typed melee hits, popups, and the shipped
+/// combat content.
+/// </summary>
 public class DamageResolutionTests
 {
     private readonly List<Object> created = new();
 
+    /// <summary>
+    /// Destroys every game object and asset instance the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -22,6 +30,9 @@ public class DamageResolutionTests
         created.Clear();
     }
 
+    /// <summary>
+    /// A hit against no defense resolves to its raw amount and type with no flags.
+    /// </summary>
     [Test]
     public void DamageMath_WithoutDefense_DealsTheRawAmount()
     {
@@ -34,6 +45,9 @@ public class DamageResolutionTests
         Assert.That(result.Resolved, Is.True);
     }
 
+    /// <summary>
+    /// A positive resistance reduces the damage by its percentage and flags the hit as resisted.
+    /// </summary>
     [Test]
     public void DamageMath_PositiveResistance_ReducesAndFlagsResisted()
     {
@@ -43,6 +57,9 @@ public class DamageResolutionTests
         Assert.That(result.Flags, Is.EqualTo(DamageFlags.Resisted));
     }
 
+    /// <summary>
+    /// A negative resistance increases the damage by its percentage and flags the hit as a weakness.
+    /// </summary>
     [Test]
     public void DamageMath_NegativeResistance_IncreasesAndFlagsWeakness()
     {
@@ -52,6 +69,9 @@ public class DamageResolutionTests
         Assert.That(result.Flags, Is.EqualTo(DamageFlags.Weakness));
     }
 
+    /// <summary>
+    /// Resistance is clamped to the settings' cap (80%) and floor (-100%).
+    /// </summary>
     [Test]
     public void DamageMath_ClampsResistanceToTheCapAndTheFloor()
     {
@@ -59,6 +79,9 @@ public class DamageResolutionTests
         Assert.That(Resolve(20, DamageType.Fire, new DefenseSnapshot(-150, false, 1f)).Amount, Is.EqualTo(40), "Weakness stops at -100%.");
     }
 
+    /// <summary>
+    /// True damage ignores resistance and carries no resisted flag, but an immune target still takes none.
+    /// </summary>
     [Test]
     public void DamageMath_TrueDamage_IgnoresResistanceButNotImmunity()
     {
@@ -71,6 +94,10 @@ public class DamageResolutionTests
         Assert.That(immune.IsImmune, Is.True);
     }
 
+    /// <summary>
+    /// An immune target takes zero damage, overriding weakness and multipliers, yet the hit still resolves with
+    /// only the immune flag.
+    /// </summary>
     [Test]
     public void DamageMath_Immune_DealsNothingButResolves()
     {
@@ -81,6 +108,9 @@ public class DamageResolutionTests
         Assert.That(result.Resolved, Is.True);
     }
 
+    /// <summary>
+    /// The attacker's dealt multiplier and the target's taken multiplier both scale the resisted amount.
+    /// </summary>
     [Test]
     public void DamageMath_AppliesDealtAndTakenMultipliers()
     {
@@ -89,6 +119,9 @@ public class DamageResolutionTests
         Assert.That(result.Amount, Is.EqualTo(15));
     }
 
+    /// <summary>
+    /// Fractional results round to the nearest whole number, with halves rounding up.
+    /// </summary>
     [Test]
     public void DamageMath_RoundsHalfAwayFromZero()
     {
@@ -97,6 +130,10 @@ public class DamageResolutionTests
         Assert.That(Resolve(9, DamageType.Fire, new DefenseSnapshot(70, false, 1f)).Amount, Is.EqualTo(3));
     }
 
+    /// <summary>
+    /// A non-immune hit reduced below the minimum by resistance or a zero dealt multiplier still deals the
+    /// minimum of 1.
+    /// </summary>
     [Test]
     public void DamageMath_HitsThatAreNotImmuneDealAtLeastTheMinimum()
     {
@@ -104,6 +141,9 @@ public class DamageResolutionTests
         Assert.That(DamageMath.Resolve(20, DamageType.Fire, 0f, DefenseSnapshot.None, TestCombat.Settings).Amount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Zero and negative raw amounts do not resolve.
+    /// </summary>
     [Test]
     public void DamageMath_NonPositiveAmounts_AreRejected()
     {
@@ -111,6 +151,9 @@ public class DamageResolutionTests
         Assert.That(Resolve(-5, DamageType.Physical, DefenseSnapshot.None).Resolved, Is.False);
     }
 
+    /// <summary>
+    /// Flags passed in, such as periodic, are kept and combined with the flags the resolution adds.
+    /// </summary>
     [Test]
     public void DamageMath_KeepsTheFlagsItWasGiven()
     {
@@ -119,6 +162,10 @@ public class DamageResolutionTests
         Assert.That(result.Flags, Is.EqualTo(DamageFlags.Periodic | DamageFlags.Resisted));
     }
 
+    /// <summary>
+    /// A receiver takes its faction, summed per-type resistances and immunities from its profile; one without a
+    /// profile has no faction and no defense.
+    /// </summary>
     [Test]
     public void DamageReceiver_DefenseComesFromItsProfile()
     {
@@ -137,6 +184,10 @@ public class DamageResolutionTests
         Assert.That(bare.GetDefense(DamageType.Fire).Immune, Is.False);
     }
 
+    /// <summary>
+    /// A resisted hit removes the reduced amount from health, and both the published report and the health damage
+    /// event carry its type and resisted flag.
+    /// </summary>
     [Test]
     public void DamageService_ResistedHit_ReportsTypeAndFlags()
     {
@@ -160,6 +211,9 @@ public class DamageResolutionTests
         Assert.That(damaged.Value.Flags, Is.EqualTo(DamageFlags.Resisted));
     }
 
+    /// <summary>
+    /// An overkill hit reports the health actually lost as its amount and the full hit as its raw amount.
+    /// </summary>
     [Test]
     public void DamageService_ReportsTheHpActuallyLost()
     {
@@ -174,6 +228,10 @@ public class DamageResolutionTests
         Assert.That(target.Health.IsDead, Is.True);
     }
 
+    /// <summary>
+    /// An immune hit resolves without health loss or a damage event, raises the receiver's immune event with the
+    /// type, and is published as an immune report.
+    /// </summary>
     [Test]
     public void DamageService_ImmuneHit_ResolvesWithoutHpLossAndIsReported()
     {
@@ -198,6 +256,10 @@ public class DamageResolutionTests
         Assert.That(report.Value.Amount, Is.Zero);
     }
 
+    /// <summary>
+    /// A hit from a source of the same faction is refused and unreported, while hits across factions, from a
+    /// source without a faction, on a target without one, or without a source all land.
+    /// </summary>
     [Test]
     public void DamageService_HostileHits_OnlyLandAcrossFactions()
     {
@@ -221,6 +283,10 @@ public class DamageResolutionTests
         Assert.That(damage.ApplyDamage(teammate, 5).Amount, Is.EqualTo(5), "A hit without a source hits anyone.");
     }
 
+    /// <summary>
+    /// A source object with no receiver of its own takes its faction from a parent, so a player's weapon cannot
+    /// hit a teammate.
+    /// </summary>
     [Test]
     public void DamageService_FindsTheSourceFactionOnItsParents()
     {
@@ -234,6 +300,10 @@ public class DamageResolutionTests
         Assert.That(result.Resolved, Is.False);
     }
 
+    /// <summary>
+    /// Without authority a replicated immune hit leaves health untouched and is published as an immune report of
+    /// its type.
+    /// </summary>
     [Test]
     public void DamageService_ReplicatedImmuneHit_IsReportedWithoutAuthority()
     {
@@ -252,6 +322,10 @@ public class DamageResolutionTests
         Assert.That(report.Value.Type, Is.EqualTo(DamageType.Fire));
     }
 
+    /// <summary>
+    /// Healing returns and reports only the health restored up to the maximum, ignores non-positive amounts and
+    /// full health, and never revives a dead unit.
+    /// </summary>
     [Test]
     public void Health_Heal_CapsAtMaxAndNeverRevives()
     {
@@ -279,6 +353,10 @@ public class DamageResolutionTests
         Assert.That(healedEvents, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// The service refuses to heal across factions or without authority, and publishes a heal report with the
+    /// target, amount, source and popup position when it heals a teammate.
+    /// </summary>
     [Test]
     public void DamageService_Heals_OnlyWithinAFactionAndWithAuthority()
     {
@@ -305,6 +383,9 @@ public class DamageResolutionTests
         Assert.That(report.Value.PopupWorldPosition, Is.EqualTo(teammate.PopupWorldPosition));
     }
 
+    /// <summary>
+    /// Without authority a replicated heal is applied and published once.
+    /// </summary>
     [Test]
     public void DamageService_ReplicatedHeal_AppliesWithoutAuthority()
     {
@@ -321,6 +402,10 @@ public class DamageResolutionTests
         Assert.That(reports, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// A melee hit on an immune target counts as an attack and starts the cooldown, so it is reported once rather
+    /// than every frame.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_ImmuneTarget_StartsTheCooldown()
     {
@@ -340,6 +425,10 @@ public class DamageResolutionTests
         Assert.That(target.Health.CurrentHealth, Is.EqualTo(target.Health.MaxHealth));
     }
 
+    /// <summary>
+    /// A melee dealer initialised from a <see cref="MobConfig"/> deals its configured damage type, which the
+    /// target's resistance to that type reduces.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_DealsTheConfiguredDamageType()
     {
@@ -358,6 +447,10 @@ public class DamageResolutionTests
         Assert.That(target.Health.CurrentHealth, Is.EqualTo(target.Health.MaxHealth - 5));
     }
 
+    /// <summary>
+    /// The presenter colours damage popups by type, shows the immune text and "+amount" heals in their colours,
+    /// and scales periodic hits by the periodic popup scale.
+    /// </summary>
     [Test]
     public void DamagePopupPresenter_ColoursByTypeShowsImmuneAndHeals_AndShrinksPeriodicHits()
     {
@@ -389,6 +482,9 @@ public class DamageResolutionTests
         AssertPopup(texts, "+5", settings.HealColor);
     }
 
+    /// <summary>
+    /// Every damage type has a colour distinct from all the others.
+    /// </summary>
     [Test]
     public void CombatSettings_GivesEachDamageTypeItsOwnColour()
     {
@@ -402,6 +498,10 @@ public class DamageResolutionTests
         Assert.That(colours.Count, Is.EqualTo(System.Enum.GetValues(typeof(DamageType)).Length));
     }
 
+    /// <summary>
+    /// The player and weasel prefabs have 100 health and their factions, and the sword and default mob config deal
+    /// their rescaled physical damage.
+    /// </summary>
     [Test]
     public void Content_UsesTheRescaledNumbersAndFactionProfiles()
     {
@@ -420,6 +520,10 @@ public class DamageResolutionTests
         Assert.That(mob.AttackDamageType, Is.EqualTo(DamageType.Physical));
     }
 
+    /// <summary>
+    /// The combat settings asset has the expected resistance cap, floor and minimum damage, and the Gameplay scene
+    /// references it.
+    /// </summary>
     [Test]
     public void Content_GameplaySceneHasCombatSettings()
     {
@@ -434,11 +538,18 @@ public class DamageResolutionTests
         Assert.That(scene, Does.Contain("combatSettings: {fileID: 11400000, guid: " + guid));
     }
 
+    /// <summary>
+    /// Resolves a hit through <see cref="DamageMath"/> with a dealt multiplier of 1 and the test combat settings.
+    /// </summary>
     private static DamageResult Resolve(int raw, DamageType type, DefenseSnapshot defense)
     {
         return DamageMath.Resolve(raw, type, 1f, defense, TestCombat.Settings);
     }
 
+    /// <summary>
+    /// Asserts that the first popup reading <paramref name="message"/> has <paramref name="color"/>, and fails
+    /// when none does.
+    /// </summary>
     private static void AssertPopup(TextMeshProUGUI[] texts, string message, Color color)
     {
         foreach (TextMeshProUGUI text in texts)
@@ -453,6 +564,9 @@ public class DamageResolutionTests
         Assert.Fail($"No popup reads '{message}'.");
     }
 
+    /// <summary>
+    /// Creates a tracked combat profile with the given faction, immunities and resistances and no status tags.
+    /// </summary>
     private CombatProfile Profile(Faction faction, DamageTypeMask immunities = DamageTypeMask.None, params DamageResistance[] resistances)
     {
         CombatProfile profile = CombatProfile.Create(faction, immunities, StatusTags.None, resistances);
@@ -460,6 +574,9 @@ public class DamageResolutionTests
         return profile;
     }
 
+    /// <summary>
+    /// Creates a tracked unit with default health and a receiver using <paramref name="profile"/> (null for none).
+    /// </summary>
     private DamageReceiver CreateUnit(string name, CombatProfile profile)
     {
         GameObject unit = Track(new GameObject(name));
@@ -469,6 +586,10 @@ public class DamageResolutionTests
         return receiver;
     }
 
+    /// <summary>
+    /// Creates a tracked screen-space overlay canvas with a <see cref="DamagePopupLayer"/> configured with an
+    /// inactive text popup template.
+    /// </summary>
     private DamagePopupLayer CreatePopupLayer()
     {
         GameObject canvasObject = Track(new GameObject("DamagePopupCanvas", typeof(RectTransform), typeof(Canvas)));
@@ -481,6 +602,9 @@ public class DamageResolutionTests
         return layer;
     }
 
+    /// <summary>
+    /// Records <paramref name="gameObject"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private GameObject Track(GameObject gameObject)
     {
         created.Add(gameObject);

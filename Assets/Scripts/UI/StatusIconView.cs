@@ -27,6 +27,9 @@ public class StatusIconView : MonoBehaviour
     internal TextMeshProUGUI StacksLabel => stacksText;
     internal StatusEffectDefinition Shown { get; private set; }
 
+    /// <summary>
+    /// Logs an error when any image or text reference is missing.
+    /// </summary>
     private void Awake()
     {
         if (frame == null || icon == null || label == null || elapsedFill == null || stacksText == null)
@@ -35,6 +38,10 @@ public class StatusIconView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Activates the icon for <paramref name="definition"/>: frame in its colour, its icon or else its
+    /// abbreviation, and <paramref name="stacks"/> when above 1 (capped at <see cref="MaxShownStacks"/>).
+    /// </summary>
     public void Show(StatusEffectDefinition definition, int stacks)
     {
         Shown = definition;
@@ -76,12 +83,18 @@ public class StatusIconView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Deactivates the icon and forgets the status it showed.
+    /// </summary>
     public void Hide()
     {
         Shown = null;
         gameObject.SetActive(false);
     }
 
+    /// <summary>
+    /// Assigns the icon's images and texts in code, for tests that build it without a prefab.
+    /// </summary>
     internal void ConfigureReferences(Image frameImage, Image iconImage, TextMeshProUGUI abbreviation, Image fill, TextMeshProUGUI stacks)
     {
         frame = frameImage;
@@ -91,6 +104,10 @@ public class StatusIconView : MonoBehaviour
         stacksText = stacks;
     }
 
+    /// <summary>
+    /// Precomputes the stack labels from 0 to <see cref="MaxShownStacks"/> so showing stacks never allocates;
+    /// 0 and 1 are empty strings.
+    /// </summary>
     private static string[] BuildStacksText()
     {
         string[] text = new string[MaxShownStacks + 1];

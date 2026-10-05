@@ -1,7 +1,14 @@
 using UnityEngine;
 
+/// <summary>
+/// The player this machine controls: its controller, weapon and <see cref="PlayerHandle"/>, as published by
+/// <see cref="LocalPlayerTracker"/> to the camera, HUD and other local-only consumers.
+/// </summary>
 public sealed class LocalPlayer
 {
+    /// <summary>
+    /// Wraps <paramref name="controller"/>, looking up its weapon and creating a handle over its transform and health.
+    /// </summary>
     public LocalPlayer(PlayerController controller)
     {
         Controller = controller;

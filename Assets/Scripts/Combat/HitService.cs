@@ -11,6 +11,9 @@ public sealed class HitService
     private readonly DamageService damageService;
     private readonly StatusEffectService statusService;
 
+    /// <summary>
+    /// Captures the damage and status services a hit is split between.
+    /// </summary>
     public HitService(DamageService damageService, StatusEffectService statusService)
     {
         this.damageService = damageService;

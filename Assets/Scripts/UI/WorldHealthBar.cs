@@ -22,6 +22,10 @@ public class WorldHealthBar : MonoBehaviour
     internal float FillFraction { get; private set; } = 1f;
     internal bool IsShown => frame != null && frame.enabled;
 
+    /// <summary>
+    /// Finds the unit's <see cref="Health"/> when unassigned and caches the fill's full size and left edge. Logs an
+    /// error and disables itself without a health, a frame or a sliced fill.
+    /// </summary>
     private void Awake()
     {
         ResolveHealth();
@@ -35,17 +39,26 @@ public class WorldHealthBar : MonoBehaviour
         CacheFillGeometry();
     }
 
+    /// <summary>
+    /// Fills in the unit's <see cref="Health"/> in the inspector when none is assigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveHealth();
     }
 
+    /// <summary>
+    /// Forces a redraw so the bar is current as soon as it is enabled.
+    /// </summary>
     private void OnEnable()
     {
         shownHealth = int.MinValue;
         Refresh();
     }
 
+    /// <summary>
+    /// Polls the health after gameplay updates and redraws when it changed.
+    /// </summary>
     private void LateUpdate()
     {
         Refresh();
@@ -82,6 +95,10 @@ public class WorldHealthBar : MonoBehaviour
         fillTransform.localPosition = position;
     }
 
+    /// <summary>
+    /// Assigns the health and renderers in code, for tests, caches the fill geometry and forces the next refresh to
+    /// redraw.
+    /// </summary>
     internal void Configure(Health unitHealth, SpriteRenderer frameRenderer, SpriteRenderer fillRenderer)
     {
         health = unitHealth;
@@ -91,6 +108,9 @@ public class WorldHealthBar : MonoBehaviour
         shownHealth = int.MinValue;
     }
 
+    /// <summary>
+    /// Records the fill's authored size as the full bar and its left edge, so shrinking keeps it anchored left.
+    /// </summary>
     private void CacheFillGeometry()
     {
         fullWidth = fill.size.x;
@@ -98,6 +118,9 @@ public class WorldHealthBar : MonoBehaviour
         leftEdge = fill.transform.localPosition.x - fullWidth * 0.5f;
     }
 
+    /// <summary>
+    /// Uses the nearest <see cref="Health"/> on this object or its parents when none is assigned.
+    /// </summary>
     private void ResolveHealth()
     {
         if (health == null)

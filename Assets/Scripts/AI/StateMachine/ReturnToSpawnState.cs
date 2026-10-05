@@ -1,15 +1,26 @@
 using UnityEngine;
 
+/// <summary>
+/// Mob state that walks back to its spawn cell (or the nearest walkable cell to it), then idles; chases a detected
+/// target it can reach on the way.
+/// </summary>
 public class ReturnToSpawnState : MobStateBase
 {
     private Vector2 returnDestination;
     private Vector3Int returnCell;
     private bool hasReturnDestination;
 
+    /// <summary>
+    /// Creates the return state for the mob run by <paramref name="brain"/>.
+    /// </summary>
     public ReturnToSpawnState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Return;
 
+    /// <summary>
+    /// Clears the path, resolves the return destination and its cell, and paths there; goes to Idle when there is no
+    /// destination or path.
+    /// </summary>
     public override void Enter()
     {
         PathAgent.ClearPath();
@@ -33,6 +44,10 @@ public class ReturnToSpawnState : MobStateBase
         }
     }
 
+    /// <summary>
+    /// Goes to Chase when a detected target is reachable; otherwise goes to Idle once in the return cell, arrived, or
+    /// stalled for <see cref="MobConfig.StuckTimeout"/>.
+    /// </summary>
     public override void Tick()
     {
         if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
@@ -59,11 +74,18 @@ public class ReturnToSpawnState : MobStateBase
         }
     }
 
+    /// <summary>
+    /// Follows the path.
+    /// </summary>
     public override void FixedTick()
     {
         PathAgent.FixedTick();
     }
 
+    /// <summary>
+    /// The center of the spawn cell, or of the walkable cell nearest to it; the raw spawn position without a grid.
+    /// False when no walkable cell lies near the spawn.
+    /// </summary>
     private bool TryResolveReturnDestination(out Vector2 destination)
     {
         destination = Patrol.SpawnPosition;
@@ -89,6 +111,9 @@ public class ReturnToSpawnState : MobStateBase
         return false;
     }
 
+    /// <summary>
+    /// Whether the mob stands in the return destination's cell; false without a grid.
+    /// </summary>
     private bool IsInReturnCell()
     {
         if (PathAgent.NavigationGrid == null)

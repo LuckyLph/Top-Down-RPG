@@ -2,6 +2,11 @@ using Unity.Netcode;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// Replicates a networked player. The owner binds it as the local player, writes its move and facing to owner
+/// network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
+/// which resolves them. Every other machine binds it as a remote copy with a kinematic body showing that movement.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
 public class PlayerNetworkSync : NetworkBehaviour
@@ -19,6 +24,9 @@ public class PlayerNetworkSync : NetworkBehaviour
     private PlayerBinder binder;
     private PlayerHandle handle;
 
+    /// <summary>
+    /// Caches the controller, weapon, abilities, health and body on this player.
+    /// </summary>
     private void Awake()
     {
         controller = GetComponent<PlayerController>();
@@ -28,12 +36,20 @@ public class PlayerNetworkSync : NetworkBehaviour
         body = GetComponent<Rigidbody2D>();
     }
 
+    /// <summary>
+    /// Takes the binder that hooks this player into the Gameplay scope when it spawns.
+    /// </summary>
     [Inject]
     public void Construct(PlayerBinder playerBinder)
     {
         binder = playerBinder;
     }
 
+    /// <summary>
+    /// The owner binds the player as local and starts relaying its swings, restores and casts; any other machine
+    /// makes the body kinematic without interpolation, binds it as remote and shows the current replicated movement.
+    /// Logs an error and does nothing when the prefab was spawned without injection.
+    /// </summary>
     public override void OnNetworkSpawn()
     {
         if (binder == null)
@@ -75,6 +91,9 @@ public class PlayerNetworkSync : NetworkBehaviour
         controller.ShowRemoteMovement(move.Value, facing.Value);
     }
 
+    /// <summary>
+    /// Stops relaying the owner's events and unbinds the player from the registry and the local player tracker.
+    /// </summary>
     public override void OnNetworkDespawn()
     {
         if (weapon != null)
@@ -101,6 +120,10 @@ public class PlayerNetworkSync : NetworkBehaviour
         handle = null;
     }
 
+    /// <summary>
+    /// Remote copies show the replicated move and facing; the owner writes its move and facing whenever either moved
+    /// past a small threshold, to keep network traffic down.
+    /// </summary>
     private void Update()
     {
         if (!IsSpawned)
@@ -127,16 +150,26 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// On the owner, moves a respawned player (its health restored, on a client by the host's replication) to its
+    /// slot at the active spawn point, since only the owner moves its own body.
+    /// </summary>
     private void HandleLocalRestored(Health _)
     {
         binder.PlaceAtActiveSpawn(handle);
     }
 
+    /// <summary>
+    /// Relays a swing the owner made to the other machines.
+    /// </summary>
     private void HandleLocalAttack(Vector2 direction)
     {
         AttackRpc(direction);
     }
 
+    /// <summary>
+    /// Runs on every machine but the owner: plays the owner's swing visual toward <paramref name="direction"/>.
+    /// </summary>
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
     private void AttackRpc(Vector2 direction)
     {
@@ -146,12 +179,19 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Relays a cast the owner started, with its aim and any networked target, to the other machines.
+    /// </summary>
     private void HandleLocalCast(AbilityCast cast)
     {
         bool hasTarget = TryReference(cast.Aim, out NetworkObjectReference target);
         CastRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
     }
 
+    /// <summary>
+    /// On a client owner, sends a completed cast and the owner's position to the host to resolve; the host resolves
+    /// its own casts locally.
+    /// </summary>
     private void HandleLocalCastCompleted(AbilityCast cast)
     {
         if (IsServer)
@@ -163,6 +203,9 @@ public class PlayerNetworkSync : NetworkBehaviour
         CastCompletedRpc(cast.Slot, cast.Aim.Point, cast.Aim.Direction, target, hasTarget, transform.position);
     }
 
+    /// <summary>
+    /// Runs on the host: resolves the effect of a cast the owner completed at <paramref name="casterPosition"/>.
+    /// </summary>
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
     private void CastCompletedRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget, Vector2 casterPosition)
     {
@@ -172,6 +215,10 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// A network reference to the aim's target unit; false (and a default reference) when there is no target or it
+    /// is not a spawned network object.
+    /// </summary>
     private static bool TryReference(in CastAim aim, out NetworkObjectReference reference)
     {
         Health target = aim.Target.Health;
@@ -181,6 +228,9 @@ public class PlayerNetworkSync : NetworkBehaviour
         return hasTarget;
     }
 
+    /// <summary>
+    /// Runs on every machine but the owner: replays a cast the owner started.
+    /// </summary>
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
     private void CastRpc(int slot, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget)
     {
@@ -190,6 +240,10 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Turns a replicated target reference back into a <see cref="UnitTarget"/> on this machine (players are allies,
+    /// anything else an enemy); no target when the object is not spawned here.
+    /// </summary>
     private UnitTarget ResolveTarget(NetworkObjectReference reference)
     {
         if (!reference.TryGet(out NetworkObject targetObject, NetworkManager))

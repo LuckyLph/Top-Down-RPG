@@ -5,6 +5,10 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Which tilemap of a <see cref="DualGridTilemapModule"/> instantiates the tiles' GameObjects: the data tilemap,
+/// the render tilemap, or neither.
+/// </summary>
 public enum GameObjectOrigin { None, DataTilemap, RenderTilemap }
 
 /// <summary>
@@ -59,17 +63,26 @@ public class DualGridTilemapModule : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Caches the data tilemap on this object and the render tilemap on its first child that has one.
+    /// </summary>
     private void Awake()
     {
         if (dataTilemap == null) dataTilemap = GetComponent<Tilemap>();
         if (renderTilemap == null) renderTilemap = transform.GetComponentInImmediateChildren<Tilemap>();
     }
 
+    /// <summary>
+    /// Starts following tile changes made to the data tilemap from outside this module.
+    /// </summary>
     private void OnEnable()
     {
         Tilemap.tilemapPositionsChanged += HandleTilemapPositionsChanged;
     }
 
+    /// <summary>
+    /// Stops following tilemap changes.
+    /// </summary>
     private void OnDisable()
     {
         Tilemap.tilemapPositionsChanged -= HandleTilemapPositionsChanged;
@@ -100,11 +113,17 @@ public class DualGridTilemapModule : MonoBehaviour
         ApplyPendingRenderTiles();
     }
 
+    /// <summary>
+    /// Fills the data cell at <paramref name="position"/> and refreshes the 4 render tiles around it.
+    /// </summary>
     public void SetDataTile(Vector3Int position)
     {
         WriteDataTile(position, DataTile);
     }
 
+    /// <summary>
+    /// Empties the data cell at <paramref name="position"/> and refreshes the 4 render tiles around it.
+    /// </summary>
     public void ClearDataTile(Vector3Int position)
     {
         WriteDataTile(position, null);
@@ -128,11 +147,19 @@ public class DualGridTilemapModule : MonoBehaviour
         WriteDataTiles(positions, null);
     }
 
+    /// <summary>
+    /// Fills every cell in <paramref name="bounds"/> in one batch, like
+    /// <see cref="SetDataTiles(IReadOnlyList{Vector3Int})"/>.
+    /// </summary>
     public void SetDataTiles(BoundsInt bounds)
     {
         WriteDataTiles(PositionsIn(bounds), DataTile);
     }
 
+    /// <summary>
+    /// Empties every cell in <paramref name="bounds"/> in one batch, like
+    /// <see cref="ClearDataTiles(IReadOnlyList{Vector3Int})"/>.
+    /// </summary>
     public void ClearDataTiles(BoundsInt bounds)
     {
         WriteDataTiles(PositionsIn(bounds), null);
@@ -171,6 +198,10 @@ public class DualGridTilemapModule : MonoBehaviour
         ApplyPendingRenderTiles();
     }
 
+    /// <summary>
+    /// Writes <paramref name="tile"/> (null to empty) to one data cell without reacting to its own change event,
+    /// then refreshes the render tiles around it.
+    /// </summary>
     private void WriteDataTile(Vector3Int position, TileBase tile)
     {
         isWritingDataTiles = true;
@@ -186,6 +217,11 @@ public class DualGridTilemapModule : MonoBehaviour
         RefreshRenderTiles(position);
     }
 
+    /// <summary>
+    /// Writes <paramref name="tile"/> (null to empty) to every data cell in <paramref name="positions"/> in one
+    /// batch without reacting to its own change event, then refreshes each affected render tile once. An empty list
+    /// does nothing.
+    /// </summary>
     private void WriteDataTiles(IReadOnlyList<Vector3Int> positions, TileBase tile)
     {
         if (positions.Count == 0)
@@ -215,6 +251,10 @@ public class DualGridTilemapModule : MonoBehaviour
         ApplyPendingRenderTiles();
     }
 
+    /// <summary>
+    /// Queues the 4 render tiles around <paramref name="dataTilePosition"/> for the next
+    /// <see cref="ApplyPendingRenderTiles"/>; duplicates collapse.
+    /// </summary>
     private void QueueRenderTiles(Vector3Int dataTilePosition)
     {
         for (int corner = 0; corner < DualGridUtils.CornerCount; corner++)
@@ -223,6 +263,10 @@ public class DualGridTilemapModule : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Resolves every queued render tile: adds it when a neighboring data tile is filled and it has none, removes it
+    /// when no neighbor is filled, and otherwise refreshes an existing one so its rule is re-evaluated.
+    /// </summary>
     private void ApplyPendingRenderTiles()
     {
         Tilemap render = RenderTilemap;
@@ -251,6 +295,10 @@ public class DualGridTilemapModule : MonoBehaviour
         WriteRenderTiles(renderTilesToClear, null);
     }
 
+    /// <summary>
+    /// Writes <paramref name="tile"/> to the render tilemap at <paramref name="positions"/>: one call per tile for
+    /// small sets, one bulk write above <see cref="BulkRenderWriteThreshold"/>.
+    /// </summary>
     private void WriteRenderTiles(List<Vector3Int> positions, TileBase tile)
     {
         if (positions.Count <= BulkRenderWriteThreshold)
@@ -284,6 +332,9 @@ public class DualGridTilemapModule : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Every cell position inside <paramref name="bounds"/>, as a new list.
+    /// </summary>
     private static List<Vector3Int> PositionsIn(BoundsInt bounds)
     {
         List<Vector3Int> positions = new(bounds.size.x * bounds.size.y * bounds.size.z);

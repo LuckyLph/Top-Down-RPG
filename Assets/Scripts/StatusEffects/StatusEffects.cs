@@ -41,26 +41,42 @@ public class StatusEffects : MonoBehaviour
     /// </summary>
     public float MovementScale => (set.Controls & (StatusControls.Stun | StatusControls.Root)) != 0 ? 0f : set.MoveSpeedMultiplier;
 
+    /// <summary>
+    /// A read-only copy of the active instance at <paramref name="index"/> (0 to <see cref="Count"/> - 1).
+    /// </summary>
     public StatusSnapshot GetSnapshot(int index)
     {
         return set.GetSnapshot(index);
     }
 
+    /// <summary>
+    /// Stacks of <paramref name="definition"/> on this unit, 0 when it is not active.
+    /// </summary>
     public int GetStacks(StatusEffectDefinition definition)
     {
         return set.GetStacks(definition);
     }
 
+    /// <summary>
+    /// The longest remaining time of <paramref name="definition"/> on this unit, 0 when it is not active.
+    /// </summary>
     public float GetRemaining(StatusEffectDefinition definition)
     {
         return set.GetRemaining(definition);
     }
 
+    /// <summary>
+    /// Sets what decides whether these statuses are held still (null for never); the host's
+    /// <see cref="NetworkStatusEffects"/> sets itself while spawned.
+    /// </summary>
     internal void SetHold(IStatusHold statusHold)
     {
         hold = statusHold;
     }
 
+    /// <summary>
+    /// Raises <see cref="Blocked"/>; called by <see cref="StatusEffectService"/> when an immunity blocks a status.
+    /// </summary>
     internal void NotifyBlocked(StatusEffectDefinition definition)
     {
         Blocked?.Invoke(definition);

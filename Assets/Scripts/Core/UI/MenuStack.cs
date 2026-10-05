@@ -13,6 +13,9 @@ public sealed class MenuStack : ITickable
     private readonly IMenuInput menuInput;
     private readonly List<IMenuLayer> layers = new();
 
+    /// <summary>
+    /// Creates an empty stack reading the menu keys from <paramref name="menuInput"/>.
+    /// </summary>
     public MenuStack(IMenuInput menuInput)
     {
         this.menuInput = menuInput;
@@ -23,6 +26,9 @@ public sealed class MenuStack : ITickable
     public int Count => layers.Count;
     public IMenuLayer Top => layers.Count > 0 ? layers[layers.Count - 1] : null;
 
+    /// <summary>
+    /// Puts <paramref name="layer"/> on top; ignores null and a layer already on the stack, which keeps its place.
+    /// </summary>
     public void Push(IMenuLayer layer)
     {
         if (layer != null && !layers.Contains(layer))
@@ -31,11 +37,18 @@ public sealed class MenuStack : ITickable
         }
     }
 
+    /// <summary>
+    /// Takes <paramref name="layer"/> off the stack wherever it is; does nothing when it is not on it.
+    /// </summary>
     public void Remove(IMenuLayer layer)
     {
         layers.Remove(layer);
     }
 
+    /// <summary>
+    /// Sends this frame's Back or Menu press to the top menu, or raises <see cref="MenuRequested"/> for a Menu press
+    /// with no menu open; a lone Back press with no menu open does nothing.
+    /// </summary>
     public void Tick()
     {
         bool menu = menuInput.MenuPressedThisFrame;

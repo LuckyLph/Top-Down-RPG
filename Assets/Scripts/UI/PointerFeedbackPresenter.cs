@@ -14,6 +14,10 @@ public sealed class PointerFeedbackPresenter : ITickable
     private readonly LocalPlayerTracker localPlayer;
     private readonly PointerFeedbackLayer layer;
 
+    /// <summary>
+    /// Creates a presenter that reads the local player's pointer from <paramref name="input"/> and drives
+    /// <paramref name="layer"/>.
+    /// </summary>
     public PointerFeedbackPresenter(
         IPlayerInput input,
         Camera camera,
@@ -28,11 +32,19 @@ public sealed class PointerFeedbackPresenter : ITickable
         this.layer = layer;
     }
 
+    /// <summary>
+    /// Runs one frame of feedback with the frame's delta time.
+    /// </summary>
     public void Tick()
     {
         Tick(Time.deltaTime);
     }
 
+    /// <summary>
+    /// Advances the move markers by <paramref name="deltaTime"/>, then updates the hover ring and attack cursor for
+    /// the unit under the pointer and drops a marker on a move click away from enemies. Hides the ring and cursor
+    /// when feedback is suppressed. Tests call it directly with a fixed step.
+    /// </summary>
     internal void Tick(float deltaTime)
     {
         layer.Tick(deltaTime);

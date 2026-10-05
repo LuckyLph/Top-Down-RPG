@@ -1,6 +1,10 @@
 using TMPro;
 using UnityEngine;
 
+/// <summary>
+/// One pooled combat popup on the <see cref="DamagePopupLayer"/> canvas: text anchored to a world position that
+/// rises by <c>riseOffset</c> and fades out over its lifetime.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
 [RequireComponent(typeof(TextMeshProUGUI))]
@@ -19,11 +23,19 @@ public class FloatingDamageText : MonoBehaviour
 
     public float Lifetime => lifetime;
 
+    /// <summary>
+    /// Caches the text, rect transform and canvas group when unassigned.
+    /// </summary>
     private void Awake()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Restarts the popup with <paramref name="message"/> in <paramref name="color"/> at
+    /// <paramref name="startWorldPosition"/>, projected through <paramref name="camera"/> into
+    /// <paramref name="parentCanvas"/>, scaled by <paramref name="scale"/>.
+    /// </summary>
     public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, float scale = 1f)
     {
         ResolveReferences();
@@ -40,12 +52,19 @@ public class FloatingDamageText : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// Ages the popup by <paramref name="deltaTime"/>; true once its lifetime is over.
+    /// </summary>
     internal bool Advance(float deltaTime)
     {
         elapsed += deltaTime;
         return elapsed >= lifetime;
     }
 
+    /// <summary>
+    /// Places the popup at its current risen world position projected onto the canvas and fades it by age; hides it
+    /// when that point is behind the camera. Does nothing before <see cref="Show"/>.
+    /// </summary>
     internal void Refresh()
     {
         if (targetCamera == null || canvasRect == null)
@@ -68,6 +87,9 @@ public class FloatingDamageText : MonoBehaviour
         canvasGroup.alpha = 1f - t;
     }
 
+    /// <summary>
+    /// Looks up the sibling text, rect transform and canvas group when not assigned.
+    /// </summary>
     private void ResolveReferences()
     {
         if (text == null)

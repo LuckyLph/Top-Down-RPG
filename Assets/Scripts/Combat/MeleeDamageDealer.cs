@@ -2,6 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// A mob's melee attack: a <see cref="Hit"/> built from its <see cref="MobConfig"/>, dealt through
+/// <see cref="HitService"/> no more often than the attack interval on the game clock.
+/// </summary>
 [DisallowMultipleComponent]
 public class MeleeDamageDealer : MonoBehaviour
 {
@@ -19,6 +23,10 @@ public class MeleeDamageDealer : MonoBehaviour
     public float AttackInterval => attackInterval;
     public float NextAttackTime => nextAttackTime;
 
+    /// <summary>
+    /// Injects the clock the attack interval runs on (falling back to <see cref="UnityClock.Shared"/> when null)
+    /// and the service hits go through.
+    /// </summary>
     [Inject]
     public void Construct(IClock gameClock, HitService hits)
     {
@@ -26,6 +34,10 @@ public class MeleeDamageDealer : MonoBehaviour
         hitService = hits;
     }
 
+    /// <summary>
+    /// Copies the attack damage, interval, damage type and statuses from <paramref name="config"/>; keeps the
+    /// current values when it is null.
+    /// </summary>
     public void Initialize(MobConfig config)
     {
         if (config == null)
@@ -44,11 +56,21 @@ public class MeleeDamageDealer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Makes the next attack available now, or one full interval from now when <paramref name="readyImmediately"/>
+    /// is false.
+    /// </summary>
     public void ResetCooldown(bool readyImmediately = true)
     {
         nextAttackTime = readyImmediately ? 0f : clock.Time + attackInterval;
     }
 
+    /// <summary>
+    /// Hits the unit <paramref name="target"/> belongs to when the attack is ready, with this mob as the source,
+    /// and starts the interval only if the hit reached it. False when there is no target or damage, the attack is
+    /// cooling down, the target is not a unit, or the hit was refused; logs an error without a
+    /// <see cref="HitService"/>.
+    /// </summary>
     public bool TryDealDamage(Transform target)
     {
         if (target == null || damageAmount <= 0 || clock.Time < nextAttackTime)

@@ -30,6 +30,10 @@ public class DualGridBrushEditor : GridBrushEditor
     /// </remarks>
     private static bool ShowFloodFillPreview => EditorPrefs.GetBool("GridBrush.EnableFloodFillPreview", true);
 
+    /// <summary>
+    /// Lazily creates the filled and empty preview tiles and redirects the selection away from a render tilemap
+    /// before the tool activates.
+    /// </summary>
     public override void OnToolActivated(GridBrushBase.Tool tool)
     {
         if (previewTile == null)
@@ -60,6 +64,10 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Remembers the dual-grid module under the brush (null on plain tilemaps) so <see cref="ClearPreview"/> knows
+    /// which preview to clear, then draws the default scene GUI.
+    /// </summary>
     public override void OnPaintSceneGUI(GridLayout gridLayout, GameObject brushTarget, BoundsInt bounds, GridBrushBase.Tool tool, bool executing)
     {
         lastDualGridTilemapModule = brushTarget.GetComponent<DualGridTilemapModule>();
@@ -67,6 +75,10 @@ public class DualGridBrushEditor : GridBrushEditor
         base.OnPaintSceneGUI(gridLayout, brushTarget, bounds, tool, executing);
     }
 
+    /// <summary>
+    /// Previews a paint stroke over the brush footprint at <paramref name="position"/> on a dual-grid target; default
+    /// preview on other tilemaps.
+    /// </summary>
     public override void PaintPreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position)
     {
         if (brushTarget.TryGetComponent(out DualGridTilemapModule dualGridTilemapModule))
@@ -80,6 +92,10 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Places filled preview tiles over <paramref name="bounds"/> and records them as a paint preview for later
+    /// clearing.
+    /// </summary>
     protected virtual void DualGridPaintPreview(DualGridTilemapModule dualGridTilemapModule, BoundsInt bounds)
     {
         foreach (var position in bounds.allPositionsWithin)
@@ -92,6 +108,10 @@ public class DualGridBrushEditor : GridBrushEditor
     }
 
 #if UNITY_2023_1_OR_NEWER
+    /// <summary>
+    /// Previews an erase over the brush footprint at <paramref name="position"/> on a dual-grid target; default preview
+    /// on other tilemaps.
+    /// </summary>
     public override void ErasePreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position)
     {
         if (brushTarget.TryGetComponent(out DualGridTilemapModule dualGridTilemapModule))
@@ -105,6 +125,10 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Places empty preview tiles over <paramref name="bounds"/> and records them as an erase preview for later
+    /// clearing.
+    /// </summary>
     private void DualGridErasePreview(DualGridTilemapModule dualGridTilemapModule, BoundsInt bounds)
     {
         foreach (var position in bounds.allPositionsWithin)
@@ -117,6 +141,9 @@ public class DualGridBrushEditor : GridBrushEditor
     }
 #endif
 
+    /// <summary>
+    /// Previews a box fill of <paramref name="bounds"/> on a dual-grid target; default preview on other tilemaps.
+    /// </summary>
     public override void BoxFillPreview(GridLayout gridLayout, GameObject brushTarget, BoundsInt bounds)
     {
         if (brushTarget.TryGetComponent(out DualGridTilemapModule dualGridTilemapModule))
@@ -129,6 +156,9 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Places filled preview tiles over <paramref name="bounds"/> and records them as a box preview for later clearing.
+    /// </summary>
     protected virtual void DualGridBoxFillPreview(DualGridTilemapModule dualGridTilemapModule, BoundsInt bounds)
     {
         foreach (var position in bounds.allPositionsWithin)
@@ -140,6 +170,10 @@ public class DualGridBrushEditor : GridBrushEditor
         lastTool = GridBrushBase.Tool.Box;
     }
 
+    /// <summary>
+    /// Previews a flood fill from <paramref name="position"/> on a dual-grid target; default preview on other
+    /// tilemaps.
+    /// </summary>
     public override void FloodFillPreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position)
     {
         if (brushTarget.TryGetComponent(out DualGridTilemapModule dualGridTilemapModule))
@@ -152,6 +186,10 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Flood fills preview tiles from <paramref name="position"/>, mirrors them onto the whole render tilemap and
+    /// records the data tilemap bounds as a flood fill preview. Skipped when the flood fill preview preference is off.
+    /// </summary>
     protected virtual void DualGridFloodFillPreview(DualGridTilemapModule dualGridTilemapModule, Vector3Int position)
     {
         if (!ShowFloodFillPreview) return;
@@ -168,6 +206,9 @@ public class DualGridBrushEditor : GridBrushEditor
         lastTool = GridBrushBase.Tool.FloodFill;
     }
 
+    /// <summary>
+    /// Clears the last dual-grid preview when the brush was last over a dual-grid module; default clear otherwise.
+    /// </summary>
     public override void ClearPreview()
     {
         if (lastDualGridTilemapModule != null)
@@ -180,6 +221,10 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// Removes the preview tiles left by the last preview, all of them after a flood fill or just the recorded bounds
+    /// otherwise, then forgets that preview.
+    /// </summary>
     protected virtual void DualGridClearPreview()
     {
         if (lastBounds == null || lastTool == null)
@@ -212,6 +257,10 @@ public class DualGridBrushEditor : GridBrushEditor
         lastTool = null;
     }
 
+    /// <summary>
+    /// On a dual-grid target, clears the pending preview and records both the data and render tilemaps in one undo
+    /// step named after <paramref name="tool"/>; default undo on other tilemaps.
+    /// </summary>
     public override void RegisterUndo(GameObject brushTarget, GridBrushBase.Tool tool)
     {
         if (brushTarget.TryGetComponent(out DualGridTilemapModule dualGridTilemapModule))
@@ -236,6 +285,9 @@ public class DualGridBrushEditor : GridBrushEditor
         }
     }
 
+    /// <summary>
+    /// The cells covered by the brush when its pivot sits on <paramref name="position"/>.
+    /// </summary>
     private BoundsInt GetBrushBounds(Vector3Int position)
     {
         var min = position - brush.pivot;
@@ -243,6 +295,9 @@ public class DualGridBrushEditor : GridBrushEditor
         return new BoundsInt(min, max - min);
     }
 
+    /// <summary>
+    /// Removes the editor preview from every data cell in <paramref name="bounds"/> and updates the render previews.
+    /// </summary>
     private static void ClearEditorPreviewTiles(DualGridTilemapModule dualGridTilemapModule, BoundsInt bounds)
     {
         foreach (Vector3Int location in bounds.allPositionsWithin)

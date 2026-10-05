@@ -3,6 +3,10 @@ using NUnit.Framework;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// Tests for <see cref="ActiveNavigationGrid"/> and how <see cref="AreaEntry"/> sets it on entering an area and
+/// clears it when the area scope is disposed.
+/// </summary>
 public class ActiveNavigationGridTests
 {
     private readonly List<GameObject> sceneObjects = new();
@@ -12,6 +16,10 @@ public class ActiveNavigationGridTests
     private ActiveNavigationGrid activeNavigationGrid;
     private CameraFollow2D cameraFollow;
 
+    /// <summary>
+    /// Builds the shared player registry, spawn point and grid holders and a camera with
+    /// <see cref="CameraFollow2D"/>.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -23,6 +31,9 @@ public class ActiveNavigationGridTests
         cameraFollow = cameraObject.AddComponent<CameraFollow2D>();
     }
 
+    /// <summary>
+    /// Disposes every area container the test built and destroys the scene objects it created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -44,6 +55,10 @@ public class ActiveNavigationGridTests
         sceneObjects.Clear();
     }
 
+    /// <summary>
+    /// <see cref="ActiveNavigationGrid.Clear"/> empties the holder only when given the current grid; another grid
+    /// or null leaves it set.
+    /// </summary>
     [Test]
     public void Clear_OnlyClearsTheGridItWasGiven()
     {
@@ -65,6 +80,9 @@ public class ActiveNavigationGridTests
         Assert.That(activeNavigationGrid.Current, Is.Null);
     }
 
+    /// <summary>
+    /// Entering an area makes its grid the active one, and disposing the area container clears it.
+    /// </summary>
     [Test]
     public void EnteringAnArea_SetsItsGrid_AndDisposingTheAreaScopeClearsIt()
     {
@@ -78,6 +96,9 @@ public class ActiveNavigationGridTests
         Assert.That(activeNavigationGrid.Current, Is.Null);
     }
 
+    /// <summary>
+    /// Leaving one area and entering the next leaves the holder empty in between and then points at the new grid.
+    /// </summary>
     [Test]
     public void ChangingArea_PointsAtTheNewAreasGrid()
     {
@@ -94,6 +115,9 @@ public class ActiveNavigationGridTests
         Assert.That(activeNavigationGrid.Current, Is.SameAs(newGrid));
     }
 
+    /// <summary>
+    /// Disposing the old area after the new one was entered does not clear the new area's grid.
+    /// </summary>
     [Test]
     public void DisposingTheOldArea_AfterTheNewOneWasEntered_KeepsTheNewGrid()
     {
@@ -109,6 +133,9 @@ public class ActiveNavigationGridTests
         Assert.That(activeNavigationGrid.Current, Is.SameAs(newGrid));
     }
 
+    /// <summary>
+    /// Entering and disposing an area that has no grid leaves the holder empty.
+    /// </summary>
     [Test]
     public void AnAreaWithoutAGrid_LeavesTheHolderEmpty()
     {
@@ -125,6 +152,10 @@ public class ActiveNavigationGridTests
         Assert.That(activeNavigationGrid.Current, Is.Null);
     }
 
+    /// <summary>
+    /// Builds a tracked container that resolves an <see cref="AreaEntry"/> for an area with one "start" spawn
+    /// point and <paramref name="grid"/> as its navigation grid (null for none).
+    /// </summary>
     private IObjectResolver BuildAreaContainer(NavigationGrid2D grid)
     {
         ContainerBuilder builder = new();
@@ -142,6 +173,9 @@ public class ActiveNavigationGridTests
         return container;
     }
 
+    /// <summary>
+    /// Creates a tracked game object with an empty <see cref="NavigationGrid2D"/>.
+    /// </summary>
     private NavigationGrid2D CreateGrid(string name)
     {
         GameObject gridObject = new(name);
@@ -149,6 +183,9 @@ public class ActiveNavigationGridTests
         return gridObject.AddComponent<NavigationGrid2D>();
     }
 
+    /// <summary>
+    /// Creates a tracked spawn point whose id is "start".
+    /// </summary>
     private SpawnPoint CreateSpawnPoint()
     {
         GameObject spawnObject = new("SpawnPoint");

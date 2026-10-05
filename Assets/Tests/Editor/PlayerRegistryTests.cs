@@ -2,10 +2,17 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
+/// <summary>
+/// Tests for <see cref="PlayerRegistry"/>: adding and removing players, its events, and whether any player is
+/// alive.
+/// </summary>
 public class PlayerRegistryTests
 {
     private readonly List<GameObject> playerObjects = new();
 
+    /// <summary>
+    /// Destroys the player objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -20,6 +27,10 @@ public class PlayerRegistryTests
         playerObjects.Clear();
     }
 
+    /// <summary>
+    /// Adding a player succeeds once and raises <see cref="PlayerRegistry.PlayerAdded"/> once; adding it again or
+    /// adding null returns false and raises nothing.
+    /// </summary>
     [Test]
     public void Add_IgnoresNullAndDuplicates_AndRaisesAddedOnce()
     {
@@ -37,6 +48,10 @@ public class PlayerRegistryTests
         Assert.That(addedCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Removing an unregistered player returns false and raises nothing; removing a registered one returns true,
+    /// raises <see cref="PlayerRegistry.PlayerRemoved"/> with it and empties the registry.
+    /// </summary>
     [Test]
     public void Remove_RaisesRemovedOnlyForRegisteredPlayers()
     {
@@ -55,6 +70,10 @@ public class PlayerRegistryTests
         Assert.That(registry.Players, Is.Empty);
     }
 
+    /// <summary>
+    /// <see cref="PlayerRegistry.AnyAlive"/> stays true while one registered player lives and turns false once
+    /// all of them are dead.
+    /// </summary>
     [Test]
     public void AnyAlive_IsFalseOnlyOnceEveryPlayerIsDead()
     {
@@ -71,6 +90,9 @@ public class PlayerRegistryTests
         Assert.That(registry.AnyAlive, Is.False);
     }
 
+    /// <summary>
+    /// Creates a tracked player object with a <see cref="Health"/> and returns an unregistered handle to it.
+    /// </summary>
     private PlayerHandle CreatePlayer()
     {
         GameObject playerObject = new("Player");

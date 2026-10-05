@@ -42,6 +42,10 @@ public sealed class PlayerOrders
     private Vector2 aimDirection;
     private bool swing;
 
+    /// <summary>
+    /// Creates an idle state machine timed by <paramref name="settings"/>, querying targets through
+    /// <paramref name="units"/> and starting casts through <paramref name="caster"/> (null ignores ability presses).
+    /// </summary>
     public PlayerOrders(PlayerControlSettings settings, IUnitQueries units, IAbilityCaster caster = null)
     {
         this.settings = settings;
@@ -180,6 +184,10 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Why crowd control blocks casting <paramref name="ability"/> right now: stunned, silenced, or rooted for an
+    /// ability that moves the caster. <see cref="CastOutcome.Started"/> when nothing blocks it.
+    /// </summary>
     private static CastOutcome ControlFailure(AbilityDefinition ability, StatusControls controls)
     {
         if ((controls & StatusControls.Stun) != 0)
@@ -200,6 +208,10 @@ public sealed class PlayerOrders
         return CastOutcome.Started;
     }
 
+    /// <summary>
+    /// Handles the stop key: drops a buffered cast and goes idle. A running cast keeps going, but the order it paused
+    /// is dropped and the motor stops.
+    /// </summary>
     private void Stop()
     {
         DropBuffered(CastOutcome.Cancelled);
@@ -245,6 +257,9 @@ public sealed class PlayerOrders
         chasing = false;
     }
 
+    /// <summary>
+    /// The order a click gives: attack a living enemy under the cursor, otherwise move to the cursor.
+    /// </summary>
     private Order OrderFrom(in PlayerCommand command)
     {
         UnitTarget target = command.Target;
@@ -256,6 +271,10 @@ public sealed class PlayerOrders
         return Order.Move(command.PointerWorld);
     }
 
+    /// <summary>
+    /// Handles an ability press: reports why it cannot cast (caster refusal, crowd control, no valid target), buffers
+    /// it while a cast runs when the ability is bufferable (otherwise reports the cast in progress), or begins it.
+    /// </summary>
     private void PressAbility(int slot, in PlayerCommand command, in PlayerOrderContext context)
     {
         if (caster == null)
@@ -302,6 +321,11 @@ public sealed class PlayerOrders
         Begin(slot, ability, aim, context, current);
     }
 
+    /// <summary>
+    /// Aims <paramref name="ability"/> from the command: at the caster when untargeted, toward the cursor for a
+    /// direction, at the cursor clamped to range for a point, at the unit under the cursor for a unit. False when a
+    /// unit ability has no living target of a team it accepts.
+    /// </summary>
     private bool TryAim(AbilityDefinition ability, in PlayerCommand command, in PlayerOrderContext context, out CastAim aim)
     {
         Vector2 toCursor = command.PointerWorld - context.Position;
@@ -330,6 +354,9 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// An aim at <paramref name="target"/>'s current position, with the direction from the player toward it.
+    /// </summary>
     private CastAim UnitAim(UnitTarget target, in PlayerOrderContext context)
     {
         Vector2 targetPosition = units.PositionOf(target);
@@ -378,6 +405,9 @@ public sealed class PlayerOrders
         return true;
     }
 
+    /// <summary>
+    /// Runs one tick of the current order; Idle does nothing.
+    /// </summary>
     private void RunCurrent(in PlayerOrderContext context)
     {
         switch (current.Kind)
@@ -397,6 +427,10 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Paths to a fresh move's destination, then ends <paramref name="order"/> and stops once the motor arrives or
+    /// has stalled for the stuck timeout.
+    /// </summary>
     private void RunMove(ref Order order, in PlayerOrderContext context)
     {
         if (fresh)
@@ -412,6 +446,11 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Ends <paramref name="order"/> and stops when its target died, chases while it is out of weapon range, and
+    /// otherwise stops chasing and, when <paramref name="act"/> is set, aims at it and swings. A paused attack runs
+    /// with <paramref name="act"/> false so it only keeps up.
+    /// </summary>
     private void RunAttack(ref Order order, in PlayerOrderContext context, bool act)
     {
         if (!units.IsAlive(order.Target))
@@ -445,6 +484,10 @@ public sealed class PlayerOrders
         swing = true;
     }
 
+    /// <summary>
+    /// Chases the target of a unit cast until it is within the ability's range, then begins the cast. Goes idle when
+    /// the slot emptied or the target died (reporting why) or when the cast is refused.
+    /// </summary>
     private void RunCastWhenInRange(in PlayerOrderContext context)
     {
         int slot = current.Slot;
@@ -476,6 +519,10 @@ public sealed class PlayerOrders
         RunCasting(context);
     }
 
+    /// <summary>
+    /// Keeps facing a targeted cast's aim, keeps the paused order moving when the cast allows movement, and finishes
+    /// the cast once its cast time has passed.
+    /// </summary>
     private void RunCasting(in PlayerOrderContext context)
     {
         if (castAbility.Targeting != AbilityTargeting.None && castAim.Direction.sqrMagnitude > AimThreshold)
@@ -495,6 +542,10 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Moves for the paused order during a cast that allows it: a move keeps walking, an attack keeps chasing without
+    /// swinging, and a CastWhenInRange approach keeps closing in until in range.
+    /// </summary>
     private void RunPausedMovement(in PlayerOrderContext context)
     {
         switch (paused.Kind)
@@ -520,6 +571,10 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Completes the running cast, then fires the buffered cast if it can start, otherwise resumes the paused order
+    /// right away (or stops when there is none).
+    /// </summary>
     private void FinishCast(in PlayerOrderContext context)
     {
         caster.CompleteCast(current.Slot);
@@ -543,6 +598,10 @@ public sealed class PlayerOrders
         RunCurrent(context);
     }
 
+    /// <summary>
+    /// Begins the buffered cast, re-aiming a unit cast at its target's current position, and runs its first tick.
+    /// False when it can no longer be cast, its target died or it was refused (each reported).
+    /// </summary>
     private bool TryFireBuffered(in PlayerOrderContext context)
     {
         hasBuffered = false;
@@ -586,6 +645,10 @@ public sealed class PlayerOrders
         return true;
     }
 
+    /// <summary>
+    /// Paths toward a moving target, repathing when a chase starts, the order is fresh, the repath interval elapsed
+    /// or the target moved too far from the last goal.
+    /// </summary>
     private void Chase(Vector2 targetPosition, in PlayerOrderContext context)
     {
         float repathDistance = settings.TargetMoveRepathDistance;
@@ -599,6 +662,9 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// Ends a chase, stopping the motor when it was chasing or the order is fresh.
+    /// </summary>
     private void StopChasing()
     {
         if (chasing || fresh)
@@ -609,12 +675,18 @@ public sealed class PlayerOrders
         chasing = false;
     }
 
+    /// <summary>
+    /// Asks the motor to path to <paramref name="point"/> this tick.
+    /// </summary>
     private void RequestMoveTo(Vector2 point)
     {
         motorRequest = PlayerMotorRequest.MoveTo;
         destination = point;
     }
 
+    /// <summary>
+    /// Ends the current order, asking the motor to stop when there was one.
+    /// </summary>
     private void BecomeIdle()
     {
         if (current.Kind != PlayerOrderKind.Idle)
@@ -627,6 +699,9 @@ public sealed class PlayerOrders
         fresh = false;
     }
 
+    /// <summary>
+    /// Drops the buffered cast, if any, reporting <paramref name="reason"/> for its slot.
+    /// </summary>
     private void DropBuffered(CastOutcome reason)
     {
         if (!hasBuffered)
@@ -641,6 +716,9 @@ public sealed class PlayerOrders
         }
     }
 
+    /// <summary>
+    /// One order: its kind plus the destination, target or ability slot that kind uses; <c>default</c> is Idle.
+    /// </summary>
     private struct Order
     {
         public PlayerOrderKind Kind;
@@ -648,26 +726,42 @@ public sealed class PlayerOrders
         public UnitTarget Target;
         public int Slot;
 
+        /// <summary>
+        /// A move to <paramref name="point"/>.
+        /// </summary>
         public static Order Move(Vector2 point)
         {
             return new Order { Kind = PlayerOrderKind.Move, Destination = point };
         }
 
+        /// <summary>
+        /// An auto attack on <paramref name="target"/>.
+        /// </summary>
         public static Order Attack(UnitTarget target)
         {
             return new Order { Kind = PlayerOrderKind.Attack, Target = target };
         }
 
+        /// <summary>
+        /// An approach to <paramref name="target"/> that casts the ability in <paramref name="slot"/> once in range.
+        /// </summary>
         public static Order CastWhenInRange(int slot, UnitTarget target)
         {
             return new Order { Kind = PlayerOrderKind.CastWhenInRange, Target = target, Slot = slot };
         }
 
+        /// <summary>
+        /// The cast running from <paramref name="slot"/>.
+        /// </summary>
         public static Order Casting(int slot)
         {
             return new Order { Kind = PlayerOrderKind.Casting, Slot = slot };
         }
 
+        /// <summary>
+        /// Whether giving this order over <paramref name="other"/> would change nothing: a move to the same point or an
+        /// attack on the same unit. Other kinds never match, so they are always reissued.
+        /// </summary>
         public readonly bool SameAs(in Order other)
         {
             if (Kind != other.Kind)

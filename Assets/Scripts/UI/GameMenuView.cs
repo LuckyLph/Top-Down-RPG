@@ -31,6 +31,9 @@ public class GameMenuView : MonoBehaviour
     public bool IsConfirmShown => confirmPanel != null && confirmPanel.activeSelf;
     internal TMP_Text ConfirmText => confirmText;
 
+    /// <summary>
+    /// Logs an error when any panel, button or text reference is missing.
+    /// </summary>
     private void Awake()
     {
         if (panel == null || resumeButton == null || optionsButton == null || leaveButton == null || quitButton == null
@@ -40,6 +43,9 @@ public class GameMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows or hides the menu panel; the component's own object stays active.
+    /// </summary>
     public void SetShown(bool shown)
     {
         if (panel != null)
@@ -48,6 +54,10 @@ public class GameMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the confirmation with <paramref name="question"/> and <paramref name="confirmLabel"/> on its confirm
+    /// button.
+    /// </summary>
     public void ShowConfirm(string question, string confirmLabel)
     {
         if (confirmText != null)
@@ -66,6 +76,9 @@ public class GameMenuView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Hides the confirmation, leaving the menu panel as it is.
+    /// </summary>
     public void HideConfirm()
     {
         if (confirmPanel != null)

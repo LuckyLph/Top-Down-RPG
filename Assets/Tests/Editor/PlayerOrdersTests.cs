@@ -4,6 +4,10 @@ using UnityEngine;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="PlayerOrders"/>: move and attack orders, ability casts with buffering and approach, and
+/// crowd control, driven tick by tick against fake units and a fake caster.
+/// </summary>
 public class PlayerOrdersTests
 {
     private const float AttackRange = 0.3f;
@@ -18,6 +22,10 @@ public class PlayerOrdersTests
     private bool reachedDestination;
     private float stalledTime;
 
+    /// <summary>
+    /// Builds the orders with test control settings, fake units and a fake caster, and resets the simulated
+    /// player to the origin at time zero with its motor arrived and not stalled.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -31,6 +39,9 @@ public class PlayerOrdersTests
         stalledTime = 0f;
     }
 
+    /// <summary>
+    /// Destroys the settings, abilities and unit objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -45,6 +56,9 @@ public class PlayerOrdersTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// A click on empty ground issues a move order that sends the motor to the clicked point without swinging.
+    /// </summary>
     [Test]
     public void ClickOnTheGround_MovesToThePointer()
     {
@@ -56,6 +70,10 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.False);
     }
 
+    /// <summary>
+    /// A move order ignores the arrival flag left over from the previous path on the tick it is issued, and goes
+    /// idle with a stop request once the motor reports arriving on the new path.
+    /// </summary>
     [Test]
     public void Move_IgnoresTheMotorsStaleArrivalOnTheTickItIsIssued_ThenEndsWhenTheMotorArrives()
     {
@@ -73,6 +91,9 @@ public class PlayerOrdersTests
         Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
     }
 
+    /// <summary>
+    /// A move order whose motor has stalled for the configured stuck timeout stops and goes idle, but not before.
+    /// </summary>
     [Test]
     public void Move_GivesUpOnceStuckForTheTimeout()
     {
@@ -88,6 +109,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
     }
 
+    /// <summary>
+    /// Clicking an ally is a plain move to the clicked point, not an attack.
+    /// </summary>
     [Test]
     public void ClickOnAnAlly_MovesToTheClickedPoint()
     {
@@ -99,6 +123,9 @@ public class PlayerOrdersTests
         Assert.That(output.Destination, Is.EqualTo(new Vector2(2f, 0.2f)));
     }
 
+    /// <summary>
+    /// Clicking a dead enemy is a plain move, not an attack.
+    /// </summary>
     [Test]
     public void ClickOnADeadEnemy_MovesToTheClickedPoint()
     {
@@ -110,6 +137,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
     }
 
+    /// <summary>
+    /// Clicking a living enemy out of attack range starts an attack order that paths to the enemy's position
+    /// rather than the clicked point, without swinging yet.
+    /// </summary>
     [Test]
     public void ClickOnAnEnemyOutOfRange_ChasesItsPosition()
     {
@@ -124,6 +155,10 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.False);
     }
 
+    /// <summary>
+    /// A chase keeps its path while the target moves less than the repath distance, repaths early once it moves
+    /// further, and repaths at the repath interval even when the target stands still.
+    /// </summary>
     [Test]
     public void Chase_RepathsAtTheIntervalOrAsSoonAsTheTargetMovesFarEnough()
     {
@@ -146,6 +181,10 @@ public class PlayerOrdersTests
         Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.MoveTo), "The interval repaths even if the target stood still.");
     }
 
+    /// <summary>
+    /// Reaching attack range stops the motor once, aims at the target, and requests a swing on every tick after
+    /// that while the attack order stays active.
+    /// </summary>
     [Test]
     public void InRange_StopsOnce_FacesTheTarget_AndKeepsSwinging()
     {
@@ -165,6 +204,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
     }
 
+    /// <summary>
+    /// Clicking an enemy already in range stops, aims and swings on the same tick.
+    /// </summary>
     [Test]
     public void ClickOnAnEnemyAlreadyInRange_SwingsAtOnce()
     {
@@ -177,6 +219,9 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.True);
     }
 
+    /// <summary>
+    /// A target that moves out of range, however far, is chased again instead of the attack order being dropped.
+    /// </summary>
     [Test]
     public void TargetLeavingRange_IsChasedAgain_AndDistanceNeverCancelsTheOrder()
     {
@@ -193,6 +238,9 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.False);
     }
 
+    /// <summary>
+    /// The attack order goes idle and stops the motor once its target dies.
+    /// </summary>
     [Test]
     public void TargetDying_EndsTheAttackOrder()
     {
@@ -207,6 +255,9 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.False);
     }
 
+    /// <summary>
+    /// The stop command cancels a running order and stops the motor.
+    /// </summary>
     [Test]
     public void Stop_CancelsTheCurrentOrder()
     {
@@ -219,6 +270,9 @@ public class PlayerOrdersTests
         Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
     }
 
+    /// <summary>
+    /// A new click replaces a running attack order on the same tick, so the player stops swinging and moves.
+    /// </summary>
     [Test]
     public void ANewClick_ReplacesTheCurrentOrderAtOnce()
     {
@@ -232,6 +286,10 @@ public class PlayerOrdersTests
         Assert.That(output.Swing, Is.False);
     }
 
+    /// <summary>
+    /// Holding the move button re-evaluates the cursor only once per hold re-evaluate interval, moving to the new
+    /// point and switching to an attack when the cursor is over an enemy.
+    /// </summary>
     [Test]
     public void HoldingTheButton_FollowsTheCursorAtTheThrottledRate()
     {
@@ -253,6 +311,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack), "Holding over an enemy switches to attacking it.");
     }
 
+    /// <summary>
+    /// Holding the move button over the enemy already being attacked keeps the current chase instead of
+    /// restarting it with a new path.
+    /// </summary>
     [Test]
     public void HoldingOverTheSameEnemy_KeepsTheChaseRunning()
     {
@@ -266,6 +328,9 @@ public class PlayerOrdersTests
         Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.None), "Re-evaluating onto the same target must not restart the chase.");
     }
 
+    /// <summary>
+    /// Empty commands, as sent while input is disabled, leave the running move order untouched.
+    /// </summary>
     [Test]
     public void AnEmptyCommand_LetsTheCurrentOrderRunOn()
     {
@@ -281,6 +346,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move), "Disabled input makes no new orders and leaves the current one running.");
     }
 
+    /// <summary>
+    /// <see cref="PlayerOrders.Clear"/> drops the order and its target and the next tick makes no motor request.
+    /// </summary>
     [Test]
     public void Clear_DropsTheOrderWithoutAMotorRequest()
     {
@@ -294,6 +362,9 @@ public class PlayerOrdersTests
         Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None));
     }
 
+    /// <summary>
+    /// Ticking through move, attack and empty commands allocates no managed memory.
+    /// </summary>
     [Test]
     public void Tick_DoesNotAllocate()
     {
@@ -313,6 +384,10 @@ public class PlayerOrdersTests
         Assert.That(tick, Is.Not.AllocatingGCMemory());
     }
 
+    /// <summary>
+    /// An ability with no cast time starts and ends on the press tick, turns the player toward its aim, and the
+    /// running move order resumes with a fresh path.
+    /// </summary>
     [Test]
     public void AnInstantCast_StartsAndEndsInOneTick_AndTheOrderRunsOn()
     {
@@ -331,6 +406,10 @@ public class PlayerOrdersTests
         Assert.That(output.AimDirection, Is.EqualTo(Vector2.up), "The player turns toward an instant cast.");
     }
 
+    /// <summary>
+    /// A cast with a cast time pauses the running order, stops the motor and holds the aim until the cast time
+    /// runs out, then ends the cast and resumes the paused order with facing back on movement.
+    /// </summary>
     [Test]
     public void ACastWithCastTime_PausesTheOrder_FacesTheAim_AndResumesWhenItIsOver()
     {
@@ -362,6 +441,10 @@ public class PlayerOrdersTests
         Assert.That(Tick(default).HasAim, Is.False, "Facing follows movement again after the cast.");
     }
 
+    /// <summary>
+    /// A <see cref="CastMovement.Continue"/> cast keeps the paused chase pathing toward its target but never
+    /// swings, even once the target is in range.
+    /// </summary>
     [Test]
     public void ContinueMovement_KeepsThePausedOrderMoving_WithoutSwinging()
     {
@@ -383,6 +466,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Casting));
     }
 
+    /// <summary>
+    /// A <see cref="CastMovement.Ability"/> cast stops the player once and then keeps it still, like a stopping
+    /// cast, since abilities do not move the caster yet.
+    /// </summary>
     [Test]
     public void AbilityMovement_StandsStillForNow()
     {
@@ -394,6 +481,10 @@ public class PlayerOrdersTests
         Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None));
     }
 
+    /// <summary>
+    /// A point-targeted cast aims at the cursor clamped to the ability's range from the player, and uses a point
+    /// inside the range unchanged.
+    /// </summary>
     [Test]
     public void PointTargeting_ClampsTheCursorToTheRange()
     {
@@ -410,6 +501,10 @@ public class PlayerOrdersTests
         Assert.That(caster.LastAim.Point, Is.EqualTo(new Vector2(1f, 2f)), "A point inside the range is used as is.");
     }
 
+    /// <summary>
+    /// A unit-targeted cast targets the unit under the cursor only when it passes the ability's enemy, ally or
+    /// any filter (the caster counts as an ally), and fails with <see cref="CastOutcome.NoTarget"/> otherwise.
+    /// </summary>
     [Test]
     public void UnitTargeting_UsesTheUnitUnderTheCursorThatPassesTheFilter()
     {
@@ -439,6 +534,10 @@ public class PlayerOrdersTests
         Assert.That(caster.Started, Is.EqualTo(4));
     }
 
+    /// <summary>
+    /// A press the caster refuses (on cooldown, empty slot) is reported with its reason and leaves the running
+    /// order and the motor alone.
+    /// </summary>
     [Test]
     public void CasterFailures_AreReported_AndChangeNothing()
     {
@@ -458,6 +557,10 @@ public class PlayerOrdersTests
         Assert.That(caster.LastFailure, Is.EqualTo((3, CastOutcome.EmptySlot)));
     }
 
+    /// <summary>
+    /// Pressing a non-bufferable ability during a cast fails with <see cref="CastOutcome.CastInProgress"/> and is
+    /// not buffered.
+    /// </summary>
     [Test]
     public void ANonBufferablePressDuringACast_Fails()
     {
@@ -472,6 +575,10 @@ public class PlayerOrdersTests
         Assert.That(orders.HasBufferedCast, Is.False);
     }
 
+    /// <summary>
+    /// A bufferable press during a cast fires with the aim taken at the press as soon as the running cast ends,
+    /// keeping the move order paused until the buffered cast is over too.
+    /// </summary>
     [Test]
     public void ABufferedCast_FiresWhenTheRunningCastEnds_PausingTheOrderAboutToResume()
     {
@@ -498,6 +605,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
     }
 
+    /// <summary>
+    /// A second bufferable press replaces the buffered one, which is reported as cancelled.
+    /// </summary>
     [Test]
     public void TheNewestBufferedPress_Wins()
     {
@@ -513,6 +623,10 @@ public class PlayerOrdersTests
         Assert.That(orders.BufferedSlot, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// A buffered cast still waiting after the cast buffer window is dropped and reported as expired, so it does
+    /// not fire when the running cast ends.
+    /// </summary>
     [Test]
     public void ABufferedCast_ExpiresAfterTheWindow()
     {
@@ -535,6 +649,9 @@ public class PlayerOrdersTests
         Assert.That(caster.Started, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// A new click or the stop command drops the buffered cast and reports it.
+    /// </summary>
     [Test]
     public void ABufferedCast_IsDroppedByANewOrderOrStop()
     {
@@ -553,6 +670,10 @@ public class PlayerOrdersTests
         Assert.That(caster.FailureCount, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// A buffered unit-targeted cast whose target died while it waited fails with
+    /// <see cref="CastOutcome.NoTarget"/> instead of firing, and the player ends idle.
+    /// </summary>
     [Test]
     public void ABufferedUnitCast_IsDroppedIfItsTargetDiedBeforeItFires()
     {
@@ -571,6 +692,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
     }
 
+    /// <summary>
+    /// A click during a cast replaces the paused order without moving the player, and the new move starts once
+    /// the cast ends.
+    /// </summary>
     [Test]
     public void ANewOrderDuringACast_ReplacesThePausedOrder_AndStartsWhenTheCastEnds()
     {
@@ -588,6 +713,10 @@ public class PlayerOrdersTests
         Assert.That(resumed.Destination, Is.EqualTo(new Vector2(-2f, 0f)));
     }
 
+    /// <summary>
+    /// Stop during a cast clears the paused order but lets the started cast run to its end, after which the
+    /// player is idle.
+    /// </summary>
     [Test]
     public void StopDuringACast_ClearsThePausedOrder_AndTheCastEndsIntoIdle()
     {
@@ -605,6 +734,11 @@ public class PlayerOrdersTests
         Assert.That(caster.Ended, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// A unit-targeted cast on a target beyond the ability's range becomes a
+    /// <see cref="PlayerOrderKind.CastWhenInRange"/> approach that walks toward the target, casts once in range,
+    /// and ends idle when the cast is over.
+    /// </summary>
     [Test]
     public void AUnitCastOutOfRange_WalksIntoRange_ThenCasts_ThenGoesIdle()
     {
@@ -632,6 +766,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle), "The approach order ends with its cast.");
     }
 
+    /// <summary>
+    /// An approach whose target dies stops the motor, goes idle and reports <see cref="CastOutcome.NoTarget"/>.
+    /// </summary>
     [Test]
     public void AnApproachWhoseTargetDies_EndsIdle()
     {
@@ -647,6 +784,10 @@ public class PlayerOrdersTests
         Assert.That(caster.LastFailure, Is.EqualTo((3, CastOutcome.NoTarget)));
     }
 
+    /// <summary>
+    /// <see cref="PlayerOrders.Clear"/> ends a running cast, reports the buffered cast as cancelled and leaves
+    /// the player idle.
+    /// </summary>
     [Test]
     public void Clear_EndsARunningCast_AndDropsTheBufferedOne()
     {
@@ -662,6 +803,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
     }
 
+    /// <summary>
+    /// Starting instant casts, buffering a cast and firing it when the running one ends allocates no managed
+    /// memory.
+    /// </summary>
     [Test]
     public void Casting_DoesNotAllocate()
     {
@@ -684,6 +829,10 @@ public class PlayerOrdersTests
         Assert.That(cast, Is.Not.AllocatingGCMemory());
     }
 
+    /// <summary>
+    /// A buffered <see cref="CastMovement.Continue"/> cast that fires after a stopping cast repaths the paused
+    /// move instead of letting the stopped motor's stale arrival end it.
+    /// </summary>
     [Test]
     public void ABufferedContinueCast_KeepsThePausedMoveGoing()
     {
@@ -709,6 +858,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
     }
 
+    /// <summary>
+    /// A buffered instant cast fires and ends on the tick the running cast ends, and the paused move resumes on
+    /// that same tick.
+    /// </summary>
     [Test]
     public void ABufferedInstantCast_FiresAndTheOrderResumesInTheSameTick()
     {
@@ -728,6 +881,10 @@ public class PlayerOrdersTests
         Assert.That(output.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
     }
 
+    /// <summary>
+    /// A buffered unit-targeted cast whose target moved out of range by the time it fires becomes an approach
+    /// that paths to the target on that tick.
+    /// </summary>
     [Test]
     public void ABufferedUnitCastOutOfRange_BecomesAnApproach_ThatChasesAtOnce()
     {
@@ -749,6 +906,10 @@ public class PlayerOrdersTests
         Assert.That(output.Destination, Is.EqualTo(new Vector2(0f, 6f)));
     }
 
+    /// <summary>
+    /// Holding the move button during a cast steers the paused move and keeps the buffered cast, while a fresh
+    /// click drops the buffered cast.
+    /// </summary>
     [Test]
     public void HoldingDuringACast_SteersThePausedOrder_ButOnlyAPressDropsTheBufferedCast()
     {
@@ -768,6 +929,10 @@ public class PlayerOrdersTests
         Assert.That(caster.LastFailure, Is.EqualTo((1, CastOutcome.Cancelled)));
     }
 
+    /// <summary>
+    /// Holding the move button keeps a cast-when-in-range approach running, while a fresh click replaces it with
+    /// a move.
+    /// </summary>
     [Test]
     public void HoldingTheButton_KeepsAnApproach_ButAClickReplacesIt()
     {
@@ -784,6 +949,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move));
     }
 
+    /// <summary>
+    /// Stop during a <see cref="CastMovement.Continue"/> cast stops the motor once and clears the paused move,
+    /// while the cast itself keeps running.
+    /// </summary>
     [Test]
     public void StopDuringAContinueCast_StopsTheMotorAndThePausedMove()
     {
@@ -800,6 +969,10 @@ public class PlayerOrdersTests
         Assert.That(Tick(default).Motor, Is.EqualTo(PlayerMotorRequest.None), "Nothing moves the player for the rest of the cast.");
     }
 
+    /// <summary>
+    /// A swing at a target at the player's own position carries no aim and a zero direction, rather than the
+    /// aim left over from an earlier cast, so the weapon falls back to the facing.
+    /// </summary>
     [Test]
     public void ASwingAtATargetOnTopOfThePlayer_CarriesNoStaleAim()
     {
@@ -814,6 +987,10 @@ public class PlayerOrdersTests
         Assert.That(output.AimDirection, Is.EqualTo(Vector2.zero), "The weapon falls back to the facing instead of an old aim.");
     }
 
+    /// <summary>
+    /// A stun cancels the running cast, drops the buffered cast and the current and paused orders, and stops the
+    /// motor once.
+    /// </summary>
     [Test]
     public void Stun_ClearsEveryOrderEndsTheCastAndStopsTheMotor()
     {
@@ -836,6 +1013,10 @@ public class PlayerOrdersTests
         Assert.That(Tick(default, StatusControls.Stun).Motor, Is.EqualTo(PlayerMotorRequest.None), "The motor is stopped once.");
     }
 
+    /// <summary>
+    /// While stunned, clicks are ignored and ability presses fail with <see cref="CastOutcome.Stunned"/>; once
+    /// the stun ends the player is idle and takes new orders.
+    /// </summary>
     [Test]
     public void Stun_IgnoresCommandsAndFailsCastsWithStunned_ThenThePlayerIsIdle()
     {
@@ -856,6 +1037,9 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Move), "Orders work again once the stun ends.");
     }
 
+    /// <summary>
+    /// A stunned player requests no swings, even when clicking an enemy in range.
+    /// </summary>
     [Test]
     public void Stun_StopsAutoAttacks()
     {
@@ -866,6 +1050,9 @@ public class PlayerOrdersTests
         Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy), StatusControls.Stun).Swing, Is.False);
     }
 
+    /// <summary>
+    /// A silence cancels the running cast and drops the buffered one, and the paused move resumes at once.
+    /// </summary>
     [Test]
     public void Silence_EndsARunningCast_AndResumesThePausedOrder()
     {
@@ -887,6 +1074,10 @@ public class PlayerOrdersTests
         Assert.That(output.Destination, Is.EqualTo(new Vector2(5f, 0f)));
     }
 
+    /// <summary>
+    /// While silenced, ability presses fail with <see cref="CastOutcome.Silenced"/> but attack orders still
+    /// swing.
+    /// </summary>
     [Test]
     public void Silence_FailsCastsWithSilenced_ButAutoAttacksGoOn()
     {
@@ -901,6 +1092,10 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
     }
 
+    /// <summary>
+    /// An approach that reaches range while silenced does not cast; it reports
+    /// <see cref="CastOutcome.Silenced"/> and goes idle.
+    /// </summary>
     [Test]
     public void Silence_StopsAnApproachFromCastingOnceInRange()
     {
@@ -917,6 +1112,11 @@ public class PlayerOrdersTests
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Idle));
     }
 
+    /// <summary>
+    /// While rooted, a move order keeps waiting for the motor, abilities that move the caster
+    /// (<see cref="CastMovement.Ability"/>) fail with <see cref="CastOutcome.Rooted"/>, and stopping casts
+    /// still start.
+    /// </summary>
     [Test]
     public void Root_KeepsTheMoveOrder_AndFailsOnlyCastsThatMoveTheCaster()
     {
@@ -938,6 +1138,10 @@ public class PlayerOrdersTests
         Assert.That(caster.Started, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Casts that run their full cast time, instant casts, and casts left running after a stop complete, while a
+    /// cast cut short by <see cref="PlayerOrders.Clear"/> is cancelled.
+    /// </summary>
     [Test]
     public void ACastThatRunsItsCastTime_Completes_AndOneThatIsCleared_IsCancelled()
     {
@@ -966,31 +1170,55 @@ public class PlayerOrdersTests
         Assert.That(caster.Completed, Is.EqualTo(3), "Stop lets the started cast run to its end.");
     }
 
+    /// <summary>
+    /// Ticks the orders with <paramref name="command"/> and the test's current position, time, motor state and
+    /// attack range, with no crowd control.
+    /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
         return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange));
     }
 
+    /// <summary>
+    /// Ticks the orders like <see cref="Tick(PlayerCommand)"/> but under the crowd control in
+    /// <paramref name="controls"/>.
+    /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command, StatusControls controls)
     {
         return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange, controls));
     }
 
+    /// <summary>
+    /// A command for the frame the move button is pressed at <paramref name="point"/>, over
+    /// <paramref name="target"/> if any.
+    /// </summary>
     private static PlayerCommand Click(Vector2 point, UnitTarget target = default)
     {
         return new PlayerCommand(point, target, movePressed: true, moveHeld: true, stopPressed: false);
     }
 
+    /// <summary>
+    /// A command for a frame the move button is still held with the cursor at <paramref name="point"/>, over
+    /// <paramref name="target"/> if any.
+    /// </summary>
     private static PlayerCommand Hold(Vector2 point, UnitTarget target = default)
     {
         return new PlayerCommand(point, target, movePressed: false, moveHeld: true, stopPressed: false);
     }
 
+    /// <summary>
+    /// A command pressing ability <paramref name="slot"/> with the cursor at <paramref name="point"/>, over
+    /// <paramref name="target"/> if any, and the move button up.
+    /// </summary>
     private static PlayerCommand Press(int slot, Vector2 point, UnitTarget target = default)
     {
         return new PlayerCommand(point, target, movePressed: false, moveHeld: false, stopPressed: false, abilitySlot: slot);
     }
 
+    /// <summary>
+    /// Creates a tracked test ability with a one-second cooldown and the given cast time, targeting, filter,
+    /// range, cast movement and bufferability.
+    /// </summary>
     private AbilityDefinition Ability(
         float castTime = 0f,
         AbilityTargeting targeting = AbilityTargeting.Direction,
@@ -1002,6 +1230,10 @@ public class PlayerOrdersTests
         return Track(AbilityDefinition.Create("Test", 1f, castTime, targeting, filter, range, movement, bufferable));
     }
 
+    /// <summary>
+    /// Creates a living unit with a <see cref="Health"/> and no collider, registered with the fake unit queries
+    /// at <paramref name="unitPosition"/> and <paramref name="distance"/> from the player.
+    /// </summary>
     private UnitTarget CreateUnit(UnitTeam team, Vector2 unitPosition, float distance)
     {
         GameObject unit = Track(new GameObject($"{team}Unit"));
@@ -1010,12 +1242,19 @@ public class PlayerOrdersTests
         return target;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);
         return created;
     }
 
+    /// <summary>
+    /// An <see cref="IAbilityCaster"/> that holds abilities per slot, succeeds unless an empty slot or a forced
+    /// <see cref="Failure"/> says otherwise, and counts starts, completions, cancellations and failures.
+    /// </summary>
     private sealed class FakeCaster : IAbilityCaster
     {
         private readonly AbilityDefinition[] slots = new AbilityDefinition[AbilitySlots.Count];
@@ -1029,16 +1268,26 @@ public class PlayerOrdersTests
         public CastAim LastAim { get; private set; }
         public (int, CastOutcome) LastFailure { get; private set; }
 
+        /// <summary>
+        /// Puts <paramref name="ability"/> in <paramref name="slot"/>.
+        /// </summary>
         public void Set(int slot, AbilityDefinition ability)
         {
             slots[slot] = ability;
         }
 
+        /// <summary>
+        /// Returns the ability set in <paramref name="slot"/>, or null when it is empty.
+        /// </summary>
         public AbilityDefinition GetAbility(int slot)
         {
             return slots[slot];
         }
 
+        /// <summary>
+        /// False with <see cref="CastOutcome.EmptySlot"/> for an empty slot, false with the forced
+        /// <see cref="Failure"/> when one is set, true otherwise.
+        /// </summary>
         public bool CanCast(int slot, out CastOutcome failure)
         {
             if (slots[slot] == null)
@@ -1051,6 +1300,10 @@ public class PlayerOrdersTests
             return Failure == null;
         }
 
+        /// <summary>
+        /// Counts a start and records <paramref name="aim"/> when <see cref="CanCast"/> allows it; otherwise
+        /// reports and returns the failure.
+        /// </summary>
         public CastOutcome TryCast(int slot, in CastAim aim)
         {
             if (!CanCast(slot, out CastOutcome failure))
@@ -1064,18 +1317,27 @@ public class PlayerOrdersTests
             return CastOutcome.Started;
         }
 
+        /// <summary>
+        /// Counts the cast as ended and completed.
+        /// </summary>
         public void CompleteCast(int slot)
         {
             Ended++;
             Completed++;
         }
 
+        /// <summary>
+        /// Counts the cast as ended and cancelled.
+        /// </summary>
         public void CancelCast(int slot)
         {
             Ended++;
             Cancelled++;
         }
 
+        /// <summary>
+        /// Counts the failure and records <paramref name="slot"/> and <paramref name="reason"/> as the last one.
+        /// </summary>
         public void ReportFailure(int slot, CastOutcome reason)
         {
             FailureCount++;
@@ -1083,45 +1345,74 @@ public class PlayerOrdersTests
         }
     }
 
+    /// <summary>
+    /// An <see cref="IUnitQueries"/> backed by per-unit state the test sets directly: alive, position and
+    /// distance from the player, keyed by the unit's <see cref="Health"/>.
+    /// </summary>
     private sealed class FakeUnits : IUnitQueries
     {
         private readonly Dictionary<Health, UnitState> states = new();
 
+        /// <summary>
+        /// Registers <paramref name="target"/> as alive at <paramref name="unitPosition"/> and
+        /// <paramref name="distance"/> from the player.
+        /// </summary>
         public void Add(UnitTarget target, Vector2 unitPosition, float distance)
         {
             states[target.Health] = new UnitState { Alive = true, Position = unitPosition, Distance = distance };
         }
 
+        /// <summary>
+        /// Marks a registered unit alive or dead without touching its <see cref="Health"/>.
+        /// </summary>
         public void SetAlive(UnitTarget target, bool alive)
         {
             states[target.Health].Alive = alive;
         }
 
+        /// <summary>
+        /// Moves a registered unit to <paramref name="unitPosition"/>; its distance is set separately.
+        /// </summary>
         public void SetPosition(UnitTarget target, Vector2 unitPosition)
         {
             states[target.Health].Position = unitPosition;
         }
 
+        /// <summary>
+        /// Sets the distance <see cref="DistanceTo"/> reports for a registered unit.
+        /// </summary>
         public void SetDistance(UnitTarget target, float distance)
         {
             states[target.Health].Distance = distance;
         }
 
+        /// <summary>
+        /// True only for a registered unit marked alive; false for an empty target or an unknown unit.
+        /// </summary>
         public bool IsAlive(UnitTarget target)
         {
             return target.Health != null && states.TryGetValue(target.Health, out UnitState state) && state.Alive;
         }
 
+        /// <summary>
+        /// Returns the position last set for a registered unit.
+        /// </summary>
         public Vector2 PositionOf(UnitTarget target)
         {
             return states[target.Health].Position;
         }
 
+        /// <summary>
+        /// Returns the distance last set for a registered unit.
+        /// </summary>
         public float DistanceTo(UnitTarget target)
         {
             return states[target.Health].Distance;
         }
 
+        /// <summary>
+        /// Mutable per-unit state behind the fake queries.
+        /// </summary>
         private sealed class UnitState
         {
             public bool Alive;

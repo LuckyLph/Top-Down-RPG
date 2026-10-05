@@ -25,12 +25,19 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
 
     public bool IsHeld => IsSpawned && IsServer && !IsOwnedByServer && readiness != null && !readiness.IsClientReady(OwnerClientId);
 
+    /// <summary>
+    /// Caches the unit's <see cref="StatusEffects"/> and <see cref="DamageReceiver"/>.
+    /// </summary>
     private void Awake()
     {
         statuses = GetComponent<StatusEffects>();
         receiver = GetComponent<DamageReceiver>();
     }
 
+    /// <summary>
+    /// Takes the status catalog from the combat settings, the service that publishes replicated blocks and the
+    /// client readiness that decides when a client's player is held.
+    /// </summary>
     [Inject]
     public void Construct(CombatSettings settings, StatusEffectService service, IClientReadiness clientReadiness)
     {
@@ -39,6 +46,10 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         readiness = clientReadiness;
     }
 
+    /// <summary>
+    /// On the host, becomes the unit's status hold, writes the list now and on every change, and forwards blocks.
+    /// On a client, rebuilds the mirror now and after every list change. Logs an error when there is no catalog.
+    /// </summary>
     public override void OnNetworkSpawn()
     {
         if (catalog == null)
@@ -59,6 +70,9 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         RebuildMirror();
     }
 
+    /// <summary>
+    /// Stops listening to the set and the list, and releases the status hold.
+    /// </summary>
     public override void OnNetworkDespawn()
     {
         statuses.Changed -= WriteEntries;
@@ -67,6 +81,10 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         statuses.SetHold(null);
     }
 
+    /// <summary>
+    /// Rebuilds the mirror once per frame after list changes; otherwise, on a client, counts the mirrored remaining
+    /// times down by the frame time.
+    /// </summary>
     private void Update()
     {
         if (mirrorDirty)
@@ -79,6 +97,10 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         }
     }
 
+    /// <summary>
+    /// Host: rewrites the list from the current set, stamping every entry with the server time. Statuses missing from
+    /// the catalog are logged and skipped; stacks are clamped to a byte.
+    /// </summary>
     private void WriteEntries()
     {
         if (catalog == null)
@@ -103,6 +125,9 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         }
     }
 
+    /// <summary>
+    /// Host: tells clients a status in the catalog was blocked by an immunity on this unit.
+    /// </summary>
     private void HandleBlocked(StatusEffectDefinition definition)
     {
         int index = catalog != null ? catalog.IndexOf(definition) : -1;
@@ -112,6 +137,10 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         }
     }
 
+    /// <summary>
+    /// Runs on clients: publishes the host's block of the status at <paramref name="catalogIndex"/> for the Immune
+    /// popup.
+    /// </summary>
     [Rpc(SendTo.NotServer)]
     private void BlockedRpc(ushort catalogIndex)
     {
@@ -121,11 +150,18 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         }
     }
 
+    /// <summary>
+    /// Client: marks the mirror for a rebuild on the next frame, so a burst of list events costs one rebuild.
+    /// </summary>
     private void HandleListChanged(NetworkListEvent<StatusEntry> _)
     {
         mirrorDirty = true;
     }
 
+    /// <summary>
+    /// Client: replaces the mirror set with the list's statuses, each remaining time reduced by the server time that
+    /// passed since the host wrote it. Entries the catalog does not know are skipped.
+    /// </summary>
     private void RebuildMirror()
     {
         mirrorDirty = false;

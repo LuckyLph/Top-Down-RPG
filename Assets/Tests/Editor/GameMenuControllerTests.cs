@@ -3,6 +3,10 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// Tests for the in-game menu (<see cref="GameMenuController"/>) on the real canvas prefab: opening and closing,
+/// input blocking, pausing solo play only, the options screen and the host's leave and quit confirmation.
+/// </summary>
 public class GameMenuControllerTests
 {
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
@@ -23,6 +27,10 @@ public class GameMenuControllerTests
     private OptionsMenuController options;
     private GameMenuController controller;
 
+    /// <summary>
+    /// Copies the project input actions, builds the input, binding and time services on in-memory settings,
+    /// instantiates the menu canvas prefab and starts the options and game menu controllers with fake menu input.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -45,6 +53,9 @@ public class GameMenuControllerTests
         controller.Start();
     }
 
+    /// <summary>
+    /// Disposes the controllers and services, destroys the canvas and the copied actions, and resets the time scale.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -58,6 +69,10 @@ public class GameMenuControllerTests
         Time.timeScale = 1f;
     }
 
+    /// <summary>
+    /// The canvas prefab holds both the menu and options views, both start hidden, and it sorts above the damage
+    /// popups.
+    /// </summary>
     [Test]
     public void ThePrefab_HasTheMenuAndTheOptionsScreenHidden()
     {
@@ -68,6 +83,9 @@ public class GameMenuControllerTests
         Assert.That(canvas.GetComponent<Canvas>().sortingOrder, Is.GreaterThan(5000), "Above the damage popups.");
     }
 
+    /// <summary>
+    /// Offline, the menu key shows the menu, blocks gameplay input and pauses time.
+    /// </summary>
     [Test]
     public void TheMenuKey_OpensIt_BlocksGameplayInput_AndPausesSoloPlay()
     {
@@ -80,6 +98,9 @@ public class GameMenuControllerTests
         Assert.That(Time.timeScale, Is.Zero);
     }
 
+    /// <summary>
+    /// In an online session the open menu blocks gameplay input but leaves time running.
+    /// </summary>
     [Test]
     public void Online_ItBlocksGameplayInput_ButPausesNothing()
     {
@@ -94,6 +115,10 @@ public class GameMenuControllerTests
         Assert.That(Time.timeScale, Is.EqualTo(1f));
     }
 
+    /// <summary>
+    /// The press that opens the menu does not also close it; a later Back closes it and restores input, time and
+    /// the menu stack, and the menu key toggles it.
+    /// </summary>
     [Test]
     public void BackOrTheMenuKey_ClosesIt_AndGivesEverythingBack()
     {
@@ -113,6 +138,9 @@ public class GameMenuControllerTests
         Assert.That(controller.IsOpen, Is.False, "The menu key (gamepad Start) toggles it.");
     }
 
+    /// <summary>
+    /// The Resume button closes the menu and unpauses time.
+    /// </summary>
     [Test]
     public void Resume_ClosesIt()
     {
@@ -124,6 +152,10 @@ public class GameMenuControllerTests
         Assert.That(Time.timeScale, Is.EqualTo(1f));
     }
 
+    /// <summary>
+    /// The Options button hides the menu and pushes the options screen while staying paused; Back from the options
+    /// returns to the menu without closing it, and a second Back closes the menu.
+    /// </summary>
     [Test]
     public void Options_TakeTheMenusPlace_AndBackFromThemReturnsToTheMenuOnly()
     {
@@ -146,6 +178,9 @@ public class GameMenuControllerTests
         Assert.That(controller.IsOpen, Is.False);
     }
 
+    /// <summary>
+    /// Closing the menu while the options are open closes both, unblocks input and empties the menu stack.
+    /// </summary>
     [Test]
     public void Closing_WithTheOptionsOpen_ClosesThemToo()
     {
@@ -160,6 +195,10 @@ public class GameMenuControllerTests
         Assert.That(menus.Count, Is.Zero);
     }
 
+    /// <summary>
+    /// An online host gets a confirmation question before leaving or quitting, and Back or No dismisses only the
+    /// question, leaving the menu open.
+    /// </summary>
     [Test]
     public void AHost_IsAskedBeforeLeavingOrQuitting_AndBackOnlyClosesTheQuestion()
     {
@@ -184,6 +223,10 @@ public class GameMenuControllerTests
         Assert.That(controller.IsOpen, Is.True);
     }
 
+    /// <summary>
+    /// Disposing the controller while open restores input and time and empties the menu stack, and afterwards the
+    /// menu key no longer opens it.
+    /// </summary>
     [Test]
     public void Dispose_WhileOpen_GivesBackGameplayInputAndTime()
     {
@@ -199,6 +242,10 @@ public class GameMenuControllerTests
         Assert.That(controller.IsOpen, Is.False, "A disposed menu no longer answers the menu key.");
     }
 
+    /// <summary>
+    /// Simulates one frame: sets the menu and back presses, ticks the menu stack and the options controller, then
+    /// releases both presses.
+    /// </summary>
     private void TickWith(bool menu = false, bool back = false)
     {
         menuInput.MenuPressedThisFrame = menu;

@@ -6,6 +6,10 @@ using UnityEngine.InputSystem;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// Root DI scope of the app, living in the Main scene for the whole run: registers the scene flow, input, clock,
+/// menus, saves, user settings and network session that the menu, gameplay and area scopes inherit.
+/// </summary>
 public class MainLifetimeScope : LifetimeScope
 {
     [SerializeField] private GameScenes gameScenes;
@@ -18,6 +22,10 @@ public class MainLifetimeScope : LifetimeScope
     [SerializeField] private NetworkManager networkManagerPrefab;
     [SerializeField] private NetworkSettings networkSettings;
 
+    /// <summary>
+    /// Registers the app-wide services and entry points, logging an error and skipping the network services when
+    /// the NetworkManager prefab or <see cref="NetworkSettings"/> is missing.
+    /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(gameScenes);

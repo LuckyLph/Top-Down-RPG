@@ -1,8 +1,16 @@
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Builds <see cref="PlayerControlSettings"/> instances for tests and assigns them to controllers, without
+/// touching the project's settings asset.
+/// </summary>
 public static class TestPlayerControlSettings
 {
+    /// <summary>
+    /// Creates a hidden, unsaved settings instance with the given tuning, the Enemy layer as enemies and the Player
+    /// layer as allies; the caller destroys it.
+    /// </summary>
     public static PlayerControlSettings Create(
         float moveSpeed = 5f,
         float stuckTimeout = 0.75f,
@@ -30,6 +38,9 @@ public static class TestPlayerControlSettings
         return settings;
     }
 
+    /// <summary>
+    /// Sets <paramref name="controller"/>'s serialized control settings to <paramref name="settings"/>.
+    /// </summary>
     public static void Assign(PlayerController controller, PlayerControlSettings settings)
     {
         SerializedObject serialized = new(controller);

@@ -2,6 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// The area scope's <see cref="IAreaEntry"/>: makes this area's navigation grid and requested spawn point the active
+/// ones, moves the players this machine simulates to their party slots at that spawn point, and snaps the camera.
+/// Clears the active grid again when the area unloads.
+/// </summary>
 public sealed class AreaEntry : IAreaEntry, IDisposable
 {
     private readonly AreaEntryRequest request;
@@ -12,6 +17,10 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
     private readonly ActiveNavigationGrid activeNavigationGrid;
     private readonly CameraFollow2D cameraFollow;
 
+    /// <summary>
+    /// Captures the entry request, the area's spawn points and navigation grid (may be null), and the
+    /// active-area holders, player registry and camera follow it uses on entry.
+    /// </summary>
     public AreaEntry(
         AreaEntryRequest request,
         SpawnPoint[] spawnPoints,
@@ -30,6 +39,11 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
         this.cameraFollow = cameraFollow;
     }
 
+    /// <summary>
+    /// Sets the active navigation grid and spawn point, then teleports each player this machine simulates to the
+    /// spawn slot for its index in the party and snaps the camera. Warns and leaves the players in place when the
+    /// area has no spawn point.
+    /// </summary>
     public void Enter()
     {
         activeNavigationGrid.Set(navigationGrid);
@@ -63,6 +77,10 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
         activeNavigationGrid.Clear(navigationGrid);
     }
 
+    /// <summary>
+    /// The spawn point with <paramref name="spawnId"/>; otherwise the first one in the area, with a warning; null
+    /// when the area has none.
+    /// </summary>
     private SpawnPoint FindSpawnPoint(string spawnId)
     {
         SpawnPoint fallback = null;

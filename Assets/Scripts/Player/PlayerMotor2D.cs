@@ -58,6 +58,9 @@ public class PlayerMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Finds the animator and sets the body up for top-down movement: no gravity, no rotation, interpolated.
+    /// </summary>
     private void Awake()
     {
         ResolveAnimator();
@@ -67,32 +70,51 @@ public class PlayerMotor2D : MonoBehaviour
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
+    /// <summary>
+    /// Fills an empty animator reference from the children, inactive ones included.
+    /// </summary>
     private void OnValidate()
     {
         ResolveAnimator();
     }
 
+    /// <summary>
+    /// Drops the path and stops the body.
+    /// </summary>
     private void OnDisable()
     {
         Stop();
     }
 
+    /// <summary>
+    /// Pushes movement and facing to the animator each frame.
+    /// </summary>
     private void Update()
     {
         UpdateAnimator();
     }
 
+    /// <summary>
+    /// Runs one <see cref="FixedTick"/> per physics step.
+    /// </summary>
     private void FixedUpdate()
     {
         FixedTick(Time.fixedDeltaTime);
     }
 
+    /// <summary>
+    /// Takes the holder of the current area's navigation grid that paths are built on.
+    /// </summary>
     [Inject]
     public void Construct(ActiveNavigationGrid navigationGrid)
     {
         activeNavigationGrid = navigationGrid;
     }
 
+    /// <summary>
+    /// Takes the control settings (speed, path following, terrain profile) and drops any path; the path follower is
+    /// reconfigured on the next <see cref="MoveTo"/>.
+    /// </summary>
     public void Initialize(PlayerControlSettings controlSettings)
     {
         settings = controlSettings;
@@ -129,6 +151,9 @@ public class PlayerMotor2D : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Drops the path and the move direction, and zeroes the body's velocity when this copy simulates movement.
+    /// </summary>
     public void Stop()
     {
         follower.Clear();
@@ -139,6 +164,9 @@ public class PlayerMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Faces <paramref name="direction"/>; a near-zero direction keeps the current facing.
+    /// </summary>
     public void Face(Vector2 direction)
     {
         if (direction.sqrMagnitude > MovingThreshold)
@@ -167,6 +195,10 @@ public class PlayerMotor2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whether this copy moves the body itself; turning it off stops first, then ignores move requests and physics
+    /// ticks so only <see cref="ShowRemoteMovement"/> drives it.
+    /// </summary>
     public void SetSimulatesMovement(bool simulates)
     {
         if (!simulates)
@@ -186,6 +218,9 @@ public class PlayerMotor2D : MonoBehaviour
         Face(remoteFacing);
     }
 
+    /// <summary>
+    /// Stops and places both the body and the transform at <paramref name="position"/>, keeping the transform's z.
+    /// </summary>
     public void Teleport(Vector2 position)
     {
         Stop();
@@ -195,6 +230,11 @@ public class PlayerMotor2D : MonoBehaviour
         transform.position = new Vector3(position.x, position.y, transform.position.z);
     }
 
+    /// <summary>
+    /// One physics step: advances the path at the scaled speed, sets the body's velocity, records the move as a
+    /// fraction of that speed and, unless aiming, faces along it. Does nothing on a remote copy or before
+    /// <see cref="Initialize"/>.
+    /// </summary>
     internal void FixedTick(float deltaTime)
     {
         if (!simulatesMovement || settings == null)
@@ -241,6 +281,10 @@ public class PlayerMotor2D : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Sets the animator's moving flag and move and last-move directions, and plays at the walk animation speed while
+    /// moving.
+    /// </summary>
     private void UpdateAnimator()
     {
         if (animator == null)
@@ -258,6 +302,9 @@ public class PlayerMotor2D : MonoBehaviour
         animator.speed = isMoving ? walkAnimationSpeed : 1f;
     }
 
+    /// <summary>
+    /// Falls back to the first <see cref="Animator"/> in the children, inactive ones included, when none is assigned.
+    /// </summary>
     private void ResolveAnimator()
     {
         if (animator == null)

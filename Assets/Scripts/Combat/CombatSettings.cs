@@ -44,6 +44,10 @@ public sealed class CombatSettings : ScriptableObject
     public string ImmuneText => immuneText;
     public float PeriodicPopupScale => periodicPopupScale;
 
+    /// <summary>
+    /// Builds an unsaved, hidden runtime instance with default rules and <paramref name="catalog"/>, for tests that
+    /// must not touch project assets.
+    /// </summary>
     public static CombatSettings Create(StatusEffectCatalog catalog)
     {
         CombatSettings settings = CreateInstance<CombatSettings>();
@@ -52,6 +56,9 @@ public sealed class CombatSettings : ScriptableObject
         return settings;
     }
 
+    /// <summary>
+    /// The popup color for <paramref name="type"/> damage; the physical color for any type without its own.
+    /// </summary>
     public Color GetColor(DamageType type)
     {
         switch (type)

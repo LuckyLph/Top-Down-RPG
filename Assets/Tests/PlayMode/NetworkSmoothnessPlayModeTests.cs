@@ -7,6 +7,10 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests and an explicit benchmark measuring how smoothly the host's copy of a client's player moves under a
+/// simulated bad connection.
+/// </summary>
 public class NetworkSmoothnessPlayModeTests
 {
     private const float MeasureSeconds = 2f;
@@ -28,6 +32,10 @@ public class NetworkSmoothnessPlayModeTests
     private InProcessClient client;
     private NetworkSimulator simulator;
 
+    /// <summary>
+    /// Resets the global interpolation buffer offset and the network simulator preset, and disposes the in-process
+    /// client.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -41,6 +49,10 @@ public class NetworkSmoothnessPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// Explicit benchmark that logs averaged smoothness for each interpolation type, delta reliability and buffer
+    /// offset combination under the stress preset, with a count of runs that stalled for over 150 ms. Asserts nothing.
+    /// </summary>
     [UnityTest, Explicit, Category("NetworkBench")]
     public IEnumerator Benchmark_RemotePlayerSmoothness_UnderStress()
     {
@@ -77,6 +89,10 @@ public class NetworkSmoothnessPlayModeTests
         }
     }
 
+    /// <summary>
+    /// With the shipped network settings under 150 ms latency, jitter and loss, the host's copy of a walking client
+    /// never steps back a pixel, never freezes for 0.6 s, starts within 0.8 s and keeps a steady speed.
+    /// </summary>
     [UnityTest]
     public IEnumerator RemotePlayer_MovesSmoothly_UnderStress()
     {
@@ -104,6 +120,11 @@ public class NetworkSmoothnessPlayModeTests
         Assert.That(result.MeanSpeedError, Is.LessThan(0.5f), $"The remote copy should move at a steady speed. {result}");
     }
 
+    /// <summary>
+    /// Hosts from the main menu, despawns the area's mobs, connects a ready in-process client with its colliders off,
+    /// caches the host's network simulator and hands the host's copy of the client's player to
+    /// <paramref name="hostCopyFound"/>.
+    /// </summary>
     private IEnumerator HostWithClient(System.Action<PlayerController> hostCopyFound)
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();
@@ -134,6 +155,11 @@ public class NetworkSmoothnessPlayModeTests
         hostCopyFound(InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId));
     }
 
+    /// <summary>
+    /// Orders the client's player to walk far along <paramref name="direction"/>, records how long the host's copy
+    /// takes to start, then for a fixed window its backward steps, longest stall and speed error against the owner,
+    /// and finally stops the player and waits for the copy to settle. Fails if the copy never starts moving.
+    /// </summary>
     private IEnumerator Measure(PlayerController hostCopy, float direction, SmoothnessResult result)
     {
         Transform owner = client.LocalPlayer.Current.Transform;
@@ -205,6 +231,9 @@ public class NetworkSmoothnessPlayModeTests
         yield return WaitUntilStill(hostCopy.transform);
     }
 
+    /// <summary>
+    /// Waits until <paramref name="target"/> has not moved for half a second, giving up silently after five seconds.
+    /// </summary>
     private static IEnumerator WaitUntilStill(Transform target)
     {
         float deadline = Time.realtimeSinceStartup + 5f;
@@ -222,11 +251,17 @@ public class NetworkSmoothnessPlayModeTests
         }
     }
 
+    /// <summary>
+    /// A bad-connection preset: 150 ms latency, 20 ms jitter and 4% packet loss.
+    /// </summary>
     private static NetworkSimulatorPreset StressPreset()
     {
         return NetworkSimulatorPreset.Create("Stress", "150 ms latency, 20 ms jitter, 4% loss", 150, 20, 0, 4);
     }
 
+    /// <summary>
+    /// Smoothness metrics of the host's copy over one or more measured runs.
+    /// </summary>
     private sealed class SmoothnessResult
     {
         public float StartLagSeconds;
@@ -235,6 +270,9 @@ public class NetworkSmoothnessPlayModeTests
         public float MeanSpeedError;
         public int Frames;
 
+        /// <summary>
+        /// Adds <paramref name="other"/>'s lag, backward steps, speed error and frames, and keeps the longer stall.
+        /// </summary>
         public void Accumulate(SmoothnessResult other)
         {
             StartLagSeconds += other.StartLagSeconds;
@@ -244,6 +282,10 @@ public class NetworkSmoothnessPlayModeTests
             Frames += other.Frames;
         }
 
+        /// <summary>
+        /// A copy with lag and speed error averaged over <paramref name="runs"/>; the longest stall, backward steps and
+        /// frames stay as accumulated.
+        /// </summary>
         public SmoothnessResult Averaged(int runs)
         {
             return new SmoothnessResult
@@ -256,6 +298,9 @@ public class NetworkSmoothnessPlayModeTests
             };
         }
 
+        /// <summary>
+        /// One-line summary of the metrics for logs and assertion messages.
+        /// </summary>
         public override string ToString()
         {
             return $"lag={StartLagSeconds * 1000f:0}ms longestStall={LongestStallSeconds * 1000f:0}ms backward={BackwardSteps} speedError={MeanSpeedError:P0} frames={Frames}";

@@ -27,6 +27,10 @@ public enum PlayerMotorRequest
 /// </summary>
 public readonly struct PlayerOrderContext
 {
+    /// <summary>
+    /// Captures the player's position, the clock time, the motor's arrival and stall state, the weapon's attack range
+    /// and the crowd control currently applied (none by default).
+    /// </summary>
     public PlayerOrderContext(
         Vector2 position,
         float time,
@@ -56,6 +60,10 @@ public readonly struct PlayerOrderContext
 /// </summary>
 public readonly struct PlayerOrderOutput
 {
+    /// <summary>
+    /// Creates an output; <paramref name="destination"/> only matters for <see cref="PlayerMotorRequest.MoveTo"/> and
+    /// <paramref name="aimDirection"/> only when <paramref name="hasAim"/> is set.
+    /// </summary>
     public PlayerOrderOutput(PlayerMotorRequest motor, Vector2 destination, bool hasAim, Vector2 aimDirection, bool swing)
     {
         Motor = motor;

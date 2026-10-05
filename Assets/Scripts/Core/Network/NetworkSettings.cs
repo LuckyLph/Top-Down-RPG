@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Connection settings for online play: the default join address, the host's listen address and port, how long a
+/// client waits to connect, and the most players a session admits.
+/// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Network Settings", fileName = "NetworkSettings")]
 public class NetworkSettings : ScriptableObject
 {

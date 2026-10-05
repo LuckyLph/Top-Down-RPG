@@ -2,6 +2,10 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Editor bootstrap that builds the sword slash prefab and links it to the Sword weapon asset, automatically after
+/// each domain load and on demand from the Tools menu.
+/// </summary>
 [InitializeOnLoad]
 public static class PlayerSlashPrefabBootstrap
 {
@@ -9,11 +13,17 @@ public static class PlayerSlashPrefabBootstrap
     private const string SwordAssetPath = "Assets/Data/Weapons/Sword.asset";
     private const string SlashAnimationPath = "Assets/Animations/Weapons/Slash.anim";
 
+    /// <summary>
+    /// Defers <see cref="EnsureAssetsExist"/> until the editor has finished loading.
+    /// </summary>
     static PlayerSlashPrefabBootstrap()
     {
         EditorApplication.delayCall += EnsureAssetsExist;
     }
 
+    /// <summary>
+    /// Rebuilds the sword slash prefab from scratch, overwriting the existing asset, and links it to the Sword weapon.
+    /// </summary>
     [MenuItem("Tools/TopDownRPG/Rebuild Player Slash Prefab")]
     public static void RebuildPrefab()
     {
@@ -21,6 +31,10 @@ public static class PlayerSlashPrefabBootstrap
         LinkSwordWeapon(slashPrefab);
     }
 
+    /// <summary>
+    /// Creates the slash prefab when it is missing or has no <see cref="SwordSlashAttack"/>, then links it to the Sword
+    /// weapon. Does nothing while the editor is compiling, importing or building a player.
+    /// </summary>
     private static void EnsureAssetsExist()
     {
         if (EditorApplication.isCompiling || EditorApplication.isUpdating || BuildPipeline.isBuildingPlayer)
@@ -37,6 +51,10 @@ public static class PlayerSlashPrefabBootstrap
         LinkSwordWeapon(prefabRoot);
     }
 
+    /// <summary>
+    /// Builds a fresh slash hierarchy, saves it over the prefab path (creating the folder if needed), destroys the
+    /// temporary scene object and returns the saved prefab asset.
+    /// </summary>
     private static GameObject CreateOrUpdatePrefab()
     {
         string directoryPath = Path.Combine(Application.dataPath, "Prefabs", "Combat");
@@ -52,6 +70,10 @@ public static class PlayerSlashPrefabBootstrap
         return prefabAsset;
     }
 
+    /// <summary>
+    /// Creates the temporary slash hierarchy: a root with an <see cref="Animator"/>, a trigger hitbox and a
+    /// <see cref="SwordSlashAttack"/>, plus a scaled Visual child holding the sprite, wired to the Slash clip.
+    /// </summary>
     private static GameObject BuildPrefabRoot()
     {
         GameObject root = new("SwordSlash");
@@ -74,6 +96,10 @@ public static class PlayerSlashPrefabBootstrap
         return root;
     }
 
+    /// <summary>
+    /// Points the Sword weapon asset's slash prefab field at <paramref name="slashPrefab"/> and saves the asset. Does
+    /// nothing when either asset is missing or the link is already in place.
+    /// </summary>
     private static void LinkSwordWeapon(GameObject slashPrefab)
     {
         if (slashPrefab == null)

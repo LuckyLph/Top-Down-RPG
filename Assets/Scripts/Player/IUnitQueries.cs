@@ -5,7 +5,13 @@ using UnityEngine;
 /// </summary>
 public interface IUnitQueries
 {
+    /// <summary>
+    /// Whether <paramref name="target"/> still exists and is not dead; orders on a dead target end.
+    /// </summary>
     bool IsAlive(UnitTarget target);
+    /// <summary>
+    /// World position of <paramref name="target"/>, used as the chase goal and to aim at it.
+    /// </summary>
     Vector2 PositionOf(UnitTarget target);
 
     /// <summary>

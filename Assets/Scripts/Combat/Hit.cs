@@ -12,6 +12,10 @@ public struct Hit
     [SerializeField] private DamageType type;
     [SerializeField] private StatusEffectDefinition[] statuses;
 
+    /// <summary>
+    /// Creates a hit dealing <paramref name="amount"/> <paramref name="type"/> damage and applying
+    /// <paramref name="statuses"/> (none when null).
+    /// </summary>
     public Hit(int amount, DamageType type, StatusEffectDefinition[] statuses = null)
     {
         this.amount = amount;
@@ -23,6 +27,10 @@ public struct Hit
     public DamageType Type => type;
     public int StatusCount => statuses != null ? statuses.Length : 0;
 
+    /// <summary>
+    /// The status at <paramref name="index"/>, from 0 to <see cref="StatusCount"/> - 1; may be null for an empty
+    /// inspector entry.
+    /// </summary>
     public StatusEffectDefinition GetStatus(int index)
     {
         return statuses[index];

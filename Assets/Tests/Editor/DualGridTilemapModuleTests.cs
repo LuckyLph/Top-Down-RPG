@@ -3,12 +3,20 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Tests for <see cref="DualGridTilemapModule"/> and <see cref="DualGridUtils"/>: how data cells map to the four
+/// render cells around them, and how single, bulk, direct and full refresh writes keep the render tilemap in step.
+/// </summary>
 public class DualGridTilemapModuleTests
 {
     private GameObject gridObject;
     private DualGridRuleTile renderTile;
     private DualGridTilemapModule module;
 
+    /// <summary>
+    /// Builds a grid with a data tilemap and a half-cell offset render tilemap under it, and a module painting a
+    /// fresh <see cref="DualGridRuleTile"/>.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -28,6 +36,9 @@ public class DualGridTilemapModuleTests
         module.RenderTile = renderTile;
     }
 
+    /// <summary>
+    /// Destroys the grid hierarchy, the rule tile and its generated data tile.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -36,6 +47,9 @@ public class DualGridTilemapModuleTests
         Object.DestroyImmediate(renderTile);
     }
 
+    /// <summary>
+    /// For every corner, mapping a data cell to its render cell and back returns the original data cell.
+    /// </summary>
     [Test]
     public void RenderAndDataTilePositions_AreInverseCorners()
     {
@@ -48,6 +62,9 @@ public class DualGridTilemapModuleTests
         }
     }
 
+    /// <summary>
+    /// Setting one data cell writes the data tile and paints the rule tile into exactly its four render cells.
+    /// </summary>
     [Test]
     public void SetDataTile_FillsTheFourRenderCellsAroundIt()
     {
@@ -62,6 +79,9 @@ public class DualGridTilemapModuleTests
         Assert.That(CountRenderTiles(), Is.EqualTo(4));
     }
 
+    /// <summary>
+    /// Clearing one of two adjacent data cells removes only the render cells the other no longer shares.
+    /// </summary>
     [Test]
     public void ClearDataTile_KeepsRenderCellsAnotherDataTileStillUses()
     {
@@ -81,6 +101,10 @@ public class DualGridTilemapModuleTests
         }
     }
 
+    /// <summary>
+    /// Painting a block in bulk produces the same render cells as painting it cell by cell, and clearing it in
+    /// bulk empties the render tilemap.
+    /// </summary>
     [Test]
     public void SetDataTiles_InBulk_MatchesPaintingOneCellAtATime()
     {
@@ -100,6 +124,9 @@ public class DualGridTilemapModuleTests
         Assert.That(bulk.Count, Is.EqualTo(21 * 21));
     }
 
+    /// <summary>
+    /// Clearing part of a painted block in bulk removes only the render cells that no remaining data cell uses.
+    /// </summary>
     [Test]
     public void ClearDataTiles_InBulk_RemovesOnlyRenderCellsNoDataTileUses()
     {
@@ -112,6 +139,10 @@ public class DualGridTilemapModuleTests
         Assert.That(module.RenderTilemap.HasTile(new Vector3Int(1, 0, 0)), Is.False);
     }
 
+    /// <summary>
+    /// A data tile written straight to the data tilemap is drawn once the module handles the tilemap's
+    /// positions-changed notification.
+    /// </summary>
     [Test]
     public void WritingTheDataTilemapDirectly_UpdatesTheRenderTilemap()
     {
@@ -122,6 +153,9 @@ public class DualGridTilemapModuleTests
         Assert.That(CountRenderTiles(), Is.EqualTo(4));
     }
 
+    /// <summary>
+    /// A full refresh repaints the render cells of every data cell after the render tilemap was wiped.
+    /// </summary>
     [Test]
     public void RefreshRenderTilemap_RebuildsRenderCellsFromTheDataTilemap()
     {
@@ -133,6 +167,10 @@ public class DualGridTilemapModuleTests
         Assert.That(CountRenderTiles(), Is.EqualTo(4));
     }
 
+    /// <summary>
+    /// Lists the cells of the rectangle from (<paramref name="minX"/>, <paramref name="minY"/>) inclusive to
+    /// (<paramref name="maxX"/>, <paramref name="maxY"/>) exclusive.
+    /// </summary>
     private static List<Vector3Int> Block(int minX, int minY, int maxX, int maxY)
     {
         List<Vector3Int> cells = new();
@@ -147,6 +185,9 @@ public class DualGridTilemapModuleTests
         return cells;
     }
 
+    /// <summary>
+    /// Collects every render tilemap cell that holds a tile, compressing its bounds first.
+    /// </summary>
     private HashSet<Vector3Int> RenderCells()
     {
         HashSet<Vector3Int> cells = new();
@@ -162,6 +203,9 @@ public class DualGridTilemapModuleTests
         return cells;
     }
 
+    /// <summary>
+    /// Counts the render tilemap cells that hold a tile.
+    /// </summary>
     private int CountRenderTiles()
     {
         return RenderCells().Count;

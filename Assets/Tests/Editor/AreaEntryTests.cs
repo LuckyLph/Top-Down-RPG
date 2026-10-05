@@ -2,10 +2,17 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
+/// <summary>
+/// Tests for placing the party on entering an area: <see cref="SpawnPoint"/> slots, <see cref="AreaEntry"/> and
+/// <see cref="PlayerRespawner"/>.
+/// </summary>
 public class AreaEntryTests
 {
     private readonly List<GameObject> sceneObjects = new();
 
+    /// <summary>
+    /// Destroys the scene objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -20,6 +27,10 @@ public class AreaEntryTests
         sceneObjects.Clear();
     }
 
+    /// <summary>
+    /// Slot 0 of a spawn point is its own position, the first four slots are distinct, and slots 1 and 2 flank
+    /// it symmetrically on x.
+    /// </summary>
     [Test]
     public void SpawnPoint_FirstSlotIsTheSpawnPoint_AndOtherSlotsAreDistinct()
     {
@@ -36,6 +47,10 @@ public class AreaEntryTests
         Assert.That(slots[1].x - 2f, Is.EqualTo(2f - slots[2].x).Within(0.0001f), "The first two extra slots should flank the spawn point.");
     }
 
+    /// <summary>
+    /// Entering an area makes the requested spawn point the active one and places each registered player in the
+    /// slot matching its registration order.
+    /// </summary>
     [Test]
     public void Enter_PlacesEveryRegisteredPlayerInItsOwnSlotAtTheRequestedSpawn()
     {
@@ -64,6 +79,10 @@ public class AreaEntryTests
         Assert.That((Vector2)third.transform.position, Is.EqualTo(start.GetSlotPosition(2)));
     }
 
+    /// <summary>
+    /// The respawner refuses a living player, and brings a dead one back at full health in its own slot at the
+    /// active spawn point.
+    /// </summary>
     [Test]
     public void Respawner_RestoresADeadPlayerIntoItsSlotAtTheActiveSpawnPoint()
     {
@@ -86,6 +105,10 @@ public class AreaEntryTests
         Assert.That((Vector2)second.transform.position, Is.EqualTo(start.GetSlotPosition(1)));
     }
 
+    /// <summary>
+    /// The respawner leaves a dead player from another registry dead, and respawns a registered player where it
+    /// died when no spawn point is active.
+    /// </summary>
     [Test]
     public void Respawner_IgnoresPlayersOutsideTheRegistry_AndRespawnsInPlaceWithoutASpawnPoint()
     {
@@ -107,6 +130,9 @@ public class AreaEntryTests
         Assert.That(registered.transform.position, Is.EqualTo(deathPosition));
     }
 
+    /// <summary>
+    /// Creates a tracked spawn point with id <paramref name="spawnId"/> at <paramref name="position"/>.
+    /// </summary>
     private SpawnPoint CreateSpawnPoint(string spawnId, Vector2 position)
     {
         GameObject spawnObject = new($"SpawnPoint_{spawnId}");
@@ -119,6 +145,10 @@ public class AreaEntryTests
         return spawnPoint;
     }
 
+    /// <summary>
+    /// Creates a tracked player away from the origin with a <see cref="PlayerController"/> and health, and adds
+    /// its handle to <paramref name="players"/>.
+    /// </summary>
     private PlayerController CreatePlayer(PlayerRegistry players)
     {
         GameObject playerObject = new("Player");
@@ -129,6 +159,9 @@ public class AreaEntryTests
         return controller;
     }
 
+    /// <summary>
+    /// Creates a tracked camera object with a <see cref="CameraFollow2D"/> for the area entry to snap.
+    /// </summary>
     private CameraFollow2D CreateCameraFollow()
     {
         GameObject cameraObject = new("Camera");

@@ -4,6 +4,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Editor helpers that set up a <see cref="DualGridRuleTile"/> from a texture sliced into 16 sprites.
+/// </summary>
 public static class DualGridRuleTileExtensions
 {
     /// <summary>
@@ -49,6 +52,10 @@ public static class DualGridRuleTileExtensions
         }
     }
 
+    /// <summary>
+    /// Replaces the tile's rules with one single-sprite rule per sprite, in order, and makes the first sprite the
+    /// default.
+    /// </summary>
     private static void ApplySprites(ref DualGridRuleTile dualGridRuleTile, List<Sprite> sprites)
     {
         dualGridRuleTile.m_DefaultSprite = sprites.FirstOrDefault();
@@ -60,13 +67,16 @@ public static class DualGridRuleTileExtensions
         }
     }
 
+    /// <summary>
+    /// Appends a tiling rule that outputs <paramref name="sprite"/> with no collider and no neighbor conditions yet.
+    /// </summary>
     private static void AddNewTilingRuleFromSprite(ref DualGridRuleTile tile, Sprite sprite)
     {
         tile.m_TilingRules.Add(new DualGridRuleTile.TilingRule() { m_Sprites = new Sprite[] { sprite }, m_ColliderType = UnityEngine.Tilemaps.Tile.ColliderType.None });
     }
 
     /// <summary>
-    /// Returns a sorted list of <see cref="Sprite"/>s from a provided <paramref name="texture"/>.
+    /// Returns every <see cref="Sprite"/> sliced from <paramref name="texture"/>, unsorted, in asset load order.
     /// </summary>
     public static List<Sprite> GetSplitSpritesFromTexture(this Texture2D texture)
     {

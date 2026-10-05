@@ -6,6 +6,10 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/> and <see cref="FileSaveStore"/>: saving and loading
+/// the current area by scene GUID, rejecting unreadable or stale saves, and writing the save file safely.
+/// </summary>
 public class GameSaveTests
 {
     private readonly List<Object> created = new();
@@ -14,6 +18,10 @@ public class GameSaveTests
     private SceneDefinition cave;
     private GameScenes gameScenes;
 
+    /// <summary>
+    /// Builds two test area definitions and a <see cref="GameScenes"/> with the clearing as the starting area
+    /// (spawn "start") and the cave as its other area.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -30,6 +38,9 @@ public class GameSaveTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    /// <summary>
+    /// Destroys the created assets and deletes the test's temporary directory, if any.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -47,6 +58,9 @@ public class GameSaveTests
         tempDirectory = null;
     }
 
+    /// <summary>
+    /// A saved area and spawn id load back as the same area definition and spawn id.
+    /// </summary>
     [Test]
     public void SaveArea_ThenTryLoadArea_ReturnsTheAreaAndSpawn()
     {
@@ -61,6 +75,9 @@ public class GameSaveTests
         Assert.That(spawnId, Is.EqualTo("door_north"));
     }
 
+    /// <summary>
+    /// The written save holds the current format version and the area's scene GUID, never its scene path.
+    /// </summary>
     [Test]
     public void SaveArea_StoresTheSceneGuidAndFormatVersion()
     {
@@ -73,6 +90,9 @@ public class GameSaveTests
         Assert.That(store.Contents, Does.Not.Contain(cave.ScenePath), "Saves identify areas by GUID so moving a scene keeps saves valid.");
     }
 
+    /// <summary>
+    /// Saving a transient area that is not in <see cref="GameScenes"/>, or no area, fails without writing.
+    /// </summary>
     [Test]
     public void SaveArea_AreaOutsideGameScenes_WritesNothing()
     {
@@ -86,6 +106,9 @@ public class GameSaveTests
         Assert.That(store.WriteCount, Is.Zero);
     }
 
+    /// <summary>
+    /// With an empty store there is no save, and loading fails with a null area.
+    /// </summary>
     [Test]
     public void TryLoadArea_WithoutASave_ReturnsFalse()
     {
@@ -96,6 +119,9 @@ public class GameSaveTests
         Assert.That(area, Is.Null);
     }
 
+    /// <summary>
+    /// A save that is not valid JSON fails to load and logs a warning.
+    /// </summary>
     [Test]
     public void TryLoadArea_CorruptFile_IsIgnoredWithAWarning()
     {
@@ -105,6 +131,9 @@ public class GameSaveTests
         Assert.That(save.TryLoadArea(out _, out _), Is.False);
     }
 
+    /// <summary>
+    /// A save written with a different format version fails to load and logs a warning.
+    /// </summary>
     [Test]
     public void TryLoadArea_OtherFormatVersion_IsIgnoredWithAWarning()
     {
@@ -116,6 +145,9 @@ public class GameSaveTests
         Assert.That(save.TryLoadArea(out _, out _), Is.False);
     }
 
+    /// <summary>
+    /// An empty JSON object reads as format version 0 and is rejected with a warning.
+    /// </summary>
     [Test]
     public void TryLoadArea_EmptyObject_IsIgnoredAsAnUnknownFormat()
     {
@@ -125,6 +157,9 @@ public class GameSaveTests
         Assert.That(save.TryLoadArea(out _, out _), Is.False);
     }
 
+    /// <summary>
+    /// A save whose scene GUID matches no area in <see cref="GameScenes"/> fails to load and logs a warning.
+    /// </summary>
     [Test]
     public void TryLoadArea_AreaNoLongerInTheBuild_IsIgnoredWithAWarning()
     {
@@ -135,6 +170,9 @@ public class GameSaveTests
         Assert.That(save.TryLoadArea(out _, out _), Is.False);
     }
 
+    /// <summary>
+    /// Without a save the starting area and spawn are returned; once an area is saved, the saved one is.
+    /// </summary>
     [Test]
     public void GetSavedOrStartingArea_PrefersTheSave_AndFallsBackToTheStartingArea()
     {
@@ -151,6 +189,10 @@ public class GameSaveTests
         Assert.That(spawnId, Is.EqualTo("door_north"));
     }
 
+    /// <summary>
+    /// The file store reads nothing before the first write, creates missing folders, replaces the previous save on
+    /// each write and leaves no temporary file behind.
+    /// </summary>
     [Test]
     public void FileSaveStore_WriteThenRead_RoundTripsAndReplacesTheOldSave()
     {
@@ -166,6 +208,9 @@ public class GameSaveTests
         Assert.That(File.Exists(path + ".tmp"), Is.False, "The temporary file is swapped in, not left behind.");
     }
 
+    /// <summary>
+    /// An area saved through one file store loads through a new <see cref="GameSave"/> reading the same file.
+    /// </summary>
     [Test]
     public void FileSaveStore_SaveSurvivesANewGameSave()
     {
@@ -179,12 +224,20 @@ public class GameSaveTests
         Assert.That(spawnId, Is.EqualTo("door_north"));
     }
 
+    /// <summary>
+    /// Picks a unique path under the system temp folder and remembers it for deletion in <see cref="TearDown"/>;
+    /// the directory itself is not created here.
+    /// </summary>
     private string CreateTempDirectory()
     {
         tempDirectory = Path.Combine(Path.GetTempPath(), "TopDownRPG_SaveTests_" + System.Guid.NewGuid().ToString("N"));
         return tempDirectory;
     }
 
+    /// <summary>
+    /// Creates a tracked <see cref="SceneDefinition"/> pointing at <paramref name="path"/> with scene GUID
+    /// <paramref name="guid"/>.
+    /// </summary>
     private SceneDefinition CreateArea(string path, string guid)
     {
         SceneDefinition definition = ScriptableObject.CreateInstance<SceneDefinition>();

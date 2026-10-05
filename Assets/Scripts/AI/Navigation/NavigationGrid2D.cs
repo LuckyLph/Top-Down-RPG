@@ -15,6 +15,9 @@ public class NavigationGrid2D : MonoBehaviour
     private const int DefaultTraversalCost = 10;
     private const int BlockedCost = int.MaxValue / 4;
 
+    /// <summary>
+    /// A walkable cell's terrain: the terrain types of its highest-priority terrain layer, and that priority.
+    /// </summary>
     private sealed class CellData
     {
         public readonly List<TerrainType2D> TerrainTypes = new();
@@ -27,6 +30,9 @@ public class NavigationGrid2D : MonoBehaviour
     /// </summary>
     internal sealed class CostField
     {
+        /// <summary>
+        /// Allocates the arrays for <paramref name="cellCount"/> cells, not baked yet.
+        /// </summary>
         public CostField(int cellCount)
         {
             Costs = new int[cellCount];
@@ -95,21 +101,34 @@ public class NavigationGrid2D : MonoBehaviour
     internal int Width => width;
     internal int Height => height;
 
+    /// <summary>
+    /// Builds the grid from its terrain sources and blocking tilemaps.
+    /// </summary>
     private void Awake()
     {
         BuildGrid();
     }
 
+    /// <summary>
+    /// Starts following tile changes on the source and blocking tilemaps.
+    /// </summary>
     private void OnEnable()
     {
         Tilemap.tilemapPositionsChanged += HandleTilemapPositionsChanged;
     }
 
+    /// <summary>
+    /// Stops following tile changes.
+    /// </summary>
     private void OnDisable()
     {
         Tilemap.tilemapPositionsChanged -= HandleTilemapPositionsChanged;
     }
 
+    /// <summary>
+    /// Replaces the listed terrain sources with the non-null <paramref name="sources"/>, for grids set up in code.
+    /// Takes effect on the next <see cref="BuildGrid"/>.
+    /// </summary>
     public void ConfigureSources(params NavigationTerrainSource2D[] sources)
     {
         terrainSources.Clear();
@@ -128,6 +147,10 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Replaces the blocking tilemaps with the non-null <paramref name="tilemaps"/>, for grids set up in code. Takes
+    /// effect on the next <see cref="BuildGrid"/>.
+    /// </summary>
     public void ConfigureBlockingTilemaps(params Tilemap[] tilemaps)
     {
         blockingTilemaps.Clear();
@@ -145,6 +168,12 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Rebuilds the grid from scratch and bumps <see cref="Version"/>: collects the cells of every usable terrain
+    /// source (listed and, optionally, found in the children), removes cells with a tile on a blocking tilemap, bakes
+    /// them over <see cref="WalkableBounds"/>, drops every cost field and creates a new pathfinder. Logs an error and
+    /// stays unbuilt when no source is usable.
+    /// </summary>
     public void BuildGrid()
     {
         cellsByPosition.Clear();
@@ -275,33 +304,58 @@ public class NavigationGrid2D : MonoBehaviour
         Version++;
     }
 
+    /// <summary>
+    /// Whether <paramref name="cell"/> is inside the grid and has terrain, without a movement profile (every terrain
+    /// walkable).
+    /// </summary>
     public bool IsCellWalkable(Vector3Int cell)
     {
         return IsCellWalkable(cell, null);
     }
 
+    /// <summary>
+    /// Whether <paramref name="cell"/> is inside the grid and walkable for <paramref name="movementProfile"/> (null =
+    /// every terrain walkable).
+    /// </summary>
     public bool IsCellWalkable(Vector3Int cell, TerrainMovementProfile2D movementProfile)
     {
         return TryGetIndex(cell, out int index) && GetCostField(movementProfile).Costs[index] > 0;
     }
 
+    /// <summary>
+    /// The data cell containing <paramref name="worldPosition"/> on the reference tilemap, or the zero cell when there
+    /// is no source tilemap.
+    /// </summary>
     public Vector3Int WorldToCell(Vector3 worldPosition)
     {
         Tilemap tilemap = GetReferenceTilemap();
         return tilemap != null ? tilemap.WorldToCell(worldPosition) : Vector3Int.zero;
     }
 
+    /// <summary>
+    /// The world-space center of <paramref name="cell"/> on the reference tilemap, or the world origin when there is
+    /// no source tilemap.
+    /// </summary>
     public Vector3 CellToWorldCenter(Vector3Int cell)
     {
         Tilemap tilemap = GetReferenceTilemap();
         return tilemap != null ? tilemap.GetCellCenterWorld(cell) : Vector3.zero;
     }
 
+    /// <summary>
+    /// The nearest cell to <paramref name="origin"/> that has terrain, without a movement profile; see the profile
+    /// overload.
+    /// </summary>
     public bool TryGetNearestWalkableCell(Vector3Int origin, out Vector3Int nearest, int maxRadius = -1)
     {
         return TryGetNearestWalkableCell(origin, null, out nearest, maxRadius);
     }
 
+    /// <summary>
+    /// Finds the cell walkable for <paramref name="movementProfile"/> nearest to <paramref name="origin"/>, searching
+    /// outward in rings of growing Manhattan distance up to <paramref name="maxRadius"/> (the grid's nearest-cell
+    /// search radius when not positive). False, with <paramref name="nearest"/> left at the origin, when none is found.
+    /// </summary>
     public bool TryGetNearestWalkableCell(Vector3Int origin, TerrainMovementProfile2D movementProfile, out Vector3Int nearest, int maxRadius = -1)
     {
         CostField field = GetCostField(movementProfile);
@@ -338,27 +392,47 @@ public class NavigationGrid2D : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// The cost of stepping from <paramref name="from"/> into the adjacent <paramref name="to"/> without a movement
+    /// profile; see the profile overload.
+    /// </summary>
     public int MovementCost(Vector3Int from, Vector3Int to)
     {
         return MovementCost(from, to, null);
     }
 
+    /// <summary>
+    /// The cost of stepping from <paramref name="from"/> into the adjacent <paramref name="to"/> for
+    /// <paramref name="movementProfile"/>: the target's diagonal cost for a diagonal step, its straight cost otherwise,
+    /// or a prohibitive cost when it is blocked.
+    /// </summary>
     public int MovementCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile)
     {
         return MovementCost(GetCostField(movementProfile), from, to);
     }
 
+    /// <summary>
+    /// The octile distance estimate between two cells at the default traversal cost.
+    /// </summary>
     public int HeuristicCost(Vector3Int from, Vector3Int to)
     {
         return HeuristicCost(from, to, null);
     }
 
+    /// <summary>
+    /// The octile distance between two cells at the cheapest traversal cost <paramref name="movementProfile"/> allows,
+    /// ignoring the cells in between, so it never overestimates a path's cost.
+    /// </summary>
     public int HeuristicCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile)
     {
         int baseTraversalCost = movementProfile != null ? movementProfile.GetMinimumTraversalCost() : DefaultTraversalCost;
         return OctileCost(Mathf.Abs(from.x - to.x), Mathf.Abs(from.y - to.y), baseTraversalCost, ScaleDiagonalCost(baseTraversalCost));
     }
 
+    /// <summary>
+    /// Whether both cells are walkable for <paramref name="movementProfile"/> and in the same 4-connected region, in
+    /// constant time. False before the grid is built or for cells outside it.
+    /// </summary>
     public bool AreCellsConnected(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile)
     {
         if (!IsBuilt || !TryGetIndex(from, out int fromIndex) || !TryGetIndex(to, out int toIndex))
@@ -370,6 +444,10 @@ public class NavigationGrid2D : MonoBehaviour
         return regions[fromIndex] >= 0 && regions[fromIndex] == regions[toIndex];
     }
 
+    /// <summary>
+    /// Bakes the cost field for <paramref name="movementProfile"/> now so the first path query does not pay for it.
+    /// Does nothing before the grid is built.
+    /// </summary>
     public void PrewarmRegions(TerrainMovementProfile2D movementProfile)
     {
         if (IsBuilt)
@@ -378,6 +456,9 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whether the cost field for <paramref name="movementProfile"/> is baked and current, without baking it.
+    /// </summary>
     internal bool AreRegionsLabeled(TerrainMovementProfile2D movementProfile)
     {
         CostField field = defaultField;
@@ -390,6 +471,11 @@ public class NavigationGrid2D : MonoBehaviour
         return field != null && field.IsBaked && field.ProfileVersion == profileVersion && field.GridVersion == Version;
     }
 
+    /// <summary>
+    /// Walks the Bresenham line from <paramref name="from"/> to <paramref name="to"/> and sums its step costs into
+    /// <paramref name="cost"/>. False when either end or any step is blocked, including a diagonal step that would cut
+    /// a blocked corner.
+    /// </summary>
     public bool TryGetLineCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile, out int cost)
     {
         cost = 0;
@@ -457,6 +543,9 @@ public class NavigationGrid2D : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// The cell at flat index <paramref name="index"/>; the inverse of <see cref="TryGetIndex"/>.
+    /// </summary>
     internal Vector3Int GetCell(int index)
     {
         int x = index % width;
@@ -466,7 +555,8 @@ public class NavigationGrid2D : MonoBehaviour
 
     /// <summary>
     /// The cost field for <paramref name="movementProfile"/> (null = every terrain walkable at the default cost),
-    /// baked on first use and rebaked when the profile's <see cref="TerrainMovementProfile2D.Version"/> changes.
+    /// baked on first use and rebaked when the profile's <see cref="TerrainMovementProfile2D.Version"/> or the grid's
+    /// <see cref="Version"/> changes.
     /// </summary>
     internal CostField GetCostField(TerrainMovementProfile2D movementProfile)
     {
@@ -494,6 +584,10 @@ public class NavigationGrid2D : MonoBehaviour
         return field;
     }
 
+    /// <summary>
+    /// The cost of a move of <paramref name="dx"/> by <paramref name="dy"/> cells taking as many diagonal steps as
+    /// possible, then straight ones.
+    /// </summary>
     internal static int OctileCost(int dx, int dy, int straightCost, int diagonalCost)
     {
         int diagonal = Mathf.Min(dx, dy);
@@ -501,11 +595,18 @@ public class NavigationGrid2D : MonoBehaviour
         return (diagonalCost * diagonal) + (straightCost * straight);
     }
 
+    /// <summary>
+    /// Whether <paramref name="cell"/> is inside the grid and has a nonzero cost in <paramref name="field"/>.
+    /// </summary>
     private bool IsWalkable(CostField field, Vector3Int cell)
     {
         return TryGetIndex(cell, out int index) && field.Costs[index] > 0;
     }
 
+    /// <summary>
+    /// Whether one step from <paramref name="from"/> to <paramref name="to"/> is allowed in <paramref name="field"/>:
+    /// the cells are adjacent, the target is walkable, and a diagonal step does not cut a blocked corner.
+    /// </summary>
     private bool CanTraverse(CostField field, Vector3Int from, Vector3Int to)
     {
         if (!IsWalkable(field, to))
@@ -532,6 +633,10 @@ public class NavigationGrid2D : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// The cost of entering <paramref name="to"/> from <paramref name="from"/> in <paramref name="field"/>: its
+    /// diagonal cost for a diagonal step, its straight cost otherwise, or a prohibitive cost when it is blocked.
+    /// </summary>
     private int MovementCost(CostField field, Vector3Int from, Vector3Int to)
     {
         if (!TryGetIndex(to, out int index) || field.Costs[index] == 0)
@@ -543,6 +648,10 @@ public class NavigationGrid2D : MonoBehaviour
         return isDiagonal ? field.DiagonalCosts[index] : field.Costs[index];
     }
 
+    /// <summary>
+    /// Adds the listed terrain sources and, when discovery is on, those in the children (inactive ones included) to the
+    /// resolved sources, skipping nulls and duplicates.
+    /// </summary>
     private void ResolveTerrainSources()
     {
         HashSet<NavigationTerrainSource2D> uniqueSources = new();
@@ -611,6 +720,10 @@ public class NavigationGrid2D : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Reads a cell's terrain from the terrain layers into <paramref name="reuse"/> (or a new cell data), or returns
+    /// null when the cell is blocked or has no terrain.
+    /// </summary>
     private CellData ReadCell(Vector3Int cell, CellData reuse)
     {
         if (IsBlocked(cell))
@@ -640,6 +753,9 @@ public class NavigationGrid2D : MonoBehaviour
         return cellData != null && cellData.TerrainTypes.Count > 0 ? cellData : null;
     }
 
+    /// <summary>
+    /// Whether any watched blocking tilemap has a tile at <paramref name="cell"/>.
+    /// </summary>
     private bool IsBlocked(Vector3Int cell)
     {
         for (int i = 0; i < blockingTilemaps.Count; i++)
@@ -671,6 +787,9 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Removes every cell with a tile on a watched blocking tilemap from the cells collected for the build.
+    /// </summary>
     private void RemoveBlockedCells()
     {
         for (int i = 0; i < blockingTilemaps.Count; i++)
@@ -691,6 +810,9 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sizes the flat cell array to <see cref="WalkableBounds"/> and copies the collected cells into it.
+    /// </summary>
     private void BakeCells()
     {
         width = walkableBounds.size.x;
@@ -705,6 +827,10 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Fills <paramref name="field"/> for <paramref name="movementProfile"/>: traversal costs plus the profile's edge
+    /// cost, diagonal costs, the minimum costs the heuristic uses, and the regions.
+    /// </summary>
     private void BakeCostField(CostField field, TerrainMovementProfile2D movementProfile)
     {
         int[] costs = field.Costs;
@@ -744,6 +870,10 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whether the cell at <paramref name="index"/> has a blocked cell among its 8 neighbours, counting the edge of the
+    /// grid as blocked.
+    /// </summary>
     private bool TouchesBlockedCell(int[] costs, int index)
     {
         int x = index % width;
@@ -770,6 +900,10 @@ public class NavigationGrid2D : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// A cell's traversal cost under <paramref name="movementProfile"/>: 0 when it has no terrain or any of its terrain
+    /// types is unwalkable, else the highest cost among them. Without a profile every terrain costs the default.
+    /// </summary>
     private static int ResolveTraversalCost(CellData cellData, TerrainMovementProfile2D movementProfile)
     {
         if (cellData == null || cellData.TerrainTypes.Count == 0)
@@ -797,6 +931,10 @@ public class NavigationGrid2D : MonoBehaviour
         return highestCost > 0 ? highestCost : movementProfile.DefaultTraversalCost;
     }
 
+    /// <summary>
+    /// Labels the 4-connected regions of walkable cells in <paramref name="field"/> with a flood fill; blocked cells
+    /// get -1.
+    /// </summary>
     private void LabelRegions(CostField field)
     {
         int[] costs = field.Costs;
@@ -850,6 +988,10 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Labels the cell at <paramref name="index"/> with <paramref name="region"/> and queues it when it is walkable and
+    /// not labeled yet. Returns the new queue tail.
+    /// </summary>
     private int EnqueueRegionCell(int index, int region, int[] costs, int[] regions, int tail)
     {
         if (costs[index] == 0 || regions[index] >= 0)
@@ -862,6 +1004,9 @@ public class NavigationGrid2D : MonoBehaviour
         return tail + 1;
     }
 
+    /// <summary>
+    /// The smallest bounds holding every collected cell, or empty bounds when there are none.
+    /// </summary>
     private BoundsInt CalculateBounds()
     {
         if (cellsByPosition.Count == 0)
@@ -889,11 +1034,18 @@ public class NavigationGrid2D : MonoBehaviour
         return new BoundsInt(minX, minY, minZ, maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1);
     }
 
+    /// <summary>
+    /// The cost of entering a cell diagonally: its straight cost times 1.4, rounded, and at least 1.
+    /// </summary>
     private static int ScaleDiagonalCost(int traversalCost)
     {
         return Mathf.Max(1, Mathf.RoundToInt(traversalCost * 1.4f));
     }
 
+    /// <summary>
+    /// The tilemap that world/cell conversions use: the first usable source's data tilemap once built, else the first
+    /// source that has a data tilemap. Null when there is none.
+    /// </summary>
     private Tilemap GetReferenceTilemap()
     {
         if (referenceTilemap != null)
@@ -924,11 +1076,18 @@ public class NavigationGrid2D : MonoBehaviour
         gizmoGridIsStale = true;
     }
 
+    /// <summary>
+    /// Marks the gizmo grid stale after an inspector change so it rebuilds on the next gizmo draw.
+    /// </summary>
     private void OnValidate()
     {
         gizmoGridIsStale = true;
     }
 
+    /// <summary>
+    /// Outside Play Mode, rebuilds the grid when it is stale or unbuilt; then draws the walkable bounds and, when
+    /// enabled, up to a capped number of walkable cells.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!Application.isPlaying && (drawGridBoundsGizmo || drawWalkableCellGizmos) && (!IsBuilt || gizmoGridIsStale))
@@ -961,6 +1120,9 @@ public class NavigationGrid2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Draws <see cref="WalkableBounds"/> as a wire box in world space.
+    /// </summary>
     private void DrawGridBoundsGizmo()
     {
         Tilemap tilemap = GetReferenceTilemap();

@@ -32,6 +32,9 @@ public class AbilitySlotView : MonoBehaviour
     internal Image Flash => flash;
     internal bool IsEmpty { get; private set; } = true;
 
+    /// <summary>
+    /// Logs an error when any required image or text reference is missing. The key label is optional.
+    /// </summary>
     private void Awake()
     {
         if (frame == null || icon == null || nameText == null || cooldownFill == null || cooldownText == null || flash == null)
@@ -40,6 +43,9 @@ public class AbilitySlotView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the bound key label, when the slot has one.
+    /// </summary>
     public void SetKey(string key)
     {
         if (keyText != null)
@@ -92,6 +98,9 @@ public class AbilitySlotView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the failure flash at <paramref name="alpha"/> (clamped to 0..1) of its configured opacity.
+    /// </summary>
     public void SetFlash(float alpha)
     {
         if (flash != null)
@@ -102,6 +111,9 @@ public class AbilitySlotView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Assigns the slot's images and texts in code, for tests that build the slot without a prefab.
+    /// </summary>
     internal void ConfigureReferences(
         Image frameImage,
         Image iconImage,
@@ -120,6 +132,10 @@ public class AbilitySlotView : MonoBehaviour
         flash = flashImage;
     }
 
+    /// <summary>
+    /// Precomputes the cooldown labels from 0 to <see cref="MaxShownSeconds"/> so showing seconds never allocates;
+    /// 0 is an empty string.
+    /// </summary>
     private static string[] BuildSecondsText()
     {
         string[] texts = new string[MaxShownSeconds + 1];

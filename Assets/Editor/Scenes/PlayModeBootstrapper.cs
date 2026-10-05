@@ -3,9 +3,11 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
-// Makes Play always start from the Main scene, like a build, while remembering which scenes were
-// open so BootFlow can load them (e.g. press Play with an area open to play that area).
-// Test Runner play sessions are left alone: they must start in the runner's own init scene.
+/// <summary>
+/// Makes Play always start from the Main scene, like a build, while remembering which scenes were
+/// open so BootFlow can load them (e.g. press Play with an area open to play that area).
+/// Test Runner play sessions are left alone: they must start in the runner's own init scene.
+/// </summary>
 [InitializeOnLoad]
 public static class PlayModeBootstrapper
 {
@@ -13,6 +15,9 @@ public static class PlayModeBootstrapper
     private const string ToggleMenuPath = ProjectScenes.MenuRoot + "Boot From Main";
     private const string TestRunnerScenePrefix = "InitTestScene";
 
+    /// <summary>
+    /// Hooks play mode changes and applies the start scene once the editor has finished loading.
+    /// </summary>
     static PlayModeBootstrapper()
     {
         EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
@@ -29,12 +34,18 @@ public static class PlayModeBootstrapper
         }
     }
 
+    /// <summary>
+    /// Flips booting from Main on or off from the Tools menu.
+    /// </summary>
     [MenuItem(ToggleMenuPath, priority = 0)]
     private static void Toggle()
     {
         Enabled = !Enabled;
     }
 
+    /// <summary>
+    /// Keeps the menu checkmark in step with the setting; the entry is always available.
+    /// </summary>
     [MenuItem(ToggleMenuPath, true)]
     private static bool ToggleValidate()
     {
@@ -42,6 +53,9 @@ public static class PlayModeBootstrapper
         return true;
     }
 
+    /// <summary>
+    /// Sets the editor's play mode start scene to Main when enabled, or clears it so Play starts in the open scenes.
+    /// </summary>
     public static void Apply()
     {
         EditorSceneManager.playModeStartScene = Enabled
@@ -49,6 +63,11 @@ public static class PlayModeBootstrapper
             : null;
     }
 
+    /// <summary>
+    /// Reapplies the start scene on return to Edit Mode. When leaving Edit Mode with booting enabled, clears the start
+    /// scene and boot request for a Test Runner session, or else saves modified scenes (cancelling Play if the user
+    /// declines) and records the open scenes as the boot request.
+    /// </summary>
     private static void HandlePlayModeStateChanged(PlayModeStateChange change)
     {
         if (change == PlayModeStateChange.EnteredEditMode)
@@ -83,6 +102,9 @@ public static class PlayModeBootstrapper
         EditorBootRequest.Set(GetOpenScenePaths());
     }
 
+    /// <summary>
+    /// Whether a loaded scene is the Test Runner's InitTestScene, meaning Play was started by a test run.
+    /// </summary>
     private static bool IsTestRunnerSessionStarting()
     {
         for (int i = 0; i < SceneManager.sceneCount; i++)
@@ -96,6 +118,9 @@ public static class PlayModeBootstrapper
         return false;
     }
 
+    /// <summary>
+    /// Paths of the open scenes that are saved to disk, excluding Main.
+    /// </summary>
     private static string[] GetOpenScenePaths()
     {
         List<string> paths = new();

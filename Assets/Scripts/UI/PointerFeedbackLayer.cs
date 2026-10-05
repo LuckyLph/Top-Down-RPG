@@ -27,6 +27,10 @@ public class PointerFeedbackLayer : MonoBehaviour
     internal bool AttackCursorShown => attackCursorShown;
     internal SpriteRenderer HoverRing => hoverRing;
 
+    /// <summary>
+    /// Logs an error when the marker prefab, hover ring or attack cursor is missing, prewarms the marker pool and
+    /// hides the hover ring.
+    /// </summary>
     private void Awake()
     {
         if (markerPrefab == null || hoverRing == null || attackCursor == null)
@@ -39,17 +43,26 @@ public class PointerFeedbackLayer : MonoBehaviour
         SetHovered(null);
     }
 
+    /// <summary>
+    /// Puts the default system cursor back so the attack cursor never outlives the layer.
+    /// </summary>
     private void OnDisable()
     {
         SetAttackCursor(false);
     }
 
+    /// <summary>
+    /// Forgets the active markers and disposes the pool, destroying the inactive markers it holds.
+    /// </summary>
     private void OnDestroy()
     {
         active.Clear();
         pool?.Dispose();
     }
 
+    /// <summary>
+    /// Shows a pooled move marker at <paramref name="position"/>. Does nothing without a marker prefab.
+    /// </summary>
     public void SpawnMarker(Vector2 position)
     {
         EnsurePool();
@@ -82,6 +95,10 @@ public class PointerFeedbackLayer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Switches between the attack cursor and the default system cursor; only calls into the OS when the state
+    /// changes.
+    /// </summary>
     public void SetAttackCursor(bool shown)
     {
         if (shown == attackCursorShown)
@@ -113,6 +130,10 @@ public class PointerFeedbackLayer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Assigns the marker prefab, hover ring and attack cursor in code, for tests that build the layer without a
+    /// prefab.
+    /// </summary>
     internal void Configure(MoveMarker prefab, SpriteRenderer ring, Texture2D cursor)
     {
         markerPrefab = prefab;
@@ -121,11 +142,17 @@ public class PointerFeedbackLayer : MonoBehaviour
         EnsurePool();
     }
 
+    /// <summary>
+    /// Creates the marker pool on first use; markers are activated when taken and deactivated when returned.
+    /// </summary>
     private void EnsurePool()
     {
         pool ??= new ObjectPool<MoveMarker>(CreateMarker, marker => marker.gameObject.SetActive(true), marker => marker.gameObject.SetActive(false), DestroyMarker);
     }
 
+    /// <summary>
+    /// Fills the pool with the configured number of inactive markers so the first clicks do not instantiate.
+    /// </summary>
     private void Prewarm()
     {
         if (markerPrefab == null)
@@ -145,6 +172,9 @@ public class PointerFeedbackLayer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Pool factory: instantiates an inactive marker under this layer.
+    /// </summary>
     private MoveMarker CreateMarker()
     {
         MoveMarker marker = Instantiate(markerPrefab, transform);
@@ -152,6 +182,9 @@ public class PointerFeedbackLayer : MonoBehaviour
         return marker;
     }
 
+    /// <summary>
+    /// Pool destroy callback: destroys the marker's game object if it still exists.
+    /// </summary>
     private static void DestroyMarker(MoveMarker marker)
     {
         if (marker != null)

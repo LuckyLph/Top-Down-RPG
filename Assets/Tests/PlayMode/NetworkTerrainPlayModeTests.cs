@@ -6,10 +6,16 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for host-authoritative runtime terrain edits replicated to an in-process client.
+/// </summary>
 public class NetworkTerrainPlayModeTests
 {
     private InProcessClient client;
 
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -17,6 +23,10 @@ public class NetworkTerrainPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// Wall and ground edits made by the host update its navigation grid and reach a late joiner as the same edit
+    /// records; editing a cell again replaces its record on the client rather than adding one.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostTerrainEdits_ReachALateJoiner_AndLaterEditsFollow()
     {
@@ -65,6 +75,9 @@ public class NetworkTerrainPlayModeTests
         Assert.That(grid.IsCellWalkable(center), Is.True);
     }
 
+    /// <summary>
+    /// The spawned terrain sync object that belongs to <paramref name="manager"/> (host or client side), or null.
+    /// </summary>
     private static NetworkAreaTerrain FindCopyManagedBy(NetworkManager manager)
     {
         foreach (NetworkAreaTerrain copy in Object.FindObjectsByType<NetworkAreaTerrain>())

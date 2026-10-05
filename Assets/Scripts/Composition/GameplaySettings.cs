@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Party death tuning registered in the Gameplay scope: how long a dead player waits to respawn while a teammate
+/// lives, and how long after the last player dies the area restarts.
+/// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Gameplay Settings", fileName = "GameplaySettings")]
 public class GameplaySettings : ScriptableObject
 {

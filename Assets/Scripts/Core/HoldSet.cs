@@ -22,6 +22,9 @@ public sealed class HoldSet
         return owner != null && owners.Remove(owner);
     }
 
+    /// <summary>
+    /// Releases every owner at once, leaving the set not held.
+    /// </summary>
     public void Clear()
     {
         owners.Clear();

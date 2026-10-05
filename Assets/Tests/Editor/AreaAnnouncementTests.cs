@@ -2,8 +2,15 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Netcode;
 
+/// <summary>
+/// Tests for the <see cref="AreaAnnouncement"/> network payload.
+/// </summary>
 public class AreaAnnouncementTests
 {
+    /// <summary>
+    /// Writing an announcement to a buffer and reading it back preserves the scene path, spawn id, epoch and
+    /// new-session flag.
+    /// </summary>
     [Test]
     public void WriteThenRead_RoundTripsEveryField()
     {
@@ -20,6 +27,9 @@ public class AreaAnnouncementTests
         Assert.That(copy.NewSession, Is.True);
     }
 
+    /// <summary>
+    /// A null scene path or spawn id is stored as an empty string.
+    /// </summary>
     [Test]
     public void NullStrings_BecomeEmpty()
     {

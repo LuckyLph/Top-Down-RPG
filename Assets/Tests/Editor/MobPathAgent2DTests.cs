@@ -5,6 +5,10 @@ using UnityEngine.Tilemaps;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="MobPathAgent2D"/> on small tilemap-built navigation grids: arrival at the final waypoint,
+/// path smoothing that respects terrain costs, allocation-free path building, and stall tracking.
+/// </summary>
 public class MobPathAgent2DTests
 {
     private readonly List<Object> createdObjects = new();
@@ -15,6 +19,9 @@ public class MobPathAgent2DTests
     private Rigidbody2D body;
     private MobPathAgent2D pathAgent;
 
+    /// <summary>
+    /// Destroys the grid, mob and assets the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -29,6 +36,10 @@ public class MobPathAgent2DTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// On a single-waypoint path the mob counts as arrived once within the arrival distance, even outside the
+    /// smaller waypoint reach distance.
+    /// </summary>
     [Test]
     public void FixedTick_UsesArrivalDistance_ForSingleWaypointPath()
     {
@@ -49,6 +60,10 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.ReachedDestination, Is.True);
     }
 
+    /// <summary>
+    /// Reaching the corner waypoint of a two-waypoint path does not arrive, and on later ticks the final
+    /// waypoint uses the arrival distance.
+    /// </summary>
     [Test]
     public void FixedTick_KeepsArrivalDistance_OnTicksAfterReachingPenultimateWaypoint()
     {
@@ -74,6 +89,10 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.ReachedDestination, Is.True);
     }
 
+    /// <summary>
+    /// Smoothing never shortcuts through costly water the pathfinder routed around: no waypoint lies in the water
+    /// and the smoothed path costs the same as the optimal one.
+    /// </summary>
     [Test]
     public void BuildPathToWorld_DoesNotSmoothAcrossTerrainThePathfinderAvoided()
     {
@@ -115,6 +134,9 @@ public class MobPathAgent2DTests
         Assert.That(smoothedCost, Is.EqualTo(optimalCost), "Smoothing must not route through the costly water corridor.");
     }
 
+    /// <summary>
+    /// After one warm-up call, building the same path again allocates no GC memory.
+    /// </summary>
     [Test]
     public void BuildPathToWorld_DoesNotAllocate_OnceWarmedUp()
     {
@@ -134,6 +156,10 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.Waypoints.Count, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// Stalled time grows by one fixed step per tick while the mob follows a path without moving, and resets to
+    /// zero once it makes progress.
+    /// </summary>
     [Test]
     public void StalledTime_Accumulates_WhileFollowingPathWithoutMoving_AndResetsOnProgress()
     {
@@ -159,6 +185,9 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.StalledTime, Is.Zero);
     }
 
+    /// <summary>
+    /// Creates the tracked grid root and the tile used to fill terrain layers.
+    /// </summary>
     private void CreateGridRoot()
     {
         root = Track(new GameObject("MobPathAgentTestRoot"));
@@ -166,6 +195,10 @@ public class MobPathAgent2DTests
         fillTile = Track(ScriptableObject.CreateInstance<Tile>());
     }
 
+    /// <summary>
+    /// Adds a tilemap layer under the grid root with <paramref name="cells"/> filled, registered as a navigation
+    /// source of <paramref name="terrain"/>.
+    /// </summary>
     private void AddTerrainLayer(string name, TerrainType2D terrain, IEnumerable<Vector3Int> cells)
     {
         GameObject layerObject = new(name);
@@ -180,6 +213,11 @@ public class MobPathAgent2DTests
         layerObject.AddComponent<NavigationTerrainSource2D>().Configure(terrain);
     }
 
+    /// <summary>
+    /// Builds the navigation grid from the layers, then creates a mob whose motor and path agent use a config with
+    /// a 0.05 waypoint reach distance, a 0.15 arrival distance and <paramref name="profile"/> (null for the
+    /// default).
+    /// </summary>
     private void BuildGridAndAgent(TerrainMovementProfile2D profile)
     {
         navigationGrid = root.AddComponent<NavigationGrid2D>();
@@ -195,22 +233,36 @@ public class MobPathAgent2DTests
         pathAgent.Initialize(navigationGrid, motor, config);
     }
 
+    /// <summary>
+    /// Teleports the mob's rigidbody and transform to <paramref name="position"/>.
+    /// </summary>
     private void PlaceMob(Vector2 position)
     {
         body.position = position;
         body.transform.position = position;
     }
 
+    /// <summary>
+    /// Creates a tracked terrain type with id <paramref name="id"/>.
+    /// </summary>
     private TerrainType2D CreateTerrain(string id)
     {
         return Track(TerrainType2D.Create(id));
     }
 
+    /// <summary>
+    /// Creates a tracked movement profile where unlisted terrain is unwalkable (default cost 10) and
+    /// <paramref name="rules"/> set the listed terrains.
+    /// </summary>
     private TerrainMovementProfile2D CreateProfile(params TerrainMovementProfile2D.TerrainRule[] rules)
     {
         return Track(TerrainMovementProfile2D.Create(false, 10, rules));
     }
 
+    /// <summary>
+    /// Lists the cells of the rectangle from (<paramref name="minX"/>, <paramref name="minY"/>) to
+    /// (<paramref name="maxX"/>, <paramref name="maxY"/>), both inclusive.
+    /// </summary>
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)
     {
         List<Vector3Int> cells = new();
@@ -225,6 +277,9 @@ public class MobPathAgent2DTests
         return cells;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

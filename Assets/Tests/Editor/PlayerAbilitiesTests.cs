@@ -5,6 +5,10 @@ using UnityEditor;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// Tests for <see cref="PlayerAbilities"/>: slots from the class and weapon, casting and its failures, completion
+/// and cancel, remote casts under authority, recent cast history, cooldowns, unit filters and the shipped blanks.
+/// </summary>
 public class PlayerAbilitiesTests
 {
     private readonly List<Object> createdObjects = new();
@@ -18,6 +22,10 @@ public class PlayerAbilitiesTests
     private AbilityDefinition[] classAbilities;
     private AbilityDefinition[] weaponAbilities;
 
+    /// <summary>
+    /// Creates a manual clock, three class abilities (the first with a 2-second cooldown) and an empty fourth
+    /// slot, two weapon abilities, and an authoritative player using them.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -29,6 +37,9 @@ public class PlayerAbilitiesTests
         abilities = CreatePlayer(FixedGameAuthority.Authoritative);
     }
 
+    /// <summary>
+    /// Destroys every object and asset the test tracked.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -43,6 +54,9 @@ public class PlayerAbilitiesTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Slots 0 to 3 hold the class abilities and slots 4 and 5 the weapon's; slots outside the bar are empty.
+    /// </summary>
     [Test]
     public void Slots_ComeFromTheClassThenTheWeapon()
     {
@@ -57,6 +71,9 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.GetAbility(-1), Is.Null);
     }
 
+    /// <summary>
+    /// Equipping another weapon raises SlotsChanged once and replaces only the weapon slots.
+    /// </summary>
     [Test]
     public void EquippingAnotherWeapon_RebuildsItsSlots()
     {
@@ -72,6 +89,10 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.GetAbility(0), Is.SameAs(classAbilities[0]));
     }
 
+    /// <summary>
+    /// A successful cast raises CastStarted with its slot, ability and aim, starts the cooldown, puts the player
+    /// in the casting state and is applied once.
+    /// </summary>
     [Test]
     public void TryCast_StartsTheCooldown_RaisesCastStarted_AndAppliesOnce()
     {
@@ -90,6 +111,10 @@ public class PlayerAbilitiesTests
         Assert.That(applied, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Casting an empty slot, an ability on cooldown, during another cast or while dead raises CastFailed with the
+    /// matching outcome, without starting, applying or putting anything on cooldown.
+    /// </summary>
     [Test]
     public void FailedCasts_ReportWhy_WithoutSideEffects()
     {
@@ -119,6 +144,10 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.RemainingCooldown(4), Is.Zero);
     }
 
+    /// <summary>
+    /// Completing or cancelling only acts on the slot that is casting, once; a completed cast keeps its aim and
+    /// resolves its effect, while a cancelled one ends without completing or resolving.
+    /// </summary>
     [Test]
     public void CompleteAndCancel_EndOnlyTheRunningSlot_AndOnlyACompletedCastResolves()
     {
@@ -148,6 +177,10 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.IsCasting, Is.False);
     }
 
+    /// <summary>
+    /// On the authority, a remote completion resolves a unit cast whose target resolved here, but not one without
+    /// a target, an empty slot or a caster seen as dead; resolving never counts as applying a cast start.
+    /// </summary>
     [Test]
     public void ResolveRemoteCast_ResolvesOnTheAuthority_UnderThePlayRemoteCastRules()
     {
@@ -169,6 +202,9 @@ public class PlayerAbilitiesTests
         Assert.That(resolved, Is.EqualTo(1), "This machine sees the caster as dead.");
     }
 
+    /// <summary>
+    /// On a machine without authority a cast still starts locally, but the ability service does not apply it.
+    /// </summary>
     [Test]
     public void WithoutAuthority_CastsRunLocally_ButAreNotApplied()
     {
@@ -178,6 +214,10 @@ public class PlayerAbilitiesTests
         Assert.That(applied, Is.Zero);
     }
 
+    /// <summary>
+    /// On the authority, a replayed remote cast is applied without raising events, starting a cooldown or entering
+    /// the casting state, and an empty slot is not applied.
+    /// </summary>
     [Test]
     public void PlayRemoteCast_IsAppliedByTheAuthority_WithoutCooldownOrEvents()
     {
@@ -193,6 +233,10 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.IsCasting, Is.False);
     }
 
+    /// <summary>
+    /// Through <see cref="PlayerOrders"/>, clearing the orders on death ends a running cast, and the next press is
+    /// blocked only by the ability's cooldown, never by a leaked cast.
+    /// </summary>
     [Test]
     public void ThroughTheOrders_DeathMidCastEndsTheCast_AndTheNextCastWaitsOnlyForItsCooldown()
     {
@@ -223,6 +267,10 @@ public class PlayerAbilitiesTests
         Assert.That(applied, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// A replayed unit cast is ignored when its target did not resolve here or has died, or when the caster is
+    /// seen as dead.
+    /// </summary>
     [Test]
     public void PlayRemoteCast_IgnoresADeadCaster_AndUnitCastsWithoutALivingTarget()
     {
@@ -246,6 +294,10 @@ public class PlayerAbilitiesTests
         Assert.That(applied, Is.EqualTo(1), "This machine sees the caster as dead.");
     }
 
+    /// <summary>
+    /// Local and remote casts are recorded newest first for the gizmos, remote casts of empty slots are skipped,
+    /// and only the latest eight are kept.
+    /// </summary>
     [Test]
     public void RecentCasts_RecordLocalAndRemoteCastsNewestFirst_ForTheGizmos()
     {
@@ -275,6 +327,10 @@ public class PlayerAbilitiesTests
         Assert.That(abilities.TryGetRecentCast(8, out _, out _), Is.False);
     }
 
+    /// <summary>
+    /// <see cref="AbilityCooldowns"/> keeps a slot unready, with the time left, until its cooldown ends, without
+    /// affecting other slots.
+    /// </summary>
     [Test]
     public void Cooldowns_TrackReadinessAndRemainingTime()
     {
@@ -290,6 +346,9 @@ public class PlayerAbilitiesTests
         Assert.That(cooldowns.IsReady(1, 0f), Is.True);
     }
 
+    /// <summary>
+    /// Enemy, ally and any unit filters accept exactly their teams, and none accepts a unit with no team.
+    /// </summary>
     [Test]
     public void UnitFilters_AcceptTheRightTeams()
     {
@@ -303,6 +362,11 @@ public class PlayerAbilitiesTests
         Assert.That(enemy.Accepts(UnitTeam.None) || ally.Accepts(UnitTeam.None) || any.Accepts(UnitTeam.None), Is.False);
     }
 
+    /// <summary>
+    /// The placeholder class and sword blank abilities are all set and distinct, and between them cover every
+    /// targeting mode and cast movement, varied cooldowns and cast times, an instant and a bufferable cast, and
+    /// ally and enemy unit targeting.
+    /// </summary>
     [Test]
     public void Blanks_CoverEveryBranchOfThePipeline()
     {
@@ -327,6 +391,10 @@ public class PlayerAbilitiesTests
         Assert.That(blanks.Any(blank => blank.Targeting == AbilityTargeting.Unit && blank.UnitFilter == AbilityUnitFilter.Enemy), Is.True);
     }
 
+    /// <summary>
+    /// The player prefab has a <see cref="PlayerAbilities"/> on the placeholder class, referenced by its
+    /// <see cref="PlayerController"/>.
+    /// </summary>
     [Test]
     public void PlayerPrefab_HasAbilitiesWithThePlaceholderClass()
     {
@@ -338,6 +406,11 @@ public class PlayerAbilitiesTests
         Assert.That(new SerializedObject(prefab.GetComponent<PlayerController>()).FindProperty("abilities").objectReferenceValue, Is.SameAs(prefabAbilities));
     }
 
+    /// <summary>
+    /// Creates a player with health, a weapon holding the weapon abilities and <see cref="PlayerAbilities"/> on
+    /// the class abilities, backed by an ability service under <paramref name="authority"/> whose applied and
+    /// resolved events bump the test counters.
+    /// </summary>
     private PlayerAbilities CreatePlayer(IGameAuthority authority)
     {
         GameObject player = Track(new GameObject("Player"));
@@ -355,11 +428,17 @@ public class PlayerAbilitiesTests
         return playerAbilities;
     }
 
+    /// <summary>
+    /// Creates a tracked ability with the given cooldown and unit filter.
+    /// </summary>
     private AbilityDefinition Ability(string name, float cooldown = 1f, AbilityUnitFilter unitFilter = AbilityUnitFilter.Enemy)
     {
         return Track(AbilityDefinition.Create(name, cooldown, unitFilter: unitFilter));
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction on teardown and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

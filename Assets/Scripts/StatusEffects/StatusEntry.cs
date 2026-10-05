@@ -13,6 +13,9 @@ public struct StatusEntry : INetworkSerializable, IEquatable<StatusEntry>
     private float remaining;
     private double writtenAt;
 
+    /// <summary>
+    /// Creates an entry for one instance, stamped with the server time <paramref name="writtenAt"/> it was written.
+    /// </summary>
     public StatusEntry(int instanceId, ushort catalogIndex, byte stacks, float remaining, double writtenAt)
     {
         this.instanceId = instanceId;
@@ -28,6 +31,9 @@ public struct StatusEntry : INetworkSerializable, IEquatable<StatusEntry>
     public float Remaining => remaining;
     public double WrittenAt => writtenAt;
 
+    /// <summary>
+    /// Reads or writes every field, in declaration order.
+    /// </summary>
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
         serializer.SerializeValue(ref instanceId);
@@ -37,6 +43,9 @@ public struct StatusEntry : INetworkSerializable, IEquatable<StatusEntry>
         serializer.SerializeValue(ref writtenAt);
     }
 
+    /// <summary>
+    /// Field-by-field equality, as <see cref="NetworkList{T}"/> requires of its elements.
+    /// </summary>
     public bool Equals(StatusEntry other)
     {
         return instanceId == other.instanceId
@@ -46,11 +55,17 @@ public struct StatusEntry : INetworkSerializable, IEquatable<StatusEntry>
             && writtenAt.Equals(other.writtenAt);
     }
 
+    /// <summary>
+    /// True when <paramref name="obj"/> is a <see cref="StatusEntry"/> with the same fields.
+    /// </summary>
     public override bool Equals(object obj)
     {
         return obj is StatusEntry other && Equals(other);
     }
 
+    /// <summary>
+    /// Combines every field, consistent with <see cref="Equals(StatusEntry)"/>.
+    /// </summary>
     public override int GetHashCode()
     {
         return HashCode.Combine(instanceId, catalogIndex, stacks, remaining, writtenAt);

@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+/// <summary>
+/// Collection helpers the dual-grid editors use to detect mixed values when several objects are selected.
+/// </summary>
 public static class CollectionExtensions
 {
     /// <summary>

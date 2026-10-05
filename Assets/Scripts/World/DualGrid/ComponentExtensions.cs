@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Component lookups limited to one level of the hierarchy, used to pair a dual-grid data tilemap with its render
+/// tilemap child.
+/// </summary>
 public static class ComponentExtensions
 {
     /// <summary>

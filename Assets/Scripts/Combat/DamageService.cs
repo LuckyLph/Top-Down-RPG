@@ -10,6 +10,9 @@ public sealed class DamageService
     private readonly IGameAuthority authority;
     private readonly CombatSettings settings;
 
+    /// <summary>
+    /// Captures the event hub results are published on, the authority check and the resolution rules.
+    /// </summary>
     public DamageService(CombatEvents combatEvents, IGameAuthority authority, CombatSettings settings)
     {
         this.combatEvents = combatEvents;
@@ -88,6 +91,11 @@ public sealed class DamageService
         return HealAndPublish(target, amount, null);
     }
 
+    /// <summary>
+    /// The shared authoritative path of direct and periodic damage: rejects as <see cref="ApplyDamage"/> describes,
+    /// resolves the amount against the target's current defence with <see cref="DamageMath"/>, notifies the target
+    /// of an immune hit, then applies and publishes the result.
+    /// </summary>
     private DamageResult Resolve(
         DamageReceiver target,
         int amount,
@@ -117,6 +125,11 @@ public sealed class DamageService
         return ApplyAndPublish(target, health, result, source);
     }
 
+    /// <summary>
+    /// Removes the resolved amount from <paramref name="health"/> and publishes a <see cref="DamageReport"/> with the
+    /// HP actually removed. Returns the result with that amount, or <c>default</c> (nothing published) when nothing
+    /// landed and the hit was not immune.
+    /// </summary>
     private DamageResult ApplyAndPublish(DamageReceiver target, Health health, DamageResult result, GameObject source)
     {
         int applied = result.Amount > 0 ? health.ApplyDamage(result.Amount, source, result.Type, result.Flags) : 0;
@@ -130,6 +143,9 @@ public sealed class DamageService
         return landed;
     }
 
+    /// <summary>
+    /// Heals the target's health and publishes a <see cref="HealReport"/> when HP was added. Returns the HP added.
+    /// </summary>
     private int HealAndPublish(DamageReceiver target, int amount, GameObject source)
     {
         Health health = target.Health;

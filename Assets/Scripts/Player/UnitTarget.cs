@@ -16,6 +16,9 @@ public enum UnitTeam
 /// </summary>
 public readonly struct UnitTarget
 {
+    /// <summary>
+    /// Creates a target for the unit owning <paramref name="health"/>; a null health makes an empty target.
+    /// </summary>
     public UnitTarget(Health health, Collider2D collider, UnitTeam team)
     {
         Health = health;
@@ -28,6 +31,10 @@ public readonly struct UnitTarget
     public UnitTeam Team { get; }
     public bool Exists => Health != null;
 
+    /// <summary>
+    /// Whether <paramref name="other"/> is the same unit, compared by health reference; never true for an empty
+    /// target.
+    /// </summary>
     public bool IsSameUnit(UnitTarget other)
     {
         return Exists && ReferenceEquals(Health, other.Health);

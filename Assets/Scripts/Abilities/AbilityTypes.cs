@@ -54,6 +54,10 @@ public enum CastOutcome
 /// </summary>
 public readonly struct CastAim
 {
+    /// <summary>
+    /// Creates an aim at <paramref name="point"/> along <paramref name="direction"/>, with
+    /// <paramref name="target"/> as the aimed unit (may be empty).
+    /// </summary>
     public CastAim(Vector2 point, Vector2 direction, UnitTarget target)
     {
         Point = point;
@@ -71,6 +75,9 @@ public readonly struct CastAim
 /// </summary>
 public readonly struct AbilityCast
 {
+    /// <summary>
+    /// Creates the record of <paramref name="ability"/> cast from <paramref name="slot"/> with <paramref name="aim"/>.
+    /// </summary>
     public AbilityCast(int slot, AbilityDefinition ability, CastAim aim)
     {
         Slot = slot;

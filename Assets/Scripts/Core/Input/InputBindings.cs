@@ -42,6 +42,11 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     private InputActionRebindingExtensions.RebindingOperation rebinding;
     private Action<RebindOutcome, InputAction> rebindFinished;
 
+    /// <summary>
+    /// Looks up the ability actions and the keyboard-and-mouse binding of every action listed in
+    /// <paramref name="rebindableActions"/> on <paramref name="actions"/>, logging an error for a listed action that is
+    /// missing, duplicated or has no such binding, and for a missing asset or list (nothing is rebindable then).
+    /// </summary>
     public InputBindings(InputActionAsset actions, RebindableActionList rebindableActions, UserSettings settings)
     {
         this.actions = actions;
@@ -82,11 +87,17 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
 
     public bool IsRebinding => rebinding != null;
 
+    /// <summary>
+    /// The rebindable action at <paramref name="index"/> (0 to <see cref="Count"/> - 1), in the list's order.
+    /// </summary>
     public InputAction GetAction(int index)
     {
         return rebindable[index];
     }
 
+    /// <summary>
+    /// Whether <paramref name="action"/> is one of the actions the player may rebind; false for null.
+    /// </summary>
     public bool IsRebindable(InputAction action)
     {
         return IndexOf(action) >= 0;
@@ -120,6 +131,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return index >= 0 ? EffectivePath(index) : null;
     }
 
+    /// <summary>
+    /// The short HUD label of the input bound to ability <paramref name="slot"/>, or an empty string for a slot out
+    /// of range or an ability action missing from the asset.
+    /// </summary>
     public string GetAbilityKeyLabel(int slot)
     {
         return slot >= 0 && slot < abilityActions.Length ? GetShortLabel(abilityActions[slot]) : string.Empty;
@@ -251,6 +266,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return true;
     }
 
+    /// <summary>
+    /// Cancels the running interactive rebind, if any, which reports <see cref="RebindOutcome.Cancelled"/> to its
+    /// callback.
+    /// </summary>
     public void CancelRebind()
     {
         if (rebinding != null)
@@ -259,6 +278,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         }
     }
 
+    /// <summary>
+    /// Removes every binding override on the asset, putting all actions back on their defaults, then saves and
+    /// raises <see cref="BindingsChanged"/>.
+    /// </summary>
     public void ResetAll()
     {
         if (actions == null)
@@ -270,18 +293,28 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         SaveAndNotify();
     }
 
+    /// <summary>
+    /// Starts watching for keyboard layout changes and applies the saved binding overrides.
+    /// </summary>
     public void Initialize()
     {
         InputSystem.onDeviceChange += HandleDeviceChange;
         Load();
     }
 
+    /// <summary>
+    /// Cancels any running rebind and stops watching device changes.
+    /// </summary>
     public void Dispose()
     {
         CancelRebind();
         InputSystem.onDeviceChange -= HandleDeviceChange;
     }
 
+    /// <summary>
+    /// Applies the overrides saved in <see cref="UserSettings"/>, then drops any that are unusable or make two
+    /// rebindable actions share an input, warning and saving the cleaned set when something was dropped.
+    /// </summary>
     private void Load()
     {
         if (actions == null)
@@ -304,6 +337,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         }
     }
 
+    /// <summary>
+    /// Loads the <paramref name="overrides"/> JSON onto the asset; when it cannot be read, warns, falls back to the
+    /// defaults and clears the saved overrides.
+    /// </summary>
     private void ApplySaved(string overrides)
     {
         try
@@ -318,6 +355,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         }
     }
 
+    /// <summary>
+    /// Removes every override on the asset that sits anywhere but a rebindable action's keyboard-and-mouse binding,
+    /// or whose path is not allowed. Returns whether any was removed.
+    /// </summary>
     private bool DropInvalidOverrides()
     {
         bool dropped = false;
@@ -347,6 +388,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return dropped;
     }
 
+    /// <summary>
+    /// Repeatedly finds two rebindable actions on the same input and removes both their overrides until no such pair
+    /// has an override left; logs an error for a pair whose defaults already clash. Returns whether any was removed.
+    /// </summary>
     private bool DropDuplicateOverrides()
     {
         bool dropped = false;
@@ -375,6 +420,9 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return dropped;
     }
 
+    /// <summary>
+    /// Removes the override on rebindable action <paramref name="index"/>'s binding; returns false when it had none.
+    /// </summary>
     private bool RemoveOverride(int index)
     {
         int bindingIndex = bindingIndices[index];
@@ -387,6 +435,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return true;
     }
 
+    /// <summary>
+    /// Binds rebindable action <paramref name="index"/> to <paramref name="path"/>, removing the override instead
+    /// when the path is its default so only real changes are saved.
+    /// </summary>
     private void SetPath(int index, string path)
     {
         if (SamePath(DefaultPath(index), path))
@@ -399,6 +451,10 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         }
     }
 
+    /// <summary>
+    /// Disposes the finished rebinding operation and reports <paramref name="outcome"/> and the swapped action to the
+    /// callback given to <see cref="StartRebind"/>, clearing it first so it runs once.
+    /// </summary>
     private void FinishRebind(RebindOutcome outcome, InputAction swappedWith)
     {
         rebinding.Dispose();
@@ -408,12 +464,19 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         finished?.Invoke(outcome, swappedWith);
     }
 
+    /// <summary>
+    /// Stores the asset's current overrides in <see cref="UserSettings"/> and raises <see cref="BindingsChanged"/>.
+    /// </summary>
     private void SaveAndNotify()
     {
         settings.SetInputBindingOverrides(actions.SaveBindingOverridesAsJson());
         BindingsChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Raises <see cref="BindingsChanged"/> when a keyboard's configuration (its layout) changes, since key labels
+    /// follow the layout.
+    /// </summary>
     private void HandleDeviceChange(InputDevice device, InputDeviceChange change)
     {
         if (device is Keyboard && change == InputDeviceChange.ConfigurationChanged)
@@ -422,6 +485,11 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         }
     }
 
+    /// <summary>
+    /// The label of <paramref name="action"/>'s keyboard-and-mouse binding (also for actions that are not
+    /// rebindable): a mouse button name, short or spelled out, or the binding's display string for a key. Empty
+    /// for null or an action without such a binding.
+    /// </summary>
     private string Label(InputAction action, bool shortLabel)
     {
         if (action == null)
@@ -445,11 +513,18 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return action.GetBindingDisplayString(bindingIndex, InputBinding.DisplayStringOptions.DontIncludeInteractions);
     }
 
+    /// <summary>
+    /// The position of <paramref name="action"/> in the rebindable list, or -1 for null or an action not on it.
+    /// </summary>
     private int IndexOf(InputAction action)
     {
         return action != null ? rebindable.IndexOf(action) : -1;
     }
 
+    /// <summary>
+    /// The first rebindable action other than <paramref name="except"/> currently bound to <paramref name="path"/>,
+    /// or -1 when there is none.
+    /// </summary>
     private int IndexOfPath(string path, int except)
     {
         for (int i = 0; i < rebindable.Count; i++)
@@ -463,16 +538,26 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return -1;
     }
 
+    /// <summary>
+    /// The path rebindable action <paramref name="index"/> is bound to now, override included.
+    /// </summary>
     private string EffectivePath(int index)
     {
         return rebindable[index].bindings[bindingIndices[index]].effectivePath;
     }
 
+    /// <summary>
+    /// The path rebindable action <paramref name="index"/> has in the asset, ignoring any override.
+    /// </summary>
     private string DefaultPath(int index)
     {
         return rebindable[index].bindings[bindingIndices[index]].path;
     }
 
+    /// <summary>
+    /// The index of <paramref name="action"/>'s first non-composite binding in the <see cref="BindingGroup"/> group,
+    /// or -1 when it has none.
+    /// </summary>
     private static int FindBindingIndex(InputAction action)
     {
         InputBinding mask = InputBinding.MaskByGroup(BindingGroup);
@@ -488,6 +573,9 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return -1;
     }
 
+    /// <summary>
+    /// The index of <paramref name="path"/> among the supported mouse buttons, or -1 when it is not one of them.
+    /// </summary>
     private static int MouseIndex(string path)
     {
         for (int i = 0; i < MousePaths.Length; i++)
@@ -501,6 +589,9 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
         return -1;
     }
 
+    /// <summary>
+    /// Whether two control paths are equal, ignoring case.
+    /// </summary>
     private static bool SamePath(string a, string b)
     {
         return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);

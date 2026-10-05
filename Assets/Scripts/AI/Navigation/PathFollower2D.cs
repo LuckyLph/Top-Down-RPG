@@ -208,6 +208,10 @@ public sealed class PathFollower2D
         pathFollowsGrid = false;
     }
 
+    /// <summary>
+    /// Records the grid version, goal and partial flag of a path built on the grid, so <see cref="Tick"/> can check it
+    /// again after the grid changes.
+    /// </summary>
     private void RememberGridPath(Vector2 worldGoal, bool allowPartial)
     {
         pathFollowsGrid = true;
@@ -232,6 +236,10 @@ public sealed class PathFollower2D
         return hasPath;
     }
 
+    /// <summary>
+    /// Whether the straight lines from <paramref name="position"/> through each remaining waypoint can all still be
+    /// walked.
+    /// </summary>
     private bool IsRemainingPathWalkable(Vector2 position)
     {
         Vector3Int from = navigationGrid.WorldToCell(position);
@@ -249,12 +257,20 @@ public sealed class PathFollower2D
         return true;
     }
 
+    /// <summary>
+    /// Whether the straight line between the two cells is walkable and costs no more than the octile heuristic, so no
+    /// route can be cheaper.
+    /// </summary>
     private bool IsStraightLineOptimal(Vector3Int startCell, Vector3Int goalCell)
     {
         return navigationGrid.TryGetLineCost(startCell, goalCell, movementProfile, out int lineCost)
             && lineCost <= navigationGrid.HeuristicCost(startCell, goalCell, movementProfile);
     }
 
+    /// <summary>
+    /// Common end of a successful build: drops a first waypoint already within reach of <paramref name="start"/>,
+    /// resets progress tracking, and records the path flags.
+    /// </summary>
     private void FinishPath(Vector2 start, bool isPartial, bool reachedGoal, bool goalAdjusted)
     {
         if (waypoints.Count > 0 && Vector2.Distance(start, waypoints[0]) <= settings.WaypointReachDistance)
@@ -272,6 +288,10 @@ public sealed class PathFollower2D
         goalWasAdjusted = goalAdjusted;
     }
 
+    /// <summary>
+    /// Skips intermediate cells of the A* route wherever the straight line from an anchor cell is walkable and costs no
+    /// more than the route it replaces. Returns <paramref name="sourceCells"/> itself when it has two cells or fewer.
+    /// </summary>
     private IReadOnlyList<Vector3Int> SmoothPathCells(IReadOnlyList<Vector3Int> sourceCells)
     {
         if (sourceCells.Count <= 2)
@@ -313,6 +333,10 @@ public sealed class PathFollower2D
         return smoothedCells;
     }
 
+    /// <summary>
+    /// Grows the stall time while the position moved less than a fifth of <paramref name="moveSpeed"/> over the step,
+    /// and resets it otherwise.
+    /// </summary>
     private void TrackProgress(Vector2 position, float moveSpeed, float deltaTime)
     {
         float minStep = moveSpeed * MinProgressSpeedFraction * deltaTime;
@@ -320,6 +344,10 @@ public sealed class PathFollower2D
         lastProgressPosition = position;
     }
 
+    /// <summary>
+    /// How close counts as reaching the waypoint at <paramref name="index"/>: the larger of the reach and arrival
+    /// distances for the last one, the reach distance for the others.
+    /// </summary>
     private float GetReachThreshold(int index)
     {
         return index == waypoints.Count - 1

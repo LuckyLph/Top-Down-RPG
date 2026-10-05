@@ -2,17 +2,29 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// Creates the <see cref="SwordSlashAttack"/> for a weapon swing through the container and hands it the
+/// <see cref="HitService"/> its hits go through. Used for local and replayed remote swings alike.
+/// </summary>
 public sealed class SlashSpawner
 {
     private readonly IObjectResolver resolver;
     private readonly HitService hitService;
 
+    /// <summary>
+    /// Captures the container slashes are instantiated through and the hit service they use.
+    /// </summary>
     public SlashSpawner(IObjectResolver resolver, HitService hitService)
     {
         this.resolver = resolver;
         this.hitService = hitService;
     }
 
+    /// <summary>
+    /// Instantiates and activates the weapon's slash prefab and initialises it for <paramref name="owner"/> swinging
+    /// toward <paramref name="direction"/>. Logs an error and returns null when the weapon is missing, has no slash
+    /// prefab, or that prefab has no <see cref="SwordSlashAttack"/> on its root.
+    /// </summary>
     public SwordSlashAttack Spawn(Transform owner, PlayerWeapon weapon, Vector2 direction, SpriteRenderer ownerSpriteRenderer = null)
     {
         if (weapon == null || weapon.SlashPrefab == null)

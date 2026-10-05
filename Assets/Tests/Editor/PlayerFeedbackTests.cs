@@ -8,6 +8,10 @@ using UnityEngine.UI;
 using VContainer;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for the local player's feedback: <see cref="AbilityBarPresenter"/> (names, key labels, cooldowns, failure
+/// flashes), the HUD prefab's ability bar, and <see cref="PointerFeedbackPresenter"/> (hover, cursor, move markers).
+/// </summary>
 public class PlayerFeedbackTests
 {
     private readonly List<Object> createdObjects = new();
@@ -18,6 +22,9 @@ public class PlayerFeedbackTests
     private AbilityBarPresenter barPresenter;
     private FakeInputBindingLabels keyLabels;
 
+    /// <summary>
+    /// Creates a manual clock, an empty local player tracker and fake key labels.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -26,6 +33,9 @@ public class PlayerFeedbackTests
         keyLabels = new FakeInputBindingLabels();
     }
 
+    /// <summary>
+    /// Disposes the ability bar presenter, if any, and destroys every object the test tracked.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -42,6 +52,10 @@ public class PlayerFeedbackTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Assigning a local player fills the bar with its abilities, showing the name of an ability without an icon,
+    /// and shows its empty slots as empty.
+    /// </summary>
     [Test]
     public void AbilityBar_ShowsTheLocalPlayersSlots_WithKeyLabelsAndAnEmptyState()
     {
@@ -59,6 +73,9 @@ public class PlayerFeedbackTests
         Assert.That(slots[0].Icon.enabled, Is.False);
     }
 
+    /// <summary>
+    /// Slots show their bound key labels and update when a binding changes, until the presenter is disposed.
+    /// </summary>
     [Test]
     public void AbilityBar_LabelsSlotsWithTheBoundKeys_AndFollowsRebinding()
     {
@@ -80,6 +97,10 @@ public class PlayerFeedbackTests
         barPresenter = null;
     }
 
+    /// <summary>
+    /// A slot on cooldown shows the remaining fraction as its fill and the seconds left rounded up, both clearing
+    /// once the ability is ready.
+    /// </summary>
     [Test]
     public void AbilityBar_ShowsTheCooldownFillAndSecondsUntilReady()
     {
@@ -106,6 +127,10 @@ public class PlayerFeedbackTests
         Assert.That(slots[0].CooldownText.text, Is.Empty);
     }
 
+    /// <summary>
+    /// A slot whose cast fails (here an empty one) flashes, and the flash fades out over
+    /// <see cref="AbilityBarPresenter.FlashSeconds"/> without touching other slots.
+    /// </summary>
     [Test]
     public void AbilityBar_FlashesAFailedSlot_AndFadesIt()
     {
@@ -128,6 +153,10 @@ public class PlayerFeedbackTests
         Assert.That(slots[0].Flash.color.a, Is.Zero);
     }
 
+    /// <summary>
+    /// The bar follows a change of local player and of that player's weapon, stops listening to the previous
+    /// player, and empties when the local player is cleared.
+    /// </summary>
     [Test]
     public void AbilityBar_FollowsTheLocalPlayerAndItsWeapon_AndClearsWithoutOne()
     {
@@ -149,6 +178,10 @@ public class PlayerFeedbackTests
         Assert.That(slots[0].IsEmpty, Is.True);
     }
 
+    /// <summary>
+    /// The HUD prefab's ability bar has one fully wired slot per ability slot; each slot's frame blocks clicks
+    /// while its flash overlay does not.
+    /// </summary>
     [Test]
     public void HudPrefab_HasAnAbilityBarOfSixWiredSlotsThatBlockClicks()
     {
@@ -170,6 +203,10 @@ public class PlayerFeedbackTests
         }
     }
 
+    /// <summary>
+    /// Pointing at a living enemy shows the hover ring on it and the attack cursor; pointing elsewhere or at a
+    /// dead enemy shows neither.
+    /// </summary>
     [Test]
     public void Feedback_HighlightsTheEnemyUnderThePointer_WithTheAttackCursor()
     {
@@ -195,6 +232,9 @@ public class PlayerFeedbackTests
         Assert.That(layer.Hovered, Is.Null, "Dead enemies are not highlighted.");
     }
 
+    /// <summary>
+    /// A move click on the ground drops a move marker, while a click over UI or on an enemy does not.
+    /// </summary>
     [Test]
     public void Feedback_DropsAMoveMarkerOnGroundClicks_ButNotOnEnemiesOrOverUI()
     {
@@ -217,6 +257,9 @@ public class PlayerFeedbackTests
         Assert.That(layer.ActiveMarkerCount, Is.EqualTo(1), "A click on an enemy is an attack, not a move.");
     }
 
+    /// <summary>
+    /// A dead local player gets no hover highlight and no move markers.
+    /// </summary>
     [Test]
     public void Feedback_ShowsNothingForADeadPlayer()
     {
@@ -231,6 +274,9 @@ public class PlayerFeedbackTests
         Assert.That(layer.ActiveMarkerCount, Is.Zero);
     }
 
+    /// <summary>
+    /// A finished move marker returns to the pool, and the next click takes it from there.
+    /// </summary>
     [Test]
     public void MoveMarkers_ReturnToThePoolWhenFinished_AndAreReused()
     {
@@ -251,6 +297,9 @@ public class PlayerFeedbackTests
         Assert.That(layer.PooledMarkerCount, Is.EqualTo(pooled), "The next marker comes from the pool.");
     }
 
+    /// <summary>
+    /// Ticking pointer feedback while hovering an enemy allocates no managed memory.
+    /// </summary>
     [Test]
     public void Feedback_DoesNotAllocateWhileHovering()
     {
@@ -265,6 +314,10 @@ public class PlayerFeedbackTests
         Assert.That(layer.AttackCursorShown, Is.True);
     }
 
+    /// <summary>
+    /// Builds an ability bar with one slot per ability slot, each with its child images and texts, and starts an
+    /// <see cref="AbilityBarPresenter"/> on it with the test's clock and key labels.
+    /// </summary>
     private void CreateBar()
     {
         GameObject barObject = Track(new GameObject("AbilityBar"));
@@ -291,6 +344,10 @@ public class PlayerFeedbackTests
         barPresenter.Start();
     }
 
+    /// <summary>
+    /// Adds a new child named <paramref name="name"/> under <paramref name="parent"/> and returns the component of
+    /// the requested type added to it.
+    /// </summary>
     private static T Child<T>(GameObject parent, string name) where T : Component
     {
         GameObject child = new(name);
@@ -298,6 +355,10 @@ public class PlayerFeedbackTests
         return child.AddComponent<T>();
     }
 
+    /// <summary>
+    /// Creates a player with health, a controller, a weapon holding <paramref name="weaponAbilities"/> and
+    /// authoritative <see cref="PlayerAbilities"/> on <paramref name="classAbilities"/>.
+    /// </summary>
     private PlayerAbilities CreatePlayer(AbilityDefinition[] classAbilities, AbilityDefinition[] weaponAbilities)
     {
         GameObject player = Track(new GameObject("Player"));
@@ -313,6 +374,11 @@ public class PlayerFeedbackTests
         return abilities;
     }
 
+    /// <summary>
+    /// Builds a pointer feedback layer with a move marker template and hover ring, a local player that is alive or
+    /// dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen center, which the
+    /// test camera maps to (10, 20).
+    /// </summary>
     private (PointerFeedbackPresenter, PointerFeedbackLayer, FakePlayerInput) CreateFeedback(bool alive)
     {
         GameObject markerTemplate = Track(new GameObject("MarkerTemplate"));
@@ -340,6 +406,10 @@ public class PlayerFeedbackTests
         return (new PointerFeedbackPresenter(input, CreateCamera(new Vector2(10f, 20f)), picker, localPlayer, layer), layer, input);
     }
 
+    /// <summary>
+    /// Creates an orthographic camera centered on <paramref name="position"/> that renders to a 200x100 texture,
+    /// so screen coordinates map to fixed world points.
+    /// </summary>
     private Camera CreateCamera(Vector2 position)
     {
         GameObject cameraObject = Track(new GameObject("Camera"));
@@ -351,6 +421,9 @@ public class PlayerFeedbackTests
         return camera;
     }
 
+    /// <summary>
+    /// Creates a living, damageable mob on the Enemy layer with a small collider at <paramref name="position"/>.
+    /// </summary>
     private Health CreateMob(Vector2 position)
     {
         GameObject mob = Track(new GameObject("Mob"));
@@ -362,11 +435,17 @@ public class PlayerFeedbackTests
         return health;
     }
 
+    /// <summary>
+    /// Creates a tracked ability with the given cooldown.
+    /// </summary>
     private AbilityDefinition Ability(string name, float cooldown)
     {
         return Track(AbilityDefinition.Create(name, cooldown));
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction on teardown and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

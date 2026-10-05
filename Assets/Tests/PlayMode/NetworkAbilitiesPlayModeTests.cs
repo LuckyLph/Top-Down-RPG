@@ -6,12 +6,19 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for networked ability casts between a host and an in-process client: host-only application,
+/// replication of casts and their effects, and target resolution on the host.
+/// </summary>
 public class NetworkAbilitiesPlayModeTests
 {
     private const int AllySlot = 2;
 
     private InProcessClient client;
 
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -19,6 +26,11 @@ public class NetworkAbilitiesPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// A host cast shows up on the client's copy of the host's player but is applied only on the host. A client's
+    /// enemy cast on its copy of a mob resolves to the host's mob, and its damage and stun land on completion and
+    /// replicate back to the client's copy.
+    /// </summary>
     [UnityTest]
     public IEnumerator AHostCastReachesClientsWithoutBeingAppliedThere_AndAClientsEnemyCastResolvesTheMobOnTheHost()
     {
@@ -99,6 +111,11 @@ public class NetworkAbilitiesPlayModeTests
             "the Smite's damage and stun to reach the client's copy of the mob");
     }
 
+    /// <summary>
+    /// The host's own cast and a client's ally cast on the host's player are each applied exactly once by the host's
+    /// ability service, with the target resolved to the host's player, the Fortify status landing on it and the
+    /// client's aim and facing carried over.
+    /// </summary>
     [UnityTest]
     public IEnumerator Casts_ReachTheHostsAbilityServiceExactlyOnce_IncludingAClientsCastOnTheHostsPlayer()
     {

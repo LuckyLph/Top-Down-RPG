@@ -80,17 +80,26 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Finds the sibling weapon controller and health when unassigned and builds the slots.
+    /// </summary>
     private void Awake()
     {
         ResolveReferences();
         RebuildSlots();
     }
 
+    /// <summary>
+    /// Fills in the sibling weapon controller and health when unassigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Subscribes to weapon changes so the A and S slots follow the equipped weapon, and rebuilds the slots.
+    /// </summary>
     private void OnEnable()
     {
         ResolveReferences();
@@ -102,6 +111,9 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         RebuildSlots();
     }
 
+    /// <summary>
+    /// Unsubscribes from weapon changes.
+    /// </summary>
     private void OnDisable()
     {
         if (weaponController != null)
@@ -110,6 +122,9 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Logs an error when no <see cref="AbilityService"/> was injected, since casts would then have no effect.
+    /// </summary>
     private void Start()
     {
         if (abilityService == null)
@@ -118,6 +133,10 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Injects the clock cooldowns run on (falling back to <see cref="UnityClock.Shared"/> when null) and the
+    /// service that applies casts.
+    /// </summary>
     [Inject]
     public void Construct(IClock gameClock, AbilityService service)
     {
@@ -125,16 +144,26 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         abilityService = service;
     }
 
+    /// <summary>
+    /// The ability in <paramref name="slot"/>, or null when the slot is empty or out of range.
+    /// </summary>
     public AbilityDefinition GetAbility(int slot)
     {
         return slot >= 0 && slot < slots.Length ? slots[slot] : null;
     }
 
+    /// <summary>
+    /// Seconds left on the cooldown of <paramref name="slot"/> on the game clock; 0 when ready or out of range.
+    /// </summary>
     public float RemainingCooldown(int slot)
     {
         return slot >= 0 && slot < slots.Length ? cooldowns.Remaining(slot, clock.Time) : 0f;
     }
 
+    /// <summary>
+    /// False with the reason when <paramref name="slot"/> is empty, the player is dead or the ability is on cooldown
+    /// (checked in that order); true with <see cref="CastOutcome.Started"/> otherwise. Ignores a running cast.
+    /// </summary>
     public bool CanCast(int slot, out CastOutcome failure)
     {
         if (GetAbility(slot) == null)
@@ -231,6 +260,9 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         CastEnded?.Invoke(slot);
     }
 
+    /// <summary>
+    /// Raises <see cref="CastFailed"/> for <paramref name="slot"/> with <paramref name="reason"/>.
+    /// </summary>
     public void ReportFailure(int slot, CastOutcome reason)
     {
         CastFailed?.Invoke(slot, reason);
@@ -333,17 +365,28 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         OnEnable();
     }
 
+    /// <summary>
+    /// Index in the recent-cast ring buffer of the <paramref name="age"/>-th most recent record (0 is the newest).
+    /// </summary>
     private int RecentIndex(int age)
     {
         return (nextRecentCast - 1 - age + RecentCastCapacity * 2) % RecentCastCapacity;
     }
 
+    /// <summary>
+    /// Stores <paramref name="cast"/> with the current clock time in the recent-cast ring buffer, overwriting the
+    /// oldest record.
+    /// </summary>
     private void RecordCast(in AbilityCast cast, bool remote)
     {
         recentCasts[nextRecentCast] = new CastRecord(cast, clock.Time, remote);
         nextRecentCast = (nextRecentCast + 1) % RecentCastCapacity;
     }
 
+    /// <summary>
+    /// Draws the aim and a label for each recent cast still running or within <c>castGizmoSeconds</c> of its end,
+    /// fading out afterwards; remote casts are dimmer.
+    /// </summary>
     private void OnDrawGizmos()
     {
         if (!drawCastGizmos)
@@ -387,6 +430,9 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Draws a labelled range circle for every slotted Point and Unit ability.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!drawRangeGizmos)
@@ -415,6 +461,10 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Draws the aim of <paramref name="cast"/> from <paramref name="origin"/> in the current gizmo color: a ring
+    /// for untargeted casts, a short line for directions, a line to the point or to the target unit otherwise.
+    /// </summary>
     private static void DrawAim(Vector3 origin, in AbilityCast cast)
     {
         CastAim aim = cast.Aim;
@@ -440,6 +490,9 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// Draws a gizmo circle in the XY plane as a closed polyline.
+    /// </summary>
     private static void DrawCircle(Vector3 center, float radius)
     {
         Vector3 previous = center + new Vector3(radius, 0f, 0f);
@@ -452,16 +505,25 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// The gizmo color of <paramref name="slot"/>; white for a slot without one.
+    /// </summary>
     private static Color SlotColor(int slot)
     {
         return slot >= 0 && slot < SlotColors.Length ? SlotColors[slot] : Color.white;
     }
 
+    /// <summary>
+    /// Rebuilds the slots when the equipped weapon changes.
+    /// </summary>
     private void HandleWeaponChanged(PlayerWeapon _)
     {
         RebuildSlots();
     }
 
+    /// <summary>
+    /// Looks up the sibling <see cref="PlayerWeaponController"/> and <see cref="Health"/> when not already set.
+    /// </summary>
     private void ResolveReferences()
     {
         if (weaponController == null)
@@ -475,8 +537,15 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         }
     }
 
+    /// <summary>
+    /// One entry of the recent-cast ring buffer: the cast, when it started and whether another machine started it.
+    /// The default value is an empty entry.
+    /// </summary>
     private readonly struct CastRecord
     {
+        /// <summary>
+        /// Creates a valid record of <paramref name="cast"/> started at <paramref name="startTime"/>.
+        /// </summary>
         public CastRecord(AbilityCast cast, float startTime, bool remote)
         {
             Cast = cast;

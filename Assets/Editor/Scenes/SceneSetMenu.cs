@@ -2,17 +2,26 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// Opens the usual multi-scene editing setups in one click.
+/// <summary>
+/// Opens the usual multi-scene editing setups in one click.
+/// </summary>
 public static class SceneSetMenu
 {
     private const string OpenScenesMenu = ProjectScenes.MenuRoot + "Open Scenes/";
 
+    /// <summary>
+    /// Opens the Main boot scene on its own.
+    /// </summary>
     [MenuItem(OpenScenesMenu + "Main", priority = 20)]
     private static void OpenMain()
     {
         Open(ProjectScenes.MainScenePath);
     }
 
+    /// <summary>
+    /// Opens Main with the main menu scene additively, making the menu active; warns and does nothing when the
+    /// <see cref="GameScenes"/> asset is missing.
+    /// </summary>
     [MenuItem(OpenScenesMenu + "Main + Main Menu", priority = 21)]
     private static void OpenMainMenu()
     {
@@ -23,6 +32,10 @@ public static class SceneSetMenu
         }
     }
 
+    /// <summary>
+    /// Opens Main with the Gameplay scene and the starting area additively, making the area active; warns and does
+    /// nothing when the <see cref="GameScenes"/> asset is missing.
+    /// </summary>
     [MenuItem(OpenScenesMenu + "Main + Gameplay + Starting Area", priority = 22)]
     private static void OpenGameplay()
     {
@@ -33,6 +46,10 @@ public static class SceneSetMenu
         }
     }
 
+    /// <summary>
+    /// After offering to save modified scenes (aborting if declined), opens the first path alone, adds the rest and
+    /// makes the last one active.
+    /// </summary>
     private static void Open(params string[] scenePaths)
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -50,6 +67,9 @@ public static class SceneSetMenu
         EditorSceneManager.SetActiveScene(EditorSceneManager.GetSceneByPath(scenePaths[scenePaths.Length - 1]));
     }
 
+    /// <summary>
+    /// Loads the <see cref="GameScenes"/> catalog, logging a warning and returning null when the asset is missing.
+    /// </summary>
     private static GameScenes LoadGameScenesOrWarn()
     {
         GameScenes gameScenes = ProjectScenes.LoadGameScenes();

@@ -15,6 +15,9 @@ public sealed class UserSettings
     private string inputBindingOverrides = string.Empty;
     private bool isReadOnly;
 
+    /// <summary>
+    /// Creates the settings over the keyed settings <paramref name="store"/> and loads them right away.
+    /// </summary>
     public UserSettings([Key(FileName)] ISaveStore store)
     {
         this.store = store;
@@ -36,6 +39,10 @@ public sealed class UserSettings
         return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides).ToJson());
     }
 
+    /// <summary>
+    /// Reads the stored settings, keeping the defaults (with a warning) when the file cannot be parsed or has another
+    /// format version; a file from a newer build also makes these settings read-only.
+    /// </summary>
     private void Load()
     {
         if (!store.TryRead(out string json))

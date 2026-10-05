@@ -10,6 +10,9 @@ public class StatusBarView : MonoBehaviour
 
     public int Capacity => icons != null ? icons.Length : 0;
 
+    /// <summary>
+    /// Logs an error when no icon views are assigned; otherwise hides them all.
+    /// </summary>
     private void Awake()
     {
         if (Capacity == 0)
@@ -21,6 +24,10 @@ public class StatusBarView : MonoBehaviour
         Clear();
     }
 
+    /// <summary>
+    /// Shows <paramref name="definition"/> with <paramref name="stacks"/> on icon <paramref name="index"/>.
+    /// Out-of-range indices are ignored.
+    /// </summary>
     public void Show(int index, StatusEffectDefinition definition, int stacks)
     {
         StatusIconView view = Icon(index);
@@ -30,6 +37,9 @@ public class StatusBarView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the elapsed fill of icon <paramref name="index"/>, 0 to 1. Out-of-range indices are ignored.
+    /// </summary>
     public void SetElapsed(int index, float fraction)
     {
         StatusIconView view = Icon(index);
@@ -53,16 +63,25 @@ public class StatusBarView : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Hides every icon, for when there is no local player.
+    /// </summary>
     public void Clear()
     {
         HideFrom(0);
     }
 
+    /// <summary>
+    /// The icon view at <paramref name="index"/>, or null when the index is out of range or none is assigned.
+    /// </summary>
     internal StatusIconView Icon(int index)
     {
         return icons != null && index >= 0 && index < icons.Length ? icons[index] : null;
     }
 
+    /// <summary>
+    /// Assigns the icon views in code, for tests that build the bar without a prefab.
+    /// </summary>
     internal void ConfigureReferences(StatusIconView[] iconViews)
     {
         icons = iconViews;

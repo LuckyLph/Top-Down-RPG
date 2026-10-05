@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// <see cref="GameObject"/> counterpart of <see cref="ComponentExtensions"/>, used by the dual-grid editor tools to
+/// tell a render tilemap from its parent module.
+/// </summary>
 public static class GameObjectExtensions
 {
     /// <summary>

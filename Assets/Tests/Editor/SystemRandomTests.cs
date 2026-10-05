@@ -1,8 +1,14 @@
 using NUnit.Framework;
 using UnityEngine;
 
+/// <summary>
+/// Tests for the seeded <see cref="SystemRandom"/>: value bounds and determinism per seed.
+/// </summary>
 public class SystemRandomTests
 {
+    /// <summary>
+    /// <see cref="SystemRandom.Range"/> always returns a value between its minimum and maximum.
+    /// </summary>
     [Test]
     public void Range_StaysWithinBounds()
     {
@@ -15,6 +21,9 @@ public class SystemRandomTests
         }
     }
 
+    /// <summary>
+    /// <see cref="SystemRandom.InsideUnitCircle"/> never returns a point farther than 1 from the origin.
+    /// </summary>
     [Test]
     public void InsideUnitCircle_NeverLeavesTheUnitCircle()
     {
@@ -26,6 +35,9 @@ public class SystemRandomTests
         }
     }
 
+    /// <summary>
+    /// Two generators with the same seed produce the same sequence of ranges and circle points.
+    /// </summary>
     [Test]
     public void SameSeed_ProducesTheSameSequence()
     {

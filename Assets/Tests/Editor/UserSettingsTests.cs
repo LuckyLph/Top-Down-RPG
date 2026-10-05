@@ -3,8 +3,15 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// Tests for <see cref="UserSettings"/>: loading the local settings file through an in-memory store, saving
+/// changes, and handling malformed, older and newer files.
+/// </summary>
 public class UserSettingsTests
 {
+    /// <summary>
+    /// Without a settings file the settings start at their defaults and nothing is written.
+    /// </summary>
     [Test]
     public void MissingFile_GivesDefaults_WithoutWriting()
     {
@@ -16,6 +23,10 @@ public class UserSettingsTests
         Assert.That(store.WriteCount, Is.Zero);
     }
 
+    /// <summary>
+    /// Changing the binding overrides writes the file once at the current format version, and a new settings
+    /// object over the same store reads them back.
+    /// </summary>
     [Test]
     public void Overrides_AreWrittenOnChange_AndReadBack()
     {
@@ -30,6 +41,9 @@ public class UserSettingsTests
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.EqualTo("{\"bindings\":[]}"));
     }
 
+    /// <summary>
+    /// A file that is not valid settings JSON logs a warning and leaves the defaults in place.
+    /// </summary>
     [Test]
     public void MalformedFile_IsIgnoredWithAWarning()
     {
@@ -41,6 +55,10 @@ public class UserSettingsTests
         Assert.That(settings.InputBindingOverrides, Is.Empty);
     }
 
+    /// <summary>
+    /// A file with a different format version logs a warning naming that version and its contents are not
+    /// loaded.
+    /// </summary>
     [Test]
     public void OtherFormatVersion_IsIgnoredWithAWarning()
     {
@@ -52,6 +70,10 @@ public class UserSettingsTests
         Assert.That(settings.InputBindingOverrides, Is.Empty);
     }
 
+    /// <summary>
+    /// A file from a newer format version makes the settings read-only: changes still apply for the session but
+    /// are never written, so the newer file survives untouched.
+    /// </summary>
     [Test]
     public void AFileFromANewerBuild_IsNeverOverwritten()
     {
@@ -69,6 +91,9 @@ public class UserSettingsTests
         Assert.That(store.Contents, Is.EqualTo(newer));
     }
 
+    /// <summary>
+    /// A file from an older format version is ignored but stays writable, so the next change replaces it.
+    /// </summary>
     [Test]
     public void AFileFromAnOlderFormat_IsReplacedOnTheNextChange()
     {
@@ -82,6 +107,9 @@ public class UserSettingsTests
         Assert.That(store.WriteCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// The settings file name differs from the game save's default file name.
+    /// </summary>
     [Test]
     public void SettingsFile_IsSeparateFromTheGameSave()
     {

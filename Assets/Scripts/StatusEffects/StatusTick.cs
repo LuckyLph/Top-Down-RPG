@@ -6,6 +6,10 @@ using UnityEngine;
 /// </summary>
 public readonly struct StatusTick
 {
+    /// <summary>
+    /// Creates a due tick of <paramref name="amount"/> for <paramref name="definition"/> from
+    /// <paramref name="source"/>, scaled later by <paramref name="dealtMultiplier"/> when it deals damage.
+    /// </summary>
     public StatusTick(StatusEffectDefinition definition, int amount, GameObject source, float dealtMultiplier)
     {
         Definition = definition;

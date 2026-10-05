@@ -43,6 +43,9 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
 
     private Tilemap lastOriginTilemap;
 
+    /// <summary>
+    /// The neighbor conditions a dual-grid tiling rule can require of each of the 4 data tiles around a render tile.
+    /// </summary>
     public class DualGridNeighbor
     {
         /// <summary>

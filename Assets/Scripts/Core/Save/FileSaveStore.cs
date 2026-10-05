@@ -10,6 +10,9 @@ public sealed class FileSaveStore : ISaveStore
     private readonly string filePath;
     private readonly string tempPath;
 
+    /// <summary>
+    /// Creates a store for <paramref name="filePath"/>, staging writes in a <c>.tmp</c> file beside it.
+    /// </summary>
     public FileSaveStore(string filePath)
     {
         this.filePath = filePath;
@@ -18,6 +21,10 @@ public sealed class FileSaveStore : ISaveStore
 
     public string FilePath => filePath;
 
+    /// <summary>
+    /// Reads the whole file; returns false when it does not exist, or logs an error and returns false when it cannot
+    /// be read.
+    /// </summary>
     public bool TryRead(out string contents)
     {
         contents = null;
@@ -38,6 +45,10 @@ public sealed class FileSaveStore : ISaveStore
         }
     }
 
+    /// <summary>
+    /// Creates the folder if needed, writes <paramref name="contents"/> to the temporary file and swaps it in for the
+    /// save. Logs an error and returns false when the disk refuses.
+    /// </summary>
     public bool Write(string contents)
     {
         try

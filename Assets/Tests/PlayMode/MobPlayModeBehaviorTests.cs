@@ -7,8 +7,16 @@ using UnityEngine.UI;
 using VContainer;
 using VContainer.Unity;
 
+/// <summary>
+/// PlayMode tests for mobs in the booted starting area: detection, spawning through the area scope, melee attacks
+/// and their pacing, deaths on both sides, and the player HUD.
+/// </summary>
 public class MobPlayModeBehaviorTests
 {
+    /// <summary>
+    /// A mob chases or attacks a player moved next to it, and returns, idles or patrols once the player is moved far
+    /// out of range.
+    /// </summary>
     [UnityTest]
     public IEnumerator MobInClearing_DetectsAndLosesTarget()
     {
@@ -41,6 +49,10 @@ public class MobPlayModeBehaviorTests
         player.transform.position = originalPlayerPosition;
     }
 
+    /// <summary>
+    /// Each mob spawn point spawns exactly one mob at its position, in the area scene and with its navigation grid and
+    /// player registry injected.
+    /// </summary>
     [UnityTest]
     public IEnumerator AreaMobs_AreSpawnedFromSpawnPointsIntoTheAreaScene()
     {
@@ -71,6 +83,10 @@ public class MobPlayModeBehaviorTests
         }
     }
 
+    /// <summary>
+    /// A mob instantiated at runtime through the area scope's container lands in the area scene and shares the scene
+    /// mob's navigation grid and player registry.
+    /// </summary>
     [UnityTest]
     public IEnumerator MobsSpawnedThroughAreaScope_ShareGridAndPlayer()
     {
@@ -96,6 +112,10 @@ public class MobPlayModeBehaviorTests
         Object.Destroy(secondMob.gameObject);
     }
 
+    /// <summary>
+    /// A mob's melee hit takes exactly its damage from the player and shows a damage popup on the Gameplay popup
+    /// layer, which fades out and returns to the pool.
+    /// </summary>
     [UnityTest]
     public IEnumerator MobInClearing_AttackDamagesPlayerAndPopupFadesOut()
     {
@@ -132,6 +152,9 @@ public class MobPlayModeBehaviorTests
         Assert.That(Object.FindAnyObjectByType<FloatingDamageText>(), Is.Null);
     }
 
+    /// <summary>
+    /// A mob in melee range does not hit again within 0.2 s of its first hit, but has hit again 0.9 s after it.
+    /// </summary>
     [UnityTest]
     public IEnumerator MobInClearing_AttackRespectsConfiguredInterval()
     {
@@ -162,6 +185,10 @@ public class MobPlayModeBehaviorTests
         player.transform.position = originalPlayerPosition;
     }
 
+    /// <summary>
+    /// When the player dies under attack, its movement and weapon controllers are disabled and the mob stops both
+    /// attacking and chasing.
+    /// </summary>
     [UnityTest]
     public IEnumerator PlayerInClearing_DeathDisablesControlsAndMobDisengages()
     {
@@ -191,6 +218,10 @@ public class MobPlayModeBehaviorTests
         Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Chase), "Mob should not chase a dead player.");
     }
 
+    /// <summary>
+    /// Lethal damage destroys the mob within a frame and spawns a death animation object that removes itself after
+    /// playback.
+    /// </summary>
     [UnityTest]
     public IEnumerator MobInClearing_DeathSpawnsAnimationAndDestroysMob()
     {
@@ -219,6 +250,10 @@ public class MobPlayModeBehaviorTests
         Assert.That(Object.FindAnyObjectByType<MobDeathAnimation>(), Is.Null, "Death animation object should clean itself up after playback.");
     }
 
+    /// <summary>
+    /// The HUD shows the player's health text and fill and the equipped weapon icon, and updates after damage; a sword
+    /// attack still deals the weapon's damage to an adjacent mob.
+    /// </summary>
     [UnityTest]
     public IEnumerator PlayerInClearing_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
     {
@@ -284,6 +319,10 @@ public class MobPlayModeBehaviorTests
         mob.transform.position = originalMobPosition;
     }
 
+    /// <summary>
+    /// The first <see cref="Image"/> under <paramref name="root"/>, inactive ones included, on an object named
+    /// <paramref name="objectName"/>, or null.
+    /// </summary>
     private static Image FindImageByName(Transform root, string objectName)
     {
         Image[] images = root.GetComponentsInChildren<Image>(true);
@@ -298,6 +337,10 @@ public class MobPlayModeBehaviorTests
         return null;
     }
 
+    /// <summary>
+    /// The first <see cref="TextMeshProUGUI"/> under <paramref name="root"/>, inactive ones included, on an object
+    /// named <paramref name="objectName"/>, or null.
+    /// </summary>
     private static TextMeshProUGUI FindTextByName(Transform root, string objectName)
     {
         TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
@@ -312,6 +355,9 @@ public class MobPlayModeBehaviorTests
         return null;
     }
 
+    /// <summary>
+    /// Yields <paramref name="frameCount"/> frames.
+    /// </summary>
     private static IEnumerator WaitFrames(int frameCount)
     {
         for (int i = 0; i < frameCount; i++)
@@ -320,6 +366,10 @@ public class MobPlayModeBehaviorTests
         }
     }
 
+    /// <summary>
+    /// Yields frames until <paramref name="health"/> is at or below <paramref name="expectedHealth"/>, giving up
+    /// silently after <paramref name="maxFrames"/> frames; callers assert the result.
+    /// </summary>
     private static IEnumerator WaitForHealthChange(Health health, int expectedHealth, int maxFrames)
     {
         for (int i = 0; i < maxFrames && health.CurrentHealth > expectedHealth; i++)

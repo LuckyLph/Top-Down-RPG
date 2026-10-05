@@ -6,6 +6,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// Tests for <see cref="InputBindings"/> on a copy of the project input actions and the project's rebindable
+/// action list: defaults, assigning and swapping keys, refused inputs, labels, resets, and loading saved overrides.
+/// </summary>
 public class InputBindingsTests
 {
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
@@ -24,6 +28,10 @@ public class InputBindingsTests
     private InputBindings bindings;
     private int changes;
 
+    /// <summary>
+    /// Copies the project input actions, loads the rebindable action list, and starts with an empty settings store
+    /// and no recorded changes.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -34,6 +42,9 @@ public class InputBindingsTests
         changes = 0;
     }
 
+    /// <summary>
+    /// Disposes the bindings, if created, and destroys the copied input actions.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -42,6 +53,10 @@ public class InputBindingsTests
         Object.DestroyImmediate(actions);
     }
 
+    /// <summary>
+    /// The project's rebindable list holds move, stop and the six abilities in menu order, each with a label and
+    /// a section, and the bindings expose one entry per action.
+    /// </summary>
     [Test]
     public void ProjectList_HasTheGameplayActionsInMenuOrder_WithLabelsAndSections()
     {
@@ -57,6 +72,10 @@ public class InputBindingsTests
         Assert.That(bindings.Count, Is.EqualTo(RebindableNames.Length));
     }
 
+    /// <summary>
+    /// The default bindings are the controls from the spec, no two share an input, and Point and Menu are not
+    /// rebindable.
+    /// </summary>
     [Test]
     public void Defaults_AreTheSpecsControls_WithNoDuplicates()
     {
@@ -70,6 +89,10 @@ public class InputBindingsTests
         Assert.That(bindings.IsRebindable(Action("Menu")), Is.False);
     }
 
+    /// <summary>
+    /// Assigning a free key applies it to the action, writes the settings once and raises one change
+    /// notification, with nothing swapped.
+    /// </summary>
     [Test]
     public void TryAssign_AppliesTheKey_SavesAndNotifiesOnce()
     {
@@ -84,6 +107,9 @@ public class InputBindingsTests
         Assert.That(store.WriteCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Assigning a key another action uses gives that action the old key, reports it as swapped and notifies once.
+    /// </summary>
     [Test]
     public void TryAssign_AKeyAnotherActionUses_SwapsTheTwo()
     {
@@ -97,6 +123,10 @@ public class InputBindingsTests
         Assert.That(changes, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Swapping two actions back to their defaults removes both overrides rather than storing overrides equal to
+    /// the defaults.
+    /// </summary>
     [Test]
     public void TryAssign_TheDefault_RemovesTheOverride()
     {
@@ -111,6 +141,9 @@ public class InputBindingsTests
         Assert.That(actions.SaveBindingOverridesAsJson(), Is.Empty);
     }
 
+    /// <summary>
+    /// Assigning an action the key it already has succeeds without notifying or writing the settings.
+    /// </summary>
     [Test]
     public void TryAssign_TheCurrentKey_ChangesNothing()
     {
@@ -122,6 +155,10 @@ public class InputBindingsTests
         Assert.That(store.WriteCount, Is.Zero);
     }
 
+    /// <summary>
+    /// Escape, any-key, a bare device path, empty or null paths, pointer axes and gamepad controls are refused,
+    /// leaving the binding, notifications and settings untouched.
+    /// </summary>
     [TestCase("<Keyboard>/escape")]
     [TestCase("<Keyboard>/anyKey")]
     [TestCase("<Keyboard>/")]
@@ -142,6 +179,9 @@ public class InputBindingsTests
         Assert.That(store.WriteCount, Is.Zero);
     }
 
+    /// <summary>
+    /// Assigning to an action outside the rebindable list, or to no action, is refused without writing.
+    /// </summary>
     [Test]
     public void TryAssign_RefusesActionsThatAreNotRebindable()
     {
@@ -153,6 +193,10 @@ public class InputBindingsTests
         Assert.That(store.WriteCount, Is.Zero);
     }
 
+    /// <summary>
+    /// Each mouse button can be bound to an ability and gets its own short label (also used on the ability bar)
+    /// and long label.
+    /// </summary>
     [TestCase("<Mouse>/leftButton", "LMB", "Left mouse button")]
     [TestCase("<Mouse>/rightButton", "RMB", "Right mouse button")]
     [TestCase("<Mouse>/middleButton", "MMB", "Middle mouse button")]
@@ -169,6 +213,10 @@ public class InputBindingsTests
         Assert.That(bindings.GetLabel(Action("Ability3")), Is.EqualTo(label));
     }
 
+    /// <summary>
+    /// Short labels name the bound key or mouse button, and ability slots outside the bar's range have an empty
+    /// label.
+    /// </summary>
     [Test]
     public void KeyLabels_ComeFromTheKeyboard_AndSlotsOutsideTheBarHaveNone()
     {
@@ -181,6 +229,10 @@ public class InputBindingsTests
         Assert.That(bindings.GetAbilityKeyLabel(AbilitySlots.Count), Is.Empty);
     }
 
+    /// <summary>
+    /// Resetting one action restores its default, swapping with the action that held that key, and leaves no
+    /// overrides.
+    /// </summary>
     [Test]
     public void Reset_PutsTheDefaultBack_AndSwapsWithWhoeverHadIt()
     {
@@ -195,6 +247,9 @@ public class InputBindingsTests
         Assert.That(actions.SaveBindingOverridesAsJson(), Is.Empty);
     }
 
+    /// <summary>
+    /// Resetting everything restores every default, notifies once and saves an empty override set.
+    /// </summary>
     [Test]
     public void ResetAll_RestoresEveryDefault_SavesAndNotifies()
     {
@@ -210,6 +265,9 @@ public class InputBindingsTests
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.Empty);
     }
 
+    /// <summary>
+    /// Bindings saved in one session are applied by the next one on the same store, without rewriting the file.
+    /// </summary>
     [Test]
     public void SavedBindings_AreAppliedByTheNextSession()
     {
@@ -225,6 +283,10 @@ public class InputBindingsTests
         Assert.That(store.WriteCount, Is.EqualTo(1), "Loading valid bindings does not rewrite the file.");
     }
 
+    /// <summary>
+    /// A saved override that would duplicate another action's key is dropped with a warning, both actions keep
+    /// their defaults, and the settings are rewritten without it.
+    /// </summary>
     [Test]
     public void SavedDuplicate_IsDroppedWithAWarning_AndTheFileRewritten()
     {
@@ -238,6 +300,10 @@ public class InputBindingsTests
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.Empty);
     }
 
+    /// <summary>
+    /// Saved overrides on non-rebindable actions or to forbidden inputs are dropped with a warning, while valid
+    /// ones alongside them are kept.
+    /// </summary>
     [Test]
     public void SavedOverridesOnFixedActionsOrForbiddenInputs_AreDroppedWithAWarning()
     {
@@ -251,6 +317,10 @@ public class InputBindingsTests
         Assert.That(bindings.GetPath(Action("Ability3")), Is.EqualTo("<Keyboard>/g"), "Valid overrides are kept.");
     }
 
+    /// <summary>
+    /// Saved bindings that are not valid JSON are ignored with a warning, the defaults apply, and the saved
+    /// overrides are cleared.
+    /// </summary>
     [Test]
     public void MalformedSavedBindings_AreIgnoredWithAWarning()
     {
@@ -263,6 +333,9 @@ public class InputBindingsTests
         Assert.That(new UserSettings(store).InputBindingOverrides, Is.Empty);
     }
 
+    /// <summary>
+    /// Two rebindable actions whose default inputs collide produce exactly one error on initialisation.
+    /// </summary>
     [Test]
     public void TwoActionsSharingADefault_AreReportedOnce()
     {
@@ -274,6 +347,9 @@ public class InputBindingsTests
         LogAssert.NoUnexpectedReceived();
     }
 
+    /// <summary>
+    /// Without a rebindable action list the bindings log an error, expose no actions and refuse every assignment.
+    /// </summary>
     [Test]
     public void MissingList_LogsAnError_AndNothingIsRebindable()
     {
@@ -286,6 +362,10 @@ public class InputBindingsTests
         Assert.That(bindings.TryAssign(Action("Stop"), "<Keyboard>/f", out _), Is.False);
     }
 
+    /// <summary>
+    /// Creates and initialises the bindings on the copied actions and the current store, counting each
+    /// <see cref="InputBindings.BindingsChanged"/> in <c>changes</c>.
+    /// </summary>
     private void Create()
     {
         bindings = new InputBindings(actions, list, new UserSettings(store));
@@ -293,11 +373,18 @@ public class InputBindingsTests
         bindings.Initialize();
     }
 
+    /// <summary>
+    /// Finds the action named <paramref name="name"/> in the copied asset, throwing when it does not exist.
+    /// </summary>
     private InputAction Action(string name)
     {
         return actions.FindAction(name, true);
     }
 
+    /// <summary>
+    /// Writes <paramref name="overrides"/> into the settings as a previous session would have saved them, leaves
+    /// the actions without overrides, and swaps in a fresh store holding those contents so write counts start at 0.
+    /// </summary>
     private void SaveOverrides(params (string action, string path)[] overrides)
     {
         foreach ((string action, string path) in overrides)

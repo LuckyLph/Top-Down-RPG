@@ -18,17 +18,27 @@ public class NetworkAreaTerrain : NetworkBehaviour
 
     internal int EditCount => edits.Count;
 
+    /// <summary>
+    /// Receives the area's terrain, which the edits are read from on the host and applied to on clients.
+    /// </summary>
     [Inject]
     public void Construct(AreaTerrain areaTerrain)
     {
         terrain = areaTerrain;
     }
 
+    /// <summary>
+    /// The replicated edit at <paramref name="index"/>, for tests.
+    /// </summary>
     internal TerrainEdit GetEdit(int index)
     {
         return edits[index];
     }
 
+    /// <summary>
+    /// On the host, copies every edit recorded so far into the replicated list and follows new ones; on a client,
+    /// applies the whole list at once and then follows its changes. Logs an error when no terrain was injected.
+    /// </summary>
     public override void OnNetworkSpawn()
     {
         if (terrain == null)
@@ -59,6 +69,9 @@ public class NetworkAreaTerrain : NetworkBehaviour
         terrain.ApplyReplicated(pending);
     }
 
+    /// <summary>
+    /// Stops following the terrain's recorded edits and the replicated list's changes.
+    /// </summary>
     public override void OnNetworkDespawn()
     {
         if (terrain != null)
@@ -69,6 +82,10 @@ public class NetworkAreaTerrain : NetworkBehaviour
         edits.OnListChanged -= HandleListChanged;
     }
 
+    /// <summary>
+    /// Host only: mirrors the terrain edit at <paramref name="index"/> into the replicated list, replacing or
+    /// appending it.
+    /// </summary>
     private void WriteEdit(int index)
     {
         if (index < edits.Count)
@@ -81,6 +98,9 @@ public class NetworkAreaTerrain : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Client only: applies an added, inserted or replaced edit to the terrain; other list changes are ignored.
+    /// </summary>
     private void HandleListChanged(NetworkListEvent<TerrainEdit> change)
     {
         if (change.Type != NetworkListEvent<TerrainEdit>.EventType.Add

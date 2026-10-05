@@ -2,8 +2,16 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Assets/Create menu entry for new <see cref="DualGridRuleTile"/> assets, set up from the selected texture when there
+/// is one.
+/// </summary>
 public static class DualGridRuleTileMenu
 {
+    /// <summary>
+    /// Creates a rule tile asset in the selected folder or next to the selected asset, applying the selected texture
+    /// first (aborting if it is rejected), then adds its data tile as a sub-asset and selects the new tile.
+    /// </summary>
     [MenuItem("Assets/Create/2D/Tiles/Dual Grid Rule Tile", false, 50)]
     private static void CreateDualGridRuleTile()
     {
@@ -33,6 +41,9 @@ public static class DualGridRuleTileMenu
         Selection.activeObject = newRuleTile;
     }
 
+    /// <summary>
+    /// Whether the active selection is a <see cref="Texture2D"/>; <paramref name="selectedTexture2d"/> is null if not.
+    /// </summary>
     private static bool TryGetSelectedTexture2D(out Texture2D selectedTexture2d)
     {
         if (Selection.activeObject is Texture2D texture2d)

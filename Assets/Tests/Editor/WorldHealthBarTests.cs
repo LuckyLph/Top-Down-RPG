@@ -3,6 +3,10 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Tests for <see cref="WorldHealthBar"/>: the fill tracking health, hiding while dead, and the weasel prefab's
+/// bar setup.
+/// </summary>
 public class WorldHealthBarTests
 {
     private readonly List<Object> createdObjects = new();
@@ -10,6 +14,10 @@ public class WorldHealthBarTests
     private WorldHealthBar bar;
     private SpriteRenderer fill;
 
+    /// <summary>
+    /// Builds a unit with a <see cref="Health"/> and a child health bar whose sliced frame and fill use the
+    /// project's rounded bar sprite.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -24,6 +32,9 @@ public class WorldHealthBarTests
         bar.Configure(health, frame, fill);
     }
 
+    /// <summary>
+    /// Destroys the unit, and with it the health bar.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -38,6 +49,10 @@ public class WorldHealthBarTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Damage shrinks the fill to the health fraction while its left edge stays put, so the bar empties from the
+    /// right.
+    /// </summary>
     [Test]
     public void Damage_ShrinksTheFillTowardTheLeftEdge()
     {
@@ -55,6 +70,10 @@ public class WorldHealthBarTests
         Assert.That(fill.bounds.min.x, Is.EqualTo(leftEdge).Within(0.001f), "The bar empties from the right, like League minion bars.");
     }
 
+    /// <summary>
+    /// A health value set by a network sync, which raises no events, still shows on the next refresh because the
+    /// bar polls health.
+    /// </summary>
     [Test]
     public void SilentHealthSyncs_AreShownToo()
     {
@@ -66,6 +85,9 @@ public class WorldHealthBarTests
         Assert.That(bar.FillFraction, Is.EqualTo(4f / health.MaxHealth).Within(0.001f), "Network syncs set health without events, so the bar polls it.");
     }
 
+    /// <summary>
+    /// The bar hides, fill included, while the unit is dead and shows full again once health is restored.
+    /// </summary>
     [Test]
     public void TheBarHidesWhileDead_AndReturnsOnRestore()
     {
@@ -80,6 +102,11 @@ public class WorldHealthBarTests
         Assert.That(bar.FillFraction, Is.EqualTo(1f));
     }
 
+    /// <summary>
+    /// The weasel prefab's health bar reads the weasel's health and draws a thin, sliced, bright red fill over
+    /// its frame with unlit materials on the Overlay sorting layer, which sorts above units, and sits above the
+    /// weasel's head.
+    /// </summary>
     [Test]
     public void WeaselPrefab_HasAThinBarOnTheOverlayLayerAboveItsHead()
     {
@@ -105,6 +132,10 @@ public class WorldHealthBarTests
         Assert.That(SortingLayer.GetLayerValueFromName("Overlay"), Is.GreaterThan(SortingLayer.GetLayerValueFromName("Entities")), "Bars draw over every unit.");
     }
 
+    /// <summary>
+    /// Creates a child sprite renderer of <paramref name="parent"/> that draws <paramref name="sprite"/> sliced
+    /// at <paramref name="size"/>.
+    /// </summary>
     private SpriteRenderer Part(GameObject parent, string name, Sprite sprite, Vector2 size)
     {
         GameObject part = new(name);
@@ -116,6 +147,9 @@ public class WorldHealthBarTests
         return renderer;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

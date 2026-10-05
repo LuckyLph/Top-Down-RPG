@@ -3,6 +3,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using VContainer;
 
+/// <summary>
+/// The main menu's buttons: new game, continue from the save, host, join an address, options and quit. Starting
+/// anything is refused while a transition runs or a join is in progress, and a status line reports save and
+/// connection problems.
+/// </summary>
 [DisallowMultipleComponent]
 public class MainMenuController : MonoBehaviour
 {
@@ -24,6 +29,9 @@ public class MainMenuController : MonoBehaviour
     internal Button OptionsButton => optionsButton;
     internal GameObject ButtonsPanel => buttonsPanel;
 
+    /// <summary>
+    /// Receives the scene flow, network session, save, options screen and UI selection services.
+    /// </summary>
     [Inject]
     public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save, OptionsMenuController optionsMenu, UISelection uiSelection)
     {
@@ -34,6 +42,9 @@ public class MainMenuController : MonoBehaviour
         selection = uiSelection;
     }
 
+    /// <summary>
+    /// Logs an error when the Continue button, the buttons panel or the Options button is missing.
+    /// </summary>
     private void Awake()
     {
         if (continueButton == null)
@@ -47,6 +58,10 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Enables Continue only when a save exists and selects it (or the first button otherwise), fills an empty
+    /// join address with the session's default and clears the status line.
+    /// </summary>
     private void Start()
     {
         bool hasSave = gameSave != null && gameSave.HasSave;
@@ -69,6 +84,9 @@ public class MainMenuController : MonoBehaviour
         SetStatus(string.Empty);
     }
 
+    /// <summary>
+    /// New game button: starts an offline game in the starting area.
+    /// </summary>
     public void StartNewGame()
     {
         if (!CanStartGame())
@@ -79,6 +97,9 @@ public class MainMenuController : MonoBehaviour
         _ = gameFlow.StartNewGameAsync();
     }
 
+    /// <summary>
+    /// Continue button: starts an offline game in the saved area and spawn, or reports that there is no save.
+    /// </summary>
     public void ContinueGame()
     {
         if (!CanStartGame())
@@ -95,6 +116,10 @@ public class MainMenuController : MonoBehaviour
         _ = gameFlow.StartNewGameAsync(area, spawnId);
     }
 
+    /// <summary>
+    /// Host button: starts hosting and then a game in the saved area, or the starting area when there is no save.
+    /// Reports and logs a failure to start the host.
+    /// </summary>
     public void HostGame()
     {
         if (!CanStartGame())
@@ -113,6 +138,9 @@ public class MainMenuController : MonoBehaviour
         _ = gameFlow.StartNewGameAsync(area, spawnId);
     }
 
+    /// <summary>
+    /// Join button: connects to the address in the join field in the background.
+    /// </summary>
     public void JoinGame()
     {
         if (!CanStartGame())
@@ -123,6 +151,10 @@ public class MainMenuController : MonoBehaviour
         _ = JoinGameAsync();
     }
 
+    /// <summary>
+    /// Connects to the host within the session's timeout, blocking other starts meanwhile, and reports the
+    /// result: connected, refused with the host's reason, or unreachable. Stops quietly if the menu is destroyed.
+    /// </summary>
     private async Awaitable JoinGameAsync()
     {
         isJoining = true;
@@ -168,6 +200,9 @@ public class MainMenuController : MonoBehaviour
         options.Open(HandleOptionsClosed);
     }
 
+    /// <summary>
+    /// Brings the menu buttons back with Options selected when the options screen closes.
+    /// </summary>
     private void HandleOptionsClosed()
     {
         SetButtonsShown(true);
@@ -177,6 +212,9 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows or hides the panel holding the menu buttons.
+    /// </summary>
     private void SetButtonsShown(bool shown)
     {
         if (buttonsPanel != null)
@@ -185,16 +223,26 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Quit button: closes the application.
+    /// </summary>
     public void QuitGame()
     {
         ApplicationExit.Quit();
     }
 
+    /// <summary>
+    /// True when the menu was injected and neither a join nor a scene transition is in progress.
+    /// </summary>
     private bool CanStartGame()
     {
         return EnsureInjected() && !isJoining && !gameFlow.IsTransitioning;
     }
 
+    /// <summary>
+    /// True when the flow, session and save were injected; otherwise logs an error pointing at loading the menu
+    /// through the Main scene.
+    /// </summary>
     private bool EnsureInjected()
     {
         if (gameFlow != null && session != null && gameSave != null)
@@ -206,6 +254,9 @@ public class MainMenuController : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Shows <paramref name="message"/> on the status line, when there is one.
+    /// </summary>
     private void SetStatus(string message)
     {
         if (statusText != null)

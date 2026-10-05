@@ -18,10 +18,16 @@ public class TerrainMovementProfile2D : ScriptableObject
         [SerializeField] private bool isWalkable = true;
         [SerializeField, Min(1)] private int traversalCost = 10;
 
+        /// <summary>
+        /// Parameterless constructor for serialization: a walkable rule with no terrain type at cost 10.
+        /// </summary>
         public TerrainRule()
         {
         }
 
+        /// <summary>
+        /// Creates a rule for <paramref name="terrainType"/>, raising <paramref name="traversalCost"/> to at least 1.
+        /// </summary>
         public TerrainRule(TerrainType2D terrainType, bool isWalkable, int traversalCost)
         {
             this.terrainType = terrainType;
@@ -49,6 +55,10 @@ public class TerrainMovementProfile2D : ScriptableObject
     public int DefaultTraversalCost => Mathf.Max(1, defaultTraversalCost);
     public int EdgeCost => Mathf.Max(0, edgeCost);
 
+    /// <summary>
+    /// Whether <paramref name="terrainType"/> is walkable and at what cost: its rule's values, or the profile defaults
+    /// when it has no rule or is null. Always returns true.
+    /// </summary>
     public bool TryGetTraversal(TerrainType2D terrainType, out bool isWalkable, out int traversalCost)
     {
         if (terrainType != null && TryGetRule(terrainType, out TerrainRule rule))
@@ -63,6 +73,10 @@ public class TerrainMovementProfile2D : ScriptableObject
         return true;
     }
 
+    /// <summary>
+    /// The cheapest cost of any walkable terrain under this profile, cached until the asset is edited. The pathfinding
+    /// heuristic uses it as its step cost.
+    /// </summary>
     public int GetMinimumTraversalCost()
     {
         if (minimumTraversalCost < 0)
@@ -98,6 +112,10 @@ public class TerrainMovementProfile2D : ScriptableObject
         return profile;
     }
 
+    /// <summary>
+    /// The lowest cost among the default (when walkable) and the walkable rules, or the default cost when nothing is
+    /// walkable.
+    /// </summary>
     private int CalculateMinimumTraversalCost()
     {
         int minimum = int.MaxValue;
@@ -120,12 +138,19 @@ public class TerrainMovementProfile2D : ScriptableObject
         return minimum == int.MaxValue ? Mathf.Max(1, defaultTraversalCost) : minimum;
     }
 
+    /// <summary>
+    /// Finds the rule for <paramref name="terrainType"/>, building the lookup on first use.
+    /// </summary>
     private bool TryGetRule(TerrainType2D terrainType, out TerrainRule rule)
     {
         EnsureLookup();
         return ruleLookup.TryGetValue(terrainType, out rule);
     }
 
+    /// <summary>
+    /// Builds the terrain-to-rule lookup from the rules list when missing, skipping empty rules; a later rule for the
+    /// same terrain type wins.
+    /// </summary>
     private void EnsureLookup()
     {
         if (ruleLookup != null)
@@ -146,6 +171,9 @@ public class TerrainMovementProfile2D : ScriptableObject
         }
     }
 
+    /// <summary>
+    /// Drops the cached lookup and minimum cost so they are rebuilt from the serialized data.
+    /// </summary>
     private void OnEnable()
     {
         ruleLookup = null;
@@ -153,6 +181,9 @@ public class TerrainMovementProfile2D : ScriptableObject
     }
 
 #if UNITY_EDITOR
+    /// <summary>
+    /// Clamps the inspector values, drops the caches and bumps <see cref="Version"/> so grids rebake their cost fields.
+    /// </summary>
     private void OnValidate()
     {
         defaultTraversalCost = Mathf.Max(1, defaultTraversalCost);

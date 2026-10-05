@@ -5,10 +5,17 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for host area announcements, the per-area client readiness gate and host restarts, using an
+/// in-process client.
+/// </summary>
 public class NetworkAreaSyncPlayModeTests
 {
     private InProcessClient client;
 
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -16,6 +23,11 @@ public class NetworkAreaSyncPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// A late joiner is told the host's area as a new session and each area change comes with the next epoch. The new
+    /// area's mob reaches a client only once it reports ready for that epoch (a report for the old epoch is ignored);
+    /// until then its player is held, so its statuses neither tick nor run down. Readying never adds a second player.
+    /// </summary>
     [UnityTest]
     public IEnumerator Host_AnnouncesAreas_AndOnlySendsNewAreaObjectsToClientsReadyForThatArea()
     {
@@ -87,6 +99,10 @@ public class NetworkAreaSyncPlayModeTests
         Assert.That(client.Players.Players.Count, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// Starting a new game in the current area while hosting bumps the area epoch, keeps the session running and
+    /// spawns a networked local player again.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostRestart_AnnouncesANewSession_AndRespawnsItsPlayer()
     {
@@ -109,11 +125,17 @@ public class NetworkAreaSyncPlayModeTests
         Assert.That(localPlayer.Current.Controller.GetComponent<NetworkObject>().IsSpawned, Is.True);
     }
 
+    /// <summary>
+    /// Resolves <typeparamref name="T"/> from the host's Gameplay scope.
+    /// </summary>
     private static T ResolveGameplay<T>()
     {
         return Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<T>();
     }
 
+    /// <summary>
+    /// The first spawned mob copy that belongs to <paramref name="manager"/> (host or client side), or null.
+    /// </summary>
     private static MobController FindMobManagedBy(NetworkManager manager)
     {
         foreach (MobController mob in Object.FindObjectsByType<MobController>())
@@ -128,6 +150,9 @@ public class NetworkAreaSyncPlayModeTests
         return null;
     }
 
+    /// <summary>
+    /// How many players in <paramref name="players"/> are owned by <paramref name="clientId"/>.
+    /// </summary>
     private static int CountPlayersOwnedBy(PlayerRegistry players, ulong clientId)
     {
         int count = 0;
@@ -142,6 +167,9 @@ public class NetworkAreaSyncPlayModeTests
         return count;
     }
 
+    /// <summary>
+    /// Yields <paramref name="count"/> frames.
+    /// </summary>
     private static IEnumerator Frames(int count)
     {
         for (int i = 0; i < count; i++)

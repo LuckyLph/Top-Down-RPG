@@ -3,8 +3,16 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// PlayMode tests for the in-game menu: pausing and input gating in solo play, and leaving to the main menu solo or
+/// while hosting.
+/// </summary>
 public class GameMenuPlayModeTests
 {
+    /// <summary>
+    /// In solo play, opening the menu stops time and gameplay input while keeping the menu key live, and closing it
+    /// restores both.
+    /// </summary>
     [UnityTest]
     public IEnumerator Solo_TheMenuPausesTheGame_AndBlocksGameplayInputUntilItCloses()
     {
@@ -29,6 +37,10 @@ public class GameMenuPlayModeTests
         Assert.That(input.GameplayEnabled, Is.True);
     }
 
+    /// <summary>
+    /// Leave from the paused solo menu goes straight to the main menu without a confirmation, with time running again
+    /// and both gameplay and menu input off.
+    /// </summary>
     [UnityTest]
     public IEnumerator Solo_LeavingFromAPause_ReachesTheMainMenuWithTimeRunning()
     {
@@ -49,6 +61,10 @@ public class GameMenuPlayModeTests
         Assert.That(input.MenusEnabled, Is.False, "The menu key is off outside the game.");
     }
 
+    /// <summary>
+    /// While hosting, the menu blocks gameplay input but does not pause time, and Leave asks for confirmation before
+    /// returning to the main menu and shutting the session down.
+    /// </summary>
     [UnityTest]
     public IEnumerator Hosting_TheMenuPausesNothing_AndLeavingAsksFirstThenEndsTheSession()
     {

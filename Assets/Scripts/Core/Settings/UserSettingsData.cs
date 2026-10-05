@@ -10,12 +10,18 @@ public sealed class UserSettingsData
     [SerializeField] private int version;
     [SerializeField] private string inputBindingOverrides;
 
+    /// <summary>
+    /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/>.
+    /// </summary>
     public UserSettingsData(string inputBindingOverrides)
     {
         version = CurrentVersion;
         this.inputBindingOverrides = inputBindingOverrides;
     }
 
+    /// <summary>
+    /// Creates empty data (version 0) for <see cref="TryParse"/> to fill from JSON.
+    /// </summary>
     private UserSettingsData()
     {
     }
@@ -23,11 +29,18 @@ public sealed class UserSettingsData
     public int Version => version;
     public string InputBindingOverrides => inputBindingOverrides ?? string.Empty;
 
+    /// <summary>
+    /// The data as pretty-printed JSON.
+    /// </summary>
     public string ToJson()
     {
         return JsonUtility.ToJson(this, true);
     }
 
+    /// <summary>
+    /// Parses <paramref name="json"/>; false only when it is not valid JSON. Missing fields keep their defaults (a
+    /// missing version reads as 0), so callers still check <see cref="Version"/>.
+    /// </summary>
     public static bool TryParse(string json, out UserSettingsData data)
     {
         data = new UserSettingsData();

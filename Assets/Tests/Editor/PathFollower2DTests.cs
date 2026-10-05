@@ -5,6 +5,10 @@ using UnityEngine.Tilemaps;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="PathFollower2D"/>: path building, steering, stall tracking, reacting to grid changes, the
+/// straight-line shortcut, allocations, and parity with <see cref="MobPathAgent2D"/> on random grids.
+/// </summary>
 public class PathFollower2DTests
 {
     private const float WaypointReachDistance = 0.05f;
@@ -17,6 +21,9 @@ public class PathFollower2DTests
     private Tile fillTile;
     private NavigationGrid2D navigationGrid;
 
+    /// <summary>
+    /// Destroys every object and asset the test tracked.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -31,6 +38,10 @@ public class PathFollower2DTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// A path to the far side of a wall goes through its gap and smooths to the same three waypoints the old mob
+    /// path agent produced.
+    /// </summary>
     [Test]
     public void BuildPath_RoutesThroughTheGapInAWall_WithTheOldAgentsWaypoints()
     {
@@ -48,6 +59,10 @@ public class PathFollower2DTests
         Assert.That(follower.ReachedResolvedGoal, Is.True);
     }
 
+    /// <summary>
+    /// When a cell on the current path stops being walkable, the next tick rebuilds a walkable detour to the same
+    /// goal and keeps moving.
+    /// </summary>
     [Test]
     public void Tick_RebuildsThePath_WhenTheGridBlocksACellOnIt()
     {
@@ -78,6 +93,9 @@ public class PathFollower2DTests
         }
     }
 
+    /// <summary>
+    /// A grid change to a cell off the current path leaves the path untouched.
+    /// </summary>
     [Test]
     public void Tick_KeepsThePath_WhenTheGridChangesOffIt()
     {
@@ -97,6 +115,9 @@ public class PathFollower2DTests
         Assert.That(follower.Waypoints, Is.EqualTo(new[] { goal }));
     }
 
+    /// <summary>
+    /// When a grid change cuts every route to the goal, the next tick drops the path and returns zero velocity.
+    /// </summary>
     [Test]
     public void Tick_StopsWhenTheGridLeavesNoRoute()
     {
@@ -119,6 +140,10 @@ public class PathFollower2DTests
         Assert.That(follower.HasPath, Is.False);
     }
 
+    /// <summary>
+    /// Toward an unreachable goal, a partial build ends at the closest reachable cell, while a strict build fails,
+    /// leaves no path and clears the goal cell.
+    /// </summary>
     [Test]
     public void BuildPath_TowardAnUnreachableGoal_EndsAtTheClosestCellWhenPartial_AndFailsWhenStrict()
     {
@@ -144,6 +169,10 @@ public class PathFollower2DTests
         Assert.That(follower.HasGoalCell, Is.False, "A failed build clears the goal, as the mob agent always did.");
     }
 
+    /// <summary>
+    /// Ticking steers at full move speed toward the next waypoint, advances past reached waypoints, and stops
+    /// once within the arrival distance of the last one.
+    /// </summary>
     [Test]
     public void Tick_SteersTowardTheNextWaypointAtMoveSpeed_AndUsesArrivalDistanceForTheLastOne()
     {
@@ -172,6 +201,9 @@ public class PathFollower2DTests
         Assert.That(follower.HasPath, Is.False);
     }
 
+    /// <summary>
+    /// Stalled time adds each tick's delta while the position stays put and resets to zero once it moves.
+    /// </summary>
     [Test]
     public void StalledTime_GrowsByTheGivenDeltaWhileNotMoving_AndResetsOnProgress()
     {
@@ -193,6 +225,10 @@ public class PathFollower2DTests
         Assert.That(follower.StalledTime, Is.Zero);
     }
 
+    /// <summary>
+    /// After a warm-up call, building paths (with and without the straight-line shortcut), ticking and
+    /// reachability checks allocate no managed memory.
+    /// </summary>
     [Test]
     public void BuildPathTickAndCanReach_DoNotAllocate_OnceWarmedUp()
     {
@@ -223,6 +259,10 @@ public class PathFollower2DTests
         Assert.That(follower.Waypoints.Count, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// A follower that was never configured builds no path, reaches nothing, steers at zero velocity and counts
+    /// as arrived.
+    /// </summary>
     [Test]
     public void Unconfigured_BuildsNothing_AndReturnsZeroVelocity()
     {
@@ -235,6 +275,10 @@ public class PathFollower2DTests
         Assert.That(follower.ReachedDestination, Is.True);
     }
 
+    /// <summary>
+    /// With the shortcut on, a clear straight line over uniform ground becomes a single waypoint at the exact goal
+    /// without running A*.
+    /// </summary>
     [Test]
     public void StraightLineShortcut_SkipsAStar_WhenTheLineIsClearAndOptimal()
     {
@@ -260,6 +304,10 @@ public class PathFollower2DTests
         Assert.That(follower.LastGoalCell, Is.EqualTo(navigationGrid.WorldToCell(goal)));
     }
 
+    /// <summary>
+    /// With the shortcut on, a wall across the straight line makes the follower fall back to A* and produce the
+    /// same waypoints as a follower without the shortcut.
+    /// </summary>
     [Test]
     public void StraightLineShortcut_FallsBackToAStar_WhenAWallBlocksTheLine()
     {
@@ -280,6 +328,10 @@ public class PathFollower2DTests
         Assert.That(shortcutFollower.Waypoints.Count, Is.EqualTo(3));
     }
 
+    /// <summary>
+    /// With the shortcut on, a straight line through costlier mud falls back to A* and takes the same cheaper
+    /// detour as a follower without the shortcut.
+    /// </summary>
     [Test]
     public void StraightLineShortcut_FallsBackToAStar_WhenTheLineCrossesCostlierTerrain()
     {
@@ -304,6 +356,10 @@ public class PathFollower2DTests
         Assert.That(shortcutFollower.Waypoints.Count, Is.GreaterThan(1), "The cheaper route detours around the mud.");
     }
 
+    /// <summary>
+    /// On seeded random grids with holes and mud, the follower matches <see cref="MobPathAgent2D"/> on
+    /// reachability, path builds, path state and steering at every tick of each walk, including stalled ticks.
+    /// </summary>
     [Test]
     public void MatchesMobPathAgent2D_OnRandomGrids()
     {
@@ -352,6 +408,10 @@ public class PathFollower2DTests
         }
     }
 
+    /// <summary>
+    /// Asserts the follower and the agent agree on every piece of path state, labelling failures with
+    /// <paramref name="context"/>.
+    /// </summary>
     private static void AssertSameState(MobPathAgent2D agent, PathFollower2D follower, string context)
     {
         Assert.That(follower.HasPath, Is.EqualTo(agent.HasPath), context);
@@ -365,6 +425,10 @@ public class PathFollower2DTests
         Assert.That(follower.Waypoints, Is.EqualTo(agent.Waypoints), context);
     }
 
+    /// <summary>
+    /// Creates a follower on the current grid for <paramref name="profile"/> with the test's waypoint reach and
+    /// arrival distances.
+    /// </summary>
     private PathFollower2D CreateFollower(TerrainMovementProfile2D profile, bool useStraightLineShortcut = false)
     {
         PathFollower2D follower = new();
@@ -375,6 +439,11 @@ public class PathFollower2DTests
         return follower;
     }
 
+    /// <summary>
+    /// Builds a <paramref name="width"/> by <paramref name="height"/> grid with about a quarter of the cells left
+    /// as holes and some ground cells also covered in mud, and returns a profile that walks both, mud at a higher
+    /// cost.
+    /// </summary>
     private TerrainMovementProfile2D BuildRandomGrid(System.Random random, int width, int height)
     {
         CreateGridRoot();
@@ -409,6 +478,10 @@ public class PathFollower2DTests
         return profile;
     }
 
+    /// <summary>
+    /// Picks random cells until one is walkable for <paramref name="profile"/> and returns a point jittered within
+    /// it.
+    /// </summary>
     private Vector2 RandomWalkablePoint(System.Random random, TerrainMovementProfile2D profile, int width, int height)
     {
         while (true)
@@ -422,6 +495,10 @@ public class PathFollower2DTests
         }
     }
 
+    /// <summary>
+    /// Creates a mob with a motor and path agent on the current grid, configured with the same speed, distances
+    /// and profile as the followers, and returns the agent with its rigidbody.
+    /// </summary>
     private (MobPathAgent2D, Rigidbody2D) CreateMobAgent(TerrainMovementProfile2D profile)
     {
         MobConfig config = Track(MobConfig.Create(
@@ -439,12 +516,18 @@ public class PathFollower2DTests
         return (agent, body);
     }
 
+    /// <summary>
+    /// Moves the rigidbody and its transform to <paramref name="position"/> at once.
+    /// </summary>
     private static void PlaceBody(Rigidbody2D body, Vector2 position)
     {
         body.position = position;
         body.transform.position = position;
     }
 
+    /// <summary>
+    /// Creates a new tracked grid root, and the shared fill tile on first use.
+    /// </summary>
     private void CreateGridRoot()
     {
         root = Track(new GameObject("PathFollowerTestRoot"));
@@ -455,6 +538,10 @@ public class PathFollower2DTests
         }
     }
 
+    /// <summary>
+    /// Adds a tilemap under the root painted on <paramref name="cells"/> and marked as <paramref name="terrain"/>
+    /// for the grid.
+    /// </summary>
     private Tilemap AddTerrainLayer(string name, TerrainType2D terrain, IEnumerable<Vector3Int> cells)
     {
         GameObject layerObject = new(name);
@@ -470,22 +557,35 @@ public class PathFollower2DTests
         return tilemap;
     }
 
+    /// <summary>
+    /// Adds a navigation grid to the root and builds it from the layers added so far.
+    /// </summary>
     private void BuildGrid()
     {
         navigationGrid = root.AddComponent<NavigationGrid2D>();
         navigationGrid.BuildGrid();
     }
 
+    /// <summary>
+    /// Creates a tracked in-memory terrain type with the given id.
+    /// </summary>
     private TerrainType2D CreateTerrain(string id)
     {
         return Track(TerrainType2D.Create(id));
     }
 
+    /// <summary>
+    /// Creates a tracked movement profile that blocks unlisted terrain and applies <paramref name="rules"/>.
+    /// </summary>
     private TerrainMovementProfile2D CreateProfile(params TerrainMovementProfile2D.TerrainRule[] rules)
     {
         return Track(TerrainMovementProfile2D.Create(false, 10, rules));
     }
 
+    /// <summary>
+    /// Lists every cell of the rectangle from (<paramref name="minX"/>, <paramref name="minY"/>) to
+    /// (<paramref name="maxX"/>, <paramref name="maxY"/>), bounds included.
+    /// </summary>
     private static List<Vector3Int> Rect(int minX, int minY, int maxX, int maxY)
     {
         List<Vector3Int> cells = new();
@@ -500,6 +600,9 @@ public class PathFollower2DTests
         return cells;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction on teardown and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

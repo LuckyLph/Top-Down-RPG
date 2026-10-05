@@ -2,6 +2,11 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+/// <summary>
+/// Sorts a sprite object by its height in the world: sets its sorting order to an offset minus its y times a
+/// multiplier, so lower objects draw in front. Writes a <see cref="SortingGroup"/> when there is one, else every
+/// cached renderer, keeping their relative orders. Runs in edit mode too.
+/// </summary>
 [DisallowMultipleComponent]
 [ExecuteAlways]
 public class YPositionSorter : MonoBehaviour
@@ -17,34 +22,52 @@ public class YPositionSorter : MonoBehaviour
     private int[] cachedOrderOffsets = Array.Empty<int>();
     private int lastAppliedOrder = int.MinValue;
 
+    /// <summary>
+    /// Caches the sorting group and renderers.
+    /// </summary>
     private void Awake()
     {
         CacheTargets();
     }
 
+    /// <summary>
+    /// Caches the targets again and applies the sorting order at once.
+    /// </summary>
     private void OnEnable()
     {
         CacheTargets();
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Caches the targets again and reapplies the sorting order after an inspector change.
+    /// </summary>
     private void OnValidate()
     {
         CacheTargets();
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Reapplies the sorting order after the frame's movement; writes only when the order changed.
+    /// </summary>
     private void LateUpdate()
     {
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Sets the constant added to the sorting order and reapplies it.
+    /// </summary>
     public void SetSortingOrderOffset(int offset)
     {
         sortingOrderOffset = offset;
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Sorts by <paramref name="referenceY"/> instead of the object's own y until <see cref="ClearSortingReferenceY"/>.
+    /// </summary>
     public void SetSortingReferenceY(float referenceY)
     {
         useSortingReferenceY = true;
@@ -52,12 +75,19 @@ public class YPositionSorter : MonoBehaviour
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Goes back to sorting by the object's own y.
+    /// </summary>
     public void ClearSortingReferenceY()
     {
         useSortingReferenceY = false;
         ApplySortingOrder();
     }
 
+    /// <summary>
+    /// Finds the sorting group and the renderers (children included when set), records each renderer's order relative
+    /// to the group's order or the lowest renderer order, and forces the next apply to write.
+    /// </summary>
     private void CacheTargets()
     {
         if (sortingGroup == null)
@@ -86,6 +116,10 @@ public class YPositionSorter : MonoBehaviour
         lastAppliedOrder = int.MinValue;
     }
 
+    /// <summary>
+    /// Computes the order from the y position and writes it to the sorting group, or to each renderer plus its
+    /// recorded offset; skips the write when the order is unchanged.
+    /// </summary>
     private void ApplySortingOrder()
     {
         float sourceY = useSortingReferenceY ? sortingReferenceY : transform.position.y;
@@ -116,6 +150,9 @@ public class YPositionSorter : MonoBehaviour
         lastAppliedOrder = targetOrder;
     }
 
+    /// <summary>
+    /// The lowest sorting order among <paramref name="renderers"/>, or 0 when there are none.
+    /// </summary>
     private static int GetLowestSortingOrder(Renderer[] renderers)
     {
         int lowestSortingOrder = 0;

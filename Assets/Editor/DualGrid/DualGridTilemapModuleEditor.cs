@@ -4,10 +4,18 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Inspector for <see cref="DualGridTilemapModule"/>: keeps the render tilemap child and tilemap colliders consistent
+/// with the module settings, and draws optional data and render tile handles in the scene view. Also hosts the
+/// factory methods that create dual-grid tilemaps.
+/// </summary>
 [CanEditMultipleObjects]
 [CustomEditor(typeof(DualGridTilemapModule))]
 public class DualGridTilemapModuleEditor : UnityEditor.Editor
 {
+    /// <summary>
+    /// Labels and tooltips used by the inspector.
+    /// </summary>
     private static class Styles
     {
         public static readonly GUIContent RenderTile = EditorGUIUtility.TrTextContent("Dual Grid Rule Tile", "The Render Tile that will be applied in the Render Tilemap.");
@@ -25,12 +33,19 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
     private bool showRenderTileBoundaries = false;
     private bool showRenderTileConnections = false;
 
+    /// <summary>
+    /// Creates a root "Dual Grid" GameObject with a <see cref="Grid"/> in the active scene.
+    /// </summary>
     public static Grid CreateNewDualGrid()
     {
         var newDualGrid = new GameObject("Dual Grid");
         return newDualGrid.AddComponent<Grid>();
     }
 
+    /// <summary>
+    /// Creates a data tilemap with a <see cref="DualGridTilemapModule"/> under <paramref name="grid"/> (a new grid when
+    /// null) and gives it a render tilemap child and matching colliders.
+    /// </summary>
     public static DualGridTilemapModule CreateNewDualGridTilemap(Grid grid = null)
     {
         if (grid == null) grid = CreateNewDualGrid();
@@ -45,6 +60,9 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         return dualGridTilemapModule;
     }
 
+    /// <summary>
+    /// Caches the inspected modules and repairs each one's render tilemap, stray renderer and colliders.
+    /// </summary>
     private void OnEnable()
     {
         targetDualGridTilemapModule = (DualGridTilemapModule)target;
@@ -57,6 +75,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         targetDualGridTilemapModules.ForEach(dualGridTilemapModule => InitializeRenderTilemap(dualGridTilemapModule));
     }
 
+    /// <summary>
+    /// Creates the render tilemap child when missing, removes any renderer from the data tilemap and syncs the
+    /// tilemap colliders. Ignores a null module.
+    /// </summary>
     private static void InitializeRenderTilemap(DualGridTilemapModule dualGridTilemapModule)
     {
         if (dualGridTilemapModule == null) return;
@@ -70,6 +92,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         UpdateTilemapColliderComponents(dualGridTilemapModule);
     }
 
+    /// <summary>
+    /// Creates the "RenderTilemap" child of <paramref name="targetModule"/>, offset by half a cell so its cells sit on
+    /// the data tilemap's corners, with its own tilemap and renderer.
+    /// </summary>
     internal static GameObject CreateRenderTilemapObject(DualGridTilemapModule targetModule)
     {
         var renderTilemapObject = new GameObject("RenderTilemap");
@@ -82,12 +108,20 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         return renderTilemapObject;
     }
 
+    /// <summary>
+    /// Destroys a <see cref="TilemapRenderer"/> on the data tilemap, with a warning, since only the render tilemap
+    /// draws.
+    /// </summary>
     private static void DestroyTilemapRendererInDataTilemap(DualGridTilemapModule dualGridTilemapModule)
     {
         TilemapRenderer renderer = dualGridTilemapModule.GetComponent<TilemapRenderer>();
         DestroyComponentIfExists(renderer, "Dual Grid Tilemaps cannot have TilemapRenderers in the same GameObject. TilemapRenderer has been destroyed.");
     }
 
+    /// <summary>
+    /// Adds or removes <see cref="TilemapCollider2D"/> components to match the module and data tile: none when
+    /// colliders are disabled or the type is None, on the render tilemap for Sprite, on the data tilemap for Grid.
+    /// </summary>
     internal static void UpdateTilemapColliderComponents(DualGridTilemapModule dualGridTilemapModule, bool shouldLogWarnings = true)
     {
         TilemapCollider2D tilemapColliderFromDataTilemap = dualGridTilemapModule.DataTilemap.GetComponent<TilemapCollider2D>();
@@ -124,6 +158,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// Immediately destroys <paramref name="component"/> when it exists, logging <paramref name="warningMessage"/>
+    /// first unless it is null.
+    /// </summary>
     private static void DestroyComponentIfExists(Component component, string warningMessage = null)
     {
         if (component != null)
@@ -135,6 +173,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// Draws the render tile, collider and GameObject origin settings for all selected modules, rebuilding tiles or
+    /// colliders when one changes, then the scene view handle toggles.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         if (hasMultipleTargets) Undo.RecordObjects(targetDualGridTilemapModules.ToArray(), $"Updated {targetDualGridTilemapModules.Count} Dual Grid Tilemap Modules");
@@ -200,6 +242,9 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// Draws the enabled tile handles for every selected module.
+    /// </summary>
     private void OnSceneGUI()
     {
         foreach (var dualGridTilemapModule in targetDualGridTilemapModules)
@@ -209,6 +254,9 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// Outlines every filled data tile in green when data tile boundaries are enabled.
+    /// </summary>
     private void DrawDataTileHandles(DualGridTilemapModule dualGridTilemapModule)
     {
         if (!showDataTileBoundaries) return;
@@ -224,6 +272,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// For every filled render tile, outlines it in yellow and draws red arrows to its filled data tile corners, each
+    /// when its toggle is enabled.
+    /// </summary>
     private void DrawRenderTileHandles(DualGridTilemapModule dualGridTilemapModule)
     {
         if (!showRenderTileBoundaries && !showRenderTileConnections) return;
@@ -242,6 +294,10 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         }
     }
 
+    /// <summary>
+    /// Draws a dot at <paramref name="tileCenter"/> and the outline of one scaled cell of <paramref name="tilemap"/>
+    /// around it, in the current handle color.
+    /// </summary>
     private static void DrawTileBoundaries(Tilemap tilemap, Vector3 tileCenter, float thickness)
     {
         if (tilemap == null) return;
@@ -262,6 +318,9 @@ public class DualGridTilemapModuleEditor : UnityEditor.Editor
         Handles.DrawLine(bottomLeft, topLeft, thickness);
     }
 
+    /// <summary>
+    /// Draws an arrow from a render tile's center toward each of its four data tile corners that holds a tile.
+    /// </summary>
     private static void DrawRenderTileConnections(Tilemap dataTilemap, Tilemap renderTilemap, Vector3Int renderTilePosition, Vector3 tileCenter)
     {
         if (dataTilemap == null || renderTilemap == null) return;

@@ -12,6 +12,9 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
     private readonly PointerTargetPicker picker;
     private bool holdAccepted;
 
+    /// <summary>
+    /// Captures the input, the camera that maps the pointer into the world and the target picker (null picks nothing).
+    /// </summary>
     public LocalPlayerCommandSource(IPlayerInput input, Camera camera, PointerTargetPicker picker)
     {
         this.input = input;
@@ -19,6 +22,10 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
         this.picker = picker;
     }
 
+    /// <summary>
+    /// Builds this frame's command from the input. Returns an empty command, and forgets any accepted hold, while
+    /// gameplay input is disabled or there is no camera.
+    /// </summary>
     public PlayerCommand ReadCommand()
     {
         if (!input.GameplayEnabled || camera == null)
@@ -49,6 +56,9 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
         return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot);
     }
 
+    /// <summary>
+    /// The lowest ability slot pressed this frame, or <see cref="PlayerCommand.NoAbility"/> when none was.
+    /// </summary>
     private int ReadAbilitySlot()
     {
         for (int slot = 0; slot < AbilitySlots.Count; slot++)

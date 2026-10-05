@@ -4,6 +4,9 @@
 /// </summary>
 public readonly struct DefenseSnapshot
 {
+    /// <summary>
+    /// Creates a snapshot with the given unclamped resistance, immunity and damage-taken multiplier.
+    /// </summary>
     public DefenseSnapshot(int resistancePercent, bool immune, float damageTakenMultiplier)
     {
         ResistancePercent = resistancePercent;

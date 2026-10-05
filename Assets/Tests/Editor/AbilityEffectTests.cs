@@ -3,12 +3,19 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Tests for <see cref="AbilityService"/>: when cast effects land, which units each targeting mode affects, the
+/// faction rules for healing and hitting, authority, and the shipped ability assets.
+/// </summary>
 public class AbilityEffectTests
 {
     private readonly List<Object> created = new();
     private CombatEvents events;
     private AbilityService service;
 
+    /// <summary>
+    /// Builds fresh combat events and an authoritative ability service for each test.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -16,6 +23,9 @@ public class AbilityEffectTests
         service = TestCombat.CreateAbilityService(FixedGameAuthority.Authoritative, events);
     }
 
+    /// <summary>
+    /// Destroys every game object and asset instance the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -30,6 +40,10 @@ public class AbilityEffectTests
         created.Clear();
     }
 
+    /// <summary>
+    /// Applying a cast only announces it; the damage lands when the cast resolves, which raises
+    /// <see cref="AbilityService.CastResolved"/> once.
+    /// </summary>
     [Test]
     public void StartingACast_HasNoEffect_ResolvingItDoes()
     {
@@ -47,6 +61,9 @@ public class AbilityEffectTests
         Assert.That(resolved, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// A unit-targeted ability on an enemy deals its hit damage and applies the hit's statuses to the target.
+    /// </summary>
     [Test]
     public void AUnitAbility_DamagesItsEnemyTarget_AndAppliesItsStatuses()
     {
@@ -61,6 +78,10 @@ public class AbilityEffectTests
         Assert.That(mob.Statuses.Controls, Is.EqualTo(StatusControls.Stun));
     }
 
+    /// <summary>
+    /// A unit-targeted ability on an ally heals it, applies its buff and raises one heal event, while a damaging
+    /// ability on an ally does no damage.
+    /// </summary>
     [Test]
     public void AUnitAbility_HealsAndBuffsAnAlly_ButNeverHurtsOne()
     {
@@ -81,6 +102,9 @@ public class AbilityEffectTests
         Assert.That(ally.Health.CurrentHealth, Is.EqualTo(ally.Health.MaxHealth - 15), "No friendly fire from abilities either.");
     }
 
+    /// <summary>
+    /// An untargeted ability with no area radius heals and buffs only the caster, not a nearby ally.
+    /// </summary>
     [Test]
     public void ASelfAbility_WithoutARadius_AffectsOnlyTheCaster()
     {
@@ -99,6 +123,10 @@ public class AbilityEffectTests
         Assert.That(ally.Statuses.Count, Is.Zero);
     }
 
+    /// <summary>
+    /// An untargeted ability with an area radius hits every enemy inside the circle around the caster, and spares
+    /// enemies outside it, allies and the caster itself.
+    /// </summary>
     [Test]
     public void ASelfAbility_WithARadius_HitsTheEnemiesAroundTheCaster()
     {
@@ -118,6 +146,10 @@ public class AbilityEffectTests
         Assert.That(caster.GetComponent<Health>().CurrentHealth, Is.EqualTo(caster.GetComponent<Health>().MaxHealth));
     }
 
+    /// <summary>
+    /// A point-targeted ability affects only the units inside its radius around the aimed point, damaging enemies
+    /// and healing allies without damaging them.
+    /// </summary>
     [Test]
     public void APointAbility_AffectsTheUnitsAroundThePoint_HealingAlliesAndHittingEnemies()
     {
@@ -136,6 +168,10 @@ public class AbilityEffectTests
         Assert.That(elsewhere.Health.CurrentHealth, Is.EqualTo(elsewhere.Health.MaxHealth));
     }
 
+    /// <summary>
+    /// A direction ability pierces every enemy on its line from the caster up to its range, missing units beyond
+    /// it, beside it or behind the caster, and does nothing when the aim has no direction.
+    /// </summary>
     [Test]
     public void ADirectionAbility_HitsTheEnemiesOnItsLine_UpToItsRange()
     {
@@ -160,6 +196,10 @@ public class AbilityEffectTests
         Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 12), "No direction, no line.");
     }
 
+    /// <summary>
+    /// An area around the caster is centred on the caster position passed to
+    /// <see cref="AbilityService.Resolve"/>, not on where this machine's copy of the caster stands.
+    /// </summary>
     [Test]
     public void AreasAroundTheCaster_StartWhereTheOwnerSawTheCaster_NotAtThisMachinesCopy()
     {
@@ -174,6 +214,9 @@ public class AbilityEffectTests
         Assert.That(atCopy.Health.CurrentHealth, Is.EqualTo(atCopy.Health.MaxHealth), "Not on this machine's lagging copy.");
     }
 
+    /// <summary>
+    /// A non-authoritative service refuses to resolve a cast and leaves the target untouched.
+    /// </summary>
     [Test]
     public void ResolvingWithoutAuthority_DoesNothing()
     {
@@ -185,6 +228,9 @@ public class AbilityEffectTests
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth));
     }
 
+    /// <summary>
+    /// A cast on a target with health but no <see cref="DamageReceiver"/> still resolves but deals no damage.
+    /// </summary>
     [Test]
     public void ACastWhoseTargetHasNoReceiver_DoesNothingButStillResolves()
     {
@@ -196,6 +242,10 @@ public class AbilityEffectTests
         Assert.That(bareHealth.CurrentHealth, Is.EqualTo(bareHealth.MaxHealth));
     }
 
+    /// <summary>
+    /// Through <see cref="PlayerAbilities"/>, a cancelled cast and a cast still in progress deal no damage; only a
+    /// completed cast lands.
+    /// </summary>
     [Test]
     public void ThroughPlayerAbilities_OnlyACompletedCastLands()
     {
@@ -218,6 +268,10 @@ public class AbilityEffectTests
         Assert.That(mob.Health.CurrentHealth, Is.EqualTo(mob.Health.MaxHealth - 15));
     }
 
+    /// <summary>
+    /// The shipped Bolt, Whirl, Smite and Mend assets carry their expected hits, heals, statuses and shapes, and
+    /// Leap and Lunge have no effect yet.
+    /// </summary>
     [Test]
     public void Content_TheAbilitiesWithEffects_AndTheMovementBlanks()
     {
@@ -245,27 +299,44 @@ public class AbilityEffectTests
         Assert.That(Load("Blank_Lunge").HasEffect, Is.False);
     }
 
+    /// <summary>
+    /// Loads the project ability asset named <paramref name="name"/> from <c>Assets/Data/Abilities</c>.
+    /// </summary>
     private static AbilityDefinition Load(string name)
     {
         return AssetDatabase.LoadAssetAtPath<AbilityDefinition>($"Assets/Data/Abilities/{name}.asset");
     }
 
+    /// <summary>
+    /// Builds a slot 3 cast of <paramref name="ability"/> aimed at <paramref name="target"/>, seen as
+    /// <paramref name="team"/> from the caster.
+    /// </summary>
     private static AbilityCast Cast(AbilityDefinition ability, DamageReceiver target, UnitTeam team)
     {
         return new AbilityCast(3, ability, new CastAim(target.transform.position, Vector2.right, new UnitTarget(target.Health, null, team)));
     }
 
+    /// <summary>
+    /// Builds a slot 4 cast of <paramref name="ability"/> with no aim point, direction or target.
+    /// </summary>
     private static AbilityCast SelfCast(AbilityDefinition ability)
     {
         return new AbilityCast(4, ability, new CastAim(Vector2.zero, Vector2.zero, default));
     }
 
+    /// <summary>
+    /// Creates a player-faction unit at <paramref name="position"/> with a <see cref="PlayerAbilities"/> component.
+    /// </summary>
     private PlayerAbilities Caster(Vector2 position)
     {
         DamageReceiver caster = Unit("Caster", Faction.Players, position);
         return caster.gameObject.AddComponent<PlayerAbilities>();
     }
 
+    /// <summary>
+    /// Creates a tracked unit of <paramref name="faction"/> at <paramref name="position"/> with a box collider,
+    /// 100 max health, a <see cref="DamageReceiver"/> and <see cref="StatusEffects"/>.
+    /// </summary>
     private DamageReceiver Unit(string name, Faction faction, Vector2 position)
     {
         GameObject unit = Track(new GameObject(name));
@@ -280,16 +351,25 @@ public class AbilityEffectTests
         return receiver;
     }
 
+    /// <summary>
+    /// Creates a tracked ability that accepts any unit, with the given targeting, hit, heal, range and area radius.
+    /// </summary>
     private AbilityDefinition Ability(AbilityTargeting targeting, Hit hit, int heal = 0, float range = 3f, float areaRadius = 0f)
     {
         return Track(AbilityDefinition.Create("Test", targeting: targeting, unitFilter: AbilityUnitFilter.Any, range: range, hit: hit, heal: heal, areaRadius: areaRadius));
     }
 
+    /// <summary>
+    /// Creates a tracked five second status of <paramref name="kind"/> that applies <paramref name="controls"/>.
+    /// </summary>
     private StatusEffectDefinition Status(string name, StatusKind kind, StatusControls controls)
     {
         return Track(StatusEffectDefinition.Create(name, kind, 5f, controls: controls));
     }
 
+    /// <summary>
+    /// Records <paramref name="instance"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T instance) where T : Object
     {
         created.Add(instance);

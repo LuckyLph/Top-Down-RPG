@@ -16,6 +16,10 @@ public sealed class RebindableActionList : ScriptableObject
         [SerializeField] private string label;
         [SerializeField] private string section;
 
+        /// <summary>
+        /// Creates an entry for <paramref name="action"/>, shown as <paramref name="label"/> under
+        /// <paramref name="section"/>.
+        /// </summary>
         public Entry(InputActionReference action, string label, string section)
         {
             this.action = action;

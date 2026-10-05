@@ -2,6 +2,11 @@ using System;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// The player's equipped weapon: swings it as a slash from <see cref="SlashSpawner"/>, gated by the weapon's attack
+/// cooldown on the game clock, and raises <see cref="Attacked"/> so the swing can be replicated. Equips the starting
+/// weapon on <c>Awake</c>.
+/// </summary>
 [DisallowMultipleComponent]
 public class PlayerWeaponController : MonoBehaviour
 {
@@ -32,6 +37,10 @@ public class PlayerWeaponController : MonoBehaviour
     }
     public Vector2 CurrentFacingDirection => playerController != null ? playerController.FacingDirection : Vector2.down;
 
+    /// <summary>
+    /// Finds the player controller and the sprite renderer slashes anchor and sort against, then equips the starting
+    /// weapon.
+    /// </summary>
     private void Awake()
     {
         ResolveReferences();
@@ -39,11 +48,18 @@ public class PlayerWeaponController : MonoBehaviour
         Equip(startingWeapon);
     }
 
+    /// <summary>
+    /// Fills an empty player controller reference from this object.
+    /// </summary>
     private void OnValidate()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Takes the slash spawner and the game clock that times the attack cooldown; null falls back to the shared
+    /// Unity clock.
+    /// </summary>
     [Inject]
     public void Construct(SlashSpawner spawner, IClock gameClock)
     {
@@ -51,6 +67,10 @@ public class PlayerWeaponController : MonoBehaviour
         clock = gameClock ?? UnityClock.Shared;
     }
 
+    /// <summary>
+    /// Makes <paramref name="weapon"/> (null for none) the current weapon and raises
+    /// <see cref="EquippedWeaponChanged"/>.
+    /// </summary>
     public void Equip(PlayerWeapon weapon)
     {
         ResolveReferences();
@@ -92,6 +112,11 @@ public class PlayerWeaponController : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Replays a swing the owner made on another machine toward <paramref name="direction"/> (down when zero): spawns
+    /// the slash without the cooldown or <see cref="Attacked"/>. Its hits only land where this machine is the
+    /// authority.
+    /// </summary>
     public void PlayRemoteAttack(Vector2 direction)
     {
         if (currentWeapon == null || slashSpawner == null)
@@ -103,6 +128,9 @@ public class PlayerWeaponController : MonoBehaviour
         slashSpawner.Spawn(transform, currentWeapon, attackDirection, ownerSpriteRenderer);
     }
 
+    /// <summary>
+    /// Falls back to the <see cref="PlayerController"/> on this object when none is assigned.
+    /// </summary>
     private void ResolveReferences()
     {
         if (playerController == null)

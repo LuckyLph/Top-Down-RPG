@@ -2,6 +2,11 @@ using Unity.Netcode;
 using UnityEngine;
 using VContainer;
 
+/// <summary>
+/// A mob's death reaction: on the first death it turns off the mob's physics and spawns its death animation, then
+/// the authority despawns the network object (or destroys a non-networked mob) while other machines hide the body
+/// until the despawn reaches them.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
 public class DestroyMobOnDeath : MonoBehaviour
@@ -14,16 +19,25 @@ public class DestroyMobOnDeath : MonoBehaviour
     private IGameAuthority authority;
     private bool handledDeath;
 
+    /// <summary>
+    /// Finds the health, death animation template and body sprite renderer when unassigned.
+    /// </summary>
     private void Awake()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Fills in the health, death animation template and body sprite renderer when unassigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Injects the spawner the death animation is played through and the authority that decides who removes the mob.
+    /// </summary>
     [Inject]
     public void Construct(EffectSpawner spawner, IGameAuthority gameAuthority)
     {
@@ -31,6 +45,9 @@ public class DestroyMobOnDeath : MonoBehaviour
         authority = gameAuthority;
     }
 
+    /// <summary>
+    /// Subscribes to the mob's death.
+    /// </summary>
     private void OnEnable()
     {
         ResolveReferences();
@@ -41,6 +58,9 @@ public class DestroyMobOnDeath : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Unsubscribes from the mob's death.
+    /// </summary>
     private void OnDisable()
     {
         if (health != null)
@@ -49,6 +69,10 @@ public class DestroyMobOnDeath : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Runs once per mob: disables its physics and spawns the death animation; then a non-authoritative machine
+    /// hides the body, while the authority despawns the spawned network object or destroys the game object.
+    /// </summary>
     private void HandleDied(Health _)
     {
         if (handledDeath)
@@ -75,6 +99,10 @@ public class DestroyMobOnDeath : MonoBehaviour
         Destroy(gameObject);
     }
 
+    /// <summary>
+    /// Turns off every renderer under the mob so a client shows only the death animation until the host's despawn
+    /// arrives.
+    /// </summary>
     private void HideUntilDespawned()
     {
         foreach (Renderer bodyRenderer in GetComponentsInChildren<Renderer>())
@@ -83,6 +111,10 @@ public class DestroyMobOnDeath : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Spawns a copy of the death animation template through the <see cref="EffectSpawner"/>, initialised from the
+    /// body sprite. Skipped without a template, and with a warning when no spawner was injected.
+    /// </summary>
     private void SpawnDeathAnimation()
     {
         if (deathAnimationTemplate == null)
@@ -104,6 +136,10 @@ public class DestroyMobOnDeath : MonoBehaviour
         });
     }
 
+    /// <summary>
+    /// Looks up the sibling <see cref="Health"/>, the child <see cref="MobDeathAnimation"/> template and the first
+    /// child sprite renderer outside that template, each only when not already set.
+    /// </summary>
     private void ResolveReferences()
     {
         if (health == null)

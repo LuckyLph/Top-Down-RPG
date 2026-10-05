@@ -5,10 +5,16 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for host-authoritative mobs and player health replicated to an in-process client.
+/// </summary>
 public class NetworkMobsPlayModeTests
 {
     private InProcessClient client;
 
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -16,6 +22,11 @@ public class NetworkMobsPlayModeTests
         client = null;
     }
 
+    /// <summary>
+    /// The client's mob copy runs no AI and mirrors the host's statuses (including for a late joiner), stun, position,
+    /// health, typed and immune hits, blocked statuses and death. The client's own player follows the host's damage,
+    /// heals, Burn ticks, death with cleared statuses and respawn.
+    /// </summary>
     [UnityTest]
     public IEnumerator HostedMobs_ReplicateMovementHealthAndDeath_AndPlayerHealthFollowsTheHost()
     {
@@ -153,6 +164,9 @@ public class NetworkMobsPlayModeTests
         Assert.That(Object.FindObjectsByType<MobDeathAnimation>().Length, Is.GreaterThanOrEqualTo(deathAnimationsBefore + 2), "Both the host and the client should play the death animation.");
     }
 
+    /// <summary>
+    /// The first spawned mob copy that belongs to <paramref name="manager"/> (host or client side), or null.
+    /// </summary>
     private static MobController FindCopyManagedBy(NetworkManager manager)
     {
         foreach (MobController mob in Object.FindObjectsByType<MobController>())

@@ -4,12 +4,18 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-// Keeps the stress scene bootable: it should load through the real scene flow, generate its map,
-// spawn every initial mob on reachable cells, and get mobs engaging the player.
+/// <summary>
+/// Keeps the stress scene bootable: it should load through the real scene flow, generate its map,
+/// spawn every initial mob on reachable cells, and get mobs engaging the player.
+/// </summary>
 public class StressTestScenePlayModeTests
 {
     private const string StressAreaPath = "Assets/Dev/StressTest/Area_StressTest.unity";
 
+    /// <summary>
+    /// Booting the stress area spawns its full initial mob count, and at least one mob goes on to chase or attack the
+    /// player.
+    /// </summary>
     [UnityTest]
     public IEnumerator StressArea_SpawnsInitialMobsThatEngageThePlayer()
     {
@@ -22,6 +28,9 @@ public class StressTestScenePlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => AnyMobEngaged(spawner.Mobs), "a mob to chase or attack the player");
     }
 
+    /// <summary>
+    /// Whether any of <paramref name="mobs"/> is chasing or in attack range.
+    /// </summary>
     private static bool AnyMobEngaged(IReadOnlyList<MobController> mobs)
     {
         for (int i = 0; i < mobs.Count; i++)

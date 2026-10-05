@@ -10,6 +10,10 @@ public readonly struct PlayerCommand
 
     private readonly int abilitySlotPlusOne;
 
+    /// <summary>
+    /// Creates a command; a negative <paramref name="abilitySlot"/> means no ability was pressed, so
+    /// <c>default</c> is a command with no intent at all.
+    /// </summary>
     public PlayerCommand(
         Vector2 pointerWorld,
         UnitTarget target,

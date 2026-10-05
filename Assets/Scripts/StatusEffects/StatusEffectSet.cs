@@ -26,12 +26,19 @@ public sealed class StatusEffectSet
     public StatusTags GrantedStatusImmunity { get; private set; }
     public StatusControls Controls { get; private set; }
 
+    /// <summary>
+    /// The resistance percentage points the active statuses add against <paramref name="type"/>, stacks included;
+    /// 0 for an unknown type.
+    /// </summary>
     public int GetResistanceDelta(DamageType type)
     {
         int index = (int)type;
         return index >= 0 && index < DamageTypeCount ? resistanceDeltas[index] : 0;
     }
 
+    /// <summary>
+    /// A read-only copy of the instance at <paramref name="index"/> (0 to <see cref="Count"/> - 1).
+    /// </summary>
     public StatusSnapshot GetSnapshot(int index)
     {
         Instance instance = instances[index];
@@ -122,6 +129,9 @@ public sealed class StatusEffectSet
         return removed;
     }
 
+    /// <summary>
+    /// Removes every instance, raising <see cref="Changed"/> only when there was any.
+    /// </summary>
     public void Clear()
     {
         if (instances.Count == 0)
@@ -249,6 +259,10 @@ public sealed class StatusEffectSet
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// <see cref="StatusStacking.Refresh"/>: lands a new instance, or resets the existing one's duration and takes
+    /// over its source and multiplier.
+    /// </summary>
     private StatusApplyOutcome ApplyRefresh(StatusEffectDefinition definition, GameObject source, float dealtMultiplier)
     {
         int index = IndexOf(definition);
@@ -266,6 +280,10 @@ public sealed class StatusEffectSet
         return StatusApplyOutcome.Refreshed;
     }
 
+    /// <summary>
+    /// <see cref="StatusStacking.AddStack"/>: lands a new instance, or adds a stack up to the maximum (a refresh once
+    /// at the cap) and resets the duration, source and multiplier.
+    /// </summary>
     private StatusApplyOutcome ApplyStack(StatusEffectDefinition definition, GameObject source, float dealtMultiplier)
     {
         int index = IndexOf(definition);
@@ -285,6 +303,10 @@ public sealed class StatusEffectSet
         return added ? StatusApplyOutcome.Stacked : StatusApplyOutcome.Refreshed;
     }
 
+    /// <summary>
+    /// <see cref="StatusStacking.Independent"/>: adds a separate instance, or at the instance cap restarts the one
+    /// closest to expiring with the new source and multiplier. Always reports a landing.
+    /// </summary>
     private StatusApplyOutcome ApplyIndependent(StatusEffectDefinition definition, GameObject source, float dealtMultiplier)
     {
         int count = 0;
@@ -319,6 +341,9 @@ public sealed class StatusEffectSet
         return StatusApplyOutcome.Landed;
     }
 
+    /// <summary>
+    /// A fresh one-stack instance with the next id, the full duration and its first tick one interval away.
+    /// </summary>
     private Instance NewInstance(StatusEffectDefinition definition, GameObject source, float dealtMultiplier)
     {
         return new Instance
@@ -333,6 +358,10 @@ public sealed class StatusEffectSet
         };
     }
 
+    /// <summary>
+    /// Removes instances carrying any of <paramref name="tags"/>, except those of <paramref name="keep"/> (the status
+    /// granting the immunity). Leaves recomputing and raising <see cref="Changed"/> to the caller.
+    /// </summary>
     private void RemoveTagged(StatusTags tags, StatusEffectDefinition keep)
     {
         for (int i = instances.Count - 1; i >= 0; i--)
@@ -345,6 +374,9 @@ public sealed class StatusEffectSet
         }
     }
 
+    /// <summary>
+    /// The index of the first instance of <paramref name="definition"/>, or -1.
+    /// </summary>
     private int IndexOf(StatusEffectDefinition definition)
     {
         for (int i = 0; i < instances.Count; i++)
@@ -358,6 +390,10 @@ public sealed class StatusEffectSet
         return -1;
     }
 
+    /// <summary>
+    /// Recombines every instance: multipliers multiply per stack, resistance deltas add per stack, and controls and
+    /// granted immunities are unioned.
+    /// </summary>
     private void Recompute()
     {
         float moveSpeed = 1f;
@@ -392,6 +428,10 @@ public sealed class StatusEffectSet
         GrantedStatusImmunity = statusImmunity;
     }
 
+    /// <summary>
+    /// One active status: its definition, id, stacks, remaining time, time to its next periodic tick, and the source
+    /// and dealt multiplier its ticks use.
+    /// </summary>
     private struct Instance
     {
         public StatusEffectDefinition Definition;

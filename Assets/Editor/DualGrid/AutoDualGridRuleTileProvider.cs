@@ -3,6 +3,9 @@ using System.Linq;
 using UnityEngine;
 using static DualGridRuleTile;
 
+/// <summary>
+/// Neighbor rule presets for dual-grid rule tiles whose texture was sliced into the standard 16-tile arrangement.
+/// </summary>
 public static class AutoDualGridRuleTileProvider
 {
     private static readonly Vector3Int UpRightNeighbor = Vector3Int.up + Vector3Int.right;
@@ -10,11 +13,17 @@ public static class AutoDualGridRuleTileProvider
     private static readonly Vector3Int DownRightNeighbor = Vector3Int.down + Vector3Int.right;
     private static readonly Vector3Int DownLeftNeighbor = Vector3Int.down + Vector3Int.left;
 
+    /// <summary>
+    /// One diagonal neighbor of a tiling rule and the filled state the rule requires there.
+    /// </summary>
     private readonly struct NeighborPattern
     {
         public Vector3Int Position { get; }
         public int State { get; }
 
+        /// <summary>
+        /// Creates a pattern that requires <paramref name="state"/> at the neighbor offset <paramref name="position"/>.
+        /// </summary>
         public NeighborPattern(Vector3Int position, int state)
         {
             Position = position;
@@ -22,6 +31,9 @@ public static class AutoDualGridRuleTileProvider
         }
     }
 
+    /// <summary>
+    /// Builds the four diagonal neighbor patterns of one tiling rule from the state required at each corner.
+    /// </summary>
     private static List<NeighborPattern> CreatePattern(int upLeft, int upRight, int downLeft, int downRight)
     {
         return new List<NeighborPattern>

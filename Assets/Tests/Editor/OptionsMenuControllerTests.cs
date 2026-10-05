@@ -4,6 +4,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
+/// <summary>
+/// Tests for <see cref="OptionsMenuController"/> on the real options menu prefab and project input actions: the
+/// binding rows, Back and close handling, interactive rebinding, per-row reset and reset all with confirmation.
+/// </summary>
 public class OptionsMenuControllerTests : InputTestFixture
 {
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
@@ -21,6 +25,10 @@ public class OptionsMenuControllerTests : InputTestFixture
     private Keyboard keyboard;
     private int closedCount;
 
+    /// <summary>
+    /// Adds a test keyboard, binds a copy of the project input actions with the project's rebindable list and
+    /// in-memory settings, instantiates the options menu prefab and starts the controller on a fresh menu stack.
+    /// </summary>
     public override void Setup()
     {
         base.Setup();
@@ -36,6 +44,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         closedCount = 0;
     }
 
+    /// <summary>
+    /// Disposes the controller and bindings, then destroys the menu instance and the copied input actions.
+    /// </summary>
     public override void TearDown()
     {
         controller.Dispose();
@@ -45,6 +56,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         base.TearDown();
     }
 
+    /// <summary>
+    /// Starting builds eight binding rows under three section headers, labelled with each action and its current
+    /// binding, and leaves the screen hidden.
+    /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
@@ -58,6 +73,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(controller.GetRow(7).Label.text, Is.EqualTo("Weapon ability 2"));
     }
 
+    /// <summary>
+    /// Back closes the open screen, pops it off the menu stack and runs the close callback exactly once, even
+    /// when pressed again.
+    /// </summary>
     [Test]
     public void Back_ClosesTheScreen_TakesItOffTheMenuStack_AndRunsTheCallbackOnce()
     {
@@ -73,6 +92,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(closedCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Clicking the on-screen back button closes the screen and runs the close callback.
+    /// </summary>
     [Test]
     public void TheBackButton_ClosesTheScreen()
     {
@@ -84,6 +106,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(closedCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Clicking a binding only starts listening on the next tick, so the click itself is never captured, and the
+    /// next key pressed becomes the binding.
+    /// </summary>
     [Test]
     public void SelectingABinding_ListensFromTheNextTick_AndAKeyBindsIt()
     {
@@ -105,6 +131,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.NoticeText.text, Is.Empty);
     }
 
+    /// <summary>
+    /// Binding a key another action already uses swaps the two keys, and the notice names the action that moved
+    /// and its new key.
+    /// </summary>
     [Test]
     public void BindingATakenKey_NamesTheActionThatMoved()
     {
@@ -119,6 +149,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.NoticeText.text, Is.EqualTo("Class ability 1 moved to X."));
     }
 
+    /// <summary>
+    /// Escape while listening cancels the rebind and keeps the old binding without closing the screen; a later
+    /// Back does close it.
+    /// </summary>
     [Test]
     public void Escape_CancelsListening_WithoutAlsoClosingTheScreen()
     {
@@ -136,6 +170,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.IsShown, Is.False, "A later Back closes it.");
     }
 
+    /// <summary>
+    /// Back is ignored both while a rebind is waiting to start and while it is listening.
+    /// </summary>
     [Test]
     public void Back_WhileARebindIsPendingOrListening_DoesNothing()
     {
@@ -151,6 +188,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.IsShown, Is.True);
     }
 
+    /// <summary>
+    /// Closing the screen while listening cancels the running rebind, hides the listening panel and runs the
+    /// close callback.
+    /// </summary>
     [Test]
     public void Closing_WhileListening_CancelsTheRebind()
     {
@@ -166,6 +207,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(closedCount, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Rows follow bindings changed outside the screen, and a row's reset button restores that action's default
+    /// key, moving the action that held it and naming it in the notice.
+    /// </summary>
     [Test]
     public void ResettingARow_PutsItsDefaultBack_AndRowsFollowEveryChange()
     {
@@ -180,6 +225,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.NoticeText.text, Is.EqualTo("Stop moved to X."));
     }
 
+    /// <summary>
+    /// Reset all asks for confirmation first; Back dismisses only the question, and confirming restores every
+    /// default and shows the reset-all notice.
+    /// </summary>
     [Test]
     public void ResetAll_AsksFirst_AndBackOnlyClosesTheQuestion()
     {
@@ -202,6 +251,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.NoticeText.text, Is.EqualTo(OptionsMenuController.ResetAllNotice));
     }
 
+    /// <summary>
+    /// Answering no to the reset-all question closes it and keeps the custom bindings.
+    /// </summary>
     [Test]
     public void TheConfirmationsCancel_KeepsTheBindings()
     {
@@ -215,6 +267,9 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("F"));
     }
 
+    /// <summary>
+    /// Closing and reopening the screen clears the notice left from the previous visit.
+    /// </summary>
     [Test]
     public void Reopening_ClearsTheLastNotice()
     {
@@ -228,12 +283,19 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.NoticeText.text, Is.Empty);
     }
 
+    /// <summary>
+    /// Opens the screen with a close callback that counts calls, then ticks once so it is ready for input.
+    /// </summary>
     private void OpenAndSettle()
     {
         controller.Open(() => closedCount++);
         controller.Tick();
     }
 
+    /// <summary>
+    /// Ticks the menu stack and the controller once, with Back pressed for that frame only when
+    /// <paramref name="back"/> is true.
+    /// </summary>
     private void TickWith(bool back)
     {
         menuInput.BackPressedThisFrame = back;
@@ -242,6 +304,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         menuInput.BackPressedThisFrame = false;
     }
 
+    /// <summary>
+    /// Presses <paramref name="button"/>, advances input time by 0.2 seconds and runs an input update so a
+    /// listening rebind completes, then releases it.
+    /// </summary>
     private void PressAndSettle(ButtonControl button)
     {
         Press(button);

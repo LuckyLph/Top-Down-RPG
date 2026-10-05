@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Tests for <see cref="MobController"/>'s state machine on a test navigation grid: idle, patrol, chase, attack,
+/// search and return transitions, perception target choice, crowd control, separation and waiting behind allies.
+/// </summary>
 public class MobStateMachineTests
 {
     private GameObject root;
@@ -21,6 +25,9 @@ public class MobStateMachineTests
     private readonly List<GameObject> sceneObjects = new();
     private readonly List<StatusEffectDefinition> statusDefinitions = new();
 
+    /// <summary>
+    /// Destroys the mobs, players, status definitions, grid root, tiles, terrain and config the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -67,6 +74,10 @@ public class MobStateMachineTests
         }
     }
 
+    /// <summary>
+    /// An idle mob chases a detected player, attacks once in range, returns when the player is far away and goes
+    /// idle again at its spawn.
+    /// </summary>
     [Test]
     public void StateMachine_TransitionsAcrossChaseAttackReturnIdle()
     {
@@ -90,6 +101,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// Re-injecting a mob whose state machine is already running restarts it from idle, so it still reacts to a
+    /// player instead of stalling with no state.
+    /// </summary>
     [Test]
     public void Reinjection_WhileRunning_ResumesFromIdleInsteadOfStalling()
     {
@@ -105,6 +120,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
     }
 
+    /// <summary>
+    /// Configuring a mob labels the navigation grid's connectivity regions for its movement profile up front.
+    /// </summary>
     [Test]
     public void Initialization_PrewarmsNavigationRegions_ForTheMobsProfile()
     {
@@ -113,6 +131,9 @@ public class MobStateMachineTests
         Assert.That(navGrid.AreRegionsLabeled(config.MovementProfile), Is.True);
     }
 
+    /// <summary>
+    /// A returning mob counts as home once it is in its spawn cell, even when it is not on the exact spawn point.
+    /// </summary>
     [Test]
     public void ReturnState_TransitionsToIdle_WhenMobIsInSpawnCellButNotSpawnPoint()
     {
@@ -128,6 +149,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// Repathing toward a moving target keeps the mob heading for the target rather than back to the center of
+    /// the cell it is standing in.
+    /// </summary>
     [Test]
     public void ChaseState_DoesNotSteerBackToCurrentCellCenter_WhenRepathingToMovingTarget()
     {
@@ -155,6 +180,10 @@ public class MobStateMachineTests
         Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f));
     }
 
+    /// <summary>
+    /// A chasing mob shoved off its path to the far side of a wall repaths and heads for the target, even though
+    /// the target has not changed cell.
+    /// </summary>
     [Test]
     public void ChaseState_Repaths_WhenMobIsPushedOffPathWhileTargetStaysInSameCell()
     {
@@ -185,6 +214,10 @@ public class MobStateMachineTests
         Assert.That(rb.linearVelocity.x, Is.GreaterThan(0f), "Mob should head straight for the target instead of back into the wall.");
     }
 
+    /// <summary>
+    /// A chasing mob that loses line of sight to a target still within range switches to search and paths to
+    /// where it last saw the target.
+    /// </summary>
     [Test]
     public void ChaseState_SearchesLastKnownPosition_WhenTargetGoesOutOfSightWithinRange()
     {
@@ -201,6 +234,9 @@ public class MobStateMachineTests
         Assert.That(brain.PathAgent.HasPath, Is.True, "The mob should head for where it last saw the target.");
     }
 
+    /// <summary>
+    /// A searching mob goes back to chasing as soon as the blocker is gone and the target is in view again.
+    /// </summary>
     [Test]
     public void SearchState_ResumesChase_WhenTargetComesBackIntoView()
     {
@@ -218,6 +254,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
     }
 
+    /// <summary>
+    /// While searching, a mob only re-acquires a visible target inside its detection radius, not out to its
+    /// lose-target distance.
+    /// </summary>
     [Test]
     public void SearchState_SpotsTargetOnlyWithinDetectionRadius_LikeEveryOtherState()
     {
@@ -237,6 +277,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Aggro range must not widen while searching.");
     }
 
+    /// <summary>
+    /// The search duration only starts counting once the mob reaches the last known position, then it returns
+    /// home after the full duration.
+    /// </summary>
     [Test]
     public void SearchState_SearchTimeStartsOnArrival_NotWhileWalkingThere()
     {
@@ -259,6 +303,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
 
+    /// <summary>
+    /// A searching mob that gets stuck on the way to the last known position starts its search time there and
+    /// returns home once it runs out.
+    /// </summary>
     [Test]
     public void SearchState_StartsSearchTime_WhenBlockedOnTheWay()
     {
@@ -270,6 +318,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
 
+    /// <summary>
+    /// A chasing mob gives up and returns when the target is behind a barrier with no path to it.
+    /// </summary>
     [Test]
     public void ChaseState_TransitionsToReturn_WhenTargetHasNoReachablePath()
     {
@@ -282,6 +333,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
 
+    /// <summary>
+    /// A returning mob already at its spawn goes idle instead of chasing a detected target it cannot reach.
+    /// </summary>
     [Test]
     public void ReturnState_GoesIdle_WhenDetectedTargetIsUnreachableButMobIsAlreadyAtSpawn()
     {
@@ -294,6 +348,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// A returning mob already at its spawn goes idle when the player is off the navigation grid.
+    /// </summary>
     [Test]
     public void ReturnState_GoesIdle_WhenDetectedTargetIsOffGridButMobIsAlreadyAtSpawn()
     {
@@ -306,6 +363,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// An idle mob stays idle when the player it detects is behind a barrier it has no path through.
+    /// </summary>
     [Test]
     public void IdleState_DoesNotEnterChase_WhenDetectedTargetIsUnreachable()
     {
@@ -318,6 +378,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// A stunned mob makes no state changes, attacks or moves, and reacts to the player again as soon as the stun
+    /// is removed.
+    /// </summary>
     [Test]
     public void AStunnedMob_NeitherDecidesNorMoves_AndResumesInTheSameState()
     {
@@ -343,6 +407,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Idle), "It reacts to the player as soon as the stun ends.");
     }
 
+    /// <summary>
+    /// A rooted mob still changes state and attacks a player in range, but its motor neither moves nor reports a
+    /// move speed.
+    /// </summary>
     [Test]
     public void ARootedMob_HoldsStillButStillAttacksInRange()
     {
@@ -363,6 +431,9 @@ public class MobStateMachineTests
         Assert.That(playerHealth.CurrentHealth, Is.LessThan(playerHealth.MaxHealth));
     }
 
+    /// <summary>
+    /// A mob under a half-speed slow chases at half its configured move speed.
+    /// </summary>
     [Test]
     public void ASlowedMob_ChasesAtTheScaledSpeed()
     {
@@ -378,6 +449,9 @@ public class MobStateMachineTests
         Assert.That(brain.Motor.DesiredVelocity.magnitude, Is.GreaterThan(0f).And.LessThanOrEqualTo(brain.Motor.MoveSpeed * 0.5f + 0.0001f));
     }
 
+    /// <summary>
+    /// Entering attack range hits once, and later ticks inside the attack interval deal no further damage.
+    /// </summary>
     [Test]
     public void AttackRangeState_DoesNotApplyDamageEveryTick_WhileOnCooldown()
     {
@@ -394,6 +468,10 @@ public class MobStateMachineTests
         Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterEnter));
     }
 
+    /// <summary>
+    /// A target stepping out of attack range and back in does not let the mob hit again before its attack
+    /// interval has passed.
+    /// </summary>
     [Test]
     public void AttackRangeState_DoesNotResetCooldown_WhenTargetLeavesAndReentersRange()
     {
@@ -415,6 +493,9 @@ public class MobStateMachineTests
         Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterFirstHit), "Re-entering range must not bypass the attack interval.");
     }
 
+    /// <summary>
+    /// With several players in view, perception picks the nearest one and the mob chases it.
+    /// </summary>
     [Test]
     public void Perception_TargetsTheNearestVisiblePlayer()
     {
@@ -429,6 +510,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
     }
 
+    /// <summary>
+    /// Perception skips a closer player whose line of sight is blocked and targets the farther visible one.
+    /// </summary>
     [Test]
     public void Perception_IgnoresACloserPlayerBehindAWall()
     {
@@ -443,6 +527,9 @@ public class MobStateMachineTests
         Assert.That(brain.Perception.CurrentTargetPlayer, Is.SameAs(playerHandle));
     }
 
+    /// <summary>
+    /// Once a mob has a target it keeps it across sight checks, even when another player moves closer.
+    /// </summary>
     [Test]
     public void Perception_KeepsItsTarget_WhenAnotherPlayerComesCloser()
     {
@@ -461,6 +548,9 @@ public class MobStateMachineTests
         }
     }
 
+    /// <summary>
+    /// When the current target dies, perception switches to another visible player and the mob keeps chasing.
+    /// </summary>
     [Test]
     public void Perception_SwitchesToAnotherVisiblePlayer_WhenItsTargetDies()
     {
@@ -479,6 +569,10 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
     }
 
+    /// <summary>
+    /// When the current target goes out of sight while another player is visible, the mob switches to that
+    /// player and keeps chasing instead of searching.
+    /// </summary>
     [Test]
     public void Perception_SwitchesToAnotherVisiblePlayer_WhenItsTargetHides()
     {
@@ -496,6 +590,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase), "Another player in view means no search.");
     }
 
+    /// <summary>
+    /// A target removed from the player registry is dropped, and the chasing mob returns home.
+    /// </summary>
     [Test]
     public void Perception_DropsATargetThatLeavesTheRegistry()
     {
@@ -512,6 +609,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
     }
 
+    /// <summary>
+    /// A mob in attack range loses its target and leaves the attack state once the target dies.
+    /// </summary>
     [Test]
     public void AttackRangeState_StopsAttacking_WhenTargetDies()
     {
@@ -529,6 +629,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.AttackRange));
     }
 
+    /// <summary>
+    /// An idle mob ignores a dead player within detection range.
+    /// </summary>
     [Test]
     public void IdleState_DoesNotEnterChase_WhenTargetIsDead()
     {
@@ -542,6 +645,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// An idle mob stays idle when the player is off the navigation grid.
+    /// </summary>
     [Test]
     public void IdleState_DoesNotEnterChase_WhenDetectedTargetIsOffGrid()
     {
@@ -554,6 +660,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// A patrolling mob that stays stuck past the stuck timeout gives up on its roam destination and goes idle.
+    /// </summary>
     [Test]
     public void PatrolState_GoesIdle_WhenBlockedFromReachingDestination()
     {
@@ -568,6 +677,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// A returning mob that stays stuck past the stuck timeout goes idle where it is instead of trying forever.
+    /// </summary>
     [Test]
     public void ReturnState_GoesIdle_WhenBlockedFromReachingSpawn()
     {
@@ -585,6 +697,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
     }
 
+    /// <summary>
+    /// Across repeated patrols, a mob whose roam radius spans a wall only picks destinations it can fully reach.
+    /// </summary>
     [Test]
     public void PatrolState_OnlyRoamsToReachableCells_WhenRoamRadiusSpansAWall()
     {
@@ -607,6 +722,9 @@ public class MobStateMachineTests
         Assert.That(patrols, Is.GreaterThan(0));
     }
 
+    /// <summary>
+    /// Two overlapping mobs get velocities pushing each away from the other.
+    /// </summary>
     [Test]
     public void Separation_PushesOverlappingMobsApart()
     {
@@ -620,6 +738,9 @@ public class MobStateMachineTests
         Assert.That(neighbor.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
     }
 
+    /// <summary>
+    /// Two mobs at exactly the same position are still pushed apart, in opposite directions.
+    /// </summary>
     [Test]
     public void Separation_PushesExactlyCoincidentMobsInOppositeDirections()
     {
@@ -635,6 +756,9 @@ public class MobStateMachineTests
         Assert.That(Vector2.Dot(first, second), Is.LessThan(0f));
     }
 
+    /// <summary>
+    /// Separation from a neighbor never pushes a mob toward an unwalkable cell.
+    /// </summary>
     [Test]
     public void Separation_NeverPushesAMobIntoAWall()
     {
@@ -647,6 +771,9 @@ public class MobStateMachineTests
         Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.y, Is.LessThanOrEqualTo(0f));
     }
 
+    /// <summary>
+    /// A chasing mob with an ally between it and the nearby target holds back instead of pushing into the ally.
+    /// </summary>
     [Test]
     public void ChaseState_WaitsBehindAnAllyNearTheTarget_InsteadOfPushingIntoIt()
     {
@@ -663,6 +790,10 @@ public class MobStateMachineTests
             "The mob should hold (only separation moves it, away from the ally) rather than push toward the target.");
     }
 
+    /// <summary>
+    /// A waiting mob nudged just outside the separation radius keeps waiting rather than stepping straight back
+    /// toward the ally.
+    /// </summary>
     [Test]
     public void ChaseState_KeepsWaiting_WhenSeparationNudgesItJustPastTheAlly()
     {
@@ -682,6 +813,9 @@ public class MobStateMachineTests
         Assert.That(rb.linearVelocity.x, Is.LessThanOrEqualTo(0f), "The mob should stay put instead of stepping straight back in.");
     }
 
+    /// <summary>
+    /// A waiting mob resumes moving toward the target once the ally blocking the way is gone.
+    /// </summary>
     [Test]
     public void ChaseState_StopsWaiting_OnceTheWayAheadIsClearlyOpen()
     {
@@ -701,8 +835,9 @@ public class MobStateMachineTests
         Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.x, Is.GreaterThan(0f));
     }
 
-    // Chase a target at (3, 0), lose sight of it behind a pillar so the mob starts searching, then take the
-    // target far away so it cannot be spotted again during the search.
+    /// <summary>
+    /// Adds another living, damageable player at <paramref name="position"/> to the registry the mobs sense.
+    /// </summary>
     private PlayerHandle AddPlayer(Vector3 position)
     {
         GameObject playerObject = new("OtherPlayer");
@@ -715,6 +850,10 @@ public class MobStateMachineTests
         return handle;
     }
 
+    /// <summary>
+    /// Chases a target at (3, 0), loses sight of it behind a pillar so the mob starts searching, then takes the
+    /// target far away so it cannot be spotted again during the search.
+    /// </summary>
     private void EnterSearchWithTargetGone()
     {
         SetupWorld();
@@ -728,8 +867,10 @@ public class MobStateMachineTests
         player.position = new Vector3(100f, 0f, 0f);
     }
 
-    // A pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so
-    // the mob can still path to where it last saw the target.
+    /// <summary>
+    /// Places a pillar on the obstacle layer that perception linecasts against. Navigation is unaffected, so
+    /// the mob can still path to where it last saw the target.
+    /// </summary>
     private GameObject BlockLineOfSightAt(Vector2 position)
     {
         GameObject pillar = new("Pillar") { layer = 8 };
@@ -740,6 +881,10 @@ public class MobStateMachineTests
         return pillar;
     }
 
+    /// <summary>
+    /// Runs enough fixed ticks without the mob moving to exceed its stuck timeout, then one state machine tick so
+    /// the state can react.
+    /// </summary>
     private void TickBlockedPastStuckTimeout()
     {
         int fixedTicks = Mathf.CeilToInt(config.StuckTimeout / Time.fixedDeltaTime) + 1;
@@ -751,6 +896,11 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
     }
 
+    /// <summary>
+    /// Builds a 21x21 walkable navigation grid centered on the origin, with an optional wall along row y = 1 and
+    /// extra <paramref name="blockedCells"/>, a registered player far out of range, the mob config and the mob
+    /// under test at <paramref name="spawnPosition"/> (the origin by default).
+    /// </summary>
     private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f)
     {
         root = new GameObject("MobStateMachineTestRoot");
@@ -825,6 +975,9 @@ public class MobStateMachineTests
         brain = CreateMob(spawnPosition ?? Vector3.zero);
     }
 
+    /// <summary>
+    /// Creates a 10-second debuff with the given move speed multiplier and crowd control, destroyed on teardown.
+    /// </summary>
     private StatusEffectDefinition Status(string name, float moveSpeed = 1f, StatusControls controls = StatusControls.None)
     {
         StatusEffectDefinition definition = StatusEffectDefinition.Create(name, StatusKind.Debuff, 10f, moveSpeedMultiplier: moveSpeed, controls: controls);
@@ -832,6 +985,10 @@ public class MobStateMachineTests
         return definition;
     }
 
+    /// <summary>
+    /// Creates a fully wired mob at <paramref name="position"/>, configured with the shared config, grid, player
+    /// registry and random source, and an authoritative melee hit service.
+    /// </summary>
     private MobController CreateMob(Vector3 position)
     {
         GameObject mob = new("Mob");

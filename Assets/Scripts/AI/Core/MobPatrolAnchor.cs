@@ -1,6 +1,10 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Remembers where a mob spawned and supplies its patrol: idle durations and reachable roam destinations around the
+/// spawn point, drawn from the injected <see cref="IRandom"/>.
+/// </summary>
 public class MobPatrolAnchor : MonoBehaviour
 {
     [Header("Debug")]
@@ -15,11 +19,17 @@ public class MobPatrolAnchor : MonoBehaviour
 
     public Vector2 SpawnPosition => spawnPosition;
 
+    /// <summary>
+    /// Records the spawn position.
+    /// </summary>
     private void Awake()
     {
         spawnPosition = transform.position;
     }
 
+    /// <summary>
+    /// Takes the grid, config and random source, and records the current position as the spawn position again.
+    /// </summary>
     public void Initialize(NavigationGrid2D navGrid, MobConfig mobConfig, IRandom randomSource)
     {
         navigationGrid = navGrid;
@@ -28,11 +38,20 @@ public class MobPatrolAnchor : MonoBehaviour
         spawnPosition = transform.position;
     }
 
+    /// <summary>
+    /// A random idle duration from the config, or 1 second without a config or random source.
+    /// </summary>
     public float GetIdleDuration()
     {
         return config != null && random != null ? config.NextIdleDuration(random) : 1f;
     }
 
+    /// <summary>
+    /// Samples up to <see cref="MobConfig.PatrolSampleAttempts"/> points within the roam radius of the spawn, snaps
+    /// each to the center of its cell (or of the nearest walkable cell when it is not walkable), and returns the first
+    /// that <paramref name="isReachable"/> accepts (any, when it is null). False without a grid, config or random
+    /// source, or when no sample qualifies.
+    /// </summary>
     public bool TryGetRoamDestination(Func<Vector2, bool> isReachable, out Vector2 destination)
     {
         destination = spawnPosition;
@@ -66,6 +85,10 @@ public class MobPatrolAnchor : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Draws the roam radius and the spawn point, falling back to the object's position outside Play Mode while no
+    /// spawn position is recorded.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!drawPatrolGizmos)

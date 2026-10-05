@@ -11,6 +11,10 @@ public sealed class GameplayInputGate : IStartable, IDisposable
     private readonly PlayerInputService playerInput;
     private readonly HoldSet blockers = new();
 
+    /// <summary>
+    /// Creates a gate that follows <paramref name="gameFlow"/>'s transitions and switches the maps on
+    /// <paramref name="playerInput"/>, with no blockers.
+    /// </summary>
     public GameplayInputGate(GameFlow gameFlow, PlayerInputService playerInput)
     {
         this.gameFlow = gameFlow;
@@ -19,6 +23,9 @@ public sealed class GameplayInputGate : IStartable, IDisposable
 
     public bool IsBlocked => blockers.IsHeld;
 
+    /// <summary>
+    /// Subscribes to transition start and end and applies the current state right away.
+    /// </summary>
     public void Start()
     {
         gameFlow.TransitionStarted += Refresh;
@@ -26,6 +33,9 @@ public sealed class GameplayInputGate : IStartable, IDisposable
         Refresh();
     }
 
+    /// <summary>
+    /// Unsubscribes from the transition events.
+    /// </summary>
     public void Dispose()
     {
         gameFlow.TransitionStarted -= Refresh;
@@ -43,6 +53,10 @@ public sealed class GameplayInputGate : IStartable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Drops <paramref name="owner"/>'s block; gameplay input comes back once no owner blocks it and the game is
+    /// running outside a transition.
+    /// </summary>
     public void Unblock(object owner)
     {
         if (blockers.Release(owner))
@@ -51,6 +65,9 @@ public sealed class GameplayInputGate : IStartable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Enables or disables the <c>Player</c> and <c>Menus</c> maps for the current game flow and blocker state.
+    /// </summary>
     private void Refresh()
     {
         bool inGame = !gameFlow.IsTransitioning && gameFlow.IsInGame;

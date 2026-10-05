@@ -32,11 +32,18 @@ public class MobPathAgent2D : MonoBehaviour
 
     internal IReadOnlyList<Vector2> Waypoints => follower.Waypoints;
 
+    /// <summary>
+    /// Caches the sibling motor until <see cref="Initialize"/> provides one.
+    /// </summary>
     private void Awake()
     {
         motor = GetComponent<MobMotor2D>();
     }
 
+    /// <summary>
+    /// Configures the follower with <paramref name="navGrid"/> and the config's movement profile and distances (no
+    /// straight-line shortcut), and clears any path.
+    /// </summary>
     public void Initialize(NavigationGrid2D navGrid, MobMotor2D mobMotor, MobConfig mobConfig)
     {
         motor = mobMotor;
@@ -45,6 +52,10 @@ public class MobPathAgent2D : MonoBehaviour
         ClearPath();
     }
 
+    /// <summary>
+    /// Builds a path from the motor's position to <paramref name="worldGoal"/>, stopping the motor when no path
+    /// results. False when the agent has no config or built grid, or no path exists.
+    /// </summary>
     public bool BuildPathToWorld(Vector2 worldGoal, bool allowPartial)
     {
         using (BuildPathMarker.Auto())
@@ -64,11 +75,19 @@ public class MobPathAgent2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whether <paramref name="worldGoal"/> lies on a walkable cell in the same region as the walkable cell nearest the
+    /// mob; false before the agent is initialized.
+    /// </summary>
     public bool CanReachWorldTarget(Vector2 worldGoal)
     {
         return motor != null && config != null && follower.CanReach(motor.Position, worldGoal);
     }
 
+    /// <summary>
+    /// Advances along the path at the motor's current speed and hands the velocity to the motor, stopping it when
+    /// there is no path or the path just ended.
+    /// </summary>
     public void FixedTick()
     {
         if (motor == null)
@@ -93,6 +112,9 @@ public class MobPathAgent2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Drops the path and its goal and stops the motor.
+    /// </summary>
     public void ClearPath()
     {
         follower.Clear();
@@ -103,6 +125,10 @@ public class MobPathAgent2D : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Follower settings from the config's waypoint reach, arrival and nearest-cell distances; the defaults without a
+    /// config.
+    /// </summary>
     private static PathFollowerSettings2D CreateSettings(MobConfig mobConfig)
     {
         return mobConfig != null
@@ -110,6 +136,9 @@ public class MobPathAgent2D : MonoBehaviour
             : default;
     }
 
+    /// <summary>
+    /// Draws the goal cell and the remaining waypoints, in a different color for a partial path.
+    /// </summary>
     private void OnDrawGizmosSelected()
     {
         if (!drawPathGizmos)

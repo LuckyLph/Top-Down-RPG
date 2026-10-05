@@ -1,6 +1,11 @@
 using Unity.Netcode;
 using UnityEngine;
 
+/// <summary>
+/// Replicates a mob's movement animation and attacks. The host writes <see cref="MobMotor2D.IsMoving"/> and
+/// <see cref="MobMotor2D.FacingDirection"/> into server-written network variables and forwards attack animations to
+/// clients; clients disable the brain, make the body kinematic and show the replicated state on the motor.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(MobController))]
 [RequireComponent(typeof(MobMotor2D))]
@@ -15,6 +20,9 @@ public class MobNetworkSync : NetworkBehaviour
     private MobMotor2D motor;
     private Rigidbody2D body;
 
+    /// <summary>
+    /// Caches the brain, motor and rigidbody.
+    /// </summary>
     private void Awake()
     {
         brain = GetComponent<MobController>();
@@ -22,6 +30,10 @@ public class MobNetworkSync : NetworkBehaviour
         body = GetComponent<Rigidbody2D>();
     }
 
+    /// <summary>
+    /// On the host, starts forwarding the motor's attack animations. On a client, disables the AI, makes the body
+    /// kinematic without interpolation, follows the replicated movement and shows its current value.
+    /// </summary>
     public override void OnNetworkSpawn()
     {
         if (IsServer)
@@ -43,6 +55,9 @@ public class MobNetworkSync : NetworkBehaviour
         motor.ShowRemoteMovement(moving.Value, facing.Value);
     }
 
+    /// <summary>
+    /// Removes the attack-animation and network-variable subscriptions made on spawn.
+    /// </summary>
     public override void OnNetworkDespawn()
     {
         motor.AttackAnimationPlayed -= HandleAttackAnimationPlayed;
@@ -50,6 +65,10 @@ public class MobNetworkSync : NetworkBehaviour
         facing.OnValueChanged -= HandleFacingChanged;
     }
 
+    /// <summary>
+    /// Host only: writes the motor's moving flag and facing into the network variables when they change, ignoring
+    /// facing changes below a small threshold.
+    /// </summary>
     private void Update()
     {
         if (!IsSpawned || !IsServer)
@@ -69,21 +88,33 @@ public class MobNetworkSync : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Host: sends an attack animation the motor just played to the clients.
+    /// </summary>
     private void HandleAttackAnimationPlayed(Vector2 direction)
     {
         AttackRpc(direction);
     }
 
+    /// <summary>
+    /// Client: shows the new moving flag with the current replicated facing.
+    /// </summary>
     private void HandleMovingChanged(bool previous, bool current)
     {
         motor.ShowRemoteMovement(current, facing.Value);
     }
 
+    /// <summary>
+    /// Client: shows the new facing with the current replicated moving flag.
+    /// </summary>
     private void HandleFacingChanged(Vector2 previous, Vector2 current)
     {
         motor.ShowRemoteMovement(moving.Value, current);
     }
 
+    /// <summary>
+    /// Runs on every client but not on the host: plays the attack animation toward <paramref name="direction"/>.
+    /// </summary>
     [Rpc(SendTo.NotServer)]
     private void AttackRpc(Vector2 direction)
     {

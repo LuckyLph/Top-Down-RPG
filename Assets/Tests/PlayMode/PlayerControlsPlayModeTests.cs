@@ -5,6 +5,10 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using VContainer;
 
+/// <summary>
+/// PlayMode tests for the click-to-move controls in the booted starting area, driven by scripted commands: pathing,
+/// attack orders, player overlap, the ability and status HUD, the dev status panel and death.
+/// </summary>
 public class PlayerControlsPlayModeTests
 {
     private const float WalkTimeoutSeconds = 10f;
@@ -15,6 +19,9 @@ public class PlayerControlsPlayModeTests
     private TerrainMovementProfile2D profile;
     private ScriptedCommands commands;
 
+    /// <summary>
+    /// After booting into the starting area, the active navigation grid is the one in the area scene.
+    /// </summary>
     [UnityTest]
     public IEnumerator EnteringTheClearing_MakesItsGridTheActiveOne()
     {
@@ -24,6 +31,10 @@ public class PlayerControlsPlayModeTests
         Assert.That(grid.gameObject.scene, Is.EqualTo(SceneBootTestHelper.ResolveGameFlow().AreaScene));
     }
 
+    /// <summary>
+    /// A move click behind a runtime-built wall gives a path with several waypoints around it, and the player arrives
+    /// at the goal.
+    /// </summary>
     [UnityTest]
     public IEnumerator RightClickBehindAWall_PathsAroundIt()
     {
@@ -41,6 +52,10 @@ public class PlayerControlsPlayModeTests
         Assert.That(Vector2.Distance(player.transform.position, goal), Is.LessThan(0.2f), "The player should arrive behind the wall.");
     }
 
+    /// <summary>
+    /// Clicking a mob behind a wall picks it as the target and gives an attack order that walls and distance do not
+    /// cancel; the order kills the mob and ends with it.
+    /// </summary>
     [UnityTest]
     public IEnumerator RightClickOnAMobBehindAWall_PathsAroundAndKillsIt()
     {
@@ -72,6 +87,9 @@ public class PlayerControlsPlayModeTests
         Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Idle), "The order ends with its target.");
     }
 
+    /// <summary>
+    /// The player walks straight through a body on the Player layer standing on its path, without pushing it.
+    /// </summary>
     [UnityTest]
     public IEnumerator Players_WalkThroughEachOther()
     {
@@ -103,6 +121,10 @@ public class PlayerControlsPlayModeTests
         }
     }
 
+    /// <summary>
+    /// The ability bar has one slot per ability labelled with its name and bound key and shows the cooldown fill and
+    /// seconds after a cast; the pointer feedback layer has prewarmed move markers and the attack cursor hidden.
+    /// </summary>
     [UnityTest]
     public IEnumerator Hud_ShowsTheLoadoutAndCooldowns_AndPointerFeedbackIsReady()
     {
@@ -131,6 +153,10 @@ public class PlayerControlsPlayModeTests
         Assert.That(feedback.AttackCursorShown, Is.False);
     }
 
+    /// <summary>
+    /// The player's statuses show on the HUD bar with buffs first and a Burn visual that follows the player; a mob's
+    /// debuff shows above its health bar; clearing the player's statuses hides the icons and pools the visual.
+    /// </summary>
     [UnityTest]
     public IEnumerator Statuses_ShowOnTheHud_OnTheMobsBar_AndAsVisuals()
     {
@@ -162,6 +188,10 @@ public class PlayerControlsPlayModeTests
         Assert.That(aura.gameObject.activeSelf, Is.False, "The visual returns to the pool.");
     }
 
+    /// <summary>
+    /// The hidden dev status panel applies statuses to the player and to the unit under a screen point (Invalid when
+    /// there is none); Blank Smite deals 18 to a Vulnerable mob and stuns it, and Blank Mend heals 25 and fortifies.
+    /// </summary>
     [UnityTest]
     public IEnumerator DevPanel_AppliesStatuses_AndSmiteAndMendHaveEffects()
     {
@@ -203,6 +233,9 @@ public class PlayerControlsPlayModeTests
         yield return null;
     }
 
+    /// <summary>
+    /// A player that dies mid-move is left with no order, no path and no movement.
+    /// </summary>
     [UnityTest]
     public IEnumerator Death_ClearsTheOrders()
     {
@@ -223,6 +256,10 @@ public class PlayerControlsPlayModeTests
         Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.zero));
     }
 
+    /// <summary>
+    /// Boots into the starting area, caches the gameplay container, local player, active grid and movement profile,
+    /// and switches the player to scripted commands.
+    /// </summary>
     private IEnumerator Boot()
     {
         yield return SceneBootTestHelper.BootIntoStartingArea();
@@ -236,6 +273,9 @@ public class PlayerControlsPlayModeTests
         player.SetCommandSource(commands);
     }
 
+    /// <summary>
+    /// Waits until the player has no order, failing the test after the walk timeout.
+    /// </summary>
     private IEnumerator WaitUntilIdle()
     {
         float deadline = Time.realtimeSinceStartup + WalkTimeoutSeconds;
@@ -246,6 +286,9 @@ public class PlayerControlsPlayModeTests
         }
     }
 
+    /// <summary>
+    /// Deactivates every mob so none attacks or blocks the player during the test.
+    /// </summary>
     private static void DisableMobs()
     {
         foreach (MobController mob in Object.FindObjectsByType<MobController>())
@@ -287,6 +330,11 @@ public class PlayerControlsPlayModeTests
         return grid.CellToWorldCenter(goal);
     }
 
+    /// <summary>
+    /// The center of the first cell <paramref name="distance"/> cells right, left, up or down of
+    /// <paramref name="from"/> that has a walkable straight line with walkable cells on both flanks; fails the test
+    /// when there is none.
+    /// </summary>
     private Vector2 FindClearGoal(Vector2 from, int distance)
     {
         Vector3Int start = grid.WorldToCell(from);
@@ -304,6 +352,10 @@ public class PlayerControlsPlayModeTests
         return from;
     }
 
+    /// <summary>
+    /// Whether the cells on both sides of the straight run from <paramref name="start"/> along
+    /// <paramref name="direction"/> are walkable for its full <paramref name="distance"/>.
+    /// </summary>
     private bool ClearOfWalls(Vector3Int start, Vector3Int direction, int distance)
     {
         Vector3Int side = new(direction.y, direction.x, 0);
@@ -319,15 +371,24 @@ public class PlayerControlsPlayModeTests
         return true;
     }
 
+    /// <summary>
+    /// <see cref="IPlayerCommandSource"/> that the test feeds one click at a time.
+    /// </summary>
     private sealed class ScriptedCommands : IPlayerCommandSource
     {
         private PlayerCommand next;
 
+        /// <summary>
+        /// Queues a single move click at <paramref name="point"/> on <paramref name="target"/> for the next read.
+        /// </summary>
         public void Click(Vector2 point, UnitTarget target)
         {
             next = new PlayerCommand(point, target, movePressed: true, moveHeld: false, stopPressed: false);
         }
 
+        /// <summary>
+        /// Returns the queued command and clears it, so each click is read once; an empty command otherwise.
+        /// </summary>
         public PlayerCommand ReadCommand()
         {
             PlayerCommand command = next;

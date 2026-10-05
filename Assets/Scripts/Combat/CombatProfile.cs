@@ -40,6 +40,10 @@ public sealed class CombatProfile : ScriptableObject
         return total;
     }
 
+    /// <summary>
+    /// Builds an unsaved, hidden runtime profile with the given faction, immunities and resistances, for tests that
+    /// must not touch project assets.
+    /// </summary>
     public static CombatProfile Create(
         Faction faction,
         DamageTypeMask immunities = DamageTypeMask.None,

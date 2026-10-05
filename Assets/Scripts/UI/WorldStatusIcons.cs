@@ -16,6 +16,10 @@ public class WorldStatusIcons : MonoBehaviour
 
     internal int ShownCount { get; private set; }
 
+    /// <summary>
+    /// Finds the unit's <see cref="StatusEffects"/> when unassigned; logs an error and disables itself without
+    /// statuses or icon renderers.
+    /// </summary>
     private void Awake()
     {
         ResolveStatuses();
@@ -26,11 +30,17 @@ public class WorldStatusIcons : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Fills in the unit's <see cref="StatusEffects"/> in the inspector when none is assigned.
+    /// </summary>
     private void OnValidate()
     {
         ResolveStatuses();
     }
 
+    /// <summary>
+    /// Subscribes to status changes once and shows the current debuffs.
+    /// </summary>
     private void OnEnable()
     {
         if (statuses != null && !subscribed)
@@ -42,6 +52,9 @@ public class WorldStatusIcons : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// Unsubscribes from status changes.
+    /// </summary>
     private void OnDisable()
     {
         if (statuses != null && subscribed)
@@ -87,6 +100,10 @@ public class WorldStatusIcons : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Assigns the statuses, icon renderers and fallback sprite in code, for tests that build the icons without a
+    /// prefab.
+    /// </summary>
     internal void Configure(StatusEffects unitStatuses, SpriteRenderer[] iconRenderers, Sprite fallback)
     {
         statuses = unitStatuses;
@@ -94,6 +111,9 @@ public class WorldStatusIcons : MonoBehaviour
         fallbackSprite = fallback;
     }
 
+    /// <summary>
+    /// Whether <paramref name="definition"/> is already on one of the icons filled so far in this refresh.
+    /// </summary>
     private bool IsShown(StatusEffectDefinition definition)
     {
         for (int i = 0; i < ShownCount; i++)
@@ -107,6 +127,9 @@ public class WorldStatusIcons : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Uses the nearest <see cref="StatusEffects"/> on this object or its parents when none is assigned.
+    /// </summary>
     private void ResolveStatuses()
     {
         if (statuses == null)

@@ -19,6 +19,9 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
     private StatusEffects statuses;
     private int shownCount;
 
+    /// <summary>
+    /// Creates a presenter for <paramref name="view"/> that can show as many statuses as the view has icons.
+    /// </summary>
     public StatusBarPresenter(LocalPlayerTracker localPlayer, StatusBarView view)
     {
         this.localPlayer = localPlayer;
@@ -27,18 +30,27 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         shownFill = new float[view.Capacity];
     }
 
+    /// <summary>
+    /// Starts following local player changes and binds the current player.
+    /// </summary>
     public void Start()
     {
         localPlayer.Changed += Bind;
         Bind(localPlayer.Current);
     }
 
+    /// <summary>
+    /// Stops following local player changes and unsubscribes from the bound player's statuses.
+    /// </summary>
     public void Dispose()
     {
         localPlayer.Changed -= Bind;
         Unbind();
     }
 
+    /// <summary>
+    /// Refreshes the elapsed fill of every shown icon. Does nothing while no player is bound.
+    /// </summary>
     public void Tick()
     {
         if (statuses == null)
@@ -52,6 +64,10 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Switches to <paramref name="player"/>'s <see cref="StatusEffects"/> and rebuilds the icons, or clears the bar
+    /// when there is no player or it has no statuses component.
+    /// </summary>
     private void Bind(LocalPlayer player)
     {
         Unbind();
@@ -67,6 +83,9 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         Rebuild();
     }
 
+    /// <summary>
+    /// Stops listening to the bound player's statuses and forgets them.
+    /// </summary>
     private void Unbind()
     {
         if (statuses != null)
@@ -77,6 +96,9 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         statuses = null;
     }
 
+    /// <summary>
+    /// Lays the icons out again from the active statuses, buffs first then debuffs, and hides the unused icons.
+    /// </summary>
     private void Rebuild()
     {
         shownCount = 0;
@@ -85,6 +107,10 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         view.HideFrom(shownCount);
     }
 
+    /// <summary>
+    /// Appends an icon, with its stack count and fill, for each distinct active status of <paramref name="kind"/>
+    /// in the order <see cref="StatusEffects"/> lists them, until the view is full.
+    /// </summary>
     private void AddKind(StatusKind kind)
     {
         for (int i = 0; i < statuses.Count && shownCount < shownDefinitions.Length; i++)
@@ -103,6 +129,9 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Whether <paramref name="definition"/> already has an icon in the current layout.
+    /// </summary>
     private bool IsShown(StatusEffectDefinition definition)
     {
         for (int i = 0; i < shownCount; i++)
@@ -116,6 +145,10 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         return false;
     }
 
+    /// <summary>
+    /// Pushes icon <paramref name="index"/>'s elapsed fraction to the view when it has moved by at least
+    /// <see cref="FillStep"/> since it was last shown.
+    /// </summary>
     private void RefreshFill(int index)
     {
         StatusEffectDefinition definition = shownDefinitions[index];

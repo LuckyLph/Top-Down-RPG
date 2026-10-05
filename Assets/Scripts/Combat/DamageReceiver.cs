@@ -1,6 +1,11 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Marks a unit that combat can affect and is the target type of <see cref="DamageService"/>, <see cref="HitService"/>
+/// and statuses: exposes its <see cref="Health"/>, faction and immunities from its <see cref="CombatProfile"/>, its
+/// current defence and damage-dealt multiplier (profile plus statuses), and where popups appear over it.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
 public class DamageReceiver : MonoBehaviour
@@ -49,11 +54,18 @@ public class DamageReceiver : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Caches the sibling <see cref="Health"/>.
+    /// </summary>
     private void Awake()
     {
         ResolveHealth();
     }
 
+    /// <summary>
+    /// The unit a collider's transform belongs to: the receiver on <paramref name="hitTransform"/> or a parent, or
+    /// null when there is none.
+    /// </summary>
     public static DamageReceiver FindFor(Transform hitTransform)
     {
         return hitTransform != null ? hitTransform.GetComponentInParent<DamageReceiver>() : null;
@@ -92,16 +104,26 @@ public class DamageReceiver : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Test setup: replaces the combat profile without the inspector.
+    /// </summary>
     internal void SetProfile(CombatProfile combatProfile)
     {
         profile = combatProfile;
     }
 
+    /// <summary>
+    /// Raises <see cref="ImmuneHit"/>; called by <see cref="DamageService"/> on the authority when a hit resolves as
+    /// immune.
+    /// </summary>
     internal void NotifyImmuneHit(DamageType type, DamageFlags flags)
     {
         ImmuneHit?.Invoke(type, flags);
     }
 
+    /// <summary>
+    /// Looks up the sibling <see cref="Health"/> when not cached yet, so it works before <c>Awake</c> too.
+    /// </summary>
     private void ResolveHealth()
     {
         if (health == null)

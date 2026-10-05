@@ -4,10 +4,17 @@ using UnityEditor;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for <see cref="MobMotor2D"/> with the weasel animator: attack animation flags, timing and events,
+/// replicated movement display, allocation, and facing under steering.
+/// </summary>
 public class MobMotor2DTests
 {
     private GameObject root;
 
+    /// <summary>
+    /// Destroys the mob object the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -17,6 +24,10 @@ public class MobMotor2DTests
         }
     }
 
+    /// <summary>
+    /// Playing an attack with an animator that supports it marks the attack animation active and faces the attack
+    /// direction.
+    /// </summary>
     [Test]
     public void PlayAttackAnimation_SetsAnimatorAttackFlag()
     {
@@ -32,6 +43,9 @@ public class MobMotor2DTests
         Assert.That(lastMoveDirection.y, Is.EqualTo(0f).Within(0.001f));
     }
 
+    /// <summary>
+    /// The attack animation stays active until the injected clock passes its duration.
+    /// </summary>
     [Test]
     public void AttackAnimation_EndsOnTheInjectedClock()
     {
@@ -48,6 +62,10 @@ public class MobMotor2DTests
         Assert.That(motor.IsAttackAnimationActive, Is.False);
     }
 
+    /// <summary>
+    /// Replicated movement sets the moving state and facing, and the moving state survives an attack animation
+    /// ending while the facing follows the attack.
+    /// </summary>
     [Test]
     public void ShowRemoteMovement_DrivesMovingAndFacing_AndSurvivesTheEndOfAnAttack()
     {
@@ -67,6 +85,10 @@ public class MobMotor2DTests
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.left));
     }
 
+    /// <summary>
+    /// Playing an attack raises <see cref="MobMotor2D.AttackAnimationPlayed"/> with the normalised attack
+    /// direction.
+    /// </summary>
     [Test]
     public void PlayAttackAnimation_RaisesAttackAnimationPlayed_WithTheFacing()
     {
@@ -79,6 +101,9 @@ public class MobMotor2DTests
         Assert.That(played, Is.EqualTo(Vector2.right));
     }
 
+    /// <summary>
+    /// After the first attack, playing another attack animation allocates no GC memory.
+    /// </summary>
     [Test]
     public void PlayAttackAnimation_DoesNotAllocate_AfterFirstAttack()
     {
@@ -88,6 +113,9 @@ public class MobMotor2DTests
         Assert.That(() => motor.PlayAttackAnimation(Vector2.left), Is.Not.AllocatingGCMemory());
     }
 
+    /// <summary>
+    /// Removing the animator controller makes the next attack report that attack animations are not supported.
+    /// </summary>
     [Test]
     public void PlayAttackAnimation_RechecksAttackSupport_WhenControllerChanges()
     {
@@ -101,6 +129,9 @@ public class MobMotor2DTests
         Assert.That(motor.SupportsAttackAnimation, Is.False);
     }
 
+    /// <summary>
+    /// A stopped mob pushed only by steering drifts with it but keeps facing its target instead of the drift.
+    /// </summary>
     [Test]
     public void FixedTick_KeepsFacing_WhenOnlySteeringDriftMovesTheMob()
     {
@@ -117,6 +148,9 @@ public class MobMotor2DTests
         Assert.That(motor.FacingDirection.x, Is.GreaterThan(0.9f), "Facing should stay on the target, not turn to face the drift.");
     }
 
+    /// <summary>
+    /// A moving mob faces its desired direction even when steering deflects its actual velocity.
+    /// </summary>
     [Test]
     public void FixedTick_FacesIntendedDirection_EvenWhenSteeringDeflectsTheMob()
     {
@@ -130,6 +164,10 @@ public class MobMotor2DTests
         Assert.That(motor.FacingDirection.y, Is.GreaterThan(0.99f));
     }
 
+    /// <summary>
+    /// Creates a mob with a gravity-free rigidbody, an animator using the weasel controller (asserted to exist)
+    /// and a <see cref="MobMotor2D"/>.
+    /// </summary>
     private MobMotor2D CreateMotorWithWeaselAnimator()
     {
         root = new GameObject("Mob");

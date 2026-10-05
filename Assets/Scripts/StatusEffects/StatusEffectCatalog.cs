@@ -11,6 +11,9 @@ public sealed class StatusEffectCatalog : ScriptableObject
 
     public int Count => effects != null ? effects.Length : 0;
 
+    /// <summary>
+    /// The definition at <paramref name="index"/>, or null when the index is out of range.
+    /// </summary>
     public StatusEffectDefinition Get(int index)
     {
         return index >= 0 && index < Count ? effects[index] : null;
@@ -37,6 +40,9 @@ public sealed class StatusEffectCatalog : ScriptableObject
         return -1;
     }
 
+    /// <summary>
+    /// Creates an unsaved, hidden catalog of <paramref name="definitions"/> in that order, for tests.
+    /// </summary>
     public static StatusEffectCatalog Create(params StatusEffectDefinition[] definitions)
     {
         StatusEffectCatalog catalog = CreateInstance<StatusEffectCatalog>();

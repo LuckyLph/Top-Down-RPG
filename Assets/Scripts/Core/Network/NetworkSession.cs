@@ -9,6 +9,11 @@ using UnityEngine.SceneManagement;
 using VContainer;
 using Object = UnityEngine.Object;
 
+/// <summary>
+/// Owns this machine's <see cref="Unity.Netcode.NetworkManager"/> for the whole app: hosts or joins sessions, admits
+/// clients through <see cref="JoinApproval"/>, announces the host's area to clients and runs the ready handshake that
+/// keeps spawned objects hidden from a client until it has loaded the current area.
+/// </summary>
 public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, ISessionStatus, IDisposable
 {
     public const string ClientReadyMessage = "TopDownRPG.ClientReady";
@@ -27,6 +32,11 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     private bool quitting;
     private bool followingHost;
 
+    /// <summary>
+    /// Instantiates <paramref name="networkManagerPrefab"/>, hooks connection approval and the client callbacks, and
+    /// starts watching for the application quitting; logs an error when the prefab has no
+    /// <see cref="UnityTransport"/> or has connection approval off.
+    /// </summary>
     public NetworkSession(NetworkManager networkManagerPrefab, NetworkSettings settings)
     {
         this.settings = settings;
@@ -70,6 +80,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public int AreaEpoch { get; private set; }
     public string JoinRefusal { get; private set; }
 
+    /// <summary>
+    /// Starts hosting on the configured listen address and port and listens for clients' ready reports. Returns false
+    /// when a session is already running, the transport is missing or Netcode fails to start.
+    /// </summary>
     public bool StartHost()
     {
         if (IsActive || transport == null)
@@ -88,6 +102,12 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         return true;
     }
 
+    /// <summary>
+    /// Connects as a client to <paramref name="address"/> (the default address when blank), sending this build's
+    /// version, and waits up to <paramref name="timeoutSeconds"/> of real time for the connection. Returns false at
+    /// once when a session runs or the client cannot start; on a refusal, disconnect or timeout it records any
+    /// refusal in <see cref="JoinRefusal"/>, shuts down and returns false; on cancellation it shuts down and rethrows.
+    /// </summary>
     public async Awaitable<bool> JoinAsync(string address, float timeoutSeconds, CancellationToken cancellation)
     {
         if (IsActive || transport == null)
@@ -131,6 +151,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         return true;
     }
 
+    /// <summary>
+    /// Ends the session on purpose (so it is not reported as <see cref="ConnectionLost"/>), stops following a host so
+    /// this machine is authoritative again, and forgets every client's readiness. Safe to call when not running.
+    /// </summary>
     public void Shutdown()
     {
         shutdownRequested = true;
@@ -142,11 +166,19 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         }
     }
 
+    /// <summary>
+    /// Whether <paramref name="clientId"/> reported ready for the current area epoch; always true for the host's own
+    /// client.
+    /// </summary>
     public bool IsClientReady(ulong clientId)
     {
         return clientId == NetworkManager.ServerClientId || readyClients.Contains(clientId);
     }
 
+    /// <summary>
+    /// Client only: tells the host this machine has loaded the area of the current <see cref="AreaEpoch"/>. Does
+    /// nothing on the host or when not connected.
+    /// </summary>
     public void NotifyReady()
     {
         if (!networkManager.IsConnectedClient || networkManager.IsServer)
@@ -159,6 +191,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         networkManager.CustomMessagingManager.SendNamedMessage(ClientReadyMessage, NetworkManager.ServerClientId, writer);
     }
 
+    /// <summary>
+    /// Client only: adopts <paramref name="announcement"/>'s epoch as it starts loading that area, so its next ready
+    /// report matches the host's.
+    /// </summary>
     public void BeginAnnouncedArea(AreaAnnouncement announcement)
     {
         if (!networkManager.IsServer)
@@ -167,6 +203,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         }
     }
 
+    /// <summary>
+    /// Host only: starts a new area epoch, clears every client's readiness and sends the area to each connected
+    /// client; it is also kept to send to clients that connect later.
+    /// </summary>
     public void AnnounceArea(string scenePath, string spawnId, bool newSession)
     {
         if (!networkManager.IsServer)
@@ -186,6 +226,9 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         }
     }
 
+    /// <summary>
+    /// Host only: despawns every spawned network object that lives in <paramref name="scene"/>.
+    /// </summary>
     public void DespawnObjectsIn(Scene scene)
     {
         if (!networkManager.IsServer || !scene.IsValid())
@@ -210,28 +253,46 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         despawnBuffer.Clear();
     }
 
+    /// <summary>
+    /// Host only: whether connected client <paramref name="clientId"/> already has a player object.
+    /// </summary>
     public bool HasPlayerObject(ulong clientId)
     {
         return networkManager.ConnectedClients.TryGetValue(clientId, out NetworkClient client) && client.PlayerObject != null;
     }
 
+    /// <summary>
+    /// Host only: spawns <paramref name="instance"/> as a server-owned object, visible to ready clients only and
+    /// destroyed with its scene.
+    /// </summary>
     public void Spawn(NetworkObject instance)
     {
         instance.CheckObjectVisibility = visibleToReadyClients;
         instance.Spawn(destroyWithScene: true);
     }
 
+    /// <summary>
+    /// Host only: spawns <paramref name="instance"/> as <paramref name="ownerClientId"/>'s player object, visible to
+    /// ready clients only and destroyed with its scene.
+    /// </summary>
     public void SpawnPlayerObject(NetworkObject instance, ulong ownerClientId)
     {
         instance.CheckObjectVisibility = visibleToReadyClients;
         instance.SpawnAsPlayerObject(ownerClientId, destroyWithScene: true);
     }
 
+    /// <summary>
+    /// Installs an <see cref="InjectingNetworkPrefabHandler"/> for <paramref name="prefab"/> so client copies are
+    /// injected from <paramref name="resolver"/> and placed in <paramref name="targetScene"/>.
+    /// </summary>
     public void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver, Scene targetScene)
     {
         networkManager.PrefabHandler.AddHandler(prefab, new InjectingNetworkPrefabHandler(prefab, resolver, targetScene));
     }
 
+    /// <summary>
+    /// Removes <paramref name="prefab"/>'s handler; does nothing once the NetworkManager is destroyed.
+    /// </summary>
     public void UnregisterPrefab(NetworkObject prefab)
     {
         if (networkManager != null)
@@ -240,6 +301,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         }
     }
 
+    /// <summary>
+    /// Unhooks every callback, shuts the session down and destroys the NetworkManager so it never outlives the Main
+    /// scope.
+    /// </summary>
     public void Dispose()
     {
         Application.quitting -= HandleQuitting;
@@ -259,12 +324,18 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         Object.Destroy(networkManager.gameObject);
     }
 
+    /// <summary>
+    /// Notes that the application is quitting, so the client stopping is not reported as a lost connection.
+    /// </summary>
     private void HandleQuitting()
     {
         quitting = true;
     }
 
 #if UNITY_EDITOR
+    /// <summary>
+    /// Treats leaving Play Mode like quitting, so the client stopping is not reported as a lost connection.
+    /// </summary>
     private void HandlePlayModeStateChanged(UnityEditor.PlayModeStateChange change)
     {
         if (change == UnityEditor.PlayModeStateChange.ExitingPlayMode)
@@ -274,6 +345,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 #endif
 
+    /// <summary>
+    /// Clears everything left from a previous session (readiness, admissions, refusal, current area, epoch) and makes
+    /// this NetworkManager the Netcode singleton, which Netcode falls back to when spawning.
+    /// </summary>
     private void ResetSessionState()
     {
         shutdownRequested = false;
@@ -286,6 +361,9 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         networkManager.SetSingleton();
     }
 
+    /// <summary>
+    /// Sends <paramref name="announcement"/> to client <paramref name="clientId"/> as a named message.
+    /// </summary>
     private void SendAreaAnnouncement(ulong clientId, AreaAnnouncement announcement)
     {
         using FastBufferWriter writer = new(AnnouncementBufferSize, Allocator.Temp);
@@ -293,6 +371,11 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         networkManager.CustomMessagingManager.SendNamedMessage(AreaAnnouncementMessage, clientId, writer);
     }
 
+    /// <summary>
+    /// Host: approves its own client, and other clients through <see cref="JoinApproval.Evaluate"/>, counting
+    /// connected clients plus those approved but not yet connected; a refusal goes back as a tagged disconnect
+    /// reason. Never creates a player object, since players are spawned once a client is ready.
+    /// </summary>
     private void HandleConnectionApproval(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
     {
         response.CreatePlayerObject = false;
@@ -315,6 +398,10 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         admittedClients.Add(request.ClientNetworkId);
     }
 
+    /// <summary>
+    /// Moves <paramref name="clientId"/> from admitted to connected and, on the host, sends a late joiner the current
+    /// area.
+    /// </summary>
     private void HandleClientConnected(ulong clientId)
     {
         admittedClients.Remove(clientId);
@@ -324,11 +411,18 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         }
     }
 
+    /// <summary>
+    /// Client: reads the host's area announcement and raises <see cref="AreaAnnounced"/>.
+    /// </summary>
     private void HandleAreaAnnouncementMessage(ulong senderClientId, FastBufferReader payload)
     {
         AreaAnnounced?.Invoke(AreaAnnouncement.Read(payload));
     }
 
+    /// <summary>
+    /// Host: records a client's ready report for the current epoch (ignoring stale epochs and repeats), shows it every
+    /// object spawned through this session that it cannot see yet, and raises <see cref="ClientReady"/>.
+    /// </summary>
     private void HandleClientReadyMessage(ulong senderClientId, FastBufferReader payload)
     {
         payload.ReadValueSafe(out int epoch);
@@ -348,12 +442,19 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         ClientReady?.Invoke(senderClientId);
     }
 
+    /// <summary>
+    /// Forgets a disconnected client's admission and readiness.
+    /// </summary>
     private void HandleClientDisconnected(ulong clientId)
     {
         admittedClients.Remove(clientId);
         readyClients.Remove(clientId);
     }
 
+    /// <summary>
+    /// Raises <see cref="ConnectionLost"/> once when the local client stops without <see cref="Shutdown"/> having been
+    /// called, unless the application is quitting or leaving Play Mode.
+    /// </summary>
     private void HandleClientStopped(bool wasHost)
     {
         if (shutdownRequested || quitting)

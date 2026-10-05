@@ -2,6 +2,11 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
+/// <summary>
+/// A standalone copy of a mob's death animation, spawned by <see cref="DestroyMobOnDeath"/>: it matches the dead
+/// body's sprite placement and look, plays its clip through a playable graph and destroys itself when the clip (or
+/// the fallback lifetime) ends. The template on the mob is never initialised, so it does nothing.
+/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(Animator))]
@@ -18,16 +23,25 @@ public class MobDeathAnimation : MonoBehaviour
     private float elapsedTime;
     private bool initialized;
 
+    /// <summary>
+    /// Caches the sprite renderer, animator and optional <see cref="YPositionSorter"/>.
+    /// </summary>
     private void Awake()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Caches the sprite renderer, animator and optional <see cref="YPositionSorter"/>.
+    /// </summary>
     private void OnValidate()
     {
         ResolveReferences();
     }
 
+    /// <summary>
+    /// Once initialised, restarts the lifetime and the clip each time the object is enabled.
+    /// </summary>
     private void OnEnable()
     {
         if (!initialized)
@@ -39,11 +53,20 @@ public class MobDeathAnimation : MonoBehaviour
         StartDeathAnimation();
     }
 
+    /// <summary>
+    /// Stops the clip and releases its playable graph.
+    /// </summary>
     private void OnDisable()
     {
         StopDeathAnimation();
     }
 
+    /// <summary>
+    /// Copies the dead body's position, rotation, material, color, flips, mask interaction and sorting (order only
+    /// without a <see cref="YPositionSorter"/>) from <paramref name="sourceRenderer"/>, scales to 1.2 times its
+    /// height and arms the lifetime; starts the clip right away if already enabled. Without a source it only arms
+    /// the lifetime.
+    /// </summary>
     public void InitializeFrom(SpriteRenderer sourceRenderer)
     {
         ResolveReferences();
@@ -91,6 +114,9 @@ public class MobDeathAnimation : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Once initialised, destroys the object when its lifetime has elapsed.
+    /// </summary>
     private void Update()
     {
         if (!initialized)
@@ -106,6 +132,9 @@ public class MobDeathAnimation : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The clip's length, or the fallback lifetime when there is no clip or it is empty.
+    /// </summary>
     private float ResolveLifetime()
     {
         if (deathAnimation != null && deathAnimation.length > 0f)
@@ -116,6 +145,9 @@ public class MobDeathAnimation : MonoBehaviour
         return fallbackLifetime;
     }
 
+    /// <summary>
+    /// Looks up the sibling sprite renderer, animator and optional <see cref="YPositionSorter"/> when not cached.
+    /// </summary>
     private void ResolveReferences()
     {
         if (spriteRenderer == null)
@@ -134,6 +166,10 @@ public class MobDeathAnimation : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Replaces any running graph with a new one that plays the death clip on the animator from its first frame,
+    /// even off screen. Does nothing without a clip or animator.
+    /// </summary>
     private void StartDeathAnimation()
     {
         StopDeathAnimation();
@@ -155,11 +191,17 @@ public class MobDeathAnimation : MonoBehaviour
         animationGraph.Evaluate(0f);
     }
 
+    /// <summary>
+    /// Releases the playable graph if it is still alive.
+    /// </summary>
     private void OnDestroy()
     {
         StopDeathAnimation();
     }
 
+    /// <summary>
+    /// Destroys the playable graph when one is valid.
+    /// </summary>
     private void StopDeathAnimation()
     {
         if (animationGraph.IsValid())

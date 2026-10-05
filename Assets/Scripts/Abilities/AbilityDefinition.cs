@@ -76,6 +76,10 @@ public sealed class AbilityDefinition : ScriptableObject
         };
     }
 
+    /// <summary>
+    /// Builds an unsaved, hidden runtime instance with the given values, for tests that must not touch project
+    /// assets. The caller owns it and destroys it.
+    /// </summary>
     public static AbilityDefinition Create(
         string name,
         float cooldown = 1f,

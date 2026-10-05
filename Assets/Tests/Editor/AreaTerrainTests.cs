@@ -8,6 +8,10 @@ using UnityEngine.Tilemaps;
 using UnityEngine.TestTools;
 using VContainer;
 
+/// <summary>
+/// Tests for runtime terrain edits through <see cref="AreaTerrain"/> and for <see cref="AreaTerrainSync"/>, which
+/// spawns or registers the network object that replicates them.
+/// </summary>
 public class AreaTerrainTests
 {
     private const string SyncPrefabPath = "Assets/Prefabs/Network/AreaTerrainSync.prefab";
@@ -19,6 +23,10 @@ public class AreaTerrainTests
     private DualGridTilemapModule ground;
     private DualGridRuleTile groundTile;
 
+    /// <summary>
+    /// Builds a grid with a plain wall tilemap and a dual-grid ground layer (data and render tilemaps) painted
+    /// with a fresh <see cref="DualGridRuleTile"/>.
+    /// </summary>
     [SetUp]
     public void SetUp()
     {
@@ -39,6 +47,9 @@ public class AreaTerrainTests
         ground.RenderTile = groundTile;
     }
 
+    /// <summary>
+    /// Destroys the grid hierarchy, tiles and spawned objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -53,6 +64,10 @@ public class AreaTerrainTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// On the authority, setting cells fills or clears the tiles and keeps one edit record per cell, replacing
+    /// a re-edited cell's record in place and raising <see cref="AreaTerrain.EditRecorded"/> with its index.
+    /// </summary>
     [Test]
     public void TrySetCells_WithAuthority_ChangesTheTiles_AndRecordsTheLastWritePerCell()
     {
@@ -72,6 +87,10 @@ public class AreaTerrainTests
         Assert.That(recorded, Is.EqualTo(new[] { 0, 1, 0 }), "Editing a cell again replaces its record in place.");
     }
 
+    /// <summary>
+    /// Filling a cell on a dual-grid data tilemap paints the module's data tile, refreshes its render tilemap and
+    /// records the edit.
+    /// </summary>
     [Test]
     public void TrySetCells_OnADualGridLayer_PaintsThroughItsModule()
     {
@@ -84,6 +103,9 @@ public class AreaTerrainTests
         Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(0, Vector3Int.zero, true) }));
     }
 
+    /// <summary>
+    /// Without authority, setting cells fails and neither changes tiles nor records edits.
+    /// </summary>
     [Test]
     public void TrySetCells_WithoutAuthority_ChangesAndRecordsNothing()
     {
@@ -95,6 +117,9 @@ public class AreaTerrainTests
         Assert.That(terrain.Edits, Is.Empty);
     }
 
+    /// <summary>
+    /// Setting cells on a tilemap that is not one of the terrain's layers logs an error, fails and records nothing.
+    /// </summary>
     [Test]
     public void TrySetCells_OnATilemapThatIsNotALayer_LogsAnErrorAndFails()
     {
@@ -107,6 +132,10 @@ public class AreaTerrainTests
         Assert.That(terrain.Edits, Is.Empty);
     }
 
+    /// <summary>
+    /// Replicated edits fill and clear cells on every layer, skip edits for a layer the area does not have, and are
+    /// not recorded.
+    /// </summary>
     [Test]
     public void ApplyReplicated_AppliesEveryLayer_WithoutRecording()
     {
@@ -127,6 +156,9 @@ public class AreaTerrainTests
         Assert.That(terrain.Edits, Is.Empty, "Replicated edits are the host's; clients do not record them.");
     }
 
+    /// <summary>
+    /// On the host the sync registers no prefab and spawns one <see cref="NetworkAreaTerrain"/> object.
+    /// </summary>
     [Test]
     public void Sync_OnTheHost_SpawnsTheSyncObjectIntoTheArea()
     {
@@ -143,6 +175,10 @@ public class AreaTerrainTests
         Assert.That(network.Spawned[0].GetComponent<NetworkAreaTerrain>(), Is.Not.Null);
     }
 
+    /// <summary>
+    /// On a client the sync registers its prefab once however often asked, spawns nothing, and unregisters the
+    /// prefab when disposed.
+    /// </summary>
     [Test]
     public void Sync_OnAClient_RegistersThePrefabOnce_SpawnsNothing_AndUnregistersOnDispose()
     {
@@ -162,6 +198,9 @@ public class AreaTerrainTests
         Assert.That(network.Registered, Is.Empty);
     }
 
+    /// <summary>
+    /// With no active network session the sync neither registers nor spawns anything.
+    /// </summary>
     [Test]
     public void Sync_Offline_DoesNothing()
     {
@@ -176,6 +215,10 @@ public class AreaTerrainTests
         Assert.That(network.Spawned, Is.Empty);
     }
 
+    /// <summary>
+    /// Creates an <see cref="AreaTerrain"/> under the grid with the ground as layer 0 and the walls as layer 1,
+    /// injected with <paramref name="authority"/> and, when given, using <paramref name="syncPrefab"/>.
+    /// </summary>
     private AreaTerrain CreateTerrain(IGameAuthority authority, NetworkObject syncPrefab = null)
     {
         GameObject terrainObject = new("Terrain");
@@ -193,6 +236,9 @@ public class AreaTerrainTests
         return terrain;
     }
 
+    /// <summary>
+    /// Loads the project's terrain sync network prefab and asserts it exists.
+    /// </summary>
     private static NetworkObject LoadSyncPrefab()
     {
         NetworkObject prefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(SyncPrefabPath);
@@ -200,6 +246,9 @@ public class AreaTerrainTests
         return prefab;
     }
 
+    /// <summary>
+    /// Builds a container holding only <paramref name="terrain"/>, for the sync to inject spawned objects from.
+    /// </summary>
     private static IObjectResolver BuildResolver(AreaTerrain terrain)
     {
         ContainerBuilder builder = new();
@@ -207,6 +256,9 @@ public class AreaTerrainTests
         return builder.Build();
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

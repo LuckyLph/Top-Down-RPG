@@ -2,11 +2,19 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Import postprocessor that enforces pixel art settings on every texture under Assets/Sprites: sprite type, 32 pixels
+/// per unit, point filtering, no mipmaps or NPOT scaling, and uncompressed RGBA32 on each platform.
+/// </summary>
 public sealed class PixelArtTextureDefaults : AssetPostprocessor
 {
     private const string SpritesRoot = "Assets/Sprites/";
     private const int PixelsPerUnit = 32;
 
+    /// <summary>
+    /// Applies the pixel art defaults to a texture under Assets/Sprites before it imports; other textures are left
+    /// alone.
+    /// </summary>
     void OnPreprocessTexture()
     {
         if (assetImporter is not TextureImporter importer)
@@ -22,6 +30,10 @@ public sealed class PixelArtTextureDefaults : AssetPostprocessor
         ApplyPixelArtDefaults(importer);
     }
 
+    /// <summary>
+    /// Applies the pixel art defaults to every texture already under Assets/Sprites, reimports only the ones that
+    /// changed and logs how many were updated.
+    /// </summary>
     [MenuItem("Tools/Textures/Apply Pixel Art Defaults To Sprites")]
     private static void ApplyDefaultsToExistingSprites()
     {
@@ -57,11 +69,18 @@ public sealed class PixelArtTextureDefaults : AssetPostprocessor
         Debug.Log($"Applied pixel art defaults to {updatedCount} of {scannedCount} texture(s) in Assets/Sprites.");
     }
 
+    /// <summary>
+    /// Whether <paramref name="path"/> lies under Assets/Sprites, ignoring case and slash direction.
+    /// </summary>
     private static bool IsManagedSpritePath(string path)
     {
         return path.Replace('\\', '/').StartsWith(SpritesRoot, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Writes the pixel art settings into <paramref name="importer"/> without reimporting, and returns whether any
+    /// setting changed.
+    /// </summary>
     private static bool ApplyPixelArtDefaults(TextureImporter importer)
     {
         bool changed = false;
@@ -111,6 +130,10 @@ public sealed class PixelArtTextureDefaults : AssetPostprocessor
         return changed;
     }
 
+    /// <summary>
+    /// Makes <paramref name="platformName"/> uncompressed, overriding it to RGBA32 on every platform except the
+    /// default one, and returns whether anything changed.
+    /// </summary>
     private static bool SetPlatformCompression(TextureImporter importer, string platformName)
     {
         TextureImporterPlatformSettings settings = importer.GetPlatformTextureSettings(platformName);

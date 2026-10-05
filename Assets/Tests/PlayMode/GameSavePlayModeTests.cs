@@ -4,8 +4,14 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
 
+/// <summary>
+/// PlayMode tests for the game save: writing it on area entry and the main menu's Continue button.
+/// </summary>
 public class GameSavePlayModeTests
 {
+    /// <summary>
+    /// Entering the starting area writes a save holding that area's scene GUID and the spawn used.
+    /// </summary>
     [UnityTest]
     public IEnumerator EnteringAnArea_SavesItsSceneAndSpawn()
     {
@@ -18,6 +24,9 @@ public class GameSavePlayModeTests
         Assert.That(data.SpawnId, Is.EqualTo(gameFlow.Scenes.StartingSpawnId));
     }
 
+    /// <summary>
+    /// With an empty save store, the main menu's Continue button is disabled and not selected.
+    /// </summary>
     [UnityTest]
     public IEnumerator MainMenu_WithoutASave_DisablesContinue()
     {
@@ -31,6 +40,10 @@ public class GameSavePlayModeTests
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.Not.SameAs(menu.ContinueButton.gameObject));
     }
 
+    /// <summary>
+    /// After playing, the main menu enables and selects Continue, which loads the saved area and spawn as a new
+    /// session.
+    /// </summary>
     [UnityTest]
     public IEnumerator MainMenu_AfterPlaying_ContinueLoadsTheSavedAreaAsANewSession()
     {

@@ -2,23 +2,35 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Replacement inspector for every <see cref="Tilemap"/> that locks the anchor and orientation of dual-grid render
+/// tilemaps, which the <see cref="DualGridTilemapModule"/> manages.
+/// </summary>
 [CanEditMultipleObjects]
 [CustomEditor(typeof(Tilemap))]
 public class RestrictedTilemapEditor : UnityEditor.Editor
 {
     private bool showInfoFoldout = true;
 
+    /// <summary>
+    /// Draws the frame rate and color fields, the anchor and orientation, the orientation matrix (editable only for a
+    /// single Custom-oriented tilemap, like Unity's inspector) and a foldout listing the tiles and sprites in use.
+    /// Anchor, orientation and matrix are locked while any selected tilemap is a render tilemap.
+    /// </summary>
     public override void OnInspectorGUI()
     {
+        serializedObject.UpdateIfRequiredOrScript();
         Tilemap tilemap = (Tilemap)target;
 
         SerializedProperty animationFrameRate = serializedObject.FindProperty("m_AnimationFrameRate");
         SerializedProperty color = serializedObject.FindProperty("m_Color");
+        SerializedProperty tileAnchor = serializedObject.FindProperty("m_TileAnchor");
+        SerializedProperty orientation = serializedObject.FindProperty("m_TileOrientation");
 
         EditorGUILayout.PropertyField(animationFrameRate, new GUIContent("Animation Frame Rate"));
         EditorGUILayout.PropertyField(color, new GUIContent("Color"));
 
-        bool isRenderTilemap = tilemap.GetComponentInImmediateParent<DualGridTilemapModule>() != null;
+        bool isRenderTilemap = HasRenderTilemapTarget();
         if (isRenderTilemap)
         {
             GUILayout.Space(2);
@@ -28,26 +40,66 @@ public class RestrictedTilemapEditor : UnityEditor.Editor
 
         using (new EditorGUI.DisabledScope(isRenderTilemap))
         {
-            EditorGUILayout.Vector3Field("Tile Anchor", tilemap.tileAnchor);
-            EditorGUILayout.EnumPopup("Orientation", tilemap.orientation);
+            EditorGUILayout.PropertyField(tileAnchor, new GUIContent("Tile Anchor"));
+            EditorGUILayout.PropertyField(orientation, new GUIContent("Orientation"));
         }
 
-        using (new EditorGUI.DisabledScope(true))
-        {
-            EditorGUILayout.Vector3Field("Offset", tilemap.tileAnchor);
-            EditorGUILayout.Vector3Field("Rotation", tilemap.transform.rotation.eulerAngles);
-            EditorGUILayout.Vector3Field("Scale", tilemap.transform.localScale);
+        serializedObject.ApplyModifiedProperties();
 
-            showInfoFoldout = EditorGUILayout.Foldout(showInfoFoldout, "Info");
-            if (showInfoFoldout)
+        bool canEditOrientationMatrix = !isRenderTilemap && targets.Length == 1 && tilemap.orientation == Tilemap.Orientation.Custom;
+        using (new EditorGUI.DisabledScope(!canEditOrientationMatrix))
+        {
+            DrawOrientationMatrix(tilemap);
+        }
+
+        showInfoFoldout = EditorGUILayout.Foldout(showInfoFoldout, "Info");
+        if (showInfoFoldout)
+        {
+            using (new EditorGUI.DisabledScope(true))
             {
                 DisplayTilemapInfo(tilemap);
             }
         }
-
-        serializedObject.ApplyModifiedProperties();
     }
 
+    /// <summary>
+    /// Whether any selected tilemap is a render tilemap of a <see cref="DualGridTilemapModule"/>.
+    /// </summary>
+    private bool HasRenderTilemapTarget()
+    {
+        foreach (Object selected in targets)
+        {
+            if (((Tilemap)selected).GetComponentInImmediateParent<DualGridTilemapModule>() != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Draws the offset, rotation and scale of <paramref name="tilemap"/>'s orientation matrix, and writes an edit
+    /// back with undo as long as no scale axis is zero.
+    /// </summary>
+    private static void DrawOrientationMatrix(Tilemap tilemap)
+    {
+        Matrix4x4 matrix = tilemap.orientationMatrix;
+
+        EditorGUI.BeginChangeCheck();
+        Vector3 offset = EditorGUILayout.Vector3Field("Offset", matrix.GetColumn(3));
+        Vector3 rotation = EditorGUILayout.Vector3Field("Rotation", matrix.rotation.eulerAngles);
+        Vector3 scale = EditorGUILayout.Vector3Field("Scale", matrix.lossyScale);
+        if (EditorGUI.EndChangeCheck() && scale.x != 0f && scale.y != 0f && scale.z != 0f)
+        {
+            Undo.RecordObject(tilemap, "Tilemap orientation change");
+            tilemap.orientationMatrix = Matrix4x4.TRS(offset, Quaternion.Euler(rotation), scale);
+        }
+    }
+
+    /// <summary>
+    /// Lists the distinct tiles and sprites used by <paramref name="tilemap"/> as read-only object fields.
+    /// </summary>
     private void DisplayTilemapInfo(Tilemap tilemap)
     {
         TileBase[] uniqueTiles = GetUniqueTilesFromTilemap(tilemap);
@@ -67,6 +119,10 @@ public class RestrictedTilemapEditor : UnityEditor.Editor
     }
 
     private TileBase[] usedTilesCache;
+    /// <summary>
+    /// The distinct tiles in <paramref name="tilemap"/>, written into a cached array that is reallocated only when the
+    /// count changes.
+    /// </summary>
     private TileBase[] GetUniqueTilesFromTilemap(Tilemap tilemap)
     {
         int usedTilesCount = tilemap.GetUsedTilesCount();
@@ -80,6 +136,10 @@ public class RestrictedTilemapEditor : UnityEditor.Editor
     }
 
     private Sprite[] usedSpritesCache;
+    /// <summary>
+    /// The distinct sprites in <paramref name="tilemap"/>, written into a cached array that is reallocated only when
+    /// the count changes.
+    /// </summary>
     private Sprite[] GetUniqueSpritesFromTilemap(Tilemap tilemap)
     {
         int usedSpritesCount = tilemap.GetUsedSpritesCount();

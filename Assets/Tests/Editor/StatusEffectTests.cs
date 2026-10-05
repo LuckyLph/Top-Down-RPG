@@ -6,10 +6,18 @@ using UnityEngine;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
+/// <summary>
+/// Tests for status effects: <see cref="StatusEffectSet"/> stacking, ticking and combined modifiers,
+/// <see cref="StatusEffectService"/> authority, faction and lifetime rules, statuses carried by hits, and the
+/// project's status content.
+/// </summary>
 public class StatusEffectTests
 {
     private readonly List<Object> created = new();
 
+    /// <summary>
+    /// Destroys the definitions, profiles, configs and unit objects the test created.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -24,6 +32,10 @@ public class StatusEffectTests
         created.Clear();
     }
 
+    /// <summary>
+    /// Reapplying a <see cref="StatusStacking.Refresh"/> status keeps a single instance and resets its remaining
+    /// time to the full duration.
+    /// </summary>
     [Test]
     public void Set_Refresh_ResetsTheDurationOfItsOneInstance()
     {
@@ -39,6 +51,10 @@ public class StatusEffectTests
         Assert.That(set.GetSnapshot(0).Remaining, Is.EqualTo(5f).Within(0.001f));
     }
 
+    /// <summary>
+    /// Reapplying an <see cref="StatusStacking.AddStack"/> status adds stacks to its one instance up to the
+    /// maximum, then only refreshes, and every application resets the duration.
+    /// </summary>
     [Test]
     public void Set_AddStack_StacksUpToTheMaximumAndResetsTheDuration()
     {
@@ -56,6 +72,10 @@ public class StatusEffectTests
         Assert.That(set.GetSnapshot(0).Remaining, Is.EqualTo(4f).Within(0.001f));
     }
 
+    /// <summary>
+    /// An <see cref="StatusStacking.Independent"/> status keeps one timer per application up to its cap, and an
+    /// application at the cap replaces the instance closest to expiring.
+    /// </summary>
     [Test]
     public void Set_Independent_KeepsSeparateTimersAndReplacesTheOneClosestToExpiring()
     {
@@ -76,6 +96,11 @@ public class StatusEffectTests
         Assert.That(set.GetStacks(poison), Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// A periodic status first ticks one interval after landing, ticks at the instant it expires, carries the
+    /// dealt multiplier captured on application, and raises <see cref="StatusEffectSet.Changed"/> only for the
+    /// expiry.
+    /// </summary>
     [Test]
     public void Set_PeriodicTicks_StartAfterOneIntervalAndIncludeTheExpiryInstant()
     {
@@ -101,6 +126,9 @@ public class StatusEffectTests
         Assert.That(changes, Is.EqualTo(1), "Plain ticks are not changes; the expiry is.");
     }
 
+    /// <summary>
+    /// A single time step spanning several tick intervals emits every periodic tick it covers.
+    /// </summary>
     [Test]
     public void Set_ATickLargerThanTheIntervalCatchesUpEveryTick()
     {
@@ -114,6 +142,9 @@ public class StatusEffectTests
         Assert.That(ticks.Count, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// Refreshing a periodic status does not restart its tick interval.
+    /// </summary>
     [Test]
     public void Set_ReapplyingKeepsTheTickPhase()
     {
@@ -129,6 +160,10 @@ public class StatusEffectTests
         Assert.That(ticks.Count, Is.EqualTo(1), "A refresh does not push the next tick back.");
     }
 
+    /// <summary>
+    /// Stacks multiply a status's periodic amount and resistance changes and compound its damage dealt and taken
+    /// multipliers.
+    /// </summary>
     [Test]
     public void Set_StacksScaleTicksMultipliersAndResistances()
     {
@@ -148,6 +183,10 @@ public class StatusEffectTests
         Assert.That(set.GetResistanceDelta(DamageType.Fire), Is.EqualTo(-20));
     }
 
+    /// <summary>
+    /// The set combines damage multipliers, resistance changes and granted damage immunity across statuses and
+    /// recomputes them when a status expires, is removed or the set is cleared.
+    /// </summary>
     [Test]
     public void Set_CombinesStatusesAndRecomputesWhenOneEnds()
     {
@@ -181,6 +220,10 @@ public class StatusEffectTests
         Assert.That(set.GetResistanceDelta(DamageType.Fire), Is.Zero);
     }
 
+    /// <summary>
+    /// Move speed multipliers multiply across statuses and stacks, crowd-control flags are the union of the
+    /// active statuses, and both recompute as statuses end.
+    /// </summary>
     [Test]
     public void Set_CombinesMoveSpeedAndControls()
     {
@@ -206,6 +249,10 @@ public class StatusEffectTests
         Assert.That(set.Controls, Is.EqualTo(StatusControls.None));
     }
 
+    /// <summary>
+    /// <see cref="StatusEffects.MovementScale"/> is zero under a stun or root and the combined slow otherwise; a
+    /// silence does not affect it.
+    /// </summary>
     [Test]
     public void Component_MovementScale_IsZeroWhileStunnedOrRooted_AndTheSlowOtherwise()
     {
@@ -226,6 +273,10 @@ public class StatusEffectTests
         Assert.That(statuses.MovementScale, Is.Zero);
     }
 
+    /// <summary>
+    /// A base status immunity blocks statuses with that tag, and a status granting an immunity removes the
+    /// active statuses it now blocks and blocks new ones while it lasts.
+    /// </summary>
     [Test]
     public void Set_StatusImmunities_BlockByTagAndAGrantRemovesWhatItNowBlocks()
     {
@@ -246,6 +297,10 @@ public class StatusEffectTests
         Assert.That(set.Apply(stun, null, 1f), Is.EqualTo(StatusApplyOutcome.Immune), "And blocks new ones while it lasts.");
     }
 
+    /// <summary>
+    /// <see cref="StatusEffectSet.SyncFrom"/> mirrors replicated snapshots (ids, stacks, remaining time and the
+    /// modifiers they imply), skips snapshots without a definition, and raises one change.
+    /// </summary>
     [Test]
     public void Set_SyncFrom_MirrorsSnapshotsWithoutTicking()
     {
@@ -263,6 +318,9 @@ public class StatusEffectTests
         Assert.That(changes, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// Ticking a set with periodic and plain statuses into a reused tick list allocates no managed memory.
+    /// </summary>
     [Test]
     public void Set_TickDoesNotAllocateOnceWarm()
     {
@@ -281,6 +339,10 @@ public class StatusEffectTests
         }, Is.Not.AllocatingGCMemory());
     }
 
+    /// <summary>
+    /// On a non-authoritative machine the service returns <see cref="StatusApplyOutcome.NoAuthority"/> and the
+    /// unit gets no status.
+    /// </summary>
     [Test]
     public void Service_WithoutAuthority_AppliesNothing()
     {
@@ -291,6 +353,10 @@ public class StatusEffectTests
         Assert.That(unit.Statuses.Count, Is.Zero);
     }
 
+    /// <summary>
+    /// Debuffs land only on units of another faction and buffs only within the source's faction (itself
+    /// included), while a status without a source lands on anyone.
+    /// </summary>
     [Test]
     public void Service_Debuffs_LandAcrossFactions_AndBuffs_WithinOne()
     {
@@ -310,6 +376,11 @@ public class StatusEffectTests
         Assert.That(statuses.Apply(teammate, burn, null), Is.EqualTo(StatusApplyOutcome.Landed), "A status without a source lands on anyone.");
     }
 
+    /// <summary>
+    /// The service refuses dead targets with <see cref="StatusApplyOutcome.TargetDead"/>, and units without a
+    /// <see cref="StatusEffects"/>, a null target or a null definition with
+    /// <see cref="StatusApplyOutcome.Invalid"/>.
+    /// </summary>
     [Test]
     public void Service_RejectsDeadTargetsAndUnitsWithoutStatuses()
     {
@@ -327,6 +398,10 @@ public class StatusEffectTests
         Assert.That(statuses.Apply(dead, null, null), Is.EqualTo(StatusApplyOutcome.Invalid));
     }
 
+    /// <summary>
+    /// Periodic damage uses the source's damage dealt multiplier captured when the status landed, even after the
+    /// source is destroyed, applies the target's resistance to its type, and is flagged periodic.
+    /// </summary>
     [Test]
     public void Service_PeriodicDamage_UsesTheCapturedMultiplierAfterTheSourceIsGone()
     {
@@ -349,6 +424,9 @@ public class StatusEffectTests
         Assert.That(reports[0].Flags & DamageFlags.Periodic, Is.EqualTo(DamageFlags.Periodic));
     }
 
+    /// <summary>
+    /// A periodic heal status heals the unit on each tick and publishes a heal event per tick.
+    /// </summary>
     [Test]
     public void Service_PeriodicHeal_Heals()
     {
@@ -366,6 +444,10 @@ public class StatusEffectTests
         Assert.That(heals, Is.EqualTo(2));
     }
 
+    /// <summary>
+    /// The service advances statuses by the time the game clock moved since its last tick, so ticks while the
+    /// clock stands still neither deal damage nor run timers down.
+    /// </summary>
     [Test]
     public void Service_TicksOnTheClockAndStopsWhenItStands()
     {
@@ -386,6 +468,10 @@ public class StatusEffectTests
         Assert.That(mob.Statuses.GetSnapshot(0).Remaining, Is.EqualTo(8f).Within(0.001f));
     }
 
+    /// <summary>
+    /// Statuses feed into direct damage: the attacker's dealt multiplier, the target's taken multiplier and
+    /// resistance changes scale it, and a granted immunity blocks even true damage.
+    /// </summary>
     [Test]
     public void Service_StatusesChangeTheDamageUnitsDealAndTake()
     {
@@ -404,6 +490,10 @@ public class StatusEffectTests
         Assert.That(services.Damage.ApplyDamage(player, 20, DamageType.True, mob.gameObject).IsImmune, Is.True);
     }
 
+    /// <summary>
+    /// A status blocked by the target's profile immunity returns <see cref="StatusApplyOutcome.Immune"/>, raises
+    /// the unit's blocked event and publishes a <see cref="StatusReport"/> for the immune popup.
+    /// </summary>
     [Test]
     public void Service_BlockedStatus_IsReportedForAnImmunePopup()
     {
@@ -425,6 +515,9 @@ public class StatusEffectTests
         Assert.That(golem.Statuses.Count, Is.Zero);
     }
 
+    /// <summary>
+    /// A unit that dies has its statuses cleared and is no longer tracked by the service.
+    /// </summary>
     [Test]
     public void Service_DeathClearsStatusesAndTheUnitStopsBeingTracked()
     {
@@ -440,6 +533,10 @@ public class StatusEffectTests
         Assert.That(services.Statuses.TrackedUnitCount, Is.Zero);
     }
 
+    /// <summary>
+    /// While a unit's <see cref="IStatusHold"/> holds it, its statuses neither tick nor run down, and they resume
+    /// once released.
+    /// </summary>
     [Test]
     public void Service_HeldUnits_NeitherTickNorRunDown()
     {
@@ -458,6 +555,9 @@ public class StatusEffectTests
         Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth - 2));
     }
 
+    /// <summary>
+    /// The service removes one named status from a unit and clears all of them.
+    /// </summary>
     [Test]
     public void Service_RemoveAndClearAll()
     {
@@ -474,6 +574,10 @@ public class StatusEffectTests
         Assert.That(mob.Statuses.Count, Is.Zero);
     }
 
+    /// <summary>
+    /// A hit applies its statuses to targets it reached that survived it, including targets immune to its
+    /// damage and status-only hits with no damage, but not to allies it refused or targets it killed.
+    /// </summary>
     [Test]
     public void HitService_AppliesStatusesOnlyToSurvivorsOfAHitThatLanded()
     {
@@ -507,6 +611,9 @@ public class StatusEffectTests
         Assert.That(services.Hits.ApplyHit(teammate, new Hit(0, DamageType.Physical, new[] { burn }), player.gameObject), Is.False, "A refused statuses-only hit did not.");
     }
 
+    /// <summary>
+    /// A damaging hit carrying a buff damages only enemies but gives the buff only to allies.
+    /// </summary>
     [Test]
     public void HitService_ADamagingHitStillBuffsTheAlliesItCannotHurt()
     {
@@ -526,6 +633,10 @@ public class StatusEffectTests
         Assert.That(mob.Statuses.Count, Is.Zero, "But never the buff.");
     }
 
+    /// <summary>
+    /// Reapplying an independent status at its cap faster than its tick interval does not keep resetting the
+    /// tick phase, so the doses keep ticking.
+    /// </summary>
     [Test]
     public void Set_Independent_ReapplyingAtTheCapKeepsTheTickPhase()
     {
@@ -544,6 +655,10 @@ public class StatusEffectTests
         Assert.That(ticks.Count, Is.GreaterThanOrEqualTo(15), "Spamming at the cap must not stall the ticks (6 s of three doses ticking every second).");
     }
 
+    /// <summary>
+    /// A mob's <see cref="MeleeDamageDealer"/> applies the attack statuses from its <see cref="MobConfig"/> to
+    /// the player it hits.
+    /// </summary>
     [Test]
     public void MeleeDamageDealer_AppliesTheConfiguredStatuses()
     {
@@ -562,6 +677,10 @@ public class StatusEffectTests
         Assert.That(player.Statuses.GetStacks(poison), Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// A published blocked-status report makes the <see cref="DamagePopupPresenter"/> show one popup with the
+    /// combat settings' immune text and colour.
+    /// </summary>
     [Test]
     public void DamagePopupPresenter_ShowsImmuneForABlockedStatus()
     {
@@ -586,6 +705,11 @@ public class StatusEffectTests
         Assert.That(texts[0].color, Is.EqualTo(TestCombat.Settings.ImmuneColor));
     }
 
+    /// <summary>
+    /// The project combat settings' status catalog lists every status definition asset exactly once at its own
+    /// index and includes the expected test statuses with their key properties; Unstoppable removes an active
+    /// stun and slow but not a silence, and blocks a new root.
+    /// </summary>
     [Test]
     public void Content_CatalogListsEveryStatusOnceAndTheSettingsUseIt()
     {
@@ -633,6 +757,10 @@ public class StatusEffectTests
         Assert.That(set.Apply(FindByName(catalog, "Root"), null, 1f), Is.EqualTo(StatusApplyOutcome.Immune));
     }
 
+    /// <summary>
+    /// The player and weasel prefabs carry <see cref="StatusEffects"/> and <see cref="NetworkStatusEffects"/>,
+    /// and their <see cref="DamageReceiver"/> uses that status component.
+    /// </summary>
     [Test]
     public void Content_UnitsCarryStatusEffectsAndReplicateThem()
     {
@@ -645,6 +773,10 @@ public class StatusEffectTests
         }
     }
 
+    /// <summary>
+    /// Returns the remaining time of every instance in <paramref name="set"/>, rounded to milliseconds so they
+    /// compare cleanly.
+    /// </summary>
     private static float[] RemainingTimes(StatusEffectSet set)
     {
         float[] times = new float[set.Count];
@@ -656,6 +788,9 @@ public class StatusEffectTests
         return times;
     }
 
+    /// <summary>
+    /// Returns the catalog entry whose display name is <paramref name="displayName"/>, or null when there is none.
+    /// </summary>
     private static StatusEffectDefinition FindByName(StatusEffectCatalog catalog, string displayName)
     {
         for (int i = 0; i < catalog.Count; i++)
@@ -669,6 +804,10 @@ public class StatusEffectTests
         return null;
     }
 
+    /// <summary>
+    /// Creates a tracked status definition; every parameter left out is neutral (refresh stacking, one stack, no
+    /// periodic effect, multipliers of 1, no resistances, immunities or controls).
+    /// </summary>
     private StatusEffectDefinition Definition(
         string name,
         StatusKind kind,
@@ -694,6 +833,9 @@ public class StatusEffectTests
         return definition;
     }
 
+    /// <summary>
+    /// Creates a tracked combat profile for <paramref name="faction"/> with the given immunities and resistances.
+    /// </summary>
     private CombatProfile Profile(Faction faction, StatusTags statusImmunities, DamageTypeMask damageImmunities = DamageTypeMask.None, params DamageResistance[] resistances)
     {
         CombatProfile profile = CombatProfile.Create(faction, damageImmunities, statusImmunities, resistances);
@@ -701,6 +843,10 @@ public class StatusEffectTests
         return profile;
     }
 
+    /// <summary>
+    /// Creates a tracked unit with 100 max health, a <see cref="DamageReceiver"/>, <see cref="StatusEffects"/> and
+    /// a profile for <paramref name="faction"/> with <paramref name="resistances"/>, and returns its receiver.
+    /// </summary>
     private DamageReceiver Unit(string name, Faction faction, params DamageResistance[] resistances)
     {
         GameObject unit = Track(new GameObject(name));
@@ -713,14 +859,24 @@ public class StatusEffectTests
         return receiver;
     }
 
+    /// <summary>
+    /// Records <paramref name="gameObject"/> for destruction in <see cref="TearDown"/> and returns it.
+    /// </summary>
     private GameObject Track(GameObject gameObject)
     {
         created.Add(gameObject);
         return gameObject;
     }
 
+    /// <summary>
+    /// The combat services a status test needs, wired together over one set of combat events.
+    /// </summary>
     private sealed class Services
     {
+        /// <summary>
+        /// Builds damage, status and hit services that are authoritative when <paramref name="authoritative"/> is
+        /// set, with the status service on <paramref name="clock"/> or a fresh manual clock.
+        /// </summary>
         public Services(bool authoritative, IClock clock = null)
         {
             IGameAuthority authority = new FixedGameAuthority(authoritative);
@@ -736,6 +892,9 @@ public class StatusEffectTests
         public HitService Hits { get; }
     }
 
+    /// <summary>
+    /// An <see cref="IStatusHold"/> the test switches on and off directly.
+    /// </summary>
     private sealed class FakeHold : IStatusHold
     {
         public bool IsHeld { get; set; }

@@ -9,8 +9,10 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using Random = System.Random;
 
-// Opt-in: run by name to compare pathfinding cost before and after navigation changes.
-// Results are logged to the console with a [PathBench] prefix.
+/// <summary>
+/// Opt-in pathfinding benchmarks: run by name to compare pathfinding cost before and after navigation changes.
+/// Results are logged to the console with a [PathBench] prefix.
+/// </summary>
 [Explicit, Category("Benchmark")]
 public class PathfindingBenchmarkTests
 {
@@ -23,6 +25,9 @@ public class PathfindingBenchmarkTests
     private TerrainMovementProfile2D profile;
     private TerrainType2D ground;
 
+    /// <summary>
+    /// Destroys every object and asset the benchmark tracked.
+    /// </summary>
     [TearDown]
     public void TearDown()
     {
@@ -37,6 +42,9 @@ public class PathfindingBenchmarkTests
         createdObjects.Clear();
     }
 
+    /// <summary>
+    /// Measures strict searches between random connected cell pairs on an open 128x128 field.
+    /// </summary>
     [Test]
     public void OpenField()
     {
@@ -44,6 +52,9 @@ public class PathfindingBenchmarkTests
         MeasureSearches("Open field", RandomPairs(Searches, requireConnected: true), allowPartial: false);
     }
 
+    /// <summary>
+    /// Measures strict searches between random connected cell pairs in a maze of walls with one gap each.
+    /// </summary>
     [Test]
     public void Maze()
     {
@@ -59,6 +70,9 @@ public class PathfindingBenchmarkTests
         MeasureSearches("Maze", RandomPairs(Searches, requireConnected: true), allowPartial: false);
     }
 
+    /// <summary>
+    /// Measures partial searches toward goals on the far side of a wall that splits the map in two.
+    /// </summary>
     [Test]
     public void UnreachableGoal_PartialAllowed()
     {
@@ -75,6 +89,9 @@ public class PathfindingBenchmarkTests
         MeasureSearches("Unreachable goal (partial)", pairs, allowPartial: true);
     }
 
+    /// <summary>
+    /// Measures strict searches toward goals on the far side of a wall that splits the map in two.
+    /// </summary>
     [Test]
     public void UnreachableGoal_Strict()
     {
@@ -95,6 +112,10 @@ public class PathfindingBenchmarkTests
         });
     }
 
+    /// <summary>
+    /// Measures a mob path agent building paths between random connected cell pairs in the maze, covering the
+    /// agent's work on top of the A* search.
+    /// </summary>
     [Test]
     public void BuildPathToWorld_Maze()
     {
@@ -124,6 +145,9 @@ public class PathfindingBenchmarkTests
         });
     }
 
+    /// <summary>
+    /// Measures A* searches over <paramref name="pairs"/> with the benchmark profile, asserting each succeeds.
+    /// </summary>
     private void MeasureSearches(string label, List<(Vector3Int, Vector3Int)> pairs, bool allowPartial)
     {
         GridAStarPathfinder2D pathfinder = (GridAStarPathfinder2D)navigationGrid.Pathfinder;
@@ -135,6 +159,11 @@ public class PathfindingBenchmarkTests
         });
     }
 
+    /// <summary>
+    /// Warms up with one call to <paramref name="run"/>, times <paramref name="count"/> calls, repeats them in a
+    /// separate pass to count allocations and heap growth, and logs the per-search averages, including the cells
+    /// expanded that each call returns.
+    /// </summary>
     private static void Measure(string label, int count, Func<int, int> run)
     {
         run(0);
@@ -180,6 +209,10 @@ public class PathfindingBenchmarkTests
             $"{allocations / (double)count:F0} allocs/search (~{bytesText}), {expanded / (double)count:F0} cells expanded/search");
     }
 
+    /// <summary>
+    /// Picks <paramref name="count"/> seeded random pairs of cells walkable for the benchmark profile, only
+    /// pairs in the same connected region when <paramref name="requireConnected"/> is true.
+    /// </summary>
     private List<(Vector3Int, Vector3Int)> RandomPairs(int count, bool requireConnected)
     {
         Random random = new(1234);
@@ -204,6 +237,10 @@ public class PathfindingBenchmarkTests
         return pairs;
     }
 
+    /// <summary>
+    /// Builds a 128x128 ground grid with the cells matching <paramref name="isBlocked"/> on a blocking tilemap,
+    /// and a benchmark profile with several terrain rules.
+    /// </summary>
     private void BuildGrid(Func<Vector3Int, bool> isBlocked)
     {
         root = Track(new GameObject("PathBenchmarkRoot"));
@@ -246,6 +283,10 @@ public class PathfindingBenchmarkTests
         navigationGrid.BuildGrid();
     }
 
+    /// <summary>
+    /// Creates a tilemap under the root with <paramref name="tile"/> set on all of <paramref name="cells"/> in one
+    /// batch.
+    /// </summary>
     private Tilemap CreateTilemap(string name, List<Vector3Int> cells, TileBase tile)
     {
         GameObject tilemapObject = new(name);
@@ -257,6 +298,9 @@ public class PathfindingBenchmarkTests
         return tilemap;
     }
 
+    /// <summary>
+    /// Records <paramref name="created"/> for destruction on teardown and returns it.
+    /// </summary>
     private T Track<T>(T created) where T : Object
     {
         createdObjects.Add(created);

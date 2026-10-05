@@ -14,6 +14,9 @@ public sealed class StatusVisualPool : IDisposable
     private readonly Dictionary<StatusVisual, Stack<StatusVisual>> free = new();
     private readonly List<StatusVisual> created = new();
 
+    /// <summary>
+    /// Creates an empty pool that moves new instances into <paramref name="scene"/> when it is loaded.
+    /// </summary>
     public StatusVisualPool(Scene scene)
     {
         this.scene = scene;
@@ -21,6 +24,10 @@ public sealed class StatusVisualPool : IDisposable
 
     internal int CreatedCount => created.Count;
 
+    /// <summary>
+    /// A hidden instance of <paramref name="prefab"/>: a released one when available (skipping destroyed ones),
+    /// otherwise a new one. Null for a null prefab.
+    /// </summary>
     public StatusVisual Get(StatusVisual prefab)
     {
         if (prefab == null)
@@ -52,6 +59,9 @@ public sealed class StatusVisualPool : IDisposable
         return instance;
     }
 
+    /// <summary>
+    /// Hides <paramref name="visual"/> and returns it to its prefab's free list; null is ignored.
+    /// </summary>
     public void Release(StatusVisual visual)
     {
         if (visual == null)
@@ -69,6 +79,9 @@ public sealed class StatusVisualPool : IDisposable
         pooled.Push(visual);
     }
 
+    /// <summary>
+    /// Destroys every instance the pool created, in use or free, and forgets them.
+    /// </summary>
     public void Dispose()
     {
         foreach (StatusVisual visual in created)

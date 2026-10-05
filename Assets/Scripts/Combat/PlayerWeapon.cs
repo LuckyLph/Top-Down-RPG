@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// A weapon the player can equip: the <see cref="Hit"/> each swing deals, the attack cooldown and range, how its
+/// slash prefab is placed around the player, its HUD icon, and the two abilities it grants (the A and S slots).
+/// </summary>
 [CreateAssetMenu(fileName = "Player Weapon", menuName = "TopDownRPG/Combat/Player Weapon")]
 public sealed class PlayerWeapon : ScriptableObject
 {
@@ -32,23 +36,37 @@ public sealed class PlayerWeapon : ScriptableObject
     public GameObject SlashPrefab => slashPrefab;
     public Sprite HudIcon => hudIcon;
 
+    /// <summary>
+    /// Keeps exactly four directional slash offsets and <see cref="AbilityCount"/> ability entries in the inspector.
+    /// </summary>
     private void OnValidate()
     {
         EnsureDirectionalSpawnOffsets();
         abilities = AbilitySlotArrays.Resize(abilities, AbilityCount);
     }
 
+    /// <summary>
+    /// The ability for weapon slot <paramref name="index"/> (0 is A), or null when empty or out of range.
+    /// </summary>
     public AbilityDefinition GetAbility(int index)
     {
         return abilities != null && index >= 0 && index < abilities.Length ? abilities[index] : null;
     }
 
+    /// <summary>
+    /// The extra world-space slash offset for the cardinal direction nearest <paramref name="attackDirection"/>;
+    /// horizontal wins only when strictly dominant, and a zero direction counts as down.
+    /// </summary>
     public Vector2 GetSlashSpawnOffset(Vector2 attackDirection)
     {
         EnsureDirectionalSpawnOffsets();
         return slashSpawnOffsets[GetDirectionIndex(attackDirection)];
     }
 
+    /// <summary>
+    /// Builds an unsaved, hidden runtime weapon with the given values, for tests that must not touch project assets.
+    /// Offsets and abilities are truncated or padded to their fixed counts.
+    /// </summary>
     public static PlayerWeapon Create(
         string name,
         int attackDamage,
@@ -78,11 +96,18 @@ public sealed class PlayerWeapon : ScriptableObject
         return weapon;
     }
 
+    /// <summary>
+    /// Replaces the slash offsets with a copy holding exactly four entries.
+    /// </summary>
     private void EnsureDirectionalSpawnOffsets()
     {
         slashSpawnOffsets = NormalizeDirectionalSpawnOffsets(slashSpawnOffsets);
     }
 
+    /// <summary>
+    /// A new four-entry array (Down, Up, Left, Right) copied from <paramref name="offsets"/>, truncated or padded with
+    /// zero offsets; all zero when it is null.
+    /// </summary>
     private static Vector2[] NormalizeDirectionalSpawnOffsets(Vector2[] offsets)
     {
         Vector2[] normalizedOffsets = new Vector2[DirectionalSpawnOffsetCount];
@@ -100,6 +125,10 @@ public sealed class PlayerWeapon : ScriptableObject
         return normalizedOffsets;
     }
 
+    /// <summary>
+    /// The offset index of the dominant axis of <paramref name="attackDirection"/>: 0 Down, 1 Up, 2 Left, 3 Right.
+    /// Ties and zero go vertical, and a non-positive vertical component is Down.
+    /// </summary>
     private static int GetDirectionIndex(Vector2 attackDirection)
     {
         if (Mathf.Abs(attackDirection.x) > Mathf.Abs(attackDirection.y))

@@ -9,6 +9,9 @@ public sealed class UISelection
 {
     private readonly EventSystem eventSystem;
 
+    /// <summary>
+    /// Creates the helper over <paramref name="eventSystem"/>, which may be null.
+    /// </summary>
     public UISelection(EventSystem eventSystem)
     {
         this.eventSystem = eventSystem;

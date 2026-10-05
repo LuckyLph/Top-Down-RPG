@@ -10,20 +10,30 @@ using VContainer.Unity;
 using UnityEditor.SceneManagement;
 #endif
 
-// Boots the game the same way a build does (Main scene -> GameFlow), so PlayMode tests exercise
-// the real additive scene composition instead of a single hand-loaded scene.
+/// <summary>
+/// Boots the game the same way a build does (Main scene -&gt; GameFlow), so PlayMode tests exercise
+/// the real additive scene composition instead of a single hand-loaded scene.
+/// </summary>
 public static class SceneBootTestHelper
 {
     public const string MainScenePath = "Assets/Scenes/Main.unity";
     public const string StartingAreaPath = "Assets/Scenes/Areas/Area_Clearing.unity";
     private const float TimeoutSeconds = 15f;
 
+    /// <summary>
+    /// Boots into a gameplay session in the starting area, backed by <paramref name="saveStore"/> or a fresh in-memory
+    /// store.
+    /// </summary>
     public static IEnumerator BootIntoStartingArea(ISaveStore saveStore = null)
     {
         yield return BootIntoArea(StartingAreaPath, saveStore);
     }
 
-    // Any scene can be booted as an area in the editor, listed in GameScenes or not (see BootFlow).
+    /// <summary>
+    /// Boots into a gameplay session in <paramref name="areaScenePath"/>, starting a new game if the boot lands in the
+    /// menu, and asserts it ends in game. Any scene can be booted as an area in the editor, listed in GameScenes or
+    /// not (see BootFlow).
+    /// </summary>
     public static IEnumerator BootIntoArea(string areaScenePath, ISaveStore saveStore = null)
     {
 #if UNITY_EDITOR
@@ -45,6 +55,9 @@ public static class SceneBootTestHelper
         Assert.That(gameFlow.IsInGame, Is.True, "Boot should end in a gameplay session.");
     }
 
+    /// <summary>
+    /// Clears any editor boot request and boots Main until it settles in the main menu.
+    /// </summary>
     public static IEnumerator BootIntoMainMenu(ISaveStore saveStore = null)
     {
 #if UNITY_EDITOR
@@ -57,23 +70,36 @@ public static class SceneBootTestHelper
         yield return WaitUntil(() => !gameFlow.IsTransitioning && gameFlow.IsInMenu, "boot to reach the main menu");
     }
 
+    /// <summary>
+    /// The running <see cref="GameFlow"/>, or null before the Main scope is built.
+    /// </summary>
     public static GameFlow ResolveGameFlow()
     {
         return ResolveFromMain<GameFlow>();
     }
 
+    /// <summary>
+    /// Resolves <typeparamref name="T"/> from the Main scope's container, or default when that scope is not built.
+    /// </summary>
     public static T ResolveFromMain<T>()
     {
         MainLifetimeScope scope = UnityEngine.Object.FindAnyObjectByType<MainLifetimeScope>();
         return scope != null && scope.Container != null ? scope.Container.Resolve<T>() : default;
     }
 
+    /// <summary>
+    /// Resolves <typeparamref name="T"/> from the Gameplay scope's container, or default when that scope is not built.
+    /// </summary>
     public static T ResolveFromGameplay<T>()
     {
         GameplayLifetimeScope scope = UnityEngine.Object.FindAnyObjectByType<GameplayLifetimeScope>();
         return scope != null && scope.Container != null ? scope.Container.Resolve<T>() : default;
     }
 
+    /// <summary>
+    /// The status in the gameplay combat settings' catalog named <paramref name="displayName"/>; fails the test when
+    /// there is none.
+    /// </summary>
     public static StatusEffectDefinition FindStatus(string displayName)
     {
         StatusEffectCatalog catalog = ResolveFromGameplay<CombatSettings>().StatusCatalog;
@@ -89,12 +115,19 @@ public static class SceneBootTestHelper
         return null;
     }
 
-    // GameFlow flips IsTransitioning synchronously when a transition starts.
+    /// <summary>
+    /// Waits for the current scene transition to finish. GameFlow flips IsTransitioning synchronously when a
+    /// transition starts.
+    /// </summary>
     public static IEnumerator WaitForTransition(GameFlow gameFlow)
     {
         yield return WaitUntil(() => !gameFlow.IsTransitioning, "the scene transition to finish");
     }
 
+    /// <summary>
+    /// Yields frames until <paramref name="condition"/> holds, failing the test with <paramref name="description"/>
+    /// after the real-time timeout.
+    /// </summary>
     public static IEnumerator WaitUntil(Func<bool> condition, string description)
     {
         float deadline = Time.realtimeSinceStartup + TimeoutSeconds;
@@ -109,6 +142,10 @@ public static class SceneBootTestHelper
         }
     }
 
+    /// <summary>
+    /// Loads Main alone with its scope given <paramref name="saveStore"/> (or a fresh in-memory store) as the save
+    /// store and an in-memory user settings store, then waits for the scope to build.
+    /// </summary>
     private static IEnumerator LoadMainScene(ISaveStore saveStore)
     {
         ISaveStore store = saveStore ?? new MemorySaveStore();

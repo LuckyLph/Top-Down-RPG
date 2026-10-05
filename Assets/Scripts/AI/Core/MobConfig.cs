@@ -76,6 +76,10 @@ public class MobConfig : ScriptableObject
     public float StuckTimeout => stuckTimeout;
     public TerrainMovementProfile2D MovementProfile => movementProfile;
 
+    /// <summary>
+    /// Rolls how long a mob idles before patrolling, uniformly within <see cref="IdleDurationRange"/>, whose bounds
+    /// may be in either order.
+    /// </summary>
     public float NextIdleDuration(IRandom random)
     {
         float min = Mathf.Min(idleDurationRange.x, idleDurationRange.y);

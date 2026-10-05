@@ -21,17 +21,26 @@ public class StatusVisuals : MonoBehaviour
 
     internal int ShownCount => shown.Count;
 
+    /// <summary>
+    /// Caches the unit's <see cref="StatusEffects"/>.
+    /// </summary>
     private void Awake()
     {
         ResolveStatuses();
     }
 
+    /// <summary>
+    /// Listens for status changes and shows the visuals of statuses already active.
+    /// </summary>
     private void OnEnable()
     {
         Subscribe();
         Refresh();
     }
 
+    /// <summary>
+    /// Logs an error when the pool was never injected, since no visuals can show without it.
+    /// </summary>
     private void Start()
     {
         if (pool == null)
@@ -40,6 +49,9 @@ public class StatusVisuals : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Stops listening for status changes and returns every shown visual to the pool.
+    /// </summary>
     private void OnDisable()
     {
         if (statuses != null && subscribed)
@@ -51,6 +63,9 @@ public class StatusVisuals : MonoBehaviour
         ReleaseAll();
     }
 
+    /// <summary>
+    /// Moves every shown visual to the unit's position plus the offset, after the unit has moved this frame.
+    /// </summary>
     private void LateUpdate()
     {
         if (shown.Count == 0)
@@ -65,6 +80,9 @@ public class StatusVisuals : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Takes the Gameplay-scope visual pool and shows the visuals of statuses already active.
+    /// </summary>
     [Inject]
     public void Construct(StatusVisualPool visualPool)
     {
@@ -115,11 +133,17 @@ public class StatusVisuals : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The visual shown at <paramref name="index"/>, which is also its layer.
+    /// </summary>
     internal StatusVisual GetShown(int index)
     {
         return shown[index];
     }
 
+    /// <summary>
+    /// Returns every shown visual to the pool and forgets them.
+    /// </summary>
     internal void ReleaseAll()
     {
         if (pool != null)
@@ -134,6 +158,9 @@ public class StatusVisuals : MonoBehaviour
         shownDefinitions.Clear();
     }
 
+    /// <summary>
+    /// Listens for status changes, at most once.
+    /// </summary>
     private void Subscribe()
     {
         ResolveStatuses();
@@ -144,6 +171,9 @@ public class StatusVisuals : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Finds the <see cref="StatusEffects"/> on this object when not cached yet.
+    /// </summary>
     private void ResolveStatuses()
     {
         if (statuses == null)

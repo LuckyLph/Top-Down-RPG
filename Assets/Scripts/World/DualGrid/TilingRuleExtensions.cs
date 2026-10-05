@@ -1,6 +1,9 @@
 using UnityEngine;
 using static UnityEngine.RuleTile;
 
+/// <summary>
+/// Helpers that let <see cref="DualGridRuleTile"/> read rule tile neighbor rules in terms of data tile offsets.
+/// </summary>
 public static class TilingRuleExtensions
 {
     /// <summary>

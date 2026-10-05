@@ -1,11 +1,20 @@
 using UnityEngine;
 
+/// <summary>
+/// Mob state that walks to a random reachable point near its spawn, then idles; chases a detected target it can reach.
+/// </summary>
 public class PatrolRoamState : MobStateBase
 {
+    /// <summary>
+    /// Creates the patrol state for the mob run by <paramref name="brain"/>.
+    /// </summary>
     public PatrolRoamState(MobController brain) : base(brain) { }
 
     public override MobStateId StateId => MobStateId.Patrol;
 
+    /// <summary>
+    /// Picks a reachable roam destination and paths to it; goes back to Idle when there is no destination or path.
+    /// </summary>
     public override void Enter()
     {
         if (!Patrol.TryGetRoamDestination(PathAgent.CanReachWorldTarget, out Vector2 destination))
@@ -21,6 +30,10 @@ public class PatrolRoamState : MobStateBase
         }
     }
 
+    /// <summary>
+    /// Goes to Chase when a detected target is reachable, and to Idle once the destination is reached or the mob has
+    /// stalled for <see cref="MobConfig.StuckTimeout"/>.
+    /// </summary>
     public override void Tick()
     {
         if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
@@ -35,6 +48,9 @@ public class PatrolRoamState : MobStateBase
         }
     }
 
+    /// <summary>
+    /// Follows the path.
+    /// </summary>
     public override void FixedTick()
     {
         PathAgent.FixedTick();

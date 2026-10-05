@@ -1,9 +1,16 @@
 using System.Linq;
 using UnityEditor;
 
+/// <summary>
+/// Inspector for <see cref="SceneDefinition"/> that picks the scene as an asset rather than a path.
+/// </summary>
 [CustomEditor(typeof(SceneDefinition))]
 public class SceneDefinitionEditor : Editor
 {
+    /// <summary>
+    /// Draws an undoable scene asset picker, the resolved path read-only, and a warning when the scene is not enabled
+    /// in the build list.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         SceneDefinition definition = (SceneDefinition)target;
@@ -31,9 +38,15 @@ public class SceneDefinitionEditor : Editor
     }
 }
 
-// Keeps SceneDefinition paths in sync when scenes are moved or renamed.
+/// <summary>
+/// Keeps SceneDefinition paths in sync when scenes are moved or renamed.
+/// </summary>
 public class SceneDefinitionPathSync : AssetPostprocessor
 {
+    /// <summary>
+    /// After an import batch that moved any scene file, re-resolves every <see cref="SceneDefinition"/> path from its
+    /// GUID and saves the ones that changed.
+    /// </summary>
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
     {
         if (!moved.Any(path => path.EndsWith(".unity")))

@@ -143,6 +143,42 @@ public class PropPrefabTests
     }
 
     /// <summary>
+    /// No prop slice takes in a strip of a neighbouring tile: inside each sprite's rect, the columns and the rows that
+    /// hold any opaque pixel form one unbroken run, so nothing sits apart from the art beyond an empty column or row.
+    /// The sheets are read from their files, since their textures are not readable.
+    /// </summary>
+    [Test]
+    public void PropSlices_HoldNoStripCutOffFromTheirArt()
+    {
+        foreach (string sheet in PropSheets)
+        {
+            Texture2D pixels = Track(new Texture2D(2, 2, TextureFormat.RGBA32, false));
+            Assert.That(pixels.LoadImage(System.IO.File.ReadAllBytes(sheet)), Is.True, sheet);
+            Color32[] block = pixels.GetPixels32();
+            foreach (Sprite sprite in AssetDatabase.LoadAllAssetsAtPath(sheet).OfType<Sprite>())
+            {
+                RectInt rect = new((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
+                bool[] columns = new bool[rect.width];
+                bool[] rows = new bool[rect.height];
+                for (int y = 0; y < rect.height; y++)
+                {
+                    for (int x = 0; x < rect.width; x++)
+                    {
+                        if (block[(rect.y + y) * pixels.width + rect.x + x].a > 0)
+                        {
+                            columns[x] = true;
+                            rows[y] = true;
+                        }
+                    }
+                }
+
+                Assert.That(Runs(columns), Is.EqualTo(1), $"{sprite.name}'s columns hold a strip cut off from its art.");
+                Assert.That(Runs(rows), Is.EqualTo(1), $"{sprite.name}'s rows hold a strip cut off from its art.");
+            }
+        }
+    }
+
+    /// <summary>
     /// A tree placed in a cell the way the placement tool snaps it blocks that cell, and only that one, on a grid whose
     /// obstacle layers include Obstacles, while tall grass placed in another cell blocks nothing.
     /// </summary>
@@ -162,6 +198,23 @@ public class PropPrefabTests
         Assert.That(grid.IsCellWalkable(new Vector3Int(2, 1, 0)), Is.True);
         Assert.That(grid.IsCellWalkable(new Vector3Int(2, 3, 0)), Is.True);
         Assert.That(grid.IsCellWalkable(new Vector3Int(0, 0, 0)), Is.True);
+    }
+
+    /// <summary>
+    /// How many unbroken runs of set entries <paramref name="filled"/> holds.
+    /// </summary>
+    private static int Runs(bool[] filled)
+    {
+        int runs = 0;
+        for (int i = 0; i < filled.Length; i++)
+        {
+            if (filled[i] && (i == 0 || !filled[i - 1]))
+            {
+                runs++;
+            }
+        }
+
+        return runs;
     }
 
     /// <summary>

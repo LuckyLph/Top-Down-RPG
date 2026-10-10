@@ -319,11 +319,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 481
-        y: 510
-        width: 68
-        height: 40
+        y: 512
+        width: 63
+        height: 32
       alignment: 9
-      pivot: {x: 0.3529412, y: 0.4}
+      pivot: {x: 0.3809524, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -516,12 +516,12 @@ TextureImporter:
       name: Mushrooms_Brown
       rect:
         serializedVersion: 2
-        x: 862
+        x: 866
         y: 98
-        width: 32
-        height: 33
+        width: 28
+        height: 28
       alignment: 9
-      pivot: {x: 0.5625, y: 0.4848485}
+      pivot: {x: 0.5, y: 0.5714286}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []

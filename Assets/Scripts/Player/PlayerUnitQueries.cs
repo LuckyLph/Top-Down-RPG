@@ -40,12 +40,18 @@ public sealed class PlayerUnitQueries : IUnitQueries
     }
 
     /// <summary>
-    /// Gap between the two enabled colliders, zero when they overlap; falls back to the distance between the
-    /// player's and the target's positions when either collider is missing or disabled.
+    /// Gap between the two enabled colliders, zero when they overlap or when the target is the player itself (an ally
+    /// cast on oneself); falls back to the distance between the player's and the target's positions when either
+    /// collider is missing or disabled.
     /// </summary>
     public float DistanceTo(UnitTarget target)
     {
         Collider2D other = target.Collider;
+        if (self != null && other == self)
+        {
+            return 0f;
+        }
+
         if (self != null && other != null && self.enabled && other.enabled)
         {
             ColliderDistance2D distance = self.Distance(other);

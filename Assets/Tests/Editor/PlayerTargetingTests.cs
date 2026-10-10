@@ -180,6 +180,26 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
+    /// Picking the caster's own body (as an ally cast on oneself does) gives a target whose collider is the caster's,
+    /// and the distance to it is zero instead of an error; the distance to another body is still the gap between
+    /// their colliders.
+    /// </summary>
+    [Test]
+    public void UnitQueries_DistanceToTheCastersOwnBody_IsZero()
+    {
+        Collider2D self = CreatePlayerBody(Vector2.zero, register: true).GetComponent<Collider2D>();
+        CreatePlayerBody(new Vector2(1.3f, 0f), register: true);
+        Physics2D.SyncTransforms();
+        PlayerUnitQueries queries = new(self, LayerMask.GetMask("Enemy"));
+
+        UnitTarget ownBody = picker.Pick(Vector2.zero);
+        Assert.That(ownBody.Collider, Is.SameAs(self), "The caster picks itself as an ally.");
+        Assert.That(ownBody.Team, Is.EqualTo(UnitTeam.Ally));
+        Assert.That(queries.DistanceTo(ownBody), Is.EqualTo(0f));
+        Assert.That(queries.DistanceTo(picker.Pick(new Vector2(1.3f, 0f))), Is.EqualTo(1f).Within(0.05f), "The collider gap to a teammate 1.3 away with 0.3 wide bodies, not their centre distance.");
+    }
+
+    /// <summary>
     /// The nearest-enemy query allocates no managed memory once warm.
     /// </summary>
     [Test]

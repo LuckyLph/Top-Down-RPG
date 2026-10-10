@@ -143,15 +143,15 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// A tree placed in a cell blocks that cell, and only that one, on a grid whose obstacle layers include Obstacles,
-    /// while tall grass placed in another cell blocks nothing.
+    /// A tree placed in a cell the way the placement tool snaps it blocks that cell, and only that one, on a grid whose
+    /// obstacle layers include Obstacles, while tall grass placed in another cell blocks nothing.
     /// </summary>
     [Test]
     public void APlacedTree_BlocksItsCell_AndGrassBlocksNothing()
     {
         NavigationGrid2D grid = CreateGround(5);
-        Place(TreePath, new Vector2(2.5f, 2.05f));
-        Place(GrassPath, new Vector2(0.5f, 0.05f));
+        Place(grid, TreePath, new Vector2(2.5f, 2.05f));
+        Place(grid, GrassPath, new Vector2(0.5f, 0.05f));
         grid.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
 
         grid.BuildGrid();
@@ -210,12 +210,14 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Places an instance of the prefab at <paramref name="path"/> with its base at <paramref name="position"/>.
+    /// Places an instance of the prefab at <paramref name="path"/> where <see cref="PropGridSnapping"/> puts it for a
+    /// click at <paramref name="pointer"/> on <paramref name="grid"/>'s cells.
     /// </summary>
-    private void Place(string path, Vector2 position)
+    private void Place(NavigationGrid2D grid, string path, Vector2 pointer)
     {
-        GameObject instance = Track(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path)));
-        instance.transform.position = position;
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        GameObject instance = Track(Object.Instantiate(prefab));
+        instance.transform.position = PropGridSnapping.Snap(grid.GetComponent<Grid>(), pointer, prefab);
     }
 
     /// <summary>

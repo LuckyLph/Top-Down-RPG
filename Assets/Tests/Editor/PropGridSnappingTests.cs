@@ -113,9 +113,10 @@ public class PropGridSnappingTests
         GameObject tree = AssetDatabase.LoadAssetAtPath<GameObject>(TreePath);
         GameObject grass = AssetDatabase.LoadAssetAtPath<GameObject>(GrassPath);
 
+        BoxCollider2D box = tree.GetComponent<BoxCollider2D>();
         Assert.That(PropGridSnapping.TryGetFootprint(tree, out Rect footprint), Is.True);
-        Assert.That(footprint.position, Is.EqualTo(new Vector2(-0.3f, 0f)));
-        Assert.That(footprint.size, Is.EqualTo(new Vector2(0.6f, 0.4f)));
+        Assert.That(footprint.position, Is.EqualTo(box.offset - box.size * 0.5f));
+        Assert.That(footprint.size, Is.EqualTo(box.size));
         Assert.That(PropGridSnapping.TryGetFootprint(grass, out _), Is.False);
         Assert.That(PropGridSnapping.Snap(grid, new Vector2(2.71f, 3.43f), grass), Is.EqualTo(new Vector3(2.71875f, 3.4375f, 0f)));
     }

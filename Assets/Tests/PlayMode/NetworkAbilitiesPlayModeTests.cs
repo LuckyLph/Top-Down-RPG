@@ -66,18 +66,15 @@ public class NetworkAbilitiesPlayModeTests
         Assert.That(clientApplied, Is.Zero, "Only the host applies casts.");
 
         MobController hostMob = null;
-        MobController mobOnClient = null;
         foreach (MobController mob in Object.FindObjectsByType<MobController>())
         {
             if (mob.enabled)
             {
                 hostMob = mob;
             }
-            else
-            {
-                mobOnClient = mob;
-            }
         }
+
+        MobController mobOnClient = hostMob != null ? FindClientCopy(hostMob) : null;
 
         Assert.That(hostMob, Is.Not.Null);
         Assert.That(mobOnClient, Is.Not.Null, "The client's copy of the mob has its AI off.");
@@ -178,5 +175,24 @@ public class NetworkAbilitiesPlayModeTests
         Vector2 aim = applied[1].Cast.Aim.Direction;
         Assert.That(aim.x, Is.LessThan(-0.9f), "The client aimed left, at the host's player.");
         Assert.That(Vector2.Dot(clientPlayerOnHost.FacingDirection, aim), Is.GreaterThan(0.9f), "The client's facing toward its aim reaches the host's copy.");
+    }
+
+    /// <summary>
+    /// The in-process client's copy of <paramref name="hostMob"/> (the same network object), or null before it
+    /// arrives.
+    /// </summary>
+    private MobController FindClientCopy(MobController hostMob)
+    {
+        ulong id = hostMob.GetComponent<NetworkObject>().NetworkObjectId;
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            NetworkObject networkObject = mob.GetComponent<NetworkObject>();
+            if (networkObject != null && networkObject.IsSpawned && networkObject.NetworkManager == client.Manager && networkObject.NetworkObjectId == id)
+            {
+                return mob;
+            }
+        }
+
+        return null;
     }
 }

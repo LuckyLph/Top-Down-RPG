@@ -150,6 +150,45 @@ public class PropGridSnappingTests
     }
 
     /// <summary>
+    /// For every blocking prop, the root <see cref="PropGridSnapping.RootOnCells"/> gives for a bottom-left cell is
+    /// already snapped, and the prop then blocks exactly <see cref="PropGridSnapping.CellsCovered"/> cells from that
+    /// cell, on a grid at the origin and on a shifted one.
+    /// </summary>
+    [Test]
+    public void RootOnCells_PutsEveryFootprintOnExactlyTheCellsItCovers()
+    {
+        Grid[] grids = { CreateGrid(Vector3.zero), CreateGrid(new Vector3(0.5f, 0.25f, 0f)) };
+        Vector3Int[] corners = { new(0, 0, 0), new(3, -2, 0), new(-7, 5, 0) };
+        int checkedProps = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Props" }))
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+            if (!PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            {
+                continue;
+            }
+
+            checkedProps++;
+            Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            foreach (Grid grid in grids)
+            {
+                foreach (Vector3Int corner in corners)
+                {
+                    Vector3 root = PropGridSnapping.RootOnCells(grid, corner, footprint);
+                    Assert.That(Vector3.Distance(PropGridSnapping.SnapBlocking(grid, root, footprint), root), Is.LessThan(0.0001f), $"{prefab.name} at {corner}");
+                    BoundsInt blocked = PropGridSnapping.BlockedCells(grid, root, footprint);
+                    Assert.That(blocked.position, Is.EqualTo(corner), $"{prefab.name} at {corner}");
+                    Assert.That(blocked.size, Is.EqualTo(new Vector3Int(covered.x, covered.y, 1)), $"{prefab.name} at {corner}");
+                }
+            }
+        }
+
+        Assert.That(checkedProps, Is.GreaterThan(10));
+        Assert.That(PropGridSnapping.CellsCovered(Footprint(1.5f, 1f), Vector2.one), Is.EqualTo(new Vector2Int(2, 1)));
+        Assert.That(PropGridSnapping.CellsCovered(Footprint(0.5f, 1.2f), Vector2.one), Is.EqualTo(new Vector2Int(1, 2)));
+    }
+
+    /// <summary>
     /// A footprint <paramref name="width"/> by <paramref name="height"/> centred on the root and standing on it.
     /// </summary>
     private static Rect Footprint(float width, float height)

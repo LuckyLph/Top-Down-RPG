@@ -13,7 +13,7 @@ Third-party art in the project, where it comes from and what its licence asks. A
 | [RPG Tiles: Cobble stone paths & town objects](https://opengameart.org/content/rpg-tiles-cobble-stone-paths-town-objects) | Zabin, Daneeklu, Jetrel, Hyptosis, Redshrike, Bertram (the page says who did what) | CC-BY-SA 3.0; Redshrike's table and Hyptosis' grass, cliff and water also CC-BY 3.0 | Crops of `PathAndObjects.png`: `Assets/Sprites/Props/props1.png`–`props17.png`, `Assets/Sprites/Terrain/path1.png`–`path15.png`, `water1.png`, `water2.png` |
 | [Castle Tiles for RPG's](https://opengameart.org/content/castle-tiles-for-rpgs) | Zabin, Hyptosis, Daniel Cook | CC-BY 3.0 | `Assets/Sprites/Terrain/Castle.png` (`Castle2.png` with a different bottom-left corner) |
 
-All of it came over from the earlier project `projet-synthese`, which used it without credits. The four sheets in `Assets/Sprites/Props` are unmodified copies (the LPC atlas matches the original download byte for byte); their sprites are slices, not edited pixels. Characters, mobs, UI art and the dual-grid tilesets in `Assets/Tiles/tilesets` are not listed yet.
+All of it came over from the earlier project `projet-synthese`, which used it without credits. The four sheets in `Assets/Sprites/Props` are unmodified copies (the LPC atlas matches the original download byte for byte); their sprites are slices, not edited pixels. Characters, mobs, UI art and the grass tilesets in `Assets/Tiles/tilesets` are not listed yet. The wall, stone path and gravel path tilesets there (`walls.png`, `stone_path.png`, `gravel_path.png`) were generated in this project and use no third-party art.
 
 ## What the licences ask
 

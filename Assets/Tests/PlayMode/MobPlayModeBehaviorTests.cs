@@ -23,7 +23,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
-        MobController brain = Object.FindAnyObjectByType<MobController>();
+        MobController brain = KeepOneMobActive();
         Assert.That(brain, Is.Not.Null, "The clearing slice should contain at least one MobController.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -122,7 +122,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
-        MobController brain = Object.FindAnyObjectByType<MobController>();
+        MobController brain = KeepOneMobActive();
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         Health health = player.GetComponent<Health>();
 
@@ -161,7 +161,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
-        MobController brain = Object.FindAnyObjectByType<MobController>();
+        MobController brain = KeepOneMobActive();
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         Health health = player.GetComponent<Health>();
 
@@ -195,7 +195,7 @@ public class MobPlayModeBehaviorTests
         yield return SceneBootTestHelper.BootIntoStartingArea();
         yield return null;
 
-        MobController brain = Object.FindAnyObjectByType<MobController>();
+        MobController brain = KeepOneMobActive();
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         Health health = player.GetComponent<Health>();
         PlayerController playerController = player.GetComponent<PlayerController>();
@@ -261,7 +261,7 @@ public class MobPlayModeBehaviorTests
         yield return null;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
-        MobController mob = Object.FindAnyObjectByType<MobController>();
+        MobController mob = KeepOneMobActive();
         PlayerHudView hud = Object.FindAnyObjectByType<PlayerHudView>();
 
         Assert.That(player, Is.Not.Null);
@@ -317,6 +317,21 @@ public class MobPlayModeBehaviorTests
 
         player.transform.position = originalPlayerPosition;
         mob.transform.position = originalMobPosition;
+    }
+
+    /// <summary>
+    /// Picks one of the area's mobs and deactivates the others, so the test sees only that mob's hits and states.
+    /// Returns null when the area has none.
+    /// </summary>
+    private static MobController KeepOneMobActive()
+    {
+        MobController kept = Object.FindAnyObjectByType<MobController>();
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.gameObject.SetActive(mob == kept);
+        }
+
+        return kept;
     }
 
     /// <summary>

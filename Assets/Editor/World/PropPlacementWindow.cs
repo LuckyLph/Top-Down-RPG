@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 public sealed class PropPlacementWindow : EditorWindow
 {
     private const string PropsFolder = "Assets/Prefabs/Props";
-    private const string PropsRootName = "Props";
+    internal const string PropsRootName = "Props";
     private const string VisualsName = "Visuals";
     private const string MenuPath = ProjectScenes.MenuRoot + "Props/";
     private const string AllCategories = "All";
@@ -253,7 +253,7 @@ public sealed class PropPlacementWindow : EditorWindow
         Undo.SetCurrentGroupName($"Place {picked.name}");
         int undoGroup = Undo.GetCurrentGroup();
         Scene scene = navigation.gameObject.scene;
-        Transform parent = PropsRoot(scene);
+        Transform parent = FindOrCreateRoot(scene, PropsRootName);
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(picked, scene);
         Undo.RegisterCreatedObjectUndo(instance, $"Place {picked.name}");
         instance.transform.SetParent(parent, false);
@@ -406,21 +406,22 @@ public sealed class PropPlacementWindow : EditorWindow
     }
 
     /// <summary>
-    /// The scene's root object named <c>Props</c>, created at the origin (with undo) when it does not exist yet.
+    /// The scene's root object named <paramref name="rootName"/>, created at the origin (with undo) when it does not
+    /// exist yet.
     /// </summary>
-    private static Transform PropsRoot(Scene scene)
+    internal static Transform FindOrCreateRoot(Scene scene, string rootName)
     {
         foreach (GameObject rootObject in scene.GetRootGameObjects())
         {
-            if (rootObject.name == PropsRootName)
+            if (rootObject.name == rootName)
             {
                 return rootObject.transform;
             }
         }
 
-        GameObject created = new(PropsRootName);
+        GameObject created = new(rootName);
         SceneManager.MoveGameObjectToScene(created, scene);
-        Undo.RegisterCreatedObjectUndo(created, "Create Props");
+        Undo.RegisterCreatedObjectUndo(created, $"Create {rootName}");
         return created.transform;
     }
 
@@ -455,7 +456,7 @@ public sealed class PropPlacementWindow : EditorWindow
     /// <summary>
     /// The first <see cref="NavigationGrid2D"/> in the loaded <paramref name="scene"/>, or null.
     /// </summary>
-    private static NavigationGrid2D FindGrid(Scene scene)
+    internal static NavigationGrid2D FindGrid(Scene scene)
     {
         if (!scene.IsValid() || !scene.isLoaded)
         {

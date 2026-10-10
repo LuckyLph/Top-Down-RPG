@@ -48,9 +48,32 @@ public static class PropGridSnapping
         float centreInCells = (basePoint.x + footprint.center.x - origin.x) / cell.x;
         int left = Mathf.RoundToInt(centreInCells - columns * 0.5f);
         int bottom = Mathf.FloorToInt((basePoint.y + footprint.yMin - origin.y + NavigationGrid2D.ObstacleEdgeInset) / cell.y);
-        float x = origin.x + (left + columns * 0.5f) * cell.x - footprint.center.x;
-        float y = origin.y + bottom * cell.y - footprint.yMin;
+        return RootOnCells(grid, new Vector3Int(left, bottom, 0), footprint);
+    }
+
+    /// <summary>
+    /// The root position that centres <paramref name="footprint"/> on the cells it needs starting at
+    /// <paramref name="corner"/>, its bottom-left cell, and stands it on that cell's bottom edge: where
+    /// <see cref="SnapBlocking"/> puts a footprint whose cells start there.
+    /// </summary>
+    public static Vector3 RootOnCells(GridLayout grid, Vector3Int corner, Rect footprint)
+    {
+        Vector2 cell = grid.cellSize;
+        Vector2 origin = grid.CellToWorld(Vector3Int.zero);
+        int columns = CellsSpanned(footprint.width, cell.x);
+        float x = origin.x + (corner.x + columns * 0.5f) * cell.x - footprint.center.x;
+        float y = origin.y + corner.y * cell.y - footprint.yMin;
         return new Vector3(x, y, 0f);
+    }
+
+    /// <summary>
+    /// How many columns and rows of cells of <paramref name="cellSize"/> a snapped <paramref name="footprint"/> blocks:
+    /// the size of <see cref="BlockedCells"/> once it is centred on its cells and stands on a bottom edge.
+    /// </summary>
+    public static Vector2Int CellsCovered(Rect footprint, Vector2 cellSize)
+    {
+        int rows = Mathf.FloorToInt((footprint.height - NavigationGrid2D.ObstacleEdgeInset) / cellSize.y) + 1;
+        return new Vector2Int(CellsSpanned(footprint.width, cellSize.x), Mathf.Max(1, rows));
     }
 
     /// <summary>

@@ -62,6 +62,11 @@ public class PlayerControlsPlayModeTests
         yield return Boot();
         MobController mob = Object.FindAnyObjectByType<MobController>();
         Assert.That(mob, Is.Not.Null);
+        foreach (MobController other in Object.FindObjectsByType<MobController>())
+        {
+            other.gameObject.SetActive(other == mob);
+        }
+
         Health mobHealth = mob.GetComponent<Health>();
         Vector2 hidingSpot = BuildWallInFrontOfThePlayer();
         Rigidbody2D mobBody = mob.GetComponent<Rigidbody2D>();

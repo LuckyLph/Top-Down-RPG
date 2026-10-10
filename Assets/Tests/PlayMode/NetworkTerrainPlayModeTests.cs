@@ -44,11 +44,9 @@ public class NetworkTerrainPlayModeTests
         Tilemap collision = grid.BlockingTilemaps[0];
         Tilemap grass = grid.GetComponentInChildren<NavigationTerrainSource2D>().DataTilemap;
 
-        BoundsInt bounds = grid.WalkableBounds;
-        Vector3Int center = new(bounds.xMin + bounds.size.x / 2, bounds.yMin + bounds.size.y / 2, 0);
+        Vector3Int center = FindOpenGround(grid, grass);
         Vector3Int[] wall = { center, center + Vector3Int.up, center + Vector3Int.down };
         Vector3Int hole = center + new Vector3Int(3, 0, 0);
-        Assert.That(grid.IsCellWalkable(center), Is.True);
 
         Assert.That(terrain.TrySetCells(collision, wall, filled: true), Is.True);
         Assert.That(terrain.TrySetCells(grass, new[] { hole }, filled: false), Is.True);
@@ -73,6 +71,39 @@ public class NetworkTerrainPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => !clientCopy.GetEdit(0).Filled, "a later edit of the same cell to reach the client");
         Assert.That(clientCopy.EditCount, Is.EqualTo(4), "Editing a cell again replaces its record instead of adding one.");
         Assert.That(grid.IsCellWalkable(center), Is.True);
+    }
+
+    /// <summary>
+    /// The walkable cell nearest the middle of <paramref name="grid"/> whose neighbours above and below are walkable
+    /// too and whose cell three to the right is walkable ground that only <paramref name="ground"/> covers, so
+    /// emptying it there leaves no terrain; fails the test when the area has none.
+    /// </summary>
+    private static Vector3Int FindOpenGround(NavigationGrid2D grid, Tilemap ground)
+    {
+        NavigationTerrainSource2D[] sources = grid.GetComponentsInChildren<NavigationTerrainSource2D>();
+        BoundsInt bounds = grid.WalkableBounds;
+        Vector3 middle = bounds.center;
+        bool found = false;
+        Vector3Int best = default;
+        foreach (Vector3Int cell in bounds.allPositionsWithin)
+        {
+            Vector3Int hole = cell + new Vector3Int(3, 0, 0);
+            bool open = grid.IsCellWalkable(cell) && grid.IsCellWalkable(cell + Vector3Int.up) && grid.IsCellWalkable(cell + Vector3Int.down)
+                && grid.IsCellWalkable(hole) && ground.HasTile(hole);
+            foreach (NavigationTerrainSource2D source in sources)
+            {
+                open &= source.DataTilemap == ground || !source.DataTilemap.HasTile(hole);
+            }
+
+            if (open && (!found || (cell - middle).sqrMagnitude < (best - middle).sqrMagnitude))
+            {
+                best = cell;
+                found = true;
+            }
+        }
+
+        Assert.That(found, Is.True, "The area should have open ground to edit.");
+        return best;
     }
 
     /// <summary>

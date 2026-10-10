@@ -56,7 +56,7 @@ public class NetworkMobsPlayModeTests
 
         MobController clientMob = null;
         yield return SceneBootTestHelper.WaitUntil(
-            () => (clientMob = FindCopyManagedBy(client.Manager)) != null && client.LocalPlayer.Current != null && hostPlayers.Players.Count == 2,
+            () => (clientMob = FindCopyManagedBy(client.Manager, hostMob)) != null && client.LocalPlayer.Current != null && hostPlayers.Players.Count == 2,
             "the client to receive the host's mob and its own player");
         client.DisableColliders();
 
@@ -165,14 +165,16 @@ public class NetworkMobsPlayModeTests
     }
 
     /// <summary>
-    /// The first spawned mob copy that belongs to <paramref name="manager"/> (host or client side), or null.
+    /// The spawned copy of <paramref name="original"/> (the same network object) that belongs to
+    /// <paramref name="manager"/>, or null.
     /// </summary>
-    private static MobController FindCopyManagedBy(NetworkManager manager)
+    private static MobController FindCopyManagedBy(NetworkManager manager, MobController original)
     {
+        ulong id = original.GetComponent<NetworkObject>().NetworkObjectId;
         foreach (MobController mob in Object.FindObjectsByType<MobController>())
         {
             NetworkObject networkObject = mob.GetComponent<NetworkObject>();
-            if (networkObject != null && networkObject.IsSpawned && networkObject.NetworkManager == manager)
+            if (networkObject != null && networkObject.IsSpawned && networkObject.NetworkManager == manager && networkObject.NetworkObjectId == id)
             {
                 return mob;
             }

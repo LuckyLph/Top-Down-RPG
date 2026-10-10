@@ -5,7 +5,8 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps. Each movement profile
+/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps and the cells under
+/// colliders on its obstacle layers (blocking props). Each movement profile
 /// gets a cost field: flat arrays over <see cref="WalkableBounds"/> holding every cell's traversal cost and connected
 /// region, baked on first use and rebaked when the profile is edited or the grid changes. While enabled it follows
 /// tile changes on its source and blocking tilemaps, updating just those cells and bumping <see cref="Version"/>.
@@ -14,6 +15,7 @@ public class NavigationGrid2D : MonoBehaviour
 {
     private const int DefaultTraversalCost = 10;
     private const int BlockedCost = int.MaxValue / 4;
+    internal const float ObstacleEdgeInset = 0.01f;
 
     /// <summary>
     /// A walkable cell's terrain: the terrain types of its highest-priority terrain layer, and that priority.
@@ -54,6 +56,9 @@ public class NavigationGrid2D : MonoBehaviour
     [SerializeField] private bool discoverSourcesInChildren = true;
     [Tooltip("Tilemaps whose cells are blocked for every terrain layer, such as the collision tilemap.")]
     [SerializeField] private List<Tilemap> blockingTilemaps = new();
+    [Tooltip("Layers whose colliders block every cell they overlap, such as the footprints of blocking props. Read " +
+        "when the grid builds; colliders on tilemaps and triggers are ignored.")]
+    [SerializeField] private LayerMask obstacleLayers;
     [SerializeField] private int nearestCellSearchRadius = 8;
     [Tooltip("Upper bound on cells a partial A* search toward an unreachable goal may expand before returning " +
         "the closest cell found so far. Searches toward reachable goals are never capped.")]
@@ -69,6 +74,8 @@ public class NavigationGrid2D : MonoBehaviour
     private readonly List<NavigationTerrainSource2D> resolvedSources = new();
     private readonly List<NavigationTerrainSource2D> terrainLayers = new();
     private readonly List<Tilemap> watchedTilemaps = new();
+    private readonly HashSet<Vector3Int> obstacleCells = new();
+    private readonly List<Collider2D> obstacleHits = new();
     private readonly Dictionary<TerrainMovementProfile2D, CostField> fieldsByProfile = new();
     private CellData[] cells = Array.Empty<CellData>();
     private int[] regionQueue = Array.Empty<int>();
@@ -96,6 +103,7 @@ public class NavigationGrid2D : MonoBehaviour
     }
     public IReadOnlyList<NavigationTerrainSource2D> TerrainSources => terrainSources;
     public IReadOnlyList<Tilemap> BlockingTilemaps => blockingTilemaps;
+    public LayerMask ObstacleLayers => obstacleLayers;
 
     internal int CellCount => cells.Length;
     internal int Width => width;
@@ -169,10 +177,18 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
+    /// Replaces the obstacle layers, for grids set up in code. Takes effect on the next <see cref="BuildGrid"/>.
+    /// </summary>
+    public void ConfigureObstacleLayers(LayerMask layers)
+    {
+        obstacleLayers = layers;
+    }
+
+    /// <summary>
     /// Rebuilds the grid from scratch and bumps <see cref="Version"/>: collects the cells of every usable terrain
-    /// source (listed and, optionally, found in the children), removes cells with a tile on a blocking tilemap, bakes
-    /// them over <see cref="WalkableBounds"/>, drops every cost field and creates a new pathfinder. Logs an error and
-    /// stays unbuilt when no source is usable.
+    /// source (listed and, optionally, found in the children), removes cells with a tile on a blocking tilemap or under
+    /// a collider on the obstacle layers, bakes them over <see cref="WalkableBounds"/>, drops every cost field and
+    /// creates a new pathfinder. Logs an error and stays unbuilt when no source is usable.
     /// </summary>
     public void BuildGrid()
     {
@@ -180,6 +196,7 @@ public class NavigationGrid2D : MonoBehaviour
         resolvedSources.Clear();
         terrainLayers.Clear();
         watchedTilemaps.Clear();
+        obstacleCells.Clear();
         fieldsByProfile.Clear();
         defaultField = null;
         cells = Array.Empty<CellData>();
@@ -273,6 +290,7 @@ public class NavigationGrid2D : MonoBehaviour
             watchedTilemaps.Add(blockingTilemap);
         }
 
+        CollectObstacleCells();
         RemoveBlockedCells();
         walkableBounds = CalculateBounds();
         BakeCells();
@@ -754,10 +772,15 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Whether any watched blocking tilemap has a tile at <paramref name="cell"/>.
+    /// Whether <paramref name="cell"/> lies under an obstacle collider or any watched blocking tilemap has a tile there.
     /// </summary>
     private bool IsBlocked(Vector3Int cell)
     {
+        if (obstacleCells.Contains(cell))
+        {
+            return true;
+        }
+
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
             if (blockingTilemaps[i] != null && watchedTilemaps.Contains(blockingTilemaps[i]) && blockingTilemaps[i].HasTile(cell))
@@ -788,10 +811,62 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes every cell with a tile on a watched blocking tilemap from the cells collected for the build.
+    /// Records every cell that a collider on the obstacle layers overlaps within the collected cells' area: the cells
+    /// its bounds touch, shrunk a little so a collider ending on a cell edge does not block the next cell. Colliders on
+    /// tilemaps (the collision tilemap's own collider) and triggers are skipped, since blocking tilemaps already cover
+    /// their cells.
+    /// </summary>
+    private void CollectObstacleCells()
+    {
+        if (obstacleLayers.value == 0 || cellsByPosition.Count == 0)
+        {
+            return;
+        }
+
+        BoundsInt area = CalculateBounds();
+        Vector2 areaMin = referenceTilemap.CellToWorld(area.min);
+        Vector2 areaMax = referenceTilemap.CellToWorld(new Vector3Int(area.xMax, area.yMax, area.zMin));
+        ContactFilter2D filter = new() { useTriggers = false };
+        filter.SetLayerMask(obstacleLayers);
+        Physics2D.SyncTransforms();
+        obstacleHits.Clear();
+        Physics2D.OverlapArea(areaMin, areaMax, filter, obstacleHits);
+
+        for (int i = 0; i < obstacleHits.Count; i++)
+        {
+            Collider2D hit = obstacleHits[i];
+            if (hit.TryGetComponent(out Tilemap _))
+            {
+                continue;
+            }
+
+            Bounds bounds = hit.bounds;
+            Vector3 inset = new(Mathf.Min(ObstacleEdgeInset, bounds.extents.x), Mathf.Min(ObstacleEdgeInset, bounds.extents.y), 0f);
+            Vector3Int min = referenceTilemap.WorldToCell(bounds.min + inset);
+            Vector3Int max = referenceTilemap.WorldToCell(bounds.max - inset);
+            for (int x = min.x; x <= max.x; x++)
+            {
+                for (int y = min.y; y <= max.y; y++)
+                {
+                    obstacleCells.Add(new Vector3Int(x, y, area.zMin));
+                }
+            }
+        }
+
+        obstacleHits.Clear();
+    }
+
+    /// <summary>
+    /// Removes every cell with a tile on a watched blocking tilemap, or under an obstacle collider, from the cells
+    /// collected for the build.
     /// </summary>
     private void RemoveBlockedCells()
     {
+        foreach (Vector3Int cell in obstacleCells)
+        {
+            cellsByPosition.Remove(cell);
+        }
+
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
             Tilemap blockingTilemap = blockingTilemaps[i];

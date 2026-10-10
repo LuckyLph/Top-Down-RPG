@@ -11,7 +11,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for <see cref="NavigationGrid2D"/> and its A* pathfinder: shortest and partial paths, search caps and
-/// allocations, terrain rules, costs and layer priority, edge cost, cell refreshes and region connectivity.
+/// allocations, terrain rules, costs and layer priority, blocking tilemaps and obstacle colliders, edge cost, cell
+/// refreshes and region connectivity.
 /// </summary>
 public class NavigationGridPathfindingTests
 {
@@ -428,6 +429,56 @@ public class NavigationGridPathfindingTests
         Assert.That(navigationGrid.IsCellWalkable(Vector3Int.zero), Is.True);
         Assert.That(navigationGrid.IsCellWalkable(wall), Is.False);
         Assert.That(navigationGrid.IsCellWalkable(wall, amphibiousProfile), Is.False);
+    }
+
+    /// <summary>
+    /// A collider on an obstacle layer blocks every cell it overlaps but not a cell it only touches on an edge, and its
+    /// cells stay blocked when refreshed; colliders on other layers, triggers and a tilemap's own collider block
+    /// nothing.
+    /// </summary>
+    [Test]
+    public void ObstacleLayers_BlockTheCellsUnderAColliderOnThem()
+    {
+        int obstacles = LayerMask.NameToLayer("Obstacles");
+        SetupOpenGround(5);
+        CreateBox("Footprint", obstacles, new Vector2(2.5f, 2.3f), new Vector2(1.2f, 0.4f), isTrigger: false);
+        CreateBox("CellSized", obstacles, new Vector2(0.5f, 4.5f), Vector2.one, isTrigger: false);
+        CreateBox("OtherLayer", 0, new Vector2(4.5f, 0.5f), Vector2.one, isTrigger: false);
+        CreateBox("Trigger", obstacles, new Vector2(4.5f, 4.5f), Vector2.one, isTrigger: true);
+        CreateTilemapCollider(obstacles, new Vector3Int(0, 0, 0), new Vector3Int(3, 3, 0));
+        navigationGrid.ConfigureObstacleLayers(1 << obstacles);
+
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 2, 0)), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(2, 2, 0)), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(3, 2, 0)), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(2, 1, 0)), Is.True);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(2, 3, 0)), Is.True);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(0, 4, 0)), Is.False);
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 4, 0)), Is.True, "Touching a cell's edge does not block it.");
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(0, 3, 0)), Is.True, "Touching a cell's edge does not block it.");
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 0, 0)), Is.True, "Other layers do not block.");
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 4, 0)), Is.True, "Triggers do not block.");
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(0, 0, 0)), Is.True, "Tilemap colliders are left to blocking tilemaps.");
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 1, 0)), Is.True, "A tilemap collider's bounds block nothing.");
+
+        navigationGrid.RefreshCells(new[] { new Vector3Int(2, 2, 0) });
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(2, 2, 0)), Is.False, "A refresh keeps the obstacle's cell blocked.");
+    }
+
+    /// <summary>
+    /// With no obstacle layers set, colliders block nothing.
+    /// </summary>
+    [Test]
+    public void WithoutObstacleLayers_CollidersBlockNothing()
+    {
+        SetupOpenGround(3);
+        CreateBox("Footprint", LayerMask.NameToLayer("Obstacles"), new Vector2(1.5f, 1.5f), Vector2.one, isTrigger: false);
+
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 1, 0)), Is.True);
     }
 
     /// <summary>
@@ -850,6 +901,60 @@ public class NavigationGridPathfindingTests
         navigationGrid = root.AddComponent<NavigationGrid2D>();
         navigationGrid.ConfigureBlockingTilemaps(collisionTilemap);
         navigationGrid.BuildGrid();
+    }
+
+    /// <summary>
+    /// Builds a <paramref name="size"/> x <paramref name="size"/> ground grid with no blocking tilemaps, not built yet.
+    /// </summary>
+    private void SetupOpenGround(int size)
+    {
+        root = CreateGridRoot("OpenGroundRoot");
+        Tilemap ground = CreateTilemapObject("Ground");
+        fillTile = ScriptableObject.CreateInstance<Tile>();
+        groundTerrain = CreateTerrain("ground");
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                ground.SetTile(new Vector3Int(x, y, 0), fillTile);
+            }
+        }
+
+        AttachTerrainSource(ground, groundTerrain);
+        navigationGrid = root.AddComponent<NavigationGrid2D>();
+    }
+
+    /// <summary>
+    /// Creates a box collider of <paramref name="size"/> centred on <paramref name="center"/> on
+    /// <paramref name="layer"/> under the root.
+    /// </summary>
+    private void CreateBox(string name, int layer, Vector2 center, Vector2 size, bool isTrigger)
+    {
+        GameObject box = new(name) { layer = layer };
+        box.transform.SetParent(root.transform);
+        box.transform.position = center;
+        BoxCollider2D collider = box.AddComponent<BoxCollider2D>();
+        collider.size = size;
+        collider.isTrigger = isTrigger;
+    }
+
+    /// <summary>
+    /// Creates a tilemap on <paramref name="layer"/> under the root, not listed as blocking, with a grid-collider tile
+    /// at each of <paramref name="cells"/> and a <see cref="TilemapCollider2D"/> built from them.
+    /// </summary>
+    private void CreateTilemapCollider(int layer, params Vector3Int[] cells)
+    {
+        Tilemap tilemap = CreateTilemapObject("TilemapCollider");
+        tilemap.gameObject.layer = layer;
+        blockTile = ScriptableObject.CreateInstance<Tile>();
+        blockTile.colliderType = Tile.ColliderType.Grid;
+        foreach (Vector3Int cell in cells)
+        {
+            tilemap.SetTile(cell, blockTile);
+        }
+
+        TilemapCollider2D collider = tilemap.gameObject.AddComponent<TilemapCollider2D>();
+        collider.ProcessTilemapChanges();
     }
 
     /// <summary>

@@ -806,6 +806,9 @@ MonoBehaviour:
   discoverSourcesInChildren: 1
   blockingTilemaps:
   - {fileID: 2106214074}
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 256
   nearestCellSearchRadius: 8
   maxSearchCells: 4096
   drawGridBoundsGizmo: 1

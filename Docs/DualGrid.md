@@ -37,6 +37,11 @@ The editor code sets `internal` members of the runtime types (for example `DualG
 2. Right-click the texture and choose **Create > 2D > Tiles > Dual Grid Rule Tile**, then accept the prompt to fill the tiling rules automatically. The inspector's preview shows a fixed sample layout so you can check the rules. **Apply Automatic Rule Tiling** rebuilds the rules if they are wrong. Exactly 16 rules are required.
 3. Create a tilemap with **GameObject > 2D Object > Tilemap > Dual Grid Tilemap**. If a `Grid` is selected the tilemap goes under it, otherwise a new grid is created. Assign the rule tile to the module.
 4. Paint the data tilemap with any brush, or use the **Dual Grid Brush**, which also previews paints and flood fills on the render tilemap. The render tilemap updates in edit mode through `DualGridTilemapPersistentListener` and in play mode through the module itself.
+5. Give the layer a tile palette: create one in `Assets/Tiles/Palettes` (manual cell size 1x1) and put the rule tile's data tile in it. That is the tile the data tilemap holds; the rule tile itself goes only on the render tilemap. Set the data tile's sprite to the full-fill slice (`_6`) so the palette shows a swatch. Data tilemaps have no renderer, so the sprite is never drawn in the scene.
+
+### Palettes
+
+Each terrain layer has a palette in `Assets/Tiles/Palettes` holding only its data tile: `Grass_Palette`, `Gravel_Palette`, `Stone_Palette` and `Walls_Palette` (the walls go on the `CollisionTilemap`). In the Tile Palette window, pick the layer's palette, select its tile, set the active tilemap to that layer's data tilemap (`GrassTilemap`, `GravelTilemap`, `StoneTilemap` or `CollisionTilemap`, never a `RenderTilemap`), and paint with the Dual Grid Brush. The Dual Grid Brush always writes the target module's own data tile, so the palette mostly tells you which layer you are on; the default brush writes the tile you picked, which is why each palette holds exactly its layer's data tile.
 
 Rules: one rule tile per data tilemap, and never share a data tilemap between modules. Several modules can share a `Grid`.
 

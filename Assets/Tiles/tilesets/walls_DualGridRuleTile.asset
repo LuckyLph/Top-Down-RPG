@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1130a02d8a6d8ee4ebf256a9752db531, type: 3}
   m_Name: walls_DualGridDataTile
   m_EditorClassIdentifier: TopDownRPG.Gameplay::DualGridDataTile
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: -1031414003539726126, guid: 55f2ec64c82da7143b4bd2d6d237145e, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1

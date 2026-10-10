@@ -31,12 +31,12 @@ public class PlayerWeaponSystemTests
         hudPresenter?.Dispose();
         hudPresenter = null;
 
-        foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include))
         {
             Object.DestroyImmediate(slashAttack.gameObject);
         }
 
-        foreach (Canvas canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Canvas canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include))
         {
             if (canvas != null && (canvas.name == "WeaponHudCanvas" || canvas.name == "PlayerHudCanvas"))
             {

@@ -19,6 +19,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/KeyBindings.md` is the spec for remappable controls, the options menu, the in-game menu and the local settings file. Follow it when working on bindings, menus or player preferences, and tick off its phase checklist as steps land.
 
+`Docs/ArtCredits.md` lists every piece of third-party art with its authors and licence. Add to it in the same commit that imports art, and import nothing whose licence is unknown or restrictive.
+
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 
 ## Unity good practices

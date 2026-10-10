@@ -1,0 +1,894 @@
+fileFormatVersion: 2
+guid: e666454d8eed6c54b9f20a4ded219adf
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3280751020740400271
+    second: magecity_0
+  - first:
+      213: 712098745279922090
+    second: magecity_1
+  - first:
+      213: -3421880717047633942
+    second: magecity_2
+  - first:
+      213: 8743738675560594818
+    second: magecity_3
+  - first:
+      213: 8914629902809588918
+    second: magecity_4
+  - first:
+      213: 8963886517163348597
+    second: magecity_5
+  - first:
+      213: -4499826970587564706
+    second: magecity_6
+  - first:
+      213: -2470767218446975184
+    second: magecity_7
+  - first:
+      213: -1441982511910441798
+    second: magecity_8
+  - first:
+      213: 7412455173543516134
+    second: magecity_9
+  - first:
+      213: -3891963416483603687
+    second: magecity_10
+  - first:
+      213: -8166825548119407610
+    second: magecity_11
+  - first:
+      213: 6897192308898692534
+    second: magecity_12
+  - first:
+      213: 7511782555380810464
+    second: magecity_13
+  - first:
+      213: 6095234598358546915
+    second: magecity_14
+  - first:
+      213: -6808230721255140164
+    second: magecity_15
+  - first:
+      213: 8429697821622141252
+    second: magecity_16
+  - first:
+      213: 5584747881176635195
+    second: magecity_17
+  - first:
+      213: 6009112941736530513
+    second: magecity_18
+  - first:
+      213: 3699806582052515183
+    second: magecity_19
+  - first:
+      213: 3988121072499364570
+    second: magecity_20
+  - first:
+      213: 166047862644792918
+    second: magecity_21
+  - first:
+      213: 1005738936508312987
+    second: magecity_22
+  - first:
+      213: 5746885810601310655
+    second: magecity_23
+  - first:
+      213: -6796265668101496064
+    second: magecity_24
+  - first:
+      213: -7787234628203180524
+    second: magecity_25
+  - first:
+      213: -1311983904745119640
+    second: magecity_26
+  - first:
+      213: -6916533568314075544
+    second: magecity_27
+  - first:
+      213: -667119215249030809
+    second: magecity_28
+  - first:
+      213: 5720727731970331451
+    second: magecity_29
+  - first:
+      213: 2626534091885077700
+    second: magecity_30
+  - first:
+      213: 4786238764139868039
+    second: magecity_31
+  - first:
+      213: 4920208579441688541
+    second: magecity_32
+  - first:
+      213: 536548758391616119
+    second: magecity_33
+  - first:
+      213: 174914472708192454
+    second: magecity_34
+  - first:
+      213: -7587912579283165609
+    second: magecity_35
+  - first:
+      213: -7596935903993151415
+    second: magecity_36
+  - first:
+      213: -4380389604519659561
+    second: magecity_37
+  - first:
+      213: 2719434138640851917
+    second: magecity_38
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Tree_BarePlanter
+      rect:
+        serializedVersion: 2
+        x: 129
+        y: 849
+        width: 127
+        height: 153
+      alignment: 9
+      pivot: {x: 0.503937, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7eddfe81f89943c4f986258d9738ccfb
+      internalID: -1557902970
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Tree_Twisted
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 843
+        width: 64
+        height: 126
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 84b60abb52806d841a60fc87d1b988fd
+      internalID: 1311615349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LampPost_Vine
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 970
+        width: 34
+        height: 100
+      alignment: 9
+      pivot: {x: 0.5588235, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b2bee84653f7dd439635de52dd1be32
+      internalID: 1716633062
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Statue_Maiden
+      rect:
+        serializedVersion: 2
+        x: 67
+        y: 971
+        width: 29
+        height: 85
+      alignment: 9
+      pivot: {x: 0.51724136, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 942c66005826c7d42ae0865160e97ac0
+      internalID: 333918252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedestal_Basin
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 971
+        width: 29
+        height: 50
+      alignment: 9
+      pivot: {x: 0.51724136, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ac7240a27dbd9bc429707e6e2e3db32f
+      internalID: -73062459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bench
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 908
+        width: 62
+        height: 36
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 266a2e7d0cb28054397ef370c8a7cd3a
+      internalID: 1822967009
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Statue_Bust
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 842
+        width: 22
+        height: 22
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c96f52fe24e677c4e9b9043bafac4ea6
+      internalID: 161953362
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Statue_Pedestal
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 843
+        width: 29
+        height: 63
+      alignment: 9
+      pivot: {x: 0.51724136, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5c99a842644782f4586f55a90f28bf32
+      internalID: -607583114
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Statue_Dark
+      rect:
+        serializedVersion: 2
+        x: 229
+        y: 780
+        width: 27
+        height: 60
+      alignment: 9
+      pivot: {x: 0.5185185, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 79accd6af31955d46a30403f60a8a791
+      internalID: 206499900
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bush_Autumn_A
+      rect:
+        serializedVersion: 2
+        x: 8
+        y: 409
+        width: 79
+        height: 73
+      alignment: 9
+      pivot: {x: 0.5822785, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 461b62aed93b5214ebfb7e346a815277
+      internalID: -156443031
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bush_Autumn_B
+      rect:
+        serializedVersion: 2
+        x: 98
+        y: 409
+        width: 94
+        height: 83
+      alignment: 9
+      pivot: {x: 0.5531915, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3983f71f35cbeb04d8e29530c99b5ed9
+      internalID: -572792295
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pumpkin
+      rect:
+        serializedVersion: 2
+        x: 200
+        y: 400
+        width: 19
+        height: 15
+      alignment: 9
+      pivot: {x: 0.5263158, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21c6af2a631f97f448a331dfc8bfaafc
+      internalID: -521072124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Fence_Iron
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 146
+        width: 63
+        height: 30
+      alignment: 9
+      pivot: {x: 0.50793654, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f02c2a1a4b89475449bdc36a3a4cb68c
+      internalID: 1921219888
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Cauldron
+      rect:
+        serializedVersion: 2
+        x: 167
+        y: 108
+        width: 23
+        height: 26
+      alignment: 9
+      pivot: {x: 0.5217391, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2c332fdeba2a9d439c25ac113a92b3f
+      internalID: 1822262163
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Barrel
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 1386
+        width: 30
+        height: 32
+      alignment: 9
+      pivot: {x: 0.53333336, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d8a1c650cad92494f908dfe721700bab
+      internalID: 1212596948
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Barrel_Tall
+      rect:
+        serializedVersion: 2
+        x: 129
+        y: 1333
+        width: 31
+        height: 41
+      alignment: 9
+      pivot: {x: 0.5483871, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1955a0df2ad82f241836cabf460c52b0
+      internalID: 1597671342
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Urn_Plant
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1324
+        width: 31
+        height: 55
+      alignment: 9
+      pivot: {x: 0.58064514, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 535a4e93b9dde8e4b831cb621d0c2281
+      internalID: 168768836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pot_DryGrass
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 1324
+        width: 55
+        height: 59
+      alignment: 9
+      pivot: {x: 0.5090909, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 182d5bf7182316545832509e94f55a1e
+      internalID: -141524980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pot_Sapling
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 1324
+        width: 32
+        height: 61
+      alignment: 9
+      pivot: {x: 0.5625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 25cda0659a514044ab8c2e921e21015f
+      internalID: -21247336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedestal_Stone
+      rect:
+        serializedVersion: 2
+        x: 163
+        y: 1324
+        width: 28
+        height: 58
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3714849677eb9ec49afdaa2ee8009c92
+      internalID: -79447429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Fountain
+      rect:
+        serializedVersion: 2
+        x: 194
+        y: 1324
+        width: 62
+        height: 62
+      alignment: 9
+      pivot: {x: 0.516129, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a6e656f51fc87cc4ab10f05091ddcf98
+      internalID: -454047120
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Table
+      rect:
+        serializedVersion: 2
+        x: 163
+        y: 1387
+        width: 61
+        height: 45
+      alignment: 9
+      pivot: {x: 0.52459013, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1ae3af21e734a648910996becdc026f
+      internalID: -1694255219
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stool_A
+      rect:
+        serializedVersion: 2
+        x: 230
+        y: 1418
+        width: 25
+        height: 23
+      alignment: 9
+      pivot: {x: 0.52, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5e617e518dc908c45bb6d1708357928e
+      internalID: 1523047016
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Stool_B
+      rect:
+        serializedVersion: 2
+        x: 226
+        y: 1394
+        width: 25
+        height: 23
+      alignment: 9
+      pivot: {x: 0.52, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ed70fc3f91eef6647b7b13271d2e7067
+      internalID: 382943813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Plant_Leafy
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 1388
+        width: 31
+        height: 27
+      alignment: 9
+      pivot: {x: 0.516129, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c953b436850a1a144a87a748d5a96898
+      internalID: 1623319005
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Plant_Pot
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 1419
+        width: 32
+        height: 29
+      alignment: 9
+      pivot: {x: 0.5625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f6029fc01e982349a8259661f407726
+      internalID: 493672975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Grass_Tuft
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 1423
+        width: 24
+        height: 26
+      alignment: 9
+      pivot: {x: 0.5416667, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 17f5b44600bcd804ead0d314165f4eda
+      internalID: 1323380266
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 3c285131c66a1d94885e1a18759e1751
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Barrel: 1212596948
+      Barrel_Tall: 1597671342
+      Bench: 1822967009
+      Bush_Autumn_A: -156443031
+      Bush_Autumn_B: -572792295
+      Cauldron: 1822262163
+      Fence_Iron: 1921219888
+      Fountain: -454047120
+      Grass_Tuft: 1323380266
+      LampPost_Vine: 1716633062
+      Pedestal_Basin: -73062459
+      Pedestal_Stone: -79447429
+      Plant_Leafy: 1623319005
+      Plant_Pot: 493672975
+      Pot_DryGrass: -141524980
+      Pot_Sapling: -21247336
+      Pumpkin: -521072124
+      Statue_Bust: 161953362
+      Statue_Dark: 206499900
+      Statue_Maiden: 333918252
+      Statue_Pedestal: -607583114
+      Stool_A: 1523047016
+      Stool_B: 382943813
+      Table: -1694255219
+      Tree_BarePlanter: -1557902970
+      Tree_Twisted: 1311615349
+      Urn_Plant: 168768836
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

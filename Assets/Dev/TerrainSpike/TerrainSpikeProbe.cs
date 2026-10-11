@@ -26,68 +26,88 @@ public static class TerrainSpikeProbe
     public static Texture2D Render(TerrainSpikeRenderer spike, Rect world, int scale, bool onTop, bool linear, bool hideEntities = false)
     {
         var hidden = new List<SpriteRenderer>();
-        if (hideEntities)
+        var restore = new List<(MeshRenderer renderer, int layer, int order)>();
+        GameObject cameraObject = null;
+        RenderTexture target = null;
+        Texture2D pixels = null;
+        bool finished = false;
+        try
         {
-            foreach (SpriteRenderer sprite in Object.FindObjectsByType<SpriteRenderer>())
+            if (hideEntities)
             {
-                if (sprite.sortingLayerName == TopSortingLayer && !sprite.forceRenderingOff)
+                foreach (SpriteRenderer sprite in Object.FindObjectsByType<SpriteRenderer>())
                 {
-                    sprite.forceRenderingOff = true;
-                    hidden.Add(sprite);
+                    if (sprite.sortingLayerName == TopSortingLayer && !sprite.forceRenderingOff)
+                    {
+                        sprite.forceRenderingOff = true;
+                        hidden.Add(sprite);
+                    }
                 }
             }
-        }
-        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * scale);
-        int height = Mathf.RoundToInt(world.height * ArtPixelsPerUnit * scale);
-        if (spike != null && spike.isActiveAndEnabled && spike.RuntimeMaterial != null)
-        {
-            CompileNow(spike.RuntimeMaterial);
-        }
-        var restore = new List<(MeshRenderer renderer, int layer, int order)>();
-        if (onTop && spike != null)
-        {
-            foreach (GameObject chunk in spike.Chunks)
+            if (spike != null && spike.isActiveAndEnabled && spike.RuntimeMaterial != null)
             {
-                var meshRenderer = chunk.GetComponent<MeshRenderer>();
-                restore.Add((meshRenderer, meshRenderer.sortingLayerID, meshRenderer.sortingOrder));
-                meshRenderer.sortingLayerName = TopSortingLayer;
-                meshRenderer.sortingOrder = TopSortingOrder;
+                CompileNow(spike.RuntimeMaterial);
+            }
+            if (onTop && spike != null)
+            {
+                foreach (GameObject chunk in spike.Chunks)
+                {
+                    var meshRenderer = chunk.GetComponent<MeshRenderer>();
+                    restore.Add((meshRenderer, meshRenderer.sortingLayerID, meshRenderer.sortingOrder));
+                    meshRenderer.sortingLayerName = TopSortingLayer;
+                    meshRenderer.sortingOrder = TopSortingOrder;
+                }
+            }
+
+            int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * scale);
+            int height = Mathf.RoundToInt(world.height * ArtPixelsPerUnit * scale);
+            cameraObject = new GameObject("TerrainSpikeProbeCamera") { hideFlags = HideFlags.HideAndDontSave };
+            var probe = cameraObject.AddComponent<Camera>();
+            probe.enabled = false;
+            probe.orthographic = true;
+            probe.clearFlags = CameraClearFlags.SolidColor;
+            probe.backgroundColor = Color.black;
+            target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.Linear : RenderTextureReadWrite.sRGB);
+            target.Create();
+            probe.targetTexture = target;
+            probe.orthographicSize = world.height * 0.5f;
+            probe.transform.position = new Vector3(world.center.x, world.center.y, -10f);
+            RenderPipeline.SubmitRenderRequest(probe, new RenderPipeline.StandardRequest { destination = target });
+            probe.targetTexture = null;
+
+            pixels = new Texture2D(width, height, TextureFormat.RGBA32, false, linear);
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            pixels.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            pixels.Apply();
+            RenderTexture.active = previous;
+            finished = true;
+            return pixels;
+        }
+        finally
+        {
+            if (!finished && pixels != null)
+            {
+                Object.DestroyImmediate(pixels);
+            }
+            if (target != null)
+            {
+                Object.DestroyImmediate(target);
+            }
+            if (cameraObject != null)
+            {
+                Object.DestroyImmediate(cameraObject);
+            }
+            foreach (var (meshRenderer, layer, order) in restore)
+            {
+                meshRenderer.sortingLayerID = layer;
+                meshRenderer.sortingOrder = order;
+            }
+            foreach (SpriteRenderer sprite in hidden)
+            {
+                sprite.forceRenderingOff = false;
             }
         }
-
-        var cameraObject = new GameObject("TerrainSpikeProbeCamera") { hideFlags = HideFlags.HideAndDontSave };
-        var probe = cameraObject.AddComponent<Camera>();
-        probe.enabled = false;
-        probe.orthographic = true;
-        probe.clearFlags = CameraClearFlags.SolidColor;
-        probe.backgroundColor = Color.black;
-        var target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.Linear : RenderTextureReadWrite.sRGB);
-        target.Create();
-        probe.targetTexture = target;
-        probe.orthographicSize = world.height * 0.5f;
-        probe.transform.position = new Vector3(world.center.x, world.center.y, -10f);
-        RenderPipeline.SubmitRenderRequest(probe, new RenderPipeline.StandardRequest { destination = target });
-
-        var pixels = new Texture2D(width, height, TextureFormat.RGBA32, false, linear);
-        RenderTexture previous = RenderTexture.active;
-        RenderTexture.active = target;
-        pixels.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-        pixels.Apply();
-        RenderTexture.active = previous;
-
-        probe.targetTexture = null;
-        Object.DestroyImmediate(target);
-        Object.DestroyImmediate(cameraObject);
-        foreach (var (meshRenderer, layer, order) in restore)
-        {
-            meshRenderer.sortingLayerID = layer;
-            meshRenderer.sortingOrder = order;
-        }
-        foreach (SpriteRenderer sprite in hidden)
-        {
-            sprite.forceRenderingOff = false;
-        }
-        return pixels;
     }
 
     /// <summary>
@@ -108,20 +128,21 @@ public static class TerrainSpikeProbe
     public static void CaptureComparison(TerrainSpikeRenderer spike, Rect world, int scale, string pathPrefix)
     {
         TerrainSpikeRenderer.Look look = spike.CurrentLook;
-        foreach (GameObject chunk in spike.Chunks)
+        try
         {
-            chunk.GetComponent<MeshRenderer>().forceRenderingOff = true;
+            SetChunksHidden(spike, true);
+            Capture(null, world, scale, pathPrefix + "_old.png");
+            SetChunksHidden(spike, false);
+            spike.SetLook(TerrainSpikeRenderer.Look.Crisp);
+            Capture(spike, world, scale, pathPrefix + "_crisp.png");
+            spike.SetLook(TerrainSpikeRenderer.Look.Soft);
+            Capture(spike, world, scale, pathPrefix + "_soft.png");
         }
-        Capture(null, world, scale, pathPrefix + "_old.png");
-        foreach (GameObject chunk in spike.Chunks)
+        finally
         {
-            chunk.GetComponent<MeshRenderer>().forceRenderingOff = false;
+            SetChunksHidden(spike, false);
+            spike.SetLook(look);
         }
-        spike.SetLook(TerrainSpikeRenderer.Look.Crisp);
-        Capture(spike, world, scale, pathPrefix + "_crisp.png");
-        spike.SetLook(TerrainSpikeRenderer.Look.Soft);
-        Capture(spike, world, scale, pathPrefix + "_soft.png");
-        spike.SetLook(look);
     }
 
     /// <summary>
@@ -136,27 +157,35 @@ public static class TerrainSpikeProbe
         TerrainSpikeRenderer.Look look = spike.CurrentLook;
         BoundsInt bounds = spike.Bounds;
         var world = new Rect(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y);
-        foreach (TerrainSpikeRenderer.Look each in new[] { TerrainSpikeRenderer.Look.Crisp, TerrainSpikeRenderer.Look.Soft })
+        try
         {
-            spike.SetLook(each);
-            spike.SetDebugLayers(true);
-            Texture2D pixels = Render(spike, world, 1, true, true);
-            spike.SetDebugLayers(false);
-            report.AppendLine(each + ":");
-            report.Append(Analyse(pixels, bounds, minPixels));
-            Object.DestroyImmediate(pixels);
+            foreach (TerrainSpikeRenderer.Look each in new[] { TerrainSpikeRenderer.Look.Crisp, TerrainSpikeRenderer.Look.Soft })
+            {
+                spike.SetLook(each);
+                spike.SetDebugLayers(true);
+                Texture2D pixels = Render(spike, world, 1, true, true);
+                report.AppendLine(each + ":");
+                report.Append(Analyse(pixels, bounds, minPixels));
+                Object.DestroyImmediate(pixels);
+            }
         }
-        spike.SetLook(look);
+        finally
+        {
+            spike.SetDebugLayers(false);
+            spike.SetLook(look);
+        }
         return report.ToString();
     }
 
     /// <summary>
     /// Times <paramref name="frames"/> renders of a camera of the given size centred on <paramref name="centre"/>,
-    /// with the spike shown and hidden, waiting for the GPU after each batch. Returns milliseconds per frame.
+    /// with the spike shown and hidden in each look, waiting for the GPU after each batch, and restores the spike's
+    /// look afterwards. Returns milliseconds per frame.
     /// </summary>
     public static string MeasureCost(TerrainSpikeRenderer spike, Vector2 centre, int width, int height, int zoom, int frames)
     {
         var report = new StringBuilder();
+        TerrainSpikeRenderer.Look previousLook = spike.CurrentLook;
         var cameraObject = new GameObject("TerrainSpikeProbeCamera") { hideFlags = HideFlags.HideAndDontSave };
         var probe = cameraObject.AddComponent<Camera>();
         probe.enabled = false;
@@ -169,32 +198,32 @@ public static class TerrainSpikeProbe
         probe.orthographicSize = height / (2f * ArtPixelsPerUnit * zoom);
         probe.transform.position = new Vector3(centre.x, centre.y, -10f);
         var readback = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-        foreach (TerrainSpikeRenderer.Look look in new[] { TerrainSpikeRenderer.Look.Crisp, TerrainSpikeRenderer.Look.Soft })
+        try
         {
-            spike.SetLook(look);
-            foreach (bool shown in new[] { false, true, false, true })
+            foreach (TerrainSpikeRenderer.Look look in new[] { TerrainSpikeRenderer.Look.Crisp, TerrainSpikeRenderer.Look.Soft })
             {
-                foreach (GameObject chunk in spike.Chunks)
+                spike.SetLook(look);
+                foreach (bool shown in new[] { false, true, false, true })
                 {
-                    chunk.GetComponent<MeshRenderer>().forceRenderingOff = !shown;
+                    SetChunksHidden(spike, !shown);
+                    CompileNow(spike.RuntimeMaterial);
+                    RenderFrames(probe, target, readback, 3);
+                    var watch = Stopwatch.StartNew();
+                    RenderFrames(probe, target, readback, frames);
+                    watch.Stop();
+                    report.AppendLine($"{look} spike {(shown ? "on " : "off")}: {watch.Elapsed.TotalMilliseconds / frames:F3} ms per frame ({width}x{height}, zoom {zoom})");
                 }
-                CompileNow(spike.RuntimeMaterial);
-                RenderFrames(probe, target, readback, 3);
-                var watch = Stopwatch.StartNew();
-                RenderFrames(probe, target, readback, frames);
-                watch.Stop();
-                report.AppendLine($"{look} spike {(shown ? "on " : "off")}: {watch.Elapsed.TotalMilliseconds / frames:F3} ms per frame ({width}x{height}, zoom {zoom})");
             }
         }
-        foreach (GameObject chunk in spike.Chunks)
+        finally
         {
-            chunk.GetComponent<MeshRenderer>().forceRenderingOff = false;
+            SetChunksHidden(spike, false);
+            spike.SetLook(previousLook);
+            probe.targetTexture = null;
+            Object.DestroyImmediate(readback);
+            Object.DestroyImmediate(target);
+            Object.DestroyImmediate(cameraObject);
         }
-        spike.SetLook(TerrainSpikeRenderer.Look.Crisp);
-        probe.targetTexture = null;
-        Object.DestroyImmediate(readback);
-        Object.DestroyImmediate(target);
-        Object.DestroyImmediate(cameraObject);
         return report.ToString();
     }
 
@@ -207,12 +236,25 @@ public static class TerrainSpikeProbe
     public static string MeasureShimmer(TerrainSpikeRenderer spike, Vector2 centre, int width, int height, int zoom, float[] offsets)
     {
         var report = new StringBuilder();
+        try
+        {
+            MeasureShimmerPasses(spike, centre, width, height, zoom, offsets, report);
+        }
+        finally
+        {
+            SetChunksHidden(spike, false);
+        }
+        return report.ToString();
+    }
+
+    /// <summary>
+    /// The two passes of <see cref="MeasureShimmer"/>: the render tilemaps with the spike hidden, then the spike.
+    /// </summary>
+    private static void MeasureShimmerPasses(TerrainSpikeRenderer spike, Vector2 centre, int width, int height, int zoom, float[] offsets, StringBuilder report)
+    {
         foreach (bool shown in new[] { false, true })
         {
-            foreach (GameObject chunk in spike.Chunks)
-            {
-                chunk.GetComponent<MeshRenderer>().forceRenderingOff = !shown;
-            }
+            SetChunksHidden(spike, !shown);
             Color32[] reference = RenderAt(spike, centre, width, height, zoom);
             report.Append(shown ? $"spike {spike.CurrentLook}:" : "render tilemaps:");
             foreach (float offset in offsets)
@@ -234,11 +276,22 @@ public static class TerrainSpikeProbe
             }
             report.AppendLine();
         }
+    }
+
+    /// <summary>
+    /// Switches the spike's chunks off or on for the next renders through <see cref="Renderer.forceRenderingOff"/>,
+    /// which takes effect at once; deactivating and reactivating the object would not draw again until the next
+    /// editor update. The flag is not saved.
+    /// </summary>
+    private static void SetChunksHidden(TerrainSpikeRenderer spike, bool hidden)
+    {
         foreach (GameObject chunk in spike.Chunks)
         {
-            chunk.GetComponent<MeshRenderer>().forceRenderingOff = false;
+            if (chunk != null)
+            {
+                chunk.GetComponent<MeshRenderer>().forceRenderingOff = hidden;
+            }
         }
-        return report.ToString();
     }
 
     /// <summary>
@@ -310,8 +363,9 @@ public static class TerrainSpikeProbe
     }
 
     /// <summary>
-    /// Labels the debug view's classes (0 nothing, 1 grass, 2 gravel, 3 stone) into 4-connected regions and describes
-    /// the small ones and the holes.
+    /// Labels the debug view's colours into classes by their brightest channel (black nothing, red grass, green gravel,
+    /// blue stone), so the lights' intensity and colour do not matter, groups them into 4-connected regions and
+    /// describes the small ones and the holes.
     /// </summary>
     private static string Analyse(Texture2D pixels, BoundsInt bounds, int minPixels)
     {
@@ -321,8 +375,9 @@ public static class TerrainSpikeProbe
         var classes = new byte[colours.Length];
         for (int i = 0; i < colours.Length; i++)
         {
-            int r = colours[i].r;
-            classes[i] = (byte)(r < 27 ? 0 : r < 81 ? 1 : r < 135 ? 2 : 3);
+            Color32 c = colours[i];
+            int brightest = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+            classes[i] = (byte)(brightest < 4 ? 0 : c.r == brightest ? 1 : c.g == brightest ? 2 : 3);
         }
         var seen = new bool[classes.Length];
         var regions = new int[4];

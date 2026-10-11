@@ -107,7 +107,8 @@ public static class TerrainSpikeMenu
     }
 
     /// <summary>
-    /// Detaches the spike when its scene closes or play mode starts, since an object flagged DontSave outlives both.
+    /// Detaches the spike when its scene closes or play mode starts or ends, since an object flagged DontSave outlives
+    /// all three.
     /// </summary>
     [InitializeOnLoadMethod]
     private static void DetachWithScene()
@@ -124,7 +125,7 @@ public static class TerrainSpikeMenu
         };
         EditorApplication.playModeStateChanged += state =>
         {
-            if (state == PlayModeStateChange.ExitingEditMode)
+            if (state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.ExitingPlayMode)
             {
                 Detach();
             }

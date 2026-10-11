@@ -346,6 +346,10 @@ TSPair TSGetPair(uint upper, int lower)
     {
         p.rim = TS_SOFT_RIM;
     }
+    if (upper == 2)
+    {
+        p.rimColour = TS_STONE_MORTAR;
+    }
 #endif
     return p;
 }
@@ -528,8 +532,9 @@ bool TSOpaque(uint layer, int lower, float d)
 }
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
-// composites grass, gravel and stone bottom up with each pair's edge. DebugView.x > 0.5 outputs the index of the
-// topmost visible layer instead, as (index + 1) / 4, and 0 where nothing is drawn.
+// composites grass, gravel and stone bottom up with each pair's edge. DebugView.x > 0.5 outputs the topmost visible
+// layer instead as a pure colour (grass red, gravel green, stone blue, black where nothing is drawn), which the 2D
+// lights scale but never mix, whatever their intensity or colour.
 void TerrainSpike_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Backdrop, float4 DebugView, out float3 Color, out float Alpha)
 {
     TSInputs ins;
@@ -578,7 +583,7 @@ void TerrainSpike_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     }
 
     float4 acc = float4(Backdrop.rgb * Backdrop.a, Backdrop.a);
-    float visible = 0.0;
+    float3 visible = float3(0.0, 0.0, 0.0);
     [unroll]
     for (uint n = 0; n < 3; n++)
     {
@@ -589,14 +594,14 @@ void TerrainSpike_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
             acc = c + acc * (1.0 - c.a);
             if (c.a >= 0.5)
             {
-                visible = (n + 1.0) * 0.25;
+                visible = float3(n == 0 ? 1.0 : 0.0, n == 1 ? 1.0 : 0.0, n == 2 ? 1.0 : 0.0);
             }
         }
     }
 
     if (DebugView.x > 0.5)
     {
-        Color = float3(visible, visible, visible);
+        Color = visible;
         Alpha = 1.0;
         return;
     }

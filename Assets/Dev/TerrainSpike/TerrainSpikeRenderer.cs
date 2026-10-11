@@ -26,6 +26,7 @@ public class TerrainSpikeRenderer : MonoBehaviour
 
     private const string SoftKeyword = "_TERRAIN_SOFT";
     private const int Margin = 1;
+    private const int TextureSize = 128;
 
     private static readonly int ControlMapId = Shader.PropertyToID("_ControlMap");
     private static readonly int AlbedoArrayId = Shader.PropertyToID("_AlbedoArray");
@@ -39,7 +40,7 @@ public class TerrainSpikeRenderer : MonoBehaviour
     [Tooltip("Ground data tilemaps, bottom layer first: grass, gravel, stone. Index i is control map bit i and material slice i.")]
     [SerializeField] private Tilemap[] layers = new Tilemap[0];
     [SerializeField] private Shader shader;
-    [Tooltip("Albedo per material, 128 px, uncompressed RGBA32, sRGB off.")]
+    [Tooltip("Albedo per material, 128 px (the shader's repeat), uncompressed RGBA32, sRGB off.")]
     [SerializeField] private Texture2D[] albedo = new Texture2D[0];
     [Tooltip("Cell field per material (empty for grass), same format.")]
     [SerializeField] private Texture2D[] field = new Texture2D[0];
@@ -159,9 +160,8 @@ public class TerrainSpikeRenderer : MonoBehaviour
         {
             return;
         }
-        if (layers.Length > 8 || albedo.Length < layers.Length || height.Length < layers.Length)
+        if (!HasValidTextures())
         {
-            Debug.LogError("TerrainSpikeRenderer needs at most 8 layers and an albedo and height texture per layer.", this);
             return;
         }
         if (grid.cellSize.x != 1f || grid.cellSize.y != 1f || grid.transform.rotation != Quaternion.identity)
@@ -188,6 +188,43 @@ public class TerrainSpikeRenderer : MonoBehaviour
         material.SetVector(ControlRectId, new Vector4(origin.x, origin.y, bounds.size.x, bounds.size.y));
         ApplySettings();
         BuildChunks(origin);
+    }
+
+    /// <summary>
+    /// Logs an error and returns false unless there are at most 8 layers, each with an albedo and a height texture,
+    /// and every texture given (cell fields may be missing) is <see cref="TextureSize"/> px square RGBA32.
+    /// </summary>
+    private bool HasValidTextures()
+    {
+        if (layers.Length > 8 || albedo.Length < layers.Length || height.Length < layers.Length)
+        {
+            Debug.LogError("TerrainSpikeRenderer needs at most 8 layers and an albedo and height texture per layer.", this);
+            return false;
+        }
+        for (int i = 0; i < layers.Length; i++)
+        {
+            if (albedo[i] == null || height[i] == null)
+            {
+                Debug.LogError($"TerrainSpikeRenderer is missing the albedo or height texture of layer {i}.", this);
+                return false;
+            }
+        }
+        foreach (Texture2D[] set in new[] { albedo, field, height })
+        {
+            if (set == null)
+            {
+                continue;
+            }
+            foreach (Texture2D texture in set)
+            {
+                if (texture != null && (texture.width != TextureSize || texture.height != TextureSize || texture.format != TextureFormat.RGBA32))
+                {
+                    Debug.LogError($"TerrainSpikeRenderer: {texture.name} must be {TextureSize} px square RGBA32, the repeat the shader assumes.", texture);
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /// <summary>
@@ -259,7 +296,7 @@ public class TerrainSpikeRenderer : MonoBehaviour
     /// </summary>
     private Texture2DArray BuildArray(Texture2D[] sources, string arrayName)
     {
-        int size = albedo[0].width;
+        const int size = TextureSize;
         var array = new Texture2DArray(size, size, layers.Length, TextureFormat.RGBA32, false, true)
         {
             name = arrayName,
@@ -271,11 +308,6 @@ public class TerrainSpikeRenderer : MonoBehaviour
         for (int slice = 0; slice < layers.Length; slice++)
         {
             Texture2D source = slice < sources.Length ? sources[slice] : null;
-            if (source != null && (source.width != size || source.height != size || source.format != TextureFormat.RGBA32))
-            {
-                Debug.LogError($"TerrainSpikeRenderer: {source.name} must be {size} px RGBA32 to go into {arrayName}.", this);
-                source = null;
-            }
             if (source == null)
             {
                 if (blank == null)
@@ -363,7 +395,8 @@ public class TerrainSpikeRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Patches the control map for cells changed on one of the layers, and rebuilds when a cell lands outside the bounds.
+    /// Patches the control map for cells changed on one of the layers. Rebuilds instead when a cell lands outside the
+    /// bounds, or a filled one lands in the margin, which must stay empty so the edge's outer bands stay on the chunks.
     /// </summary>
     private void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
@@ -380,7 +413,9 @@ public class TerrainSpikeRenderer : MonoBehaviour
         bool changed = false;
         foreach (Vector3Int position in positions)
         {
-            if (!bounds.Contains(new Vector3Int(position.x, position.y, 0)))
+            bool inMargin = position.x < bounds.xMin + Margin || position.x >= bounds.xMax - Margin
+                || position.y < bounds.yMin + Margin || position.y >= bounds.yMax - Margin;
+            if (!bounds.Contains(new Vector3Int(position.x, position.y, 0)) || (inMargin && tilemap.HasTile(position)))
             {
                 Rebuild();
                 return;

@@ -69,3 +69,7 @@ ServerData/
 # Unity crash recovery scenes
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
+
+# Python bytecode (tools/)
+__pycache__/
+*.pyc

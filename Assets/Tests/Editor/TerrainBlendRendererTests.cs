@@ -13,8 +13,11 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// and from replicated edits on a client reach the control map's texture, and so do undos; a render uploads pending
 /// changes once and stops listening; the chunks cover the layers and follow the bounds as they grow and shrink;
 /// disabling unsubscribes from everything and destroys what was built; nothing runs or allocates per frame while no
-/// cell changes; fixing the style rebuilds a renderer that could not build; the style is never written. Each test
-/// builds its own style with <see cref="TestTerrainStyle"/>.
+/// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
+/// the new one, and fixing a material rebuilds a renderer that could not build; the style and materials are never
+/// written; a layer without a material, a texture of the wrong size and a tilemap listed twice stop the build, and a
+/// broken material drawn by two layers is reported once. Each test builds its own style and materials with
+/// <see cref="TestTerrainStyle"/>.
 /// </summary>
 public class TerrainBlendRendererTests
 {
@@ -23,10 +26,11 @@ public class TerrainBlendRendererTests
     private Tilemap[] layers;
     private Tile tile;
     private TerrainStyle style;
+    private TerrainMaterial[] materials;
 
     /// <summary>
     /// Builds an inactive grid with grass, gravel and stone layer tilemaps (grass painted over a 20 x 12 block, gravel
-    /// along a row of it) and a style of three plain materials.
+    /// along a row of it), a style and three plain materials.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -57,11 +61,12 @@ public class TerrainBlendRendererTests
         }
 
         style = TestTerrainStyle.Create(createdObjects);
+        materials = TestTerrainStyle.PlainMaterials(createdObjects);
     }
 
     /// <summary>
-    /// Clears the undo history of the layers and destroys the grid, the tile, the style and the textures the test
-    /// created.
+    /// Clears the undo history of the layers and destroys the grid, the tile, the style, the materials and the textures
+    /// the test created.
     /// </summary>
     [TearDown]
     public void TearDown()
@@ -293,8 +298,8 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Disabling stops following tile changes, render callbacks (even with an upload pending), undos and style
-    /// changes, and destroys the control map's texture, the arrays, the lookup texture, the material, the chunk meshes
+    /// Disabling stops following tile changes, render callbacks (even with an upload pending), undos and style and
+    /// material changes, and destroys the control map's texture, the arrays, the lookup texture, the material, the chunk meshes
     /// and the chunk objects.
     /// </summary>
     [Test]
@@ -317,12 +322,13 @@ public class TerrainBlendRendererTests
         layers[0].SetTile(new Vector3Int(2, 2, 0), null);
         RenderOneFrame();
         Undo.PerformUndo();
-        SetGravelField(TestTerrainStyle.CreateTexture("Other field", new Color32(128, 128, 128, 0), createdObjects));
+        SetEdgeNoise(2f);
+        SetCellField(materials[1], TestTerrainStyle.CreateTexture("Other field", new Color32(128, 128, 128, 0), createdObjects));
 
         Assert.That(renderer.HandledChangeCount, Is.EqualTo(changes), "A disabled renderer no longer follows tile changes.");
         Assert.That(renderer.RenderCallbackCount, Is.EqualTo(renders), "A disabled renderer no longer waits for a render.");
         Assert.That(renderer.HandledUndoCount, Is.EqualTo(undos), "A disabled renderer no longer follows undos.");
-        Assert.That(renderer.IsRebuildScheduled, Is.False, "A disabled renderer no longer follows its style.");
+        Assert.That(renderer.IsRebuildScheduled, Is.False, "A disabled renderer no longer follows its style or materials.");
         Assert.That(renderer.IsFlushScheduled, Is.False);
         Assert.That(renderer.ControlMap, Is.Null);
         Assert.That(renderer.Chunks, Is.Empty);
@@ -382,21 +388,90 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// A renderer that could not build because its style lacked a texture rebuilds once the style is fixed in the
-    /// inspector: the change schedules a rebuild, which then succeeds.
+    /// An inspector change to the style or to a material one of its layers draws schedules a rebuild, which builds the
+    /// lookup texture again from the new settings; a change to a material no layer draws schedules nothing.
     /// </summary>
     [Test]
-    public void FixingTheStyle_RebuildsARendererThatCouldNotBuild()
+    public void EditingTheStyleOrAMaterialItDraws_RebuildsTheRenderer()
     {
-        style = TestTerrainStyle.Create(createdObjects,
-            TestTerrainStyle.PlainMaterial("Grass", TerrainStyle.CellMode.None, createdObjects),
-            new TerrainStyle.MaterialSettings("Gravel", TestTerrainStyle.CreateTexture("Gravel albedo", new Color32(150, 120, 90, 255), createdObjects), null, 4, TerrainStyle.CellMode.WholeChips, Color.gray, new TerrainStyle.EdgeSettings()),
-            TestTerrainStyle.PlainMaterial("Stone", TerrainStyle.CellMode.CutStones, createdObjects));
-        LogAssert.Expect(LogType.Error, "TerrainStyle: material Gravel has chips or stones but no cell field texture.");
+        TerrainBlendRenderer renderer = CreateRenderer();
+        TerrainMaterial unused = TestTerrainStyle.PlainMaterial("Sand", TerrainMaterial.CellMode.None, createdObjects);
+
+        SetBaseColour(unused, Color.yellow);
+
+        Assert.That(renderer.IsRebuildScheduled, Is.False, "No layer draws Sand.");
+
+        SetBaseColour(materials[1], new Color(0.5f, 0.25f, 0.125f));
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.Lut.GetPixel(2, 2), Is.EqualTo(new Color(0.5f, 0.25f, 0.125f)), "Gravel's layer row holds its new base colour.");
+
+        SetEdgeNoise(2f);
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.Lut.GetPixel(0, 0).r, Is.EqualTo(2f));
+    }
+
+    /// <summary>
+    /// Changing a layer's material in the inspector rebuilds the renderer, which then follows the new material and no
+    /// longer the old one.
+    /// </summary>
+    [Test]
+    public void SwappingALayersMaterial_FollowsTheNewMaterialOnly()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        TerrainMaterial previous = materials[1];
+        TerrainMaterial replacement = TestTerrainStyle.PlainMaterial("Other gravel", TerrainMaterial.CellMode.WholeChips, createdObjects);
+        SerializedObject serialized = new(renderer);
+        serialized.FindProperty("layers.Array.data[1].material").objectReferenceValue = replacement;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        renderer.RunScheduledRebuild();
+
+        SetBaseColour(previous, Color.yellow);
+
+        Assert.That(renderer.IsRebuildScheduled, Is.False, "The old material no longer rebuilds the renderer.");
+
+        SetBaseColour(replacement, Color.yellow);
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+    }
+
+    /// <summary>
+    /// A broken material drawn by two layers logs its error once (any second error would fail the test).
+    /// </summary>
+    [Test]
+    public void ABrokenMaterialDrawnByTwoLayers_LogsItsErrorOnce()
+    {
+        Texture2D albedo = TestTerrainStyle.CreateTexture("Gravel albedo", new Color32(150, 120, 90, 255), createdObjects);
+        TerrainMaterial broken = TerrainMaterial.Create("Gravel", albedo, null, 4, TerrainMaterial.CellMode.WholeChips, Color.gray, new TerrainStyle.EdgeSettings());
+        createdObjects.Add(broken);
+        TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[1], broken), new TerrainBlendRenderer.Layer(layers[2], broken));
+
+        LogAssert.Expect(LogType.Error, "Terrain material Gravel has chips or stones but no cell field texture.");
+        root.SetActive(true);
+
+        Assert.That(renderer.ControlMap, Is.Null);
+    }
+
+    /// <summary>
+    /// A renderer that could not build because a material it draws lacked a texture rebuilds once the material is
+    /// fixed in the inspector: the change schedules a rebuild, which then succeeds.
+    /// </summary>
+    [Test]
+    public void FixingAMaterial_RebuildsARendererThatCouldNotBuild()
+    {
+        Texture2D albedo = TestTerrainStyle.CreateTexture("Gravel albedo", new Color32(150, 120, 90, 255), createdObjects);
+        materials[1] = TerrainMaterial.Create("Gravel", albedo, null, 4, TerrainMaterial.CellMode.WholeChips, Color.gray, new TerrainStyle.EdgeSettings());
+        createdObjects.Add(materials[1]);
+        LogAssert.Expect(LogType.Error, "Terrain material Gravel has chips or stones but no cell field texture.");
         TerrainBlendRenderer renderer = CreateRenderer();
         Assert.That(renderer.ControlMap, Is.Null);
 
-        SetGravelField(TestTerrainStyle.CreateTexture("Gravel field", new Color32(128, 128, 128, 0), createdObjects));
+        SetCellField(materials[1], TestTerrainStyle.CreateTexture("Gravel field", new Color32(128, 128, 128, 0), createdObjects));
 
         Assert.That(renderer.IsRebuildScheduled, Is.True);
         renderer.RunScheduledRebuild();
@@ -405,14 +480,24 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Building, patching, rebuilding and disabling leave the style and its textures exactly as they were.
+    /// Building, patching, rebuilding and disabling leave the style, the materials and their textures exactly as they
+    /// were.
     /// </summary>
     [Test]
-    public void TheStyle_IsNeverModified()
+    public void TheStyleAndMaterials_AreNeverModified()
     {
-        string before = EditorJsonUtility.ToJson(style);
-        int dirtyCount = EditorUtility.GetDirtyCount(style);
-        Color32[] albedoBefore = style.Materials[1].Albedo.GetPixels32();
+        List<Object> assets = new() { style };
+        assets.AddRange(materials);
+        List<string> before = new();
+        List<int> dirtyCounts = new();
+        foreach (Object asset in assets)
+        {
+            before.Add(EditorJsonUtility.ToJson(asset));
+            dirtyCounts.Add(EditorUtility.GetDirtyCount(asset));
+        }
+
+        Color32[] albedoBefore = materials[1].Albedo.GetPixels32();
+        Color32[] fieldBefore = materials[1].CellField.GetPixels32();
 
         TerrainBlendRenderer renderer = CreateRenderer();
         layers[1].SetTile(new Vector3Int(3, 3, 0), tile);
@@ -421,25 +506,48 @@ public class TerrainBlendRendererTests
         renderer.Rebuild();
         renderer.enabled = false;
 
-        Assert.That(EditorJsonUtility.ToJson(style), Is.EqualTo(before));
-        Assert.That(style.Materials[1].Albedo.GetPixels32(), Is.EqualTo(albedoBefore));
-        Assert.That(EditorUtility.GetDirtyCount(style), Is.EqualTo(dirtyCount));
+        for (int i = 0; i < assets.Count; i++)
+        {
+            Assert.That(EditorJsonUtility.ToJson(assets[i]), Is.EqualTo(before[i]), assets[i].name);
+            Assert.That(EditorUtility.GetDirtyCount(assets[i]), Is.EqualTo(dirtyCounts[i]), assets[i].name);
+        }
+
+        Assert.That(materials[1].Albedo.GetPixels32(), Is.EqualTo(albedoBefore));
+        Assert.That(materials[1].CellField.GetPixels32(), Is.EqualTo(fieldBefore));
     }
 
     /// <summary>
-    /// A layer drawing a material the style does not have logs an error and builds nothing.
+    /// A layer without a material logs an error and builds nothing.
     /// </summary>
     [Test]
-    public void ALayerWithAnUnknownMaterial_LogsAnErrorAndBuildsNothing()
+    public void ALayerWithoutAMaterial_LogsAnErrorAndBuildsNothing()
     {
         TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
-        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], 0), new TerrainBlendRenderer.Layer(layers[1], 5));
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[1], null));
 
-        LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layer 1 (Gravel) draws material 5, but TerrainStyle has 3.");
+        LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layer 1 (Gravel) has no material.");
         root.SetActive(true);
 
         Assert.That(renderer.ControlMap, Is.Null);
         Assert.That(renderer.Chunks, Is.Empty);
+    }
+
+    /// <summary>
+    /// A material whose texture is not its repeat x 32 px square logs an error and builds nothing, since the texture
+    /// could not be copied into the arrays.
+    /// </summary>
+    [Test]
+    public void AMaterialWithATextureOfTheWrongSize_LogsAnErrorAndBuildsNothing()
+    {
+        Texture2D small = new(64, 64, TextureFormat.RGBA32, false, true) { name = "Small albedo" };
+        createdObjects.Add(small);
+        materials[0] = TerrainMaterial.Create("Grass", small, null, 4, TerrainMaterial.CellMode.None, Color.gray, new TerrainStyle.EdgeSettings());
+        createdObjects.Add(materials[0]);
+
+        LogAssert.Expect(LogType.Error, "Small albedo of terrain material Grass must be 128 px square (its repeat of 4 cells) and RGBA32 with sRGB off.");
+        TerrainBlendRenderer renderer = CreateRenderer();
+
+        Assert.That(renderer.ControlMap, Is.Null);
     }
 
     /// <summary>
@@ -449,7 +557,7 @@ public class TerrainBlendRendererTests
     public void ATilemapListedTwice_LogsAnErrorAndBuildsNothing()
     {
         TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
-        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], 0), new TerrainBlendRenderer.Layer(layers[0], 1));
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[0], materials[1]));
 
         LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layers 0 and 1 both list Grass; each tilemap is one layer.");
         root.SetActive(true);
@@ -458,12 +566,12 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Adds a renderer over the three layers (materials 0, 1, 2) to the grid and activates it.
+    /// Adds a renderer over the three layers, drawing the three materials in order, to the grid and activates it.
     /// </summary>
     private TerrainBlendRenderer CreateRenderer()
     {
         TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
-        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], 0), new TerrainBlendRenderer.Layer(layers[1], 1), new TerrainBlendRenderer.Layer(layers[2], 2));
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[1], materials[1]), new TerrainBlendRenderer.Layer(layers[2], materials[2]));
         root.SetActive(true);
         return renderer;
     }
@@ -493,13 +601,33 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Sets the style's gravel cell field through a serialized object, as the inspector does, which validates the
-    /// style.
+    /// Sets <paramref name="material"/>'s cell field through a serialized object, as the inspector does, which
+    /// validates the material.
     /// </summary>
-    private void SetGravelField(Texture2D field)
+    private static void SetCellField(TerrainMaterial material, Texture2D field)
+    {
+        SerializedObject serialized = new(material);
+        serialized.FindProperty("cellField").objectReferenceValue = field;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// Sets <paramref name="material"/>'s base colour through a serialized object, as the inspector does.
+    /// </summary>
+    private static void SetBaseColour(TerrainMaterial material, Color colour)
+    {
+        SerializedObject serialized = new(material);
+        serialized.FindProperty("baseColour").colorValue = colour;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// Sets the style's edge noise through a serialized object, as the inspector does, which validates the style.
+    /// </summary>
+    private void SetEdgeNoise(float noise)
     {
         SerializedObject serialized = new(style);
-        serialized.FindProperty("materials.Array.data[1].cellField").objectReferenceValue = field;
+        serialized.FindProperty("edgeNoise").floatValue = noise;
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 

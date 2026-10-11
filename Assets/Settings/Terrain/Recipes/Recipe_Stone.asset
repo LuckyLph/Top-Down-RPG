@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f57a4e038c353cf4883de9bbebf49df5, type: 3}
+  m_Name: Recipe_Stone
+  m_EditorClassIdentifier: TopDownRPG.Editor::StoneCobblesRecipe
+  material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  seed: 20261014
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  mortar:
+    serializedVersion: 2
+    rgba: 4283193442
+  mortarWidth: 0.5
+  grit: 7
+  stonesPerCell: 4.5
+  jitter: 0.32
+  palette:
+  - serializedVersion: 2
+    rgba: 4287272088
+  - serializedVersion: 2
+    rgba: 4287930534
+  - serializedVersion: 2
+    rgba: 4286482572
+  - serializedVersion: 2
+    rgba: 4288588464
+  - serializedVersion: 2
+    rgba: 4285955714
+  - serializedVersion: 2
+    rgba: 4287141534
+  - serializedVersion: 2
+    rgba: 4287271058
+  bevel: 18
+  bevelWidth: 1.25
+  radial: 4
+  radialRadius: 3.5
+  shadedSide: 8
+  shadedSideFrom: 0.35

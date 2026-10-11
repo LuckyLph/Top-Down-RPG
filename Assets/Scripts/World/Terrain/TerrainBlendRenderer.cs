@@ -9,28 +9,29 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Draws an area's ground layers with one blending shader at 32 px per unit (Docs/TerrainBlending.md), in place of
 /// their render tilemaps. Sits on the area's Grid and runs in edit mode too. From its layers (data tilemaps, bottom
-/// first, each drawing a material of its <see cref="TerrainStyle"/>) it builds a <see cref="TerrainControlMap"/>,
-/// texture arrays of the materials' albedo and cell field textures (a slice per layer), the style's lookup texture
-/// (<see cref="TerrainBlendLut"/>), a runtime material, and one quad per chunk of cells over the control map's bounds
-/// on the Terrain sorting layer, each its own renderer so off-screen chunks are culled (chunks the bounds no longer
-/// reach are removed); nothing is drawn where no layer is filled. Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile
-/// changes on a layer (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a
-/// client) patch the control map at once, an undo or redo in the editor reads the layers again, and the texture is
-/// uploaded once before the next render; nothing runs per frame while no cell changes. Reads its style and textures
-/// and never writes them.
+/// first, each drawing a <see cref="TerrainMaterial"/>) and its <see cref="TerrainStyle"/> it builds a
+/// <see cref="TerrainControlMap"/>, texture arrays of the materials' albedo and cell field textures (a slice per layer),
+/// the lookup texture of the style and materials (<see cref="TerrainBlendLut"/>), a runtime material, and one quad per
+/// chunk of cells over the control map's bounds on the Terrain sorting layer, each its own renderer so off-screen
+/// chunks are culled (chunks the bounds no longer reach are removed); nothing is drawn where no layer is filled.
+/// Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile changes on a layer
+/// (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a client) patch the
+/// control map at once, an undo or redo in the editor reads the layers again, and the texture is uploaded once before
+/// the next render; nothing runs per frame while no cell changes. Reads its style, materials and textures and never
+/// writes them.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Grid))]
 public class TerrainBlendRenderer : MonoBehaviour
 {
-    /// <summary>One ground layer: a data tilemap and the index of the material it draws in the style.</summary>
+    /// <summary>One ground layer: a data tilemap and the material it draws.</summary>
     [Serializable]
     public class Layer
     {
         [SerializeField] private Tilemap tilemap;
-        [Tooltip("Index of the material this layer draws in the style's material list.")]
-        [SerializeField, Min(0)] private int material;
+        [Tooltip("The material this layer draws.")]
+        [SerializeField] private TerrainMaterial material;
 
         /// <summary>
         /// Creates an empty layer, for Unity serialization and the inspector list.
@@ -40,16 +41,16 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         /// <summary>
-        /// Creates a layer drawing <paramref name="tilemap"/>'s filled cells with material <paramref name="material"/>.
+        /// Creates a layer drawing <paramref name="tilemap"/>'s filled cells with <paramref name="material"/>.
         /// </summary>
-        public Layer(Tilemap tilemap, int material)
+        public Layer(Tilemap tilemap, TerrainMaterial material)
         {
             this.tilemap = tilemap;
             this.material = material;
         }
 
         public Tilemap Tilemap => tilemap;
-        public int Material => material;
+        public TerrainMaterial Material => material;
     }
 
     /// <summary>One chunk quad: its renderer and its mesh.</summary>
@@ -75,9 +76,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int ControlRectId = Shader.PropertyToID("_ControlRect");
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
 
-    [Tooltip("The look: the terrain shader, the materials and the pair rules. Read, never written.")]
+    [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
-    [Tooltip("Ground data tilemaps, bottom layer first, each with its material in the style. Upper layers draw over lower ones, as their navigation priority decides a cell. At most 8.")]
+    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, as their navigation priority decides a cell. At most 8.")]
     [SerializeField] private Layer[] layers = new Layer[0];
     [Tooltip("Cells per side of each chunk quad; each chunk is culled on its own.")]
     [SerializeField, Min(1)] private int chunkSize = 16;
@@ -100,6 +101,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private bool flushScheduled;
     [NonSerialized] private bool debugView;
 #if UNITY_EDITOR
+    [NonSerialized] private readonly List<TerrainMaterial> subscribedMaterials = new();
     [NonSerialized] private bool enabledOnce;
     [NonSerialized] private TerrainStyle subscribedStyle;
     [NonSerialized] private bool rebuildScheduled;
@@ -268,12 +270,63 @@ public class TerrainBlendRenderer : MonoBehaviour
             Rebuild();
         }
     }
+
+    /// <summary>
+    /// Has inspector changes to the style and to each layer's material (once per material, however many layers draw
+    /// it) schedule a rebuild.
+    /// </summary>
+    private void FollowStyleAndMaterials()
+    {
+        if (style != null)
+        {
+            subscribedStyle = style;
+            subscribedStyle.Validated += ScheduleRebuild;
+        }
+
+        if (layers == null)
+        {
+            return;
+        }
+
+        foreach (Layer layer in layers)
+        {
+            TerrainMaterial layerMaterial = layer?.Material;
+            if (layerMaterial != null && !subscribedMaterials.Contains(layerMaterial))
+            {
+                subscribedMaterials.Add(layerMaterial);
+                layerMaterial.Validated += ScheduleRebuild;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stops following the style and the materials.
+    /// </summary>
+    private void StopFollowingStyleAndMaterials()
+    {
+        if (subscribedStyle != null)
+        {
+            subscribedStyle.Validated -= ScheduleRebuild;
+        }
+
+        subscribedStyle = null;
+        foreach (TerrainMaterial subscribed in subscribedMaterials)
+        {
+            if (subscribed != null)
+            {
+                subscribed.Validated -= ScheduleRebuild;
+            }
+        }
+
+        subscribedMaterials.Clear();
+    }
 #endif
 
     /// <summary>
     /// Builds the control map, texture arrays, lookup texture, runtime material and chunks; logs what is wrong and
-    /// builds nothing when the style or layers are not usable. In the editor it follows its style's inspector changes
-    /// either way, so fixing the style rebuilds a renderer that could not build.
+    /// builds nothing when the style, layers or materials are not usable. In the editor it follows the inspector
+    /// changes of its style and of its layers' materials either way, so fixing one rebuilds a renderer that could not
+    /// build.
     /// </summary>
     private void Build()
     {
@@ -283,11 +336,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        if (style != null)
-        {
-            subscribedStyle = style;
-            subscribedStyle.Validated += ScheduleRebuild;
-        }
+        FollowStyleAndMaterials();
 #endif
         if (!IsUsable())
         {
@@ -296,7 +345,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         int count = layers.Length;
         layerTilemaps = new Tilemap[count];
-        int[] materials = new int[count];
+        TerrainMaterial[] materials = new TerrainMaterial[count];
         for (int i = 0; i < count; i++)
         {
             layerTilemaps[i] = layers[i].Tilemap;
@@ -323,8 +372,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// Returns false without a word for a renderer not configured at all (no style, no layers) outside play mode, as
     /// right after it is added. Otherwise logs an error for each thing that stops the renderer from drawing (no style
     /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a layer without a tilemap, a
-    /// tilemap listed twice, a layer with a material the style lacks, a material's textures missing or of the wrong
-    /// size or format, an unknown sorting layer) and returns whether there was none. Warns when the grid is not made of unrotated one-unit cells, which the shader assumes.
+    /// tilemap listed twice, a layer without a material, a material's textures missing or of the wrong size or format,
+    /// an unknown sorting layer) and returns whether there was none; a material several layers draw is checked once.
+    /// Warns when the grid is not made of unrotated one-unit cells, which the shader assumes.
     /// </summary>
     private bool IsUsable()
     {
@@ -346,6 +396,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         bool usable = true;
+        List<TerrainMaterial> checkedMaterials = new();
         for (int i = 0; i < layers.Length; i++)
         {
             Layer layer = layers[i];
@@ -360,14 +411,15 @@ public class TerrainBlendRenderer : MonoBehaviour
                 Debug.LogError($"{name}: ground layers {earlier} and {i} both list {layer.Tilemap.name}; each tilemap is one layer.", this);
                 usable = false;
             }
-            else if (layer.Material < 0 || layer.Material >= style.Materials.Count)
+            else if (layer.Material == null)
             {
-                Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) draws material {layer.Material}, but {style.name} has {style.Materials.Count}.", this);
+                Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) has no material.", this);
                 usable = false;
             }
-            else
+            else if (!checkedMaterials.Contains(layer.Material))
             {
-                usable &= HasUsableTextures(style.Materials[layer.Material]);
+                checkedMaterials.Add(layer.Material);
+                usable &= HasUsableTextures(layer.Material);
             }
         }
 
@@ -402,39 +454,40 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Logs an error and returns false when <paramref name="settings"/> has no albedo, lacks the cell field its cell
-    /// mode needs, or has a texture that is not repeat x 32 px square RGBA32 with sRGB off.
+    /// Logs an error and returns false when <paramref name="terrainMaterial"/> has no albedo, lacks the cell field its
+    /// cell mode needs, or has a texture that is not repeat x 32 px square RGBA32 with sRGB off.
     /// </summary>
-    private bool HasUsableTextures(TerrainStyle.MaterialSettings settings)
+    private static bool HasUsableTextures(TerrainMaterial terrainMaterial)
     {
-        if (settings.Albedo == null)
+        if (terrainMaterial.Albedo == null)
         {
-            Debug.LogError($"{style.name}: material {settings.Name} has no albedo texture.", style);
+            Debug.LogError($"Terrain material {terrainMaterial.name} has no albedo texture.", terrainMaterial);
             return false;
         }
 
-        if (settings.Cells != TerrainStyle.CellMode.None && settings.CellField == null)
+        if (terrainMaterial.Cells != TerrainMaterial.CellMode.None && terrainMaterial.CellField == null)
         {
-            Debug.LogError($"{style.name}: material {settings.Name} has chips or stones but no cell field texture.", style);
+            Debug.LogError($"Terrain material {terrainMaterial.name} has chips or stones but no cell field texture.", terrainMaterial);
             return false;
         }
 
-        return HasUsableFormat(settings, settings.Albedo) && (settings.CellField == null || HasUsableFormat(settings, settings.CellField));
+        return HasUsableFormat(terrainMaterial, terrainMaterial.Albedo)
+            && (terrainMaterial.CellField == null || HasUsableFormat(terrainMaterial, terrainMaterial.CellField));
     }
 
     /// <summary>
     /// Logs an error and returns false unless <paramref name="texture"/> is the material's repeat x 32 px square and
     /// RGBA32 with sRGB off, so it can be copied into the arrays as it is.
     /// </summary>
-    private bool HasUsableFormat(TerrainStyle.MaterialSettings settings, Texture2D texture)
+    private static bool HasUsableFormat(TerrainMaterial terrainMaterial, Texture2D texture)
     {
-        int size = settings.RepeatPixels;
+        int size = terrainMaterial.RepeatPixels;
         if (texture.width == size && texture.height == size && texture.graphicsFormat == GraphicsFormat.R8G8B8A8_UNorm)
         {
             return true;
         }
 
-        Debug.LogError($"{style.name}: {texture.name} of material {settings.Name} must be {size} px square (its repeat of {settings.RepeatCells} cells) and RGBA32 with sRGB off.", texture);
+        Debug.LogError($"{texture.name} of terrain material {terrainMaterial.name} must be {size} px square (its repeat of {terrainMaterial.RepeatCells} cells) and RGBA32 with sRGB off.", texture);
         return false;
     }
 
@@ -444,12 +497,12 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// which a later upload would otherwise overwrite. A slice whose material has no cell field is left empty; the
     /// shader never reads it.
     /// </summary>
-    private Texture2DArray BuildArray(int[] materials, bool albedo, string arrayName)
+    private static Texture2DArray BuildArray(TerrainMaterial[] materials, bool albedo, string arrayName)
     {
         int size = TerrainStyle.PixelsPerCell;
-        foreach (int index in materials)
+        foreach (TerrainMaterial layerMaterial in materials)
         {
-            size = Mathf.Max(size, style.Materials[index].RepeatPixels);
+            size = Mathf.Max(size, layerMaterial.RepeatPixels);
         }
 
         Texture2DArray array = new(size, size, materials.Length, TextureFormat.RGBA32, false, true)
@@ -462,8 +515,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         array.Apply(false, true);
         for (int slice = 0; slice < materials.Length; slice++)
         {
-            TerrainStyle.MaterialSettings settings = style.Materials[materials[slice]];
-            Texture2D source = albedo ? settings.Albedo : settings.CellField;
+            Texture2D source = albedo ? materials[slice].Albedo : materials[slice].CellField;
             if (source != null)
             {
                 Graphics.CopyTexture(source, 0, 0, 0, 0, source.width, source.height, array, slice, 0, 0, 0);
@@ -687,7 +739,8 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Stops waiting to upload, stops following the style, and destroys the chunks, meshes, material and textures.
+    /// Stops waiting to upload, stops following the style and materials, and destroys the chunks, meshes, material and
+    /// textures.
     /// </summary>
     private void Teardown()
     {
@@ -698,12 +751,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        if (subscribedStyle != null)
-        {
-            subscribedStyle.Validated -= ScheduleRebuild;
-        }
-
-        subscribedStyle = null;
+        StopFollowingStyleAndMaterials();
 #endif
         foreach (Chunk chunk in chunksByKey.Values)
         {

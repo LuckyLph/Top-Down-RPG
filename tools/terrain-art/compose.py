@@ -2,7 +2,8 @@
 detached opaque blobs (dots) in each path layer.
 
 Usage: python compose.py <tiles folder> <grass.png> <output.png> [scale]. The tiles folder holds gravel_path.png and
-stone_path.png; MAP below is the test layout ('G' gravel, 'S' stone, '.' grass).
+stone_path.png; MAP below is the test layout ('G' gravel, 'S' stone, '.' grass). It checks only the old path tilesets,
+which go in Phase 4 of Docs/TerrainBlending.md; the blended terrain is checked with TerrainBlendProbe.CheckBlobs.
 """
 import os
 import sys

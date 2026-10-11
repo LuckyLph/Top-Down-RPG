@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The terrain style as data for the terrain blending shader (Assets/Shaders/Terrain/TerrainBlend.hlsl): a small
-/// point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with.
+/// The terrain style and materials as data for the terrain blending shader (Assets/Shaders/Terrain/TerrainBlend.hlsl):
+/// a small point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with.
 /// Row 0 holds the shared settings (edge noise, pair margin, pair blend). Rows 1 to L hold each layer's material:
 /// (outer radius, inner radius, repeat in pixels, cell mode), (keep margin, cut gap, cut bevel), (base colour). Then
 /// one row per pair of an upper layer u over a lower layer l, or over nothing (l = -1), at
@@ -36,17 +36,18 @@ public static class TerrainBlendLut
     }
 
     /// <summary>
-    /// Builds the texels for layers drawing <paramref name="layerMaterials"/> (material indices in
-    /// <paramref name="style"/>, bottom layer first), row by row from the bottom, <see cref="Width"/> per row.
+    /// Builds the texels for layers drawing <paramref name="layerMaterials"/> (bottom layer first) with
+    /// <paramref name="style"/>'s shared settings and pair overrides, row by row from the bottom, <see cref="Width"/>
+    /// per row.
     /// </summary>
-    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<int> layerMaterials)
+    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials)
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
         texels[0] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, 0f);
         for (int layer = 0; layer < layers; layer++)
         {
-            TerrainStyle.MaterialSettings material = style.Materials[layerMaterials[layer]];
+            TerrainMaterial material = layerMaterials[layer];
             int row = (1 + layer) * Width;
             texels[row] = new Color(material.OuterRadius, material.InnerRadius, material.RepeatPixels, (float)material.Cells);
             texels[row + 1] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
@@ -57,7 +58,7 @@ public static class TerrainBlendLut
         {
             for (int lower = -1; lower < upper; lower++)
             {
-                int lowerMaterial = lower < 0 ? TerrainStyle.NoMaterial : layerMaterials[lower];
+                TerrainMaterial lowerMaterial = lower < 0 ? null : layerMaterials[lower];
                 WriteEdge(texels, PairRow(layers, upper, lower) * Width, style.GetEdge(layerMaterials[upper], lowerMaterial));
             }
         }
@@ -69,7 +70,7 @@ public static class TerrainBlendLut
     /// Creates the lookup texture for <paramref name="style"/> and <paramref name="layerMaterials"/>, flagged so it is
     /// never saved. The caller destroys it.
     /// </summary>
-    public static Texture2D Create(TerrainStyle style, IReadOnlyList<int> layerMaterials, string textureName)
+    public static Texture2D Create(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, string textureName)
     {
         Texture2D texture = new(Width, Height(layerMaterials.Count), TextureFormat.RGBAFloat, false, true)
         {

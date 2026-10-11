@@ -581,10 +581,11 @@ public class AreaGenerationTests
         AreaLayout first = villageForest.Generate(3);
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, first), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
+        TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
         TerrainBlendRenderer.Layer[] rendererLayers = new TerrainBlendRenderer.Layer[layers.Count];
         for (int i = 0; i < layers.Count; i++)
         {
-            rendererLayers[i] = new TerrainBlendRenderer.Layer(grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>(), i);
+            rendererLayers[i] = new TerrainBlendRenderer.Layer(grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>(), materials[i]);
         }
 
         TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();

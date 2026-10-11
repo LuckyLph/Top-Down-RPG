@@ -8,6 +8,10 @@ filleted inner ones), pushed by smooth noise that repeats every 64 px and is too
 Stones and pebbles come from fields that also repeat every 64 px, so pieces that meet agree along their edge.
 The edge waves with zero amplitude are kept on purpose: each wave draws its phase from the shared random source,
 so removing one would reshuffle the chip and stone layout that was tuned after it.
+
+These tilesets draw the paths of the areas not yet converted to the blended terrain, and go with them in Phase 4 of
+Docs/TerrainBlending.md. The blended terrain's material textures are generated in the editor instead, by the
+terrain material recipes (Assets/Editor/World/Terrain).
 """
 import math
 import os

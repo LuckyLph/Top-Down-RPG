@@ -23,7 +23,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 - Runtime terrain edits change the picture on every machine, with nothing new replicated.
 - Painting by hand keeps a preview of the stroke while hovering.
 - Ground textures repeat less visibly than one-cell tiles do.
-- A new material is a texture set and a style entry, not a tileset.
+- A new material is a material asset and the recipe that generates its textures, not a tileset.
 
 ## Non-goals (for now)
 
@@ -101,20 +101,22 @@ The current tilesets' maths, moved into the shader (see [DualGrid.md](DualGrid.m
 | Type | Role |
 |---|---|
 | `TerrainControlMap` | Plain C#. Knows the layers' bounds, packs each cell's layer bits, grows when an edit lands outside the bounds, collects changed cells and writes them into its `Texture2D` in one batch, and holds preview bits separately from the real ones. Testable in EditMode. |
-| `TerrainBlendRenderer` | `MonoBehaviour` on the area's `Grid`, `[ExecuteAlways]`. Lists the ground layers bottom first (tilemap and material index), its `TerrainStyle`, chunk size and `mode`. Builds the control map, the chunk meshes and a runtime material from the style; subscribes to `Tilemap.tilemapPositionsChanged` in `OnEnable` and unsubscribes in `OnDisable`; destroys its texture, meshes and material when disabled. No per-frame work unless cells changed. |
-| `TerrainStyle` | ScriptableObject: the materials (albedo, optional cell field and height textures, repeat in cells, edge settings) and the pair overrides. Read-only at runtime. |
+| `TerrainBlendRenderer` | `MonoBehaviour` on the area's `Grid`, `[ExecuteAlways]`. Lists the ground layers bottom first (tilemap and `TerrainMaterial` asset), its `TerrainStyle`, chunk size and `mode`. Builds the control map, the chunk meshes and a runtime material from the style; subscribes to `Tilemap.tilemapPositionsChanged` in `OnEnable` and unsubscribes in `OnDisable`; destroys its texture, meshes and material when disabled. No per-frame work unless cells changed. |
+| `TerrainMaterial` | ScriptableObject, one per material: albedo, optional cell field and height textures, repeat in cells, corner radii, chip settings, base colour and default edge settings. Read-only at runtime; its recipe writes the textures, repeat, cell mode and base colour in the editor. |
+| `TerrainStyle` | ScriptableObject: the shader, the shared settings and the pair overrides, keyed by material asset. Read-only at runtime. |
 
 Shaders in `Assets/Shaders`: `Terrain/TerrainBlend.shadergraph` (Sprite Lit, a Custom Function node calling `Terrain/TerrainBlend.hlsl`) and shared helpers in `Include/`.
 
 ### Editor (`TopDownRPG.Editor`)
 
 - `TerrainBrush`: a grid brush for ground layers with the hover preview described above.
-- `AreaLayoutWriter` and `AreaGenerator.TerrainLayer`: layers become plain data tilemaps with a plain tile, a terrain type, a navigation priority and a style material, instead of a rule tile and a sorting order; the writer adds or updates the area's `TerrainBlendRenderer`.
+- `TerrainMaterialRecipe` and its kinds (grass tufts, gravel chips, stone cobbles): one editor-only asset per material with its seed and parameters, whose inspector previews the textures; `TerrainMaterialWriter` writes them as the material's textures (Phase 1b).
+- `AreaLayoutWriter` and `AreaGenerator.TerrainLayer`: layers become plain data tilemaps with a plain tile, a terrain type, a navigation priority and a material asset, instead of a rule tile and a sorting order; the writer adds or updates the area's `TerrainBlendRenderer`.
 - A migration command that converts an area's ground layers: removes the modules and render tilemaps, swaps the data tiles for plain ones, and adds the renderer.
 
 ### Art
 
-The material generator writes, per material, an albedo texture and, where the material has chips or stones, a cell field texture of the same size; a height texture for soft mode; and the 32 px walls sheet. Generated textures are imported with point filtering, no compression and no mipmaps, at 32 PPU. Until Phase 1b the generator is `tools/terrain-art/materials.py`, with `compose.py` previewing the old tilesets on test maps; from Phase 1b it is an editor tool in `TopDownRPG.Editor`, driven by one recipe asset per material.
+The material generator writes, per material, an albedo texture and, where the material has chips or stones, a cell field texture of the same size; a height texture for soft mode; and the 32 px walls sheet. Generated textures are imported with point filtering, no compression and no mipmaps, at 32 PPU. The generator is an editor tool in `TopDownRPG.Editor`, driven by one recipe asset per material; until Phase 1b it was `tools/terrain-art/materials.py`. `compose.py` still previews the old tilesets on test maps.
 
 ### Networking
 
@@ -125,7 +127,7 @@ Nothing new. The renderer derives everything from the data tilemaps, which `Area
 - The ground layers' `DualGridTilemapModule`s and render tilemaps in `Area_Clearing`, `Area_VillageForest` and `Area_StressTest` (`StressTestMap` paints ground through a module today).
 - `grass_DualGridRuleTile`, `gravel_path_DualGridRuleTile`, `stone_path_DualGridRuleTile` and their tilesets, replaced by material textures; the palettes hold plain tiles.
 - `walls.png` regenerated at 32 px; the walls rule tile keeps its 16 slices.
-- `tools/terrain-art/materials.py`, once the editor generator replaces it (Phase 1b); `pathtiles.py` and `compose.py` once the old path tilesets go (Phase 4).
+- `tools/terrain-art/materials.py`, once the editor generator replaces it (done in Phase 1b); `pathtiles.py` and `compose.py` once the old path tilesets go (Phase 4).
 - `AreaGenerator.TerrainLayer` fields change (keep serialized names or add `[FormerlySerializedAs]`), and the generator assets follow.
 - Tests that inspect the ground's render tilemaps (`AreaGenerationTests`' writer test) check the renderer instead. Wall rendering tests stay.
 - Docs: DualGrid.md (the ground is no longer dual-grid; walls are), SceneGeneration.md (layers and drawing order), Architecture.md (World and areas, Editor tools, configs, tests, known gaps), ArtCredits.md (grass).
@@ -140,7 +142,7 @@ Nothing new. The renderer derives everything from the data tilemaps, which `Area
 
 #### Phase 0 decision note
 
-The spike (removed after the Phase 1 review; see the `e9f87f3` and `f6a62fb` commits) was run on `Area_VillageForest` and `Area_Clearing`: menu `Tools/TopDownRPG/Dev/Terrain Spike/` (Attach To Active Area, Toggle Visible, Flip Look, Detach). Its textures come from [tools/terrain-art/materials.py](../tools/terrain-art/materials.py). Measurements were taken with `TerrainSpikeProbe` on an RTX 5070 Ti under D3D12.
+The spike (removed after the Phase 1 review; see the `e9f87f3` and `f6a62fb` commits) was run on `Area_VillageForest` and `Area_Clearing`: menu `Tools/TopDownRPG/Dev/Terrain Spike/` (Attach To Active Area, Toggle Visible, Flip Look, Detach). Its textures came from `tools/terrain-art/materials.py`, which the editor's material recipes replaced in Phase 1b. Measurements were taken with `TerrainSpikeProbe` on an RTX 5070 Ti under D3D12.
 
 Answers:
 
@@ -200,10 +202,32 @@ Measured with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12:
 
 Generated textures stay, since they save manual work, but they move into the editor: each material and its textures become persistent assets, and the generator becomes an editor tool instead of a Python script. This comes before the soft look, whose height textures and per-cobble random values are generated and want tuning with a preview, and before the migration, whose generator assets and scene writer can then refer to material assets. Pair overrides keyed by material index, fragile when materials are reordered, move to material assets while only the Village Forest uses the style.
 
-- [ ] `TerrainMaterial` ScriptableObject (runtime), one asset per material in `Assets/Settings/Terrain/Materials`: textures, repeat, corner radii, chip settings, base colour and default edge, moved out of `TerrainStyle`. `TerrainStyle` keeps the shader, the shared settings and the pair overrides, keyed by material asset instead of index; `TerrainBlendRenderer`'s layers refer to material assets. `TerrainStyle.asset` and the Village Forest's renderer move over with the same look.
-- [ ] An editor-only recipe asset per material, like `AreaGenerator`: the generator kind (grass tufts, gravel chips, cut stones), a seed and its parameters (palette, density, sizes, tints). Its inspector previews the textures and has Generate, which writes the material's PNGs into `Assets/Textures/Terrain`, reimports them, writes the material's base colour (no longer kept in step by hand) and has the renderers using it rebuild.
-- [ ] `materials.py` ported to C# in `TopDownRPG.Editor`, then removed. The C# random source places chips, stones and tufts differently from Python's: the look is kept, not the pixels. Phase 4's 32 px walls use the same tool.
-- [ ] EditMode tests: the same seed gives the same pixels; the cell field keeps the shader's contract (every chip pixel points at a pixel of its own chip, a chip's reach covers its whole footprint, a stone pixel's border is its distance to its stone's edge); the base colour written matches the texture.
+- [x] `TerrainMaterial` ScriptableObject (runtime), one asset per material in `Assets/Settings/Terrain/Materials`: textures, repeat, corner radii, chip settings, base colour and default edge, moved out of `TerrainStyle`. `TerrainStyle` keeps the shader, the shared settings and the pair overrides, keyed by material asset instead of index; `TerrainBlendRenderer`'s layers refer to material assets. `TerrainStyle.asset` and the Village Forest's renderer move over with the same look.
+- [x] An editor-only recipe asset per material, like `AreaGenerator`: the generator kind (grass tufts, gravel chips, cut stones), a seed and its parameters (palette, density, sizes, tints). Its inspector previews the textures and has Generate, which writes the material's PNGs into `Assets/Textures/Terrain`, reimports them, writes the material's base colour (no longer kept in step by hand) and has the renderers using it rebuild.
+- [x] `materials.py` ported to C# in `TopDownRPG.Editor`, then removed. The C# random source places chips, stones and tufts differently from Python's: the look is kept, not the pixels. Phase 4's 32 px walls use the same tool.
+- [x] EditMode tests: the same seed gives the same pixels; the cell field keeps the shader's contract (every chip pixel points at a pixel of its own chip, a chip's reach covers its whole footprint, a stone pixel's border is its distance to its stone's edge); the base colour written matches the texture.
+
+#### Phase 1b notes
+
+The code is described in [Architecture.md](Architecture.md#world-and-areas) (World and areas, Editor tools). The three materials are assets in `Assets/Settings/Terrain/Materials`, created from the Phase 1 style's values; `TerrainStyle.asset` keeps the shader and the shared settings, and the Village Forest's renderer layers name the material assets (the scene's only change). The recipes in `Assets/Settings/Terrain/Recipes` keep `materials.py`'s parameters and seeds (20261012 grass, 20261013 gravel, 20261014 stone), and their Generate rewrote the three materials' textures. What settled differently from the plan above, or is worth knowing:
+
+- **A material's name is its asset name**, and new texture files are named after it in lower case (`grass_albedo.png`). Once a material uses PNGs in `Assets/Textures/Terrain`, Generate keeps writing those, so renaming the material keeps its files and GUIDs. Generate refuses to write a file that is another material's texture, and writes all of a material's files or none.
+- **Pair overrides are keyed by asset**, so one whose lower material goes missing (its asset deleted) would read as an override over nothing under Unity's `==`. The style tells a missing lower material from none, never applies such an override and warns about it.
+- **Generate writes the repeat and the cell mode too**, not only the base colour: the textures' size follows the recipe's repeat and the meaning of the cell field's alpha follows the recipe's kind, so a material cannot disagree with its textures.
+- **The recipe generates, a writer writes**, as `AreaGenerator.Generate` and `AreaLayoutWriter` split the scene generator: the recipe returns pixel arrays without touching an asset, and `TerrainMaterialWriter` writes the PNGs, reimports them and sets the material through its serialized data. It does so without undo, since the files cannot be undone either, then has the renderers drawing the material rebuild even when nothing on the material changed, since the textures' pixels may have.
+- **Pixels are generated y up**, as `Texture2D` stores them, so offsets need no flipping, the light comes from (-0.6, 0.8) as in the shader, and a tuft glyph's top row is drawn highest.
+- **A chip's or stone's centre pixel is its pixel nearest its seed**, not the pixel holding the seed: in `materials.py` an overlapping chip could take that pixel, leaving a chip pointing at another chip's pixel. A stone's distance to its cell edge is exact rather than taken from the nine nearest seeds: the seed grid is searched ring by ring around each pixel until no farther ring can hold a nearer seed or edge, which keeps a pixel's cost independent of the number of stones. Shading rounds halves up and adds the base shade as a whole number, so the field's blue channel and the albedo's bare dirt or mortar agree exactly.
+- **Height waves too steep are scaled down** so the red channel's slope stays under 0.1 per pixel, where `materials.py` stopped on an assertion at the same limit. The contract allows 0.2; `materials.py`'s docstring said 0.2 while its check held half that.
+- **Waves count whole periods across the texture**, as in `materials.py`, so they stay periodic at any repeat; changing a recipe's repeat changes their scale. Spots and stones per cell are rounded to a whole number across the texture.
+- **The walls are not a recipe yet**: Phase 4's 32 px walls sheet is still to be made with this tool.
+
+Checked with `TerrainBlendProbe` on the same RTX 5070 Ti:
+
+- Moving the Village Forest to the material assets alone left every pixel of the captures below unchanged.
+- Same look with the generated textures: captures of the Village Forest's map edge, the stone/gravel junction near (2.5, -5), the village square around (-27, -10) and a gravel close-up match the Phase 1 textures' in palette, tuft and chip sizes and densities, chip shadows, the bare dirt band along gravel edges and stones cut along the rim; the pixels differ, as the random draws do.
+- Blob check, tufts included: the Village Forest grass 2, gravel 2, stone 1; the Clearing, through a temporary renderer that was never saved, grass 4, gravel 2, stone 1; no blob under 200 px and no holes in either.
+- A second Generate writes byte-identical files. Generating takes about 15 ms for grass, 20 ms for gravel and 30 ms for stone (110 ms for stone at repeat 8, even at the densest setting); stone first took 0.2 s, measuring every pixel against every seed, and the ring search that replaced it gives the same bytes and matches that search exactly on other grid sizes and jitters.
+- A review after the phase found nothing that changed what ships; it led to the asset-keyed pair override fix, the writer's file paths and all-or-nothing writes, the stone search, and tests for the light direction, naming, rollback and a lower bound on the stone border distance.
 
 ### Phase 2: soft and pair rules
 
@@ -230,10 +254,11 @@ Generated textures stay, since they save manual work, but they move into the edi
 ## Testing
 
 - EditMode, `TerrainControlMap`: bits per cell from several layers; bounds from the layers; an edit inside the bounds patches only its texel, one outside grows the map; changed cells batched into one write; preview bits shown and cleared without touching the real ones.
-- EditMode, `TerrainBlendRenderer`: painting a data tilemap updates its texel; an `AreaTerrain` edit, and one applied with `ApplyReplicated`, updates it; disabling unsubscribes and destroys the runtime texture, meshes and material; chunk meshes cover the layers' bounds; nothing allocates per frame when no cell changed; the style is never modified.
+- EditMode, `TerrainBlendRenderer`: painting a data tilemap updates its texel; an `AreaTerrain` edit, and one applied with `ApplyReplicated`, updates it; disabling unsubscribes and destroys the runtime texture, meshes and material; chunk meshes cover the layers' bounds; nothing allocates per frame when no cell changed; the style and materials are never modified; editing the style or a material rebuilds the renderers using it.
+- EditMode, recipes: the same seed gives the same pixels and PNG bytes; the cell field keeps the shader's contract; the height is smooth with one value per chip or stone; the base colour written is the textures' base.
 - EditMode, shaders: the terrain shader and its graph compile without errors (`ShaderUtil.ShaderHasError`), with both keywords.
 - EditMode, writer: a generated layout written into a scene sets up plain layers and the renderer; navigation still blocks exactly the footprints.
-- Art: `compose.py` reports no detached blobs on its test maps for every material and pair.
+- Art: `TerrainBlendProbe.CheckBlobs` finds no detached blobs or holes on the converted areas (until Phase 4, `compose.py` checks the old path tilesets on its test maps).
 - Manual: screenshots of both areas in both looks; seams across cell borders; lighting under the Global Light 2D; Multiplayer Play Mode as in Phase 4.
 
 ## Open questions

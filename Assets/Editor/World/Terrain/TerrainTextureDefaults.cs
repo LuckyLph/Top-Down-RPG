@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Import postprocessor for the terrain material textures under Assets/Textures/Terrain (written by
-/// tools/terrain-art/materials.py): plain textures with sRGB off (the terrain shader treats albedo bytes as sRGB
+/// <see cref="TerrainMaterialWriter"/>): plain textures with sRGB off (the terrain shader treats albedo bytes as sRGB
 /// itself and reads the cell fields as raw offsets), point filtering, repeat wrapping, no mipmaps, no NPOT scaling and
 /// uncompressed RGBA32, so <see cref="TerrainBlendRenderer"/> can copy them into its texture arrays as they are.
 /// </summary>

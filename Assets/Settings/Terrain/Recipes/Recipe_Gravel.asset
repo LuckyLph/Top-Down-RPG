@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce97aeadb2b169a4181134c9725cfde4, type: 3}
+  m_Name: Recipe_Gravel
+  m_EditorClassIdentifier: TopDownRPG.Editor::GravelChipsRecipe
+  material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
+  seed: 20261013
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  dirt:
+    serializedVersion: 2
+    rgba: 4283988626
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 4
+  - x: 0
+    y: 1
+    amplitude: 3
+  - x: 2
+    y: 2
+    amplitude: 3
+  - x: 3
+    y: -1
+    amplitude: 2
+  dirtGrit: 7
+  spotsPerCell: 6.75
+  jitter: 0.4
+  chipChance: 0.72
+  densityWaves:
+  - x: 3
+    y: 2
+    amplitude: 0.08
+  - x: -2
+    y: 3
+    amplitude: 0.08
+  - x: 4
+    y: -1
+    amplitude: 0.06
+  lightChip:
+    serializedVersion: 2
+    rgba: 4286882996
+  greyChip:
+    serializedVersion: 2
+    rgba: 4287273120
+  darkChip:
+    serializedVersion: 2
+    rgba: 4283985534
+  darkChance: 0.16
+  colourJitter: 10
+  minRadius: 1.15
+  maxRadius: 2.1
+  minStretch: 0.8
+  maxStretch: 1.25
+  chipGrit: 5
+  bevel: 22
+  bevelStart: 0.35
+  shadow: 16

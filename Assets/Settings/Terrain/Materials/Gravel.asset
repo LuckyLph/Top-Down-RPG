@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
+  m_Name: Gravel
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  albedo: {fileID: 2800000, guid: 043d557112573aa4c9a582ffd58f5416, type: 3}
+  cellField: {fileID: 2800000, guid: bb39a97cd7efc55498047a34a8c504ba, type: 3}
+  height: {fileID: 2800000, guid: 5e6829eec0235a6488d6d8f891a0519f, type: 3}
+  repeatCells: 4
+  outerRadius: 14
+  innerRadius: 11
+  cellMode: 1
+  baseColour: {r: 0.57254905, g: 0.47843137, b: 0.34509805, a: 1}
+  keepMargin: 0
+  cutGap: 0.5
+  cutBevel: 18
+  edge:
+    rimWidth: 1.75
+    rim:
+      serializedVersion: 2
+      key0: {r: 0.49411765, g: 0.40784314, b: 0.29803923, a: 1}
+      key1: {r: 0.49411765, g: 0.40784314, b: 0.29803923, a: 0.875}
+      key2: {r: 0, g: 0, b: 0, a: 0.646}
+      key3: {r: 0, g: 0, b: 0, a: 0.35}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 16384
+      atime2: 32768
+      atime3: 49151
+      atime4: 65535
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 5
+    drawOutline: 1
+    outlineColour: {r: 0.4, g: 0.32941177, b: 0.23529412, a: 1}
+    shadowColour: {r: 0.14901961, g: 0.20392157, b: 0.09411765, a: 1}
+    shadowAlpha: 0.32
+    shadowWidth: 1
+    tuftHeight: 0

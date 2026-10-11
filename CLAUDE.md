@@ -78,7 +78,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 
 ## Working conventions
 
-- Commit directly on `main`; no feature branch first. Use conventional-commit style messages (`feat(ai): ...`, `fix(ai): ...`, `tune(ai): ...`).
+- Ask which branch to work on (`main` or a feature branch) before committing. Use conventional-commit style messages (`feat(ai): ...`, `fix(ai): ...`, `tune(ai): ...`).
 - Match surrounding code style: 4-space indent, Allman braces, `private` fields in camelCase without underscore prefix, PascalCase types/members.
 - Avoid code comments. The only comments allowed are class and method descriptors (XML doc summaries). Design rationale, tuning notes, explanations of behaviour, and anything else belongs in a doc file under `Docs/`, not inline in code. Do not leave commented-out code or TODO notes in source.
 - Prefer editing existing files over creating new ones; do not add speculative abstractions.

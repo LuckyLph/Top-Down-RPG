@@ -11,7 +11,8 @@ using UnityEngine.Tilemaps;
 /// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
 /// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
 /// forest; the same seed gives the same layout; and <see cref="AreaLayoutWriter"/> writes a layout into a scene so that
-/// the navigation grid blocks exactly the props' cells.
+/// the navigation grid blocks exactly the props' cells, and so that a <see cref="TerrainBlendRenderer"/> over the
+/// layers follows a layout written over another.
 /// </summary>
 public class AreaGenerationTests
 {
@@ -562,6 +563,58 @@ public class AreaGenerationTests
         foreach (AreaLayout.Mob mob in layout.Mobs)
         {
             Assert.That(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), Is.True, $"mob at {mob.Cell}");
+        }
+    }
+
+    /// <summary>
+    /// A terrain renderer over the Village Forest generator's layers stays in step with the writer: after one layout
+    /// is written over another, its control map holds exactly the new layout's cells on every layer, the cells the old
+    /// layout filled and the new one leaves empty included (the writer clears each layer before painting it). The
+    /// renderer is removed before <see cref="TearDown"/> reverts the writer, which destroys the path layers it created.
+    /// </summary>
+    [Test]
+    public void TheWriter_KeepsATerrainRendererInStep_WhenALayoutIsWrittenOverAnother()
+    {
+        Grid grid = CreateAreaWithGrass(villageForest);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        AreaLayout first = villageForest.Generate(3);
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, first), Is.True);
+        IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
+        TerrainBlendRenderer.Layer[] rendererLayers = new TerrainBlendRenderer.Layer[layers.Count];
+        for (int i = 0; i < layers.Count; i++)
+        {
+            rendererLayers[i] = new TerrainBlendRenderer.Layer(grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>(), i);
+        }
+
+        TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        try
+        {
+            renderer.Configure(TestTerrainStyle.Create(created), rendererLayers);
+            AreaLayout second = villageForest.Generate(4);
+
+            Assert.That(AreaLayoutWriter.Write(grid, villageForest, second), Is.True);
+            renderer.FlushPendingChanges();
+
+            int emptied = 0;
+            for (int i = 0; i < layers.Count; i++)
+            {
+                HashSet<Vector3Int> cells = new(first.TerrainCells(i));
+                cells.UnionWith(second.TerrainCells(i));
+                byte bit = (byte)(1 << i);
+                foreach (Vector3Int cell in cells)
+                {
+                    bool filled = second.TerrainCells(i).Contains(cell);
+                    Assert.That((renderer.ControlMap.GetShownCell(cell) & bit) != 0, Is.EqualTo(filled), $"{layers[i].TilemapName} {cell}");
+                    emptied += filled ? 0 : 1;
+                }
+            }
+
+            Assert.That(emptied, Is.GreaterThan(0), "The second layout leaves some of the first one's cells empty.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(renderer);
         }
     }
 

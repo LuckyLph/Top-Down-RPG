@@ -133,13 +133,13 @@ Nothing new. The renderer derives everything from the data tilemaps, which `Area
 
 ### Phase 0: spike
 
-- [x] A throwaway renderer and shader in `Assets/Dev/TerrainSpike` draw an area's existing grass, gravel and stone data tilemaps at 32 px per unit, in crisp and soft, beside the current render tilemaps, with a way to flip between them in the editor. Nothing is saved into the area scenes.
+- [x] A throwaway renderer and shader in `Assets/Dev/TerrainSpike` (removed after the Phase 1 review) draw an area's existing grass, gravel and stone data tilemaps at 32 px per unit, in crisp and soft, beside the current render tilemaps, with a way to flip between them in the editor. Nothing is saved into the area scenes.
 - [x] Answered: does a `MeshRenderer` with a Sprite Lit graph get 2D lighting and sort on the `Terrain` layer like the tilemaps? Texture arrays or fixed texture slots? Any shimmer with the camera's current snapping settings? Cost per frame?
 - [x] Screenshots of both looks against today's tiles, and a short decision note added to this file.
 
 #### Phase 0 decision note
 
-The spike (see [Architecture.md](Architecture.md#terrain-blending-spike)) was run on `Area_VillageForest` and `Area_Clearing`: menu `Tools/TopDownRPG/Dev/Terrain Spike/` (Attach To Active Area, Toggle Visible, Flip Look, Detach). Its textures come from [tools/terrain-art/materials.py](../tools/terrain-art/materials.py). Measurements were taken with `TerrainSpikeProbe` on an RTX 5070 Ti under D3D12.
+The spike (removed after the Phase 1 review; see the `e9f87f3` and `f6a62fb` commits) was run on `Area_VillageForest` and `Area_Clearing`: menu `Tools/TopDownRPG/Dev/Terrain Spike/` (Attach To Active Area, Toggle Visible, Flip Look, Detach). Its textures come from [tools/terrain-art/materials.py](../tools/terrain-art/materials.py). Measurements were taken with `TerrainSpikeProbe` on an RTX 5070 Ti under D3D12.
 
 Answers:
 
@@ -168,9 +168,32 @@ Phase 1 should change:
 
 ### Phase 1: renderer and crisp
 
-- [ ] `TerrainControlMap`, `TerrainBlendRenderer`, `TerrainStyle` and its asset.
-- [ ] The crisp shader with today's pairs; material textures and cell fields at 32 px from `tools/terrain-art`, grass included.
-- [ ] One area converted by hand and reviewed.
+- [x] `TerrainControlMap`, `TerrainBlendRenderer`, `TerrainStyle` and its asset.
+- [x] The crisp shader with today's pairs; material textures and cell fields at 32 px from `tools/terrain-art`, grass included.
+- [x] One area converted by hand and reviewed.
+
+#### Phase 1 notes
+
+The code is described in [Architecture.md](Architecture.md#world-and-areas). `Area_VillageForest` is converted: a `TerrainBlendRenderer` on its `Grid` draws grass, gravel and stone with `Assets/Settings/Terrain/TerrainStyle.asset`, and the three ground `TilemapRenderer`s are switched off; the modules, rule tiles and render tilemaps stay until Phase 4. What settled differently from the plan above or from the Phase 0 note:
+
+- **Edge settings are a lookup texture** (`TerrainBlendLut`): a row of shared settings, a row per layer's material and a row per pair. A pair's rim is a gradient sampled every half pixel rather than one colour, so grass over nothing keeps today's light fringe bands (highlight, lime, a dark line, mid green) as data, and gravel's rim fades into the dirt.
+- **Corner radii belong to the material, not to the pair.** A layer's shape is computed before the shader knows which pair is drawn there, and layers whose edges coincide must share their radii, or the lower one shows at corners (radii 4 px apart leave a sliver of about 1.7 px, more than the pair margin).
+- **Pair settings blend** over the style's pair blend (1.5 px) around the 1.5 px margin, while whether a lower layer is drawn still switches at the margin. The light stone wedge at the three-way corner near (2.9, -4.2) is gone.
+- **Chips and stones decide at their centre** both whether they are kept and which pair, and so which rim, they meet, so a stone stays whole where the pair changes. Stones are left out only where their centre lies more than 0.5 px into the rim (the spike needed it 1 px clear of the rim); the others are cut along the rim behind a 0.5 px mortar line and bevelled to the light. A gravel chip is kept only where all of it lies clear of the rim, so kept chips are never painted over: the cell field holds each chip's reach from its centre pixel, which the shader stretches by the edge noise's steepest slope, since the distance can fall that much faster than the pixels move away. Small chips can therefore lie closer to the edge than big ones, and the path's edge keeps a band of bare dirt a few pixels wide.
+- **Tufts are back on grass over nothing**, as a decoration of the edge and the band outside it: five triangular spikes per corner patch, placed along the edge by the pixel's position along the bare shape's tangent, so each spike stands straight out of the edge and every pixel between its tip and the edge belongs to it. Tuft pixels are opaque, outlined, and filled with the rim's outer colour. They keep to straight edges and fade out within a few degrees of curve: around a corner the normals spread or close up, and the blob check found spike tips there touching the edge by a pixel corner only. They are smaller than today's (up to 4.5 px).
+- **The control map uploads before the next render**, not at the end of the frame: a tile change patches the map at once and subscribes the renderer to `RenderPipelineManager.beginContextRendering`, which uploads and unsubscribes. An undo restores tilemaps without reporting the cells it changed, so in the editor the renderer reads its layers again on `Undo.undoRedoPerformed`.
+- **Chunks sit on a fixed 16-cell grid**, so growing bounds only add chunks, and the control map grows by 8 cells more than needed on each side that grows, so painting outward does not regrow it every cell.
+- **Texture arrays have a slice per layer**, sized to the largest material, so materials may repeat over different numbers of cells (each texture is its repeat x 32 px). No height array is built until Phase 2.
+- **The camera does not snap after all.** Turning on `CameraFollow2D.snapToPixelGrid` in `Main`, as the Phase 0 note suggested, made the moving player shake, and it was turned back off. The camera follows the player smoothly and the player's body is interpolated, so a snapped camera jumps by whole art pixels (3 screen pixels at zoom 3) while the player moves by fractions of one: simulated at 5 units per second, the player wobbles against the screen by 1.4 screen pixels on average and up to 2 at 60 fps (2.7 at 144 fps), against 0.3 without snapping. Avoiding the half-pixel case needs the sprites snapped as well (the Pixel Perfect Camera's pixel snapping or upscale render texture) or a camera that snaps only once it has settled; that is still to decide.
+- **Art**: gravel chips are rounded (tilted ellipses about 2 to 5 px across, lit from the top left, each with a one-pixel shadow that belongs to its chip, so a chip left out takes its shadow with it), and grass tufts are darker with lighter tips. `compose.py` was not extended: `TerrainBlendProbe.CheckBlobs` checks the real renderer on real areas instead.
+
+Measured with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12:
+
+- Blob check on the Village Forest, tufts included: one region per path and grass part (grass 2, gravel 2, stone 1, as in Phase 0), no blob under 200 px, no holes.
+- Lighting: a grass texel of (35, 114, 40) renders as (32, 105, 36) under the Global Light 2D, as on today's tiles.
+- Shimmer, 1920 x 1080 at zoom 3: a moved frame matches the reference shifted by whole pixels exactly, unless the camera's sub-pixel position crosses the half-pixel phase of the art grid on the way, where about 27 % of the pixels differ. Phase 0 started from a camera aligned with the art grid, so its mismatches fell at exactly 0.5 and 1.5 px. With the camera not snapping (see above), the blended ground changes shape at those moments like every 32 px sprite does; it no longer shimmers at every offset as the 64 px tiles did.
+- Cost: drawing the whole area at 7680 x 4320 adds about 0.5 ms per frame (best of six runs: 1.13 ms without the chunks, 1.65 ms with them; Phase 0 measured 0.4 ms), and at 1920 x 1080 and zoom 3 about 0.2 ms, which is within the editor's noise. A full rebuild takes 4.7 ms.
+- Editor checks have two more things to allow for. Hiding props through `forceRenderingOff` marks them changed, and the next save then writes every prop's `YPositionSorter` order into the scene, so the probe clears that mark. Chunks rebuilt after an inspector change appear one editor update later.
 
 ### Phase 2: soft and pair rules
 

@@ -1,9 +1,10 @@
-"""Generates the terrain-blending spike's material textures: grass, gravel and stone at 32 px per cell, each repeating
-every 4 cells (128 px).
+"""Generates the terrain materials' textures: grass, gravel and stone at 32 px per cell, each repeating every 4 cells
+(128 px).
 
-Usage: python materials.py <output folder>. Writes, per material, <name>_albedo.png and <name>_height.png, and for
-gravel and stone <name>_field.png. They go into Assets/Dev/TerrainSpike/Textures and are imported with point
-filtering, no compression, no mipmaps and sRGB off (the shader reads raw bytes and treats albedo as sRGB itself).
+Usage: python -I materials.py <output folder>. Writes, per material, <name>_albedo.png and <name>_height.png, and for
+gravel and stone <name>_field.png. They go into Assets/Textures/Terrain, where TerrainTextureDefaults imports them with
+point filtering, no compression, no mipmaps and sRGB off (the shader reads raw bytes and treats albedo as sRGB itself).
+A rerun writes byte-identical files.
 
 Texel rows are written top first, as PNGs are, and Unity reads them bottom first, so every offset stored here is in
 Unity's orientation: x to the right, y up.
@@ -11,8 +12,12 @@ Unity's orientation: x to the right, y up.
 Albedo: the material's interior as it looks away from any edge (chips, stones, tufts), alpha 255.
 Field (gravel, stone): R, G = offset in whole pixels from the texel to the centre pixel of its chip or stone, plus 128.
 B = the base shade (dirt or mortar without the chip on top), as 128 plus the amount added to the material's base
-colour. A = the distance from the texel to the edge of its chip's or stone's cell, times 16 (at least 1); 0 marks a
-texel that belongs to no chip, so the shader uses the albedo as it is.
+colour (BASE_COLOURS, which the terrain style's base colours must match). A, times 16 (at least 1): for gravel, whose
+chips are drawn whole or left out, the chip's reach, the distance from its centre pixel to its farthest pixel, the same
+over the whole chip, so the shader can keep only chips that lie wholly clear of the rim; for stone, which is cut along
+the rim, the distance from the texel to the edge of its stone. A = 0 marks a texel that belongs to no chip, so the
+shader uses the albedo as it is. A gravel chip's footprint includes the shadow it casts on the dirt, so a chip left out
+takes its shadow with it.
 Height: R = smooth height in [0, 1] whose slope stays under 0.2 per pixel (soft mode scales it by a few pixels, keeping
 the slope under 1). G = one random value per chip or stone (0.5 for grass), constant over its cell.
 """
@@ -23,12 +28,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathtiles import (CellField, GRAVEL_CHIPS, STONE_PALETTE, clamp, hash01, lerp, max_slope,  # noqa: E402
-                       periodic_noise, shade)
+                       periodic_noise, shade, wrap_delta)
 from pngio import write_png  # noqa: E402
 
 P = 128
 LIGHT = (-0.6, -0.8)
 HEIGHT_TERMS = [(1, 0, 1.0), (0, 1, 0.9), (1, 1, 0.7), (2, -1, 0.5), (-1, 2, 0.45), (3, 1, 0.25)]
+BASE_COLOURS = {'gravel': (146, 122, 88), 'stone': (98, 88, 76)}
 
 
 def blank():
@@ -47,11 +53,12 @@ def smooth_height(rng):
     return [[0.5 + 0.5 * grid[y][x] / total for x in range(P)] for y in range(P)]
 
 
-def height_image(height, per_cell=None, field=None):
+def height_image(height, per_cell=None, owner=None):
     out = blank()
     for y in range(P):
         for x in range(P):
-            g = 0.5 if per_cell is None else per_cell[field.at(x, y)[0]]
+            index = None if owner is None else owner(x, y)
+            g = 0.5 if index is None else per_cell[index]
             out[y][x] = (int(round(height[y][x] * 255)), int(round(g * 255)), 0, 255)
     return out
 
@@ -69,34 +76,51 @@ def bevel_light(dx, dy):
 
 
 class Grass:
-    """Flat dark green with slow tint patches and sparse small tufts, like the interior of grass.png."""
+    """Dark green with slow tint patches and small tufts of blades: dark strokes with lighter tips, like the marks in
+    today's grass edge, clustering here and there."""
 
     base = (35, 114, 40)
-    dark = (27, 100, 32)
-    light = (54, 136, 56)
+    dark = (24, 88, 30)
+    light = (62, 146, 60)
     glyphs = [
-        [(-1, 0), (0, 1), (1, 0)],
-        [(-2, 0), (-1, 1), (0, 0), (1, 1), (2, 0)],
-        [(0, 0), (0, 1)],
-        [(-1, 0), (1, 0), (0, 1), (0, 2)],
+        ['+.+',
+         '#.#',
+         '.#.'],
+        ['+.+.+',
+         '#.#.#',
+         '.#.#.'],
+        ['.+',
+         '+#',
+         '#.'],
+        ['+...+',
+         '#.+.#',
+         '.#.#.'],
+        ['+.',
+         '#+',
+         '.#'],
+        ['.+.',
+         '+#+',
+         '#.#'],
     ]
 
     def __init__(self, seed):
         rng = random.Random(seed)
-        self.tint = periodic_noise(rng, [(1, 0, 1.1), (0, 1, 0.9), (2, 1, 0.7), (1, -2, 0.7), (3, 2, 0.4)], P)
-        self.field = CellField(rng, 10, 0.45, P)
-        self.tufts = {}
-        for index, (sx, sy) in enumerate(self.field.seeds):
-            if rng.random() < 0.5:
-                self.tufts[index] = (rng.choice(self.glyphs), int(sx), int(sy), rng.random() < 0.5)
-        self.height = smooth_height(rng)
+        self.tint = periodic_noise(rng, [(1, 0, 1.4), (0, 1, 1.1), (2, 1, 0.9), (1, -2, 0.9), (3, 2, 0.5)], P)
+        density = periodic_noise(rng, [(2, 1, 0.14), (-1, 2, 0.12), (3, -2, 0.08)], P)
+        self.field = CellField(rng, 12, 0.42, P)
         self.marks = {}
-        for glyph, sx, sy, lit in self.tufts.values():
-            for gx, gy in glyph:
-                self.marks[((sx + gx) % P, (sy - gy) % P)] = 'dark'
-            if lit:
-                top = max(gy for _, gy in glyph)
-                self.marks[(sx % P, (sy - top - 1) % P)] = 'light'
+        for sx, sy in self.field.seeds:
+            keep = rng.random() < 0.62 + density[int(sy) % P][int(sx) % P]
+            glyph = rng.choice(self.glyphs)
+            if not keep:
+                continue
+            ox = int(sx) - len(glyph[0]) // 2
+            oy = int(sy) - len(glyph) // 2
+            for gy, row in enumerate(glyph):
+                for gx, mark in enumerate(row):
+                    if mark != '.':
+                        self.marks[((ox + gx) % P, (oy + gy) % P)] = mark
+        self.height = smooth_height(rng)
 
     def albedo(self):
         out = blank()
@@ -105,9 +129,9 @@ class Grass:
                 grit = (hash01(x, y, 3) - 0.5) * 3
                 colour = shade(self.base, self.tint[y][x] + grit)
                 mark = self.marks.get((x, y))
-                if mark == 'dark':
+                if mark == '#':
                     colour = shade(self.dark, grit)
-                elif mark == 'light':
+                elif mark == '+':
                     colour = shade(self.light, grit)
                 out[y][x] = to_bytes(colour)
         return out
@@ -117,26 +141,76 @@ class Grass:
 
 
 class Gravel:
-    """Packed dirt with slow tint patches, half covered in small chips, as in pathtiles.py's gravel at half the size."""
+    """Packed dirt with slow tint patches, scattered with small rounded chips: each a tilted ellipse about two to five
+    pixels across, lit from the top left, casting a one-pixel shadow on the dirt to its bottom right."""
 
-    dirt = (146, 122, 88)
+    dirt = BASE_COLOURS['gravel']
 
     def __init__(self, seed):
         rng = random.Random(seed)
         self.tint = periodic_noise(rng, [(1, 0, 4.0), (0, 1, 3.0), (2, 2, 3.0), (3, -1, 2.0)], P)
-        density = periodic_noise(rng, [(3, 2, 0.06), (-2, 3, 0.06), (4, -1, 0.05)], P)
-        self.field = CellField(rng, 25, 0.4, P)
+        density = periodic_noise(rng, [(3, 2, 0.08), (-2, 3, 0.08), (4, -1, 0.06)], P)
+        seeds = CellField(rng, 27, 0.4, P).seeds
         light = GRAVEL_CHIPS['light']
         grey = GRAVEL_CHIPS['grey']
         dark = GRAVEL_CHIPS['dark']
         self.chips = []
-        for sx, sy in self.field.seeds:
-            keep = rng.random() < 0.7 + density[int(sy) % P][int(sx) % P]
+        for sx, sy in seeds:
+            keep = rng.random() < 0.72 + density[int(sy) % P][int(sx) % P]
             roll = rng.random()
-            colour = lerp(light, grey, rng.random()) if roll < 0.86 else dark
-            self.chips.append((keep, shade(colour, rng.uniform(-9, 9)), rng.uniform(0.45, 0.85)))
-        self.random = [rng.random() for _ in self.field.seeds]
+            colour = lerp(light, grey, rng.random()) if roll < 0.84 else dark
+            radius = rng.uniform(1.15, 2.1)
+            stretch = rng.uniform(0.8, 1.25)
+            angle = rng.uniform(0, math.pi)
+            entry = (sx, sy, radius * stretch, radius / stretch, angle, shade(colour, rng.uniform(-10, 10)))
+            if keep:
+                self.chips.append(entry)
+        self.random = [rng.random() for _ in self.chips]
         self.height = smooth_height(rng)
+        self.owner = [[None] * P for _ in range(P)]
+        self.kind = [[None] * P for _ in range(P)]
+        self._place()
+
+    def _inside(self, chip, px, py):
+        """How far pixel centre (px, py) lies inside a chip's ellipse: below 1 inside, with its offset from the centre."""
+        sx, sy, rx, ry, angle, _ = chip
+        dx = wrap_delta(px - sx, P)
+        dy = wrap_delta(py - sy, P)
+        c = math.cos(angle)
+        s = math.sin(angle)
+        u = (dx * c + dy * s) / rx
+        v = (-dx * s + dy * c) / ry
+        return math.hypot(u, v), dx, dy
+
+    def _place(self):
+        buckets = {}
+        for index, (sx, sy, rx, ry, _, _) in enumerate(self.chips):
+            buckets.setdefault((int(sx) // 8, int(sy) // 8), []).append(index)
+        best = [[(9.0, None, 0.0, 0.0)] * P for _ in range(P)]
+        for y in range(P):
+            for x in range(P):
+                bx, by = x // 8, y // 8
+                for ny in (by - 1, by, by + 1):
+                    for nx in (bx - 1, bx, bx + 1):
+                        for index in buckets.get((nx % (P // 8), ny % (P // 8)), ()):
+                            q, dx, dy = self._inside(self.chips[index], x + 0.5, y + 0.5)
+                            if q < best[y][x][0]:
+                                best[y][x] = (q, index, dx, dy)
+        self.best = best
+        for y in range(P):
+            for x in range(P):
+                q, index, dx, dy = best[y][x]
+                if index is not None and q <= 1.0:
+                    self.owner[y][x] = index
+                    self.kind[y][x] = 'chip'
+        for y in range(P):
+            for x in range(P):
+                if self.owner[y][x] is not None:
+                    continue
+                up_left = self.owner[(y - 1) % P][(x - 1) % P]
+                if up_left is not None and self.kind[(y - 1) % P][(x - 1) % P] == 'chip':
+                    self.owner[y][x] = up_left
+                    self.kind[y][x] = 'shadow'
 
     def base_amount(self, x, y):
         return self.tint[y][x] + (hash01(x, y, 7) - 0.5) * 7
@@ -147,40 +221,52 @@ class Gravel:
             for x in range(P):
                 amount = self.base_amount(x, y)
                 base = shade(self.dirt, amount)
-                index, dx, dy, border = self.field.at(x, y)
-                keep, colour, gap = self.chips[index]
-                if not keep:
+                kind = self.kind[y][x]
+                if kind is None:
                     out[y][x] = to_bytes(base)
-                elif border < gap:
-                    out[y][x] = to_bytes(shade(base, -10 if dx + dy > 0 else -3))
-                else:
-                    grit = (hash01(x, y, 7) - 0.5) * 7
-                    bevel = clamp(1 - (border - gap) / 0.9)
-                    out[y][x] = to_bytes(shade(colour, bevel_light(dx, dy) * 18 * bevel + grit * 0.6))
+                    continue
+                if kind == 'shadow':
+                    out[y][x] = to_bytes(shade(base, -16))
+                    continue
+                q, index, dx, dy = self.best[y][x]
+                colour = self.chips[index][5]
+                grit = (hash01(x, y, 7) - 0.5) * 5
+                edge = clamp((q - 0.35) / 0.65)
+                out[y][x] = to_bytes(shade(colour, bevel_light(dx, dy) * 22 * edge + grit))
         return out
 
+    def offset(self, x, y):
+        """Whole-pixel offset from texel (x, y) to the centre pixel of the chip that owns it."""
+        sx, sy = self.chips[self.owner[y][x]][0], self.chips[self.owner[y][x]][1]
+        return centre_offset(x, y, wrap_delta(x + 0.5 - sx, P), wrap_delta(y + 0.5 - sy, P))
+
     def field_map(self):
+        reach = {}
+        for y in range(P):
+            for x in range(P):
+                if self.owner[y][x] is not None:
+                    ox, oy = self.offset(x, y)
+                    reach[self.owner[y][x]] = max(reach.get(self.owner[y][x], 0.0), math.hypot(ox, oy))
         out = blank()
         for y in range(P):
             for x in range(P):
                 amount = int(round(self.base_amount(x, y)))
-                index, dx, dy, border = self.field.at(x, y)
-                if not self.chips[index][0]:
+                index = self.owner[y][x]
+                if index is None:
                     out[y][x] = (128, 128, 128 + amount, 0)
                     continue
-                ox, oy = centre_offset(x, y, dx, dy)
-                out[y][x] = (128 + ox, 128 + oy, 128 + amount, int(clamp(round(border * 16), 1, 255)))
+                ox, oy = self.offset(x, y)
+                out[y][x] = (128 + ox, 128 + oy, 128 + amount, int(clamp(math.ceil(reach[index] * 16), 1, 255)))
         return out
 
     def height_map(self):
-        return height_image(self.height, self.random, self.field)
+        return height_image(self.height, self.random, lambda x, y: self.owner[y][x])
 
 
 class Stone:
-    """Cobbles in dark mortar, as in pathtiles.py's stone at half the size: one-pixel mortar lines, each stone lit from
-    the top left along its own cell edges."""
+    """Cobbles in dark mortar: one-pixel mortar lines, each stone lit from the top left along its own cell edges."""
 
-    mortar = (98, 88, 76)
+    mortar = BASE_COLOURS['stone']
 
     def __init__(self, seed):
         rng = random.Random(seed)
@@ -218,7 +304,7 @@ class Stone:
         return out
 
     def height_map(self):
-        return height_image(self.height, self.random, self.field)
+        return height_image(self.height, self.random, lambda x, y: self.field.at(x, y)[0])
 
 
 if __name__ == '__main__':

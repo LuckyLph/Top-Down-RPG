@@ -1,0 +1,467 @@
+using System;
+using System.Collections.Generic;
+using Unity.Collections;
+using UnityEngine;
+using UnityEngine.Tilemaps;
+
+/// <summary>
+/// The ground layers' cells as a texture for the terrain blending shader: one R8 texel per cell over the layers'
+/// bounds plus a margin of empty cells, one bit per layer (bit i for layer i, bottom first). Built from the layers'
+/// tilemaps, then refreshed cell by cell after tile changes, growing when a filled cell lands outside the bounds or in
+/// the margin. <see cref="Bounds"/> are the cells the texture covers (z from 0 to 1; zero width while no layer has a
+/// filled cell). Changed cells are collected and written into the point-filtered texture in one batch by
+/// <see cref="Apply"/>, which creates the texture the first time (1 x 1 while the map is empty) and counts its uploads
+/// in <see cref="UploadCount"/> for tests. Preview bits, for a brush's hover, are kept apart from the real ones: they
+/// show in the texture, never reach the tilemaps, and clear without touching the real bits. Owns its texture;
+/// <see cref="Dispose"/> destroys it.
+/// </summary>
+public sealed class TerrainControlMap : IDisposable
+{
+    public const int MaxLayers = 8;
+    public const int Margin = 1;
+    public const int GrowthSlack = 8;
+
+    /// <summary>The layer bits a preview replaces in one cell, and the values it shows instead.</summary>
+    private struct PreviewBits
+    {
+        public byte Mask;
+        public byte Value;
+    }
+
+    private readonly Tilemap[] layers;
+    private readonly string textureName;
+    private readonly List<int> pending = new();
+    private readonly Dictionary<Vector3Int, PreviewBits> preview = new();
+    private byte[] cells = new byte[0];
+    private bool[] pendingFlags = new bool[0];
+    private BoundsInt bounds;
+    private bool fullUploadPending;
+    private Texture2D texture;
+
+    /// <summary>
+    /// Builds the map from <paramref name="layers"/> (bottom first, at most <see cref="MaxLayers"/>; null entries
+    /// read as empty). The texture holds nothing until the first <see cref="Apply"/>.
+    /// </summary>
+    public TerrainControlMap(IReadOnlyList<Tilemap> layers, string textureName = "TerrainControlMap")
+    {
+        if (layers.Count > MaxLayers)
+        {
+            throw new ArgumentException($"A control map holds at most {MaxLayers} layers.", nameof(layers));
+        }
+
+        this.layers = new Tilemap[layers.Count];
+        for (int i = 0; i < layers.Count; i++)
+        {
+            this.layers[i] = layers[i];
+        }
+
+        this.textureName = textureName;
+        Rebuild();
+    }
+
+    public BoundsInt Bounds => bounds;
+    public Texture2D Texture => texture;
+    public int LayerCount => layers.Length;
+    public bool IsEmpty => bounds.size.x <= 0 || bounds.size.y <= 0;
+    public bool HasPendingChanges => fullUploadPending || pending.Count > 0;
+    internal int UploadCount { get; private set; }
+
+    /// <summary>
+    /// Reads every layer again: the bounds become the filled cells' bounds (and any filled preview cell's) plus the
+    /// margin, and the whole texture is written on the next <see cref="Apply"/>.
+    /// </summary>
+    public void Rebuild()
+    {
+        bool any = false;
+        Vector2Int min = Vector2Int.zero;
+        Vector2Int max = Vector2Int.zero;
+        TileBase[][] blocks = new TileBase[layers.Length][];
+        BoundsInt[] blockBounds = new BoundsInt[layers.Length];
+        for (int layer = 0; layer < layers.Length; layer++)
+        {
+            Tilemap tilemap = layers[layer];
+            if (tilemap == null)
+            {
+                continue;
+            }
+
+            BoundsInt cellBounds = tilemap.cellBounds;
+            if (cellBounds.size.x <= 0 || cellBounds.size.y <= 0)
+            {
+                continue;
+            }
+
+            cellBounds = new BoundsInt(cellBounds.xMin, cellBounds.yMin, 0, cellBounds.size.x, cellBounds.size.y, 1);
+            TileBase[] block = tilemap.GetTilesBlock(cellBounds);
+            blocks[layer] = block;
+            blockBounds[layer] = cellBounds;
+            for (int index = 0; index < block.Length; index++)
+            {
+                if (block[index] != null)
+                {
+                    Include(new Vector2Int(cellBounds.xMin + index % cellBounds.size.x, cellBounds.yMin + index / cellBounds.size.x), ref any, ref min, ref max);
+                }
+            }
+        }
+
+        foreach (KeyValuePair<Vector3Int, PreviewBits> entry in preview)
+        {
+            if ((entry.Value.Mask & entry.Value.Value) != 0)
+            {
+                Include(new Vector2Int(entry.Key.x, entry.Key.y), ref any, ref min, ref max);
+            }
+        }
+
+        bounds = any
+            ? new BoundsInt(min.x - Margin, min.y - Margin, 0, max.x - min.x + 1 + 2 * Margin, max.y - min.y + 1 + 2 * Margin, 1)
+            : new BoundsInt(0, 0, 0, 0, 0, 1);
+        cells = new byte[bounds.size.x * bounds.size.y];
+        pendingFlags = new bool[cells.Length];
+        pending.Clear();
+        fullUploadPending = true;
+
+        for (int layer = 0; layer < layers.Length; layer++)
+        {
+            TileBase[] block = blocks[layer];
+            if (block == null)
+            {
+                continue;
+            }
+
+            byte bit = (byte)(1 << layer);
+            BoundsInt cellBounds = blockBounds[layer];
+            for (int index = 0; index < block.Length; index++)
+            {
+                if (block[index] != null)
+                {
+                    cells[IndexOf(cellBounds.xMin + index % cellBounds.size.x, cellBounds.yMin + index / cellBounds.size.x)] |= bit;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads <paramref name="positions"/> of layer <paramref name="layer"/> again after its tiles changed, growing the
+    /// bounds first when a filled cell lies outside them or in the margin, and records the cells whose bits changed
+    /// for the next <see cref="Apply"/>. Like <see cref="Rebuild"/>, it reads only z = 0 and ignores other positions.
+    /// Allocates nothing unless the bounds grow.
+    /// </summary>
+    public void Refresh(int layer, NativeArray<Vector3Int> positions)
+    {
+        Tilemap tilemap = layers[layer];
+        if (tilemap == null)
+        {
+            return;
+        }
+
+        bool grow = false;
+        Vector2Int min = Vector2Int.zero;
+        Vector2Int max = Vector2Int.zero;
+        for (int i = 0; i < positions.Length; i++)
+        {
+            Vector3Int position = positions[i];
+            if (position.z == 0 && !IsInsideMargin(position) && tilemap.HasTile(position))
+            {
+                Include(new Vector2Int(position.x, position.y), ref grow, ref min, ref max);
+            }
+        }
+
+        if (grow)
+        {
+            Grow(min, max);
+        }
+
+        byte bit = (byte)(1 << layer);
+        for (int i = 0; i < positions.Length; i++)
+        {
+            Vector3Int position = positions[i];
+            if (position.z != 0 || !Contains(position))
+            {
+                continue;
+            }
+
+            int index = IndexOf(position.x, position.y);
+            byte value = tilemap.HasTile(position) ? (byte)(cells[index] | bit) : (byte)(cells[index] & ~bit);
+            if (value != cells[index])
+            {
+                cells[index] = value;
+                MarkPending(index);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The real layer bits of <paramref name="cell"/>, without any preview; 0 outside the bounds.
+    /// </summary>
+    public byte GetCell(Vector3Int cell)
+    {
+        return Contains(cell) ? cells[IndexOf(cell.x, cell.y)] : (byte)0;
+    }
+
+    /// <summary>
+    /// The layer bits <paramref name="cell"/> shows: the real bits with any preview applied; 0 outside the bounds.
+    /// </summary>
+    public byte GetShownCell(Vector3Int cell)
+    {
+        return Contains(cell) ? Shown(IndexOf(cell.x, cell.y)) : (byte)0;
+    }
+
+    /// <summary>
+    /// Shows layer <paramref name="layer"/> as filled or empty in <paramref name="previewCells"/> without changing the
+    /// real bits or the tilemaps, growing the bounds when a filled preview cell lies outside them or in the margin.
+    /// Stays until <see cref="ClearPreview"/>.
+    /// </summary>
+    public void SetPreview(int layer, IReadOnlyList<Vector3Int> previewCells, bool filled)
+    {
+        byte bit = (byte)(1 << layer);
+        if (filled)
+        {
+            bool grow = false;
+            Vector2Int min = Vector2Int.zero;
+            Vector2Int max = Vector2Int.zero;
+            for (int i = 0; i < previewCells.Count; i++)
+            {
+                if (!IsInsideMargin(previewCells[i]))
+                {
+                    Include(new Vector2Int(previewCells[i].x, previewCells[i].y), ref grow, ref min, ref max);
+                }
+            }
+
+            if (grow)
+            {
+                Grow(min, max);
+            }
+        }
+
+        for (int i = 0; i < previewCells.Count; i++)
+        {
+            Vector3Int cell = new(previewCells[i].x, previewCells[i].y, 0);
+            preview.TryGetValue(cell, out PreviewBits bits);
+            bits.Mask |= bit;
+            bits.Value = filled ? (byte)(bits.Value | bit) : (byte)(bits.Value & ~bit);
+            preview[cell] = bits;
+            if (Contains(cell))
+            {
+                MarkPending(IndexOf(cell.x, cell.y));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes every preview, so the cells show their real bits again on the next <see cref="Apply"/>.
+    /// </summary>
+    public void ClearPreview()
+    {
+        foreach (KeyValuePair<Vector3Int, PreviewBits> entry in preview)
+        {
+            if (Contains(entry.Key))
+            {
+                MarkPending(IndexOf(entry.Key.x, entry.Key.y));
+            }
+        }
+
+        preview.Clear();
+    }
+
+    /// <summary>
+    /// Writes the changed cells (every cell after a rebuild or growth) into the texture and uploads it once. Returns
+    /// whether anything was uploaded. Allocates nothing unless the texture has to be created.
+    /// </summary>
+    public bool Apply()
+    {
+        if (!HasPendingChanges)
+        {
+            return false;
+        }
+
+        int width = Mathf.Max(1, bounds.size.x);
+        int height = Mathf.Max(1, bounds.size.y);
+        if (texture == null)
+        {
+            texture = new Texture2D(width, height, TextureFormat.R8, false, true)
+            {
+                name = textureName,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave
+            };
+            fullUploadPending = true;
+        }
+        else if (texture.width != width || texture.height != height)
+        {
+            texture.Reinitialize(width, height);
+            fullUploadPending = true;
+        }
+
+        NativeArray<byte> data = texture.GetPixelData<byte>(0);
+        if (fullUploadPending)
+        {
+            if (cells.Length == 0)
+            {
+                data[0] = 0;
+            }
+            else
+            {
+                data.CopyFrom(cells);
+                foreach (KeyValuePair<Vector3Int, PreviewBits> entry in preview)
+                {
+                    if (Contains(entry.Key))
+                    {
+                        int index = IndexOf(entry.Key.x, entry.Key.y);
+                        data[index] = Shown(index);
+                    }
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < pending.Count; i++)
+            {
+                data[pending[i]] = Shown(pending[i]);
+            }
+        }
+
+        for (int i = 0; i < pending.Count; i++)
+        {
+            pendingFlags[pending[i]] = false;
+        }
+
+        pending.Clear();
+        fullUploadPending = false;
+        texture.Apply(false, false);
+        UploadCount++;
+        return true;
+    }
+
+    /// <summary>
+    /// Destroys the texture.
+    /// </summary>
+    public void Dispose()
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            UnityEngine.Object.Destroy(texture);
+        }
+        else
+        {
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
+
+        texture = null;
+    }
+
+    /// <summary>
+    /// Widens the running bounds <paramref name="min"/> to <paramref name="max"/> to hold <paramref name="cell"/>,
+    /// starting them at the cell when <paramref name="any"/> is still false.
+    /// </summary>
+    private static void Include(Vector2Int cell, ref bool any, ref Vector2Int min, ref Vector2Int max)
+    {
+        min = any ? Vector2Int.Min(min, cell) : cell;
+        max = any ? Vector2Int.Max(max, cell) : cell;
+        any = true;
+    }
+
+    /// <summary>
+    /// Grows the bounds to hold the cells from <paramref name="min"/> to <paramref name="max"/> with the margin around
+    /// them, plus <see cref="GrowthSlack"/> more cells on each side that grows, so painting outward does not regrow
+    /// every cell. Keeps every cell's bits and schedules a full upload.
+    /// </summary>
+    private void Grow(Vector2Int min, Vector2Int max)
+    {
+        Vector2Int needMin = min - new Vector2Int(Margin, Margin);
+        Vector2Int needMax = max + new Vector2Int(Margin, Margin);
+        int xMin;
+        int yMin;
+        int xMax;
+        int yMax;
+        if (IsEmpty)
+        {
+            xMin = needMin.x;
+            yMin = needMin.y;
+            xMax = needMax.x;
+            yMax = needMax.y;
+        }
+        else
+        {
+            xMin = needMin.x < bounds.xMin ? needMin.x - GrowthSlack : bounds.xMin;
+            yMin = needMin.y < bounds.yMin ? needMin.y - GrowthSlack : bounds.yMin;
+            xMax = needMax.x > bounds.xMax - 1 ? needMax.x + GrowthSlack : bounds.xMax - 1;
+            yMax = needMax.y > bounds.yMax - 1 ? needMax.y + GrowthSlack : bounds.yMax - 1;
+        }
+
+        BoundsInt grown = new(xMin, yMin, 0, xMax - xMin + 1, yMax - yMin + 1, 1);
+        byte[] grownCells = new byte[grown.size.x * grown.size.y];
+        for (int y = bounds.yMin; y < bounds.yMax; y++)
+        {
+            Array.Copy(cells, (y - bounds.yMin) * bounds.size.x, grownCells, (y - grown.yMin) * grown.size.x + bounds.xMin - grown.xMin, bounds.size.x);
+        }
+
+        bounds = grown;
+        cells = grownCells;
+        pendingFlags = new bool[cells.Length];
+        pending.Clear();
+        fullUploadPending = true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies inside the bounds and outside the margin ring, where it may be filled
+    /// without the bounds growing.
+    /// </summary>
+    private bool IsInsideMargin(Vector3Int cell)
+    {
+        return !IsEmpty
+            && cell.x >= bounds.xMin + Margin && cell.x < bounds.xMax - Margin
+            && cell.y >= bounds.yMin + Margin && cell.y < bounds.yMax - Margin;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies inside the bounds, ignoring z.
+    /// </summary>
+    private bool Contains(Vector3Int cell)
+    {
+        return cell.x >= bounds.xMin && cell.x < bounds.xMax && cell.y >= bounds.yMin && cell.y < bounds.yMax;
+    }
+
+    /// <summary>
+    /// The index in <see cref="cells"/> and in the texture's data of the cell at (<paramref name="x"/>,
+    /// <paramref name="y"/>), which must lie inside the bounds.
+    /// </summary>
+    private int IndexOf(int x, int y)
+    {
+        return (y - bounds.yMin) * bounds.size.x + x - bounds.xMin;
+    }
+
+    /// <summary>
+    /// The bits cell <paramref name="index"/> shows: its real bits with any preview applied.
+    /// </summary>
+    private byte Shown(int index)
+    {
+        byte value = cells[index];
+        if (preview.Count == 0)
+        {
+            return value;
+        }
+
+        Vector3Int cell = new(bounds.xMin + index % bounds.size.x, bounds.yMin + index / bounds.size.x, 0);
+        return preview.TryGetValue(cell, out PreviewBits bits) ? (byte)((value & ~bits.Mask) | (bits.Value & bits.Mask)) : value;
+    }
+
+    /// <summary>
+    /// Records cell <paramref name="index"/> for the next <see cref="Apply"/>, once.
+    /// </summary>
+    private void MarkPending(int index)
+    {
+        if (fullUploadPending || pendingFlags[index])
+        {
+            return;
+        }
+
+        pendingFlags[index] = true;
+        pending.Add(index);
+    }
+}

@@ -24,6 +24,9 @@ FLIPS = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
 LIGHT = (-0.6, -0.8)
 GRAVEL_EDGE = [(1, 1, 0.7), (2, -1, 0.35), (1, 2, 0.3), (3, 2, 0.0), (-2, 3, 0.0)]
 STONE_EDGE = [(1, 1, 0.6), (2, -1, 0.3), (1, 2, 0.25), (3, 2, 0.0), (-2, 3, 0.0)]
+GRAVEL_CHIPS = {'light': (180, 164, 132), 'grey': (160, 152, 138), 'dark': (126, 110, 88)}
+STONE_PALETTE = [(152, 148, 138), (166, 160, 148), (140, 136, 126), (176, 170, 158), (130, 126, 118),
+                 (158, 150, 136), (146, 144, 138)]
 
 
 def clamp(v, lo=0.0, hi=1.0):
@@ -73,17 +76,17 @@ def shape_sd(mask, u, v, r_out, r_in):
     return -convex(sx * u, sy * v, r_in)
 
 
-def periodic_noise(rng, terms):
+def periodic_noise(rng, terms, period=T):
     comps = [(kx, ky, amp, rng.uniform(0, 2 * math.pi)) for kx, ky, amp in terms]
-    grid = [[0.0] * T for _ in range(T)]
-    for y in range(T):
-        for x in range(T):
-            grid[y][x] = sum(a * math.sin(2 * math.pi * (kx * x + ky * y) / T + ph) for kx, ky, a, ph in comps)
+    grid = [[0.0] * period for _ in range(period)]
+    for y in range(period):
+        for x in range(period):
+            grid[y][x] = sum(a * math.sin(2 * math.pi * (kx * x + ky * y) / period + ph) for kx, ky, a, ph in comps)
     return grid
 
 
-def max_slope(terms):
-    return sum(abs(a) * 2 * math.pi * math.hypot(kx, ky) / T for kx, ky, a in terms)
+def max_slope(terms, period=T):
+    return sum(abs(a) * 2 * math.pi * math.hypot(kx, ky) / period for kx, ky, a in terms)
 
 
 def hash01(x, y, salt):
@@ -92,29 +95,30 @@ def hash01(x, y, salt):
     return ((h ^ (h >> 16)) & 0xffff) / 65535.0
 
 
-def wrap_delta(d):
-    return d - T * round(d / T)
+def wrap_delta(d, period=T):
+    return d - period * round(d / period)
 
 
 class CellField:
-    """Jittered seeds on a grid that repeats every 64 px, and for every pixel its nearest seed, the offset to it and
-    the distance to the edge of its cell."""
+    """Jittered seeds on a grid that repeats every period (64 px by default), and for every pixel its nearest seed,
+    the offset to it and the distance to the edge of its cell."""
 
-    def __init__(self, rng, cells, jitter):
-        size = T / cells
+    def __init__(self, rng, cells, jitter, period=T):
+        self.period = period
+        size = period / cells
         self.seeds = []
         for j in range(cells):
             for i in range(cells):
-                self.seeds.append((((i + 0.5 + rng.uniform(-jitter, jitter)) * size) % T,
-                                   ((j + 0.5 + rng.uniform(-jitter, jitter)) * size) % T))
-        self.table = [[self._nearest(x, y) for x in range(T)] for y in range(T)]
+                self.seeds.append((((i + 0.5 + rng.uniform(-jitter, jitter)) * size) % period,
+                                   ((j + 0.5 + rng.uniform(-jitter, jitter)) * size) % period))
+        self.table = [[self._nearest(x, y) for x in range(period)] for y in range(period)]
 
     def _nearest(self, x, y):
         px, py = x + 0.5, y + 0.5
         near = []
         for index, (sx, sy) in enumerate(self.seeds):
-            dx = wrap_delta(px - sx)
-            dy = wrap_delta(py - sy)
+            dx = wrap_delta(px - sx, self.period)
+            dy = wrap_delta(py - sy, self.period)
             near.append((dx * dx + dy * dy, dx, dy, index))
         near.sort(key=lambda n: n[0])
         d1, dx1, dy1, index = near[0]
@@ -126,7 +130,7 @@ class CellField:
         return index, dx1, dy1, border
 
     def at(self, x, y):
-        return self.table[y % T][x % T]
+        return self.table[y % self.period][x % self.period]
 
 
 class Style:
@@ -198,9 +202,9 @@ class Gravel(Style):
         self.tint = periodic_noise(self.rng, [(1, 0, 4.0), (0, 1, 3.0), (2, 2, 3.0), (3, -1, 2.0)])
         density = periodic_noise(self.rng, [(3, 2, 0.05), (-2, 3, 0.05), (4, -1, 0.04)])
         self.field = CellField(self.rng, 13, 0.4)
-        light = (180, 164, 132)
-        grey = (160, 152, 138)
-        dark = (126, 110, 88)
+        light = GRAVEL_CHIPS['light']
+        grey = GRAVEL_CHIPS['grey']
+        dark = GRAVEL_CHIPS['dark']
         self.chips = []
         for sx, sy in self.field.seeds:
             keep = self.rng.random() < 0.8 + density[int(sy) % T][int(sx) % T]
@@ -237,9 +241,7 @@ class Stone(Style):
         self.mortar = (98, 88, 76)
         self.rim_colour = (112, 98, 80)
         self.field = CellField(self.rng, 5, 0.32)
-        palette = [(152, 148, 138), (166, 160, 148), (140, 136, 126), (176, 170, 158), (130, 126, 118),
-                   (158, 150, 136), (146, 144, 138)]
-        self.colours = [self.rng.choice(palette) for _ in self.field.seeds]
+        self.colours = [self.rng.choice(STONE_PALETTE) for _ in self.field.seeds]
 
     def interior(self, mask, x, y, depth):
         grit = (hash01(x % T, y % T, 11) - 0.5) * 7

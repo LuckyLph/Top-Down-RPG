@@ -133,9 +133,38 @@ Nothing new. The renderer derives everything from the data tilemaps, which `Area
 
 ### Phase 0: spike
 
-- [ ] A throwaway renderer and shader in `Assets/Dev/TerrainSpike` draw an area's existing grass, gravel and stone data tilemaps at 32 px per unit, in crisp and soft, beside the current render tilemaps, with a way to flip between them in the editor. Nothing is saved into the area scenes.
-- [ ] Answered: does a `MeshRenderer` with a Sprite Lit graph get 2D lighting and sort on the `Terrain` layer like the tilemaps? Texture arrays or fixed texture slots? Any shimmer with the camera's current snapping settings? Cost per frame?
-- [ ] Screenshots of both looks against today's tiles, and a short decision note added to this file.
+- [x] A throwaway renderer and shader in `Assets/Dev/TerrainSpike` draw an area's existing grass, gravel and stone data tilemaps at 32 px per unit, in crisp and soft, beside the current render tilemaps, with a way to flip between them in the editor. Nothing is saved into the area scenes.
+- [x] Answered: does a `MeshRenderer` with a Sprite Lit graph get 2D lighting and sort on the `Terrain` layer like the tilemaps? Texture arrays or fixed texture slots? Any shimmer with the camera's current snapping settings? Cost per frame?
+- [x] Screenshots of both looks against today's tiles, and a short decision note added to this file.
+
+#### Phase 0 decision note
+
+The spike (see [Architecture.md](Architecture.md#terrain-blending-spike)) was run on `Area_VillageForest` and `Area_Clearing`: menu `Tools/TopDownRPG/Dev/Terrain Spike/` (Attach To Active Area, Toggle Visible, Flip Look, Detach). Its textures come from [tools/terrain-art/materials.py](../tools/terrain-art/materials.py). Measurements were taken with `TerrainSpikeProbe` on an RTX 5070 Ti under D3D12.
+
+Answers:
+
+1. **Lighting and sorting: yes.** A `MeshRenderer` quad per 16 x 16 cells with the Sprite Lit graph is lit by the Global Light 2D and by a point Light 2D exactly as the render tilemaps are, and sorts by its sorting layer and order: a `Terrain` sprite at order 3 is hidden under the spike at order 5, one at order 10 (the walls' order) and everything on `Entities` draw over it. Like any sprite, it is lit only on sorting layers a light targets (on `Overlay`, which the Global Light 2D leaves out, it renders black). Neither SpriteRenderers nor a TilemapRenderer is needed. The graph turns on Disable Color Tint, since a mesh has no sprite colour.
+2. **Texture arrays.** One `Texture2DArray` per kind (albedo, cell field, height), a slice per material, built at runtime with `Graphics.CopyTexture` from 128 px RGBA32 textures imported with sRGB off; the HLSL treats albedo bytes as sRGB itself, so every copy is between identical formats. The shader reads them with `Load`, needs no sampler, and indexes by layer in a loop; fixed slots would need three textures and a switch per material. Every slice must share size and format, so materials stay 128 px.
+3. **Shimmer: none, except at exact half-pixel camera offsets.** At 1920 x 1080 and zoom 3 the camera was moved by fractions of a screen pixel and each frame compared with the unmoved frame shifted by whole pixels. The spike matched exactly at 0.25, 0.75, 1 and 2.3 px, so it only ever jumps by whole pixels, like a 32 px sprite. At exactly 0.5 and 1.5 px about 16 % of the pixels differed: pixel centres fall exactly on art-pixel edges, so `floor` picks either side and some art pixels come out 2 or 4 screen pixels wide instead of 3. Today's render tilemaps differed at every offset (16 to 18 % of the pixels at 0.25, 0.5, 1.5 and 2.3 px, 3 % at 0.75 px, 0.2 % even at 1 px), because a 64 px texel is 1.5 screen pixels at zoom 3: today's ground already shimmers, and 32 px fixes that. The camera does not snap now (`CameraFollow2D.snapToPixelGrid` is off in `Main`, and the Pixel Perfect Camera's grid and pixel snapping are off), so it passes through half-pixel offsets, and an odd viewport size could keep it on one.
+4. **Cost: negligible.** Drawing the whole Village Forest at 7680 x 4320 (all 30 chunks) took 1.41 ms per frame without the spike and 1.80 ms with it, in either look: about 0.4 ms per 33 million pixels, or 0.025 ms for a 1080p frame on this GPU (at 1080p itself the difference was below the editor's noise). A 640 x 360 view touches at most 6 chunks, so 6 draw calls. Nothing runs per frame on the CPU; a full rebuild (control map, arrays, chunks) takes 3.5 ms in the editor, and the textures take 6 KB (control map) plus 576 KB (three arrays of three 128 px slices). A pixel reads 4 control texels, up to 3 heights in soft, the albedo and field of each visible layer, and 4 more control texels per chip or stone decided at its centre.
+
+Both looks render both areas with every edge attached: `TerrainSpikeProbe.CheckBlobs` labels the topmost visible layer of every pixel and finds, in both looks, one region per path and per grass part (Village Forest: grass 2, gravel 2, stone 1; Clearing: grass 4, gravel 2, stone 1), none under 200 px, and no holes. Crisp follows today's shapes cell for cell, with a thin mortar line and a neutral shadow where stone meets gravel instead of today's heavy border. Soft turns cell steps into straight diagonals and chamfered corners, waves its edges by the materials' heights, and lets whole cobbles make the stone-over-gravel edge.
+
+Phase 1 should keep:
+- Chunk quads with a Sprite Lit graph whose Custom Function (file mode) calls the HLSL, on the `Terrain` sorting layer.
+- Cumulative layers: a layer counts a cell as filled when it or any layer above it is filled, so lower layers continue under upper ones. Stone beside gravel then shows no seam, and gravel fills the notch beside a stone corner.
+- Pair choice per pixel from the layers' distances: a lower layer is "under" an upper one only where its edge lies at least 1.5 px beyond the upper's. Where the edges coincide (gravel continuing under a stone path that borders grass), the lower layer is skipped there, so the edge reads as stone over grass. This needs the same edge noise on every layer in crisp; soft mixes the materials' heights by the bilinear weight of each cell's top layer, which keeps coinciding edges equal too.
+- Chip and stone decisions from the distance at their centre, measured with the corner patch around that centre.
+- Soft weights interpolated bilinearly, minus a bump on diagonal pairs so two diagonal cells never join through the saddle point.
+
+Phase 1 should change:
+- The pair switches abruptly where that 1.5 px margin is crossed, which shows at three-way corners (a light stone wedge at about (2.9, -4.2) in the Village Forest). Blend the pair settings over a pixel or two.
+- Cobbles dropped near the rim leave mortar bumps 3 to 4 px wide at 32 px. The spike already drops fewer than `pathtiles.py` (centre within rim + 1 px instead of rim + 1.75); cut more of them instead.
+- Grass over nothing has the outline and light bands but not today's spiky tufts, which an edge term with a slope under 1 cannot make. If they are wanted, draw them as an attached decoration in the outer band.
+- The textures need an art pass: the gravel chips are blocky at 32 px and the grass tufts faint.
+- Snap the camera to the 1/32 grid (`CameraFollow2D` has the option; it is a change to `Main`), so the half-pixel case cannot happen.
+- The spike fills cells with no ground with a backdrop colour so today's tiles cannot show through; the real renderer draws nothing there. Tile edits through `Tilemap.tilemapPositionsChanged` are wired in the spike but were not exercised.
+- Editor checks have to allow for three things. Render requests skip shader variants still compiling in the background, so compile them first with `ShaderUtil.CompilePass`. Renderers created, reactivated or moved to another layer earlier in the same editor update are not drawn until the next one. A Light 2D builds its mesh in `LateUpdate`, which an unfocused editor seldom runs.
 
 ### Phase 1: renderer and crisp
 
@@ -176,7 +205,6 @@ Nothing new. The renderer derives everything from the data tilemaps, which `Area
 
 ## Open questions
 
-- The spike's questions in Phase 0.
 - How many layers an area may have: 8 fit in one `R8` texel; more need a wider format.
 - Whether soft mode's rim band reads better as a hard band or a one-pixel ordered dither.
 - Whether grass should keep `grass.png`'s hand-drawn look, if its source and licence can be found.

@@ -8,38 +8,58 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for scene generation: the project's Clearing generator gives playable layouts for many seeds (paths on the
 /// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
-/// where it can walk to the spawn), the same seed gives the same layout, and <see cref="AreaLayoutWriter"/> writes a
-/// layout into a scene so that the navigation grid blocks exactly the props' cells.
+/// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
+/// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
+/// forest; the same seed gives the same layout; and <see cref="AreaLayoutWriter"/> writes a layout into a scene so that
+/// the navigation grid blocks exactly the props' cells.
 /// </summary>
 public class AreaGenerationTests
 {
-    private const string GeneratorPath = "Assets/Settings/Generation/Generator_Clearing.asset";
+    private const string ClearingGeneratorPath = "Assets/Settings/Generation/Generator_Clearing.asset";
+    private const string VillageForestGeneratorPath = "Assets/Settings/Generation/Generator_VillageForest.asset";
     private const string GrassTilePath = "Assets/Tiles/tilesets/grass_DualGridRuleTile.asset";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string PropsRootName = "Props";
     private const int SeedCount = 20;
+    private const int MinRegionCells = 300;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
+    private static readonly VillageForestGenerator.Region[] Regions =
+    {
+        VillageForestGenerator.Region.Village,
+        VillageForestGenerator.Region.Clearing,
+        VillageForestGenerator.Region.Forest
+    };
 
     private readonly List<Object> created = new();
+    private readonly Dictionary<int, VillageForestGenerator.Generation> villageForestLayouts = new();
     private ClearingGenerator generator;
+    private VillageForestGenerator villageForest;
+    private int undoGroup;
 
     /// <summary>
-    /// Loads the project's Clearing generator, which the tests only read.
+    /// Loads the project's generators, which the tests only read, and starts the undo group the test's scene changes
+    /// are reverted to.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
-        generator = AssetDatabase.LoadAssetAtPath<ClearingGenerator>(GeneratorPath);
-        Assert.That(generator, Is.Not.Null, $"{GeneratorPath} should exist.");
+        generator = AssetDatabase.LoadAssetAtPath<ClearingGenerator>(ClearingGeneratorPath);
+        Assert.That(generator, Is.Not.Null, $"{ClearingGeneratorPath} should exist.");
+        villageForest = AssetDatabase.LoadAssetAtPath<VillageForestGenerator>(VillageForestGeneratorPath);
+        Assert.That(villageForest, Is.Not.Null, $"{VillageForestGeneratorPath} should exist.");
+        Undo.IncrementCurrentGroup();
+        undoGroup = Undo.GetCurrentGroup();
     }
 
     /// <summary>
-    /// Destroys every object the test created, and the roots the writer added to the scene.
+    /// Reverts the writer's undoable changes, so the Test Runner's own undo revert cannot bring back the objects it
+    /// destroyed, then destroys every object the test created and the roots the writer added to the scene.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
+        Undo.RevertAllDownToGroup(undoGroup);
         foreach (GameObject root in SceneManager.GetActiveScene().GetRootGameObjects())
         {
             if (root.name == AreaLayoutWriter.MobSpawnsRootName || root.name == PropsRootName)
@@ -184,14 +204,261 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// Generating twice from one seed gives the same cells, props, mobs and spawn; another seed gives another layout.
+    /// For every Village Forest seed, with no warnings: each region is a sizeable stretch of grass; the stone street
+    /// runs through the village and gravel trails reach the clearing and the forest; the paths lie on the grass, no
+    /// footprint covers them, and they form one 4-connected network with the spawn on it; the forest is several times
+    /// as dense with footprints as the clearing; and almost all the open ground of each region can be walked to from
+    /// the spawn, so the trees seal off no more than a few stray cells.
     /// </summary>
     [Test]
-    public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne()
+    public void VillageForestLayouts_JoinAVillageAClearingAndAForest_WithOneConnectedPathNetwork()
     {
-        AreaLayout first = generator.Generate(7);
-        AreaLayout again = generator.Generate(7);
-        AreaLayout other = generator.Generate(8);
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            VillageForestGenerator.Generation generation = VillageForestLayout(seed);
+            AreaLayout layout = generation.Layout;
+            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> paths = PathCells(layout);
+            HashSet<Vector3Int> footprints = Footprints(layout);
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
+
+            Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
+            Assert.That(grass.IsSupersetOf(paths), Is.True, $"seed {seed}: paths only on grass");
+            Assert.That(paths.Overlaps(footprints), Is.False, $"seed {seed}: a footprint on a path");
+            Assert.That(Reachable(layout.SpawnCell, paths.Contains).SetEquals(paths), Is.True, $"seed {seed}: one path network through the spawn");
+
+            Dictionary<VillageForestGenerator.Region, int> cells = new();
+            Dictionary<VillageForestGenerator.Region, int> covered = new();
+            Dictionary<VillageForestGenerator.Region, int> open = new();
+            Dictionary<VillageForestGenerator.Region, int> reached = new();
+            foreach (VillageForestGenerator.Region region in Regions)
+            {
+                cells[region] = covered[region] = open[region] = reached[region] = 0;
+            }
+
+            int villageStone = 0;
+            int clearingGravel = 0;
+            int forestGravel = 0;
+            foreach (KeyValuePair<Vector3Int, VillageForestGenerator.Region> entry in generation.Regions)
+            {
+                VillageForestGenerator.Region region = entry.Value;
+                cells[region]++;
+                if (footprints.Contains(entry.Key))
+                {
+                    covered[region]++;
+                }
+                else
+                {
+                    open[region]++;
+                    reached[region] += reachable.Contains(entry.Key) ? 1 : 0;
+                }
+
+                villageStone += region == VillageForestGenerator.Region.Village && layout.TerrainCells(2).Contains(entry.Key) ? 1 : 0;
+                clearingGravel += region == VillageForestGenerator.Region.Clearing && layout.TerrainCells(1).Contains(entry.Key) ? 1 : 0;
+                forestGravel += region == VillageForestGenerator.Region.Forest && layout.TerrainCells(1).Contains(entry.Key) ? 1 : 0;
+            }
+
+            Assert.That(grass.SetEquals(generation.Regions.Keys), Is.True, $"seed {seed}: every grass cell has a region");
+            foreach (VillageForestGenerator.Region region in Regions)
+            {
+                Assert.That(cells[region], Is.GreaterThanOrEqualTo(MinRegionCells), $"seed {seed}: {region} cells");
+                float share = reached[region] / (float)open[region];
+                Assert.That(share, Is.GreaterThanOrEqualTo(region == VillageForestGenerator.Region.Forest ? 0.97f : 0.99f), $"seed {seed}: {region} open ground reachable");
+            }
+
+            Assert.That(villageStone, Is.GreaterThan(0), $"seed {seed}: the street through the village");
+            Assert.That(clearingGravel, Is.GreaterThan(0), $"seed {seed}: a trail into the clearing");
+            Assert.That(forestGravel, Is.GreaterThan(0), $"seed {seed}: trails into the forest");
+            float forestDensity = covered[VillageForestGenerator.Region.Forest] / (float)cells[VillageForestGenerator.Region.Forest];
+            float clearingDensity = covered[VillageForestGenerator.Region.Clearing] / (float)cells[VillageForestGenerator.Region.Clearing];
+            Assert.That(forestDensity, Is.GreaterThan(3f * clearingDensity), $"seed {seed}: the forest is dense and the clearing open");
+        }
+    }
+
+    /// <summary>
+    /// For every Village Forest seed all the configured buildings stand in the village, off the paths, and the only
+    /// path cell within the path clearance of each is its doorstep, the cell in front of its door: that cell is stone
+    /// and can be walked to from the spawn. The fountain stands in its paved square, and lamp posts and fences line the
+    /// street.
+    /// </summary>
+    [Test]
+    public void VillageForestLayouts_FaceTheBuildingsOnTheStreet_WithReachableDoors()
+    {
+        int clearance = villageForest.PathClearance;
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            VillageForestGenerator.Generation generation = VillageForestLayout(seed);
+            AreaLayout layout = generation.Layout;
+            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> stone = layout.TerrainCells(2);
+            HashSet<Vector3Int> paths = PathCells(layout);
+            HashSet<Vector3Int> footprints = Footprints(layout);
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
+            int buildings = 0;
+            int fountains = 0;
+            int lamps = 0;
+            int fences = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (prop.Prefab == villageForest.FountainPrefab)
+                {
+                    fountains++;
+                    Assert.That(stone.Contains(prop.Cell + new Vector3Int(-clearance - 1, 0, 0)), Is.True, $"seed {seed}: the fountain's square");
+                }
+
+                lamps += prop.Prefab == villageForest.LampPostPrefab ? 1 : 0;
+                fences += prop.Prefab == villageForest.FencePrefab ? 1 : 0;
+                if (prop.Prefab != villageForest.BuildingPrefab)
+                {
+                    continue;
+                }
+
+                buildings++;
+                Vector3Int doorstep = prop.Cell + new Vector3Int(villageForest.DoorColumn, -1, 0);
+                Assert.That(stone.Contains(doorstep), Is.True, $"seed {seed}: the path to the door at {doorstep}");
+                Assert.That(reachable.Contains(doorstep), Is.True, $"seed {seed}: the door at {doorstep} reachable from the spawn");
+                PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint);
+                foreach (Vector3Int cell in CoveredCells(prop, footprint))
+                {
+                    Assert.That(generation.Regions[cell], Is.EqualTo(VillageForestGenerator.Region.Village), $"seed {seed}: building at {cell}");
+                    foreach (Vector3Int near in CellsWithin(cell, clearance))
+                    {
+                        Assert.That(!paths.Contains(near) || near == doorstep, Is.True, $"seed {seed}: the building at {prop.Cell} beside the path at {near}");
+                    }
+                }
+            }
+
+            Assert.That(buildings, Is.EqualTo(villageForest.BuildingCount), $"seed {seed}: buildings");
+            Assert.That(fountains, Is.EqualTo(1), $"seed {seed}: the fountain");
+            Assert.That(lamps, Is.GreaterThanOrEqualTo(2), $"seed {seed}: lamp posts");
+            Assert.That(fences, Is.GreaterThanOrEqualTo(villageForest.BuildingCount), $"seed {seed}: fences");
+        }
+    }
+
+    /// <summary>
+    /// For every Village Forest seed the spawn is on the street with grass all around it for the clear radius and no
+    /// blocking prop near it; footprints cover grass cells no other footprint covers, and none but the buildings (whose
+    /// doorsteps the previous test covers) comes within the clearance of a path; walk-through props stand on grass,
+    /// off the paths and outside every footprint.
+    /// </summary>
+    [Test]
+    public void VillageForestLayouts_KeepTheSpawnOpen_AndBlockingPropsOffThePaths()
+    {
+        int radius = villageForest.SpawnClearRadius;
+        int clearance = villageForest.PathClearance;
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = VillageForestLayout(seed).Layout;
+            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> paths = PathCells(layout);
+            HashSet<Vector3Int> footprints = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    continue;
+                }
+
+                foreach (Vector3Int cell in CoveredCells(prop, footprint))
+                {
+                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass at {cell}");
+                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: two footprints on {cell}");
+                    if (prop.Prefab == villageForest.BuildingPrefab)
+                    {
+                        continue;
+                    }
+
+                    foreach (Vector3Int near in CellsWithin(cell, clearance))
+                    {
+                        Assert.That(paths.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {cell} beside a path");
+                    }
+                }
+            }
+
+            Assert.That(layout.TerrainCells(2).Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the street");
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    Vector3Int cell = layout.SpawnCell + new Vector3Int(dx, dy, 0);
+                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: grass at {cell} around the spawn");
+                    if (dx * dx + dy * dy <= radius * radius)
+                    {
+                        Assert.That(footprints.Contains(cell), Is.False, $"seed {seed}: a prop at {cell} near the spawn");
+                    }
+                }
+            }
+
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
+                {
+                    continue;
+                }
+
+                Assert.That(grass.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass");
+                Assert.That(paths.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} on a path");
+                Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                Assert.That(prop.Offset.x, Is.InRange(0f, 1f));
+                Assert.That(prop.Offset.y, Is.InRange(0f, 1f));
+            }
+        }
+    }
+
+    /// <summary>
+    /// For every Village Forest seed each region has exactly its configured mobs, most of them in the forest, and every
+    /// mob stands on open grass the spawn can walk to, far enough from the spawn and from every other mob.
+    /// </summary>
+    [Test]
+    public void VillageForestLayouts_SpreadTheMobs_MostlyInTheForest_WhereTheSpawnCanWalkToThem()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            VillageForestGenerator.Generation generation = VillageForestLayout(seed);
+            AreaLayout layout = generation.Layout;
+            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> footprints = Footprints(layout);
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
+            Dictionary<VillageForestGenerator.Region, int> counts = new();
+            foreach (VillageForestGenerator.Region region in Regions)
+            {
+                counts[region] = 0;
+            }
+
+            for (int i = 0; i < layout.Mobs.Count; i++)
+            {
+                AreaLayout.Mob mob = layout.Mobs[i];
+                counts[generation.Regions[mob.Cell]]++;
+                Assert.That(mob.Prefab, Is.SameAs(villageForest.MobPrefab));
+                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
+                Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(villageForest.MobDistanceFromSpawn), $"seed {seed}");
+                for (int j = 0; j < i; j++)
+                {
+                    Assert.That(Vector3Int.Distance(mob.Cell, layout.Mobs[j].Cell), Is.GreaterThanOrEqualTo(villageForest.MobSpacing), $"seed {seed}");
+                }
+            }
+
+            foreach (VillageForestGenerator.Region region in Regions)
+            {
+                Assert.That(counts[region], Is.EqualTo(villageForest.MobCount(region)), $"seed {seed}: mobs in the {region}");
+            }
+
+            Assert.That(2 * counts[VillageForestGenerator.Region.Forest], Is.GreaterThan(layout.Mobs.Count), $"seed {seed}: most mobs in the forest");
+        }
+    }
+
+    /// <summary>
+    /// For each generator, generating twice from one seed gives the same cells, props, mobs and spawn; another seed
+    /// gives another layout.
+    /// </summary>
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne(string generatorPath)
+    {
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaLayout first = target.Generate(7);
+        AreaLayout again = target.Generate(7);
+        AreaLayout other = target.Generate(8);
 
         for (int layer = 0; layer < first.TerrainLayerCount; layer++)
         {
@@ -209,6 +476,7 @@ public class AreaGenerationTests
         Assert.That(again.Mobs.Count, Is.EqualTo(first.Mobs.Count));
         for (int i = 0; i < first.Mobs.Count; i++)
         {
+            Assert.That(again.Mobs[i].Prefab, Is.SameAs(first.Mobs[i].Prefab));
             Assert.That(again.Mobs[i].Cell, Is.EqualTo(first.Mobs[i].Cell));
         }
 
@@ -217,26 +485,28 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// Writing a layout into a scene with only a grass layer creates the missing path layers in order, paints every
-    /// layer's data tilemap with exactly its cells, sets up each one's rule tile, navigation source and draw order,
-    /// replaces the old props and mob spawn points and moves the start spawn point; the navigation grid then blocks
-    /// exactly the footprint cells, and every mob can walk to the spawn.
+    /// For each generator, writing a layout into a scene with only a grass layer creates the missing path layers in
+    /// order, paints every layer's data tilemap with exactly its cells, sets up each one's rule tile, navigation source
+    /// and draw order, replaces the old props and mob spawn points and moves the start spawn point; the navigation grid
+    /// then blocks exactly the footprint cells, and every mob can walk to the spawn.
     /// </summary>
-    [Test]
-    public void TheWriter_PaintsEveryLayer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints()
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    public void TheWriter_PaintsEveryLayer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
-        Grid grid = CreateAreaWithGrass();
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        Grid grid = CreateAreaWithGrass(target);
         Transform props = Track(new GameObject(PropsRootName)).transform;
         GameObject stale = new("Stale");
         stale.transform.SetParent(props, false);
         GameObject oldMob = Track(new GameObject("OldMobSpawn"));
         oldMob.AddComponent<MobSpawnPoint>();
         SpawnPoint start = Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = generator.Generate(3);
+        AreaLayout layout = target.Generate(3);
 
-        Assert.That(AreaLayoutWriter.Write(grid, generator, layout), Is.True);
+        Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
 
-        IReadOnlyList<AreaGenerator.TerrainLayer> layers = generator.TerrainLayers;
+        IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
         for (int i = 0; i < layers.Count; i++)
         {
             Transform child = grid.transform.Find(layers[i].TilemapName);
@@ -296,15 +566,15 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// Builds a grid of one-unit cells carrying a navigation grid, with a dual-grid grass tilemap named like the
-    /// generator's first layer but none of its path layers.
+    /// Builds a grid of one-unit cells carrying a navigation grid, with a dual-grid grass tilemap named like
+    /// <paramref name="target"/>'s first layer but none of its path layers.
     /// </summary>
-    private Grid CreateAreaWithGrass()
+    private Grid CreateAreaWithGrass(AreaGenerator target)
     {
         Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
         grid.gameObject.AddComponent<NavigationGrid2D>();
         DualGridTilemapModule grass = DualGridTilemapModuleEditor.CreateNewDualGridTilemap(grid);
-        grass.name = generator.TerrainLayers[0].TilemapName;
+        grass.name = target.TerrainLayers[0].TilemapName;
         grass.RenderTile = AssetDatabase.LoadAssetAtPath<DualGridRuleTile>(GrassTilePath);
         grass.gameObject.AddComponent<NavigationTerrainSource2D>();
         return grid;
@@ -321,6 +591,47 @@ public class AreaGenerationTests
             if (tilemap.HasTile(cell))
             {
                 cells.Add(cell);
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// The Village Forest generation for <paramref name="seed"/>, generated once per fixture.
+    /// </summary>
+    private VillageForestGenerator.Generation VillageForestLayout(int seed)
+    {
+        if (!villageForestLayouts.TryGetValue(seed, out VillageForestGenerator.Generation generation))
+        {
+            generation = villageForest.GenerateWithRegions(seed);
+            villageForestLayouts[seed] = generation;
+        }
+
+        return generation;
+    }
+
+    /// <summary>
+    /// Every gravel and stone cell of <paramref name="layout"/>.
+    /// </summary>
+    private static HashSet<Vector3Int> PathCells(AreaLayout layout)
+    {
+        HashSet<Vector3Int> cells = new(layout.TerrainCells(1));
+        cells.UnionWith(layout.TerrainCells(2));
+        return cells;
+    }
+
+    /// <summary>
+    /// <paramref name="cell"/> and every cell within <paramref name="steps"/> steps of it (8 neighbours).
+    /// </summary>
+    private static List<Vector3Int> CellsWithin(Vector3Int cell, int steps)
+    {
+        List<Vector3Int> cells = new();
+        for (int dy = -steps; dy <= steps; dy++)
+        {
+            for (int dx = -steps; dx <= steps; dx++)
+            {
+                cells.Add(cell + new Vector3Int(dx, dy, 0));
             }
         }
 

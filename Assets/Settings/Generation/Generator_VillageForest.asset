@@ -1,0 +1,185 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dda15287c1ab86d449d9495a3cbfda61, type: 3}
+  m_Name: Generator_VillageForest
+  m_EditorClassIdentifier: TopDownRPG.Editor::VillageForestGenerator
+  seed: 1
+  grass:
+    tilemapName: GrassTilemap
+    ruleTile: {fileID: 11400000, guid: a5e4e863827cb05479e7a30ba449016d, type: 2}
+    terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
+    navigationPriority: 0
+    sortingOrder: 0
+  gravel:
+    tilemapName: GravelTilemap
+    ruleTile: {fileID: 11400000, guid: bb2cea5267105214793f4627912c3837, type: 2}
+    terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
+    navigationPriority: 1
+    sortingOrder: 1
+  stone:
+    tilemapName: StoneTilemap
+    ruleTile: {fileID: 11400000, guid: 34350a16e4782c148b0a685de1999ec7, type: 2}
+    terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
+    navigationPriority: 2
+    sortingOrder: 2
+  size: {x: 92, y: 62}
+  squareness: 4
+  edgeWobble: 0.06
+  borderDepth: 3
+  villageSize: {x: 46, y: 28}
+  clearingSize: {x: 30, y: 22}
+  regionWobble: 0.2
+  streetWidth: 3
+  streetMeander: 1.5
+  trailWidth: 2
+  forestTrailCount: 3
+  trailWinding: 0.45
+  pathClearance: 1
+  gladeRadius: 3
+  spawnAlongStreet: 0.8
+  spawnClearRadius: 6
+  buildingPrefab: {fileID: 295165022902028204, guid: 5ea89e9c42aca7f4d91eef902a2f4d45, type: 3}
+  buildingCount: 3
+  doorColumn: 3
+  yardDepth: 3
+  sideYard: 1
+  backYard: 2
+  lotGap: 1
+  fencePrefab: {fileID: 5093150972732105546, guid: 0b99dc00dea99444f81a761231cdfb9d, type: 3}
+  lampPostPrefab: {fileID: 770021972486659317, guid: 27f5d8db63a7f664ca68b5ba4d80533a, type: 3}
+  lampSpacing: 7
+  fountainPrefab: {fileID: 3668707607309481159, guid: dd415562e36c1ea48930c9a06038ecc3, type: 3}
+  squareAlongStreet: 0.45
+  squareRadius: 5.5
+  townProps:
+  - {fileID: 5113165517094793044, guid: cee8bff80a266444ba01591073c82687, type: 3}
+  - {fileID: 5126134951293468089, guid: 23d003808853a0c479691f5aa76f01aa, type: 3}
+  - {fileID: 2000356368516295162, guid: aaa767110b2c3ec42afc2cf3466fe2f0, type: 3}
+  - {fileID: 1204481919086890327, guid: ff89d4a4b6ae75f4aa306bd27d2bd1ea, type: 3}
+  - {fileID: 1924067238871986131, guid: a4b9bb0a0b302634ea66639033007770, type: 3}
+  - {fileID: 2483829782386022968, guid: f75e258aba60acd4fa142b271daefebf, type: 3}
+  - {fileID: 1796254949524079909, guid: 655884c53bca92041a0e24c22ff77239, type: 3}
+  - {fileID: 3441148661069680234, guid: eb43bdcc29407b942862df09465cb8f2, type: 3}
+  - {fileID: 7050435574996827108, guid: c9bd549b1e162a345ac977df4968cb09, type: 3}
+  - {fileID: 4776120242105271613, guid: 64379d3fd63be6f4e92c9f130f9bba26, type: 3}
+  - {fileID: 4023188401234425415, guid: 9f1d68253cddf144dad3d76976de5461, type: 3}
+  townPropsPerBuilding: 4
+  townPropsAroundSquare: 6
+  townPropSpacing: 2.5
+  scatters:
+  - label: Village trees
+    prefabs:
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
+    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
+    count: 12
+    spacing: 6
+    region: 0
+  - label: Village bushes
+    prefabs:
+    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
+    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
+    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
+    - {fileID: 1929214567514569964, guid: ba70c1916b0ce54488a64a73327a92dd, type: 3}
+    count: 10
+    spacing: 5
+    region: 0
+  - label: Village flowers
+    prefabs:
+    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
+    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
+    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
+    - {fileID: 3954581806144712336, guid: 947cc52a1ef4a4b42963a60149c2996f, type: 3}
+    count: 50
+    spacing: 2.2
+    region: 0
+  - label: Clearing trees
+    prefabs:
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
+    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    count: 8
+    spacing: 6
+    region: 1
+  - label: Clearing bushes and rocks
+    prefabs:
+    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
+    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
+    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
+    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
+    - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
+    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    count: 8
+    spacing: 5
+    region: 1
+  - label: Clearing plants
+    prefabs:
+    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
+    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
+    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
+    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
+    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
+    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    - {fileID: 5651893063177631531, guid: ee50fb4338635a0489e10fae3eabe14f, type: 3}
+    count: 45
+    spacing: 2.2
+    region: 1
+  - label: Forest undergrowth
+    prefabs:
+    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
+    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
+    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
+    - {fileID: 1929214567514569964, guid: ba70c1916b0ce54488a64a73327a92dd, type: 3}
+    - {fileID: 3359738446966892449, guid: 20599c41ed914e54d9b160ab17c6cdce, type: 3}
+    - {fileID: 7431738515794547705, guid: 263606e53899dfb4b863389eb92d51d9, type: 3}
+    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    count: 40
+    spacing: 4
+    region: 2
+  - label: Forest trees
+    prefabs:
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
+    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
+    - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
+    count: 2000
+    spacing: 2.2
+    region: 2
+  - label: Forest floor
+    prefabs:
+    - {fileID: 5651893063177631531, guid: ee50fb4338635a0489e10fae3eabe14f, type: 3}
+    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
+    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
+    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
+    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    count: 140
+    spacing: 2
+    region: 2
+  mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+  villageMobCount: 0
+  clearingMobCount: 3
+  forestMobCount: 6
+  mobDistanceFromSpawn: 14
+  mobSpacing: 9

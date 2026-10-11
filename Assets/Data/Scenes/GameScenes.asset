@@ -18,3 +18,4 @@ MonoBehaviour:
   startingSpawnId: start
   areas:
   - {fileID: 11400000, guid: 1d086e110f27b644ca75fd1509664a6b, type: 2}
+  - {fileID: 11400000, guid: 42abb6baff3572948a980a02bbcab07e, type: 2}

@@ -33,6 +33,27 @@ public abstract class AreaGenerator : ScriptableObject
         public int SortingOrder => sortingOrder;
     }
 
+    /// <summary>
+    /// Props a generator scatters over part of its area, picked at random from a list, at least a spacing apart. Each
+    /// prefab is placed as a blocking or walk-through prop depending on whether it has a footprint collider. Each
+    /// generator's own scatter type says which part of the area it fills.
+    /// </summary>
+    [Serializable]
+    public class PropScatter
+    {
+        [SerializeField] private string label = "Props";
+        [SerializeField] private List<GameObject> prefabs = new();
+        [Tooltip("Most props of this layer placed. Fewer are placed when its part of the area runs out of room.")]
+        [SerializeField, Min(0)] private int count = 10;
+        [Tooltip("Smallest distance in cells between two props of this layer.")]
+        [SerializeField, Min(0f)] private float spacing = 3f;
+
+        public string Label => label;
+        public IReadOnlyList<GameObject> Prefabs => prefabs;
+        public int Count => count;
+        public float Spacing => spacing;
+    }
+
     [Tooltip("Seed the scene generator uses. The same seed always gives the same layout.")]
     [SerializeField] private int seed = 1;
 

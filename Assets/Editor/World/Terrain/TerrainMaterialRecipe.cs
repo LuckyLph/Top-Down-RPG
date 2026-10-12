@@ -92,12 +92,7 @@ public abstract class TerrainMaterialRecipe : ScriptableObject
     /// </summary>
     protected double[] SmoothHeight(System.Random random, int size)
     {
-        double total = 0.0;
-        foreach (Wave wave in heightWaves)
-        {
-            total += Math.Abs(wave.Amplitude);
-        }
-
+        double total = TerrainArt.TotalAmplitude(heightWaves);
         double scale = Math.Max(total, 0.5 * TerrainArt.MaxSlope(heightWaves, size) / MaxHeightSlope);
         double[] height = TerrainArt.PeriodicNoise(random, heightWaves, size);
         for (int i = 0; i < height.Length; i++)

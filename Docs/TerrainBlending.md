@@ -32,7 +32,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 - Walls in the blend: they stay a dual-grid layer, because they are raised and carry colliders. Only their art moves to 32 px.
 - A player-facing option for the look. The toggle is for developers.
 - Normal maps, 2D shadows or other lights on the ground.
-- Animated materials (water), elevation and cliffs.
+- Elevation and cliffs, and water that flows or moves its shore. Water is animated inside a fixed shape only: its glints and the swell of its shore rim (Phase 5).
 
 ## Decisions
 
@@ -102,7 +102,7 @@ The maths of the 64 px path tilesets (removed in Phase 4 with `pathtiles.py`, wh
 |---|---|
 | `TerrainControlMap` | Plain C#. Knows the layers' bounds, packs each cell's layer bits, grows when an edit lands outside the bounds, collects changed cells and writes them into its `Texture2D` in one batch, and holds preview bits separately from the real ones. Testable in EditMode. |
 | `TerrainBlendRenderer` | `MonoBehaviour` on the area's `Grid`, `[ExecuteAlways]`. Lists the ground layers bottom first (tilemap and `TerrainMaterial` asset), its `TerrainStyle`, chunk size and `mode`. Builds the control map, the chunk meshes and a runtime material from the style; subscribes to `Tilemap.tilemapPositionsChanged` in `OnEnable` and unsubscribes in `OnDisable`; destroys its texture, meshes and material when disabled. No per-frame work unless cells changed. Shows a brush's preview bits (`SetPreview`, `ClearPreview`). |
-| `TerrainMaterial` | ScriptableObject, one per material: albedo, optional cell field and height textures, repeat in cells, corner radii, chip settings, base colour, the soft look's height scale and default edge settings. Read-only at runtime; its recipe writes the textures, repeat, cell mode and base colour in the editor. |
+| `TerrainMaterial` | ScriptableObject, one per material: albedo, optional cell field and height textures, repeat in cells, corner radii, chip settings, base colour, the soft look's height scale, its animation (frames per second, glints, rim swell; Phase 5) and default edge settings. Read-only at runtime; its recipe writes the textures, repeat, cell mode and base colour in the editor. |
 | `TerrainStyle` | ScriptableObject: the shader, the shared settings and the pair overrides, keyed by material asset. Read-only at runtime. |
 
 Shaders in `Assets/Shaders`: `Terrain/TerrainBlend.shadergraph` (Sprite Lit, a Custom Function node calling `Terrain/TerrainBlend.hlsl`) and shared helpers in `Include/`.
@@ -111,14 +111,14 @@ Shaders in `Assets/Shaders`: `Terrain/TerrainBlend.shadergraph` (Sprite Lit, a C
 
 - `TerrainBrush`: a grid brush for ground layers with the hover preview described above (`TerrainBrushEditor`); elsewhere the Dual Grid Brush.
 - `TerrainTileWriter`: the plain tile of each material, with a swatch of its albedo for the palette (Phase 3).
-- `TerrainMaterialRecipe` and its kinds (grass tufts, gravel chips, stone cobbles): one editor-only asset per material with its seed and parameters, whose inspector previews the textures; `TerrainMaterialWriter` writes them as the material's textures (Phase 1b).
+- `TerrainMaterialRecipe` and its kinds (grass tufts, gravel chips, stone cobbles, and from Phase 5 sand ripples, mud puddles and water ripples): one editor-only asset per material with its seed and parameters, whose inspector previews the textures; `TerrainMaterialWriter` writes them as the material's textures (Phase 1b).
 - `AreaLayoutWriter` and `AreaGenerator.TerrainLayer`: layers become plain data tilemaps with a plain tile, a terrain type and a material asset, instead of a rule tile; a layer's place in the generator's list is its draw order and its navigation priority; the writer adds or updates the area's `TerrainBlendRenderer` (Phase 4).
 - `GroundLayerMigration`, the Scene Generator window's Convert Ground: converts an area's ground layers to a generator's layers without repainting them: removes the modules and render tilemaps, swaps the data tiles for plain ones, adds or updates the renderer and fills `AreaTerrain`'s layers with their tiles (Phase 4).
 - `WallSheetRecipe` and `WallSheetWriter`: the 32 px walls sheet, generated and sliced in the editor (Phase 4).
 
 ### Art
 
-The material generator writes, per material, an albedo texture and, where the material has chips or stones, a cell field texture of the same size, and a height texture for soft mode. The walls recipe writes the 32 px walls sheet. Generated textures are imported with point filtering, no compression and no mipmaps, at 32 PPU. The generators are editor tools in `TopDownRPG.Editor`, driven by one recipe asset per material and one for the walls; until Phase 1b the materials came from `tools/terrain-art/materials.py`, and the folder's other scripts (`pathtiles.py`, `compose.py`, `pngio.py`) went in Phase 4 with the old tilesets.
+The material generator writes, per material, an albedo texture and, where the material has chips or stones, a cell field texture of the same size, and a height texture for soft mode, which also holds an animated material's glint phases (Phase 5). The walls recipe writes the 32 px walls sheet. Generated textures are imported with point filtering, no compression and no mipmaps, at 32 PPU. The generators are editor tools in `TopDownRPG.Editor`, driven by one recipe asset per material and one for the walls; until Phase 1b the materials came from `tools/terrain-art/materials.py`, and the folder's other scripts (`pathtiles.py`, `compose.py`, `pngio.py`) went in Phase 4 with the old tilesets.
 
 ### Networking
 
@@ -352,9 +352,42 @@ Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12:
 - The migration converted 5282 grass, 219 gravel and 243 stone cells in the Village Forest and 1301, 75 and 149 in the Clearing. A second run reported no change in either.
 - Tests: the full EditMode suite passes, and so do the PlayMode tests `NetworkTerrainPlayModeTests`, `PlayerControlsPlayModeTests`, `StressTestScenePlayModeTests` and `SceneFlowPlayModeTests`.
 
+### Phase 5: sand, mud and water
+
+- [x] `Sand`, `Mud` and `Water` materials with their recipes (`SandRipplesRecipe`, `MudPuddlesRecipe`, `WaterRipplesRecipe`), ground tiles and palettes; terrain types, with water unwalkable and mud costing twice as much as grass in the default movement profile.
+- [x] Animated water: glints and a swelling shore rim, in the shader alone; a fixed time for checks.
+- [x] The generators list six layers, with sand, mud and water generated empty; Convert Ground creates the layers an area lacks; the Clearing and the Village Forest have empty sand, mud and water layers to paint with the Terrain Brush.
+- [ ] Checked by hand in play mode: a painted pond that units walk around, mud they avoid when a detour is short, and the water moving in the Game view.
+
+#### Phase 5 notes
+
+The code is described in [Architecture.md](Architecture.md#world-and-areas) (World and areas, Editor tools, configs). What was decided and what is worth knowing:
+
+- **Draw order: grass, sand, mud, gravel, stone, water.** The paths cross sand and mud, so they come above them. Water comes last, so it decides its cells for navigation whatever lies under it, and painting water over grass makes a pond without erasing the grass. Lower layers continue under it as under any layer, so a shore is water over whatever it meets. Six of the eight layers an `R8` control map can hold are used. Inserting sand and mud under gravel moved gravel's and stone's navigation priorities from 1 and 2 to 3 and 4; nothing else changed for them (see the checks below).
+- **Water blocks through navigation only.** The default movement profile (`TerrainMovement_Default`) has water unwalkable, so paths go around it, a click on water walks to the nearest walkable cell, and shore cells take the profile's edge cost like cells beside walls. Water has no collider: bodies only move along paths today (click-to-move and the mobs' paths), and a collider on the `Obstacles` layer would also block the mobs' line of sight across a pond. A knockback or a dash would need one on a layer of its own.
+- **Mud costs 20, sand 10 like grass.** A* goes around mud when the detour costs less, and the straight-line shortcut of click-to-move is not taken across mud. The profile's minimum cost stays 10, so the heuristic does not change (see [SceneGeneration.md](SceneGeneration.md#terrain-layers-and-drawing-order)). Terrain does not change speed yet.
+- **Animation lives in the shader.** A material with frames per second above 0 is animated (`TerrainMaterial`'s Animation settings, two more texels of its layer row in the lookup texture). Its glint pixels light up in turn: where the height texture's blue channel holds a phase (1 + 254 times the phase, 0 for none), the pixel shows the glint colour for the duty fraction of each glint period, at half strength over the first and last quarter of it. Its rims reach up to the rim swell further in and back over the swell period, at a phase that drifts along the edge with the shared edge noise's pattern, so the foam rolls along a shore. The time is `_TimeParameters.x`, stepped to the frames per second so every animated pixel changes on the same frames, like a sprite animation. Nothing runs per frame on the CPU, and the edges never move, so the shapes, the debug view and navigation do not change with time. Each machine animates from its own clock: the animation is not game state and nothing about it is replicated.
+- **No new texture or graph input.** The glint phases use the height texture's free blue channel, whose array is built in both looks, and the shader reads the time from URP's globals, so `TerrainBlend.shadergraph` did not change. `TerrainBlendRenderer.SetFixedTime` draws animated materials at a given time through `_TerrainInfo`'s last two values, for repeatable checks; the blob check uses it.
+- **In the editor** the Scene view animates water only while it repaints (its Always Refresh toggle); the Game view in play mode animates every frame.
+- **Recipes.** Sand (seed 20261016): pale grainy sand, wind ripples (a one-pixel shaded trough under a one-pixel lit crest, whole ripples across the texture, bent by smooth waves and faded out in patches) and sparse specks. Mud (20261017): dark mud with tint patches, grit and two-pixel lumps lit from the top left, and puddles where a smooth noise rises above a level, each in a halo of wetter, darker mud, its edge shaded under its top-left bank and lit on its bottom-right one, with short streaks of reflected sky. The first puddles, dark and small, read as holes; lighter pools, fewer and larger, with the wet halo, read as water. Water (20261018): deep water with slow lighter and darker patches and ripple marks on a jittered grid, short light dashes curving up at their ends, some over a dark trough; every dash glints, its phase running along it so the glint sweeps from left to right. No recipe writes a cell field.
+- **Edges.** Sand over anything: a 1.5 px rim of darker sand fading in, an outline (150, 120, 76) and a green shadow, like gravel; mud the same in its own browns; both a 1.5 px band in soft. Water's default edge, over grass, mud, the paths and nothing: an outline (40, 66, 56), an 8 px shore rim in fixed steps (foam (206, 232, 236) for 1.5 px, light shallows (110, 172, 204) to 3.5 px, shallows (80, 140, 188) to 6 px, then (62, 118, 170) at half cover to 8 px), a faint dark shadow (18, 40, 28) at 0.22 over a pixel and no tufts; it has no soft band, so the soft look keeps the outline and the shore rim. `TerrainStyle.asset`'s second override, water over sand, draws no outline and a wet sand shadow (150, 118, 76) at 0.5 over 2.5 px, so the beach darkens towards the foam. Height scales: sand and mud 2 px, water 1.5. Water: 8 frames per second, glints (214, 238, 246) every 3.2 s for 18 % of it, a rim swell of 1.5 px over 4.5 s.
+- **The debug view tells eight layers apart**: layers 0 to 6 by which of red, green and blue are full (the bits of the layer plus one), layer 7 by a half-strength green. `TerrainBlendProbe.CheckBlobs` names layers after their materials and now renders a grid that is not at the origin where it lies; it used the control map's cell bounds as world coordinates. It names the layers the renderer lists, so check after a rebuild: a rebuild scheduled for later (an inspector change, Convert Ground) waits for an editor update, which an unfocused editor seldom runs.
+- **Convert Ground creates the layers an area lacks**, empty, through the step the writer already used (`AreaGroundSetup.PrepareLayer`), so the layers come first among the grid's children in the generator's order. It used to leave them out, so adding a layer to a generator did not reach existing areas. An area with none of the layers is still refused. The stress test, which has no generator, was not converted again and keeps its grass layer only.
+
+Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12, with the editor unfocused:
+
+- A temporary scene (never saved) with a 40 x 26 cell grid at x = 500: grass, a mud patch, a beach of sand along the west of a pond, a gravel path along the bottom and a stone road across, in both looks. Blob check in both looks: grass 5, sand 1, mud 1, gravel 2, stone 1, water 1, no blob under 200 px, no holes.
+- Animation: frames at 1, 2.25 and 3.5 s differ from each other in 2.2 % and 2.9 % of the pixels around the pond, in the glints and the foam; the debug view at 0, 1.7 and 3.3 s is identical in both looks.
+- The Village Forest with its six layers against the same renderer set back to three, and against the shader as it was before this phase (through the committed file put back for the comparison), at the five Phase 4 spots in both looks at 4 screen pixels per art pixel: 0 pixels differ.
+- Blob checks after the conversion: the Clearing grass 4, gravel 2, stone 1; the Village Forest grass 2, gravel 2, stone 1, in both looks, as before.
+- Scene diffs, object by object: each area gained its three empty tilemaps (GameObject, Transform, Tilemap and navigation source each), its renderer three layers, and its gravel and stone sources their new priorities; the grid's children were reordered. No prop's sorting order was written. A second Convert Ground reported no change.
+- Cost could not be measured: in the unfocused editor a 1080p frame at zoom 3 took about 6.5 to 7 ms with or without the chunks, over the pond as over the Clearing's road.
+- Tests: the full EditMode suite passes, and so do the PlayMode tests `NetworkTerrainPlayModeTests`, `PlayerControlsPlayModeTests`, `StressTestScenePlayModeTests` and `SceneFlowPlayModeTests`.
+
 ### Later
 
-- More materials (dirt, sand) and animated ones (water).
+- More materials (dirt, snow), and generators that place sand, mud and water (beaches, ponds, mud along trails).
+- Water that flows or moves its shore; a collider for water if something starts pushing bodies around.
 - Renderer feature passes on the `Terrain` sorting layer if a material needs one.
 - Y-sorting through the 2D renderer's custom sort axis and Sorting Groups, which would replace `YPositionSorter` and fix "units sort by their sprite's centre" (see Architecture.md's known gaps).
 
@@ -370,10 +403,11 @@ Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12:
 - EditMode, migration: on a grid with dual-grid layers, the same filled cells afterwards as plain tiles, no module or render tilemap, the renderer added with its layers and materials in order and the priorities from that order, `AreaTerrain`'s fill tiles set, one undo restoring everything, and a second run changing nothing.
 - EditMode, walls: the same recipe settings give the same bytes; 16 pieces of 32 px named `walls_0` to `walls_15`; each piece fills the quadrants its tiling rule marks as filled; the rule tile's sprites still point at the slices.
 - EditMode, runtime layers: `AreaTerrain` on plain layers with fill tiles, on the host and replicated; `StressTestMap`'s ground as a plain tilemap.
+- EditMode, Phase 5: sand's lit crests lie over their shaded troughs, mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, water glints on its dashes only and at many phases, and only water's height holds glint phases; an animated material's settings reach its layer row and a still one's leave it empty; the project's water is animated and meets sand without an outline; a fixed time reaches the runtime material; Convert Ground creates a missing layer empty at its place; the generators lay sand, mud and water out empty; on the writer's layers water blocks a cell and mud can be walked.
 - Art: `TerrainBlendProbe.CheckBlobs` finds no detached blobs or holes on the converted areas.
 - Manual: screenshots of both areas in both looks; seams across cell borders; lighting under the Global Light 2D; Multiplayer Play Mode as in Phase 4.
 
 ## Open questions
 
-- How many layers an area may have: 8 fit in one `R8` texel; more need a wider format.
+- How many layers an area may have: 8 fit in one `R8` texel (the generators use 6); more need a wider format.
 - Whether grass should get a hand-drawn look. `grass.png`, whose source and licence were never found, went in Phase 4 (it is in the history before it).

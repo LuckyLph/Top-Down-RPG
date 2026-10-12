@@ -8,6 +8,8 @@
 #define TB_MAX_LAYERS 8
 #define TB_FAR 100.0
 #define TB_RAMP_COLUMN 5
+#define TB_ANIMATION_COLUMN 4
+#define TB_GLINT_COLUMN 5
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
@@ -18,7 +20,8 @@ static const float2 TB_LIGHT = float2(-0.6, 0.8);
 // The renderer's inputs. The lookup texture (see TerrainBlendLut) holds the style as data: row 0 the shared settings,
 // then a row per layer (its material's shape, interior and height scale), then a row per pair of an upper layer over a
 // lower one or over nothing (its edge in both looks). rect.xy is the world position of control map cell (0, 0),
-// rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array; the crisp look never does.
+// rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array's red and green channels; both looks
+// read its blue channel, the glint phases of animated materials. time is the time animated materials are drawn at.
 struct TBInputs
 {
     UnityTexture2D control;
@@ -29,6 +32,7 @@ struct TBInputs
     float4 rect;
     uint layers;
     float4 globals;
+    float time;
     float4 shapes[TB_MAX_LAYERS];
 };
 
@@ -420,6 +424,54 @@ TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool 
     return centre;
 }
 
+// The time an animated material is drawn at, in seconds, stepped to its frames per second, so every animated pixel
+// changes on the same frames, like a sprite animation.
+float TBAnimationTime(TBInputs ins, float framesPerSecond)
+{
+    return floor(ins.time * framesPerSecond) / framesPerSecond;
+}
+
+// An animated layer's glint at a texel of its textures: where the height texture's blue channel holds a glint phase
+// (1 + 254 times the phase, 0 for none), the albedo lights up with the glint colour for the duty fraction of each
+// glint period, at half strength over the first and last quarter of it. Other layers and texels keep their colour.
+float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
+{
+    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, 1 + (int)m);
+    [branch]
+    if (animation.x > 0.0 && animation.z > 0.0)
+    {
+        float phase = LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0;
+        if (phase > 0.5)
+        {
+            float cycle = frac(TBAnimationTime(ins, animation.x) / animation.y + (phase - 1.0) / 254.0);
+            if (cycle < animation.z)
+            {
+                float along = cycle / animation.z;
+                float3 glint = TBLut(ins, TB_GLINT_COLUMN, 1 + (int)m).rgb;
+                colour = lerp(colour, glint, along < 0.25 || along >= 0.75 ? 0.5 : 1.0);
+            }
+        }
+    }
+    return colour;
+}
+
+// How many pixels further in an animated layer's rims reach at a pixel: up to its rim swell, in and out over its
+// swell period, at a phase that drifts along the edge with the shared edge noise's pattern, so the swell rolls along a
+// shore. 0 for a still layer. The edge itself never moves.
+float TBSwell(TBInputs ins, uint m, float2 worldPixel)
+{
+    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, 1 + (int)m);
+    float swell = 0.0;
+    [branch]
+    if (animation.x > 0.0 && animation.w > 0.0)
+    {
+        float period = TBLut(ins, TB_GLINT_COLUMN, 1 + (int)m).a;
+        float phase = TBAnimationTime(ins, animation.x) / period + 0.6 * PeriodicEdgeNoise(worldPixel);
+        swell = animation.w * (0.5 - 0.5 * cos(6.28318530718 * phase));
+    }
+    return swell;
+}
+
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
 // margin clear of the rim: its field's alpha holds its reach from its centre pixel. In crisp that reach is stretched
@@ -432,7 +484,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
 {
     float4 shape = ins.shapes[m];
     int2 texel = (int2)WrapPixel(worldPixel, shape.z);
-    float3 colour = LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, m).rgb;
+    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, m).rgb);
     [branch]
     if (shape.w > 0.5)
     {
@@ -599,7 +651,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
             float depth = -d;
             float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, hasCentre, centre);
             float band;
-            float4 rim = TBRamp(ins, e, m, w, depth, band);
+            float4 rim = TBRamp(ins, e, m, w, max(depth - TBSwell(ins, m, worldPixel), 0.0), band);
             colour = colour * (1.0 - rim.a) + rim.rgb + grit * band;
             result = float4(colour, 1.0);
         }
@@ -646,7 +698,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         float depth = -d;
         float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, false, (TBCentre)0);
         float band;
-        float4 rim = TBRamp(ins, e, m, w, depth, band);
+        float4 rim = TBRamp(ins, e, m, w, max(depth - TBSwell(ins, m, worldPixel), 0.0), band);
         colour = colour * (1.0 - rim.a) + rim.rgb;
         if (depth < 1.5)
         {
@@ -669,24 +721,27 @@ bool TBOpaqueInside(TBInputs ins, uint m)
 #endif
 }
 
-// The debug colour of a layer: grass red, gravel green, stone blue (layers 0 to 2), white above, black for none.
+// The debug colour of a layer, black for none: layers 0 to 6 light red, green and blue fully by the bits of the layer
+// plus one (layer 0 red, 1 green, 2 yellow, 3 blue, 4 magenta, 5 cyan, 6 white), layer 7 full red with half green.
 float3 TBDebugColour(int layer)
 {
     if (layer < 0)
     {
         return float3(0.0, 0.0, 0.0);
     }
-    if (layer > 2)
+    if (layer >= 7)
     {
-        return float3(1.0, 1.0, 1.0);
+        return float3(1.0, 0.5, 0.0);
     }
-    return float3(layer == 0 ? 1.0 : 0.0, layer == 1 ? 1.0 : 0.0, layer == 2 ? 1.0 : 0.0);
+    uint bits = (uint)layer + 1u;
+    return float3((bits & 1u) != 0u ? 1.0 : 0.0, (bits & 2u) != 0u ? 1.0 : 0.0, (bits & 4u) != 0u ? 1.0 : 0.0);
 }
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
 // composites the layers bottom up, each drawn over the layer below it with that pair's edge, in the crisp look or,
 // with the keyword _TERRAIN_SOFT, the soft one. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
-// visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix).
+// visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
+// draws animated materials at the time Info.w instead of the frame's.
 void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
 {
     TBInputs ins;
@@ -698,6 +753,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     ins.rect = ControlRect;
     ins.layers = (uint)clamp(Info.x, 0.0, (float)TB_MAX_LAYERS);
     ins.globals = TBLut(ins, 0, 0);
+    ins.time = Info.z > 0.5 ? Info.w : _TimeParameters.x;
     [unroll]
     for (uint s = 0u; s < (uint)TB_MAX_LAYERS; s++)
     {

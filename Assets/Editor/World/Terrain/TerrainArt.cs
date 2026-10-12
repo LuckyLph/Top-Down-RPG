@@ -45,6 +45,20 @@ public static class TerrainArt
     }
 
     /// <summary>
+    /// The sum of the absolute amplitudes of <paramref name="waves"/>, the most their noise can reach either way.
+    /// </summary>
+    public static double TotalAmplitude(IReadOnlyList<TerrainMaterialRecipe.Wave> waves)
+    {
+        double total = 0.0;
+        foreach (TerrainMaterialRecipe.Wave wave in waves)
+        {
+            total += Math.Abs(wave.Amplitude);
+        }
+
+        return total;
+    }
+
+    /// <summary>
     /// The steepest slope per pixel that <paramref name="waves"/> can reach together over a texture of
     /// <paramref name="size"/> pixels.
     /// </summary>
@@ -196,17 +210,27 @@ public static class TerrainArt
     /// <summary>
     /// The height texture's pixels: R the smooth <paramref name="height"/> in [0, 1], G the value of the chip or stone
     /// that owns each pixel (<paramref name="owner"/>, an index into <paramref name="values"/>, negative for none), 0.5
-    /// where none does or when there are no owners, B 0 and A opaque.
+    /// where none does or when there are no owners, B the pixel's glint phase from <paramref name="glints"/> (0 for no
+    /// glint, else <see cref="GlintByte"/>; 0 everywhere without glints) and A opaque.
     /// </summary>
-    public static Color32[] HeightPixels(double[] height, int[] owner, double[] values)
+    public static Color32[] HeightPixels(double[] height, int[] owner, double[] values, byte[] glints = null)
     {
         Color32[] pixels = new Color32[height.Length];
         for (int i = 0; i < pixels.Length; i++)
         {
             double value = owner != null && owner[i] >= 0 ? values[owner[i]] : 0.5;
-            pixels[i] = new Color32(ToByte(height[i] * 255.0), ToByte(value * 255.0), 0, 255);
+            pixels[i] = new Color32(ToByte(height[i] * 255.0), ToByte(value * 255.0), glints != null ? glints[i] : (byte)0, 255);
         }
 
         return pixels;
+    }
+
+    /// <summary>
+    /// The height texture's blue channel for a glint at <paramref name="phase"/> of its period (wrapped into [0, 1)):
+    /// 1 plus 254 times the phase, so 0 stays free for no glint, as the terrain shader reads it.
+    /// </summary>
+    public static byte GlintByte(double phase)
+    {
+        return (byte)(1 + Math.Min(253, (int)Math.Floor(Wrap(phase, 1) * 254.0)));
     }
 }

@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4f7a6a0bf689b74492ba71c08d016b5, type: 3}
+  m_Name: Recipe_Mud
+  m_EditorClassIdentifier: TopDownRPG.Editor::MudPuddlesRecipe
+  material: {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
+  seed: 20261017
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  mud:
+    serializedVersion: 2
+    rgba: 4281880680
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 4
+  - x: 0
+    y: 1
+    amplitude: 3.5
+  - x: 2
+    y: -1
+    amplitude: 2.5
+  - x: 1
+    y: 2
+    amplitude: 2
+  grit: 7
+  puddleWaves:
+  - x: 1
+    y: 1
+    amplitude: 1
+  - x: 2
+    y: -1
+    amplitude: 0.8
+  - x: -1
+    y: 3
+    amplitude: 0.5
+  - x: 3
+    y: 2
+    amplitude: 0.4
+  puddleLevel: 0.55
+  wetLevel: 0.2
+  wetShade: 12
+  pool:
+    serializedVersion: 2
+    rgba: 4282402896
+  bankShade:
+    serializedVersion: 2
+    rgba: 4280692280
+  wetRim:
+    serializedVersion: 2
+    rgba: 4284248708
+  reflection:
+    serializedVersion: 2
+    rgba: 4287007370
+  reflectionChance: 0.015
+  lumpsPerCell: 3
+  jitter: 0.45
+  lumpChance: 0.6
+  lumpLit:
+    serializedVersion: 2
+    rgba: 4284119702
+  lump:
+    serializedVersion: 2
+    rgba: 4282802814
+  lumpShade:
+    serializedVersion: 2
+    rgba: 4280694344

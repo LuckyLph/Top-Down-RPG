@@ -5,9 +5,10 @@ using UnityEngine;
 /// <summary>
 /// Inspector of every <see cref="TerrainMaterialRecipe"/>: its settings, previews of what it generates for its seed
 /// (the albedo; the cell field, each chip or stone in its own colour, brighter where its alpha is larger, its centre
-/// pixel white and pixels of no chip dark; the height's smooth red channel in grey), regenerated after every change and
-/// after an undo or redo that changed the recipe, and Generate, which writes the textures as the material's through
-/// <see cref="TerrainMaterialWriter"/> once the inspector is drawn and names the files it writes.
+/// pixel white and pixels of no chip dark; the height's smooth red channel in grey, and an animated material's glint
+/// pixels in a hue by their phase), regenerated after every change and after an undo or redo that changed the recipe,
+/// and Generate, which writes the textures as the material's through <see cref="TerrainMaterialWriter"/> once the
+/// inspector is drawn and names the files it writes.
 /// </summary>
 [CustomEditor(typeof(TerrainMaterialRecipe), true)]
 public sealed class TerrainMaterialRecipeEditor : Editor
@@ -157,7 +158,8 @@ public sealed class TerrainMaterialRecipeEditor : Editor
         for (int i = 0; i < heights.Length; i++)
         {
             byte grey = preview.Height[i].r;
-            heights[i] = new Color32(grey, grey, grey, 255);
+            byte glint = preview.Height[i].b;
+            heights[i] = glint > 0 ? (Color32)Color.HSVToRGB((glint - 1) / 254f, 0.7f, 1f) : new Color32(grey, grey, grey, 255);
         }
 
         Paint(ref heightPreview, size, heights);

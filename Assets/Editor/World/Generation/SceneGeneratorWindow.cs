@@ -20,8 +20,11 @@ public sealed class SceneGeneratorWindow : EditorWindow
     private static readonly Color32[] LayerColours =
     {
         new(78, 138, 56, 255),
+        new(226, 204, 150, 255),
+        new(118, 88, 60, 255),
         new(198, 170, 120, 255),
         new(150, 148, 142, 255),
+        new(70, 130, 200, 255),
         new(120, 110, 170, 255)
     };
     private static readonly Color32 BlockingColour = new(24, 66, 30, 255);

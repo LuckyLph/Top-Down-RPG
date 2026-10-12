@@ -20,7 +20,8 @@ using UnityEngine.Tilemaps;
 /// before the next render; nothing runs per frame while no cell changes. A brush's hover preview
 /// (<see cref="SetPreview"/>, <see cref="ClearPreview"/>) shows cells of a layer filled or empty the same way without
 /// touching its tilemap. Its <see cref="BlendMode"/>, a developer toggle, only switches the soft look's shader keyword
-/// on the runtime material. The order of its layers is both the draw order and the navigation priority: a layer whose
+/// on the runtime material. Animated materials (water) move in the shader from the frame's time, with nothing done
+/// per frame here. The order of its layers is both the draw order and the navigation priority: a layer whose
 /// tilemap has a <see cref="NavigationTerrainSource2D"/> must have its index as priority
 /// (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch is logged as an error while
 /// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them.
@@ -120,6 +121,8 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Material material;
     [NonSerialized] private bool flushScheduled;
     [NonSerialized] private bool debugView;
+    [NonSerialized] private bool timeFixed;
+    [NonSerialized] private float fixedTime;
     [NonSerialized] private bool previewGrewBounds;
 #if UNITY_EDITOR
     [NonSerialized] private readonly List<TerrainMaterial> subscribedMaterials = new();
@@ -264,12 +267,24 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the topmost visible layer of every pixel as a pure colour instead of the ground (grass red, gravel green,
-    /// stone blue for layers 0 to 2), for blob checks. Not saved.
+    /// Shows the topmost visible layer of every pixel as a pure colour instead of the ground (layers 0 to 6 by which of
+    /// red, green and blue are full, layer i lighting the channels of i + 1's bits; layer 7 full red with half green),
+    /// for blob checks. Not saved.
     /// </summary>
     internal void SetDebugView(bool on)
     {
         debugView = on;
+        UpdateInfo();
+    }
+
+    /// <summary>
+    /// Draws animated materials at <paramref name="seconds"/> instead of the frame's time, so checks and captures of an
+    /// animated ground are repeatable; null goes back to the frame's time. Not saved.
+    /// </summary>
+    internal void SetFixedTime(float? seconds)
+    {
+        timeFixed = seconds.HasValue;
+        fixedTime = seconds ?? 0f;
         UpdateInfo();
     }
 
@@ -926,13 +941,14 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Tells the material how many layers there are and whether to draw the debug view.
+    /// Tells the material how many layers there are, whether to draw the debug view, and the fixed time animated
+    /// materials are drawn at, if any.
     /// </summary>
     private void UpdateInfo()
     {
         if (material != null)
         {
-            material.SetVector(InfoId, new Vector4(layers.Length, debugView ? 1f : 0f, 0f, 0f));
+            material.SetVector(InfoId, new Vector4(layers.Length, debugView ? 1f : 0f, timeFixed ? 1f : 0f, fixedTime));
         }
     }
 

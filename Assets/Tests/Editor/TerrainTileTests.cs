@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 /// Tests for <see cref="TerrainTileWriter"/> and the ground tiles it wrote: a swatch is its albedo's bottom-left cell;
 /// every terrain material in Assets/Settings/Terrain/Materials has a plain tile (a <see cref="Tile"/>, not a dual-grid
 /// data tile) without a collider whose sprite is the material's swatch, one 32 px cell at 32 pixels per unit holding
-/// exactly the albedo's bottom-left cell; and Grass_Palette, Gravel_Palette and Stone_Palette each hold only their
+/// exactly the albedo's bottom-left cell; and each material's palette (Grass_Palette and so on) holds only its
 /// layer's tile, while Walls_Palette keeps the walls' data tile. Project assets are only read.
 /// </summary>
 public class TerrainTileTests
@@ -64,7 +64,7 @@ public class TerrainTileTests
     public void EachGroundMaterial_HasAPlainTileShowingItsSwatch()
     {
         List<TerrainMaterial> materials = ProjectMaterials();
-        Assert.That(materials.Count, Is.EqualTo(3));
+        Assert.That(materials.Count, Is.EqualTo(6));
 
         foreach (TerrainMaterial material in materials)
         {
@@ -86,8 +86,8 @@ public class TerrainTileTests
     }
 
     /// <summary>
-    /// The grass, gravel and stone palettes each hold one tile, their layer's plain tile, and the walls palette keeps
-    /// the walls' dual-grid data tile.
+    /// Each material's palette holds one tile, its layer's plain tile, and the walls palette keeps the walls' dual-grid
+    /// data tile.
     /// </summary>
     [Test]
     public void TheGroundPalettes_HoldTheirLayersPlainTile()

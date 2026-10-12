@@ -6,15 +6,17 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Brings an area's ground layers in line with a generator's terrain layers without repainting them, as one undo step
-/// (Docs/TerrainBlending.md, Phase 4, which used it to move every area off the dual-grid ground). For each terrain layer
-/// whose tilemap the area's <see cref="Grid"/> has: every filled cell keeps its place and holds the layer's plain tile,
-/// the layer loses its dual-grid module, render tilemap and any Tilemap Renderer of its own, and its navigation source
-/// gets the layer's terrain type and its draw order as priority. The grid's <see cref="TerrainBlendRenderer"/> is added
-/// or updated to draw those layers in the generator's order with their materials and the generator's style, and the
-/// area's <see cref="AreaTerrain"/> fills them with their tiles. Terrain layers the area does not have are left out (an
-/// area with none of them is refused), and every other tilemap (the walls), prop and object stays as it is, except that
-/// a tilemap the renderer drew besides the terrain layers stays drawn above them. Running it again changes nothing.
-/// The Scene Generator window runs it as Convert Ground.
+/// (Docs/TerrainBlending.md, Phase 4, which used it to move every area off the dual-grid ground, and Phase 5, which
+/// used it to give the areas their empty sand, mud and water layers). For each terrain layer: its tilemap under the
+/// area's <see cref="Grid"/> is created empty when missing, every filled cell keeps its place and holds the layer's
+/// plain tile, the layer loses its dual-grid module, render tilemap and any Tilemap Renderer of its own, the layers come
+/// first among the grid's children in the generator's order, and each one's navigation source gets the layer's terrain
+/// type and its draw order as priority. The grid's <see cref="TerrainBlendRenderer"/> is added or updated to draw the
+/// layers in the generator's order with their materials and the generator's style, and the area's
+/// <see cref="AreaTerrain"/> fills them with their tiles. An area with none of the layers is refused, and every other
+/// tilemap (the walls), prop and object stays as it is, except that a tilemap the renderer drew besides the terrain
+/// layers stays drawn above them. Running it again changes nothing. The Scene Generator window runs it as Convert
+/// Ground.
 /// </summary>
 public static class GroundLayerMigration
 {
@@ -30,8 +32,9 @@ public static class GroundLayerMigration
 
     /// <summary>
     /// Converts the ground layers of <paramref name="grid"/> to <paramref name="layers"/>, bottom first, drawn with
-    /// <paramref name="style"/>. Returns a line per change (empty when nothing changed), or null when the layers cannot
-    /// be set up or none of them is a tilemap under the grid, after logging an error naming <paramref name="owner"/>.
+    /// <paramref name="style"/>, creating the layers the grid lacks. Returns a line per change (empty when nothing
+    /// changed), or null when the layers cannot be set up or none of them is a tilemap under the grid, after logging an
+    /// error naming <paramref name="owner"/>.
     /// </summary>
     public static List<string> Migrate(Grid grid, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, string owner = nameof(GroundLayerMigration))
     {
@@ -40,23 +43,7 @@ public static class GroundLayerMigration
             return null;
         }
 
-        List<Tilemap> tilemaps = new();
-        List<TerrainMaterial> materials = new();
-        List<TileBase> tiles = new();
-        List<AreaGenerator.TerrainLayer> present = new();
-        foreach (AreaGenerator.TerrainLayer layer in layers)
-        {
-            Transform child = grid.transform.Find(layer.TilemapName);
-            if (child != null && child.TryGetComponent(out Tilemap tilemap))
-            {
-                tilemaps.Add(tilemap);
-                materials.Add(layer.Material);
-                tiles.Add(layer.Tile);
-                present.Add(layer);
-            }
-        }
-
-        if (present.Count == 0)
+        if (!HasAnyLayer(grid, layers))
         {
             Debug.LogError($"{owner}: none of its terrain layers is a tilemap under {grid.name}, so there is nothing to convert.", grid);
             return null;
@@ -66,18 +53,18 @@ public static class GroundLayerMigration
         Undo.SetCurrentGroupName($"Convert {grid.gameObject.scene.name} ground");
         int undoGroup = Undo.GetCurrentGroup();
         List<string> changes = new();
-        for (int i = 0; i < tilemaps.Count; i++)
+        Tilemap[] tilemaps = new Tilemap[layers.Count];
+        TerrainMaterial[] materials = new TerrainMaterial[layers.Count];
+        TileBase[] tiles = new TileBase[layers.Count];
+        for (int i = 0; i < layers.Count; i++)
         {
-            AreaGroundSetup.RemoveDualGridParts(tilemaps[i], changes);
-            SwapTiles(tilemaps[i], present[i].Tile, changes);
+            tilemaps[i] = AreaGroundSetup.PrepareLayer(grid, layers[i], i, changes);
+            materials[i] = layers[i].Material;
+            tiles[i] = layers[i].Tile;
+            SwapTiles(tilemaps[i], layers[i].Tile, changes);
         }
 
         AreaGroundSetup.SetRenderer(grid, style, tilemaps, materials, changes);
-        for (int i = 0; i < tilemaps.Count; i++)
-        {
-            AreaGroundSetup.SetNavigationSource(tilemaps[i], present[i].TerrainType, TerrainBlendRenderer.NavigationPriorityOf(i), changes);
-        }
-
         AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
         if (changes.Count > 0)
         {
@@ -86,6 +73,23 @@ public static class GroundLayerMigration
         }
 
         return changes;
+    }
+
+    /// <summary>
+    /// Whether any of <paramref name="layers"/> is a tilemap under <paramref name="grid"/>.
+    /// </summary>
+    private static bool HasAnyLayer(Grid grid, IReadOnlyList<AreaGenerator.TerrainLayer> layers)
+    {
+        foreach (AreaGenerator.TerrainLayer layer in layers)
+        {
+            Transform child = grid.transform.Find(layer.TilemapName);
+            if (child != null && child.TryGetComponent(out Tilemap _))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

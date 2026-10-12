@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab0a1c1470f60c146aee1e36c5bd0155, type: 3}
+  m_Name: Recipe_Water
+  m_EditorClassIdentifier: TopDownRPG.Editor::WaterRipplesRecipe
+  material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+  seed: 20261018
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  water:
+    serializedVersion: 2
+    rgba: 4288045100
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 4
+  - x: 0
+    y: 1
+    amplitude: 3.5
+  - x: 1
+    y: -1
+    amplitude: 3
+  - x: 2
+    y: 1
+    amplitude: 2
+  grit: 2
+  marksPerCell: 2.25
+  jitter: 0.45
+  markChance: 0.8
+  minLength: 2
+  maxLength: 5
+  curveLength: 4
+  ripple:
+    serializedVersion: 2
+    rgba: 4290808916
+  trough:
+    serializedVersion: 2
+    rgba: 4286861346
+  troughChance: 0.5
+  sweep: 0.12

@@ -12,7 +12,8 @@ using UnityEngine.Tilemaps;
 /// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
 /// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
 /// forest; the same seed gives the same layout; the project's generators list plain ground tiles and the project's
-/// materials in draw order; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn
+/// materials in draw order, lay their sand, mud and water out empty, and the default movement profile blocks water and
+/// makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn
 /// by a <see cref="TerrainBlendRenderer"/> in the generator's order, with navigation priorities from that order, a
 /// renderer that follows a layout written over another, and a navigation grid that blocks exactly the props' cells.
 /// </summary>
@@ -92,9 +93,9 @@ public class AreaGenerationTests
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = generator.Generate(seed);
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
-            HashSet<Vector3Int> gravel = layout.TerrainCells(1);
-            HashSet<Vector3Int> stone = layout.TerrainCells(2);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
+            HashSet<Vector3Int> gravel = layout.TerrainCells(AreaLayoutBuilder.GravelLayer);
+            HashSet<Vector3Int> stone = layout.TerrainCells(AreaLayoutBuilder.StoneLayer);
             HashSet<Vector3Int> footprints = Footprints(layout);
 
             Assert.That(stone, Is.Not.Empty, $"seed {seed}: the road");
@@ -141,7 +142,7 @@ public class AreaGenerationTests
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = generator.Generate(seed);
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
             HashSet<Vector3Int> footprints = new();
             int blocking = 0;
             foreach (AreaLayout.Prop prop in layout.Props)
@@ -168,7 +169,7 @@ public class AreaGenerationTests
                 }
 
                 Assert.That(grass.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass");
-                Assert.That(layout.TerrainCells(1).Contains(prop.Cell) || layout.TerrainCells(2).Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} on a path");
+                Assert.That(layout.TerrainCells(AreaLayoutBuilder.GravelLayer).Contains(prop.Cell) || layout.TerrainCells(AreaLayoutBuilder.StoneLayer).Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} on a path");
                 Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
                 Assert.That(prop.Offset.x, Is.InRange(0f, 1f));
                 Assert.That(prop.Offset.y, Is.InRange(0f, 1f));
@@ -186,7 +187,7 @@ public class AreaGenerationTests
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = generator.Generate(seed);
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
 
@@ -220,7 +221,7 @@ public class AreaGenerationTests
         {
             VillageForestGenerator.Generation generation = VillageForestLayout(seed);
             AreaLayout layout = generation.Layout;
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
             HashSet<Vector3Int> paths = PathCells(layout);
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
@@ -256,9 +257,9 @@ public class AreaGenerationTests
                     reached[region] += reachable.Contains(entry.Key) ? 1 : 0;
                 }
 
-                villageStone += region == VillageForestGenerator.Region.Village && layout.TerrainCells(2).Contains(entry.Key) ? 1 : 0;
-                clearingGravel += region == VillageForestGenerator.Region.Clearing && layout.TerrainCells(1).Contains(entry.Key) ? 1 : 0;
-                forestGravel += region == VillageForestGenerator.Region.Forest && layout.TerrainCells(1).Contains(entry.Key) ? 1 : 0;
+                villageStone += region == VillageForestGenerator.Region.Village && layout.TerrainCells(AreaLayoutBuilder.StoneLayer).Contains(entry.Key) ? 1 : 0;
+                clearingGravel += region == VillageForestGenerator.Region.Clearing && layout.TerrainCells(AreaLayoutBuilder.GravelLayer).Contains(entry.Key) ? 1 : 0;
+                forestGravel += region == VillageForestGenerator.Region.Forest && layout.TerrainCells(AreaLayoutBuilder.GravelLayer).Contains(entry.Key) ? 1 : 0;
             }
 
             Assert.That(grass.SetEquals(generation.Regions.Keys), Is.True, $"seed {seed}: every grass cell has a region");
@@ -292,8 +293,8 @@ public class AreaGenerationTests
         {
             VillageForestGenerator.Generation generation = VillageForestLayout(seed);
             AreaLayout layout = generation.Layout;
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
-            HashSet<Vector3Int> stone = layout.TerrainCells(2);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
+            HashSet<Vector3Int> stone = layout.TerrainCells(AreaLayoutBuilder.StoneLayer);
             HashSet<Vector3Int> paths = PathCells(layout);
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
@@ -352,7 +353,7 @@ public class AreaGenerationTests
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = VillageForestLayout(seed).Layout;
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
             HashSet<Vector3Int> paths = PathCells(layout);
             HashSet<Vector3Int> footprints = new();
             foreach (AreaLayout.Prop prop in layout.Props)
@@ -378,7 +379,7 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(layout.TerrainCells(2).Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the street");
+            Assert.That(layout.TerrainCells(AreaLayoutBuilder.StoneLayer).Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the street");
             for (int dy = -radius; dy <= radius; dy++)
             {
                 for (int dx = -radius; dx <= radius; dx++)
@@ -419,7 +420,7 @@ public class AreaGenerationTests
         {
             VillageForestGenerator.Generation generation = VillageForestLayout(seed);
             AreaLayout layout = generation.Layout;
-            HashSet<Vector3Int> grass = layout.TerrainCells(0);
+            HashSet<Vector3Int> grass = layout.TerrainCells(AreaLayoutBuilder.GrassLayer);
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
             Dictionary<VillageForestGenerator.Region, int> counts = new();
@@ -484,7 +485,7 @@ public class AreaGenerationTests
         }
 
         Assert.That(again.SpawnCell, Is.EqualTo(first.SpawnCell));
-        Assert.That(other.TerrainCells(0).SetEquals(first.TerrainCells(0)) && other.TerrainCells(2).SetEquals(first.TerrainCells(2)), Is.False);
+        Assert.That(other.TerrainCells(AreaLayoutBuilder.GrassLayer).SetEquals(first.TerrainCells(AreaLayoutBuilder.GrassLayer)) && other.TerrainCells(AreaLayoutBuilder.StoneLayer).SetEquals(first.TerrainCells(AreaLayoutBuilder.StoneLayer)), Is.False);
     }
 
     /// <summary>
@@ -535,7 +536,7 @@ public class AreaGenerationTests
             }
 
             SerializedProperty tileAssets = new SerializedObject(tilemap).FindProperty("m_TileAssetArray");
-            Assert.That(tileAssets.arraySize, Is.EqualTo(1), $"{layers[i].TilemapName} keeps no record of the data tiles it held");
+            Assert.That(tileAssets.arraySize, Is.EqualTo(layout.TerrainCells(i).Count > 0 ? 1 : 0), $"{layers[i].TilemapName} keeps no record of the data tiles it held");
 
             NavigationTerrainSource2D source = child.GetComponent<NavigationTerrainSource2D>();
             Assert.That(source.TerrainType, Is.SameAs(layers[i].TerrainType));
@@ -578,7 +579,7 @@ public class AreaGenerationTests
         navigation.BuildGrid();
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         HashSet<Vector3Int> footprints = Footprints(layout);
-        foreach (Vector3Int cell in layout.TerrainCells(0))
+        foreach (Vector3Int cell in layout.TerrainCells(AreaLayoutBuilder.GrassLayer))
         {
             Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!footprints.Contains(cell)), $"cell {cell}");
         }
@@ -587,6 +588,35 @@ public class AreaGenerationTests
         {
             Assert.That(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), Is.True, $"mob at {mob.Cell}");
         }
+    }
+
+    /// <summary>
+    /// On the layers the writer sets up, water painted over the road takes the cell out of the navigation grid for the
+    /// default movement profile, since water is drawn on top and so decides the cell, while mud painted beside it
+    /// stays walkable.
+    /// </summary>
+    [Test]
+    public void TheWriter_LetsWaterBlockACell_AndMudBeWalked()
+    {
+        Grid grid = CreateAreaWithDualGridGrass(generator);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        AreaLayout layout = generator.Generate(3);
+        Assert.That(AreaLayoutWriter.Write(grid, generator, layout), Is.True);
+        IReadOnlyList<AreaGenerator.TerrainLayer> layers = generator.TerrainLayers;
+        Vector3Int road = layout.SpawnCell;
+        Vector3Int beside = road + new Vector3Int(0, 2, 0);
+        grid.transform.Find(layers[AreaLayoutBuilder.WaterLayer].TilemapName).GetComponent<Tilemap>().SetTile(road, layers[AreaLayoutBuilder.WaterLayer].Tile);
+        grid.transform.Find(layers[AreaLayoutBuilder.MudLayer].TilemapName).GetComponent<Tilemap>().SetTile(beside, layers[AreaLayoutBuilder.MudLayer].Tile);
+        NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
+        navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
+        TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
+
+        navigation.BuildGrid();
+
+        Assert.That(layout.TerrainCells(AreaLayoutBuilder.StoneLayer).Contains(road), Is.True, "The spawn is on the road.");
+        Assert.That(navigation.IsCellWalkable(road, profile), Is.False, "Water over the road blocks it.");
+        Assert.That(navigation.IsCellWalkable(beside, profile), Is.True, "Mud can be walked.");
     }
 
     /// <summary>
@@ -645,7 +675,7 @@ public class AreaGenerationTests
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(3)), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
-        Assert.That(layers.Count, Is.EqualTo(3));
+        Assert.That(layers.Count, Is.EqualTo(AreaLayoutBuilder.LayerCount));
         TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Undo.IncrementCurrentGroup();
@@ -658,8 +688,8 @@ public class AreaGenerationTests
         {
             grid.transform.Find(layers[0].TilemapName).GetComponent<Tilemap>(),
             water,
-            grid.transform.Find(layers[2].TilemapName).GetComponent<Tilemap>(),
-            grid.transform.Find(layers[1].TilemapName).GetComponent<Tilemap>()
+            grid.transform.Find(layers[AreaLayoutBuilder.StoneLayer].TilemapName).GetComponent<Tilemap>(),
+            grid.transform.Find(layers[AreaLayoutBuilder.GravelLayer].TilemapName).GetComponent<Tilemap>()
         };
         TerrainMaterial[] drawnMaterials = { materials[0], materials[1], materials[2], materials[1] };
         SerializedObject rendererData = new(renderer);
@@ -689,16 +719,18 @@ public class AreaGenerationTests
             Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), layers[i].TilemapName);
         }
 
-        Assert.That(renderer.Layers[3].Tilemap, Is.SameAs(water), "The water stays drawn, above the generator's layers.");
-        Assert.That(renderer.Layers[3].Material, Is.SameAs(materials[1]), "with its own material");
-        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(3)));
+        Assert.That(renderer.Layers[layers.Count].Tilemap, Is.SameAs(water), "The water stays drawn, above the generator's layers.");
+        Assert.That(renderer.Layers[layers.Count].Material, Is.SameAs(materials[1]), "with its own material");
+        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(layers.Count)));
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
         renderer.RunScheduledRebuild();
         Assert.That(renderer.ControlMap, Is.Not.Null);
     }
 
     /// <summary>
-    /// The project's generators (only read) list grass, gravel and stone, bottom first, each with its plain ground tile
+    /// The project's generators (only read) list grass, sand, mud, gravel, stone and water, bottom first (the layout
+    /// builder's layer indices), and the default movement profile lets sand be walked like grass, mud at a higher cost
+    /// and water not at all; each layer has its plain ground tile
     /// from Assets/Tiles/Ground, its terrain type and the project's material of that name, and draw them with the
     /// project's terrain style.
     /// </summary>
@@ -707,11 +739,17 @@ public class AreaGenerationTests
     public void TheGenerators_ListPlainTilesAndTheProjectsMaterials_InDrawOrder(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
-        string[] names = { "Grass", "Gravel", "Stone" };
+        string[] names = { "Grass", "Sand", "Mud", "Gravel", "Stone", "Water" };
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
 
         Assert.That(target.TerrainStyle, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath)));
         Assert.That(layers.Count, Is.EqualTo(names.Length));
+        Assert.That(layers[AreaLayoutBuilder.GrassLayer].TilemapName, Is.EqualTo("GrassTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.SandLayer].TilemapName, Is.EqualTo("SandTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.MudLayer].TilemapName, Is.EqualTo("MudTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.GravelLayer].TilemapName, Is.EqualTo("GravelTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.StoneLayer].TilemapName, Is.EqualTo("StoneTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.WaterLayer].TilemapName, Is.EqualTo("WaterTilemap"));
         for (int i = 0; i < names.Length; i++)
         {
             Assert.That(layers[i].TilemapName, Is.EqualTo($"{names[i]}Tilemap"));
@@ -719,6 +757,34 @@ public class AreaGenerationTests
             Assert.That(layers[i].Tile.GetType(), Is.EqualTo(typeof(Tile)), $"{names[i]} is a plain tile");
             Assert.That(layers[i].Material, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/{names[i]}.asset")), names[i]);
             Assert.That(layers[i].TerrainType, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainType2D>($"Assets/Settings/AI/Terrain_{names[i]}.asset")), names[i]);
+        }
+
+        TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
+        profile.TryGetTraversal(layers[AreaLayoutBuilder.GrassLayer].TerrainType, out bool grassWalkable, out int grassCost);
+        profile.TryGetTraversal(layers[AreaLayoutBuilder.MudLayer].TerrainType, out bool mudWalkable, out int mudCost);
+        profile.TryGetTraversal(layers[AreaLayoutBuilder.SandLayer].TerrainType, out bool sandWalkable, out int sandCost);
+        profile.TryGetTraversal(layers[AreaLayoutBuilder.WaterLayer].TerrainType, out bool waterWalkable, out _);
+        Assert.That(grassWalkable && sandWalkable && mudWalkable, Is.True);
+        Assert.That(sandCost, Is.EqualTo(grassCost), "Sand costs what grass costs.");
+        Assert.That(mudCost, Is.GreaterThan(grassCost), "Paths go around mud when they can.");
+        Assert.That(waterWalkable, Is.False, "Water cannot be walked.");
+    }
+
+    /// <summary>
+    /// Both generators lay their sand, mud and water layers out empty, for painting by hand, whatever the seed.
+    /// </summary>
+    [Test]
+    public void Layouts_LeaveTheSandMudAndWaterLayersEmpty()
+    {
+        for (int seed = 1; seed <= 3; seed++)
+        {
+            foreach (AreaLayout layout in new[] { generator.Generate(seed), VillageForestLayout(seed).Layout })
+            {
+                Assert.That(layout.TerrainLayerCount, Is.EqualTo(AreaLayoutBuilder.LayerCount));
+                Assert.That(layout.TerrainCells(AreaLayoutBuilder.SandLayer), Is.Empty, $"seed {seed}: sand");
+                Assert.That(layout.TerrainCells(AreaLayoutBuilder.MudLayer), Is.Empty, $"seed {seed}: mud");
+                Assert.That(layout.TerrainCells(AreaLayoutBuilder.WaterLayer), Is.Empty, $"seed {seed}: water");
+            }
         }
     }
 
@@ -777,8 +843,8 @@ public class AreaGenerationTests
     /// </summary>
     private static HashSet<Vector3Int> PathCells(AreaLayout layout)
     {
-        HashSet<Vector3Int> cells = new(layout.TerrainCells(1));
-        cells.UnionWith(layout.TerrainCells(2));
+        HashSet<Vector3Int> cells = new(layout.TerrainCells(AreaLayoutBuilder.GravelLayer));
+        cells.UnionWith(layout.TerrainCells(AreaLayoutBuilder.StoneLayer));
         return cells;
     }
 

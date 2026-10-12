@@ -21,6 +21,7 @@ public static class TerrainBlendProbe
     private const int ArtPixelsPerUnit = 32;
     private const string EntitiesSortingLayer = "Entities";
     private const string MenuRoot = "Tools/TopDownRPG/World/Terrain/";
+    private const int DebugLayers = 8;
 
     /// <summary>
     /// Logs the blob check of every terrain renderer in the open scenes, in the crisp look and in the soft one, leaving
@@ -206,9 +207,10 @@ public static class TerrainBlendProbe
     /// Renders the debug view over the control map's bounds at one screen pixel per art pixel, with every other
     /// renderer left out, and reports per layer the connected regions of pixels where that layer is the topmost one
     /// drawn, listing those under <paramref name="minPixels"/> (detached blobs), and the regions with no ground that
-    /// do not reach the edge of the bounds (holes). Layers 0 to 2 are told apart by their pure debug colours. Says so
-    /// instead when the renderer has nothing built, or when nothing was drawn, as happens right after the chunks were
-    /// built.
+    /// do not reach the edge of the bounds (holes). Layers are told apart by their pure debug colours and named after
+    /// their materials. Says so instead when the renderer has nothing built, or when nothing was drawn, as happens right
+    /// after the chunks were built. Animated materials are drawn at a fixed time, though they never change which layer
+    /// is on top.
     /// </summary>
     public static string CheckBlobs(TerrainBlendRenderer terrain, int minPixels)
     {
@@ -219,18 +221,21 @@ public static class TerrainBlendProbe
 
         terrain.FlushPendingChanges();
         BoundsInt bounds = terrain.ControlMap.Bounds;
-        Rect world = new(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y);
+        Vector3 origin = terrain.GetComponent<Grid>().CellToWorld(bounds.min);
+        Rect world = new(origin.x, origin.y, bounds.size.x, bounds.size.y);
         try
         {
             terrain.SetDebugView(true);
+            terrain.SetFixedTime(0f);
             Texture2D pixels = Render(terrain, world, 1, true, true, true);
-            string report = Analyse(pixels, bounds, minPixels);
+            string report = Analyse(pixels, world, minPixels, LayerNames(terrain));
             Object.DestroyImmediate(pixels);
             return report;
         }
         finally
         {
             terrain.SetDebugView(false);
+            terrain.SetFixedTime(null);
         }
     }
 
@@ -399,11 +404,48 @@ public static class TerrainBlendProbe
     }
 
     /// <summary>
-    /// Labels the debug view's colours into classes by their brightest channel (black nothing, red grass, green
-    /// gravel, blue stone), so the lights' intensity does not matter, groups them into 4-connected regions and
-    /// describes the small ones and the holes.
+    /// The name of each layer a debug class can show, for the report: the renderer's layer's material name, else its
+    /// index.
     /// </summary>
-    private static string Analyse(Texture2D pixels, BoundsInt bounds, int minPixels)
+    private static string[] LayerNames(TerrainBlendRenderer terrain)
+    {
+        string[] names = new string[DebugLayers];
+        for (int i = 0; i < names.Length; i++)
+        {
+            TerrainMaterial material = i < terrain.Layers.Count ? terrain.Layers[i]?.Material : null;
+            names[i] = material != null ? material.name.ToLowerInvariant() : $"layer {i}";
+        }
+
+        return names;
+    }
+
+    /// <summary>
+    /// The layer a debug view colour shows, plus one (0 for nothing): the channels near the brightest one give the bits
+    /// of layers 0 to 6 plus one, and a channel at about half of it marks layer 7 (TBDebugColour in the terrain shader),
+    /// so the lights' intensity does not matter.
+    /// </summary>
+    private static byte DebugClass(Color32 c)
+    {
+        int brightest = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+        if (brightest < 4)
+        {
+            return 0;
+        }
+
+        bool half = IsHalf(c.r, brightest) || IsHalf(c.g, brightest) || IsHalf(c.b, brightest);
+        int bits = (IsFull(c.r, brightest) ? 1 : 0) | (IsFull(c.g, brightest) ? 2 : 0) | (IsFull(c.b, brightest) ? 4 : 0);
+        return (byte)(half ? DebugLayers : bits);
+
+        static bool IsFull(int channel, int max) => channel * 4 >= max * 3;
+        static bool IsHalf(int channel, int max) => channel * 4 >= max && channel * 4 < max * 3;
+    }
+
+    /// <summary>
+    /// Labels the debug view's colours into classes by layer (<see cref="DebugClass"/>), groups them into 4-connected
+    /// regions and describes the small ones and the holes at their world position in <paramref name="world"/>, naming
+    /// the layers by <paramref name="names"/>.
+    /// </summary>
+    private static string Analyse(Texture2D pixels, Rect world, int minPixels, string[] names)
     {
         int width = pixels.width;
         int height = pixels.height;
@@ -411,13 +453,11 @@ public static class TerrainBlendProbe
         byte[] classes = new byte[colours.Length];
         for (int i = 0; i < colours.Length; i++)
         {
-            Color32 c = colours[i];
-            int brightest = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
-            classes[i] = (byte)(brightest < 4 ? 0 : c.r == brightest ? 1 : c.g == brightest ? 2 : 3);
+            classes[i] = DebugClass(colours[i]);
         }
 
         bool[] seen = new bool[classes.Length];
-        int[] regions = new int[4];
+        int[] regions = new int[DebugLayers + 1];
         StringBuilder small = new();
         StringBuilder holes = new();
         int smallCount = 0;
@@ -468,15 +508,15 @@ public static class TerrainBlendProbe
             }
 
             regions[cls]++;
-            float cx = bounds.xMin + (sumX / (float)size + 0.5f) / ArtPixelsPerUnit;
-            float cy = bounds.yMin + (sumY / (float)size + 0.5f) / ArtPixelsPerUnit;
+            float cx = world.xMin + (sumX / (float)size + 0.5f) / ArtPixelsPerUnit;
+            float cy = world.yMin + (sumY / (float)size + 0.5f) / ArtPixelsPerUnit;
             if (cls == 0 && !touchesEdge && holeCount++ < 20)
             {
                 holes.AppendLine($"  hole: {size} px around ({cx:F2}, {cy:F2})");
             }
             else if (cls != 0 && size < minPixels && smallCount++ < 20)
             {
-                small.AppendLine($"  {ClassName(cls)} blob: {size} px around ({cx:F2}, {cy:F2})");
+                small.AppendLine($"  {names[cls - 1]} blob: {size} px around ({cx:F2}, {cy:F2})");
             }
 
             void Visit(int next)
@@ -489,19 +529,22 @@ public static class TerrainBlendProbe
             }
         }
 
-        if (regions[1] + regions[2] + regions[3] == 0)
+        StringBuilder counts = new($"none {regions[0]}");
+        int drawn = 0;
+        for (int cls = 1; cls < regions.Length; cls++)
+        {
+            drawn += regions[cls];
+            if (regions[cls] > 0)
+            {
+                counts.Append($", {names[cls - 1]} {regions[cls]}");
+            }
+        }
+
+        if (drawn == 0)
         {
             return "  nothing was drawn: chunks built or rebuilt in this editor update are drawn from the next one, so check again\n";
         }
 
-        return $"  regions: none {regions[0]}, grass {regions[1]}, gravel {regions[2]}, stone {regions[3]}; blobs under {minPixels} px: {smallCount}; holes: {holeCount}\n{small}{holes}";
-    }
-
-    /// <summary>
-    /// The layer name for a debug class.
-    /// </summary>
-    private static string ClassName(byte cls)
-    {
-        return cls == 1 ? "grass" : cls == 2 ? "gravel" : "stone";
+        return $"  regions: {counts}; blobs under {minPixels} px: {smallCount}; holes: {holeCount}\n{small}{holes}";
     }
 }

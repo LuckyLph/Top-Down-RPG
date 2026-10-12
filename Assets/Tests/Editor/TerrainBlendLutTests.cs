@@ -8,9 +8,10 @@ using UnityEngine.TestTools;
 /// Tests for <see cref="TerrainBlendLut"/>, the terrain style and materials as shader data: a pair override replaces
 /// the upper material's default edge for its own pair of material assets only, one whose lower material is missing is
 /// not taken for one over nothing, layers find their materials' rows whatever the order, the rim is sampled every half
-/// pixel up to its width, the soft look's height scale (held to its bound), band and whole stones reach their rows, and
-/// the project style's stone over gravel override changes that pair's row only. The project's style and materials are
-/// only read.
+/// pixel up to its width, the soft look's height scale (held to its bound), band and whole stones reach their rows, an
+/// animated material's animation reaches its layer's row and a still one's leaves it empty, the project style's stone
+/// over gravel override changes that pair's row only, and the project's water is animated and meets sand without an
+/// outline. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -199,6 +200,72 @@ public class TerrainBlendLutTests
         SerializedObject serialized = new(material);
         serialized.FindProperty("cutGap").floatValue = 1f;
         serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// An animated material's layer row holds its frames per second, glint period and duty and rim swell, then its glint
+    /// colour and swell period; a still material's holds nothing there, so the shader neither glints nor swells it.
+    /// </summary>
+    [Test]
+    public void AnAnimatedMaterial_ReachesItsLayerRow_AndAStillOneLeavesItEmpty()
+    {
+        TerrainMaterial grass = Material("Grass", 0.1f);
+        TerrainMaterial water = Material("Water", 0f);
+        SerializedObject settings = new(water);
+        settings.FindProperty("framesPerSecond").floatValue = 8f;
+        settings.FindProperty("glintColour").colorValue = new Color(0.8f, 0.9f, 1f);
+        settings.FindProperty("glintPeriod").floatValue = 3.2f;
+        settings.FindProperty("glintDuty").floatValue = 0.18f;
+        settings.FindProperty("rimSwell").floatValue = 1.5f;
+        settings.FindProperty("swellPeriod").floatValue = 4.5f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
+
+        Assert.That(grass.IsAnimated, Is.False);
+        Assert.That(water.IsAnimated, Is.True);
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.AnimationColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.GlintColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.AnimationColumn), Is.EqualTo(new Color(8f, 3.2f, 0.18f, 1.5f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.GlintColumn), Is.EqualTo(new Color(0.8f, 0.9f, 1f, 4.5f)));
+    }
+
+    /// <summary>
+    /// The project's water is animated and drawn over every other material: over sand its style override draws no
+    /// outline and a wet sand shadow, while over grass, mud, gravel, stone and nothing it keeps its own default edge,
+    /// an outline with a shore rim. Its texture's glint phases are what it animates.
+    /// </summary>
+    [Test]
+    public void TheProjectsWater_IsAnimated_AndMeetsSandWithoutAnOutline()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        string[] names = { "Grass", "Sand", "Mud", "Gravel", "Stone", "Water" };
+        TerrainMaterial[] materials = new TerrainMaterial[names.Length];
+        for (int i = 0; i < names.Length; i++)
+        {
+            materials[i] = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{names[i]}.asset");
+            Assert.That(materials[i], Is.Not.Null, names[i]);
+        }
+
+        TerrainMaterial water = materials[5];
+        TerrainStyle.EdgeSettings overSand = style.GetEdge(water, materials[1]);
+
+        Assert.That(water.IsAnimated, Is.True);
+        Assert.That(water.Height, Is.Not.Null, "The glint phases live in the height texture.");
+        Assert.That(overSand, Is.Not.SameAs(water.Edge));
+        Assert.That(overSand.DrawOutline, Is.False);
+        Assert.That(overSand.ShadowAlpha, Is.GreaterThan(0f));
+        Assert.That(water.Edge.DrawOutline, Is.True);
+        Assert.That(water.Edge.RimWidth, Is.GreaterThan(4f));
+        foreach (TerrainMaterial lower in new[] { null, materials[0], materials[2], materials[3], materials[4] })
+        {
+            Assert.That(style.GetEdge(water, lower), Is.SameAs(water.Edge), lower != null ? lower.name : "nothing");
+        }
+
+        for (int i = 0; i < 5; i++)
+        {
+            Assert.That(materials[i].IsAnimated, Is.False, names[i]);
+        }
     }
 
     /// <summary>

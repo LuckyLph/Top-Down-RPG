@@ -62,8 +62,14 @@ public sealed class VillageForestGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Generated empty: painted by hand.")]
+    [SerializeField] private TerrainLayer sand = new();
+    [Tooltip("Generated empty: painted by hand.")]
+    [SerializeField] private TerrainLayer mud = new();
     [SerializeField] private TerrainLayer gravel = new();
     [SerializeField] private TerrainLayer stone = new();
+    [Tooltip("Generated empty: painted by hand. Drawn over every other layer, so it decides its cells: water cannot be walked.")]
+    [SerializeField] private TerrainLayer water = new();
 
     [Header("Shape")]
     [Tooltip("Width and height of the area in cells, before its outline wobbles.")]
@@ -164,9 +170,10 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, then gravel, then stone: each path layer is drawn over the ones before it and decides its cells.
+    /// Grass, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its cells,
+    /// so the paths cross sand and mud and water covers everything. Sand, mud and water are generated empty.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, gravel, stone };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, sand, mud, gravel, stone, water };
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.

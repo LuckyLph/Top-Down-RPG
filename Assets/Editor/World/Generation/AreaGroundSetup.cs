@@ -6,7 +6,8 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// The steps <see cref="AreaLayoutWriter"/> and <see cref="GroundLayerMigration"/> share to set up an area's ground
 /// layers the way the blended terrain draws them (Docs/TerrainBlending.md): plain data tilemaps without dual-grid parts
-/// or a Tilemap Renderer, each with a navigation source whose priority is its draw order, drawn by the Grid's
+/// or a Tilemap Renderer, first among the Grid's children in draw order (created when missing), each with a navigation
+/// source whose priority is its draw order, drawn by the Grid's
 /// <see cref="TerrainBlendRenderer"/>, and filled by the area's <see cref="AreaTerrain"/> with their plain tiles. Every
 /// change goes through undo, a step whose target is already set changes and records nothing, and each change adds a
 /// line to the caller's list. Only outside play mode, where the changes can be saved.
@@ -59,6 +60,41 @@ internal static class AreaGroundSetup
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The grid's child tilemap named after <paramref name="layer"/>, created empty when missing, as a plain data
+    /// tilemap at place <paramref name="index"/> among the grid's children: any dual-grid parts or Tilemap Renderer
+    /// removed, and a navigation source with the layer's terrain type and its index as priority, its draw order in the
+    /// renderer <see cref="SetRenderer"/> sets up.
+    /// </summary>
+    public static Tilemap PrepareLayer(Grid grid, AreaGenerator.TerrainLayer layer, int index, List<string> changes)
+    {
+        Transform child = grid.transform.Find(layer.TilemapName);
+        Tilemap tilemap = child != null ? child.GetComponent<Tilemap>() : null;
+        if (child == null)
+        {
+            GameObject data = new(layer.TilemapName);
+            Undo.RegisterCreatedObjectUndo(data, $"Create {layer.TilemapName}");
+            data.transform.SetParent(grid.transform, false);
+            tilemap = data.AddComponent<Tilemap>();
+            changes.Add($"{grid.name}: created {layer.TilemapName}");
+        }
+        else if (tilemap == null)
+        {
+            tilemap = Undo.AddComponent<Tilemap>(child.gameObject);
+            changes.Add($"{layer.TilemapName}: added a {nameof(Tilemap)}");
+        }
+
+        RemoveDualGridParts(tilemap, changes);
+        SetNavigationSource(tilemap, layer.TerrainType, TerrainBlendRenderer.NavigationPriorityOf(index), changes);
+        if (tilemap.transform.GetSiblingIndex() != index)
+        {
+            Undo.SetSiblingIndex(tilemap.transform, index, $"Order {layer.TilemapName}");
+            changes.Add($"{layer.TilemapName}: moved to place {index} under {grid.name}");
+        }
+
+        return tilemap;
     }
 
     /// <summary>

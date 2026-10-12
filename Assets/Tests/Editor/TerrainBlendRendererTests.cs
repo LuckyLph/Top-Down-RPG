@@ -16,7 +16,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
-/// layer, and a material without a height still builds; a brush's preview shows only in the shown cells, replaces the
+/// layer, and a material without a height still builds; a fixed time for animated materials reaches the runtime
+/// material and clears without a rebuild; a brush's preview shows only in the shown cells, replaces the
 /// last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
 /// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
 /// or allocating per frame;
@@ -438,6 +439,26 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.HeightArray.depth, Is.EqualTo(3));
         Assert.That(renderer.Lut.GetPixel(3, 1).r, Is.EqualTo(0f));
         Assert.That(renderer.Lut.GetPixel(3, 2).r, Is.EqualTo(TerrainMaterial.DefaultHeightScale));
+    }
+
+    /// <summary>
+    /// A fixed time reaches the runtime material (its info's third and fourth values), so animated materials draw at
+    /// that time, and clearing it goes back to the frame's time; neither schedules a rebuild or an upload.
+    /// </summary>
+    [Test]
+    public void AFixedTime_ReachesTheMaterial_AndClearingItGoesBackToTheFramesTime()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        int infoId = Shader.PropertyToID("_TerrainInfo");
+        Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(3f, 0f, 0f, 0f)));
+
+        renderer.SetFixedTime(2.5f);
+
+        Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(3f, 0f, 1f, 2.5f)));
+        renderer.SetFixedTime(null);
+        Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(3f, 0f, 0f, 0f)));
+        Assert.That(renderer.IsRebuildScheduled, Is.False);
+        Assert.That(renderer.IsFlushScheduled, Is.False);
     }
 
     /// <summary>

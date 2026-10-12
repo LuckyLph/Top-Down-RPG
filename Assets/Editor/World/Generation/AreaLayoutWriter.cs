@@ -47,7 +47,7 @@ public static class AreaLayoutWriter
         TileBase[] tiles = new TileBase[layers.Count];
         for (int i = 0; i < layers.Count; i++)
         {
-            tilemaps[i] = PrepareTerrainLayer(grid, layers[i], i, changes);
+            tilemaps[i] = AreaGroundSetup.PrepareLayer(grid, layers[i], i, changes);
             materials[i] = layers[i].Material;
             tiles[i] = layers[i].Tile;
             Paint(tilemaps[i], layers[i].Tile, layout.TerrainCells(i));
@@ -98,37 +98,6 @@ public static class AreaLayoutWriter
         }
 
         return AreaGroundSetup.CanSetUp(generator.name, generator.TerrainStyle, layers, generator);
-    }
-
-    /// <summary>
-    /// The grid's child tilemap named after <paramref name="layer"/>, created when missing, as a plain data tilemap at
-    /// its place among the grid's children: any dual-grid parts or Tilemap Renderer removed, and a navigation source
-    /// with the layer's terrain type and its index as priority, its draw order in the renderer the writer sets up.
-    /// </summary>
-    private static Tilemap PrepareTerrainLayer(Grid grid, AreaGenerator.TerrainLayer layer, int index, List<string> changes)
-    {
-        Transform child = grid.transform.Find(layer.TilemapName);
-        Tilemap tilemap = child != null ? child.GetComponent<Tilemap>() : null;
-        if (child == null)
-        {
-            GameObject data = new(layer.TilemapName);
-            Undo.RegisterCreatedObjectUndo(data, $"Create {layer.TilemapName}");
-            data.transform.SetParent(grid.transform, false);
-            tilemap = data.AddComponent<Tilemap>();
-        }
-        else if (tilemap == null)
-        {
-            tilemap = Undo.AddComponent<Tilemap>(child.gameObject);
-        }
-
-        AreaGroundSetup.RemoveDualGridParts(tilemap, changes);
-        AreaGroundSetup.SetNavigationSource(tilemap, layer.TerrainType, TerrainBlendRenderer.NavigationPriorityOf(index), changes);
-        if (tilemap.transform.GetSiblingIndex() != index)
-        {
-            Undo.SetSiblingIndex(tilemap.transform, index, $"Order {layer.TilemapName}");
-        }
-
-        return tilemap;
     }
 
     /// <summary>

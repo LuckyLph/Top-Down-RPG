@@ -11,8 +11,8 @@ using UnityEngine.Tilemaps;
 /// test) and a plain stone layer, each with a navigation source whose priority is off, dual-grid walls on the collision
 /// tilemap, and an <see cref="AreaTerrain"/> listing the grass and the walls. The conversion keeps every filled cell as
 /// the layer's plain tile, leaves no module or render tilemap, adds the terrain renderer with the layers and materials
-/// in order and the navigation priorities from that order, sets the area terrain's fill tiles, leaves the walls alone,
-/// is undone in one step, and changes nothing when run again.
+/// in order and the navigation priorities from that order, creates a layer the area lacks empty at its place, sets the
+/// area terrain's fill tiles, leaves the walls alone, is undone in one step, and changes nothing when run again.
 /// </summary>
 public class GroundLayerMigrationTests
 {
@@ -161,24 +161,37 @@ public class GroundLayerMigrationTests
 
     /// <summary>
     /// An existing renderer is updated in place (the same component), and a generator layer the area does not have is
-    /// left out of it rather than created.
+    /// created empty, first among the grid's children at its place in the generator's order, with a navigation source
+    /// of its terrain type and its draw order as priority, and drawn at its place; a second run changes nothing.
     /// </summary>
     [Test]
-    public void Migrate_UpdatesAnExistingRenderer_AndLeavesOutLayersTheAreaDoesNotHave()
+    public void Migrate_UpdatesAnExistingRenderer_AndCreatesTheLayersTheAreaLacks_Empty()
     {
         Object.DestroyImmediate(stone.gameObject);
         TerrainBlendRenderer existing = grid.gameObject.AddComponent<TerrainBlendRenderer>();
         existing.Configure(TestTerrainStyle.Create(created), new TerrainBlendRenderer.Layer(gravel.DataTilemap, layers[0].Material));
 
-        GroundLayerMigration.Migrate(grid, style, layers);
+        List<string> changes = GroundLayerMigration.Migrate(grid, style, layers);
 
         Assert.That(grid.GetComponent<TerrainBlendRenderer>(), Is.SameAs(existing));
         Assert.That(existing.Style, Is.SameAs(style));
-        Assert.That(existing.Layers.Count, Is.EqualTo(2));
+        Assert.That(existing.Layers.Count, Is.EqualTo(3));
         Assert.That(existing.Layers[0].Tilemap, Is.SameAs(grass.DataTilemap));
         Assert.That(existing.Layers[1].Tilemap, Is.SameAs(Layer(1)));
         Assert.That(existing.Layers[1].Material, Is.SameAs(layers[1].Material));
-        Assert.That(grid.transform.Find("StoneTilemap"), Is.Null, "A missing layer is not created.");
+        Assert.That(changes, Does.Contain("Grid: created StoneTilemap"));
+        Tilemap stoneLayer = Layer(2);
+        Assert.That(stoneLayer.transform.parent, Is.SameAs(grid.transform));
+        Assert.That(stoneLayer.transform.GetSiblingIndex(), Is.EqualTo(2));
+        Assert.That(stoneLayer.GetUsedTilesCount(), Is.Zero, "A created layer is empty.");
+        Assert.That(stoneLayer.GetComponent<TilemapRenderer>(), Is.Null);
+        NavigationTerrainSource2D source = stoneLayer.GetComponent<NavigationTerrainSource2D>();
+        Assert.That(source.TerrainType, Is.SameAs(layers[2].TerrainType));
+        Assert.That(source.Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(2)));
+        Assert.That(existing.Layers[2].Tilemap, Is.SameAs(stoneLayer));
+        Assert.That(existing.Layers[2].Material, Is.SameAs(layers[2].Material));
+        Assert.That(existing.HasNavigationPrioritiesInStep(), Is.True);
+        Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Is.Empty);
     }
 
     /// <summary>

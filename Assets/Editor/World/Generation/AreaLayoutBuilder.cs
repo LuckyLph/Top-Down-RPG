@@ -5,16 +5,19 @@ using Random = System.Random;
 
 /// <summary>
 /// The shared state and steps of one generation, used by the generators' runs: the seeded random source, the layout
-/// being filled with its grass, gravel and stone cells, how deep each grass cell lies inside the edge, and which
-/// cells are kept free of blocking props, covered by one, or hold a walk-through prop. Iteration always goes through
-/// ordered lists, never hash sets, so a seed gives the same layout every time.
+/// being filled with its grass, gravel and stone cells (its sand, mud and water layers stay empty), how deep each grass
+/// cell lies inside the edge, and which cells are kept free of blocking props, covered by one, or hold a walk-through
+/// prop. Iteration always goes through ordered lists, never hash sets, so a seed gives the same layout every time.
 /// </summary>
 internal sealed class AreaLayoutBuilder
 {
     public const int GrassLayer = 0;
-    public const int GravelLayer = 1;
-    public const int StoneLayer = 2;
-    public const int LayerCount = 3;
+    public const int SandLayer = 1;
+    public const int MudLayer = 2;
+    public const int GravelLayer = 3;
+    public const int StoneLayer = 4;
+    public const int WaterLayer = 5;
+    public const int LayerCount = 6;
 
     private const float SampleStep = 0.2f;
     private const float PathEdgeAllowance = 0.05f;
@@ -27,7 +30,8 @@ internal sealed class AreaLayoutBuilder
     private readonly Dictionary<Vector3Int, int> edgeDistance = new();
 
     /// <summary>
-    /// Prepares an empty grass, gravel and stone layout and a random source seeded with <paramref name="seed"/>.
+    /// Prepares an empty layout of the generators' six layers, of which grass, gravel and stone are laid, and a random
+    /// source seeded with <paramref name="seed"/>.
     /// </summary>
     public AreaLayoutBuilder(int seed)
     {

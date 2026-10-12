@@ -14,15 +14,20 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone; tufts point up; writing the textures to a material sets the base colour the textures'
-/// base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built in memory with their
+/// one value per chip or stone, and glint phases only where water's ripple marks are; tufts point up; sand's crests lie
+/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing
+/// the textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
+/// rebuild. Recipes and materials are built in memory with their
 /// default settings (the project's Gravel material is only read), and files go to a temporary folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
     private const int Seed = 20261013;
 
-    private static readonly Type[] RecipeTypes = { typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe) };
+    private static readonly Type[] RecipeTypes =
+    {
+        typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterRipplesRecipe)
+    };
 
     private readonly List<Object> created = new();
     private string tempFolder;
@@ -368,7 +373,7 @@ public class TerrainMaterialRecipeTests
     /// <summary>
     /// The height's red channel changes by at most 0.1 per pixel (within rounding; the shader's contract allows 0.2) and
     /// is not flat; its green channel is one value per chip or stone, and 0.5 where there is none (grass, bare gravel
-    /// dirt).
+    /// dirt); its blue channel holds no glint phase but in water.
     /// </summary>
     [TestCaseSource(nameof(RecipeTypes))]
     public void TheHeight_IsSmooth_WithOneValuePerChipOrStone(Type recipeType)
@@ -395,6 +400,11 @@ public class TerrainMaterialRecipeTests
                 else
                 {
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
+                }
+
+                if (recipeType != typeof(WaterRipplesRecipe))
+                {
+                    Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
             }
         }
@@ -438,6 +448,126 @@ public class TerrainMaterialRecipeTests
         }
 
         Assert.That(tips, Is.GreaterThan(100));
+    }
+
+    /// <summary>
+    /// Water's glint phases lie exactly on its ripple marks' dashes (the height's blue channel is 0 elsewhere), and the
+    /// marks glint at many different phases, so they do not all light up at once.
+    /// </summary>
+    [Test]
+    public void WaterRipples_GlintOnTheirDashesOnly_AtManyPhases()
+    {
+        WaterRipplesRecipe recipe = (WaterRipplesRecipe)CreateRecipe(typeof(WaterRipplesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("ripple").colorValue = Color.white;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        HashSet<byte> phases = new();
+        int glints = 0;
+        for (int i = 0; i < textures.Albedo.Length; i++)
+        {
+            bool dash = SameColour(textures.Albedo[i], new Color32(255, 255, 255, 255));
+            byte phase = textures.Height[i].b;
+            Assert.That(phase > 0, Is.EqualTo(dash), $"texel {i % textures.Size}, {i / textures.Size}");
+            glints += dash ? 1 : 0;
+            phases.Add(phase);
+        }
+
+        Assert.That(glints, Is.GreaterThan(200));
+        Assert.That(phases.Count, Is.GreaterThan(50));
+    }
+
+    /// <summary>
+    /// With straight ripples across the y axis and nothing else drawn, every lit crest pixel lies right over a shaded
+    /// trough pixel, so a ripple reads as a ridge lit from above.
+    /// </summary>
+    [Test]
+    public void SandRipples_LayTheirLitCrestsOverTheirShadedTroughs()
+    {
+        SandRipplesRecipe recipe = (SandRipplesRecipe)CreateRecipe(typeof(SandRipplesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("ripplesAlongX").intValue = 0;
+        settings.FindProperty("ripplesAlongY").intValue = 8;
+        settings.FindProperty("wobbleWaves").arraySize = 0;
+        settings.FindProperty("coverWaves").arraySize = 0;
+        settings.FindProperty("speckChance").floatValue = 0f;
+        settings.FindProperty("trough").colorValue = Color.black;
+        settings.FindProperty("crest").colorValue = Color.white;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        int crests = 0;
+        int troughs = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = textures.Albedo[y * size + x];
+                troughs += SameColour(colour, new Color32(0, 0, 0, 255)) ? 1 : 0;
+                if (SameColour(colour, new Color32(255, 255, 255, 255)))
+                {
+                    crests++;
+                    Assert.That(SameColour(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x], new Color32(0, 0, 0, 255)), Is.True, $"no trough under the crest at ({x}, {y})");
+                }
+            }
+        }
+
+        Assert.That(crests, Is.EqualTo(8 * size));
+        Assert.That(troughs, Is.EqualTo(crests));
+    }
+
+    /// <summary>
+    /// A puddle sinks into the mud: the pixels of its edge in the bank's shade have dry mud above or to their left, and
+    /// those catching the light have the puddle above and to their left and dry mud below or to their right.
+    /// </summary>
+    [Test]
+    public void MudPuddles_AreShadedUnderTheirTopLeftBank_AndLitOnTheirBottomRightEdge()
+    {
+        MudPuddlesRecipe recipe = (MudPuddlesRecipe)CreateRecipe(typeof(MudPuddlesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("reflectionChance").floatValue = 0f;
+        settings.FindProperty("pool").colorValue = new Color32(0, 0, 255, 255);
+        settings.FindProperty("bankShade").colorValue = new Color32(0, 0, 0, 255);
+        settings.FindProperty("wetRim").colorValue = new Color32(255, 255, 255, 255);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        int shaded = 0;
+        int lit = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = textures.Albedo[y * size + x];
+                bool puddleAbove = IsPuddle(textures.Albedo[TerrainArt.Wrap(y + 1, size) * size + x]);
+                bool puddleLeft = IsPuddle(textures.Albedo[y * size + TerrainArt.Wrap(x - 1, size)]);
+                bool puddleBelow = IsPuddle(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x]);
+                bool puddleRight = IsPuddle(textures.Albedo[y * size + TerrainArt.Wrap(x + 1, size)]);
+                if (SameColour(colour, new Color32(0, 0, 0, 255)))
+                {
+                    shaded++;
+                    Assert.That(!puddleAbove || !puddleLeft, Is.True, $"({x}, {y})");
+                }
+                else if (SameColour(colour, new Color32(255, 255, 255, 255)))
+                {
+                    lit++;
+                    Assert.That(puddleAbove && puddleLeft && (!puddleBelow || !puddleRight), Is.True, $"({x}, {y})");
+                }
+            }
+        }
+
+        Assert.That(shaded, Is.GreaterThan(20));
+        Assert.That(lit, Is.GreaterThan(20));
+
+        static bool IsPuddle(Color32 c) => c.g == 0 || (c.r == 255 && c.g == 255 && c.b == 255);
     }
 
     /// <summary>

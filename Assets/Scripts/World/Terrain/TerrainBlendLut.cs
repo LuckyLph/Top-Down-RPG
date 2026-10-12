@@ -7,7 +7,9 @@ using UnityEngine;
 /// holding both looks, so switching between them needs no rebuild. Row 0 holds the shared settings (edge noise, pair
 /// margin, pair blend). Rows 1 to L hold each layer's material: (outer radius, inner radius, repeat in pixels, cell
 /// mode), (keep margin, cut gap, cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them
-/// whole in the soft look), (base colour), (soft height scale, 0 without a height texture). Then one row per pair of
+/// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
+/// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), zero otherwise, at
+/// <see cref="AnimationColumn"/> and <see cref="GlintColumn"/>. Then one row per pair of
 /// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
 /// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
 /// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
@@ -16,6 +18,8 @@ using UnityEngine;
 /// </summary>
 public static class TerrainBlendLut
 {
+    public const int AnimationColumn = 4;
+    public const int GlintColumn = 5;
     public const int RampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
@@ -56,6 +60,12 @@ public static class TerrainBlendLut
             texels[row + 1] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
             texels[row + 2] = material.BaseColour;
             texels[row + 3] = new Color(material.Height != null ? material.HeightScale : 0f, 0f, 0f, 0f);
+            if (material.IsAnimated)
+            {
+                Color glint = material.GlintColour;
+                texels[row + AnimationColumn] = new Color(material.FramesPerSecond, material.GlintPeriod, material.GlintDuty, material.RimSwell);
+                texels[row + GlintColumn] = new Color(glint.r, glint.g, glint.b, material.SwellPeriod);
+            }
         }
 
         for (int upper = 0; upper < layers; upper++)

@@ -46,7 +46,7 @@ public abstract class TerrainMaterialRecipe : ScriptableObject
     [SerializeField] private int seed = 1;
     [Tooltip("Cells the textures cover before they repeat, 32 px each.")]
     [SerializeField, Range(1, 8)] private int repeatCells = 4;
-    [Tooltip("Waves of the smooth height the soft look reads (Phase 2), in the height texture's red channel. Normalised into 0-1 by their total amplitude, and scaled down further where the red channel's slope could reach 0.1 per pixel (the cell field contract allows 0.2).")]
+    [Tooltip("Soft look only (no effect in the crisp look): gentle bumps that push this material's edges in and out, by up to its material's Height Scale in pixels. X and Y are how many times a wave repeats across the texture. Amplitudes only count relative to each other: the sum is rescaled, and flattened further when it is too steep for smooth edges. Shown as the grey Height preview.")]
     [SerializeField] private Wave[] heightWaves =
     {
         new(1, 0, 1f), new(0, 1, 0.9f), new(1, 1, 0.7f), new(2, -1, 0.5f), new(-1, 2, 0.45f), new(3, 1, 0.25f)

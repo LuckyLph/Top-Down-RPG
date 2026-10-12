@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ab0a1c1470f60c146aee1e36c5bd0155, type: 3}
+  m_Script: {fileID: 11500000, guid: a52dd248cb786a643895ee7bf5572cc3, type: 3}
   m_Name: Recipe_Water
-  m_EditorClassIdentifier: TopDownRPG.Editor::WaterCausticsRecipe
+  m_EditorClassIdentifier: TopDownRPG.Editor::WaterHighlightsRecipe
   material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
   seed: 20261018
   repeatCells: 8
@@ -37,68 +37,54 @@ MonoBehaviour:
   water:
     serializedVersion: 2
     rgba: 4288702504
-  deep:
+  darker:
     serializedVersion: 2
-    rgba: 4288702504
-  depthWaves:
-  - x: 2
-    y: 1
-    amplitude: 1
+    rgba: 4288307749
+  lighter:
+    serializedVersion: 2
+    rgba: 4289097260
+  toneWaves:
   - x: 1
-    y: -2
-    amplitude: 0.9
-  - x: 3
-    y: 2
-    amplitude: 0.6
-  - x: -2
     y: 3
-    amplitude: 0.5
-  deepShare: 0.35
-  cellsAlongXPerCell: 1.75
-  cellsAlongYPerCell: 2.5
-  jitter: 0.85
-  breathe: 1
-  warpWaves:
-  - x: 8
-    y: 3
-    amplitude: 2.5
-  - x: -5
-    y: 9
-    amplitude: 2
-  - x: 11
-    y: -6
     amplitude: 1
-  lineWidth: 0.55
-  widthWaves:
-  - x: 4
-    y: 7
-    amplitude: 1
-  - x: 9
-    y: -3
-    amplitude: 0.7
-  - x: -6
+  - x: 2
     y: 5
+    amplitude: 0.7
+  - x: -1
+    y: 4
+    amplitude: 0.6
+  - x: 3
+    y: 7
+    amplitude: 0.4
+  darkerShare: 0.3
+  lighterShare: 0.2
+  strokesPerCell: 1.6
+  jitter: 0.45
+  strokeChance: 0.6
+  densityWaves:
+  - x: 1
+    y: 3
+    amplitude: 1
+  - x: 2
+    y: 5
+    amplitude: 0.7
+  - x: -1
+    y: 4
     amplitude: 0.5
-  widthVariation: 0.5
-  dropChance: 0.25
-  deepDropChance: 0.7
-  junctionReach: 1.6
-  minPiece: 5
-  net:
+  densityAmount: 0.5
+  minLength: 3
+  maxLength: 10
+  bowLength: 17
+  companionChance: 0.4
+  resting:
     serializedVersion: 2
-    rgba: 4291335244
-  haloWidth: 2
-  halo:
+    rgba: 4289492018
+  highlight:
     serializedVersion: 2
-    rgba: 4289755188
-  knotReach: 1
-  knotShare: 0.2
-  knot:
-    serializedVersion: 2
-    rgba: 4293711510
-  sparkleShare: 0.4
-  sparkleLength: 3
-  sparkleStep: 0.03125
+    rgba: 4293182604
+  spread: 0.15
+  sparklesPerCell: 0.7
+  sparkleChance: 0.6
   sparkle:
     serializedVersion: 2
     rgba: 4294112994

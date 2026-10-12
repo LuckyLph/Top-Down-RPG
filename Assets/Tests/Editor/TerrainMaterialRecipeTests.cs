@@ -14,12 +14,13 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses, runs
-/// sideways when flattened and breaks into ripples with a junction gap; tufts point up; sand's crests lie over their
-/// troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing the textures
-/// to a material sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built in memory
-/// with their default settings (the project's Gravel material is only read), and files go to a temporary folder
-/// outside Assets.
+/// one value per chip or stone, and glint and sparkle phases only in the water recipes; caustic water's net breathes
+/// between two courses, runs sideways when flattened and breaks into ripples with a junction gap, and pond water's
+/// strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's crests lie over
+/// their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing the
+/// textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
+/// rebuild. Recipes and materials are built in memory with their default settings (the project's Gravel material is
+/// only read), and files go to a temporary folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -27,7 +28,8 @@ public class TerrainMaterialRecipeTests
 
     private static readonly Type[] RecipeTypes =
     {
-        typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe)
+        typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe),
+        typeof(WaterHighlightsRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -403,7 +405,7 @@ public class TerrainMaterialRecipeTests
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
-                if (recipeType != typeof(WaterCausticsRecipe))
+                if (recipeType != typeof(WaterCausticsRecipe) && recipeType != typeof(WaterHighlightsRecipe))
                 {
                     Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
@@ -668,6 +670,85 @@ public class TerrainMaterialRecipeTests
         }
 
         return ((double)pixels / sidewaysRuns) / ((double)pixels / uprightRuns);
+    }
+
+    /// <summary>
+    /// Pond water is its three flat tones, near their shares, and strokes in the resting colour. Exactly the stroke
+    /// pixels carry a glint phase; a stroke is a level dash of at least two pixels and at most the longest stroke, both
+    /// ends with one phase, and on a dash with a middle pixel the ends glint a spread after it. Sparkles sit on plain
+    /// water. The textures bring the highlight and sparkle colours as their glint and sparkle colours.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_StrokesGlintFromTheirMiddle_AndSparklesSitOnPlainWater()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 water = settings.FindProperty("water").colorValue;
+        Color32 darker = settings.FindProperty("darker").colorValue;
+        Color32 lighter = settings.FindProperty("lighter").colorValue;
+        Color32 resting = settings.FindProperty("resting").colorValue;
+        double darkerShare = settings.FindProperty("darkerShare").floatValue;
+        double lighterShare = settings.FindProperty("lighterShare").floatValue;
+        int maxLength = settings.FindProperty("maxLength").intValue;
+        int spread = (int)Math.Round(settings.FindProperty("spread").floatValue * 127.0);
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        Assert.That(textures.GlintColour.HasValue && SameColour(textures.GlintColour.Value, settings.FindProperty("highlight").colorValue), Is.True);
+        Assert.That(textures.SparkleColour.HasValue && SameColour(textures.SparkleColour.Value, settings.FindProperty("sparkle").colorValue), Is.True);
+        int plain = 0;
+        int darkerPixels = 0;
+        int lighterPixels = 0;
+        int strokes = 0;
+        int sparkles = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                Color32 colour = textures.Albedo[i];
+                int code = textures.Height[i].b;
+                bool stroke = SameColour(colour, resting);
+                Assert.That(stroke || SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is neither a tone nor a stroke");
+                Assert.That(code > 0 && code < 128, Is.EqualTo(stroke), $"({x}, {y}) glints off a stroke, or a stroke does not");
+                if (!stroke)
+                {
+                    plain++;
+                    darkerPixels += SameColour(colour, darker) ? 1 : 0;
+                    lighterPixels += SameColour(colour, lighter) ? 1 : 0;
+                    sparkles += code >= 128 ? 1 : 0;
+                    continue;
+                }
+
+                if (SameColour(textures.Albedo[y * size + TerrainArt.Wrap(x - 1, size)], resting))
+                {
+                    continue;
+                }
+
+                strokes++;
+                int length = 1;
+                while (length < size && SameColour(textures.Albedo[y * size + TerrainArt.Wrap(x + length, size)], resting))
+                {
+                    length++;
+                }
+
+                Assert.That(length, Is.InRange(2, maxLength), $"the stroke at ({x}, {y})");
+                int first = textures.Height[i].b;
+                int last = textures.Height[y * size + TerrainArt.Wrap(x + length - 1, size)].b;
+                Assert.That(last, Is.EqualTo(first), $"the stroke at ({x}, {y}) glints at its ends together");
+                if (length % 2 == 1 && length >= 3)
+                {
+                    int middle = textures.Height[y * size + TerrainArt.Wrap(x + length / 2, size)].b;
+                    Assert.That(((middle - first) % 127 + 127) % 127, Is.InRange(spread - 1, spread + 1), $"the stroke at ({x}, {y}) glints from its middle out");
+                }
+            }
+        }
+
+        Assert.That((double)darkerPixels / plain, Is.InRange(darkerShare - 0.08, darkerShare + 0.08), "darker share");
+        Assert.That((double)lighterPixels / plain, Is.InRange(lighterShare - 0.08, lighterShare + 0.08), "lighter share");
+        Assert.That(strokes, Is.GreaterThan(5));
+        Assert.That(sparkles, Is.GreaterThan(0));
     }
 
     /// <summary>

@@ -19,7 +19,7 @@ using UnityEngine;
 /// No cell field; the base colour is the fill, the glint colour the net's and the sparkle colour the sparkles', and the
 /// height's per-chip value is 0.5 everywhere.
 /// </summary>
-[CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Caustics", fileName = "Recipe_Water")]
+[CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Caustics", fileName = "Recipe_WaterCaustics")]
 public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
 {
     private const int DropSalt = 23;

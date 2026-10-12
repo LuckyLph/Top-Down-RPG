@@ -8,8 +8,9 @@ using UnityEngine;
 /// margin, pair blend). Rows 1 to L hold each layer's material: (outer radius, inner radius, repeat in pixels, cell
 /// mode), (keep margin, cut gap, cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them
 /// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
-/// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), zero otherwise, at
-/// <see cref="AnimationColumn"/> and <see cref="GlintColumn"/>. Then one row per pair of
+/// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
+/// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
+/// <see cref="SparkleTimingColumn"/>. Then one row per pair of
 /// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
 /// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
 /// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
@@ -20,6 +21,8 @@ public static class TerrainBlendLut
 {
     public const int AnimationColumn = 4;
     public const int GlintColumn = 5;
+    public const int SparkleColumn = 6;
+    public const int SparkleTimingColumn = 7;
     public const int RampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
@@ -65,6 +68,9 @@ public static class TerrainBlendLut
                 Color glint = material.GlintColour;
                 texels[row + AnimationColumn] = new Color(material.FramesPerSecond, material.GlintPeriod, material.GlintDuty, material.RimSwell);
                 texels[row + GlintColumn] = new Color(glint.r, glint.g, glint.b, material.SwellPeriod);
+                Color sparkle = material.SparkleColour;
+                texels[row + SparkleColumn] = new Color(sparkle.r, sparkle.g, sparkle.b, material.SparklePeriod);
+                texels[row + SparkleTimingColumn] = new Color(material.SparkleDuty, 0f, 0f, 0f);
             }
         }
 

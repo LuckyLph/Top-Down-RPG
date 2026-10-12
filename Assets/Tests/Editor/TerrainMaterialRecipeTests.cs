@@ -14,7 +14,7 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint phases only in water, running along its crests' cores and in its sparkles;
+/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses;
 /// tufts point up; sand's crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on
 /// their bottom-right edge; writing the textures to a material sets the base colour the textures' base is shaded from
 /// and has the renderers drawing it rebuild. Recipes and materials are built in memory with their default settings
@@ -26,7 +26,7 @@ public class TerrainMaterialRecipeTests
 
     private static readonly Type[] RecipeTypes =
     {
-        typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterRipplesRecipe)
+        typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -402,7 +402,7 @@ public class TerrainMaterialRecipeTests
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
-                if (recipeType != typeof(WaterRipplesRecipe))
+                if (recipeType != typeof(WaterCausticsRecipe))
                 {
                     Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
@@ -451,80 +451,114 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Without sparkles, water's glint phases lie exactly on the bright cores of its wave crests (the height's blue
-    /// channel is 0 elsewhere), at many phases, and on straight rows each glint runs along its row: neighbouring core
-    /// pixels' phases differ by the glint's trips across the texture per pixel. With sparkles, every other glint is a
-    /// pair of side-by-side pixels of plain water with one phase, off the crests.
+    /// Water's net breathes between two courses and sparkles at some knots. A pixel with a glint phase shows the plain
+    /// fill (water or deep) until it lights up with the net's colour, which the textures bring as their glint colour,
+    /// and most of them have a pixel of the other course nearby whose phase is half a period away, so each edge always
+    /// shows one course. Pixels drawn as net or knot carry no glint. Sparkles are short horizontal runs on knots whose
+    /// phases step along them. Deep cells and the net's two courses each take a fair share of the texture.
     /// </summary>
     [Test]
-    public void WaterRipples_GlintAlongTheirCrestsCores_AndInHiddenSparkles()
+    public void WaterCaustics_BreatheBetweenTwoCourses_AndSparkleAtKnots()
     {
-        WaterRipplesRecipe recipe = (WaterRipplesRecipe)CreateRecipe(typeof(WaterRipplesRecipe));
+        WaterCausticsRecipe recipe = (WaterCausticsRecipe)CreateRecipe(typeof(WaterCausticsRecipe));
         SerializedObject settings = new(recipe);
-        settings.FindProperty("crestBright").colorValue = Color.white;
-        settings.FindProperty("crestDim").colorValue = Color.black;
-        settings.FindProperty("wobbleWaves").arraySize = 0;
-        settings.FindProperty("sparkleChance").floatValue = 0f;
-        settings.ApplyModifiedPropertiesWithoutUndo();
-        int trips = settings.FindProperty("glintTrips").intValue;
+        Color32 water = settings.FindProperty("water").colorValue;
+        Color32 deep = settings.FindProperty("deep").colorValue;
+        Color32 net = settings.FindProperty("net").colorValue;
+        Color32 knot = settings.FindProperty("knot").colorValue;
+        int sparkleLength = settings.FindProperty("sparkleLength").intValue;
+        int sparkleStep = (int)Math.Round(settings.FindProperty("sparkleStep").floatValue * 128.0);
 
         TerrainTextures textures = recipe.Generate(Seed);
 
         int size = textures.Size;
-        Color32 white = new(255, 255, 255, 255);
-        Color32 black = new(0, 0, 0, 255);
-        HashSet<byte> phases = new();
-        int glints = 0;
-        int steps = 0;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                int i = y * size + x;
-                bool core = SameColour(textures.Albedo[i], white);
-                byte phase = textures.Height[i].b;
-                Assert.That(phase > 0, Is.EqualTo(core), $"({x}, {y})");
-                glints += core ? 1 : 0;
-                phases.Add(phase);
-                int next = y * size + TerrainArt.Wrap(x + 1, size);
-                if (core && SameColour(textures.Albedo[next], white))
-                {
-                    int step = ((textures.Height[next].b - phase) % 254 + 254) % 254;
-                    Assert.That(step, Is.InRange((int)Math.Floor(trips * 254.0 / size), (int)Math.Ceiling(trips * 254.0 / size)), $"({x}, {y})");
-                    steps++;
-                }
-            }
-        }
-
-        Assert.That(glints, Is.GreaterThan(200));
-        Assert.That(phases.Count, Is.GreaterThan(50));
-        Assert.That(steps, Is.GreaterThan(100));
-
-        settings.FindProperty("sparkleChance").floatValue = 1f;
-        settings.ApplyModifiedPropertiesWithoutUndo();
-        TerrainTextures sparkling = recipe.Generate(Seed);
-
+        Assert.That(textures.GlintColour.HasValue && SameColour(textures.GlintColour.Value, net), Is.True);
+        Assert.That(textures.SparkleColour.HasValue, Is.True);
+        int breathing = 0;
+        int paired = 0;
+        int deepFill = 0;
+        int fill = 0;
+        int lines = 0;
         int sparkles = 0;
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
                 int i = y * size + x;
-                Color32 colour = sparkling.Albedo[i];
-                byte phase = sparkling.Height[i].b;
-                if (phase == 0 || SameColour(colour, white))
+                Color32 colour = textures.Albedo[i];
+                int code = textures.Height[i].b;
+                bool isFill = SameColour(colour, water) || SameColour(colour, deep);
+                bool isLine = SameColour(colour, net) || SameColour(colour, knot);
+                Assert.That(isFill || isLine, Is.True, $"({x}, {y}) is neither fill nor net");
+                fill += isFill ? 1 : 0;
+                deepFill += SameColour(colour, deep) ? 1 : 0;
+                lines += isLine ? 1 : 0;
+                if (code >= 128)
                 {
-                    continue;
-                }
+                    sparkles++;
+                    int left = textures.Height[y * size + TerrainArt.Wrap(x - 1, size)].b;
+                    Assert.That(SameColour(colour, knot) || left >= 128, Is.True, $"({x}, {y}) sparkles neither on a knot nor after a sparkle");
+                    if (left >= 128 && !SameColour(colour, knot))
+                    {
+                        Assert.That(((code - left) % 128 + 128) % 128, Is.EqualTo(sparkleStep), $"({x}, {y})");
+                    }
 
-                sparkles++;
-                Assert.That(SameColour(colour, black), Is.False, $"({x}, {y}) is on a crest");
-                bool paired = sparkling.Height[y * size + TerrainArt.Wrap(x - 1, size)].b == phase || sparkling.Height[y * size + TerrainArt.Wrap(x + 1, size)].b == phase;
-                Assert.That(paired, Is.True, $"({x}, {y})");
+                    Assert.That(RunLength(textures.Height, x, y, size), Is.LessThanOrEqualTo(sparkleLength * 2), $"({x}, {y})");
+                }
+                else if (code > 0)
+                {
+                    breathing++;
+                    Assert.That(isFill, Is.True, $"({x}, {y}) breathes but is drawn as net");
+                    paired += HasOppositeCourseNearby(textures.Height, x, y, size, code) ? 1 : 0;
+                }
             }
         }
 
-        Assert.That(sparkles, Is.GreaterThan(20));
+        Assert.That(breathing, Is.GreaterThan(size * size / 20));
+        Assert.That(paired, Is.GreaterThan(breathing * 6 / 10), "most breathing pixels have the other course nearby");
+        Assert.That(deepFill, Is.InRange(fill / 10, fill * 45 / 100));
+        Assert.That(lines, Is.GreaterThan(0), "some of the net lies on both courses");
+        Assert.That(lines + breathing, Is.InRange(size * size / 20, size * size * 4 / 10), "the net, both courses together");
+        Assert.That(sparkles, Is.GreaterThan(0).And.LessThan(size * size / 100));
+    }
+
+    /// <summary>
+    /// How many sparkle pixels in a row lie at and to the left of (<paramref name="x"/>, <paramref name="y"/>).
+    /// </summary>
+    private static int RunLength(Color32[] height, int x, int y, int size)
+    {
+        int run = 0;
+        while (run < size && height[y * size + TerrainArt.Wrap(x - run, size)].b >= 128)
+        {
+            run++;
+        }
+
+        return run;
+    }
+
+    /// <summary>
+    /// Whether a breathing pixel within two pixels of (<paramref name="x"/>, <paramref name="y"/>) has a glint phase
+    /// half a period away from <paramref name="code"/>'s, within a step.
+    /// </summary>
+    private static bool HasOppositeCourseNearby(Color32[] height, int x, int y, int size, int code)
+    {
+        for (int dy = -2; dy <= 2; dy++)
+        {
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                int other = height[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)].b;
+                if (other > 0 && other < 128)
+                {
+                    int difference = ((other - code) % 127 + 127) % 127;
+                    if (Math.Abs(difference - 63.5) <= 1.5)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -643,6 +677,16 @@ public class TerrainMaterialRecipeTests
         Assert.That(material.Cells, Is.EqualTo(recipe.CellMode));
         Color32 baseColour = material.BaseColour;
         Assert.That(SameColour(baseColour, textures.BaseColour), Is.True);
+        if (textures.GlintColour.HasValue)
+        {
+            Assert.That(SameColour(material.GlintColour, textures.GlintColour.Value), Is.True, "The glint colour is written too.");
+        }
+
+        if (textures.SparkleColour.HasValue)
+        {
+            Assert.That(SameColour(material.SparkleColour, textures.SparkleColour.Value), Is.True, "The sparkle colour is written too.");
+        }
+
         if (textures.CellField == null)
         {
             return;

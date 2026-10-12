@@ -208,7 +208,8 @@ public static class TerrainMaterialWriter
 
     /// <summary>
     /// Points <paramref name="material"/> at the given textures and writes the base colour, repeat and cell mode
-    /// <paramref name="textures"/> were made for, through its serialized data and without undo (the files they came
+    /// <paramref name="textures"/> were made for, and the glint and sparkle colours when they bring them, through its
+    /// serialized data and without undo (the files they came
     /// from cannot be undone either). Then has the renderers drawing it rebuild, after the editor's current update as
     /// for an inspector change, even when nothing on the material changed, since the textures' pixels may have.
     /// </summary>
@@ -221,6 +222,16 @@ public static class TerrainMaterialWriter
         serialized.FindProperty("repeatCells").intValue = textures.Size / TerrainStyle.PixelsPerCell;
         serialized.FindProperty("cellMode").enumValueIndex = (int)textures.CellMode;
         serialized.FindProperty("baseColour").colorValue = textures.BaseColour;
+        if (textures.GlintColour.HasValue)
+        {
+            serialized.FindProperty("glintColour").colorValue = textures.GlintColour.Value;
+        }
+
+        if (textures.SparkleColour.HasValue)
+        {
+            serialized.FindProperty("sparkleColour").colorValue = textures.SparkleColour.Value;
+        }
+
         serialized.ApplyModifiedPropertiesWithoutUndo();
         material.NotifyChanged();
     }

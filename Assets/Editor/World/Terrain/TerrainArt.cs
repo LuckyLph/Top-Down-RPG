@@ -210,8 +210,8 @@ public static class TerrainArt
     /// <summary>
     /// The height texture's pixels: R the smooth <paramref name="height"/> in [0, 1], G the value of the chip or stone
     /// that owns each pixel (<paramref name="owner"/>, an index into <paramref name="values"/>, negative for none), 0.5
-    /// where none does or when there are no owners, B the pixel's glint phase from <paramref name="glints"/> (0 for no
-    /// glint, else <see cref="GlintByte"/>; 0 everywhere without glints) and A opaque.
+    /// where none does or when there are no owners, B the pixel's glint or sparkle from <paramref name="glints"/> (0 for
+    /// neither, else <see cref="GlintByte"/> or <see cref="SparkleByte"/>; 0 everywhere without glints) and A opaque.
     /// </summary>
     public static Color32[] HeightPixels(double[] height, int[] owner, double[] values, byte[] glints = null)
     {
@@ -227,10 +227,19 @@ public static class TerrainArt
 
     /// <summary>
     /// The height texture's blue channel for a glint at <paramref name="phase"/> of its period (wrapped into [0, 1)):
-    /// 1 plus 254 times the phase, so 0 stays free for no glint, as the terrain shader reads it.
+    /// 1 plus 127 times the phase, from 1 to 127, as the terrain shader reads it; 0 stays free for neither.
     /// </summary>
     public static byte GlintByte(double phase)
     {
-        return (byte)(1 + Math.Min(253, (int)Math.Floor(Wrap(phase, 1) * 254.0)));
+        return (byte)(1 + Math.Min(126, (int)Math.Floor(Wrap(phase, 1) * 127.0)));
+    }
+
+    /// <summary>
+    /// The height texture's blue channel for a sparkle at <paramref name="phase"/> of its period (wrapped into [0, 1)):
+    /// 128 plus 128 times the phase, from 128 to 255, as the terrain shader reads it.
+    /// </summary>
+    public static byte SparkleByte(double phase)
+    {
+        return (byte)(128 + Math.Min(127, (int)Math.Floor(Wrap(phase, 1) * 128.0)));
     }
 }

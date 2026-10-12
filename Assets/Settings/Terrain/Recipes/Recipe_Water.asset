@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab0a1c1470f60c146aee1e36c5bd0155, type: 3}
   m_Name: Recipe_Water
-  m_EditorClassIdentifier: TopDownRPG.Editor::WaterRipplesRecipe
+  m_EditorClassIdentifier: TopDownRPG.Editor::WaterCausticsRecipe
   material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
   seed: 20261018
   repeatCells: 8
@@ -36,64 +36,63 @@ MonoBehaviour:
     amplitude: 0.25
   water:
     serializedVersion: 2
-    rgba: 4288045100
+    rgba: 4288704570
+  deep:
+    serializedVersion: 2
+    rgba: 4288439862
   depthWaves:
-  - x: 1
-    y: 0
-    amplitude: 1
-  - x: 0
-    y: 1
-    amplitude: 0.9
-  - x: 1
-    y: -1
-    amplitude: 0.7
   - x: 2
     y: 1
-    amplitude: 0.45
-  - x: -1
-    y: 3
-    amplitude: 0.35
+    amplitude: 1
+  - x: 1
+    y: -2
+    amplitude: 0.9
   - x: 3
     y: 2
-    amplitude: 0.3
-  tones: 3
-  toneStep: 9
-  ditherWidth: 0.3
-  grit: 1
-  rowsAlongX: 0
-  rowsAlongY: 24
-  wobbleWaves:
-  - x: 2
-    y: 0
-    amplitude: 0.3
-  - x: 4
-    y: 2
-    amplitude: 0.18
-  - x: 6
-    y: -2
-    amplitude: 0.1
-  dashWaves:
-  - x: 4
-    y: 6
-    amplitude: 1
-  - x: 6
-    y: -4
-    amplitude: 0.8
-  - x: 10
-    y: 8
+    amplitude: 0.6
+  - x: -2
+    y: 3
     amplitude: 0.5
-  - x: -8
-    y: 10
-    amplitude: 0.4
-  dashLevel: 0.05
-  coreLevel: 0.35
-  crestDim:
+  deepShare: 0.25
+  cellsAlongXPerCell: 1.75
+  cellsAlongYPerCell: 2.5
+  jitter: 0.85
+  breathe: 1.25
+  warpWaves:
+  - x: 8
+    y: 3
+    amplitude: 2.5
+  - x: -5
+    y: 9
+    amplitude: 2
+  - x: 11
+    y: -6
+    amplitude: 1
+  lineWidth: 0.6
+  widthWaves:
+  - x: 4
+    y: 7
+    amplitude: 1
+  - x: 9
+    y: -3
+    amplitude: 0.7
+  - x: -6
+    y: 5
+    amplitude: 0.5
+  widthVariation: 0.5
+  dropChance: 0.25
+  minPiece: 5
+  net:
     serializedVersion: 2
-    rgba: 4289755712
-  crestBright:
+    rgba: 4290285138
+  knotReach: 1
+  knotShare: 0.2
+  knot:
     serializedVersion: 2
-    rgba: 4291204186
-  glintTrips: 6
-  sparklesPerCell: 1.5
-  jitter: 0.45
-  sparkleChance: 0.5
+    rgba: 4292132480
+  sparkleShare: 0.4
+  sparkleLength: 3
+  sparkleStep: 0.03125
+  sparkle:
+    serializedVersion: 2
+    rgba: 4294112994

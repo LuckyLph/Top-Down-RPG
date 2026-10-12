@@ -203,8 +203,9 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// An animated material's layer row holds its frames per second, glint period and duty and rim swell, then its glint
-    /// colour and swell period; a still material's holds nothing there, so the shader neither glints nor swells it.
+    /// An animated material's layer row holds its frames per second, glint period and duty and rim swell, its glint
+    /// colour and swell period, its sparkle colour and period, and its sparkle duty; a still material's holds nothing
+    /// there, so the shader neither glints, sparkles nor swells it.
     /// </summary>
     [Test]
     public void AnAnimatedMaterial_ReachesItsLayerRow_AndAStillOneLeavesItEmpty()
@@ -218,6 +219,9 @@ public class TerrainBlendLutTests
         settings.FindProperty("glintDuty").floatValue = 0.18f;
         settings.FindProperty("rimSwell").floatValue = 1.5f;
         settings.FindProperty("swellPeriod").floatValue = 4.5f;
+        settings.FindProperty("sparkleColour").colorValue = new Color(0.9f, 1f, 0.95f);
+        settings.FindProperty("sparklePeriod").floatValue = 4f;
+        settings.FindProperty("sparkleDuty").floatValue = 0.25f;
         settings.ApplyModifiedPropertiesWithoutUndo();
 
         Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
@@ -228,6 +232,9 @@ public class TerrainBlendLutTests
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.GlintColumn), Is.EqualTo(Color.clear));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.AnimationColumn), Is.EqualTo(new Color(8f, 3.2f, 0.18f, 1.5f)));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.GlintColumn), Is.EqualTo(new Color(0.8f, 0.9f, 1f, 4.5f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SparkleColumn), Is.EqualTo(new Color(0.9f, 1f, 0.95f, 4f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SparkleTimingColumn), Is.EqualTo(new Color(0.25f, 0f, 0f, 0f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.SparkleColumn), Is.EqualTo(Color.clear));
     }
 
     /// <summary>

@@ -10,6 +10,8 @@
 #define TB_RAMP_COLUMN 5
 #define TB_ANIMATION_COLUMN 4
 #define TB_GLINT_COLUMN 5
+#define TB_SPARKLE_COLUMN 6
+#define TB_SPARKLE_TIMING_COLUMN 7
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
@@ -21,7 +23,8 @@ static const float2 TB_LIGHT = float2(-0.6, 0.8);
 // then a row per layer (its material's shape, interior and height scale), then a row per pair of an upper layer over a
 // lower one or over nothing (its edge in both looks). rect.xy is the world position of control map cell (0, 0),
 // rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array's red and green channels; both looks
-// read its blue channel, the glint phases of animated materials. time is the time animated materials are drawn at.
+// read its blue channel, the glint and sparkle phases of animated materials. time is the time animated materials are
+// drawn at.
 struct TBInputs
 {
     UnityTexture2D control;
@@ -431,24 +434,32 @@ float TBAnimationTime(TBInputs ins, float framesPerSecond)
     return floor(ins.time * framesPerSecond) / framesPerSecond;
 }
 
-// An animated layer's glint at a texel of its textures: where the height texture's blue channel holds a glint phase
-// (1 + 254 times the phase, 0 for none), the albedo lights up with the glint colour for the duty fraction of each
-// glint period, at half strength over the first and last quarter of it. Other layers and texels keep their colour.
+// An animated layer's glint or sparkle at a texel of its textures. The height texture's blue channel holds 0 for
+// neither, 1 + 127 times a glint's phase, or 128 + 128 times a sparkle's phase; the albedo lights up with the glint
+// colour or the sparkle colour for the duty fraction of each of that one's periods, at half strength over the first and
+// last quarter of it. Other layers and texels keep their colour.
 float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
 {
-    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, 1 + (int)m);
+    int row = 1 + (int)m;
+    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, row);
     [branch]
-    if (animation.x > 0.0 && animation.z > 0.0)
+    if (animation.x > 0.0)
     {
-        float phase = LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0;
-        if (phase > 0.5)
+        float code = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0);
+        [branch]
+        if (code > 0.5)
         {
-            float cycle = frac(TBAnimationTime(ins, animation.x) / animation.y + (phase - 1.0) / 254.0);
-            if (cycle < animation.z)
+            bool sparkle = code > 127.5;
+            float4 glint = TBLut(ins, TB_GLINT_COLUMN, row);
+            float4 sparkleLook = TBLut(ins, TB_SPARKLE_COLUMN, row);
+            float phase = sparkle ? (code - 128.0) / 128.0 : (code - 1.0) / 127.0;
+            float period = sparkle ? sparkleLook.a : animation.y;
+            float duty = sparkle ? TBLut(ins, TB_SPARKLE_TIMING_COLUMN, row).x : animation.z;
+            float cycle = frac(TBAnimationTime(ins, animation.x) / period + phase);
+            if (cycle < duty)
             {
-                float along = cycle / animation.z;
-                float3 glint = TBLut(ins, TB_GLINT_COLUMN, 1 + (int)m).rgb;
-                colour = lerp(colour, glint, along < 0.25 || along >= 0.75 ? 0.5 : 1.0);
+                float along = cycle / duty;
+                colour = lerp(colour, sparkle ? sparkleLook.rgb : glint.rgb, along < 0.25 || along >= 0.75 ? 0.5 : 1.0);
             }
         }
     }

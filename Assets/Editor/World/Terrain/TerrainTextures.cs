@@ -3,8 +3,9 @@ using UnityEngine;
 /// <summary>
 /// What a <see cref="TerrainMaterialRecipe"/> generates: the pixels of a material's square textures, row by row from
 /// the bottom like <see cref="Texture2D.SetPixels32"/>, with the base colour and cell mode the material needs to read
-/// them. The cell field, when there is one, keeps the contract the terrain shader reads (Docs/Architecture.md, World
-/// and areas). Plain data: nothing here touches an asset.
+/// them, and for an animated material the glint and sparkle colours its height texture's phases light up with. The
+/// cell field, when there is one, keeps the contract the terrain shader reads (Docs/Architecture.md, World and areas).
+/// Plain data: nothing here touches an asset.
 /// </summary>
 public sealed class TerrainTextures
 {
@@ -12,7 +13,7 @@ public sealed class TerrainTextures
     /// Holds textures of <paramref name="size"/> pixels square; <paramref name="cellField"/> is null for a material
     /// without chips or stones.
     /// </summary>
-    public TerrainTextures(int size, Color32 baseColour, TerrainMaterial.CellMode cellMode, Color32[] albedo, Color32[] cellField, Color32[] height)
+    public TerrainTextures(int size, Color32 baseColour, TerrainMaterial.CellMode cellMode, Color32[] albedo, Color32[] cellField, Color32[] height, Color32? glintColour = null, Color32? sparkleColour = null)
     {
         Size = size;
         BaseColour = baseColour;
@@ -20,6 +21,8 @@ public sealed class TerrainTextures
         Albedo = albedo;
         CellField = cellField;
         Height = height;
+        GlintColour = glintColour;
+        SparkleColour = sparkleColour;
     }
 
     public int Size { get; }
@@ -28,4 +31,6 @@ public sealed class TerrainTextures
     public Color32[] Albedo { get; }
     public Color32[] CellField { get; }
     public Color32[] Height { get; }
+    public Color32? GlintColour { get; }
+    public Color32? SparkleColour { get; }
 }

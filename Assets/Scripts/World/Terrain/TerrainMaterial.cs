@@ -7,8 +7,8 @@ using UnityEngine;
 /// over any material the <see cref="TerrainStyle"/> has no pair override for. Read-only at runtime: renderers copy its
 /// textures and settings and never write it. In the editor, a terrain material recipe generates its textures and writes
 /// their base colour, repeat and cell mode. In the soft look its height texture, times its height scale, moves its
-/// edges. An animated material (water) lights its glint pixels in turn and swells its rims in and out, in the shader
-/// alone, at its frames per second; its edges never move.
+/// edges. An animated material (water) lights its glint and sparkle pixels in turn and swells its rims in and out, in
+/// the shader alone, at its frames per second; its edges never move.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
@@ -34,7 +34,7 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField] private Texture2D albedo;
     [Tooltip("Optional: for every pixel, the offset to its chip's or stone's centre (see Docs/Architecture.md, World and areas). Same size and format as the albedo. Needed unless Cell Mode is None. Written by the material's recipe.")]
     [SerializeField] private Texture2D cellField;
-    [Tooltip("Optional: the height the soft look reads (red a smooth height, green one value per chip or stone), and the glint phases an animated material reads (blue, 0 for no glint). Same size and format as the albedo. Without it the soft look moves this material's edges by nothing and nothing glints. Written by the material's recipe.")]
+    [Tooltip("Optional: the height the soft look reads (red a smooth height, green one value per chip or stone), and the glint and sparkle phases an animated material reads (blue: 0 for neither, 1 to 127 a glint, 128 to 255 a sparkle). Same size and format as the albedo. Without it the soft look moves this material's edges by nothing and nothing glints. Written by the material's recipe.")]
     [SerializeField] private Texture2D height;
     [Tooltip("Cells the textures cover before they repeat. Written by the material's recipe.")]
     [SerializeField, Min(1)] private int repeatCells = 4;
@@ -60,12 +60,18 @@ public class TerrainMaterial : ScriptableObject
     [Header("Animation")]
     [Tooltip("Frames per second of the material's animation (its glints and the swell of its rims), stepped like a sprite animation so every animated pixel changes on the same frames; 0 for a still material.")]
     [SerializeField, Range(0f, MaxFramesPerSecond)] private float framesPerSecond;
-    [Tooltip("Colour a glint pixel lights up with: a pixel whose height texture's blue channel holds a glint phase, which an animated recipe (water's) writes. Dimmer at the start and the end of each glint.")]
+    [Tooltip("Colour a glint pixel lights up with: a pixel whose height texture's blue channel holds a glint phase, which an animated recipe (water's) writes. At half strength over the first and last quarter of each glint. Written by the material's recipe.")]
     [SerializeField] private Color glintColour = Color.white;
     [Tooltip("Seconds between two glints of the same pixel.")]
     [SerializeField, Range(MinPeriod, 30f)] private float glintPeriod = 3f;
     [Tooltip("Fraction of the glint period a glint pixel stays lit.")]
     [SerializeField, Range(0f, 1f)] private float glintDuty = 0.2f;
+    [Tooltip("Colour a sparkle pixel lights up with: a pixel whose height texture's blue channel holds a sparkle phase. Like a glint, on its own colour and timing. Written by the material's recipe.")]
+    [SerializeField] private Color sparkleColour = Color.white;
+    [Tooltip("Seconds between two sparkles of the same pixel.")]
+    [SerializeField, Range(MinPeriod, 30f)] private float sparklePeriod = 4f;
+    [Tooltip("Fraction of the sparkle period a sparkle pixel stays lit.")]
+    [SerializeField, Range(0f, 1f)] private float sparkleDuty = 0.25f;
     [Tooltip("How many pixels further in this material's rims reach at the top of a swell, so a shore's foam washes in and out; 0 for none. The edge itself never moves.")]
     [SerializeField, Range(0f, 4f)] private float rimSwell;
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
@@ -92,6 +98,9 @@ public class TerrainMaterial : ScriptableObject
     public Color GlintColour => glintColour;
     public float GlintPeriod => Mathf.Max(glintPeriod, MinPeriod);
     public float GlintDuty => Mathf.Clamp01(glintDuty);
+    public Color SparkleColour => sparkleColour;
+    public float SparklePeriod => Mathf.Max(sparklePeriod, MinPeriod);
+    public float SparkleDuty => Mathf.Clamp01(sparkleDuty);
     public float RimSwell => Mathf.Max(rimSwell, 0f);
     public float SwellPeriod => Mathf.Max(swellPeriod, MinPeriod);
     public TerrainStyle.EdgeSettings Edge => edge;

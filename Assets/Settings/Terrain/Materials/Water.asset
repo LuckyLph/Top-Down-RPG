@@ -19,15 +19,18 @@ MonoBehaviour:
   outerRadius: 14
   innerRadius: 11
   cellMode: 0
-  baseColour: {r: 0.17254902, g: 0.3764706, b: 0.5882353, a: 1}
+  baseColour: {r: 0.22745098, g: 0.4392157, b: 0.627451, a: 1}
   keepMargin: 1
   cutGap: 0.5
   cutBevel: 18
   heightScale: 1.5
   framesPerSecond: 8
-  glintColour: {r: 0.8392157, g: 0.93333334, b: 0.9647059, a: 1}
-  glintPeriod: 3.2
-  glintDuty: 0.18
+  glintColour: {r: 0.32156864, g: 0.5568628, b: 0.72156864, a: 1}
+  glintPeriod: 2
+  glintDuty: 0.5
+  sparkleColour: {r: 0.8862745, g: 0.9647059, b: 0.9490196, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.25
   rimSwell: 1.5
   swellPeriod: 4.5
   edge:

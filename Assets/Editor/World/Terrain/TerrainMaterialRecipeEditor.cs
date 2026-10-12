@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Inspector of every <see cref="TerrainMaterialRecipe"/>: its settings, previews of what it generates for its seed
 /// (the albedo; the cell field, each chip or stone in its own colour, brighter where its alpha is larger, its centre
-/// pixel white and pixels of no chip dark; the height's smooth red channel in grey, and an animated material's glint
-/// pixels in a hue by their phase), regenerated after every change and after an undo or redo that changed the recipe,
+/// pixel white and pixels of no chip dark; the height's smooth red channel in grey, an animated material's glint
+/// pixels in a hue by their phase and its sparkle pixels white), regenerated after every change and after an undo or redo that changed the recipe,
 /// and Generate, which writes the textures as the material's through <see cref="TerrainMaterialWriter"/> once the
 /// inspector is drawn and names the files it writes.
 /// </summary>
@@ -20,6 +20,7 @@ public sealed class TerrainMaterialRecipeEditor : Editor
 
     private static readonly Color32 NoChipColour = new(28, 30, 34, 255);
     private static readonly Color32 CentreColour = new(255, 255, 255, 255);
+    private static readonly Color32 SparkleColour = new(255, 255, 255, 255);
 
     private TerrainTextures preview;
     private Texture2D albedoPreview;
@@ -159,7 +160,7 @@ public sealed class TerrainMaterialRecipeEditor : Editor
         {
             byte grey = preview.Height[i].r;
             byte glint = preview.Height[i].b;
-            heights[i] = glint > 0 ? (Color32)Color.HSVToRGB((glint - 1) / 254f, 0.7f, 1f) : new Color32(grey, grey, grey, 255);
+            heights[i] = glint == 0 ? new Color32(grey, grey, grey, 255) : glint < 128 ? (Color32)Color.HSVToRGB((glint - 1) / 127f, 0.7f, 1f) : SparkleColour;
         }
 
         Paint(ref heightPreview, size, heights);

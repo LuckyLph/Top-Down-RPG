@@ -36,10 +36,10 @@ MonoBehaviour:
     amplitude: 0.25
   water:
     serializedVersion: 2
-    rgba: 4288704570
+    rgba: 4288702504
   deep:
     serializedVersion: 2
-    rgba: 4288439862
+    rgba: 4288702504
   depthWaves:
   - x: 2
     y: 1
@@ -53,11 +53,11 @@ MonoBehaviour:
   - x: -2
     y: 3
     amplitude: 0.5
-  deepShare: 0.25
+  deepShare: 0.35
   cellsAlongXPerCell: 1.75
   cellsAlongYPerCell: 2.5
   jitter: 0.85
-  breathe: 1.25
+  breathe: 1
   warpWaves:
   - x: 8
     y: 3
@@ -68,7 +68,7 @@ MonoBehaviour:
   - x: 11
     y: -6
     amplitude: 1
-  lineWidth: 0.6
+  lineWidth: 0.55
   widthWaves:
   - x: 4
     y: 7
@@ -81,15 +81,21 @@ MonoBehaviour:
     amplitude: 0.5
   widthVariation: 0.5
   dropChance: 0.25
+  deepDropChance: 0.7
+  junctionReach: 1.6
   minPiece: 5
   net:
     serializedVersion: 2
-    rgba: 4290285138
+    rgba: 4291335244
+  haloWidth: 2
+  halo:
+    serializedVersion: 2
+    rgba: 4289755188
   knotReach: 1
   knotShare: 0.2
   knot:
     serializedVersion: 2
-    rgba: 4292132480
+    rgba: 4293711510
   sparkleShare: 0.4
   sparkleLength: 3
   sparkleStep: 0.03125

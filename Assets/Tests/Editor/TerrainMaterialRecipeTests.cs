@@ -452,10 +452,10 @@ public class TerrainMaterialRecipeTests
 
     /// <summary>
     /// Water's net breathes between two courses and sparkles at some knots. A pixel with a glint phase shows the plain
-    /// fill (water or deep) until it lights up with the net's colour, which the textures bring as their glint colour,
-    /// and most of them have a pixel of the other course nearby whose phase is half a period away, so each edge always
-    /// shows one course. Pixels drawn as net or knot carry no glint. Sparkles are short horizontal runs on knots whose
-    /// phases step along them. Deep cells and the net's two courses each take a fair share of the texture.
+    /// fill (water, deep or the lines' glow) until it lights up with the net's colour, which the textures bring as their
+    /// glint colour, and most of them have a pixel of the other course nearby whose phase is half a period away, so each
+    /// edge always shows one course. Pixels drawn as net or knot carry no glint. Sparkles are short horizontal runs on knots whose
+    /// phases step along them. The glow and the net's two courses each take a fair share of the texture.
     /// </summary>
     [Test]
     public void WaterCaustics_BreatheBetweenTwoCourses_AndSparkleAtKnots()
@@ -464,6 +464,7 @@ public class TerrainMaterialRecipeTests
         SerializedObject settings = new(recipe);
         Color32 water = settings.FindProperty("water").colorValue;
         Color32 deep = settings.FindProperty("deep").colorValue;
+        Color32 halo = settings.FindProperty("halo").colorValue;
         Color32 net = settings.FindProperty("net").colorValue;
         Color32 knot = settings.FindProperty("knot").colorValue;
         int sparkleLength = settings.FindProperty("sparkleLength").intValue;
@@ -476,7 +477,7 @@ public class TerrainMaterialRecipeTests
         Assert.That(textures.SparkleColour.HasValue, Is.True);
         int breathing = 0;
         int paired = 0;
-        int deepFill = 0;
+        int glowFill = 0;
         int fill = 0;
         int lines = 0;
         int sparkles = 0;
@@ -487,11 +488,11 @@ public class TerrainMaterialRecipeTests
                 int i = y * size + x;
                 Color32 colour = textures.Albedo[i];
                 int code = textures.Height[i].b;
-                bool isFill = SameColour(colour, water) || SameColour(colour, deep);
+                bool isFill = SameColour(colour, water) || SameColour(colour, deep) || SameColour(colour, halo);
                 bool isLine = SameColour(colour, net) || SameColour(colour, knot);
                 Assert.That(isFill || isLine, Is.True, $"({x}, {y}) is neither fill nor net");
                 fill += isFill ? 1 : 0;
-                deepFill += SameColour(colour, deep) ? 1 : 0;
+                glowFill += SameColour(colour, halo) ? 1 : 0;
                 lines += isLine ? 1 : 0;
                 if (code >= 128)
                 {
@@ -516,7 +517,7 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(breathing, Is.GreaterThan(size * size / 20));
         Assert.That(paired, Is.GreaterThan(breathing * 6 / 10), "most breathing pixels have the other course nearby");
-        Assert.That(deepFill, Is.InRange(fill / 10, fill * 45 / 100));
+        Assert.That(glowFill, Is.InRange(fill / 10, fill * 6 / 10), "the glow around the lines");
         Assert.That(lines, Is.GreaterThan(0), "some of the net lies on both courses");
         Assert.That(lines + breathing, Is.InRange(size * size / 20, size * size * 4 / 10), "the net, both courses together");
         Assert.That(sparkles, Is.GreaterThan(0).And.LessThan(size * size / 100));

@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 
 /// <summary>
@@ -11,8 +12,9 @@ using UnityEngine.Tilemaps;
 /// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
 /// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
 /// forest; the same seed gives the same layout; and <see cref="AreaLayoutWriter"/> writes a layout into a scene so that
-/// the navigation grid blocks exactly the props' cells, and so that a <see cref="TerrainBlendRenderer"/> over the
-/// layers follows a layout written over another.
+/// the navigation grid blocks exactly the props' cells, so that a <see cref="TerrainBlendRenderer"/> over the layers
+/// follows a layout written over another, and so that the layers' navigation priorities follow that renderer's draw
+/// order.
 /// </summary>
 public class AreaGenerationTests
 {
@@ -612,6 +614,61 @@ public class AreaGenerationTests
             }
 
             Assert.That(emptied, Is.GreaterThan(0), "The second layout leaves some of the first one's cells empty.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(renderer);
+        }
+    }
+
+    /// <summary>
+    /// In an area drawn by a terrain renderer whose layers are in another order than the generator's (stone drawn under
+    /// gravel), the writer gives each layer's navigation source the layer's place in the renderer, its draw order,
+    /// rather than the generator's priority, so writing puts the two back in step; until then the renderer reports
+    /// the mismatch and still draws. The renderer is removed before <see cref="TearDown"/> reverts the writer.
+    /// </summary>
+    [Test]
+    public void TheWriter_TakesNavigationPrioritiesFromATerrainRenderersDrawOrder()
+    {
+        Grid grid = CreateAreaWithGrass(villageForest);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(3)), Is.True);
+        IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
+        Assert.That(layers.Count, Is.EqualTo(3));
+        int[] drawOrder = { 0, 2, 1 };
+        TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
+        TerrainBlendRenderer.Layer[] rendererLayers = new TerrainBlendRenderer.Layer[layers.Count];
+        NavigationTerrainSource2D[] sources = new NavigationTerrainSource2D[layers.Count];
+        for (int i = 0; i < layers.Count; i++)
+        {
+            Transform layer = grid.transform.Find(layers[drawOrder[i]].TilemapName);
+            rendererLayers[i] = new TerrainBlendRenderer.Layer(layer.GetComponent<Tilemap>(), materials[drawOrder[i]]);
+            sources[i] = layer.GetComponent<NavigationTerrainSource2D>();
+            Assert.That(sources[i].Priority, Is.EqualTo(layers[drawOrder[i]].NavigationPriority));
+        }
+
+        TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        try
+        {
+            for (int i = 1; i < layers.Count; i++)
+            {
+                LogAssert.Expect(LogType.Error, $"Grid: ground layer {i} ({layers[drawOrder[i]].TilemapName}) has navigation priority {layers[drawOrder[i]].NavigationPriority}, but a ground layer's navigation priority is its place in the layers, its draw order: {i}. Set it from the draw order in the TerrainBlendRenderer inspector.");
+            }
+
+            renderer.Configure(TestTerrainStyle.Create(created), rendererLayers);
+            Assert.That(renderer.ControlMap, Is.Not.Null, "A mismatch is reported but the ground is still drawn.");
+
+            Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                Assert.That(sources[i].Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), layers[drawOrder[i]].TilemapName);
+            }
+
+            Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+            renderer.RunScheduledRebuild();
+            Assert.That(renderer.ControlMap, Is.Not.Null);
         }
         finally
         {

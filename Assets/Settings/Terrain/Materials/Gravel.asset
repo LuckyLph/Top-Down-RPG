@@ -23,6 +23,7 @@ MonoBehaviour:
   keepMargin: 0
   cutGap: 0.5
   cutBevel: 18
+  heightScale: 2
   edge:
     rimWidth: 1.75
     rim:
@@ -61,3 +62,6 @@ MonoBehaviour:
     shadowAlpha: 0.32
     shadowWidth: 1
     tuftHeight: 0
+    softBandWidth: 1.5
+    softBandColour: {r: 0.49411765, g: 0.40784314, b: 0.29803923, a: 1}
+    softWholeStones: 0

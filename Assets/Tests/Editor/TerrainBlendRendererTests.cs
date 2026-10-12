@@ -14,9 +14,14 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// changes once and stops listening; the chunks cover the layers and follow the bounds as they grow and shrink;
 /// disabling unsubscribes from everything and destroys what was built; nothing runs or allocates per frame while no
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
-/// the new one, and fixing a material rebuilds a renderer that could not build; the style and materials are never
-/// written; a layer without a material, a texture of the wrong size and a tilemap listed twice stop the build, and a
-/// broken material drawn by two layers is reported once. Each test builds its own style and materials with
+/// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
+/// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
+/// layer, and a material without a height still builds; the style, materials and textures are never written; a layer
+/// without a material, a texture of the wrong size and a tilemap listed twice stop the build, and a broken material
+/// drawn by two layers is reported once; a layer whose navigation priority is not its draw order is reported while the
+/// ground is still drawn, a change to a layer's navigation source (one added after the build included, which starts
+/// with its layer's priority) rebuilds, the inspector's sync gives each layer's source its draw order with undo, and
+/// only a renderer above a tilemap sets its priority. Each test builds its own style and materials with
 /// <see cref="TestTerrainStyle"/>.
 /// </summary>
 public class TerrainBlendRendererTests
@@ -91,8 +96,8 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Enabling builds the control map, the arrays (keeping no copy in memory), the lookup texture, the material and
-    /// the chunks, and waits for no render.
+    /// Enabling builds the control map, the albedo, cell field and height arrays (a slice per layer, keeping no copy in
+    /// memory), the lookup texture, the material and the chunks, in the crisp look, and waits for no render.
     /// </summary>
     [Test]
     public void Enabling_BuildsEverything()
@@ -103,8 +108,13 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.ControlMap.Texture, Is.Not.Null);
         Assert.That(renderer.AlbedoArray.depth, Is.EqualTo(3));
         Assert.That(renderer.FieldArray.depth, Is.EqualTo(3));
+        Assert.That(renderer.HeightArray.depth, Is.EqualTo(3));
         Assert.That(renderer.AlbedoArray.isReadable, Is.False);
         Assert.That(renderer.FieldArray.isReadable, Is.False);
+        Assert.That(renderer.HeightArray.isReadable, Is.False);
+        Assert.That(renderer.RuntimeMaterial.GetTexture("_HeightArray"), Is.SameAs(renderer.HeightArray));
+        Assert.That(renderer.Mode, Is.EqualTo(TerrainBlendRenderer.BlendMode.Crisp));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(SoftKeyword(renderer)), Is.False);
         Assert.That(renderer.Lut, Is.Not.Null);
         Assert.That(renderer.RuntimeMaterial.shader, Is.SameAs(style.Shader));
         Assert.That(renderer.RuntimeMaterial.GetTexture("_ControlMap"), Is.SameAs(renderer.ControlMap.Texture));
@@ -299,8 +309,8 @@ public class TerrainBlendRendererTests
 
     /// <summary>
     /// Disabling stops following tile changes, render callbacks (even with an upload pending), undos and style and
-    /// material changes, and destroys the control map's texture, the arrays, the lookup texture, the material, the chunk meshes
-    /// and the chunk objects.
+    /// material changes, and destroys the control map's texture, the albedo, cell field and height arrays, the lookup
+    /// texture, the material, the chunk meshes and the chunk objects.
     /// </summary>
     [Test]
     public void Disabling_UnsubscribesFromEverything_AndDestroysWhatWasBuilt()
@@ -308,7 +318,7 @@ public class TerrainBlendRendererTests
         TerrainBlendRenderer renderer = CreateRenderer();
         PaintWithUndo(layers[2], new Vector3Int(1, 1, 0));
         Assert.That(renderer.IsFlushScheduled, Is.True);
-        List<Object> built = new() { renderer.ControlMap.Texture, renderer.AlbedoArray, renderer.FieldArray, renderer.Lut, renderer.RuntimeMaterial };
+        List<Object> built = new() { renderer.ControlMap.Texture, renderer.AlbedoArray, renderer.FieldArray, renderer.HeightArray, renderer.Lut, renderer.RuntimeMaterial };
         foreach (MeshRenderer chunk in renderer.Chunks)
         {
             built.Add(chunk.gameObject);
@@ -331,11 +341,99 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.IsRebuildScheduled, Is.False, "A disabled renderer no longer follows its style or materials.");
         Assert.That(renderer.IsFlushScheduled, Is.False);
         Assert.That(renderer.ControlMap, Is.Null);
+        Assert.That(renderer.HeightArray, Is.Null);
         Assert.That(renderer.Chunks, Is.Empty);
         foreach (Object created in built)
         {
             Assert.That(created == null, Is.True, $"{created} was not destroyed.");
         }
+    }
+
+    /// <summary>
+    /// Setting the mode to soft enables the soft keyword on the runtime material at once, in edit mode; a rebuild
+    /// keeps it on the new material, and setting it back to crisp clears it again, also across a rebuild.
+    /// </summary>
+    [Test]
+    public void TheMode_SetsAndClearsTheSoftKeyword_AcrossRebuilds()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        LocalKeyword soft = SoftKeyword(renderer);
+        Assert.That(soft.isValid, Is.True);
+
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Soft;
+
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(soft), Is.True);
+        Material before = renderer.RuntimeMaterial;
+        renderer.Rebuild();
+        Assert.That(renderer.RuntimeMaterial, Is.Not.SameAs(before));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(soft), Is.True, "A rebuild keeps the soft look.");
+
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
+
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(soft), Is.False);
+        renderer.Rebuild();
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(soft), Is.False);
+    }
+
+    /// <summary>
+    /// Flipping the mode, from code or through a serialized object as the inspector does, only switches the keyword:
+    /// it schedules no rebuild, keeps the material, arrays and chunks, and allocates nothing. A change to a field the
+    /// build reads still schedules one.
+    /// </summary>
+    [Test]
+    public void FlippingTheMode_SchedulesNoRebuild_AndAllocatesNothing()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        LocalKeyword soft = SoftKeyword(renderer);
+        Material material = renderer.RuntimeMaterial;
+        Texture2DArray heights = renderer.HeightArray;
+        MeshRenderer chunk = renderer.Chunks[0];
+        SerializedObject serialized = new(renderer);
+
+        serialized.FindProperty("mode").enumValueIndex = (int)TerrainBlendRenderer.BlendMode.Soft;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        Assert.That(renderer.Mode, Is.EqualTo(TerrainBlendRenderer.BlendMode.Soft));
+        Assert.That(renderer.IsRebuildScheduled, Is.False);
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(soft), Is.True);
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Soft;
+        Assert.That(() =>
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
+                renderer.Mode = TerrainBlendRenderer.BlendMode.Soft;
+            }
+        }, Is.Not.AllocatingGCMemory());
+        Assert.That(renderer.IsRebuildScheduled, Is.False);
+        Assert.That(renderer.RuntimeMaterial, Is.SameAs(material));
+        Assert.That(renderer.HeightArray, Is.SameAs(heights));
+        Assert.That(renderer.Chunks[0], Is.SameAs(chunk));
+
+        serialized.Update();
+        serialized.FindProperty("sortingOrder").intValue = 3;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True, "A change the build reads rebuilds.");
+    }
+
+    /// <summary>
+    /// A material without a height texture builds: its slice of the height array is left empty, and the lookup
+    /// texture gives it a height scale of 0, so the soft look moves its edges by nothing.
+    /// </summary>
+    [Test]
+    public void AMaterialWithoutAHeight_BuildsWithAZeroHeightScale()
+    {
+        materials[0] = TerrainMaterial.Create("Grass", materials[0].Albedo, null, 4, TerrainMaterial.CellMode.None, Color.gray, new TerrainStyle.EdgeSettings(), null, 2f);
+        createdObjects.Add(materials[0]);
+
+        TerrainBlendRenderer renderer = CreateRenderer();
+
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.HeightArray.depth, Is.EqualTo(3));
+        Assert.That(renderer.Lut.GetPixel(3, 1).r, Is.EqualTo(0f));
+        Assert.That(renderer.Lut.GetPixel(3, 2).r, Is.EqualTo(TerrainMaterial.DefaultHeightScale));
     }
 
     /// <summary>
@@ -480,8 +578,8 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// Building, patching, rebuilding and disabling leave the style, the materials and their textures exactly as they
-    /// were.
+    /// Building, patching, switching the look, rebuilding and disabling leave the style, the materials and their
+    /// textures exactly as they were.
     /// </summary>
     [Test]
     public void TheStyleAndMaterials_AreNeverModified()
@@ -498,12 +596,15 @@ public class TerrainBlendRendererTests
 
         Color32[] albedoBefore = materials[1].Albedo.GetPixels32();
         Color32[] fieldBefore = materials[1].CellField.GetPixels32();
+        Color32[] heightBefore = materials[1].Height.GetPixels32();
 
         TerrainBlendRenderer renderer = CreateRenderer();
         layers[1].SetTile(new Vector3Int(3, 3, 0), tile);
         renderer.FlushPendingChanges();
         renderer.SetDebugView(true);
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Soft;
         renderer.Rebuild();
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
         renderer.enabled = false;
 
         for (int i = 0; i < assets.Count; i++)
@@ -514,6 +615,7 @@ public class TerrainBlendRendererTests
 
         Assert.That(materials[1].Albedo.GetPixels32(), Is.EqualTo(albedoBefore));
         Assert.That(materials[1].CellField.GetPixels32(), Is.EqualTo(fieldBefore));
+        Assert.That(materials[1].Height.GetPixels32(), Is.EqualTo(heightBefore));
     }
 
     /// <summary>
@@ -563,6 +665,152 @@ public class TerrainBlendRendererTests
         root.SetActive(true);
 
         Assert.That(renderer.ControlMap, Is.Null);
+    }
+
+    /// <summary>
+    /// A layer whose tilemap's navigation source has another priority than its index, its draw order, logs an error,
+    /// and the ground is still drawn, since the drawing never reads the priority.
+    /// </summary>
+    [Test]
+    public void ALayerWhoseNavigationPriorityIsNotItsDrawOrder_IsReported_AndStillDrawn()
+    {
+        AddSources(0, 1, 5);
+
+        LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layer 2 (Stone) has navigation priority 5, but a ground layer's navigation priority is its place in the layers, its draw order: 2. Set it from the draw order in the TerrainBlendRenderer inspector.");
+        TerrainBlendRenderer renderer = CreateRenderer();
+
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.Chunks, Is.Not.Empty);
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.False);
+    }
+
+    /// <summary>
+    /// A change to a layer's navigation source through a serialized object schedules a rebuild, which reports a
+    /// priority that is no longer the layer's draw order and still draws.
+    /// </summary>
+    [Test]
+    public void ChangingALayersNavigationPriority_RebuildsAndReportsAMismatch()
+    {
+        NavigationTerrainSource2D[] sources = AddSources(0, 1, 2);
+        TerrainBlendRenderer renderer = CreateRenderer();
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+
+        SerializedObject serialized = new(sources[2]);
+        serialized.FindProperty("priority").intValue = 0;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layer 2 (Stone) has navigation priority 0, but a ground layer's navigation priority is its place in the layers, its draw order: 2. Set it from the draw order in the TerrainBlendRenderer inspector.");
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// A navigation source added to a layer's tilemap after the renderer was built starts with that layer's priority,
+    /// and a later change to it reaches the renderer, which rebuilds and reports the mismatch.
+    /// </summary>
+    [Test]
+    public void ANavigationSourceAddedLater_StartsInStep_AndItsChangesReachTheRenderer()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+
+        NavigationTerrainSource2D stone = layers[2].gameObject.AddComponent<NavigationTerrainSource2D>();
+
+        Assert.That(stone.Priority, Is.EqualTo(2));
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        renderer.RunScheduledRebuild();
+        SerializedObject serialized = new(stone);
+        serialized.FindProperty("priority").intValue = 0;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        LogAssert.Expect(LogType.Error, "TerrainBlendGrid: ground layer 2 (Stone) has navigation priority 0, but a ground layer's navigation priority is its place in the layers, its draw order: 2. Set it from the draw order in the TerrainBlendRenderer inspector.");
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.False);
+    }
+
+    /// <summary>
+    /// After the layers are reordered (stone moved under gravel), the inspector's sync gives each layer's navigation
+    /// source its new index, as one undo step, and the renderer builds with gravel drawn on top; the source's inspector
+    /// finds the renderer and the layer that set its priority. The renderer is disabled before the undo, which would
+    /// otherwise rebuild it and report the restored priorities as out of step.
+    /// </summary>
+    [Test]
+    public void TheInspectorsSync_GivesEachLayerItsDrawOrderAsPriority()
+    {
+        NavigationTerrainSource2D[] sources = AddSources(0, 1, 2);
+        TerrainBlendRenderer renderer = CreateRenderer();
+        SerializedObject serialized = new(renderer);
+        serialized.FindProperty("layers").MoveArrayElement(2, 1);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.False);
+
+        Undo.IncrementCurrentGroup();
+        int changed = TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
+
+        Assert.That(changed, Is.EqualTo(2));
+        Assert.That(sources[0].Priority, Is.EqualTo(0));
+        Assert.That(sources[2].Priority, Is.EqualTo(1), "Stone is now layer 1.");
+        Assert.That(sources[1].Priority, Is.EqualTo(2), "Gravel is now layer 2, drawn on top.");
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.Layers[2].Tilemap, Is.SameAs(layers[1]));
+        Assert.That(TerrainBlendRenderer.FindLayerDrawing(layers[1], out int layer), Is.SameAs(renderer));
+        Assert.That(layer, Is.EqualTo(2));
+
+        renderer.enabled = false;
+        Undo.PerformUndo();
+
+        Assert.That(sources[2].Priority, Is.EqualTo(2));
+        Assert.That(sources[1].Priority, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// Only a renderer above a tilemap that lists it sets its priority: a tilemap the renderer does not list, and one it
+    /// lists from outside its own hierarchy, are not drawn by it as far as navigation goes, so the renderer does not
+    /// check their sources, the sync leaves them alone and their inspectors keep the priority editable.
+    /// </summary>
+    [Test]
+    public void OnlyARendererAboveATilemap_SetsItsPriority()
+    {
+        GameObject outside = Track(new GameObject("Outside", typeof(Grid)));
+        GameObject outsideLayer = new("Sand", typeof(Tilemap));
+        outsideLayer.transform.SetParent(outside.transform);
+        Tilemap sand = outsideLayer.GetComponent<Tilemap>();
+        sand.SetTile(new Vector3Int(3, 3, 0), tile);
+        NavigationTerrainSource2D sandSource = outsideLayer.AddComponent<NavigationTerrainSource2D>();
+        sandSource.Configure(null, 7);
+        NavigationTerrainSource2D stone = layers[2].gameObject.AddComponent<NavigationTerrainSource2D>();
+        stone.Configure(null, 7);
+        TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[1], materials[1]), new TerrainBlendRenderer.Layer(sand, materials[2]));
+        root.SetActive(true);
+
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(TerrainBlendRenderer.FindLayerDrawing(layers[2], out int layer), Is.Null);
+        Assert.That(layer, Is.EqualTo(-1));
+        Assert.That(TerrainBlendRenderer.FindLayerDrawing(sand, out _), Is.Null);
+        Assert.That(renderer.NavigationSourceOf(2), Is.Null);
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        Assert.That(TerrainBlendRendererEditor.SyncNavigationPriorities(renderer), Is.EqualTo(0));
+        Assert.That(sandSource.Priority, Is.EqualTo(7));
+    }
+
+    /// <summary>
+    /// Adds a navigation source to each layer tilemap, in order, with the given priorities.
+    /// </summary>
+    private NavigationTerrainSource2D[] AddSources(params int[] priorities)
+    {
+        NavigationTerrainSource2D[] sources = new NavigationTerrainSource2D[priorities.Length];
+        for (int i = 0; i < priorities.Length; i++)
+        {
+            sources[i] = layers[i].gameObject.AddComponent<NavigationTerrainSource2D>();
+            sources[i].Configure(null, priorities[i]);
+        }
+
+        return sources;
     }
 
     /// <summary>
@@ -653,6 +901,14 @@ public class TerrainBlendRendererTests
             Object.DestroyImmediate(target);
             Object.DestroyImmediate(cameraObject);
         }
+    }
+
+    /// <summary>
+    /// The soft look's keyword on the renderer's shader.
+    /// </summary>
+    private static LocalKeyword SoftKeyword(TerrainBlendRenderer renderer)
+    {
+        return new LocalKeyword(renderer.RuntimeMaterial.shader, "_TERRAIN_SOFT");
     }
 
     /// <summary>

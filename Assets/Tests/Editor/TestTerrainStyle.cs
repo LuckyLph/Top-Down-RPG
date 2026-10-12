@@ -5,8 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// Builds terrain styles and materials in memory for tests, with <see cref="TerrainStyle.Create"/>,
-/// <see cref="TerrainMaterial.Create"/> and fresh textures, using the project's terrain shader, which is only read.
-/// Every object it creates is added to the caller's list, for the caller to destroy.
+/// <see cref="TerrainMaterial.Create"/> and fresh textures (albedo, height and, with chips or stones, cell field),
+/// using the project's terrain shader, which is only read. Every object it creates is added to the caller's list, for
+/// the caller to destroy.
 /// </summary>
 public static class TestTerrainStyle
 {
@@ -39,14 +40,15 @@ public static class TestTerrainStyle
     }
 
     /// <summary>
-    /// A material named <paramref name="name"/> with a fresh 128 px albedo, a fresh cell field when
-    /// <paramref name="mode"/> needs one, and a default edge.
+    /// A material named <paramref name="name"/> with a fresh 128 px albedo and height (flat, at half height), a fresh
+    /// cell field when <paramref name="mode"/> needs one, and a default edge.
     /// </summary>
     public static TerrainMaterial PlainMaterial(string name, TerrainMaterial.CellMode mode, List<Object> created)
     {
         Texture2D albedo = CreateTexture(name + " albedo", new Color32(90, 140, 60, 255), created);
         Texture2D field = mode == TerrainMaterial.CellMode.None ? null : CreateTexture(name + " field", new Color32(128, 128, 128, 0), created);
-        TerrainMaterial material = TerrainMaterial.Create(name, albedo, field, 4, mode, Color.gray, new TerrainStyle.EdgeSettings());
+        Texture2D height = CreateTexture(name + " height", new Color32(128, 128, 0, 255), created);
+        TerrainMaterial material = TerrainMaterial.Create(name, albedo, field, 4, mode, Color.gray, new TerrainStyle.EdgeSettings(), height);
         created.Add(material);
         return material;
     }

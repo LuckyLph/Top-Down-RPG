@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// The look of the blended ground (Docs/TerrainBlending.md): the terrain shader, the settings every edge shares, and
 /// the edges that pairs of an upper <see cref="TerrainMaterial"/> over a lower one (or over nothing) draw in place of
-/// the upper material's default edge. A <see cref="TerrainBlendRenderer"/>'s layers each name their own material.
-/// Read-only at runtime: the renderer builds its runtime material and textures from it and never writes it.
+/// the upper material's default edge, in the crisp look and in the soft one. A <see cref="TerrainBlendRenderer"/>'s
+/// layers each name their own material. Read-only at runtime: the renderer builds its runtime material and textures
+/// from it and never writes it.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Style", fileName = "TerrainStyle")]
 public class TerrainStyle : ScriptableObject
@@ -14,13 +15,16 @@ public class TerrainStyle : ScriptableObject
     public const int PixelsPerCell = 32;
 
     /// <summary>
-    /// How an upper material's edge is drawn over what lies under it, from the outside in: a translucent shadow, an
-    /// outline (or the rim's outer colour) on the edge pixel, then the rim over the interior, with optional tufts
-    /// growing out of the edge.
+    /// How an upper material's edge is drawn over what lies under it. Crisp look, from the outside in: a translucent
+    /// shadow, an outline (or the rim's outer colour) on the edge pixel, then the rim over the interior, with optional
+    /// tufts growing out of the edge. Soft look: the same edge pixel and rim, unless a band of one colour replaces both,
+    /// or, over a material with cut stones, whole stones make the edge.
     /// </summary>
     [Serializable]
     public class EdgeSettings
     {
+        public const float MaxSoftBandWidth = 4f;
+
         [Tooltip("Width in pixels of the band inside the edge drawn with the rim gradient; 0 for none.")]
         [SerializeField, Range(0f, 15f)] private float rimWidth = 1.5f;
         [Tooltip("The rim from the edge (left) to its inner end (right). Alpha is how much of the material's interior it covers. Its left end also fills the edge pixel when no outline is drawn.")]
@@ -34,6 +38,12 @@ public class TerrainStyle : ScriptableObject
         [SerializeField, Range(0f, 4f)] private float shadowWidth = 1f;
         [Tooltip("Height in pixels of the tufts (spikes) that grow out of the edge, drawn with its outline and rim and always attached to it; 0 for none.")]
         [SerializeField, Range(0f, 6f)] private float tuftHeight;
+        [Tooltip("Soft look: width in pixels of a band of one colour inside the edge, drawn in place of the outline and the rim; 0 keeps the outline and the rim as in the crisp look.")]
+        [SerializeField, Range(0f, MaxSoftBandWidth)] private float softBandWidth;
+        [Tooltip("Soft look: the band's colour. A material with a cell field shades it per pixel by the field's grit, as it shades its base colour.")]
+        [SerializeField] private Color softBandColour = Color.gray;
+        [Tooltip("Soft look, over a material with cut stones: each stone is drawn whole or not at all, kept where its centre, moved by its own height (the height texture's green channel times the material's height scale), lies the keep margin inside the edge, so whole cobbles make the edge. No band or rim is drawn there.")]
+        [SerializeField] private bool softWholeStones;
 
         /// <summary>
         /// Creates default settings, for Unity serialization and the inspector list.
@@ -45,7 +55,7 @@ public class TerrainStyle : ScriptableObject
         /// <summary>
         /// Creates settings with every value given, for tests.
         /// </summary>
-        internal EdgeSettings(float rimWidth, Gradient rim, bool drawOutline, Color outlineColour, Color shadowColour, float shadowAlpha, float shadowWidth, float tuftHeight = 0f)
+        internal EdgeSettings(float rimWidth, Gradient rim, bool drawOutline, Color outlineColour, Color shadowColour, float shadowAlpha, float shadowWidth, float tuftHeight = 0f, float softBandWidth = 0f, Color softBandColour = default, bool softWholeStones = false)
         {
             this.tuftHeight = tuftHeight;
             this.rimWidth = rimWidth;
@@ -55,6 +65,9 @@ public class TerrainStyle : ScriptableObject
             this.shadowColour = shadowColour;
             this.shadowAlpha = shadowAlpha;
             this.shadowWidth = shadowWidth;
+            this.softBandWidth = softBandWidth;
+            this.softBandColour = softBandColour;
+            this.softWholeStones = softWholeStones;
         }
 
         public float RimWidth => rimWidth;
@@ -64,6 +77,9 @@ public class TerrainStyle : ScriptableObject
         public float ShadowAlpha => shadowAlpha;
         public float ShadowWidth => shadowWidth;
         public float TuftHeight => tuftHeight;
+        public float SoftBandWidth => Mathf.Clamp(softBandWidth, 0f, MaxSoftBandWidth);
+        public Color SoftBandColour => softBandColour;
+        public bool SoftWholeStones => softWholeStones;
 
         /// <summary>
         /// The rim's colour at <paramref name="position"/> across it, from 0 at the edge to 1 at its inner end; alpha

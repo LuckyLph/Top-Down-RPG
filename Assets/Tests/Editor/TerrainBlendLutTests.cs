@@ -7,8 +7,10 @@ using UnityEngine.TestTools;
 /// <summary>
 /// Tests for <see cref="TerrainBlendLut"/>, the terrain style and materials as shader data: a pair override replaces
 /// the upper material's default edge for its own pair of material assets only, one whose lower material is missing is
-/// not taken for one over nothing, layers find their materials' rows whatever the order, and the rim is sampled every
-/// half pixel up to its width.
+/// not taken for one over nothing, layers find their materials' rows whatever the order, the rim is sampled every half
+/// pixel up to its width, the soft look's height scale (held to its bound), band and whole stones reach their rows, and
+/// the project style's stone over gravel override changes that pair's row only. The project's style and materials are
+/// only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -145,6 +147,118 @@ public class TerrainBlendLutTests
         Assert.That(texels[ramp + 2], Is.EqualTo(Color.blue));
         Assert.That(texels[ramp + 3], Is.EqualTo(Color.blue));
         Assert.That(texels[ramp + 4], Is.EqualTo(Color.clear));
+    }
+
+    /// <summary>
+    /// Each layer row holds its material's soft height scale, 0 without a height texture and held to
+    /// <see cref="TerrainMaterial.MaxHeightScale"/>; each pair row holds the soft band's colour and width; whole stones
+    /// are marked on the pair and on the upper layer's row only where the upper material has cut stones.
+    /// </summary>
+    [Test]
+    public void TheSoftSettings_ReachTheLayerAndPairRows()
+    {
+        Texture2D height = Track(new Texture2D(4, 4, TextureFormat.RGBA32, false, true));
+        Color dirt = new(0.5f, 0.4f, 0.3f);
+        TerrainMaterial grass = Track(TerrainMaterial.Create("Grass", null, null, 4, TerrainMaterial.CellMode.None, Color.gray, Edge(0.1f, 1f), null, 2f));
+        TerrainMaterial gravel = Track(TerrainMaterial.Create("Gravel", null, null, 4, TerrainMaterial.CellMode.WholeChips, Color.gray,
+            new TerrainStyle.EdgeSettings(1.75f, new Gradient(), true, Color.black, Color.black, 0.3f, 1f, 0f, 1.5f, dirt, true), height, 1.25f));
+        TerrainMaterial stone = Track(TerrainMaterial.Create("Stone", null, null, 4, TerrainMaterial.CellMode.CutStones, Color.gray, Edge(0.3f, 1.5f), height, 9f));
+        TerrainStyle style = Style(new TerrainStyle.PairOverride(stone, gravel,
+            new TerrainStyle.EdgeSettings(0.75f, new Gradient(), false, Color.black, Color.black, 0.28f, 1f, 0f, 0f, Color.gray, true)));
+
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, gravel, stone });
+
+        Assert.That(LayerTexel(texels, 0, 3).r, Is.EqualTo(0f), "Grass has no height texture.");
+        Assert.That(LayerTexel(texels, 1, 3).r, Is.EqualTo(1.25f));
+        Assert.That(LayerTexel(texels, 2, 3).r, Is.EqualTo(TerrainMaterial.MaxHeightScale), "Stone's 9 px is held to the bound.");
+        Assert.That(PairTexel(texels, 3, 1, 0, 4), Is.EqualTo(new Color(dirt.r, dirt.g, dirt.b, 1.5f)));
+        Assert.That(PairTexel(texels, 3, 2, 1, 2).a, Is.EqualTo(1f), "Stone over gravel shows whole stones.");
+        Assert.That(PairTexel(texels, 3, 2, 0, 2).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 2, -1, 2).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 1, 0, 2).a, Is.EqualTo(0f), "Gravel has chips, not cut stones.");
+        Assert.That(LayerTexel(texels, 2, 1).a, Is.EqualTo(1f));
+        Assert.That(LayerTexel(texels, 1, 1).a, Is.EqualTo(0f));
+        Assert.That(LayerTexel(texels, 0, 1).a, Is.EqualTo(0f));
+    }
+
+    /// <summary>
+    /// The height scale is held to its bound in the inspector, in its getter and with a warning when an edited asset
+    /// holds more (the expected warning is formatted like the material's, so the numbers match in any culture).
+    /// </summary>
+    [Test]
+    public void TheHeightScale_IsHeldToItsBound()
+    {
+        UnityEngine.RangeAttribute range = (UnityEngine.RangeAttribute)System.Attribute.GetCustomAttribute(
+            typeof(TerrainMaterial).GetField("heightScale", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic), typeof(UnityEngine.RangeAttribute));
+        TerrainMaterial material = Track(TerrainMaterial.Create("Stone", null, null, 4, TerrainMaterial.CellMode.CutStones, Color.gray, Edge(0.3f, 1.5f), null, 4f));
+
+        Assert.That(range.max, Is.EqualTo(TerrainMaterial.MaxHeightScale));
+        Assert.That(TerrainMaterial.MaxHeightScale, Is.LessThanOrEqualTo(3f));
+        Assert.That(material.HeightScale, Is.EqualTo(TerrainMaterial.MaxHeightScale));
+        LogAssert.Expect(LogType.Warning, $"Stone: height scale {4f} is outside 0 to {TerrainMaterial.MaxHeightScale} px, the bound that keeps the soft look's blobs attached, so {TerrainMaterial.MaxHeightScale} is used.");
+        SerializedObject serialized = new(material);
+        serialized.FindProperty("cutGap").floatValue = 1f;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// The project's style gives stone over gravel its own edge (a thin mortar rim, no outline, a neutral shadow, whole
+    /// stones in the soft look) and leaves every other pair of the project's materials on its upper material's default
+    /// edge.
+    /// </summary>
+    [Test]
+    public void TheProjectStonesOverGravelOverride_AppliesToItsPairOnly()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial[] materials =
+        {
+            AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Grass.asset"),
+            AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Gravel.asset"),
+            AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Stone.asset")
+        };
+        Assert.That(style, Is.Not.Null);
+        Assert.That(materials, Has.All.Not.Null);
+
+        Color[] texels = TerrainBlendLut.BuildTexels(style, materials);
+        TerrainStyle.EdgeSettings stoneOverGravel = style.GetEdge(materials[2], materials[1]);
+
+        Assert.That(stoneOverGravel, Is.Not.SameAs(materials[2].Edge));
+        Assert.That(stoneOverGravel.DrawOutline, Is.False);
+        Assert.That(stoneOverGravel.RimWidth, Is.LessThan(materials[2].Edge.RimWidth));
+        Assert.That(stoneOverGravel.SoftWholeStones, Is.True);
+        Assert.That(PairTexel(texels, 3, 2, 1, 1).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 2, 1, 2).a, Is.EqualTo(1f));
+        for (int upper = 0; upper < 3; upper++)
+        {
+            for (int lower = -1; lower < upper; lower++)
+            {
+                if (upper == 2 && lower == 1)
+                {
+                    continue;
+                }
+
+                TerrainMaterial lowerMaterial = lower < 0 ? null : materials[lower];
+                Assert.That(style.GetEdge(materials[upper], lowerMaterial), Is.SameAs(materials[upper].Edge), $"{upper} over {lower}");
+                Assert.That(PairTexel(texels, 3, upper, lower, 2).a, Is.EqualTo(0f), $"{upper} over {lower}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The texel at <paramref name="column"/> of layer <paramref name="layer"/>'s row.
+    /// </summary>
+    private static Color LayerTexel(Color[] texels, int layer, int column)
+    {
+        return texels[(1 + layer) * TerrainBlendLut.Width + column];
+    }
+
+    /// <summary>
+    /// The texel at <paramref name="column"/> of the row of layer <paramref name="upper"/> over layer
+    /// <paramref name="lower"/>, for <paramref name="layers"/> layers.
+    /// </summary>
+    private static Color PairTexel(Color[] texels, int layers, int upper, int lower, int column)
+    {
+        return texels[TerrainBlendLut.PairRow(layers, upper, lower) * TerrainBlendLut.Width + column];
     }
 
     /// <summary>

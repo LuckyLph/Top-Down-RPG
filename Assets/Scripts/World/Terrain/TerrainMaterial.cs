@@ -6,11 +6,15 @@ using UnityEngine;
 /// per cell, repeating every few cells), its shape's corner radii, how its chips or stones meet an edge, and its edge
 /// over any material the <see cref="TerrainStyle"/> has no pair override for. Read-only at runtime: renderers copy its
 /// textures and settings and never write it. In the editor, a terrain material recipe generates its textures and writes
-/// their base colour, repeat and cell mode.
+/// their base colour, repeat and cell mode. In the soft look its height texture, times its height scale, moves its
+/// edges.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
 {
+    public const float MaxHeightScale = 2.5f;
+    public const float DefaultHeightScale = 2f;
+
     /// <summary>
     /// What a material's cell field holds and how its chips or stones meet an edge: none, chips drawn whole or left
     /// out, or stones left out or cut along the rim.
@@ -27,7 +31,7 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField] private Texture2D albedo;
     [Tooltip("Optional: for every pixel, the offset to its chip's or stone's centre (see Docs/Architecture.md, World and areas). Same size and format as the albedo. Needed unless Cell Mode is None. Written by the material's recipe.")]
     [SerializeField] private Texture2D cellField;
-    [Tooltip("Optional: the height the soft look uses (Phase 2). Same size and format as the albedo. Written by the material's recipe.")]
+    [Tooltip("Optional: the height the soft look reads (red a smooth height, green one value per chip or stone). Same size and format as the albedo. Without it the soft look moves this material's edges by nothing. Written by the material's recipe.")]
     [SerializeField] private Texture2D height;
     [Tooltip("Cells the textures cover before they repeat. Written by the material's recipe.")]
     [SerializeField, Min(1)] private int repeatCells = 4;
@@ -47,6 +51,9 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 3f)] private float cutGap = 0.5f;
     [Tooltip("Cut stones: how much the light changes a stone's colour along its cut, in 0-255 steps.")]
     [SerializeField, Range(0f, 64f)] private float cutBevel = 18f;
+    [Header("Soft look")]
+    [Tooltip("How many pixels the height texture can move this material's edges in the soft look, either way: its red channel moves them smoothly, and where a pair shows whole stones its green channel moves each stone's centre. At most 2.5 px, which keeps the height's slope below the weight's so no blob can detach (Docs/TerrainBlending.md, Phase 2 notes).")]
+    [SerializeField, Range(0f, MaxHeightScale)] private float heightScale = DefaultHeightScale;
     [Header("Edge")]
     [Tooltip("How this material's edge is drawn over any material, or over nothing, without a pair override in the style.")]
     [SerializeField] private TerrainStyle.EdgeSettings edge = new();
@@ -63,6 +70,7 @@ public class TerrainMaterial : ScriptableObject
     public float KeepMargin => keepMargin;
     public float CutGap => cutGap;
     public float CutBevel => cutBevel;
+    public float HeightScale => Mathf.Clamp(heightScale, 0f, MaxHeightScale);
     public TerrainStyle.EdgeSettings Edge => edge;
 
 #if UNITY_EDITOR
@@ -70,9 +78,10 @@ public class TerrainMaterial : ScriptableObject
 #endif
 
     /// <summary>
-    /// Creates a material in memory with its textures, chips and edge, keeping the default corner radii, for tests.
+    /// Creates a material in memory with its textures, chips, edge and soft height, keeping the default corner radii,
+    /// for tests.
     /// </summary>
-    internal static TerrainMaterial Create(string materialName, Texture2D albedo, Texture2D cellField, int repeatCells, CellMode cellMode, Color baseColour, TerrainStyle.EdgeSettings edge)
+    internal static TerrainMaterial Create(string materialName, Texture2D albedo, Texture2D cellField, int repeatCells, CellMode cellMode, Color baseColour, TerrainStyle.EdgeSettings edge, Texture2D height = null, float heightScale = DefaultHeightScale)
     {
         TerrainMaterial material = CreateInstance<TerrainMaterial>();
         material.name = materialName;
@@ -82,6 +91,8 @@ public class TerrainMaterial : ScriptableObject
         material.cellMode = cellMode;
         material.baseColour = baseColour;
         material.edge = edge;
+        material.height = height;
+        material.heightScale = heightScale;
         return material;
     }
 
@@ -96,10 +107,16 @@ public class TerrainMaterial : ScriptableObject
     }
 
     /// <summary>
-    /// Tells the renderers using this material to rebuild after an inspector change.
+    /// Warns about a height scale outside its bound, which only an edited asset file can hold and which is used
+    /// clamped, and tells the renderers using this material to rebuild after an inspector change.
     /// </summary>
     private void OnValidate()
     {
+        if (heightScale < 0f || heightScale > MaxHeightScale)
+        {
+            Debug.LogWarning($"{name}: height scale {heightScale} is outside 0 to {MaxHeightScale} px, the bound that keeps the soft look's blobs attached, so {HeightScale} is used.", this);
+        }
+
         Validated?.Invoke();
     }
 #endif

@@ -21,7 +21,7 @@ public abstract class AreaGenerator : ScriptableObject
         [SerializeField] private DualGridRuleTile ruleTile;
         [Tooltip("Terrain type the layer's navigation source gives its cells.")]
         [SerializeField] private TerrainType2D terrainType;
-        [Tooltip("Where terrain layers overlap, the highest priority decides walkability and cost.")]
+        [Tooltip("Where terrain layers overlap, the highest priority decides walkability and cost. In an area drawn by a Terrain Blend Renderer the writer uses the layer's place in the renderer's layers, its draw order, instead.")]
         [SerializeField] private int navigationPriority;
         [Tooltip("Order of the render tilemap on the Terrain sorting layer. A layer drawn over others goes higher.")]
         [SerializeField] private int sortingOrder;

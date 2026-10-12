@@ -10,21 +10,35 @@ using UnityEngine.Tilemaps;
 /// Draws an area's ground layers with one blending shader at 32 px per unit (Docs/TerrainBlending.md), in place of
 /// their render tilemaps. Sits on the area's Grid and runs in edit mode too. From its layers (data tilemaps, bottom
 /// first, each drawing a <see cref="TerrainMaterial"/>) and its <see cref="TerrainStyle"/> it builds a
-/// <see cref="TerrainControlMap"/>, texture arrays of the materials' albedo and cell field textures (a slice per layer),
-/// the lookup texture of the style and materials (<see cref="TerrainBlendLut"/>), a runtime material, and one quad per
-/// chunk of cells over the control map's bounds on the Terrain sorting layer, each its own renderer so off-screen
-/// chunks are culled (chunks the bounds no longer reach are removed); nothing is drawn where no layer is filled.
-/// Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile changes on a layer
-/// (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a client) patch the
-/// control map at once, an undo or redo in the editor reads the layers again, and the texture is uploaded once before
-/// the next render; nothing runs per frame while no cell changes. Reads its style, materials and textures and never
-/// writes them.
+/// <see cref="TerrainControlMap"/>, texture arrays of the materials' albedo, cell field and height textures (a slice per
+/// layer), the lookup texture of the style and materials (<see cref="TerrainBlendLut"/>), a runtime material, and one
+/// quad per chunk of cells over the control map's bounds on the Terrain sorting layer, each its own renderer so
+/// off-screen chunks are culled (chunks the bounds no longer reach are removed); nothing is drawn where no layer is
+/// filled. Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile changes on
+/// a layer (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a client) patch
+/// the control map at once, an undo or redo in the editor reads the layers again, and the texture is uploaded once
+/// before the next render; nothing runs per frame while no cell changes. Its <see cref="BlendMode"/>, a developer
+/// toggle, only switches the soft look's shader keyword on the runtime material. The order of its layers is both the
+/// draw order and the navigation priority: a layer whose tilemap has a <see cref="NavigationTerrainSource2D"/> must
+/// have its index as priority (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch
+/// is logged as an error while the ground is still drawn. Reads its style, materials, textures and navigation sources
+/// and never writes them.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Grid))]
 public class TerrainBlendRenderer : MonoBehaviour
 {
+    /// <summary>
+    /// The look the ground is drawn in: crisp, designed rounded edges with rims and outlines, or soft, shapes blended
+    /// from the cells' weights and the materials' heights.
+    /// </summary>
+    public enum BlendMode
+    {
+        Crisp,
+        Soft
+    }
+
     /// <summary>One ground layer: a data tilemap and the material it draws.</summary>
     [Serializable]
     public class Layer
@@ -73,12 +87,14 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int LutId = Shader.PropertyToID("_TerrainLut");
     private static readonly int AlbedoArrayId = Shader.PropertyToID("_AlbedoArray");
     private static readonly int FieldArrayId = Shader.PropertyToID("_FieldArray");
+    private static readonly int HeightArrayId = Shader.PropertyToID("_HeightArray");
     private static readonly int ControlRectId = Shader.PropertyToID("_ControlRect");
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
+    private const string SoftKeywordName = "_TERRAIN_SOFT";
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
-    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, as their navigation priority decides a cell. At most 8.")]
+    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 8.")]
     [SerializeField] private Layer[] layers = new Layer[0];
     [Tooltip("Cells per side of each chunk quad; each chunk is culled on its own.")]
     [SerializeField, Min(1)] private int chunkSize = 16;
@@ -86,6 +102,8 @@ public class TerrainBlendRenderer : MonoBehaviour
     [SerializeField] private string sortingLayerName = "Terrain";
     [Tooltip("Order of the chunk quads on their sorting layer.")]
     [SerializeField] private int sortingOrder;
+    [Tooltip("Developer toggle for the look: crisp (designed edges with rims and outlines) or soft (shapes blended from the cells and the materials' heights). Switching only flips the shader keyword, rebuilding nothing. Keep areas saved as Crisp.")]
+    [SerializeField] private BlendMode mode;
 
     private readonly Dictionary<Vector2Int, Chunk> chunksByKey = new();
     private readonly List<MeshRenderer> chunks = new();
@@ -96,6 +114,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private TerrainControlMap controlMap;
     private Texture2DArray albedoArray;
     private Texture2DArray fieldArray;
+    private Texture2DArray heightArray;
     private Texture2D lut;
     private Material material;
     [NonSerialized] private bool flushScheduled;
@@ -105,14 +124,108 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private bool enabledOnce;
     [NonSerialized] private TerrainStyle subscribedStyle;
     [NonSerialized] private bool rebuildScheduled;
+    [NonSerialized] private TerrainStyle builtStyle;
+    [NonSerialized] private readonly List<Tilemap> builtTilemaps = new();
+    [NonSerialized] private readonly List<TerrainMaterial> builtMaterials = new();
+    [NonSerialized] private int builtChunkSize;
+    [NonSerialized] private string builtSortingLayerName;
+    [NonSerialized] private int builtSortingOrder;
 #endif
 
     public TerrainStyle Style => style;
     public IReadOnlyList<Layer> Layers => layers;
+
+    /// <summary>
+    /// The navigation priority of the layer at <paramref name="layerIndex"/>, bottom first: its index, so the layer
+    /// drawn on top of a cell is also the one that decides the cell for navigation.
+    /// </summary>
+    public static int NavigationPriorityOf(int layerIndex)
+    {
+        return layerIndex;
+    }
+
+    /// <summary>
+    /// The index of the first layer drawing <paramref name="tilemap"/>, bottom first, or -1 when no layer does.
+    /// </summary>
+    public int LayerIndexOf(Tilemap tilemap)
+    {
+        for (int i = 0; tilemap != null && layers != null && i < layers.Length; i++)
+        {
+            if (layers[i] != null && layers[i].Tilemap == tilemap)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// The terrain renderer that draws <paramref name="tilemap"/> as a ground layer, with that layer's index in
+    /// <paramref name="layer"/>: the nearest renderer on the tilemap or one of its parents (the area's Grid) that lists
+    /// it, or null and -1. The one rule the renderer, its inspector, the navigation source and the scene writer share
+    /// for which layer sets a tilemap's navigation priority.
+    /// </summary>
+    public static TerrainBlendRenderer FindLayerDrawing(Tilemap tilemap, out int layer)
+    {
+        TerrainBlendRenderer renderer = tilemap != null ? tilemap.GetComponentInParent<TerrainBlendRenderer>(true) : null;
+        layer = renderer != null ? renderer.LayerIndexOf(tilemap) : -1;
+        return layer >= 0 ? renderer : null;
+    }
+
+    /// <summary>
+    /// The navigation source whose priority layer <paramref name="layer"/>'s place sets: the one on the layer's tilemap,
+    /// when <see cref="FindLayerDrawing"/> finds this renderer and this layer for that tilemap (so a tilemap listed
+    /// twice counts at its first layer); null otherwise.
+    /// </summary>
+    public NavigationTerrainSource2D NavigationSourceOf(int layer)
+    {
+        Tilemap tilemap = layers != null && layer >= 0 && layer < layers.Length ? layers[layer]?.Tilemap : null;
+        if (tilemap == null || FindLayerDrawing(tilemap, out int drawnAt) != this || drawnAt != layer)
+        {
+            return null;
+        }
+
+        return tilemap.TryGetComponent(out NavigationTerrainSource2D source) ? source : null;
+    }
+
+    /// <summary>
+    /// Whether every layer's navigation source (see <see cref="NavigationSourceOf"/>) has the layer's priority.
+    /// </summary>
+    public bool HasNavigationPrioritiesInStep()
+    {
+        for (int i = 0; layers != null && i < layers.Length; i++)
+        {
+            NavigationTerrainSource2D source = NavigationSourceOf(i);
+            if (source != null && source.Priority != NavigationPriorityOf(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The look the ground is drawn in. Setting it only switches the soft look's keyword on the runtime material, at
+    /// once and in edit mode too, rebuilding nothing and allocating nothing; it is not saved per machine. Set from code
+    /// it does not mark the scene changed, but a later save of the scene keeps it.
+    /// </summary>
+    public BlendMode Mode
+    {
+        get => mode;
+        set
+        {
+            mode = value;
+            ApplyMode();
+        }
+    }
+
     internal TerrainControlMap ControlMap => controlMap;
     internal Material RuntimeMaterial => material;
     internal Texture2DArray AlbedoArray => albedoArray;
     internal Texture2DArray FieldArray => fieldArray;
+    internal Texture2DArray HeightArray => heightArray;
     internal Texture2D Lut => lut;
     internal IReadOnlyList<MeshRenderer> Chunks => chunks;
     internal bool IsFlushScheduled => flushScheduled;
@@ -212,15 +325,63 @@ public class TerrainBlendRenderer : MonoBehaviour
 
 #if UNITY_EDITOR
     /// <summary>
-    /// Rebuilds after an inspector change, once the editor is done with the change (objects cannot be destroyed
-    /// during validation). Ignored while loading, before the first build.
+    /// After an inspector change (or an undo of one), switches the look at once and rebuilds when anything the build
+    /// reads changed, once the editor is done with the change (objects cannot be destroyed during validation), so
+    /// flipping the mode rebuilds nothing. No rebuild while loading, before the first build.
     /// </summary>
     private void OnValidate()
     {
-        if (enabledOnce)
+        ApplyMode();
+        if (enabledOnce && BuildInputsChanged())
         {
             ScheduleRebuild();
         }
+    }
+
+    /// <summary>
+    /// Remembers what the build reads (the style, the layers' tilemaps and materials, the chunk size and the sorting),
+    /// for <see cref="BuildInputsChanged"/>.
+    /// </summary>
+    private void RememberBuildInputs()
+    {
+        builtStyle = style;
+        builtTilemaps.Clear();
+        builtMaterials.Clear();
+        if (layers != null)
+        {
+            foreach (Layer layer in layers)
+            {
+                builtTilemaps.Add(layer?.Tilemap);
+                builtMaterials.Add(layer?.Material);
+            }
+        }
+
+        builtChunkSize = chunkSize;
+        builtSortingLayerName = sortingLayerName;
+        builtSortingOrder = sortingOrder;
+    }
+
+    /// <summary>
+    /// Whether anything the last build read has changed since.
+    /// </summary>
+    private bool BuildInputsChanged()
+    {
+        int count = layers?.Length ?? 0;
+        if (!ReferenceEquals(style, builtStyle) || count != builtTilemaps.Count || chunkSize != builtChunkSize
+            || sortingLayerName != builtSortingLayerName || sortingOrder != builtSortingOrder)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            if (!ReferenceEquals(layers[i]?.Tilemap, builtTilemaps[i]) || !ReferenceEquals(layers[i]?.Material, builtMaterials[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -300,6 +461,19 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// Rebuilds after a change to the navigation source of one of the layers' tilemaps (its inspector, a script through
+    /// a serialized object, or one added later), so the build checks its priority again; the source calls it from its
+    /// validation. Ignored while disabled or loading.
+    /// </summary>
+    internal void HandleNavigationSourceChanged()
+    {
+        if (enabledOnce && isActiveAndEnabled)
+        {
+            ScheduleRebuild();
+        }
+    }
+
+    /// <summary>
     /// Stops following the style and the materials.
     /// </summary>
     private void StopFollowingStyleAndMaterials()
@@ -336,6 +510,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
+        RememberBuildInputs();
         FollowStyleAndMaterials();
 #endif
         if (!IsUsable())
@@ -354,8 +529,9 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         controlMap = new TerrainControlMap(layerTilemaps, $"{name} Terrain Control Map");
         controlMap.Apply();
-        albedoArray = BuildArray(materials, true, $"{name} Terrain Albedo");
-        fieldArray = BuildArray(materials, false, $"{name} Terrain Cell Field");
+        albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
+        fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
+        heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
         lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut");
 
         material = new Material(style.Shader) { name = $"{name} Terrain (runtime)", hideFlags = HideFlags.DontSave };
@@ -363,9 +539,34 @@ public class TerrainBlendRenderer : MonoBehaviour
         material.SetTexture(LutId, lut);
         material.SetTexture(AlbedoArrayId, albedoArray);
         material.SetTexture(FieldArrayId, fieldArray);
+        material.SetTexture(HeightArrayId, heightArray);
+        ApplyMode();
         UpdateControlRect();
         UpdateInfo();
         UpdateChunks();
+    }
+
+    /// <summary>
+    /// Switches the soft look's keyword on the runtime material to match the mode; warns instead when the style's
+    /// shader has no such keyword and the mode is soft. The keyword is looked up each time, which allocates nothing,
+    /// since one kept from an earlier import of the shader no longer switches anything once the shader is reimported.
+    /// </summary>
+    private void ApplyMode()
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        LocalKeyword softKeyword = new(material.shader, SoftKeywordName);
+        if (softKeyword.isValid)
+        {
+            material.SetKeyword(softKeyword, mode == BlendMode.Soft);
+        }
+        else if (mode == BlendMode.Soft)
+        {
+            Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {SoftKeywordName} keyword, so the soft look draws as crisp.", this);
+        }
     }
 
     /// <summary>
@@ -374,7 +575,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a layer without a tilemap, a
     /// tilemap listed twice, a layer without a material, a material's textures missing or of the wrong size or format,
     /// an unknown sorting layer) and returns whether there was none; a material several layers draw is checked once.
-    /// Warns when the grid is not made of unrotated one-unit cells, which the shader assumes.
+    /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
+    /// drawing (the drawing never reads the priority), and warns when the grid is not made of unrotated one-unit cells,
+    /// which the shader assumes.
     /// </summary>
     private bool IsUsable()
     {
@@ -400,7 +603,8 @@ public class TerrainBlendRenderer : MonoBehaviour
         for (int i = 0; i < layers.Length; i++)
         {
             Layer layer = layers[i];
-            int earlier = EarlierLayerWith(layer?.Tilemap, i);
+            int first = LayerIndexOf(layer?.Tilemap);
+            int earlier = first >= 0 && first < i ? first : -1;
             if (layer == null || layer.Tilemap == null)
             {
                 Debug.LogError($"{name}: ground layer {i} has no tilemap.", this);
@@ -421,6 +625,12 @@ public class TerrainBlendRenderer : MonoBehaviour
                 checkedMaterials.Add(layer.Material);
                 usable &= HasUsableTextures(layer.Material);
             }
+
+            NavigationTerrainSource2D source = NavigationSourceOf(i);
+            if (source != null && source.Priority != NavigationPriorityOf(i))
+            {
+                Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) has navigation priority {source.Priority}, but a ground layer's navigation priority is its place in the layers, its draw order: {NavigationPriorityOf(i)}. Set it from the draw order in the {nameof(TerrainBlendRenderer)} inspector.", this);
+            }
         }
 
         if (!SortingLayer.IsValid(SortingLayer.NameToID(sortingLayerName)))
@@ -438,24 +648,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// The index of the first layer before <paramref name="before"/> that lists <paramref name="tilemap"/>, or -1.
-    /// </summary>
-    private int EarlierLayerWith(Tilemap tilemap, int before)
-    {
-        for (int i = 0; tilemap != null && i < before; i++)
-        {
-            if (layers[i] != null && layers[i].Tilemap == tilemap)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    /// <summary>
     /// Logs an error and returns false when <paramref name="terrainMaterial"/> has no albedo, lacks the cell field its
-    /// cell mode needs, or has a texture that is not repeat x 32 px square RGBA32 with sRGB off.
+    /// cell mode needs, or has a texture (the height included) that is not repeat x 32 px square RGBA32 with sRGB off.
+    /// A material without a height texture is usable: the soft look moves its edges by nothing.
     /// </summary>
     private static bool HasUsableTextures(TerrainMaterial terrainMaterial)
     {
@@ -472,7 +667,8 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         return HasUsableFormat(terrainMaterial, terrainMaterial.Albedo)
-            && (terrainMaterial.CellField == null || HasUsableFormat(terrainMaterial, terrainMaterial.CellField));
+            && (terrainMaterial.CellField == null || HasUsableFormat(terrainMaterial, terrainMaterial.CellField))
+            && (terrainMaterial.Height == null || HasUsableFormat(terrainMaterial, terrainMaterial.Height));
     }
 
     /// <summary>
@@ -492,12 +688,13 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Copies each layer's albedo (or cell field) texture into a slice of a new array as large as the largest one,
-    /// on the GPU. The array keeps no copy in memory, so it is uploaded empty and made unreadable before the copies,
-    /// which a later upload would otherwise overwrite. A slice whose material has no cell field is left empty; the
-    /// shader never reads it.
+    /// Copies each layer's texture of one kind (albedo, cell field or height, picked by <paramref name="kind"/>) into
+    /// a slice of a new array as large as the largest material, on the GPU. The array keeps no copy in memory, so it is
+    /// uploaded empty and made unreadable before the copies, which a later upload would otherwise overwrite. A slice
+    /// whose material has no such texture is left empty: the shader never reads a missing cell field, and the lookup
+    /// texture gives a material without a height a height scale of 0.
     /// </summary>
-    private static Texture2DArray BuildArray(TerrainMaterial[] materials, bool albedo, string arrayName)
+    private static Texture2DArray BuildArray(TerrainMaterial[] materials, Func<TerrainMaterial, Texture2D> kind, string arrayName)
     {
         int size = TerrainStyle.PixelsPerCell;
         foreach (TerrainMaterial layerMaterial in materials)
@@ -515,7 +712,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         array.Apply(false, true);
         for (int slice = 0; slice < materials.Length; slice++)
         {
-            Texture2D source = albedo ? materials[slice].Albedo : materials[slice].CellField;
+            Texture2D source = kind(materials[slice]);
             if (source != null)
             {
                 Graphics.CopyTexture(source, 0, 0, 0, 0, source.width, source.height, array, slice, 0, 0, 0);
@@ -740,7 +937,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     /// <summary>
     /// Stops waiting to upload, stops following the style and materials, and destroys the chunks, meshes, material and
-    /// textures.
+    /// textures (the control map's, the three arrays and the lookup texture).
     /// </summary>
     private void Teardown()
     {
@@ -770,10 +967,12 @@ public class TerrainBlendRenderer : MonoBehaviour
         DestroyRuntime(material);
         DestroyRuntime(albedoArray);
         DestroyRuntime(fieldArray);
+        DestroyRuntime(heightArray);
         DestroyRuntime(lut);
         material = null;
         albedoArray = null;
         fieldArray = null;
+        heightArray = null;
         lut = null;
         layerTilemaps = new Tilemap[0];
     }

@@ -7,21 +7,25 @@
 
 #define TB_MAX_LAYERS 8
 #define TB_FAR 100.0
-#define TB_RAMP_COLUMN 4
+#define TB_RAMP_COLUMN 5
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
+#define TB_DIAGONAL_GAP 4.0
+#define TB_WHOLE_CLEARANCE 10.0
 
 static const float2 TB_LIGHT = float2(-0.6, 0.8);
 
-// The renderer's inputs. The lookup texture (see TerrainBlendRenderer) holds the style as data: row 0 the shared
-// settings, then a row per layer (its material's shape and interior), then a row per pair of an upper layer over a
-// lower one or over nothing (its edge). rect.xy is the world position of control map cell (0, 0), rect.zw its size.
+// The renderer's inputs. The lookup texture (see TerrainBlendLut) holds the style as data: row 0 the shared settings,
+// then a row per layer (its material's shape, interior and height scale), then a row per pair of an upper layer over a
+// lower one or over nothing (its edge in both looks). rect.xy is the world position of control map cell (0, 0),
+// rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array; the crisp look never does.
 struct TBInputs
 {
     UnityTexture2D control;
     UnityTexture2D lut;
     UnityTexture2DArray albedo;
     UnityTexture2DArray field;
+    UnityTexture2DArray height;
     float4 rect;
     uint layers;
     float4 globals;
@@ -37,6 +41,9 @@ struct TBCorner
 };
 
 // How an upper layer's edge is drawn at a pixel: the settings of each pair it may be drawn over, blended by weight.
+// In the soft look a pair with a band draws no outline and fills with the band's colour; edge is the colour of the
+// opaque edge pixel, each pair's own (its outline where it draws one, else its fill) blended by weight, and
+// bandWeight is how much of the edge pairs with a band make up.
 struct TBEdge
 {
     float3 shadow;
@@ -45,8 +52,25 @@ struct TBEdge
     float3 outline;
     float outlineWeight;
     float3 fill;
+    float3 edge;
     float tuftHeight;
+    float bandWeight;
     int firstRow;
+};
+
+// What a chip or stone sees at its centre pixel, decided from the corner patch around that centre, so every pixel of
+// it agrees: how deep inside layer m the centre lies, the rim width of the pair drawn there (in the soft look the
+// band's width where the pair has one, and none where it shows whole stones), how much of that pair shows whole
+// stones in the soft look, and the outward direction of the shape there (soft only). A pair shows whole stones only
+// where the centre lies at least TB_WHOLE_CLEARANCE pixels inside the lower layer, so a stone never reaches past a
+// strip of the lower layer that thins out (where stone, gravel and grass meet) and cuts it into pieces; nearer, the
+// pair's rim cuts the stones as in crisp.
+struct TBCentre
+{
+    float depth;
+    float rim;
+    float whole;
+    float2 outward;
 };
 
 // One texel of the lookup texture.
@@ -105,18 +129,111 @@ uint TBMask(TBCorner corner, uint layer)
     return mask;
 }
 
-// Every layer's signed distance in pixels at a corner patch, positive outside, pushed by the shared edge noise so
-// edges that coincide stay equal; TB_FAR where a layer covers none of the four cells.
-void TBDistances(TBInputs ins, TBCorner corner, float noise, out float d[TB_MAX_LAYERS])
+// The highest layer filled in a cell (0 for an empty cell).
+uint TBTopLayer(uint cell)
 {
+    uint top = 0u;
+    [unroll]
+    for (uint l = 1u; l < (uint)TB_MAX_LAYERS; l++)
+    {
+        if ((cell >> l) != 0u)
+        {
+            top = l;
+        }
+    }
+    return top;
+}
+
+// Soft: each of the four cells' height term in pixels at a pixel, from the material of the cell's top layer: its
+// height (the height texture's red channel) from -1 to 1 times its height scale, which is 0 for a material without a
+// height texture.
+float4 TBCellHeights(TBInputs ins, TBCorner corner, float2 worldPixel)
+{
+    float4 heights = float4(0.0, 0.0, 0.0, 0.0);
+    [unroll]
+    for (uint k = 0u; k < 4u; k++)
+    {
+        [branch]
+        if (corner.cells[k] != 0u)
+        {
+            uint top = TBTopLayer(corner.cells[k]);
+            float scale = TBLut(ins, 3, 1 + (int)top).x;
+            int2 texel = (int2)WrapPixel(worldPixel, ins.shapes[top].z);
+            heights[k] = scale * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, top).r - 1.0);
+        }
+    }
+    return heights;
+}
+
+// Soft: layer l's signed distance in pixels at a corner patch, positive outside. Its weight is interpolated
+// bilinearly from the four cells (1 where the layer or one above it is filled), less a bump on diagonal pairs so two
+// diagonal cells never join through the saddle point; the cells' heights, mixed by the same weights over the filled
+// cells, are added, so edges that coincide stay equal. The layer covers a pixel where its weight, in pixels across a
+// cell, plus the height passes one half: there the distance falls below 0.5, where crisp's edge pixel ends, so the
+// rest of the pipeline is shared. Slope is the weight's slope per pixel, in pixels (32 times the weight). TB_FAR
+// where the layer covers none of the four cells, -TB_FAR where it covers all.
+float TBSoftDistance(TBCorner corner, uint l, float4 heights, out float2 slope)
+{
+    uint mask = TBMask(corner, l);
+    slope = float2(0.0, 0.0);
+    if (mask == 0u)
+    {
+        return TB_FAR;
+    }
+    if (mask == 15u)
+    {
+        return -TB_FAR;
+    }
+    float2 st = corner.uv / ART_PIXELS_PER_UNIT + 0.5;
+    float s = st.x;
+    float t = st.y;
+    float4 b = float4((1.0 - s) * (1.0 - t), s * (1.0 - t), (1.0 - s) * t, s * t);
+    float4 bs = float4(t - 1.0, 1.0 - t, -t, t);
+    float4 bt = float4(s - 1.0, -s, 1.0 - s, s);
+    float w = 0.0;
+    float h = 0.0;
+    [unroll]
+    for (uint k = 0u; k < 4u; k++)
+    {
+        if ((mask & (1u << k)) != 0u)
+        {
+            w += b[k];
+            h += b[k] * heights[k];
+            slope += float2(bs[k], bt[k]);
+        }
+    }
+    h /= max(w, 1e-4);
+    if (mask == 6u || mask == 9u)
+    {
+        w -= TB_DIAGONAL_GAP * s * (1.0 - s) * t * (1.0 - t);
+        slope -= TB_DIAGONAL_GAP * float2((1.0 - 2.0 * s) * t * (1.0 - t), (1.0 - 2.0 * t) * s * (1.0 - s));
+    }
+    return 0.5 - (ART_PIXELS_PER_UNIT * (w - 0.5) + h);
+}
+
+// Every layer's signed distance in pixels at a corner patch, positive outside; TB_FAR where a layer covers none of
+// the four cells. Crisp: the rounded shape pushed by the shared edge noise, so edges that coincide stay equal. Soft:
+// TBSoftDistance.
+void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel, out float d[TB_MAX_LAYERS])
+{
+#ifdef _TERRAIN_SOFT
+    float4 heights = TBCellHeights(ins, corner, worldPixel);
+    float2 slope;
+#else
+    float noise = PeriodicEdgeNoise(worldPixel) * ins.globals.x;
+#endif
     [unroll]
     for (uint l = 0u; l < (uint)TB_MAX_LAYERS; l++)
     {
         d[l] = TB_FAR;
         if (l < ins.layers)
         {
+#ifdef _TERRAIN_SOFT
+            d[l] = TBSoftDistance(corner, l, heights, slope);
+#else
             float sd = CornerShapeDistance(TBMask(corner, l), corner.uv, ins.shapes[l].x, ins.shapes[l].y, TB_FAR);
             d[l] = abs(sd) >= TB_FAR ? sd : sd + noise;
+#endif
         }
     }
 }
@@ -157,7 +274,8 @@ void TBPairWeights(TBInputs ins, float d[TB_MAX_LAYERS], uint m, out float w[TB_
     w[0] = remaining;
 }
 
-// The edge settings of layer m at a pixel, blended from the pairs it is drawn over.
+// The edge settings of layer m at a pixel, blended from the pairs it is drawn over. In the soft look a pair with a
+// band draws no outline and fills its edge pixel with the band's colour.
 TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
     TBEdge e = (TBEdge)0;
@@ -176,19 +294,31 @@ TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
             e.shadow += w[k] * shadow.rgb;
             e.shadowAlpha += w[k] * shadow.a;
             e.outline += w[k] * outline.rgb;
-            e.outlineWeight += w[k] * outline.a;
             e.shadowWidth += w[k] * widths.x;
             e.tuftHeight += w[k] * widths.z;
+#ifdef _TERRAIN_SOFT
+            float4 band = TBLut(ins, 4, row);
+            float banded = band.a > 0.0 ? 1.0 : 0.0;
+            float3 filled = lerp(fill.rgb, band.rgb, banded);
+            e.fill += w[k] * filled;
+            e.edge += w[k] * lerp(filled, outline.rgb, outline.a * (1.0 - banded));
+            e.bandWeight += w[k] * banded;
+#else
+            e.outlineWeight += w[k] * outline.a;
             e.fill += w[k] * fill.rgb;
+#endif
         }
     }
     return e;
 }
 
-// The rim at a depth inside the edge, premultiplied: its colour and how much of the interior it covers.
-float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float depth)
+// The rim at a depth inside the edge, premultiplied: its colour and how much of the interior it covers. In the soft
+// look a pair with a band covers the interior with the band's colour up to the band's width instead; band is how much
+// of the result such bands make up (0 in crisp).
+float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float depth, out float band)
 {
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
+    band = 0.0;
     int column = TB_RAMP_COLUMN + (int)min(floor(depth / TB_RAMP_STEP), TB_RAMP_TEXELS - 1.0);
     [unroll]
     for (uint k = 0u; k <= (uint)TB_MAX_LAYERS; k++)
@@ -197,33 +327,19 @@ float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float 
         if (k <= m && w[k] > 0.0)
         {
             float4 r = TBLut(ins, column, e.firstRow + (int)k);
+#ifdef _TERRAIN_SOFT
+            float4 settings = TBLut(ins, 4, e.firstRow + (int)k);
+            if (settings.a > 0.0)
+            {
+                float cover = depth < settings.a ? 1.0 : 0.0;
+                r = float4(settings.rgb, cover);
+                band += w[k] * cover;
+            }
+#endif
             result += w[k] * float4(r.rgb * r.a, r.a);
         }
     }
     return result;
-}
-
-// How deep inside layer m the centre pixel of a chip or stone lies, and the rim width of the pair drawn there, both
-// decided from the corner patch around that centre, so every pixel of the chip agrees and chips stay whole.
-float TBCentreDepth(TBInputs ins, uint m, float2 pixel, float2 worldPixel, out float rimWidth)
-{
-    TBCorner corner = TBLoadCorner(ins, pixel);
-    float d[TB_MAX_LAYERS];
-    TBDistances(ins, corner, PeriodicEdgeNoise(worldPixel) * ins.globals.x, d);
-    float w[TB_MAX_LAYERS + 1];
-    TBPairWeights(ins, d, m, w);
-    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
-    rimWidth = 0.0;
-    [unroll]
-    for (uint k = 0u; k <= (uint)TB_MAX_LAYERS; k++)
-    {
-        [branch]
-        if (k <= m && w[k] > 0.0)
-        {
-            rimWidth += w[k] * TBLut(ins, 2, firstRow + (int)k).y;
-        }
-    }
-    return -d[m];
 }
 
 // The outward direction of layer m's shape at a pixel of a corner patch, from distances one pixel apart, with the
@@ -242,13 +358,77 @@ float2 TBGradient(TBInputs ins, TBCorner corner, uint m, float2 worldPixel, floa
     return length2 > 1e-6 ? g * rsqrt(length2) : float2(0.0, 0.0);
 }
 
+// The outward direction of layer m's edge at a pixel of a corner patch: in crisp the gradient of the shape with the
+// edge noise, in soft against the slope of the layer's weight.
+float2 TBOutward(TBInputs ins, TBCorner corner, uint m, float2 worldPixel)
+{
+#ifdef _TERRAIN_SOFT
+    float2 slope;
+    TBSoftDistance(corner, m, float4(0.0, 0.0, 0.0, 0.0), slope);
+    float length2 = dot(slope, slope);
+    return length2 > 1e-6 ? -slope * rsqrt(length2) : float2(0.0, 0.0);
+#else
+    return TBGradient(ins, corner, m, worldPixel, ins.globals.x);
+#endif
+}
+
+// How deep inside layer m a map pixel lies, from the corner patch around it.
+float TBDepthAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel)
+{
+    TBCorner corner = TBLoadCorner(ins, pixel);
+    float d[TB_MAX_LAYERS];
+    TBDistances(ins, corner, worldPixel, d);
+    return -d[m];
+}
+
+// What the chip or stone whose centre is a map pixel sees there (see TBCentre); in the soft look the outward direction
+// only when asked for, since only whole chips use it.
+TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool outward)
+{
+    TBCentre centre = (TBCentre)0;
+    TBCorner corner = TBLoadCorner(ins, pixel);
+    float d[TB_MAX_LAYERS];
+    TBDistances(ins, corner, worldPixel, d);
+    float w[TB_MAX_LAYERS + 1];
+    TBPairWeights(ins, d, m, w);
+    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    [unroll]
+    for (uint k = 0u; k <= (uint)TB_MAX_LAYERS; k++)
+    {
+        [branch]
+        if (k <= m && w[k] > 0.0)
+        {
+            float4 widths = TBLut(ins, 2, firstRow + (int)k);
+#ifdef _TERRAIN_SOFT
+            float band = TBLut(ins, 4, firstRow + (int)k).a;
+            float whole = widths.w > 0.5 && (k == 0u || d[max((int)k - 1, 0)] <= -TB_WHOLE_CLEARANCE) ? 1.0 : 0.0;
+            centre.rim += w[k] * (whole > 0.5 ? 0.0 : (band > 0.0 ? band : widths.y));
+            centre.whole += w[k] * whole;
+#else
+            centre.rim += w[k] * widths.y;
+#endif
+        }
+    }
+    centre.depth = -d[m];
+#ifdef _TERRAIN_SOFT
+    [branch]
+    if (outward)
+    {
+        centre.outward = TBOutward(ins, corner, m, worldPixel);
+    }
+#endif
+    return centre;
+}
+
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
-// margin clear of the rim: its field's alpha holds its reach from its centre pixel, stretched by the edge noise's
-// steepest slope, since the distance can fall that much faster than the pixels move away. A stone is left out when
-// its centre lies too near the rim, and the others are cut along the rim's line, shaded to the light like the stones'
-// own edges.
-float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner)
+// margin clear of the rim: its field's alpha holds its reach from its centre pixel. In crisp that reach is stretched
+// by the edge noise's steepest slope, since the distance can fall that much faster than the pixels move away; in soft
+// the depth is measured where the chip comes nearest the edge, its reach from the centre along the edge's outward
+// direction there. A stone is left out when its centre lies too near the rim, and the others are cut along the rim's
+// line, shaded to the light like the stones' own edges. With hasCentre, known is what the pixel's chip or stone sees
+// at its centre, already worked out by the caller.
+float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
 {
     float4 shape = ins.shapes[m];
     int2 texel = (int2)WrapPixel(worldPixel, shape.z);
@@ -264,12 +444,21 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
             float4 chip = TBLut(ins, 1, row);
             float3 base = TBLut(ins, 2, row).rgb + (f.b * 255.0 - 128.0) / 255.0;
             float2 offset = round(f.rg * 255.0) - 128.0;
-            float centreRim = 0.0;
-            float centreDepth = TBCentreDepth(ins, m, pixel + offset, worldPixel + offset, centreRim);
-            float inside = depth - centreRim;
+            TBCentre centre = known;
+            [branch]
+            if (!hasCentre)
+            {
+                centre = TBCentreAt(ins, m, pixel + offset, worldPixel + offset, shape.w < 1.5);
+            }
+            float inside = depth - centre.rim;
             float border = f.a * 255.0 / 16.0;
-            float reach = shape.w < 1.5 ? border * (1.0 + PERIODIC_NOISE_MAX_SLOPE * ins.globals.x) : 0.0;
-            if (centreDepth - reach < centreRim + chip.x)
+#ifdef _TERRAIN_SOFT
+            float2 reach = shape.w < 1.5 ? border * centre.outward : float2(0.0, 0.0);
+            float nearest = shape.w < 1.5 ? TBDepthAt(ins, m, pixel + offset + reach, worldPixel + offset + reach) : centre.depth;
+#else
+            float nearest = centre.depth - (shape.w < 1.5 ? border * (1.0 + PERIODIC_NOISE_MAX_SLOPE * ins.globals.x) : 0.0);
+#endif
+            if (nearest < centre.rim + chip.x)
             {
                 colour = base;
             }
@@ -279,7 +468,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
             }
             else if (shape.w > 1.5 && inside < border)
             {
-                float lit = dot(TBGradient(ins, corner, m, worldPixel, ins.globals.x), TB_LIGHT);
+                float lit = dot(TBOutward(ins, corner, m, worldPixel), TB_LIGHT);
                 float bevel = saturate(1.0 - (inside - chip.y) / 1.25);
                 float amount = lit * chip.z * bevel - (lit < -0.35 ? 0.45 * chip.z * bevel : 0.0);
                 colour += amount / 255.0;
@@ -325,7 +514,11 @@ float TBTuftReach(float u, uint seed, float height)
 // Returns 0 outside a tuft, 1 inside, 2 on its border.
 float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float2 worldPixel, float height)
 {
+#ifdef _TERRAIN_SOFT
+    float2 n = TBOutward(ins, corner, m, worldPixel);
+#else
     float2 n = TBGradient(ins, corner, m, worldPixel, 0.0);
+#endif
     float u = dot(corner.uv, float2(-n.y, n.x));
     uint seed = TBCornerSeed(ins, pixel);
     float scaled = height * saturate(1.0 - 8.0 * abs(n.x * n.y));
@@ -341,6 +534,79 @@ float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float
     return result;
 }
 
+#ifdef _TERRAIN_SOFT
+// Layer m's colour at a pixel in the soft look, opaque or clear. Where a pair with whole stones meets the stone the
+// pixel belongs to (decided at the stone's centre), the stone is drawn whole, inside or outside the shape, when its
+// centre moved by its own height (the height texture's green channel times the material's height scale) lies the
+// keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
+// tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
+// opaque; then the interior under the band or the rim. No shadow is drawn. Bands are shaded by the cell field's grit
+// like the base colour.
+float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
+{
+    float4 shape = ins.shapes[m];
+    int2 texel = (int2)WrapPixel(worldPixel, shape.z);
+    float grit = 0.0;
+    float4 result = float4(0.0, 0.0, 0.0, 0.0);
+    bool decided = false;
+    bool hasCentre = false;
+    TBCentre centre = (TBCentre)0;
+    [branch]
+    if (shape.w > 0.5)
+    {
+        float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m);
+        grit = (f.b * 255.0 - 128.0) / 255.0;
+        float4 chip = TBLut(ins, 1, 1 + (int)m);
+        [branch]
+        if (chip.w > 0.5)
+        {
+            float2 offset = round(f.rg * 255.0) - 128.0;
+            centre = TBCentreAt(ins, m, pixel + offset, worldPixel + offset, false);
+            hasCentre = true;
+            if (centre.whole >= 0.5)
+            {
+                decided = true;
+                float jitter = TBLut(ins, 3, 1 + (int)m).x * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).g - 1.0);
+                if (centre.depth + jitter >= centre.rim + chip.x)
+                {
+                    result = float4(LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, m).rgb, 1.0);
+                }
+            }
+        }
+    }
+
+    [branch]
+    if (!decided)
+    {
+        float3 edge = e.edge + grit * e.bandWeight;
+        float tuft = 0.0;
+        [branch]
+        if (e.tuftHeight > 0.0 && d > -0.5 && d < 0.5 + e.tuftHeight)
+        {
+            tuft = TBTuft(ins, corner, m, d, pixel, worldPixel, e.tuftHeight);
+        }
+
+        if (tuft > 0.5)
+        {
+            result = float4(tuft > 1.5 ? edge : e.fill, 1.0);
+        }
+        else if (d > -0.5 && d < 0.5)
+        {
+            result = float4(edge, 1.0);
+        }
+        else if (d <= -0.5)
+        {
+            float depth = -d;
+            float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, hasCentre, centre);
+            float band;
+            float4 rim = TBRamp(ins, e, m, w, depth, band);
+            colour = colour * (1.0 - rim.a) + rim.rgb + grit * band;
+            result = float4(colour, 1.0);
+        }
+    }
+    return result;
+}
+#else
 // Layer m's colour at a pixel, premultiplied: from the outside in, the translucent shadow, the antialiased edge pixel
 // (the outline, or the rim's outer colour where the pair draws none), then the interior under the rim, with the
 // outline fading into it over the first pixel. Where the pair has tufts, pixels of the edge and of the band outside
@@ -378,8 +644,9 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     else
     {
         float depth = -d;
-        float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner);
-        float4 rim = TBRamp(ins, e, m, w, depth);
+        float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, false, (TBCentre)0);
+        float band;
+        float4 rim = TBRamp(ins, e, m, w, depth, band);
         colour = colour * (1.0 - rim.a) + rim.rgb;
         if (depth < 1.5)
         {
@@ -388,6 +655,18 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         result = float4(colour, 1.0);
     }
     return result;
+}
+#endif
+
+// Whether layer m hides everything under it wherever it lies inside its edge: always in crisp; in soft not where it
+// may show whole stones, which leave the layer below showing between them.
+bool TBOpaqueInside(TBInputs ins, uint m)
+{
+#ifdef _TERRAIN_SOFT
+    return TBLut(ins, 1, 1 + (int)m).w < 0.5;
+#else
+    return true;
+#endif
 }
 
 // The debug colour of a layer: grass red, gravel green, stone blue (layers 0 to 2), white above, black for none.
@@ -405,16 +684,17 @@ float3 TBDebugColour(int layer)
 }
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
-// composites the layers bottom up, each drawn over the layer below it with that pair's edge. Info.x is the number of
-// layers, Info.y > 0.5 outputs the topmost visible layer instead as TBDebugColour (pure colours, which the 2D lights
-// scale but never mix).
-void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
+// composites the layers bottom up, each drawn over the layer below it with that pair's edge, in the crisp look or,
+// with the keyword _TERRAIN_SOFT, the soft one. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
+// visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix).
+void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
 {
     TBInputs ins;
     ins.control = ControlMap;
     ins.lut = Lut;
     ins.albedo = Albedo;
     ins.field = Field;
+    ins.height = Height;
     ins.rect = ControlRect;
     ins.layers = (uint)clamp(Info.x, 0.0, (float)TB_MAX_LAYERS);
     ins.globals = TBLut(ins, 0, 0);
@@ -436,13 +716,13 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     }
 
     float d[TB_MAX_LAYERS];
-    TBDistances(ins, corner, PeriodicEdgeNoise(worldPixel) * ins.globals.x, d);
+    TBDistances(ins, corner, worldPixel, d);
 
     uint start = 0u;
     [unroll]
     for (uint m = 0u; m < (uint)TB_MAX_LAYERS; m++)
     {
-        if (m < ins.layers && d[m] <= -0.5 && TBVisible(ins, d, m))
+        if (m < ins.layers && d[m] <= -0.5 && TBVisible(ins, d, m) && TBOpaqueInside(ins, m))
         {
             start = m;
         }
@@ -478,11 +758,11 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
 }
 
 // The half-precision entry point of the Custom Function node: runs TerrainBlend_float.
-void TerrainBlend_half(half3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, half4 ControlRect, half4 Info, out half3 Color, out half Alpha)
+void TerrainBlend_half(half3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, half4 ControlRect, half4 Info, out half3 Color, out half Alpha)
 {
     float3 colour;
     float alpha;
-    TerrainBlend_float(WorldPos, ControlMap, Lut, Albedo, Field, ControlRect, Info, colour, alpha);
+    TerrainBlend_float(WorldPos, ControlMap, Lut, Albedo, Field, Height, ControlRect, Info, colour, alpha);
     Color = colour;
     Alpha = alpha;
 }

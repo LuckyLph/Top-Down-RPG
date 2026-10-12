@@ -97,8 +97,10 @@ public static class AreaLayoutWriter
 
     /// <summary>
     /// The dual-grid module of the grid's child tilemap named after <paramref name="layer"/>, created when missing and
-    /// set up to match it: its rule tile, a navigation source with its terrain type and priority, its render tilemap
-    /// on the Terrain sorting layer at its order, and its place among the grid's children.
+    /// set up to match it: its rule tile, a navigation source with its terrain type and priority (in an area drawn by a
+    /// <see cref="TerrainBlendRenderer"/>, the priority of the tilemap's place in the renderer's layers, its draw order,
+    /// so the two stay in step), its render tilemap on the Terrain sorting layer at its order, and its place among the
+    /// grid's children.
     /// </summary>
     private static DualGridTilemapModule PrepareTerrainLayer(Grid grid, AreaGenerator.TerrainLayer layer, int siblingIndex)
     {
@@ -127,7 +129,8 @@ public static class AreaLayoutWriter
 
         SerializedObject sourceData = new(source);
         sourceData.FindProperty("terrainType").objectReferenceValue = layer.TerrainType;
-        sourceData.FindProperty("priority").intValue = layer.NavigationPriority;
+        bool drawn = TerrainBlendRenderer.FindLayerDrawing(module.DataTilemap, out int drawOrder) != null;
+        sourceData.FindProperty("priority").intValue = drawn ? TerrainBlendRenderer.NavigationPriorityOf(drawOrder) : layer.NavigationPriority;
         sourceData.ApplyModifiedProperties();
 
         TilemapRenderer renderer = module.RenderTilemap.GetComponent<TilemapRenderer>();

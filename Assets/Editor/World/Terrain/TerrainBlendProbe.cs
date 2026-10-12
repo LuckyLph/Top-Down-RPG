@@ -9,12 +9,14 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Editor checks for <see cref="TerrainBlendRenderer"/>: renders a world rectangle through a temporary camera at a
 /// whole number of screen pixels per art pixel and writes it as a PNG, with today's render tilemaps for comparison;
-/// checks the topmost visible layer for detached blobs and holes; measures shimmer at sub-pixel camera offsets and the
-/// cost of a frame. Shaders compile synchronously during its renders, since a render skips variants still compiling
-/// in the background. It hides renderers only through <see cref="Renderer.forceRenderingOff"/>, which takes effect at
-/// once and is not saved, and puts back what a render hid even when the render fails, clearing the dirty mark that
-/// setting it leaves: otherwise the next save would write every prop's sorting order (set in edit mode by its
-/// <see cref="YPositionSorter"/>) into the scene as a prefab override.
+/// checks the topmost visible layer for detached blobs and holes; measures shimmer at sub-pixel camera offsets, the
+/// cost of a frame, of a rebuild and of switching the look. Any check can run in either look through
+/// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. Shaders compile synchronously during its
+/// renders, since a render skips variants still compiling in the background. It hides renderers only through
+/// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved, and puts back what a render
+/// hid even when the render fails, clearing the dirty mark that setting it leaves: otherwise the next save would write
+/// every prop's sorting order (set in edit mode by its <see cref="YPositionSorter"/>) into the scene as a prefab
+/// override.
 /// </summary>
 public static class TerrainBlendProbe
 {
@@ -23,7 +25,8 @@ public static class TerrainBlendProbe
     private const string MenuRoot = "Tools/TopDownRPG/World/Terrain/";
 
     /// <summary>
-    /// Logs the blob check of every terrain renderer in the open scenes.
+    /// Logs the blob check of every terrain renderer in the open scenes, in the crisp look and in the soft one, leaving
+    /// each renderer in the look it had.
     /// </summary>
     [MenuItem(MenuRoot + "Check Blobs In Open Areas")]
     private static void CheckBlobsInOpenAreas()
@@ -32,13 +35,62 @@ public static class TerrainBlendProbe
         foreach (TerrainBlendRenderer renderer in Object.FindObjectsByType<TerrainBlendRenderer>())
         {
             found++;
-            UnityEngine.Debug.Log($"Terrain blob check, {renderer.gameObject.scene.name}:\n{CheckBlobs(renderer, 200)}", renderer);
+            string crisp = InMode(renderer, TerrainBlendRenderer.BlendMode.Crisp, () => CheckBlobs(renderer, 200));
+            string soft = InMode(renderer, TerrainBlendRenderer.BlendMode.Soft, () => CheckBlobs(renderer, 200));
+            UnityEngine.Debug.Log($"Terrain blob check, {renderer.gameObject.scene.name}, crisp:\n{crisp}soft:\n{soft}", renderer);
         }
 
         if (found == 0)
         {
             UnityEngine.Debug.LogWarning("No TerrainBlendRenderer in the open scenes.");
         }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="check"/> with <paramref name="terrain"/> drawing in <paramref name="mode"/> and puts its
+    /// mode back afterwards, even when the check throws. The mode is set through
+    /// <see cref="TerrainBlendRenderer.Mode"/>, which marks nothing changed, so a check in the soft look leaves no
+    /// scene diff.
+    /// </summary>
+    public static T InMode<T>(TerrainBlendRenderer terrain, TerrainBlendRenderer.BlendMode mode, System.Func<T> check)
+    {
+        TerrainBlendRenderer.BlendMode previous = terrain.Mode;
+        try
+        {
+            terrain.Mode = mode;
+            return check();
+        }
+        finally
+        {
+            terrain.Mode = previous;
+        }
+    }
+
+    /// <summary>
+    /// Times a full rebuild of <paramref name="terrain"/> (control map, arrays, lookup texture, material and chunks)
+    /// and a switch of its look, each the best of <paramref name="repeats"/> runs, and leaves it in the look it had.
+    /// Chunks rebuilt here are drawn from the next editor update.
+    /// </summary>
+    public static string MeasureRebuildAndModeSwitch(TerrainBlendRenderer terrain, int repeats)
+    {
+        double rebuild = double.MaxValue;
+        double modeSwitch = double.MaxValue;
+        TerrainBlendRenderer.BlendMode previous = terrain.Mode;
+        TerrainBlendRenderer.BlendMode other = previous == TerrainBlendRenderer.BlendMode.Crisp ? TerrainBlendRenderer.BlendMode.Soft : TerrainBlendRenderer.BlendMode.Crisp;
+        for (int i = 0; i < repeats; i++)
+        {
+            Stopwatch watch = Stopwatch.StartNew();
+            terrain.Rebuild();
+            watch.Stop();
+            rebuild = System.Math.Min(rebuild, watch.Elapsed.TotalMilliseconds);
+            watch.Restart();
+            terrain.Mode = other;
+            watch.Stop();
+            modeSwitch = System.Math.Min(modeSwitch, watch.Elapsed.TotalMilliseconds);
+            terrain.Mode = previous;
+        }
+
+        return $"rebuild: {rebuild:F3} ms; switching the look: {modeSwitch * 1000.0:F1} us (best of {repeats})";
     }
 
     /// <summary>

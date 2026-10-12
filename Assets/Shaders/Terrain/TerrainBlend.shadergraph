@@ -20,9 +20,16 @@
         },
         {
             "m_Id": "111eb327ab02480ab50cd3383a071398"
+        },
+        {
+            "m_Id": "add154cbe4da48ce88288419c2230fa8"
         }
     ],
-    "m_Keywords": [],
+    "m_Keywords": [
+        {
+            "m_Id": "a4dbe848b61240839ab972bb11c9b172"
+        }
+    ],
     "m_Dropdowns": [],
     "m_CategoryData": [
         {
@@ -71,6 +78,9 @@
         },
         {
             "m_Id": "01aa2c5d3f3f400ab966577da33c639f"
+        },
+        {
+            "m_Id": "31bcdd42f37c4e4aab653069af730d30"
         },
         {
             "m_Id": "d2de866588e44143a016c3efd40b4c72"
@@ -175,6 +185,20 @@
                     "m_Id": "d2de866588e44143a016c3efd40b4c72"
                 },
                 "m_SlotId": 6
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "31bcdd42f37c4e4aab653069af730d30"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "d2de866588e44143a016c3efd40b4c72"
+                },
+                "m_SlotId": 9
             }
         },
         {
@@ -803,6 +827,38 @@
 }
 
 {
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DArrayShaderProperty",
+    "m_ObjectId": "add154cbe4da48ce88288419c2230fa8",
+    "m_Guid": {
+        "m_GuidSerialized": "3bc77878-dde9-4aec-949d-d22d8dee79b9"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Height Array",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Height Array",
+    "m_DefaultReferenceName": "_HeightArray",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": {
+        "m_SerializedTexture": "{\"textureArray\":{\"instanceID\":0}}",
+        "m_Guid": ""
+    },
+    "m_Modifiable": true
+}
+
+{
     "m_SGVersion": 1,
     "m_Type": "UnityEditor.ShaderGraph.Internal.Vector4ShaderProperty",
     "m_ObjectId": "c07b337457484dd3a5973d0c63400c2c",
@@ -1339,6 +1395,23 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Texture2DArrayInputMaterialSlot",
+    "m_ObjectId": "49ad04a56f89404fa0d7ac3e5ec3cb15",
+    "m_Id": 9,
+    "m_DisplayName": "Height",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Height",
+    "m_StageCapability": 3,
+    "m_BareResource": false,
+    "m_TextureArray": {
+        "m_SerializedTexture": "{\"textureArray\":{\"instanceID\":0}}",
+        "m_Guid": ""
+    }
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector4MaterialSlot",
     "m_ObjectId": "f25585907deb400b9c894076b2627bf3",
     "m_Id": 5,
@@ -1460,6 +1533,9 @@
             "m_Id": "e3ca9aa377b34bd6ad8916e7924a2f4c"
         },
         {
+            "m_Id": "49ad04a56f89404fa0d7ac3e5ec3cb15"
+        },
+        {
             "m_Id": "f25585907deb400b9c894076b2627bf3"
         },
         {
@@ -1541,7 +1617,90 @@
         },
         {
             "m_Id": "111eb327ab02480ab50cd3383a071398"
+        },
+        {
+            "m_Id": "add154cbe4da48ce88288419c2230fa8"
+        },
+        {
+            "m_Id": "a4dbe848b61240839ab972bb11c9b172"
         }
     ]
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Texture2DArrayMaterialSlot",
+    "m_ObjectId": "0588089e28194032bff1ce4f1af962d0",
+    "m_Id": 0,
+    "m_DisplayName": "Height Array",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 3,
+    "m_BareResource": false
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "31bcdd42f37c4e4aab653069af730d30",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": -900.0,
+            "y": 440.0,
+            "width": 0.0,
+            "height": 0.0
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "0588089e28194032bff1ce4f1af962d0"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": true,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "add154cbe4da48ce88288419c2230fa8"
+    }
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.ShaderKeyword",
+    "m_ObjectId": "a4dbe848b61240839ab972bb11c9b172",
+    "m_Guid": {
+        "m_GuidSerialized": "2e60f3d6-a763-425e-bd39-334832ab77f8"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Terrain Soft",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Terrain Soft",
+    "m_DefaultReferenceName": "_TERRAIN_SOFT",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": false,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_KeywordType": 0,
+    "m_KeywordDefinition": 1,
+    "m_KeywordScope": 0,
+    "m_KeywordStages": 2,
+    "m_Entries": [],
+    "m_Value": 0,
+    "m_IsEditable": true
 }
 

@@ -4,7 +4,9 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Marks the tilemap on this GameObject as terrain of one <see cref="TerrainType2D"/> for the
 /// <see cref="NavigationGrid2D"/> above it. On dual-grid terrain it belongs on the data tilemap (the one carrying the
-/// <see cref="DualGridTilemapModule"/>), never on the half-cell-offset render tilemap below it.
+/// <see cref="DualGridTilemapModule"/>), never on the half-cell-offset render tilemap below it. On a ground layer of a
+/// <see cref="TerrainBlendRenderer"/> its priority is the layer's place in the renderer's layers, its draw order: a
+/// source added there starts with it, and in the editor every change reaches that renderer, which checks it.
 /// </summary>
 [RequireComponent(typeof(Tilemap))]
 [DisallowMultipleComponent]
@@ -40,7 +42,8 @@ public class NavigationTerrainSource2D : MonoBehaviour
     public bool IsDualGridRenderTilemap => DualGridUtils.IsRenderTilemap(transform);
 
     /// <summary>
-    /// Tells the parent grid to rebuild its gizmo grid after an inspector change.
+    /// Tells the parent grid to rebuild its gizmo grid after an inspector change, and in the editor tells the terrain
+    /// renderer drawing this tilemap, which checks that its priority is still the layer's draw order.
     /// </summary>
     private void OnValidate()
     {
@@ -48,6 +51,27 @@ public class NavigationTerrainSource2D : MonoBehaviour
         if (grid != null)
         {
             grid.MarkGizmoGridStale();
+        }
+
+#if UNITY_EDITOR
+        TerrainBlendRenderer drawnBy = TerrainBlendRenderer.FindLayerDrawing(DataTilemap, out _);
+        if (drawnBy != null)
+        {
+            drawnBy.HandleNavigationSourceChanged();
+        }
+#endif
+    }
+
+    /// <summary>
+    /// When the source is added (or reset) in the editor on a ground layer of a terrain renderer, starts with that
+    /// layer's priority, its draw order.
+    /// </summary>
+    private void Reset()
+    {
+        TerrainBlendRenderer drawnBy = TerrainBlendRenderer.FindLayerDrawing(DataTilemap, out int layer);
+        if (drawnBy != null)
+        {
+            priority = TerrainBlendRenderer.NavigationPriorityOf(layer);
         }
     }
 

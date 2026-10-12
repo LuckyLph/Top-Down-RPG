@@ -3,17 +3,20 @@ using UnityEngine;
 
 /// <summary>
 /// The terrain style and materials as data for the terrain blending shader (Assets/Shaders/Terrain/TerrainBlend.hlsl):
-/// a small point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with.
-/// Row 0 holds the shared settings (edge noise, pair margin, pair blend). Rows 1 to L hold each layer's material:
-/// (outer radius, inner radius, repeat in pixels, cell mode), (keep margin, cut gap, cut bevel), (base colour). Then
-/// one row per pair of an upper layer u over a lower layer l, or over nothing (l = -1), at
-/// <see cref="PairRow"/>: (shadow colour, shadow alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height),
-/// (the rim's outer colour), then the rim sampled every half pixel from the edge inwards (colour, how much of the
-/// interior it covers). Colours stay sRGB, as the shader expects.
+/// a small point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with,
+/// holding both looks, so switching between them needs no rebuild. Row 0 holds the shared settings (edge noise, pair
+/// margin, pair blend). Rows 1 to L hold each layer's material: (outer radius, inner radius, repeat in pixels, cell
+/// mode), (keep margin, cut gap, cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them
+/// whole in the soft look), (base colour), (soft height scale, 0 without a height texture). Then one row per pair of
+/// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
+/// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
+/// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
+/// none), then the rim sampled every half pixel from the edge inwards (colour, how much of the interior it covers).
+/// Colours stay sRGB, as the shader expects.
 /// </summary>
 public static class TerrainBlendLut
 {
-    public const int RampColumn = 4;
+    public const int RampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
     public const int Width = RampColumn + RampTexels;
@@ -52,14 +55,22 @@ public static class TerrainBlendLut
             texels[row] = new Color(material.OuterRadius, material.InnerRadius, material.RepeatPixels, (float)material.Cells);
             texels[row + 1] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
             texels[row + 2] = material.BaseColour;
+            texels[row + 3] = new Color(material.Height != null ? material.HeightScale : 0f, 0f, 0f, 0f);
         }
 
         for (int upper = 0; upper < layers; upper++)
         {
+            bool cutStones = layerMaterials[upper].Cells == TerrainMaterial.CellMode.CutStones;
             for (int lower = -1; lower < upper; lower++)
             {
                 TerrainMaterial lowerMaterial = lower < 0 ? null : layerMaterials[lower];
-                WriteEdge(texels, PairRow(layers, upper, lower) * Width, style.GetEdge(layerMaterials[upper], lowerMaterial));
+                TerrainStyle.EdgeSettings edge = style.GetEdge(layerMaterials[upper], lowerMaterial);
+                bool wholeStones = cutStones && edge.SoftWholeStones;
+                WriteEdge(texels, PairRow(layers, upper, lower) * Width, edge, wholeStones);
+                if (wholeStones)
+                {
+                    texels[(1 + upper) * Width + 1].a = 1f;
+                }
             }
         }
 
@@ -87,15 +98,17 @@ public static class TerrainBlendLut
     /// <summary>
     /// Writes one pair row starting at texel <paramref name="start"/>.
     /// </summary>
-    private static void WriteEdge(Color[] texels, int start, TerrainStyle.EdgeSettings edge)
+    private static void WriteEdge(Color[] texels, int start, TerrainStyle.EdgeSettings edge, bool wholeStones)
     {
         Color shadow = edge.ShadowColour;
         Color outline = edge.OutlineColour;
+        Color band = edge.SoftBandColour;
         texels[start] = new Color(shadow.r, shadow.g, shadow.b, edge.ShadowAlpha);
         texels[start + 1] = new Color(outline.r, outline.g, outline.b, edge.DrawOutline ? 1f : 0f);
-        texels[start + 2] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, 0f);
+        texels[start + 2] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, wholeStones ? 1f : 0f);
         Color outer = edge.EvaluateRim(0f);
         texels[start + 3] = new Color(outer.r, outer.g, outer.b, 1f);
+        texels[start + 4] = new Color(band.r, band.g, band.b, edge.SoftBandWidth);
         for (int i = 0; i < RampTexels; i++)
         {
             float depth = (i + 0.5f) * RampStep;

@@ -119,7 +119,7 @@ public sealed class TerrainMaterialRecipeEditor : Editor
         {
             (string albedo, string cellField, string height) = TerrainMaterialWriter.TargetPaths(recipe.Material, recipe.CellMode != TerrainMaterial.CellMode.None);
             string field = cellField != null ? $", {Path.GetFileName(cellField)}" : string.Empty;
-            EditorGUILayout.HelpBox($"Generate writes {Path.GetFileName(albedo)}{field} and {Path.GetFileName(height)} into {TerrainMaterialWriter.TextureFolder} for seed {recipe.Seed}, and sets {recipe.Material.name}'s textures, base colour, repeat and cell mode.", MessageType.None);
+            EditorGUILayout.HelpBox($"Generate writes {Path.GetFileName(albedo)}{field} and {Path.GetFileName(height)} into {Path.GetDirectoryName(albedo).Replace('\\', '/')} for seed {recipe.Seed}, and sets {recipe.Material.name}'s textures, base colour, repeat and cell mode.", MessageType.None);
         }
 
         using (new EditorGUI.DisabledScope(recipe.Material == null))

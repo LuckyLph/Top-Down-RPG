@@ -155,7 +155,7 @@ public static class TerrainTileWriter
     /// </summary>
     private static void WriteSwatch(TerrainMaterial material, int size, Color32[] albedo)
     {
-        EnsureFolder(SwatchFolder);
+        TerrainMaterialWriter.EnsureFolder(SwatchFolder);
         string path = SwatchPath(material);
         byte[] png = TerrainMaterialWriter.EncodePng(TerrainStyle.PixelsPerCell, SwatchPixels(size, albedo));
         if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(png) || AssetImporter.GetAtPath(path) == null)
@@ -183,7 +183,7 @@ public static class TerrainTileWriter
         Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(path);
         if (tile == null)
         {
-            EnsureFolder(TileFolder);
+            TerrainMaterialWriter.EnsureFolder(TileFolder);
             tile = ScriptableObject.CreateInstance<Tile>();
             tile.sprite = swatch;
             tile.colliderType = Tile.ColliderType.None;
@@ -200,20 +200,5 @@ public static class TerrainTileWriter
         }
 
         return tile;
-    }
-
-    /// <summary>
-    /// Creates <paramref name="folder"/> and any missing parent folder as asset folders.
-    /// </summary>
-    private static void EnsureFolder(string folder)
-    {
-        if (AssetDatabase.IsValidFolder(folder))
-        {
-            return;
-        }
-
-        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
-        EnsureFolder(parent);
-        AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
     }
 }

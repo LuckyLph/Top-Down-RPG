@@ -7,8 +7,9 @@ using Object = UnityEngine.Object;
 
 /// <summary>
 /// Writes what a <see cref="TerrainMaterialRecipe"/> generates as its <see cref="TerrainMaterial"/>'s textures: PNGs in
-/// Assets/Textures/Terrain, at the paths the material's textures already have there (so their GUIDs stay, even after
-/// the material is renamed) or else named after the material, reimported so <see cref="TerrainTextureDefaults"/>
+/// the material's own folder under Assets/Textures/Terrain, at the paths the material's textures already have there (so
+/// their GUIDs stay, even after the material is renamed) or else named after the material, reimported so
+/// <see cref="TerrainTextureDefaults"/>
 /// applies, and the material pointed at them with the base colour, repeat and cell mode they were made for, after which
 /// the renderers drawing the material rebuild, and the swatch of its ground tile (<see cref="TerrainTileWriter"/>)
 /// follows. It refuses to overwrite another material's texture, and writes all of a material's files or none. The
@@ -39,6 +40,14 @@ public static class TerrainMaterialWriter
         if (!CanWrite(recipe, material, paths))
         {
             return false;
+        }
+
+        foreach (string path in new[] { paths.Albedo, paths.CellField, paths.Height })
+        {
+            if (path != null)
+            {
+                EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
+            }
         }
 
         WriteFiles(textures, paths);
@@ -73,13 +82,24 @@ public static class TerrainMaterialWriter
     }
 
     /// <summary>
+    /// The folder <paramref name="material"/>'s textures go in: the folder of the first of its textures (albedo, cell
+    /// field, height) that is a PNG under <see cref="TextureFolder"/>, so a material's textures stay together and a
+    /// renamed material keeps its folder, else a folder named after the material in <see cref="TextureFolder"/>.
+    /// </summary>
+    public static string FolderOf(TerrainMaterial material)
+    {
+        string existing = PathInTextureFolder(material.Albedo) ?? PathInTextureFolder(material.CellField) ?? PathInTextureFolder(material.Height);
+        return existing != null ? Path.GetDirectoryName(existing).Replace('\\', '/') : $"{TextureFolder}/{material.name}";
+    }
+
+    /// <summary>
     /// Where Generate writes <paramref name="material"/>'s textures: for each, the path of the PNG the material already
-    /// uses in <see cref="TextureFolder"/>, else the file named after the material there. The cell field's path is null
-    /// when <paramref name="withCellField"/> is false.
+    /// uses under <see cref="TextureFolder"/>, else the file named after the material in its folder
+    /// (<see cref="FolderOf"/>). The cell field's path is null when <paramref name="withCellField"/> is false.
     /// </summary>
     public static (string Albedo, string CellField, string Height) TargetPaths(TerrainMaterial material, bool withCellField)
     {
-        (string Albedo, string CellField, string Height) named = PathsIn(TextureFolder, FileBaseName(material), withCellField);
+        (string Albedo, string CellField, string Height) named = PathsIn(FolderOf(material), FileBaseName(material), withCellField);
         return (PathInTextureFolder(material.Albedo) ?? named.Albedo,
             withCellField ? PathInTextureFolder(material.CellField) ?? named.CellField : null,
             PathInTextureFolder(material.Height) ?? named.Height);
@@ -231,7 +251,23 @@ public static class TerrainMaterialWriter
     }
 
     /// <summary>
-    /// The asset path of <paramref name="texture"/> when it is a PNG in <see cref="TextureFolder"/>, else null.
+    /// Creates <paramref name="folder"/> and any missing parent folder as asset folders.
+    /// </summary>
+    public static void EnsureFolder(string folder)
+    {
+        if (AssetDatabase.IsValidFolder(folder))
+        {
+            return;
+        }
+
+        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
+        EnsureFolder(parent);
+        AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
+    }
+
+    /// <summary>
+    /// The asset path of <paramref name="texture"/> when it is a PNG under <see cref="TextureFolder"/> (in any of its
+    /// folders), else null.
     /// </summary>
     private static string PathInTextureFolder(Texture2D texture)
     {

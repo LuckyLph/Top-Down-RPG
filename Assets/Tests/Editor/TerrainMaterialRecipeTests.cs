@@ -131,27 +131,52 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Generate writes a material's textures into the terrain texture folder, named after the material in lower case,
-    /// with a cell field only when the recipe makes one.
+    /// Generate writes a new material's textures into a folder named after it in the terrain texture folder, each file
+    /// named after the material in lower case, with a cell field only when the recipe makes one.
     /// </summary>
     [Test]
-    public void TargetPaths_AreNamedAfterTheMaterial()
+    public void TargetPaths_AreNamedAfterTheMaterial_InItsOwnFolder()
     {
         TerrainMaterial material = Track(TerrainMaterial.Create("RoadGravel", null, null, 4, TerrainMaterial.CellMode.None, Color.gray, new TerrainStyle.EdgeSettings()));
 
         (string Albedo, string CellField, string Height) withField = TerrainMaterialWriter.TargetPaths(material, true);
         (string Albedo, string CellField, string Height) withoutField = TerrainMaterialWriter.TargetPaths(material, false);
 
-        Assert.That(withField.Albedo, Is.EqualTo("Assets/Textures/Terrain/roadgravel_albedo.png"));
-        Assert.That(withField.CellField, Is.EqualTo("Assets/Textures/Terrain/roadgravel_field.png"));
-        Assert.That(withField.Height, Is.EqualTo("Assets/Textures/Terrain/roadgravel_height.png"));
+        Assert.That(TerrainMaterialWriter.FolderOf(material), Is.EqualTo("Assets/Textures/Terrain/RoadGravel"));
+        Assert.That(withField.Albedo, Is.EqualTo("Assets/Textures/Terrain/RoadGravel/roadgravel_albedo.png"));
+        Assert.That(withField.CellField, Is.EqualTo("Assets/Textures/Terrain/RoadGravel/roadgravel_field.png"));
+        Assert.That(withField.Height, Is.EqualTo("Assets/Textures/Terrain/RoadGravel/roadgravel_height.png"));
         Assert.That(withoutField.CellField, Is.Null);
     }
 
     /// <summary>
-    /// A material that already uses PNGs in the terrain texture folder keeps them whatever its name, so renaming it
-    /// keeps its textures' files and GUIDs; those files are another material's (the project's Gravel, only read here),
-    /// which Generate refuses to overwrite, while the Gravel material itself may.
+    /// The project's materials (only read) each keep their textures in a folder of their own, named after them, under
+    /// the terrain texture folder, and that is the folder Generate writes them to.
+    /// </summary>
+    [Test]
+    public void TheProjectsMaterials_KeepTheirTexturesInAFolderOfTheirOwn()
+    {
+        foreach (string name in new[] { "Grass", "Gravel", "Stone" })
+        {
+            TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
+            string folder = $"{TerrainMaterialWriter.TextureFolder}/{name}";
+
+            Assert.That(TerrainMaterialWriter.FolderOf(material), Is.EqualTo(folder), name);
+            foreach (Texture2D texture in new[] { material.Albedo, material.CellField, material.Height })
+            {
+                if (texture != null)
+                {
+                    Assert.That(Path.GetDirectoryName(AssetDatabase.GetAssetPath(texture)).Replace('\\', '/'), Is.EqualTo(folder), texture.name);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A material that already uses PNGs under the terrain texture folder keeps them whatever its name, and puts a
+    /// texture it does not have yet beside them, so renaming it keeps its textures' folder, files and GUIDs; those files
+    /// are another material's (the project's Gravel, only read here), which Generate refuses to overwrite, while the
+    /// Gravel material itself may.
     /// </summary>
     [Test]
     public void TargetPaths_KeepTheFilesAMaterialAlreadyUses_AndOtherMaterialsFilesAreFound()
@@ -164,7 +189,7 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(paths.Albedo, Is.EqualTo(AssetDatabase.GetAssetPath(gravel.Albedo)));
         Assert.That(paths.CellField, Is.EqualTo(AssetDatabase.GetAssetPath(gravel.CellField)));
-        Assert.That(paths.Height, Is.EqualTo("Assets/Textures/Terrain/roadgravel_height.png"), "A texture the material does not use yet is named after it.");
+        Assert.That(paths.Height, Is.EqualTo("Assets/Textures/Terrain/Gravel/roadgravel_height.png"), "A texture the material does not use yet is named after it, beside its other textures.");
         Assert.That(TerrainMaterialWriter.MaterialUsingTexture(paths.Albedo, renamed), Is.SameAs(gravel));
         Assert.That(TerrainMaterialWriter.MaterialUsingTexture(paths.Albedo, gravel), Is.Null);
         Assert.That(TerrainMaterialWriter.MaterialUsingTexture(paths.Height, renamed), Is.Null);

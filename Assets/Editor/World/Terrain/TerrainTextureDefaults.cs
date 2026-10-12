@@ -3,8 +3,8 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Import postprocessor for the terrain material textures under Assets/Textures/Terrain (written by
-/// <see cref="TerrainMaterialWriter"/>): plain textures with sRGB off (the terrain shader treats albedo bytes as sRGB
+/// Import postprocessor for the terrain material textures under Assets/Textures/Terrain, a folder per material (written
+/// by <see cref="TerrainMaterialWriter"/>): plain textures with sRGB off (the terrain shader treats albedo bytes as sRGB
 /// itself and reads the cell fields as raw offsets), point filtering, repeat wrapping, no mipmaps, no NPOT scaling and
 /// uncompressed RGBA32, so <see cref="TerrainBlendRenderer"/> can copy them into its texture arrays as they are.
 /// </summary>
@@ -13,8 +13,8 @@ public sealed class TerrainTextureDefaults : AssetPostprocessor
     private const string TerrainTexturesRoot = "Assets/Textures/Terrain/";
 
     /// <summary>
-    /// Applies the terrain texture settings to a texture under Assets/Textures/Terrain before it imports; other
-    /// textures are left alone.
+    /// Applies the terrain texture settings to a texture under Assets/Textures/Terrain (in any of its folders) before it
+    /// imports; other textures are left alone.
     /// </summary>
     private void OnPreprocessTexture()
     {

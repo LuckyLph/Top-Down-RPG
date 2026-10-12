@@ -11,9 +11,10 @@ using UnityEngine.Tilemaps;
 /// the layer loses its dual-grid module, render tilemap and any Tilemap Renderer of its own, and its navigation source
 /// gets the layer's terrain type and its draw order as priority. The grid's <see cref="TerrainBlendRenderer"/> is added
 /// or updated to draw those layers in the generator's order with their materials and the generator's style, and the
-/// area's <see cref="AreaTerrain"/> fills them with their tiles. Terrain layers the area does not have are left out,
-/// and every other tilemap (the walls), prop and object stays as it is. Running it again changes nothing. The Scene
-/// Generator window runs it as Convert Ground.
+/// area's <see cref="AreaTerrain"/> fills them with their tiles. Terrain layers the area does not have are left out (an
+/// area with none of them is refused), and every other tilemap (the walls), prop and object stays as it is, except that
+/// a tilemap the renderer drew besides the terrain layers stays drawn above them. Running it again changes nothing.
+/// The Scene Generator window runs it as Convert Ground.
 /// </summary>
 public static class GroundLayerMigration
 {
@@ -30,7 +31,7 @@ public static class GroundLayerMigration
     /// <summary>
     /// Converts the ground layers of <paramref name="grid"/> to <paramref name="layers"/>, bottom first, drawn with
     /// <paramref name="style"/>. Returns a line per change (empty when nothing changed), or null when the layers cannot
-    /// be set up, after logging an error naming <paramref name="owner"/>.
+    /// be set up or none of them is a tilemap under the grid, after logging an error naming <paramref name="owner"/>.
     /// </summary>
     public static List<string> Migrate(Grid grid, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, string owner = nameof(GroundLayerMigration))
     {
@@ -53,6 +54,12 @@ public static class GroundLayerMigration
                 tiles.Add(layer.Tile);
                 present.Add(layer);
             }
+        }
+
+        if (present.Count == 0)
+        {
+            Debug.LogError($"{owner}: none of its terrain layers is a tilemap under {grid.name}, so there is nothing to convert.", grid);
+            return null;
         }
 
         Undo.IncrementCurrentGroup();
@@ -82,10 +89,10 @@ public static class GroundLayerMigration
     }
 
     /// <summary>
-    /// When a filled cell of <paramref name="tilemap"/> holds another tile than <paramref name="tile"/>, clears the
-    /// tilemap and fills every filled cell with <paramref name="tile"/> in one batch recorded for undo. Clearing first
-    /// also drops the tilemap's records of the tiles and sprites it held, which would otherwise stay in the scene
-    /// unused but still pointing at them.
+    /// When a filled cell of <paramref name="tilemap"/> holds another tile than <paramref name="tile"/>, or the tilemap
+    /// still keeps records of tiles or sprites it no longer holds (<see cref="HasStaleRecords"/>), clears the tilemap
+    /// and fills every filled cell with <paramref name="tile"/> in one batch recorded for undo. Clearing first drops
+    /// those records, which would otherwise stay in the scene unused but still pointing at the old tiles.
     /// </summary>
     private static void SwapTiles(Tilemap tilemap, TileBase tile, List<string> changes)
     {
@@ -101,7 +108,7 @@ public static class GroundLayerMigration
             }
         }
 
-        if (swapped == 0)
+        if (swapped == 0 && !HasStaleRecords(tilemap, tile))
         {
             return;
         }
@@ -111,6 +118,36 @@ public static class GroundLayerMigration
         Undo.RegisterCompleteObjectUndo(tilemap, $"Convert {tilemap.name}");
         tilemap.ClearAllTiles();
         tilemap.SetTiles(filled.ToArray(), tiles);
-        changes.Add($"{tilemap.name}: {swapped} cells now hold {tile.name}");
+        changes.Add(swapped > 0 ? $"{tilemap.name}: {swapped} cells now hold {tile.name}" : $"{tilemap.name}: dropped its records of tiles it no longer holds");
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/>'s serialized records of the tiles and sprites its cells hold keep an entry no
+    /// cell uses any more, or a tile other than <paramref name="tile"/>. Writing a tile over a cell keeps the old tile's
+    /// record, with a count of 0, until the tilemap is cleared.
+    /// </summary>
+    private static bool HasStaleRecords(Tilemap tilemap, TileBase tile)
+    {
+        SerializedObject data = new(tilemap);
+        SerializedProperty tileRecords = data.FindProperty("m_TileAssetArray");
+        for (int i = 0; i < tileRecords.arraySize; i++)
+        {
+            SerializedProperty record = tileRecords.GetArrayElementAtIndex(i);
+            if (record.FindPropertyRelative("m_RefCount").intValue == 0 || record.FindPropertyRelative("m_Data").objectReferenceValue != tile)
+            {
+                return true;
+            }
+        }
+
+        SerializedProperty spriteRecords = data.FindProperty("m_TileSpriteArray");
+        for (int i = 0; i < spriteRecords.arraySize; i++)
+        {
+            if (spriteRecords.GetArrayElementAtIndex(i).FindPropertyRelative("m_RefCount").intValue == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 /// <summary>
 /// Tests for the walls' sheet: <see cref="WallSheetRecipe"/> built in memory with its default settings and the
@@ -142,6 +143,52 @@ public class WallSheetRecipeTests
         Assert.That(recipe.Sheet, Is.SameAs(sheet));
         Assert.That(recipe.RuleTile, Is.SameAs(ruleTile));
         Assert.That(File.ReadAllBytes(SheetPath), Is.EqualTo(TerrainMaterialWriter.EncodePng(recipe.SheetSize, recipe.Generate(recipe.Seed))), "The sheet is what its recipe generates.");
+    }
+
+    /// <summary>
+    /// Settings that cannot make a sheet (a corner radius reaching half a piece) are reported by
+    /// <see cref="WallSheetRecipe.CanGenerate"/>, make <see cref="WallSheetRecipe.Generate(int, int[])"/> throw, and make
+    /// the writer log the reason and write nothing instead of throwing.
+    /// </summary>
+    [Test]
+    public void SettingsThatCannotMakeASheet_AreReported_AndTheWriterRefusesThem()
+    {
+        WallSheetRecipe recipe = CreateRecipe();
+        recipe.name = "Recipe";
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("ruleTile").objectReferenceValue = ruleTile;
+        settings.FindProperty("outerRadius").floatValue = 16f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        int[] masks = WallSheetRecipe.PieceMasks(ruleTile, out _);
+
+        Assert.That(recipe.CanGenerate(out string problem), Is.False);
+        Assert.That(() => recipe.Generate(1, masks), Throws.InvalidOperationException);
+        LogAssert.Expect(LogType.Error, $"Recipe: {problem}");
+        Assert.That(WallSheetWriter.Generate(recipe), Is.False);
+    }
+
+    /// <summary>
+    /// The inspector's preview follows the rule tile: after an edit to one of its tiling rules elsewhere, the preview
+    /// asks to be rebuilt although the recipe itself did not change, and a rebuild settles it again.
+    /// </summary>
+    [Test]
+    public void ThePreview_FollowsAnEditToTheRuleTile()
+    {
+        DualGridRuleTile copy = Track(Object.Instantiate(ruleTile));
+        WallSheetRecipe recipe = CreateRecipe();
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("ruleTile").objectReferenceValue = copy;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        WallSheetRecipeEditor inspector = Track((WallSheetRecipeEditor)Editor.CreateEditor(recipe));
+        inspector.RebuildPreview(recipe);
+        Assert.That(inspector.PreviewNeedsRebuild(recipe), Is.False);
+
+        List<int> neighbours = copy.m_TilingRules[12].m_Neighbors;
+        neighbours[0] = neighbours[0] == DualGridRuleTile.DualGridNeighbor.Filled ? DualGridRuleTile.DualGridNeighbor.NotFilled : DualGridRuleTile.DualGridNeighbor.Filled;
+
+        Assert.That(inspector.PreviewNeedsRebuild(recipe), Is.True);
+        inspector.RebuildPreview(recipe);
+        Assert.That(inspector.PreviewNeedsRebuild(recipe), Is.False);
     }
 
     /// <summary>

@@ -9,18 +9,24 @@ using UnityEngine.Tilemaps;
 /// or a Tilemap Renderer, each with a navigation source whose priority is its draw order, drawn by the Grid's
 /// <see cref="TerrainBlendRenderer"/>, and filled by the area's <see cref="AreaTerrain"/> with their plain tiles. Every
 /// change goes through undo, a step whose target is already set changes and records nothing, and each change adds a
-/// line to the caller's list.
+/// line to the caller's list. Only outside play mode, where the changes can be saved.
 /// </summary>
 internal static class AreaGroundSetup
 {
     /// <summary>
-    /// Whether ground layers can be set up from <paramref name="layers"/> and <paramref name="style"/>: a style, at
-    /// most <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a
-    /// material. Logs an error naming <paramref name="owner"/> for the first problem, pinging
-    /// <paramref name="context"/>.
+    /// Whether ground layers can be set up from <paramref name="layers"/> and <paramref name="style"/>: outside play
+    /// mode (a change to the scene's play-mode copy would be lost when play stops), with a style, and at most
+    /// <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a material.
+    /// Logs an error naming <paramref name="owner"/> for the first problem, pinging <paramref name="context"/>.
     /// </summary>
     public static bool CanSetUp(string owner, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, Object context)
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            Debug.LogError($"{owner}: ground layers are set up outside play mode; a change to the scene during play is lost when play stops.", context);
+            return false;
+        }
+
         if (style == null)
         {
             Debug.LogError($"{owner}: no terrain style for the area's {nameof(TerrainBlendRenderer)}.", context);
@@ -57,22 +63,26 @@ internal static class AreaGroundSetup
 
     /// <summary>
     /// Removes what a ground layer no longer has from <paramref name="tilemap"/>: its
-    /// <see cref="DualGridTilemapModule"/> with the module's render tilemap (the first child that has a Tilemap), and a
-    /// Tilemap Renderer on the data tilemap itself, which would draw the tiles' palette swatches.
+    /// <see cref="DualGridTilemapModule"/>, every tilemap under it (the module's render tilemap, or one left behind
+    /// after its module was removed, which would go on drawing the old tileset), and a Tilemap Renderer on the data
+    /// tilemap itself, which would draw the tiles' palette swatches.
     /// </summary>
     public static void RemoveDualGridParts(Tilemap tilemap, List<string> changes)
     {
         if (tilemap.TryGetComponent(out DualGridTilemapModule module))
         {
-            Tilemap render = module.RenderTilemap;
-            if (render != null && render != tilemap)
-            {
-                changes.Add($"{tilemap.name}: removed its render tilemap {render.name}");
-                Undo.DestroyObjectImmediate(render.gameObject);
-            }
-
             changes.Add($"{tilemap.name}: removed its {nameof(DualGridTilemapModule)}");
             Undo.DestroyObjectImmediate(module);
+        }
+
+        for (int i = tilemap.transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = tilemap.transform.GetChild(i);
+            if (child.TryGetComponent(out Tilemap _))
+            {
+                changes.Add($"{tilemap.name}: removed its render tilemap {child.name}");
+                Undo.DestroyObjectImmediate(child.gameObject);
+            }
         }
 
         if (tilemap.TryGetComponent(out TilemapRenderer tilemapRenderer))
@@ -114,11 +124,13 @@ internal static class AreaGroundSetup
 
     /// <summary>
     /// Adds the <see cref="TerrainBlendRenderer"/> of <paramref name="grid"/> when it has none and has it draw
-    /// <paramref name="tilemaps"/>, bottom first, with <paramref name="materials"/> and <paramref name="style"/>. Its
-    /// other settings (chunk size, sorting, look) stay as they are. Warns about each tilemap it drew before and no
-    /// longer draws.
+    /// <paramref name="tilemaps"/> first, bottom first, with <paramref name="materials"/> and <paramref name="style"/>.
+    /// Any other tilemap it drew stays drawn above them, in its old order and with its material, and its navigation
+    /// source's priority follows its new place, so no layer stops being drawn while it still counts for navigation. Past
+    /// <see cref="TerrainControlMap.MaxLayers"/> layers the rest are dropped with a warning, and entries without a
+    /// tilemap are dropped. Its other settings (chunk size, sorting, look) stay as they are.
     /// </summary>
-    public static TerrainBlendRenderer SetRenderer(Grid grid, TerrainStyle style, IReadOnlyList<Tilemap> tilemaps, IReadOnlyList<TerrainMaterial> materials, List<string> changes)
+    public static void SetRenderer(Grid grid, TerrainStyle style, IReadOnlyList<Tilemap> tilemaps, IReadOnlyList<TerrainMaterial> materials, List<string> changes)
     {
         if (!grid.TryGetComponent(out TerrainBlendRenderer renderer))
         {
@@ -135,36 +147,72 @@ internal static class AreaGroundSetup
         }
 
         SerializedProperty layers = data.FindProperty("layers");
+        List<Tilemap> drawn = new(tilemaps);
+        List<TerrainMaterial> drawnMaterials = new(materials);
         for (int i = 0; i < layers.arraySize; i++)
         {
-            Object listed = layers.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue;
-            if (listed != null && !Contains(tilemaps, listed))
+            SerializedProperty layer = layers.GetArrayElementAtIndex(i);
+            Tilemap listed = layer.FindPropertyRelative("tilemap").objectReferenceValue as Tilemap;
+            if (listed == null || Contains(drawn, listed))
             {
-                Debug.LogWarning($"{grid.name}: the {nameof(TerrainBlendRenderer)} no longer draws {listed.name}, which is not one of the ground layers.", renderer);
-                changes.Add($"{grid.name}: stopped drawing {listed.name}");
+                continue;
             }
+
+            if (drawn.Count >= TerrainControlMap.MaxLayers)
+            {
+                Debug.LogWarning($"{grid.name}: the {nameof(TerrainBlendRenderer)} no longer draws {listed.name}: it draws at most {TerrainControlMap.MaxLayers} layers. {listed.name}'s navigation source still counts.", renderer);
+                changes.Add($"{grid.name}: stopped drawing {listed.name}");
+                continue;
+            }
+
+            drawn.Add(listed);
+            drawnMaterials.Add(layer.FindPropertyRelative("material").objectReferenceValue as TerrainMaterial);
         }
 
-        if (layers.arraySize != tilemaps.Count)
+        if (layers.arraySize != drawn.Count)
         {
-            layers.arraySize = tilemaps.Count;
+            changes.Add($"{grid.name}: draws {drawn.Count} layers instead of {layers.arraySize}");
+            layers.arraySize = drawn.Count;
         }
 
-        for (int i = 0; i < tilemaps.Count; i++)
+        for (int i = 0; i < drawn.Count; i++)
         {
             SerializedProperty layer = layers.GetArrayElementAtIndex(i);
             SerializedProperty tilemap = layer.FindPropertyRelative("tilemap");
             SerializedProperty material = layer.FindPropertyRelative("material");
-            if (tilemap.objectReferenceValue != tilemaps[i] || material.objectReferenceValue != materials[i])
+            if (tilemap.objectReferenceValue != drawn[i] || material.objectReferenceValue != drawnMaterials[i])
             {
-                changes.Add($"{grid.name}: draws {tilemaps[i].name} as layer {i} with {Name(materials[i])}");
-                tilemap.objectReferenceValue = tilemaps[i];
-                material.objectReferenceValue = materials[i];
+                changes.Add(i < tilemaps.Count ? $"{grid.name}: draws {drawn[i].name} as layer {i} with {Name(drawnMaterials[i])}" : $"{grid.name}: keeps drawing {drawn[i].name}, now as layer {i}");
+                tilemap.objectReferenceValue = drawn[i];
+                material.objectReferenceValue = drawnMaterials[i];
             }
         }
 
         data.ApplyModifiedProperties();
-        return renderer;
+        for (int i = tilemaps.Count; i < drawn.Count; i++)
+        {
+            SetNavigationPriority(drawn[i], TerrainBlendRenderer.NavigationPriorityOf(i), changes);
+        }
+    }
+
+    /// <summary>
+    /// Gives the navigation source of <paramref name="tilemap"/>, when it has one, <paramref name="priority"/>.
+    /// </summary>
+    private static void SetNavigationPriority(Tilemap tilemap, int priority, List<string> changes)
+    {
+        if (!tilemap.TryGetComponent(out NavigationTerrainSource2D source))
+        {
+            return;
+        }
+
+        SerializedObject data = new(source);
+        SerializedProperty order = data.FindProperty("priority");
+        if (order.intValue != priority)
+        {
+            changes.Add($"{tilemap.name}: navigation priority {order.intValue} -> {priority}");
+            order.intValue = priority;
+            data.ApplyModifiedProperties();
+        }
     }
 
     /// <summary>
@@ -199,7 +247,7 @@ internal static class AreaGroundSetup
     /// <summary>
     /// Whether <paramref name="tilemaps"/> holds <paramref name="candidate"/>.
     /// </summary>
-    private static bool Contains(IReadOnlyList<Tilemap> tilemaps, Object candidate)
+    private static bool Contains(IReadOnlyList<Tilemap> tilemaps, Tilemap candidate)
     {
         for (int i = 0; i < tilemaps.Count; i++)
         {

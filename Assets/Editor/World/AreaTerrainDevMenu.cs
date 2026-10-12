@@ -23,6 +23,17 @@ public static class AreaTerrainDevMenu
     }
 
     /// <summary>
+    /// The cell of <paramref name="layer"/> under <paramref name="point"/>, at z = 0, the plane the terrain renderer and
+    /// navigation read: a camera's position lies off that plane, and on a grid whose cells have depth it would give
+    /// another z.
+    /// </summary>
+    public static Vector3Int CellAt(Tilemap layer, Vector3 point)
+    {
+        Vector3Int cell = layer.WorldToCell(point);
+        return new Vector3Int(cell.x, cell.y, 0);
+    }
+
+    /// <summary>
     /// Toggles the cell at the centre of the view on the selected tilemap through the area terrain of its scene, and
     /// logs the outcome.
     /// </summary>
@@ -37,7 +48,7 @@ public static class AreaTerrainDevMenu
             return;
         }
 
-        Vector3Int cell = layer.WorldToCell(ViewCentre());
+        Vector3Int cell = CellAt(layer, ViewCentre());
         bool filled = !layer.HasTile(cell);
         Debug.Log(Toggle(terrain, layer, cell)
             ? $"{(filled ? "Filled" : "Emptied")} {layer.name} {cell} through {terrain.name}."

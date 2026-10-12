@@ -18,22 +18,22 @@ public static class WallSheetWriter
 {
     /// <summary>
     /// Generates <paramref name="recipe"/>'s sheet for its seed, writes it over the recipe's sheet texture and slices
-    /// it. Logs an error and writes nothing when the recipe has no PNG sheet or its rule tile cannot say what each
-    /// piece fills.
+    /// it. Logs an error and writes nothing when the recipe's settings cannot make a sheet, its rule tile cannot say
+    /// what each piece fills, or it has no PNG sheet.
     /// </summary>
     public static bool Generate(WallSheetRecipe recipe)
     {
+        int[] masks = WallSheetRecipe.PieceMasks(recipe.RuleTile, out string problem);
+        if (masks == null || !recipe.CanGenerate(out problem))
+        {
+            Debug.LogError($"{recipe.name}: {problem}", recipe);
+            return false;
+        }
+
         string path = recipe.Sheet != null ? AssetDatabase.GetAssetPath(recipe.Sheet) : null;
         if (string.IsNullOrEmpty(path) || !path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
             Debug.LogError($"{recipe.name} has no PNG sheet to write.", recipe);
-            return false;
-        }
-
-        int[] masks = WallSheetRecipe.PieceMasks(recipe.RuleTile, out string problem);
-        if (masks == null)
-        {
-            Debug.LogError($"{recipe.name}: {problem}", recipe);
             return false;
         }
 

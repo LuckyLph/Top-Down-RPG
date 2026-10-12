@@ -66,10 +66,23 @@ public sealed class WallSheetRecipe : ScriptableObject
     }
 
     /// <summary>
+    /// Whether the settings can make a sheet: a top colour, and corner radii and an outline and face under half a piece,
+    /// so every edge stays inside its piece. Returns the reason in <paramref name="problem"/> when they cannot.
+    /// </summary>
+    public bool CanGenerate(out string problem)
+    {
+        float half = pieceSize * 0.5f;
+        problem = topColours == null || topColours.Length == 0 || outerRadius >= half || innerRadius >= half || outlineWidth + faceHeight >= half
+            ? $"a wall sheet needs a top colour, and corner radii and an outline and face under half a piece ({half} px)."
+            : null;
+        return problem == null;
+    }
+
+    /// <summary>
     /// The sheet's pixels for <paramref name="sheetSeed"/>, rows from the bottom as <see cref="Texture2D.SetPixels32"/>
     /// takes them, piece i filling the quadrants of <paramref name="pieceMasks"/>[i] (see <see cref="PieceMasks"/>).
     /// Every random value comes from one <see cref="System.Random"/> seeded with <paramref name="sheetSeed"/>. Throws
-    /// when there are not 16 masks or no top colour, or when the radii or the outline and face reach half a piece.
+    /// when there are not 16 masks or when the settings cannot make a sheet (<see cref="CanGenerate"/>).
     /// </summary>
     public Color32[] Generate(int sheetSeed, int[] pieceMasks)
     {
@@ -78,11 +91,12 @@ public sealed class WallSheetRecipe : ScriptableObject
             throw new ArgumentException($"A wall sheet needs {PieceCount} piece masks.", nameof(pieceMasks));
         }
 
-        float half = pieceSize * 0.5f;
-        if (topColours == null || topColours.Length == 0 || outerRadius >= half || innerRadius >= half || outlineWidth + faceHeight >= half)
+        if (!CanGenerate(out string problem))
         {
-            throw new InvalidOperationException($"{name}: a wall sheet needs a top colour, and corner radii and an outline and face under half a piece ({half} px).");
+            throw new InvalidOperationException($"{name}: {problem}");
         }
+
+        float half = pieceSize * 0.5f;
 
         System.Random random = new(sheetSeed);
         int blocksAcross = (pieceSize + blockSize - 1) / blockSize;

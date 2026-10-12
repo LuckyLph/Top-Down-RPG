@@ -629,15 +629,16 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// In an area whose terrain renderer draws the layers in another order than the generator's (stone under gravel,
-    /// their navigation priorities following that order), with other materials, and draws a tilemap that is not one of
-    /// the generator's layers, writing puts the renderer's layers back in the generator's order with its materials,
-    /// gives each layer's navigation source its index there, and stops drawing the other tilemap with a warning; the
-    /// renderer then builds without reporting a mismatch. The test's own changes go through undo, so the revert in
-    /// <see cref="TearDown"/> only passes through states whose priorities match the draw order.
+    /// In an area whose terrain renderer draws the layers in another order than the generator's (stone under gravel),
+    /// with other materials, and draws a water tilemap that is not one of the generator's layers between them (every
+    /// navigation priority following that order), writing puts the generator's layers first in its order with its
+    /// materials, keeps drawing the water above them with its own material, and gives every layer's navigation source
+    /// its new index, so nothing it drew stops being drawn while still counting for navigation; the renderer then builds
+    /// without reporting a mismatch. The test's own changes go through undo, so the revert in <see cref="TearDown"/> only
+    /// passes through states whose priorities match the draw order.
     /// </summary>
     [Test]
-    public void TheWriter_PutsATerrainRenderersLayersInTheGeneratorsOrder()
+    public void TheWriter_PutsTheGeneratorsLayersFirstInItsOrder_AndKeepsDrawingOtherLayersAboveThem()
     {
         Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
@@ -645,33 +646,41 @@ public class AreaGenerationTests
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(3)), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
         Assert.That(layers.Count, Is.EqualTo(3));
-        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
-        Undo.RegisterCreatedObjectUndo(water.gameObject, "Create Water");
-        water.transform.SetParent(grid.transform, false);
         TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
-        int[] drawOrder = { 0, 2, 1 };
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Undo.IncrementCurrentGroup();
         int reorder = Undo.GetCurrentGroup();
+        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
+        Undo.RegisterCreatedObjectUndo(water.gameObject, "Create Water");
+        water.transform.SetParent(grid.transform, false);
+        Undo.AddComponent<NavigationTerrainSource2D>(water.gameObject).Configure(Track(TerrainType2D.Create("water")));
+        Tilemap[] drawOrder =
+        {
+            grid.transform.Find(layers[0].TilemapName).GetComponent<Tilemap>(),
+            water,
+            grid.transform.Find(layers[2].TilemapName).GetComponent<Tilemap>(),
+            grid.transform.Find(layers[1].TilemapName).GetComponent<Tilemap>()
+        };
+        TerrainMaterial[] drawnMaterials = { materials[0], materials[1], materials[2], materials[1] };
         SerializedObject rendererData = new(renderer);
         SerializedProperty listed = rendererData.FindProperty("layers");
-        listed.arraySize = 4;
-        for (int i = 0; i < 4; i++)
+        listed.arraySize = drawOrder.Length;
+        for (int i = 0; i < drawOrder.Length; i++)
         {
             SerializedProperty layer = listed.GetArrayElementAtIndex(i);
-            layer.FindPropertyRelative("tilemap").objectReferenceValue = i < 3 ? grid.transform.Find(layers[drawOrder[i]].TilemapName).GetComponent<Tilemap>() : water;
-            layer.FindPropertyRelative("material").objectReferenceValue = materials[i < 3 ? drawOrder[i] : 0];
+            layer.FindPropertyRelative("tilemap").objectReferenceValue = drawOrder[i];
+            layer.FindPropertyRelative("material").objectReferenceValue = drawnMaterials[i];
         }
 
         rendererData.ApplyModifiedProperties();
         TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
         Undo.CollapseUndoOperations(reorder);
-        Assert.That(grid.transform.Find(layers[2].TilemapName).GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(1), "Stone is drawn under gravel.");
-        LogAssert.Expect(LogType.Warning, "Grid: the TerrainBlendRenderer no longer draws Water, which is not one of the ground layers.");
+        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(1), "The water is drawn second.");
+        Assert.That(drawOrder[2].GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(2), "Stone is drawn under gravel.");
 
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
 
-        Assert.That(renderer.Layers.Count, Is.EqualTo(layers.Count));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(layers.Count + 1));
         for (int i = 0; i < layers.Count; i++)
         {
             Tilemap tilemap = grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>();
@@ -680,6 +689,9 @@ public class AreaGenerationTests
             Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), layers[i].TilemapName);
         }
 
+        Assert.That(renderer.Layers[3].Tilemap, Is.SameAs(water), "The water stays drawn, above the generator's layers.");
+        Assert.That(renderer.Layers[3].Material, Is.SameAs(materials[1]), "with its own material");
+        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(3)));
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
         renderer.RunScheduledRebuild();
         Assert.That(renderer.ControlMap, Is.Not.Null);

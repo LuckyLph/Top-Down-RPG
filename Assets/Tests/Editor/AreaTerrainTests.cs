@@ -180,6 +180,18 @@ public class AreaTerrainTests
     }
 
     /// <summary>
+    /// The dev menu edits the cell under the view's centre at z = 0, the plane the terrain renderer and navigation read,
+    /// even from a camera's position off that plane on a grid whose cells have depth.
+    /// </summary>
+    [Test]
+    public void DevMenuCell_IsTheCellUnderThePoint_AtZeroZ()
+    {
+        root.GetComponent<Grid>().cellSize = Vector3.one;
+
+        Assert.That(AreaTerrainDevMenu.CellAt(ground, new Vector3(2.5f, -3.5f, -10f)), Is.EqualTo(new Vector3Int(2, -4, 0)));
+    }
+
+    /// <summary>
     /// On the host the sync registers no prefab and spawns one <see cref="NetworkAreaTerrain"/> object.
     /// </summary>
     [Test]

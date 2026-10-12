@@ -182,6 +182,115 @@ public class GroundLayerMigrationTests
     }
 
     /// <summary>
+    /// A tilemap the renderer drew besides the layers stays drawn above them, with its material, and its navigation
+    /// source's priority follows its new place, so it does not go on counting for navigation without being drawn.
+    /// </summary>
+    [Test]
+    public void Migrate_KeepsDrawingATilemapTheRendererDrewBesidesTheLayers_AboveThem()
+    {
+        Tilemap water = AddTilemap("WaterTilemap");
+        water.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(Track(TerrainType2D.Create("water")));
+        grass.GetComponent<NavigationTerrainSource2D>().Configure(layers[0].TerrainType, 1);
+        TerrainBlendRenderer existing = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        existing.Configure(style, new TerrainBlendRenderer.Layer(water, layers[2].Material), new TerrainBlendRenderer.Layer(grass.DataTilemap, layers[0].Material));
+
+        List<string> changes = GroundLayerMigration.Migrate(grid, style, layers);
+
+        Assert.That(existing.Layers.Count, Is.EqualTo(4));
+        Assert.That(existing.Layers[3].Tilemap, Is.SameAs(water));
+        Assert.That(existing.Layers[3].Material, Is.SameAs(layers[2].Material));
+        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(3)));
+        Assert.That(existing.HasNavigationPrioritiesInStep(), Is.True);
+        Assert.That(changes, Does.Contain("Grid: keeps drawing WaterTilemap, now as layer 3"));
+        Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Is.Empty);
+    }
+
+    /// <summary>
+    /// A renderer entry without a tilemap is dropped, and that counts as a change, so the conversion reports it and
+    /// records it as its undo step instead of saying the ground already matches. The entry is added and dropped in one
+    /// undo group, so the revert in <see cref="TearDown"/> never rebuilds the renderer with it.
+    /// </summary>
+    [Test]
+    public void Migrate_ReportsDroppingARendererLayerWithoutATilemap()
+    {
+        GroundLayerMigration.Migrate(grid, style, layers);
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Undo.IncrementCurrentGroup();
+        int group = Undo.GetCurrentGroup();
+        SerializedObject rendererData = new(renderer);
+        SerializedProperty listed = rendererData.FindProperty("layers");
+        listed.arraySize = 4;
+        listed.GetArrayElementAtIndex(3).FindPropertyRelative("tilemap").objectReferenceValue = null;
+        rendererData.ApplyModifiedProperties();
+
+        List<string> changes = GroundLayerMigration.Migrate(grid, style, layers);
+        Undo.CollapseUndoOperations(group);
+
+        Assert.That(changes, Is.EqualTo(new[] { "Grid: draws 3 layers instead of 4" }));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(3));
+    }
+
+    /// <summary>
+    /// A render tilemap left under a ground layer after its module was removed would go on drawing the old tileset, so
+    /// the conversion removes it too.
+    /// </summary>
+    [Test]
+    public void Migrate_RemovesARenderTilemapLeftWithoutItsModule()
+    {
+        Object.DestroyImmediate(grass);
+
+        Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Does.Contain("GrassTilemap: removed its render tilemap RenderTilemap"));
+
+        Assert.That(Layer(0).transform.childCount, Is.Zero);
+    }
+
+    /// <summary>
+    /// A layer whose cells all hold its tile already but which keeps the record of a tile it held before (written over
+    /// cell by cell, not cleared: the old record stays with a count of 0 once the new tile has a record of its own) is
+    /// rewritten, so the scene stops referencing the old tile; then a second run changes nothing.
+    /// </summary>
+    [Test]
+    public void Migrate_DropsRecordsOfTilesALayerNoLongerHolds()
+    {
+        Vector3Int[] cells = { StoneCells[0], new(3, 1, 0) };
+        stone.SetTile(cells[1], stone.GetTile(cells[0]));
+        foreach (Vector3Int cell in cells)
+        {
+            stone.SetTile(cell, layers[2].Tile);
+        }
+
+        Assert.That(new SerializedObject(stone).FindProperty("m_TileAssetArray").arraySize, Is.EqualTo(2), "The old tile's record stays.");
+
+        Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Does.Contain("StoneTilemap: dropped its records of tiles it no longer holds"));
+
+        SerializedProperty records = new SerializedObject(stone).FindProperty("m_TileAssetArray");
+        Assert.That(records.arraySize, Is.EqualTo(1));
+        Assert.That(records.GetArrayElementAtIndex(0).FindPropertyRelative("m_Data").objectReferenceValue, Is.SameAs(layers[2].Tile));
+        AssertHolds(stone, cells, layers[2].Tile);
+        Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Is.Empty);
+    }
+
+    /// <summary>
+    /// Layers none of which is a tilemap under the grid (renamed, say) are refused with an error, leaving an existing
+    /// renderer's layers as they were instead of emptying them.
+    /// </summary>
+    [Test]
+    public void Migrate_WithNoneOfItsLayersUnderTheGrid_LogsAnErrorAndChangesNothing()
+    {
+        TerrainBlendRenderer existing = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        grass.GetComponent<NavigationTerrainSource2D>().Configure(layers[0].TerrainType);
+        existing.Configure(style, new TerrainBlendRenderer.Layer(grass.DataTilemap, layers[0].Material));
+        AreaGenerator.TerrainLayer[] renamed = { new("GroundTilemap", layers[0].Tile, layers[0].TerrainType, layers[0].Material) };
+        LogAssert.Expect(LogType.Error, "GroundLayerMigration: none of its terrain layers is a tilemap under Grid, so there is nothing to convert.");
+
+        Assert.That(GroundLayerMigration.Migrate(grid, style, renamed), Is.Null);
+
+        Assert.That(existing.Layers.Count, Is.EqualTo(1));
+        Assert.That(existing.Layers[0].Tilemap, Is.SameAs(grass.DataTilemap));
+        Assert.That(grass.GetComponent<DualGridTilemapModule>(), Is.Not.Null);
+    }
+
+    /// <summary>
     /// The area terrain fills each converted layer it lists with the layer's tile; the walls keep no fill tile, since
     /// their module paints them.
     /// </summary>

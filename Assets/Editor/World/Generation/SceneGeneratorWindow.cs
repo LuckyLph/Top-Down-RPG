@@ -127,8 +127,9 @@ public sealed class SceneGeneratorWindow : EditorWindow
     }
 
     /// <summary>
-    /// Draws Random Seed, which gives the generator a new seed with undo, and Generate, which is disabled without a
-    /// target and generates into <paramref name="grid"/>'s scene once this GUI pass is over.
+    /// Draws Random Seed, which gives the generator a new seed with undo, Generate, which generates into
+    /// <paramref name="grid"/>'s scene once this GUI pass is over, and Convert Ground. Generate and Convert Ground are
+    /// disabled without a target and in play mode, where their changes to the scene would be lost when play stops.
     /// </summary>
     private void DrawButtons(Grid grid)
     {
@@ -141,7 +142,7 @@ public sealed class SceneGeneratorWindow : EditorWindow
             MarkPreviewStale();
         }
 
-        using (new EditorGUI.DisabledScope(grid == null))
+        using (new EditorGUI.DisabledScope(grid == null || EditorApplication.isPlayingOrWillChangePlaymode))
         {
             if (GUILayout.Button("Generate"))
             {

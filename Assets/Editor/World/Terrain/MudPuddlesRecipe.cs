@@ -2,13 +2,14 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Mud: dark wet earth with slow tint patches and grit, small puddles, ridges and lumps, spread evenly so a large area
-/// does not show the texture repeating. Where a smooth noise of many short waves rises above a level the mud is wetter
-/// and darker, and above a higher one lies a puddle: a small pool of muddy water sunk into the mud, so the bank on its
-/// top-left side shades its edge there and its bottom-right edge catches the light, with short streaks of reflected
-/// light in it. Ridges are short level rows of lit mud over a row of shade a pixel to their right, lumps of drier mud
-/// two pixels square lit from the top left, both on jittered grids off the puddles and clear of each other. No cell
-/// field; the base colour is the mud colour, and the height's per-chip value is 0.5 everywhere.
+/// Mud: dark wet earth with slow tint patches and grit, puddles of many sizes, ridges and lumps. Where a smooth noise
+/// of many short waves rises above a level the mud is wetter and darker, and above a higher one lies a puddle: a pool
+/// of muddy water sunk into the mud, so the bank on its top-left side shades its edge there and its bottom-right edge
+/// catches the light, with short streaks of reflected light in it. Slower cluster waves lower both levels and darken
+/// the mud in wetter stretches and raise them in drier ones, so the puddles gather in some places and leave others
+/// bare. Ridges are short level rows of lit mud over a row of shade a pixel to their right, lumps of drier mud two
+/// pixels square lit from the top left, both on jittered grids off the puddles and clear of each other. No cell field;
+/// the base colour is the mud colour, and the height's per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Mud Puddles", fileName = "Recipe_Mud")]
 public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
@@ -24,10 +25,23 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     [Tooltip("Per-pixel noise, in 0-255 steps from darkest to lightest.")]
     [SerializeField, Range(0f, 32f)] private float grit = 7f;
     [Header("Puddles")]
-    [Tooltip("Waves of the noise whose high ground makes the wet patches and the puddles, normalised into -1 to 1 by their total amplitude. Many short waves keep the puddles small and evenly spread; set for a texture of 8 cells.")]
-    [SerializeField] private Wave[] puddleWaves = { new(5, 2, 1f), new(-3, 6, 0.9f), new(7, -4, 0.8f), new(2, 8, 0.7f), new(9, 3, 0.6f), new(-6, 7, 0.5f) };
+    [Tooltip("Waves of the noise whose high ground makes the wet patches and the puddles, normalised into -1 to 1 by their total amplitude. Many short waves, weaker the shorter they are, give puddles of many sizes and shapes; set for a texture of 16 cells.")]
+    [SerializeField] private Wave[] puddleWaves =
+    {
+        new(7, 2, 1f), new(-3, 8, 0.9f), new(11, -5, 0.8f), new(2, 13, 0.7f), new(15, 3, 0.6f), new(-9, 11, 0.55f),
+        new(17, -8, 0.45f), new(5, 19, 0.4f), new(21, 1, 0.3f), new(-16, 13, 0.3f), new(9, -23, 0.25f), new(25, 10, 0.2f)
+    };
     [Tooltip("Puddles lie where the puddle waves rise above this level: -1 everywhere, 1 nowhere.")]
-    [SerializeField, Range(-1f, 1f)] private float puddleLevel = 0.45f;
+    [SerializeField, Range(-1f, 1f)] private float puddleLevel = 0.5f;
+    [Tooltip("Slower waves, normalised into -1 to 1, that lower the puddle and wet levels where they rise and raise them where they fall, so puddles gather in wetter stretches and leave drier ones bare. Set for a texture of 16 cells.")]
+    [SerializeField] private Wave[] clusterWaves =
+    {
+        new(1, 1, 0.7f), new(2, -1, 0.6f), new(3, 2, 1f), new(-3, 4, 0.8f), new(5, -2, 0.6f), new(2, 6, 0.5f)
+    };
+    [Tooltip("How far the cluster waves move the puddle and wet levels.")]
+    [SerializeField, Range(0f, 1f)] private float clusterAmount = 0.5f;
+    [Tooltip("How much darker the mud is where the cluster waves are highest, and lighter where they are lowest, in 0-255 steps.")]
+    [SerializeField, Range(0f, 24f)] private float clusterShade = 6f;
     [Tooltip("The mud is wetter and darker where the puddle waves rise above this level, around the puddles.")]
     [SerializeField, Range(-1f, 1f)] private float wetLevel = 0.25f;
     [Tooltip("How much darker the wet mud is, in 0-255 steps.")]
@@ -72,20 +86,25 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.None;
 
     /// <summary>
-    /// Draws the tint and puddle waves, the ridge spots and each spot's ridge (kept or not, length), the lump spots and
-    /// whether each holds a lump, then the height waves, and paints the mud, its wet patches, puddles, ridges and lumps.
+    /// Draws the tint, puddle and cluster waves, the ridge spots and each spot's ridge (kept or not, length), the lump
+    /// spots and whether each holds a lump, then the height waves, and paints the mud, its wet patches, puddles, ridges
+    /// and lumps.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
         double[] tint = TerrainArt.PeriodicNoise(random, tintWaves, size);
         double[] puddleNoise = TerrainArt.PeriodicNoise(random, puddleWaves, size);
         double puddleTotal = TerrainArt.TotalAmplitude(puddleWaves);
+        double[] cluster = TerrainArt.PeriodicNoise(random, clusterWaves, size);
+        double clusterTotal = TerrainArt.TotalAmplitude(clusterWaves);
         bool[] puddle = new bool[size * size];
         bool[] wet = new bool[size * size];
         for (int i = 0; i < puddle.Length; i++)
         {
-            puddle[i] = puddleTotal > 0.0 && puddleNoise[i] / puddleTotal > puddleLevel;
-            wet[i] = puddleTotal > 0.0 && puddleNoise[i] / puddleTotal > wetLevel;
+            cluster[i] = clusterTotal > 0.0 ? cluster[i] / clusterTotal : 0.0;
+            double shift = clusterAmount * cluster[i];
+            puddle[i] = puddleTotal > 0.0 && puddleNoise[i] / puddleTotal + shift > puddleLevel;
+            wet[i] = puddleTotal > 0.0 && puddleNoise[i] / puddleTotal + shift > wetLevel;
         }
 
         Color32?[] marks = new Color32?[size * size];
@@ -123,7 +142,7 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
             {
                 int i = y * size + x;
                 double pixelGrit = (TerrainArt.Hash01(x, y, GritSalt) - 0.5) * grit;
-                albedo[i] = puddle[i] ? PuddleColour(puddle, size, x, y, pixelGrit) : marks[i] ?? TerrainArt.Shade(mud, tint[i] + pixelGrit - (wet[i] ? wetShade : 0.0));
+                albedo[i] = puddle[i] ? PuddleColour(puddle, size, x, y, pixelGrit) : marks[i] ?? TerrainArt.Shade(mud, tint[i] + pixelGrit - clusterShade * cluster[i] - (wet[i] ? wetShade : 0.0));
             }
         }
 

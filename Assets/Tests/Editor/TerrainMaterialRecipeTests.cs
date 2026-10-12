@@ -17,11 +17,11 @@ using Object = UnityEngine.Object;
 /// with one value per chip or stone, and glint and sparkle phases only in the water recipes; caustic water's net
 /// breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap, and pond
 /// water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's crests lie
-/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, and its
-/// ridges cast their shade a row below and a pixel to the right; writing the textures to a material sets the base
-/// colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built
-/// in memory with their default settings (the project's Gravel material is only read), and files go to a temporary
-/// folder outside Assets.
+/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, gather in
+/// clusters, and its ridges cast their shade a row below and a pixel to the right; writing the textures to a material
+/// sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and
+/// materials are built in memory with their default settings (the project's Gravel material is only read), and files go
+/// to a temporary folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -880,6 +880,79 @@ public class TerrainMaterialRecipeTests
         Assert.That(lit, Is.GreaterThan(20));
 
         static bool IsPuddle(Color32 c) => c.g == 0 || (c.r == 255 && c.g == 255 && c.b == 255);
+    }
+
+    /// <summary>
+    /// Mud's cluster waves gather its puddles: over blocks of two cells square, the share of puddle pixels varies at
+    /// least half as much again as with no clustering, and some blocks hold none.
+    /// </summary>
+    [Test]
+    public void MudClusters_GatherThePuddles()
+    {
+        double even = PuddleShareSpread(0f, out _);
+        double clustered = PuddleShareSpread(0.8f, out int bareBlocks);
+
+        Assert.That(clustered, Is.GreaterThan(even * 1.5), $"even {even:F4}, clustered {clustered:F4}");
+        Assert.That(bareBlocks, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// The standard deviation of the share of puddle pixels over blocks of two cells square, in a mud texture of 16
+    /// cells for the test seed with <paramref name="clusterAmount"/>, and in <paramref name="bareBlocks"/> how many
+    /// blocks hold no puddle.
+    /// </summary>
+    private double PuddleShareSpread(float clusterAmount, out int bareBlocks)
+    {
+        MudPuddlesRecipe recipe = (MudPuddlesRecipe)CreateRecipe(typeof(MudPuddlesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("repeatCells").intValue = 16;
+        settings.FindProperty("clusterAmount").floatValue = clusterAmount;
+        settings.FindProperty("reflectionChance").floatValue = 0f;
+        settings.FindProperty("pool").colorValue = new Color32(0, 0, 255, 255);
+        settings.FindProperty("bankShade").colorValue = new Color32(0, 255, 0, 255);
+        settings.FindProperty("wetRim").colorValue = new Color32(255, 0, 255, 255);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        int block = 2 * TerrainStyle.PixelsPerCell;
+        int blocks = size / block;
+        List<double> shares = new();
+        bareBlocks = 0;
+        for (int by = 0; by < blocks; by++)
+        {
+            for (int bx = 0; bx < blocks; bx++)
+            {
+                int puddles = 0;
+                for (int y = by * block; y < (by + 1) * block; y++)
+                {
+                    for (int x = bx * block; x < (bx + 1) * block; x++)
+                    {
+                        Color32 colour = textures.Albedo[y * size + x];
+                        bool puddle = SameColour(colour, new Color32(0, 0, 255, 255)) || SameColour(colour, new Color32(0, 255, 0, 255)) || SameColour(colour, new Color32(255, 0, 255, 255));
+                        puddles += puddle ? 1 : 0;
+                    }
+                }
+
+                shares.Add((double)puddles / (block * block));
+                bareBlocks += puddles == 0 ? 1 : 0;
+            }
+        }
+
+        double mean = 0.0;
+        foreach (double share in shares)
+        {
+            mean += share / shares.Count;
+        }
+
+        double variance = 0.0;
+        foreach (double share in shares)
+        {
+            variance += (share - mean) * (share - mean) / shares.Count;
+        }
+
+        return Math.Sqrt(variance);
     }
 
     /// <summary>

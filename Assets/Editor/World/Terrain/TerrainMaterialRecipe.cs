@@ -45,7 +45,7 @@ public abstract class TerrainMaterialRecipe : ScriptableObject
     [Tooltip("The same seed always gives the same textures.")]
     [SerializeField] private int seed = 1;
     [Tooltip("Cells the textures cover before they repeat, 32 px each.")]
-    [SerializeField, Range(1, 8)] private int repeatCells = 4;
+    [SerializeField, Range(1, 16)] private int repeatCells = 4;
     [Tooltip("Soft look only (no effect in the crisp look): gentle bumps that push this material's edges in and out, by up to its material's Height Scale in pixels. X and Y are how many times a wave repeats across the texture. Amplitudes only count relative to each other: the sum is rescaled, and flattened further when it is too steep for smooth edges. Shown as the grey Height preview.")]
     [SerializeField] private Wave[] heightWaves =
     {

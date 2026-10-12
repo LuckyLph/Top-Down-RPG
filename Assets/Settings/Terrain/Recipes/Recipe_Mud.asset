@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::MudPuddlesRecipe
   material: {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
   seed: 20261017
-  repeatCells: 8
+  repeatCells: 16
   heightWaves:
   - x: 1
     y: 0
@@ -52,25 +52,64 @@ MonoBehaviour:
     amplitude: 1.5
   grit: 7
   puddleWaves:
-  - x: 5
+  - x: 7
     y: 2
     amplitude: 1
   - x: -3
-    y: 6
+    y: 8
     amplitude: 0.9
-  - x: 7
-    y: -4
+  - x: 11
+    y: -5
     amplitude: 0.8
   - x: 2
-    y: 8
+    y: 13
     amplitude: 0.7
-  - x: 9
+  - x: 15
     y: 3
     amplitude: 0.6
-  - x: -6
-    y: 7
+  - x: -9
+    y: 11
+    amplitude: 0.55
+  - x: 17
+    y: -8
+    amplitude: 0.45
+  - x: 5
+    y: 19
+    amplitude: 0.4
+  - x: 21
+    y: 1
+    amplitude: 0.3
+  - x: -16
+    y: 13
+    amplitude: 0.3
+  - x: 9
+    y: -23
+    amplitude: 0.25
+  - x: 25
+    y: 10
+    amplitude: 0.2
+  puddleLevel: 0.5
+  clusterWaves:
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.6
+  - x: 3
+    y: 2
+    amplitude: 1
+  - x: -3
+    y: 4
+    amplitude: 0.8
+  - x: 5
+    y: -2
+    amplitude: 0.6
+  - x: 2
+    y: 6
     amplitude: 0.5
-  puddleLevel: 0.45
+  clusterAmount: 0.5
+  clusterShade: 6
   wetLevel: 0.25
   wetShade: 8
   pool:

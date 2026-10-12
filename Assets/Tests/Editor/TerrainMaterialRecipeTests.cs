@@ -14,11 +14,12 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses;
-/// tufts point up; sand's crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on
-/// their bottom-right edge; writing the textures to a material sets the base colour the textures' base is shaded from
-/// and has the renderers drawing it rebuild. Recipes and materials are built in memory with their default settings
-/// (the project's Gravel material is only read), and files go to a temporary folder outside Assets.
+/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses and
+/// runs sideways when flattened; tufts point up; sand's crests lie over their troughs; mud's puddles are shaded under
+/// their top-left bank and lit on their bottom-right edge; writing the textures to a material sets the base colour the
+/// textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built in memory
+/// with their default settings (the project's Gravel material is only read), and files go to a temporary folder
+/// outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -521,6 +522,66 @@ public class TerrainMaterialRecipeTests
         Assert.That(lines, Is.GreaterThan(0), "some of the net lies on both courses");
         Assert.That(lines + breathing, Is.InRange(size * size / 20, size * size * 4 / 10), "the net, both courses together");
         Assert.That(sparkles, Is.GreaterThan(0).And.LessThan(size * size / 100));
+    }
+
+    /// <summary>
+    /// Flattening water's net and leaving out its upright edges makes it run sideways: its lines' runs of pixels along x
+    /// grow longer against their runs along y than in the default net, both courses counted.
+    /// </summary>
+    [Test]
+    public void WaterCaustics_Flattened_RunSideways()
+    {
+        WaterCausticsRecipe plain = (WaterCausticsRecipe)CreateRecipe(typeof(WaterCausticsRecipe));
+        WaterCausticsRecipe flat = (WaterCausticsRecipe)CreateRecipe(typeof(WaterCausticsRecipe));
+        SerializedObject settings = new(flat);
+        settings.FindProperty("flatten").floatValue = 3f;
+        settings.FindProperty("uprightDropChance").floatValue = 0.9f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        double plainRatio = SidewaysRunRatio(plain);
+        double flatRatio = SidewaysRunRatio(flat);
+
+        Assert.That(flatRatio, Is.GreaterThan(plainRatio + 0.15), $"plain {plainRatio:F2}, flattened {flatRatio:F2}");
+        Assert.That(flatRatio, Is.GreaterThan(1.1));
+    }
+
+    /// <summary>
+    /// The mean length of the runs of line pixels (net, knots and both breathing courses) along x over that along y, in
+    /// <paramref name="recipe"/>'s textures for the test seed, wrapping around the texture.
+    /// </summary>
+    private static double SidewaysRunRatio(WaterCausticsRecipe recipe)
+    {
+        SerializedObject settings = new(recipe);
+        Color32 net = settings.FindProperty("net").colorValue;
+        Color32 knot = settings.FindProperty("knot").colorValue;
+        TerrainTextures textures = recipe.Generate(Seed);
+        int size = textures.Size;
+        bool[] line = new bool[size * size];
+        for (int i = 0; i < line.Length; i++)
+        {
+            int code = textures.Height[i].b;
+            line[i] = SameColour(textures.Albedo[i], net) || SameColour(textures.Albedo[i], knot) || (code > 0 && code < 128);
+        }
+
+        int pixels = 0;
+        int sidewaysRuns = 0;
+        int uprightRuns = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                if (!line[y * size + x])
+                {
+                    continue;
+                }
+
+                pixels++;
+                sidewaysRuns += line[y * size + TerrainArt.Wrap(x - 1, size)] ? 0 : 1;
+                uprightRuns += line[TerrainArt.Wrap(y - 1, size) * size + x] ? 0 : 1;
+            }
+        }
+
+        return ((double)pixels / sidewaysRuns) / ((double)pixels / uprightRuns);
     }
 
     /// <summary>

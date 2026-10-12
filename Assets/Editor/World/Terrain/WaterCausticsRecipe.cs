@@ -28,6 +28,19 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     private const int SearchRadius = 2;
 
     /// <summary>
+    /// The seeds' base places (before breathing) and whether each one's cell is deep, in a texture of
+    /// <see cref="Size"/> pixels, for deciding which edges are drawn.
+    /// </summary>
+    private sealed class Lattice
+    {
+        public double[] X;
+        public double[] Y;
+        public bool[] Deep;
+        public int Size;
+        public double Flatten;
+    }
+
+    /// <summary>
     /// The Voronoi cell a pixel lies in for one course of the net: its nearest seed, the seeds across its nearest and
     /// second-nearest cell edges, and its distances in pixels to those edges.
     /// </summary>
@@ -54,12 +67,16 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0.5f, 6f)] private float cellsAlongXPerCell = 1.75f;
     [Tooltip("Cells of the net along y per world cell; more than along x stretches the cells sideways.")]
     [SerializeField, Range(0.5f, 6f)] private float cellsAlongYPerCell = 2.5f;
+    [Tooltip("How much flatter the cell edges run: the cells are found with up-and-down distances counted this many times over, so every edge leans towards level and the net runs sideways like ripples, without changing the cells' size; 1 for none.")]
+    [SerializeField, Range(1f, 4f)] private float flatten = 1f;
     [Tooltip("How much of its lattice cell a seed may lie anywhere in; low values give a honeycomb.")]
     [SerializeField, Range(0f, 1f)] private float jitter = 0.85f;
     [Tooltip("Distance in pixels between a seed's two positions, so between an edge's two courses.")]
     [SerializeField, Range(0f, 3f)] private float breathe = 1f;
-    [Tooltip("Waves that warp the pixels before the cells are found, their amplitude in pixels, drawn once per axis; about one period per two cells bends the edges. Set for a texture of 8 cells.")]
+    [Tooltip("Waves that move the pixels sideways before the cells are found, their amplitude in pixels; about one period per two cells bends the edges. Set for a texture of 8 cells.")]
     [SerializeField] private Wave[] warpWaves = { new(8, 3, 2.5f), new(-5, 9, 2f), new(11, -6, 1f) };
+    [Tooltip("Waves that move the pixels up and down before the cells are found, their amplitude in pixels. Waves that repeat often along X and rarely along Y make level lines undulate like ripples. Set for a texture of 8 cells.")]
+    [SerializeField] private Wave[] verticalWarpWaves = { new(8, 3, 2.5f), new(-5, 9, 2f), new(11, -6, 1f) };
     [Tooltip("A pixel is on a line when it lies this many pixels or less from a cell edge, on average.")]
     [SerializeField, Range(0.3f, 1.5f)] private float lineWidth = 0.55f;
     [Tooltip("Waves that vary the line width along the net, normalised into -1 to 1 by their total amplitude, so lines swell and thin out. Set for a texture of 8 cells.")]
@@ -70,6 +87,8 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 0.9f)] private float dropChance = 0.25f;
     [Tooltip("Chance that an edge between two deep cells is left out, so deep water shows a sparser net.")]
     [SerializeField, Range(0f, 0.9f)] private float deepDropChance = 0.7f;
+    [Tooltip("Chance that an upright edge (between cells side by side) is left out; slanted edges are left out by less, level ones by the drop chances above. Raise it to make the net run sideways, in level ripples; 0 treats every edge alike.")]
+    [SerializeField, Range(0f, 1f)] private float uprightDropChance;
     [Tooltip("A pixel within this many pixels of two drawn cell edges is on the net too, so the lines thicken into small blobs where they meet and the cells' corners round off; 0 keeps thin junctions.")]
     [SerializeField, Range(0f, 4f)] private float junctionReach = 1.6f;
     [Tooltip("Pieces of line smaller than this many pixels are removed.")]
@@ -127,13 +146,14 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
         }
 
         double[] warpX = TerrainArt.PeriodicNoise(random, warpWaves, size);
-        double[] warpY = TerrainArt.PeriodicNoise(random, warpWaves, size);
+        double[] warpY = TerrainArt.PeriodicNoise(random, verticalWarpWaves, size);
         double[] depth = TerrainArt.PeriodicNoise(random, depthWaves, size);
         double[] widthNoise = TerrainArt.PeriodicNoise(random, widthWaves, size);
         double widthTotal = TerrainArt.TotalAmplitude(widthWaves);
         double[] height = SmoothHeight(random, size);
 
         bool[] deepCell = DeepCells(depth, seedX, seedY, size);
+        Lattice lattice = new() { X = seedX, Y = seedY, Deep = deepCell, Size = size, Flatten = flatten };
         Hit[] first = new Hit[size * size];
         Hit[] second = new Hit[size * size];
         bool[] firstLine = new bool[size * size];
@@ -149,11 +169,11 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
                 for (int x = 0; x < size; x++)
                 {
                     int i = y * size + x;
-                    Hit hit = FindCell(x + 0.5 + warpX[i], y + 0.5 + warpY[i], sign, seedX, seedY, shiftX, shiftY, across, down, pitchX, pitchY, size);
+                    Hit hit = FindCell(x + 0.5 + warpX[i], y + 0.5 + warpY[i], sign, seedX, seedY, shiftX, shiftY, across, down, pitchX, pitchY, size, flatten);
                     hits[i] = hit;
                     double swell = 1.0 + (widthTotal > 0.0 ? widthVariation * widthNoise[i] / widthTotal : 0.0);
-                    line[i] = OnLine(hit, deepCell, lineWidth * swell) || AtJunction(hit, deepCell, junctionReach * swell);
-                    glow[i] |= haloWidth > 0f && OnLine(hit, deepCell, (lineWidth + haloWidth) * swell);
+                    line[i] = OnLine(hit, lattice, lineWidth * swell) || AtJunction(hit, lattice, junctionReach * swell);
+                    glow[i] |= haloWidth > 0f && OnLine(hit, lattice, (lineWidth + haloWidth) * swell);
                 }
             }
 
@@ -195,7 +215,7 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
                 {
                     albedo[i] = fill;
                     Hit course = firstLine[i] ? first[i] : second[i];
-                    int other = LineEdgeAcross(course, deepCell);
+                    int other = LineEdgeAcross(course, lattice);
                     double offset = TerrainArt.Hash01(Math.Min(course.Seed, other), Math.Max(course.Seed, other), EdgePhaseSalt);
                     glints[i] = TerrainArt.GlintByte(offset + (secondLine[i] ? 0.5 : 0.0));
                 }
@@ -291,9 +311,10 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     /// The Voronoi cell of the point (<paramref name="qx"/>, <paramref name="qy"/>) for the course where every seed is
     /// moved by <paramref name="sign"/> times its shift: the nearest seed among the lattice cells within
     /// <see cref="SearchRadius"/>, wrapping around the texture, and the exact distances to the two nearest edges of its
-    /// cell, each the distance to the bisector between it and another seed.
+    /// cell, each the distance to the bisector between it and another seed. Up-and-down distances count
+    /// <paramref name="flatten"/> times over, so the bisectors lean towards level; edge distances are still in pixels.
     /// </summary>
-    private static Hit FindCell(double qx, double qy, double sign, double[] seedX, double[] seedY, double[] shiftX, double[] shiftY, int across, int down, double pitchX, double pitchY, int size)
+    private static Hit FindCell(double qx, double qy, double sign, double[] seedX, double[] seedY, double[] shiftX, double[] shiftY, int across, int down, double pitchX, double pitchY, int size, double flatten)
     {
         int column = (int)Math.Floor(qx / pitchX);
         int row = (int)Math.Floor(qy / pitchY);
@@ -306,7 +327,7 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
             for (int di = -SearchRadius; di <= SearchRadius; di++)
             {
                 SeedAt(column + di, row + dj, sign, seedX, seedY, shiftX, shiftY, across, down, size, out int k, out double sx, out double sy);
-                double distance = (qx - sx) * (qx - sx) + (qy - sy) * (qy - sy);
+                double distance = (qx - sx) * (qx - sx) + flatten * flatten * (qy - sy) * (qy - sy);
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
@@ -324,14 +345,14 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
             {
                 SeedAt(column + di, row + dj, sign, seedX, seedY, shiftX, shiftY, across, down, size, out int k, out double sx, out double sy);
                 double nx = sx - nearestX;
-                double ny = sy - nearestY;
-                double length = Math.Sqrt(nx * nx + ny * ny);
-                if (length < 1e-9)
+                double ny = flatten * (sy - nearestY);
+                double scale = Math.Sqrt(nx * nx + flatten * flatten * ny * ny);
+                if (scale < 1e-9)
                 {
                     continue;
                 }
 
-                double edge = Math.Abs((qx - 0.5 * (sx + nearestX)) * nx + (qy - 0.5 * (sy + nearestY)) * ny) / length;
+                double edge = Math.Abs((qx - 0.5 * (sx + nearestX)) * nx + flatten * (qy - 0.5 * (sy + nearestY)) * ny) / scale;
                 if (edge < hit.Edge)
                 {
                     hit.SecondEdge = hit.Edge;
@@ -368,41 +389,55 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     /// Whether a pixel lies within <paramref name="width"/> pixels of one of its cell's two nearest edges that is not left
     /// out.
     /// </summary>
-    private bool OnLine(Hit hit, bool[] deepCell, double width)
+    private bool OnLine(Hit hit, Lattice lattice, double width)
     {
-        return (hit.Edge < width && Kept(hit.Seed, hit.Across, deepCell)) || (hit.SecondEdge < width && Kept(hit.Seed, hit.SecondAcross, deepCell));
+        return (hit.Edge < width && Kept(hit.Seed, hit.Across, lattice)) || (hit.SecondEdge < width && Kept(hit.Seed, hit.SecondAcross, lattice));
     }
 
     /// <summary>
     /// Whether a pixel lies within <paramref name="reach"/> pixels of both its cell's nearest edges, both drawn.
     /// </summary>
-    private bool AtJunction(Hit hit, bool[] deepCell, double reach)
+    private bool AtJunction(Hit hit, Lattice lattice, double reach)
     {
-        return hit.SecondEdge < reach && Kept(hit.Seed, hit.Across, deepCell) && Kept(hit.Seed, hit.SecondAcross, deepCell);
+        return hit.SecondEdge < reach && Kept(hit.Seed, hit.Across, lattice) && Kept(hit.Seed, hit.SecondAcross, lattice);
     }
 
     /// <summary>
     /// The seed across the edge a line pixel lies on: its nearest edge when that one is kept, else its second.
     /// </summary>
-    private int LineEdgeAcross(Hit hit, bool[] deepCell)
+    private int LineEdgeAcross(Hit hit, Lattice lattice)
     {
-        return Kept(hit.Seed, hit.Across, deepCell) ? hit.Across : hit.SecondAcross;
+        return Kept(hit.Seed, hit.Across, lattice) ? hit.Across : hit.SecondAcross;
     }
 
     /// <summary>
     /// Whether the edge between the cells of seeds <paramref name="a"/> and <paramref name="b"/> is drawn: always where
-    /// a deep cell meets a shallow one, so the change of tone lies under a line, else unless it is left out, by the
-    /// deep chance between two deep cells.
+    /// a deep cell meets a shallow one, so the change of tone lies under a line, else unless it is left out. Its chance
+    /// to be left out is the drop chance, the deep one between two deep cells, raised towards the upright one by the
+    /// square of how upright the edge stands, from the two seeds' base places (across the texture's edges by the
+    /// shortest way) and the flattening.
     /// </summary>
-    private bool Kept(int a, int b, bool[] deepCell)
+    private bool Kept(int a, int b, Lattice lattice)
     {
         if (b < 0)
         {
             return false;
         }
 
-        double chance = deepCell[a] && deepCell[b] ? deepDropChance : dropChance;
-        return deepCell[a] != deepCell[b] || TerrainArt.Hash01(Math.Min(a, b), Math.Max(a, b), DropSalt) >= chance;
+        if (lattice.Deep[a] != lattice.Deep[b])
+        {
+            return true;
+        }
+
+        double dx = TerrainArt.WrapDelta(lattice.X[b] - lattice.X[a], lattice.Size);
+        double dy = TerrainArt.WrapDelta(lattice.Y[b] - lattice.Y[a], lattice.Size);
+        double alongX = lattice.Flatten * dy;
+        double alongY = dx / lattice.Flatten;
+        double length = Math.Sqrt(alongX * alongX + alongY * alongY);
+        double upright = length > 0.0 ? alongY / length : 0.0;
+        double level = lattice.Deep[a] ? deepDropChance : dropChance;
+        double chance = level + (Math.Max(level, uprightDropChance) - level) * upright * upright;
+        return TerrainArt.Hash01(Math.Min(a, b), Math.Max(a, b), DropSalt) >= chance;
     }
 
     /// <summary>

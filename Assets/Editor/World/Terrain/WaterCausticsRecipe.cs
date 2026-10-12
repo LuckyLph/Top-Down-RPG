@@ -5,16 +5,18 @@ using UnityEngine;
 /// <summary>
 /// Water, for an animated material: a "breathing caustic net" (Docs/TerrainBlending.md, Phase 5 notes). A light net of
 /// one-pixel lines over a mid-blue fill, the edges of Voronoi cells around jittered seeds on a stretched lattice, the
-/// pixels warped by smooth waves and some edges dropped so neighbouring cells merge into larger blobs; the lines
-/// thicken where they meet and glow either side, so they read as light on the water rather than as cracks; deep cells
-/// where a smooth field is lowest, which drop more of their shared edges, so deep water shows an open net, and may have
-/// a fill of their own, their edges with shallow cells never dropped so a change of tone falls under a line; a few
-/// brighter knots where lines meet. Every seed has two positions a little apart, so each edge has two nearby courses: a pixel on both
-/// is drawn as net, and a pixel on only one carries a glint phase, the edge's own offset, half a period apart between
-/// the two courses, so with a glint duty of 0.5 each edge holds one course, crossfades and holds the other, out of step
-/// with the rest. Some knots sparkle: a short horizontal dash whose sparkle phases step along it, so the sparkle appears,
-/// slides a pixel or two and fades. The Voronoi search wraps around the texture, so the net tiles seamlessly. No cell
-/// field; the base colour is the fill, the glint colour the net's and the sparkle colour the sparkles', and the
+/// pixels warped by smooth waves and some edges dropped so neighbouring cells merge into larger blobs; flattened and
+/// with its upright edges left out, it runs sideways in level ripples. The lines thicken where they meet (or, with a
+/// junction gap, stop short of meeting, so the net breaks into separate ripples) and glow either side, so they read as
+/// light on the water rather than as cracks. Deep cells, where a smooth field is lowest, drop more of their shared
+/// edges, so deep water shows an open net, and may have a fill of their own, their edges with shallow cells never
+/// dropped so a change of tone falls under a line; a few brighter knots sit where lines meet. Every seed has two
+/// positions a little apart, so each edge has two nearby courses: a pixel on both is drawn as net, and a pixel on only
+/// one carries a glint phase, the edge's own offset, half a period apart between the two courses, so with a glint duty
+/// of 0.5 each edge holds one course, crossfades and holds the other, out of step with the rest. Some edges sparkle: a
+/// short horizontal dash from the middle of the edge's line, whose sparkle phases step along it, so the sparkle
+/// appears, slides a pixel or two and fades. The Voronoi search wraps around the texture, so the net tiles seamlessly.
+/// No cell field; the base colour is the fill, the glint colour the net's and the sparkle colour the sparkles', and the
 /// height's per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Caustics", fileName = "Recipe_Water")]
@@ -91,6 +93,8 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 1f)] private float uprightDropChance;
     [Tooltip("A pixel within this many pixels of two drawn cell edges is on the net too, so the lines thicken into small blobs where they meet and the cells' corners round off; 0 keeps thin junctions.")]
     [SerializeField, Range(0f, 4f)] private float junctionReach = 1.6f;
+    [Tooltip("Lines and their glow stop this many pixels short of where they meet another drawn edge, so the net breaks into separate ripples instead of a connected web; 0 keeps it connected. Takes over from Junction Reach where both apply.")]
+    [SerializeField, Range(0f, 8f)] private float junctionGap;
     [Tooltip("Pieces of line smaller than this many pixels are removed.")]
     [SerializeField, Range(1, 16)] private int minPiece = 5;
     [Tooltip("The net's lines, and the glint colour their breathing lights up with.")]
@@ -106,9 +110,9 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 1f)] private float knotShare = 0.2f;
     [SerializeField] private Color32 knot = new(150, 214, 236, 255);
     [Header("Sparkles")]
-    [Tooltip("Share of the bright knots that sparkle.")]
-    [SerializeField, Range(0f, 1f)] private float sparkleShare = 0.4f;
-    [Tooltip("Length in pixels of a sparkle's dash, from its knot's leftmost pixel to the right.")]
+    [Tooltip("Share of the net's edges that sparkle, from the middle of their line, so a sparkle shows whether the lines meet or stop short of each other.")]
+    [SerializeField, Range(0f, 1f)] private float sparkleShare = 0.08f;
+    [Tooltip("Length in pixels of a sparkle's dash, from the middle of its edge's line to the right.")]
     [SerializeField, Range(1, 6)] private int sparkleLength = 3;
     [Tooltip("How much of the sparkle period each pixel of the dash lights up after the one before it.")]
     [SerializeField, Range(0f, 0.25f)] private float sparkleStep = 0.03125f;
@@ -172,8 +176,9 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
                     Hit hit = FindCell(x + 0.5 + warpX[i], y + 0.5 + warpY[i], sign, seedX, seedY, shiftX, shiftY, across, down, pitchX, pitchY, size, flatten);
                     hits[i] = hit;
                     double swell = 1.0 + (widthTotal > 0.0 ? widthVariation * widthNoise[i] / widthTotal : 0.0);
-                    line[i] = OnLine(hit, lattice, lineWidth * swell) || AtJunction(hit, lattice, junctionReach * swell);
-                    glow[i] |= haloWidth > 0f && OnLine(hit, lattice, (lineWidth + haloWidth) * swell);
+                    bool gap = AtJunction(hit, lattice, junctionGap);
+                    line[i] = !gap && (OnLine(hit, lattice, lineWidth * swell) || AtJunction(hit, lattice, junctionReach * swell));
+                    glow[i] |= !gap && haloWidth > 0f && OnLine(hit, lattice, (lineWidth + haloWidth) * swell);
                 }
             }
 
@@ -184,8 +189,8 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
         KeepGlowNearLines(glow, firstLine, secondLine, size);
         Color32[] albedo = new Color32[size * size];
         byte[] glints = new byte[size * size];
-        List<long> knots = new();
-        Dictionary<long, int> knotStart = new();
+        List<long> edges = new();
+        Dictionary<long, List<int>> edgePixels = new();
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
@@ -200,16 +205,18 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
                     if (key >= 0 && Chance(key, seeds, KnotSalt) < knotShare)
                     {
                         albedo[i] = knot;
-                        if (!knotStart.TryGetValue(key, out int start))
-                        {
-                            knots.Add(key);
-                            knotStart[key] = i;
-                        }
-                        else if (x < start % size)
-                        {
-                            knotStart[key] = i;
-                        }
                     }
+
+                    int other = LineEdgeAcross(hit, lattice);
+                    long edge = (long)Math.Min(hit.Seed, other) * seeds + Math.Max(hit.Seed, other);
+                    if (!edgePixels.TryGetValue(edge, out List<int> pixels))
+                    {
+                        pixels = new List<int>();
+                        edgePixels[edge] = pixels;
+                        edges.Add(edge);
+                    }
+
+                    pixels.Add(i);
                 }
                 else if (firstLine[i] || secondLine[i])
                 {
@@ -226,14 +233,14 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
             }
         }
 
-        foreach (long key in knots)
+        foreach (long key in edges)
         {
             if (Chance(key, seeds, SparkleSalt) >= sparkleShare)
             {
                 continue;
             }
 
-            int start = knotStart[key];
+            int start = MiddlePixel(edgePixels[key], size);
             double phase = Chance(key, seeds, SparklePhaseSalt);
             for (int k = 0; k < sparkleLength; k++)
             {
@@ -243,6 +250,17 @@ public sealed class WaterCausticsRecipe : TerrainMaterialRecipe
         }
 
         return new TerrainTextures(size, water, CellMode, albedo, null, TerrainArt.HeightPixels(height, null, null, glints), net, sparkle);
+    }
+
+    /// <summary>
+    /// The pixel of an edge's line, among <paramref name="pixels"/> in scan order, that lies in the middle of it from
+    /// left to right, so a sparkle starts near the middle of its ripple.
+    /// </summary>
+    private static int MiddlePixel(List<int> pixels, int size)
+    {
+        int[] byColumn = pixels.ToArray();
+        Array.Sort(byColumn, (a, b) => a % size != b % size ? (a % size).CompareTo(b % size) : a.CompareTo(b));
+        return byColumn[byColumn.Length / 2];
     }
 
     /// <summary>

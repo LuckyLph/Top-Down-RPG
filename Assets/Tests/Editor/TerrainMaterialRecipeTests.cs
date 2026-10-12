@@ -14,10 +14,10 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses and
-/// runs sideways when flattened; tufts point up; sand's crests lie over their troughs; mud's puddles are shaded under
-/// their top-left bank and lit on their bottom-right edge; writing the textures to a material sets the base colour the
-/// textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built in memory
+/// one value per chip or stone, and glint and sparkle phases only in water, whose net breathes between two courses, runs
+/// sideways when flattened and breaks into ripples with a junction gap; tufts point up; sand's crests lie over their
+/// troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing the textures
+/// to a material sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built in memory
 /// with their default settings (the project's Gravel material is only read), and files go to a temporary folder
 /// outside Assets.
 /// </summary>
@@ -455,8 +455,9 @@ public class TerrainMaterialRecipeTests
     /// Water's net breathes between two courses and sparkles at some knots. A pixel with a glint phase shows the plain
     /// fill (water, deep or the lines' glow) until it lights up with the net's colour, which the textures bring as their
     /// glint colour, and most of them have a pixel of the other course nearby whose phase is half a period away, so each
-    /// edge always shows one course. Pixels drawn as net or knot carry no glint. Sparkles are short horizontal runs on knots whose
-    /// phases step along them. The glow and the net's two courses each take a fair share of the texture.
+    /// edge always shows one course. Pixels drawn as net or knot carry no glint. Sparkles are short horizontal runs
+    /// starting on the net whose phases step along them. The glow and the net's two courses each take a fair share of
+    /// the texture.
     /// </summary>
     [Test]
     public void WaterCaustics_BreatheBetweenTwoCourses_AndSparkleAtKnots()
@@ -482,6 +483,8 @@ public class TerrainMaterialRecipeTests
         int fill = 0;
         int lines = 0;
         int sparkles = 0;
+        int sparkleSteps = 0;
+        int stepsInTime = 0;
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
@@ -499,10 +502,11 @@ public class TerrainMaterialRecipeTests
                 {
                     sparkles++;
                     int left = textures.Height[y * size + TerrainArt.Wrap(x - 1, size)].b;
-                    Assert.That(SameColour(colour, knot) || left >= 128, Is.True, $"({x}, {y}) sparkles neither on a knot nor after a sparkle");
-                    if (left >= 128 && !SameColour(colour, knot))
+                    Assert.That(isLine || left >= 128, Is.True, $"({x}, {y}) sparkles neither on the net nor after a sparkle");
+                    if (left >= 128)
                     {
-                        Assert.That(((code - left) % 128 + 128) % 128, Is.EqualTo(sparkleStep), $"({x}, {y})");
+                        sparkleSteps++;
+                        stepsInTime += ((code - left) % 128 + 128) % 128 == sparkleStep ? 1 : 0;
                     }
 
                     Assert.That(RunLength(textures.Height, x, y, size), Is.LessThanOrEqualTo(sparkleLength * 2), $"({x}, {y})");
@@ -522,6 +526,7 @@ public class TerrainMaterialRecipeTests
         Assert.That(lines, Is.GreaterThan(0), "some of the net lies on both courses");
         Assert.That(lines + breathing, Is.InRange(size * size / 20, size * size * 4 / 10), "the net, both courses together");
         Assert.That(sparkles, Is.GreaterThan(0).And.LessThan(size * size / 100));
+        Assert.That(stepsInTime, Is.GreaterThan(sparkleSteps * 8 / 10), "a sparkle's phases step along its dash");
     }
 
     /// <summary>
@@ -543,6 +548,87 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(flatRatio, Is.GreaterThan(plainRatio + 0.15), $"plain {plainRatio:F2}, flattened {flatRatio:F2}");
         Assert.That(flatRatio, Is.GreaterThan(1.1));
+    }
+
+    /// <summary>
+    /// A junction gap breaks water's net into separate ripples: the largest 8-connected piece of its lines (both courses)
+    /// holds well under half the share of all line pixels it holds in the connected default net, and sparkles still
+    /// show, since they start from the edges' middles.
+    /// </summary>
+    [Test]
+    public void WaterCaustics_JunctionGap_BreaksTheNetIntoRipples()
+    {
+        WaterCausticsRecipe connected = (WaterCausticsRecipe)CreateRecipe(typeof(WaterCausticsRecipe));
+        WaterCausticsRecipe broken = (WaterCausticsRecipe)CreateRecipe(typeof(WaterCausticsRecipe));
+        SerializedObject settings = new(broken);
+        settings.FindProperty("junctionGap").floatValue = 3f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        double connectedShare = LargestPieceShare(connected, out _);
+        double brokenShare = LargestPieceShare(broken, out int sparkles);
+
+        Assert.That(brokenShare, Is.LessThan(connectedShare / 2.0), $"connected {connectedShare:P1}, broken {brokenShare:P1}");
+        Assert.That(sparkles, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// The share of the line pixels (net, knots and both breathing courses) of <paramref name="recipe"/>'s textures for
+    /// the test seed that the largest of their 8-connected pieces holds, wrapping around the texture, and in
+    /// <paramref name="sparkles"/> how many pixels sparkle.
+    /// </summary>
+    private static double LargestPieceShare(WaterCausticsRecipe recipe, out int sparkles)
+    {
+        SerializedObject settings = new(recipe);
+        Color32 net = settings.FindProperty("net").colorValue;
+        Color32 knot = settings.FindProperty("knot").colorValue;
+        TerrainTextures textures = recipe.Generate(Seed);
+        int size = textures.Size;
+        bool[] line = new bool[size * size];
+        sparkles = 0;
+        int total = 0;
+        for (int i = 0; i < line.Length; i++)
+        {
+            int code = textures.Height[i].b;
+            line[i] = SameColour(textures.Albedo[i], net) || SameColour(textures.Albedo[i], knot) || (code > 0 && code < 128);
+            sparkles += code >= 128 ? 1 : 0;
+            total += line[i] ? 1 : 0;
+        }
+
+        bool[] seen = new bool[line.Length];
+        Stack<int> stack = new();
+        int largest = 0;
+        for (int start = 0; start < line.Length; start++)
+        {
+            if (!line[start] || seen[start])
+            {
+                continue;
+            }
+
+            int piece = 0;
+            seen[start] = true;
+            stack.Push(start);
+            while (stack.Count > 0)
+            {
+                int index = stack.Pop();
+                piece++;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int next = TerrainArt.Wrap(index / size + dy, size) * size + TerrainArt.Wrap(index % size + dx, size);
+                        if (line[next] && !seen[next])
+                        {
+                            seen[next] = true;
+                            stack.Push(next);
+                        }
+                    }
+                }
+            }
+
+            largest = Math.Max(largest, piece);
+        }
+
+        return (double)largest / total;
     }
 
     /// <summary>

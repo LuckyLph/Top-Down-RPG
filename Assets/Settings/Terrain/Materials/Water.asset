@@ -15,7 +15,7 @@ MonoBehaviour:
   albedo: {fileID: 2800000, guid: c320a823d10d01f4c9e47d1e9644cb35, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: bdc4f5cf7268aaa4d8df3550408c260a, type: 3}
-  repeatCells: 4
+  repeatCells: 8
   outerRadius: 14
   innerRadius: 11
   cellMode: 0

@@ -14,11 +14,11 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
 /// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
 /// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint phases only where water's ripple marks are; tufts point up; sand's crests lie
-/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing
-/// the textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
-/// rebuild. Recipes and materials are built in memory with their
-/// default settings (the project's Gravel material is only read), and files go to a temporary folder outside Assets.
+/// one value per chip or stone, and glint phases only in water, running along its crests' cores and in its sparkles;
+/// tufts point up; sand's crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on
+/// their bottom-right edge; writing the textures to a material sets the base colour the textures' base is shaded from
+/// and has the renderers drawing it rebuild. Recipes and materials are built in memory with their default settings
+/// (the project's Gravel material is only read), and files go to a temporary folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -451,32 +451,80 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Water's glint phases lie exactly on its ripple marks' dashes (the height's blue channel is 0 elsewhere), and the
-    /// marks glint at many different phases, so they do not all light up at once.
+    /// Without sparkles, water's glint phases lie exactly on the bright cores of its wave crests (the height's blue
+    /// channel is 0 elsewhere), at many phases, and on straight rows each glint runs along its row: neighbouring core
+    /// pixels' phases differ by the glint's trips across the texture per pixel. With sparkles, every other glint is a
+    /// pair of side-by-side pixels of plain water with one phase, off the crests.
     /// </summary>
     [Test]
-    public void WaterRipples_GlintOnTheirDashesOnly_AtManyPhases()
+    public void WaterRipples_GlintAlongTheirCrestsCores_AndInHiddenSparkles()
     {
         WaterRipplesRecipe recipe = (WaterRipplesRecipe)CreateRecipe(typeof(WaterRipplesRecipe));
         SerializedObject settings = new(recipe);
-        settings.FindProperty("ripple").colorValue = Color.white;
+        settings.FindProperty("crestBright").colorValue = Color.white;
+        settings.FindProperty("crestDim").colorValue = Color.black;
+        settings.FindProperty("wobbleWaves").arraySize = 0;
+        settings.FindProperty("sparkleChance").floatValue = 0f;
         settings.ApplyModifiedPropertiesWithoutUndo();
+        int trips = settings.FindProperty("glintTrips").intValue;
 
         TerrainTextures textures = recipe.Generate(Seed);
 
+        int size = textures.Size;
+        Color32 white = new(255, 255, 255, 255);
+        Color32 black = new(0, 0, 0, 255);
         HashSet<byte> phases = new();
         int glints = 0;
-        for (int i = 0; i < textures.Albedo.Length; i++)
+        int steps = 0;
+        for (int y = 0; y < size; y++)
         {
-            bool dash = SameColour(textures.Albedo[i], new Color32(255, 255, 255, 255));
-            byte phase = textures.Height[i].b;
-            Assert.That(phase > 0, Is.EqualTo(dash), $"texel {i % textures.Size}, {i / textures.Size}");
-            glints += dash ? 1 : 0;
-            phases.Add(phase);
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                bool core = SameColour(textures.Albedo[i], white);
+                byte phase = textures.Height[i].b;
+                Assert.That(phase > 0, Is.EqualTo(core), $"({x}, {y})");
+                glints += core ? 1 : 0;
+                phases.Add(phase);
+                int next = y * size + TerrainArt.Wrap(x + 1, size);
+                if (core && SameColour(textures.Albedo[next], white))
+                {
+                    int step = ((textures.Height[next].b - phase) % 254 + 254) % 254;
+                    Assert.That(step, Is.InRange((int)Math.Floor(trips * 254.0 / size), (int)Math.Ceiling(trips * 254.0 / size)), $"({x}, {y})");
+                    steps++;
+                }
+            }
         }
 
         Assert.That(glints, Is.GreaterThan(200));
         Assert.That(phases.Count, Is.GreaterThan(50));
+        Assert.That(steps, Is.GreaterThan(100));
+
+        settings.FindProperty("sparkleChance").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures sparkling = recipe.Generate(Seed);
+
+        int sparkles = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                Color32 colour = sparkling.Albedo[i];
+                byte phase = sparkling.Height[i].b;
+                if (phase == 0 || SameColour(colour, white))
+                {
+                    continue;
+                }
+
+                sparkles++;
+                Assert.That(SameColour(colour, black), Is.False, $"({x}, {y}) is on a crest");
+                bool paired = sparkling.Height[y * size + TerrainArt.Wrap(x - 1, size)].b == phase || sparkling.Height[y * size + TerrainArt.Wrap(x + 1, size)].b == phase;
+                Assert.That(paired, Is.True, $"({x}, {y})");
+            }
+        }
+
+        Assert.That(sparkles, Is.GreaterThan(20));
     }
 
     /// <summary>

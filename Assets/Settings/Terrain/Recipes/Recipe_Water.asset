@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::WaterRipplesRecipe
   material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
   seed: 20261018
-  repeatCells: 4
+  repeatCells: 8
   heightWaves:
   - x: 1
     y: 0
@@ -37,31 +37,63 @@ MonoBehaviour:
   water:
     serializedVersion: 2
     rgba: 4288045100
-  tintWaves:
+  depthWaves:
   - x: 1
     y: 0
-    amplitude: 4
+    amplitude: 1
   - x: 0
     y: 1
-    amplitude: 3.5
+    amplitude: 0.9
   - x: 1
     y: -1
-    amplitude: 3
+    amplitude: 0.7
   - x: 2
     y: 1
-    amplitude: 2
-  grit: 2
-  marksPerCell: 2.25
+    amplitude: 0.45
+  - x: -1
+    y: 3
+    amplitude: 0.35
+  - x: 3
+    y: 2
+    amplitude: 0.3
+  tones: 3
+  toneStep: 9
+  ditherWidth: 0.3
+  grit: 1
+  rowsAlongX: 0
+  rowsAlongY: 24
+  wobbleWaves:
+  - x: 2
+    y: 0
+    amplitude: 0.3
+  - x: 4
+    y: 2
+    amplitude: 0.18
+  - x: 6
+    y: -2
+    amplitude: 0.1
+  dashWaves:
+  - x: 4
+    y: 6
+    amplitude: 1
+  - x: 6
+    y: -4
+    amplitude: 0.8
+  - x: 10
+    y: 8
+    amplitude: 0.5
+  - x: -8
+    y: 10
+    amplitude: 0.4
+  dashLevel: 0.05
+  coreLevel: 0.35
+  crestDim:
+    serializedVersion: 2
+    rgba: 4289755712
+  crestBright:
+    serializedVersion: 2
+    rgba: 4291204186
+  glintTrips: 6
+  sparklesPerCell: 1.5
   jitter: 0.45
-  markChance: 0.8
-  minLength: 2
-  maxLength: 5
-  curveLength: 4
-  ripple:
-    serializedVersion: 2
-    rgba: 4290808916
-  trough:
-    serializedVersion: 2
-    rgba: 4286861346
-  troughChance: 0.5
-  sweep: 0.12
+  sparkleChance: 0.5

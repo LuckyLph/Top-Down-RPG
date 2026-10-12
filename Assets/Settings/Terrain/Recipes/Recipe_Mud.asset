@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::MudPuddlesRecipe
   material: {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
   seed: 20261017
-  repeatCells: 4
+  repeatCells: 8
   heightWaves:
   - x: 1
     y: 0
@@ -40,55 +40,71 @@ MonoBehaviour:
   tintWaves:
   - x: 1
     y: 0
-    amplitude: 4
+    amplitude: 3
   - x: 0
     y: 1
-    amplitude: 3.5
+    amplitude: 2.5
   - x: 2
     y: -1
-    amplitude: 2.5
+    amplitude: 2
   - x: 1
     y: 2
-    amplitude: 2
+    amplitude: 1.5
   grit: 7
   puddleWaves:
-  - x: 1
-    y: 1
-    amplitude: 1
-  - x: 2
-    y: -1
-    amplitude: 0.8
-  - x: -1
-    y: 3
-    amplitude: 0.5
-  - x: 3
+  - x: 5
     y: 2
-    amplitude: 0.4
-  puddleLevel: 0.55
-  wetLevel: 0.2
-  wetShade: 12
+    amplitude: 1
+  - x: -3
+    y: 6
+    amplitude: 0.9
+  - x: 7
+    y: -4
+    amplitude: 0.8
+  - x: 2
+    y: 8
+    amplitude: 0.7
+  - x: 9
+    y: 3
+    amplitude: 0.6
+  - x: -6
+    y: 7
+    amplitude: 0.5
+  puddleLevel: 0.45
+  wetLevel: 0.25
+  wetShade: 8
   pool:
     serializedVersion: 2
-    rgba: 4282402896
+    rgba: 4281221720
   bankShade:
     serializedVersion: 2
-    rgba: 4280692280
+    rgba: 4280430658
   wetRim:
     serializedVersion: 2
-    rgba: 4284248708
+    rgba: 4283065984
   reflection:
     serializedVersion: 2
-    rgba: 4287007370
-  reflectionChance: 0.015
-  lumpsPerCell: 3
+    rgba: 4285432982
+  reflectionChance: 0.02
+  ridgesPerCell: 1.5
+  ridgeChance: 0.7
+  minRidgeLength: 2
+  maxRidgeLength: 4
+  ridgeLit:
+    serializedVersion: 2
+    rgba: 4282934400
+  ridgeShade:
+    serializedVersion: 2
+    rgba: 4281089618
+  lumpsPerCell: 1.5
   jitter: 0.45
   lumpChance: 0.6
   lumpLit:
     serializedVersion: 2
-    rgba: 4284119702
+    rgba: 4283329158
   lump:
     serializedVersion: 2
-    rgba: 4282802814
+    rgba: 4282407540
   lumpShade:
     serializedVersion: 2
-    rgba: 4280694344
+    rgba: 4280958032

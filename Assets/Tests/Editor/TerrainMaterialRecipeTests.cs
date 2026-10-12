@@ -11,16 +11,17 @@ using Object = UnityEngine.Object;
 /// Tests for the terrain material recipes and <see cref="TerrainMaterialWriter"/>: each recipe gives the same pixels
 /// for the same seed and others for another seed, and the same PNG bytes on every run; a failed write leaves every file
 /// as it was; texture files keep the paths a material already uses and are otherwise named after it, and another
-/// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its chip's
-/// centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone pixel's
-/// alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth with
-/// one value per chip or stone, and glint and sparkle phases only in the water recipes; caustic water's net breathes
-/// between two courses, runs sideways when flattened and breaks into ripples with a junction gap, and pond water's
-/// strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's crests lie over
-/// their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge; writing the
-/// textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
-/// rebuild. Recipes and materials are built in memory with their default settings (the project's Gravel material is
-/// only read), and files go to a temporary folder outside Assets.
+/// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its
+/// chip's centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone
+/// pixel's alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth
+/// with one value per chip or stone, and glint and sparkle phases only in the water recipes; caustic water's net
+/// breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap, and pond
+/// water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's crests lie
+/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, and its
+/// ridges cast their shade a row below and a pixel to the right; writing the textures to a material sets the base
+/// colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and materials are built
+/// in memory with their default settings (the project's Gravel material is only read), and files go to a temporary
+/// folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -879,6 +880,51 @@ public class TerrainMaterialRecipeTests
         Assert.That(lit, Is.GreaterThan(20));
 
         static bool IsPuddle(Color32 c) => c.g == 0 || (c.r == 255 && c.g == 255 && c.b == 255);
+    }
+
+    /// <summary>
+    /// A mud ridge is lit from the top left: with no puddles or lumps, every lit ridge pixel has a shaded pixel a row
+    /// below and a pixel to its right, and every shaded pixel a lit one a row above and a pixel to its left.
+    /// </summary>
+    [Test]
+    public void MudRidges_CastTheirShadeBelowAndToTheRight()
+    {
+        MudPuddlesRecipe recipe = (MudPuddlesRecipe)CreateRecipe(typeof(MudPuddlesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("puddleLevel").floatValue = 1f;
+        settings.FindProperty("lumpsPerCell").floatValue = 0f;
+        settings.FindProperty("ridgeLit").colorValue = new Color32(255, 255, 255, 255);
+        settings.FindProperty("ridgeShade").colorValue = new Color32(0, 0, 0, 255);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        int lit = 0;
+        int shaded = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = textures.Albedo[y * size + x];
+                if (SameColour(colour, new Color32(255, 255, 255, 255)))
+                {
+                    lit++;
+                    Color32 below = textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
+                    Assert.That(SameColour(below, new Color32(0, 0, 0, 255)), Is.True, $"({x}, {y})");
+                }
+                else if (SameColour(colour, new Color32(0, 0, 0, 255)))
+                {
+                    shaded++;
+                    Color32 above = textures.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
+                    Assert.That(SameColour(above, new Color32(255, 255, 255, 255)), Is.True, $"({x}, {y})");
+                }
+            }
+        }
+
+        Assert.That(lit, Is.EqualTo(shaded));
+        Assert.That(lit, Is.GreaterThan(20));
     }
 
     /// <summary>

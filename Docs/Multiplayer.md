@@ -152,6 +152,18 @@ Virtual players use the same company and product name as the main editor, so the
 3. In Multiplayer Play Mode, Host Game in the main editor continues from that save; Join Game in a virtual player follows the host's area and writes nothing.
 4. The file is `%USERPROFILE%/AppData/LocalLow/<company>/<product>/save.json` on Windows. Delete it to get a clean menu. Automated tests use an in-memory store and never touch it.
 
+### Checking runtime terrain edits
+
+Nothing in gameplay edits terrain yet, so the editor menu Tools > TopDownRPG > Dev > Toggle Terrain Cell At View Centre makes an edit by hand: in play mode it toggles the cell at the Scene view's pivot (or at the centre of the Game view when no Scene view is open) on the tilemap selected in the Hierarchy, through the area's `AreaTerrain`, as gameplay would. It runs in the main editor, which hosts.
+
+1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2 and Player 3.
+2. Press Play. Click Host Game in the main editor and Join Game in Player 2. Both start in the Clearing.
+3. In the main editor's Hierarchy, under the Clearing's `Grid`, select `GrassTilemap`. Frame open grass near the players in the Scene view (its centre is the cell edited) and run the menu: a hole opens in the ground on the host, and the same hole opens in Player 2's Game view. Run it again to fill the cell back, and check Player 2 follows. The Console logs each edit.
+4. Select `CollisionTilemap`, frame another grass cell and run the menu: a wall piece appears on both machines, and a click past it on Player 2 walks around it.
+5. Leave a hole and a wall in place, then click Join Game in Player 3: the late joiner sees both as soon as it is in the area.
+
+The edits travel as cell records (the runtime terrain edits row of the authority model); each machine redraws its ground from its own tilemaps, so nothing about the drawing is sent.
+
 ### Playing over the internet (virtual LAN)
 
 1. Every player installs [Tailscale](https://tailscale.com) (or ZeroTier) and joins the same network: the host invites the others to its tailnet, or shares the node with them.

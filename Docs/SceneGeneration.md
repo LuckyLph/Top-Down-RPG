@@ -1,6 +1,6 @@
 # Scene generation
 
-An editor tool that fills an area scene with generated content: dual-grid terrain layers, props and mob spawn points, plus the party's start spawn. The result is saved in the scene like hand-made content. There are two generators: the forest Clearing (`Area_Clearing.unity` was made with it) and the Village Forest, which joins a village, a clearing and a forest in one larger area (`Area_VillageForest.unity`).
+An editor tool that fills an area scene with generated content: terrain layers (plain data tilemaps drawn by the area's blended terrain, see [TerrainBlending.md](TerrainBlending.md)), props and mob spawn points, plus the party's start spawn. The result is saved in the scene like hand-made content. There are two generators: the forest Clearing (`Area_Clearing.unity` was made with it) and the Village Forest, which joins a village, a clearing and a forest in one larger area (`Area_VillageForest.unity`).
 
 ## Using it
 
@@ -9,14 +9,17 @@ An editor tool that fills an area scene with generated content: dual-grid terrai
 3. Tune its settings in the window. A map of the layout redraws on every change, one pixel per cell: grass green, gravel tan, stone grey, blocking footprints dark green, walk-through props light green, mob spawns red, the party spawn cyan. The line under it counts cells, props and mobs, and warnings say what did not fit.
 4. **Random Seed** picks a new seed. The seed is stored on the generator asset, and the same seed and settings always give the same layout.
 5. **Generate** asks first, then replaces the scene's content as a single undo step. Review the scene and save it.
+6. **Convert Ground** asks first, then sets the scene's ground layers up as the generator's layers without generating anything (see `GroundLayerMigration` below), as a single undo step: every painted cell stays, and props, mobs and walls are left alone. Use it after changing a generator's terrain layers (a tile, a material, their order) on an area you do not want to regenerate. Phase 4 of TerrainBlending.md converted every area's dual-grid ground with it.
 
 What Generate replaces:
-- Every terrain layer the generator lists: the data tilemap child of the area's `Grid` with that name is cleared and repainted. A layer the scene does not have yet is created with a dual-grid module, render tilemap and navigation source. Each layer's rule tile, terrain type, navigation priority and draw order are set from the generator, and the layers are put first among the grid's children, in the generator's order. In an area drawn by a `TerrainBlendRenderer` (the Village Forest) a layer the renderer lists gets its place in the renderer's layers as navigation priority instead, which is the draw order there, so generating never puts the two out of step; a layer it does not list keeps the generator's priority, which should then not equal a listed layer's place.
+- Every terrain layer the generator lists: the data tilemap child of the area's `Grid` with that name is cleared and filled with the layer's plain tile in exactly the layout's cells. A layer the scene does not have yet is created as a plain tilemap. Each layer is left a plain data tilemap: a dual-grid module, its render tilemap or a Tilemap Renderer still on it is removed, since every cell is repainted anyway. Its navigation source (added when missing) gets the layer's terrain type and its index in the generator's list as priority, and the layers are put first among the grid's children, in the generator's order.
+- The grid's `TerrainBlendRenderer`, added when missing: it draws exactly the generator's layers, in the generator's order (its draw order, and so the navigation priorities), with their materials and the generator's terrain style. A tilemap it drew that is not one of the generator's layers is dropped from it with a warning. Its other settings (chunk size, sorting, look) stay.
+- The fill tile of each of the generator's layers that the area's `AreaTerrain` lists: the layer's tile.
 - Every child of the `Props` root, so props placed by hand there go too.
 - Every `MobSpawnPoint` in the scene. The new ones go under a `MobSpawns` root, named `MobSpawn_<prefab>_<n>`.
 - The position of the `start` spawn point, or of the first spawn point when none has that id. One is created when the scene has none.
 
-The collision tilemap (walls), `AreaTerrain`, the lifetime scope, lights and any other objects are left alone. Generated layouts assume cells of one unit, like every area; the writer refuses any other grid.
+The collision tilemap (walls), the rest of `AreaTerrain`, the lifetime scope, lights and any other objects are left alone. Generated layouts assume cells of one unit, like every area; the writer refuses any other grid.
 
 ## Pieces
 
@@ -24,13 +27,15 @@ All of it is editor-only code in `TopDownRPG.Editor`, under [Assets/Editor/World
 
 | Type | Role |
 |---|---|
-| [AreaGenerator](../Assets/Editor/World/Generation/AreaGenerator.cs) | Abstract `ScriptableObject`, one subclass per kind of environment. Holds the `Seed` the window uses, lists the `TerrainLayers` it paints (each one has a tilemap name, a `DualGridRuleTile`, a `TerrainType2D`, a navigation priority and a sorting order), and `Generate(seed)` returns an `AreaLayout`. `PropScatter` is the base of the generators' scatter layers: a label, a prefab list, a count and a spacing; each generator's subclass adds which part of its area the layer fills. |
+| [AreaGenerator](../Assets/Editor/World/Generation/AreaGenerator.cs) | Abstract `ScriptableObject`, one subclass per kind of environment. Holds the `Seed` the window uses and the `TerrainStyle` the area's terrain renderer draws with, lists the `TerrainLayers` it paints, bottom first (each one has a tilemap name, a plain `Tile`, a `TerrainType2D` and a `TerrainMaterial`; its place in the list is its draw order and its navigation priority), and `Generate(seed)` returns an `AreaLayout`. `PropScatter` is the base of the generators' scatter layers: a label, a prefab list, a count and a spacing; each generator's subclass adds which part of its area the layer fills. |
 | [AreaLayout](../Assets/Editor/World/Generation/AreaLayout.cs) | Plain data in one-unit cells: the filled cells of each terrain layer, `Props` (prefab plus cell: the bottom-left cell of a blocking prop's footprint, or the cell and an offset inside it for a walk-through prop), `Mobs` (prefab plus cell), `SpawnCell`, and `Warnings`. |
 | [AreaLayoutBuilder](../Assets/Editor/World/Generation/AreaLayoutBuilder.cs) | Internal. The state and steps both generators share during one generation: the seeded random source, the layout with its grass, gravel and stone cells, how deep each grass cell lies inside the edge, and which cells are reserved (kept free of blocking props), covered by a footprint or hold a walk-through prop. Its steps: `LayGrass` (a wobbly superellipse, its largest 4-connected region and the edge distances), `WobblyShape`, `SampleSpline` and `Paint`, `PlaceSpawn`, `ReservePathClearance`, `ReserveSquare` and `ReserveDisc`, `ScatterProps` and `TryPlaceFootprint`, `MobCells` and `PlaceMobs`, `ReachableFromSpawn` and `FloodFill`. |
 | [ClearingGenerator](../Assets/Editor/World/Generation/ClearingGenerator.cs) | The forest clearing, described below. Create menu: `TopDownRPG/World/Clearing Generator`. |
 | [VillageForestGenerator](../Assets/Editor/World/Generation/VillageForestGenerator.cs) | A village, a clearing and a forest in one area, described below. `GenerateWithRegions(seed)` also returns the region of every grass cell, which the tests read. Create menu: `TopDownRPG/World/Village Forest Generator`. |
-| [AreaLayoutWriter](../Assets/Editor/World/Generation/AreaLayoutWriter.cs) | `Write(grid, generator, layout)` writes a layout into the grid's scene as described above. Blocking props go to `PropGridSnapping.RootOnCells`, so their footprints cover exactly their cells, and walk-through props are snapped to the pixel grid. Mob spawns and the party spawn go to cell centres. |
-| [SceneGeneratorWindow](../Assets/Editor/World/Generation/SceneGeneratorWindow.cs) | The window. It targets the active scene's grid (the one with the `NavigationGrid2D`, else the first `Grid`), draws the generator's own inspector and the preview, and runs Generate after the GUI pass. |
+| [AreaLayoutWriter](../Assets/Editor/World/Generation/AreaLayoutWriter.cs) | `Write(grid, generator, layout)` writes a layout into the grid's scene as described above. It refuses a generator without a terrain style, with more than 8 layers, with a layer lacking a tilemap name, a tile or a material, or with two layers of one tilemap name. Blocking props go to `PropGridSnapping.RootOnCells`, so their footprints cover exactly their cells, and walk-through props are snapped to the pixel grid. Mob spawns and the party spawn go to cell centres. |
+| [GroundLayerMigration](../Assets/Editor/World/Generation/GroundLayerMigration.cs) | `Migrate(grid, generator)` (or with a style and layers) sets the grid's ground layers up as the generator's without repainting them, as one undo step, and returns a line per change: for each terrain layer whose tilemap the grid has, every filled cell holds the layer's tile (a layer holding another tile is cleared and filled in one batch, so it keeps no record of the old tiles), its dual-grid parts and any Tilemap Renderer go, and its navigation source gets the layer's terrain type and draw order. The renderer and `AreaTerrain`'s fill tiles are set as Generate sets them. Terrain layers the scene lacks are left out, and a second run changes nothing. The window's Convert Ground runs it. |
+| [AreaGroundSetup](../Assets/Editor/World/Generation/AreaGroundSetup.cs) | Internal. The steps the writer and the migration share: checking a generator's layers and style, removing a layer's dual-grid parts, setting a navigation source, setting the renderer, and setting `AreaTerrain`'s fill tiles, each with undo and recording nothing when already set. |
+| [SceneGeneratorWindow](../Assets/Editor/World/Generation/SceneGeneratorWindow.cs) | The window. It targets the active scene's grid (the one with the `NavigationGrid2D`, else the first `Grid`), draws the generator's own inspector and the preview, and runs Generate or Convert Ground after the GUI pass. |
 
 The generators work in cells and know footprints only through `PropGridSnapping.CellsCovered`, the same rule the writer and `NavigationGrid2D` follow. `AreaGenerationTests` checks that a written layout is blocked by the navigation grid on exactly its footprint cells.
 
@@ -81,16 +86,14 @@ Like the Clearing, it keeps `spawnClearRadius` 6 and mobs at least 14 cells from
 
 ## Terrain layers and drawing order
 
-| Layer | Tilemap | Rule tile | Terrain type | Navigation priority | Sorting order (Terrain layer) |
+| Layer | Tilemap | Tile | Material | Terrain type | Draw order and navigation priority |
 |---|---|---|---|---|---|
-| Grass | `GrassTilemap` | `grass_DualGridRuleTile` | `Terrain_Grass` | 0 | 0 |
-| Gravel | `GravelTilemap` | `gravel_path_DualGridRuleTile` | `Terrain_Gravel` | 1 | 1 |
-| Stone | `StoneTilemap` | `stone_path_DualGridRuleTile` | `Terrain_Stone` | 2 | 2 |
-| Walls | `CollisionTilemap` (not generated) | `walls_DualGridRuleTile` | blocking | n/a | 10 |
+| Grass | `GrassTilemap` | `Tile_Grass` | `Grass` | `Terrain_Grass` | 0 |
+| Gravel | `GravelTilemap` | `Tile_Gravel` | `Gravel` | `Terrain_Gravel` | 1 |
+| Stone | `StoneTilemap` | `Tile_Stone` | `Stone` | `Terrain_Stone` | 2 |
+| Walls | `CollisionTilemap` (not generated) | `walls_DualGridRuleTile`'s data tile | none (its render tilemap draws them) | blocking | order 10 on the `Terrain` sorting layer |
 
-Grass is painted under the paths too, so the grass shows through a path's ragged edge. Stone is drawn over gravel where they meet. Walls sit at order 10 in every area so they draw over any ground layer, with room for more of them.
-
-The Village Forest draws its ground with a `TerrainBlendRenderer` on its `Grid` instead ([TerrainBlending.md](TerrainBlending.md)): it lists the three layers bottom first, each with its material asset (`Grass`, `Gravel` and `Stone` in `Assets/Settings/Terrain/Materials`), and `TerrainStyle.asset`, draws them in one shader on the `Terrain` sorting layer at order 0 in the crisp look (its `mode`, a developer toggle, is saved as Crisp), and the layers' render tilemaps are switched off. The generator still writes the layers' data tilemaps (and their hidden render tilemaps) as above, and the renderer redraws from the data tilemaps at once, so Generate works on it unchanged. Until Phase 4, a layer the writer has to create gets a render tilemap that is switched on and is missing from the renderer's list; add it to the list and switch its render tilemap off when converting an area by hand.
+Both generators list the same three layers, with `TerrainStyle.asset` as their terrain style. Tiles are in `Assets/Tiles/Ground`, materials in `Assets/Settings/Terrain/Materials`. The area's `TerrainBlendRenderer` draws the three layers in one shader on the `Terrain` sorting layer at order 0, bottom first, so stone is drawn over gravel and gravel over grass where they meet, and a layer's place is also its navigation priority, so the layer drawn on top of a cell decides it. Grass is painted under the paths too: lower layers continue under upper ones, and grass over nothing is the map's edge. Walls sit at order 10 in every area, so they draw over the ground.
 
 `TerrainMovement_Default` has no rules for stone or gravel, so both are walkable at the default cost of 10, the same as grass. Making roads cheaper would make units prefer them, but it would also lower the profile's minimum cost, which the A* heuristic uses as its step cost, and it would stop click-to-move from taking its straight-line shortcut across grass. Clicks would then bend toward the road. The terrain types are there for later uses such as footsteps or speed.
 
@@ -100,7 +103,7 @@ Generation happens in the editor, and its result is saved in the scene. Every ma
 
 ## Adding a generator
 
-1. Subclass `AreaGenerator` with `[CreateAssetMenu(menuName = "TopDownRPG/World/...")]`. List the terrain layers it paints in `TerrainLayers` (bottom first) and fill one `AreaLayout` per call to `Generate(seed)`. Build it on an `AreaLayoutBuilder` for the grass, painting, reservations, scatter, mobs and reachability, and derive its scatter layers from `PropScatter`.
+1. Subclass `AreaGenerator` with `[CreateAssetMenu(menuName = "TopDownRPG/World/...")]`. List the terrain layers it paints in `TerrainLayers` (bottom first, each with its tilemap name, plain tile, terrain type and material; at most 8) and fill one `AreaLayout` per call to `Generate(seed)`. Give its asset a terrain style. Build it on an `AreaLayoutBuilder` for the grass, painting, reservations, scatter, mobs and reachability, and derive its scatter layers from `PropScatter`.
 2. Keep it deterministic: one `System.Random` from the seed (the builder's), and no iteration over hash sets where order matters.
 3. Keep paths on terrain, the spawn open, footprints apart and every mob reachable from the spawn, and test those properties over many seeds as `AreaGenerationTests` does for both generators. Add its asset path to the determinism and writer test cases.
 4. Create its asset under `Assets/Settings/Generation`. The window lists every `AreaGenerator` asset.

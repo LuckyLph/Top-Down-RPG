@@ -18,33 +18,33 @@ public class AreaTerrainTests
 
     private readonly List<Object> createdObjects = new();
     private GameObject root;
-    private Tile wallTile;
-    private Tilemap walls;
-    private DualGridTilemapModule ground;
-    private DualGridRuleTile groundTile;
+    private Tile groundTile;
+    private Tilemap ground;
+    private DualGridTilemapModule walls;
+    private DualGridRuleTile wallTile;
 
     /// <summary>
-    /// Builds a grid with a plain wall tilemap and a dual-grid ground layer (data and render tilemaps) painted
-    /// with a fresh <see cref="DualGridRuleTile"/>.
+    /// Builds a grid laid out like an area's: a plain ground data tilemap filled with a fresh plain tile, and dual-grid
+    /// walls (data and render tilemaps) of a fresh <see cref="DualGridRuleTile"/>.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
         root = Track(new GameObject("AreaTerrainRoot", typeof(Grid)));
-        wallTile = Track(ScriptableObject.CreateInstance<Tile>());
-
-        GameObject wallObject = new("Walls", typeof(Tilemap));
-        wallObject.transform.SetParent(root.transform);
-        walls = wallObject.GetComponent<Tilemap>();
+        groundTile = Track(ScriptableObject.CreateInstance<Tile>());
 
         GameObject groundObject = new("Ground", typeof(Tilemap));
         groundObject.transform.SetParent(root.transform);
-        GameObject renderObject = new("GroundRender", typeof(Tilemap));
-        renderObject.transform.SetParent(groundObject.transform);
-        groundTile = Track(ScriptableObject.CreateInstance<DualGridRuleTile>());
-        Track(groundTile.RefreshDataTile());
-        ground = groundObject.AddComponent<DualGridTilemapModule>();
-        ground.RenderTile = groundTile;
+        ground = groundObject.GetComponent<Tilemap>();
+
+        GameObject wallObject = new("Walls", typeof(Tilemap));
+        wallObject.transform.SetParent(root.transform);
+        GameObject renderObject = new("WallsRender", typeof(Tilemap));
+        renderObject.transform.SetParent(wallObject.transform);
+        wallTile = Track(ScriptableObject.CreateInstance<DualGridRuleTile>());
+        Track(wallTile.RefreshDataTile());
+        walls = wallObject.AddComponent<DualGridTilemapModule>();
+        walls.RenderTile = wallTile;
     }
 
     /// <summary>
@@ -65,8 +65,9 @@ public class AreaTerrainTests
     }
 
     /// <summary>
-    /// On the authority, setting cells fills or clears the tiles and keeps one edit record per cell, replacing
-    /// a re-edited cell's record in place and raising <see cref="AreaTerrain.EditRecorded"/> with its index.
+    /// On the authority, setting cells of a plain ground layer fills them with its fill tile or clears them, and keeps
+    /// one edit record per cell, replacing a re-edited cell's record in place and raising
+    /// <see cref="AreaTerrain.EditRecorded"/> with its index.
     /// </summary>
     [Test]
     public void TrySetCells_WithAuthority_ChangesTheTiles_AndRecordsTheLastWritePerCell()
@@ -76,31 +77,31 @@ public class AreaTerrainTests
         terrain.EditRecorded += recorded.Add;
         Vector3Int[] cells = { new(0, 0, 0), new(1, 0, 0) };
 
-        Assert.That(terrain.TrySetCells(walls, cells, filled: true), Is.True);
-        Assert.That(walls.GetTile(cells[0]), Is.SameAs(wallTile));
-        Assert.That(walls.GetTile(cells[1]), Is.SameAs(wallTile));
+        Assert.That(terrain.TrySetCells(ground, cells, filled: true), Is.True);
+        Assert.That(ground.GetTile(cells[0]), Is.SameAs(groundTile));
+        Assert.That(ground.GetTile(cells[1]), Is.SameAs(groundTile));
 
-        Assert.That(terrain.TrySetCells(walls, new[] { cells[0] }, filled: false), Is.True);
-        Assert.That(walls.HasTile(cells[0]), Is.False);
+        Assert.That(terrain.TrySetCells(ground, new[] { cells[0] }, filled: false), Is.True);
+        Assert.That(ground.HasTile(cells[0]), Is.False);
 
-        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(1, cells[0], false), new TerrainEdit(1, cells[1], true) }));
+        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(0, cells[0], false), new TerrainEdit(0, cells[1], true) }));
         Assert.That(recorded, Is.EqualTo(new[] { 0, 1, 0 }), "Editing a cell again replaces its record in place.");
     }
 
     /// <summary>
-    /// Filling a cell on a dual-grid data tilemap paints the module's data tile, refreshes its render tilemap and
-    /// records the edit.
+    /// Filling a cell of the dual-grid walls paints the module's data tile, refreshes its render tilemap and records
+    /// the edit.
     /// </summary>
     [Test]
     public void TrySetCells_OnADualGridLayer_PaintsThroughItsModule()
     {
         AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative);
 
-        Assert.That(terrain.TrySetCells(ground.DataTilemap, new[] { Vector3Int.zero }, filled: true), Is.True);
+        Assert.That(terrain.TrySetCells(walls.DataTilemap, new[] { Vector3Int.zero }, filled: true), Is.True);
 
-        Assert.That(ground.DataTilemap.GetTile(Vector3Int.zero), Is.SameAs(groundTile.DataTile));
-        Assert.That(ground.RenderTilemap.HasTile(new Vector3Int(1, 1, 0)), Is.True);
-        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(0, Vector3Int.zero, true) }));
+        Assert.That(walls.DataTilemap.GetTile(Vector3Int.zero), Is.SameAs(wallTile.DataTile));
+        Assert.That(walls.RenderTilemap.HasTile(new Vector3Int(1, 1, 0)), Is.True);
+        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(1, Vector3Int.zero, true) }));
     }
 
     /// <summary>
@@ -111,9 +112,9 @@ public class AreaTerrainTests
     {
         AreaTerrain terrain = CreateTerrain(new FixedGameAuthority(false));
 
-        Assert.That(terrain.TrySetCells(walls, new[] { Vector3Int.zero }, filled: true), Is.False);
+        Assert.That(terrain.TrySetCells(ground, new[] { Vector3Int.zero }, filled: true), Is.False);
 
-        Assert.That(walls.HasTile(Vector3Int.zero), Is.False);
+        Assert.That(ground.HasTile(Vector3Int.zero), Is.False);
         Assert.That(terrain.Edits, Is.Empty);
     }
 
@@ -133,27 +134,49 @@ public class AreaTerrainTests
     }
 
     /// <summary>
-    /// Replicated edits fill and clear cells on every layer, skip edits for a layer the area does not have, and are
-    /// not recorded.
+    /// On a client, replicated edits fill a plain ground layer's cells with its fill tile and clear them, paint the
+    /// dual-grid walls through their module, skip edits for a layer the area does not have, and are not recorded.
     /// </summary>
     [Test]
     public void ApplyReplicated_AppliesEveryLayer_WithoutRecording()
     {
         AreaTerrain terrain = CreateTerrain(new FixedGameAuthority(false));
-        walls.SetTile(new Vector3Int(5, 5, 0), wallTile);
+        ground.SetTile(new Vector3Int(5, 5, 0), groundTile);
 
         terrain.ApplyReplicated(new[]
         {
-            new TerrainEdit(0, new Vector3Int(2, 2, 0), true),
-            new TerrainEdit(1, new Vector3Int(4, 4, 0), true),
-            new TerrainEdit(1, new Vector3Int(5, 5, 0), false),
+            new TerrainEdit(0, new Vector3Int(4, 4, 0), true),
+            new TerrainEdit(0, new Vector3Int(5, 5, 0), false),
+            new TerrainEdit(1, new Vector3Int(2, 2, 0), true),
             new TerrainEdit(7, new Vector3Int(9, 9, 0), true)
         });
 
-        Assert.That(ground.DataTilemap.HasTile(new Vector3Int(2, 2, 0)), Is.True);
-        Assert.That(walls.GetTile(new Vector3Int(4, 4, 0)), Is.SameAs(wallTile));
-        Assert.That(walls.HasTile(new Vector3Int(5, 5, 0)), Is.False);
+        Assert.That(ground.GetTile(new Vector3Int(4, 4, 0)), Is.SameAs(groundTile));
+        Assert.That(ground.HasTile(new Vector3Int(5, 5, 0)), Is.False);
+        Assert.That(walls.DataTilemap.GetTile(new Vector3Int(2, 2, 0)), Is.SameAs(wallTile.DataTile));
+        Assert.That(walls.RenderTilemap.HasTile(new Vector3Int(3, 3, 0)), Is.True, "The walls' render tilemap follows.");
         Assert.That(terrain.Edits, Is.Empty, "Replicated edits are the host's; clients do not record them.");
+    }
+
+    /// <summary>
+    /// The editor's dev toggle fills an empty cell of a plain ground layer with its fill tile and empties a filled one,
+    /// recording both through the area terrain on the authority, and is refused on a client.
+    /// </summary>
+    [Test]
+    public void DevToggle_FillsAnEmptyCellAndEmptiesAFilledOne_ThroughTheAreaTerrain()
+    {
+        AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative);
+        Vector3Int cell = new(3, 2, 0);
+
+        Assert.That(AreaTerrainDevMenu.Toggle(terrain, ground, cell), Is.True);
+        Assert.That(ground.GetTile(cell), Is.SameAs(groundTile));
+        Assert.That(AreaTerrainDevMenu.Toggle(terrain, ground, cell), Is.True);
+        Assert.That(ground.HasTile(cell), Is.False);
+        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(0, cell, false) }));
+
+        AreaTerrain client = CreateTerrain(new FixedGameAuthority(false));
+        Assert.That(AreaTerrainDevMenu.Toggle(client, ground, cell), Is.False);
+        Assert.That(ground.HasTile(cell), Is.False);
     }
 
     /// <summary>
@@ -216,15 +239,16 @@ public class AreaTerrainTests
     }
 
     /// <summary>
-    /// Creates an <see cref="AreaTerrain"/> under the grid with the ground as layer 0 and the walls as layer 1,
-    /// injected with <paramref name="authority"/> and, when given, using <paramref name="syncPrefab"/>.
+    /// Creates an <see cref="AreaTerrain"/> under the grid with the plain ground as layer 0, filled with its plain tile,
+    /// and the dual-grid walls as layer 1, as in an area, injected with <paramref name="authority"/> and, when given,
+    /// using <paramref name="syncPrefab"/>.
     /// </summary>
     private AreaTerrain CreateTerrain(IGameAuthority authority, NetworkObject syncPrefab = null)
     {
         GameObject terrainObject = new("Terrain");
         terrainObject.transform.SetParent(root.transform);
         AreaTerrain terrain = terrainObject.AddComponent<AreaTerrain>();
-        terrain.Configure(new AreaTerrain.Layer(ground.DataTilemap, null), new AreaTerrain.Layer(walls, wallTile));
+        terrain.Configure(new AreaTerrain.Layer(ground, groundTile), new AreaTerrain.Layer(walls.DataTilemap, null));
         terrain.Construct(authority);
         if (syncPrefab != null)
         {

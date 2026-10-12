@@ -6,9 +6,10 @@ using Debug = UnityEngine.Debug;
 using Random = System.Random;
 
 /// <summary>
-/// Dev-only generator for the stress test area: paints a seeded rectangle of dual-grid ground ringed by a wall
-/// border, adds walls in the chosen <see cref="WallLayout"/>, keeps the centre clear and rebuilds the navigation
-/// grid. Runs early so the map exists before anything spawns on it.
+/// Dev-only generator for the stress test area: fills a rectangle of its plain ground tilemap with the ground tile (the
+/// area's <see cref="TerrainBlendRenderer"/> draws it), rings it with a dual-grid wall border, adds walls in the chosen
+/// <see cref="WallLayout"/>, keeps the centre clear and rebuilds the navigation grid. Runs early so the map exists
+/// before anything spawns on it.
 /// </summary>
 [DefaultExecutionOrder(-1000)]
 public class StressTestMap : MonoBehaviour
@@ -23,7 +24,10 @@ public class StressTestMap : MonoBehaviour
         Corridors
     }
 
-    [SerializeField] private DualGridTilemapModule ground;
+    [Tooltip("Plain ground data tilemap, a layer of the area's Terrain Blend Renderer.")]
+    [SerializeField] private Tilemap groundTilemap;
+    [Tooltip("Plain tile written into every ground cell (Tile_Grass).")]
+    [SerializeField] private TileBase groundTile;
     [Tooltip("Dual-grid walls: the data tilemap is the collision tilemap, its render tilemap draws them.")]
     [SerializeField] private DualGridTilemapModule walls;
     [SerializeField] private NavigationGrid2D navigationGrid;
@@ -52,10 +56,17 @@ public class StressTestMap : MonoBehaviour
 
     /// <summary>
     /// Clears and repaints the ground and wall layers from the current settings and seed, rebuilds the
-    /// <see cref="NavigationGrid2D"/> and logs the size, wall count and time taken.
+    /// <see cref="NavigationGrid2D"/> and logs the size, wall count and time taken. Logs an error and does nothing when
+    /// a reference is missing.
     /// </summary>
     public void Generate()
     {
+        if (groundTilemap == null || groundTile == null || walls == null || navigationGrid == null)
+        {
+            Debug.LogError($"{name}: {nameof(StressTestMap)} needs its ground tilemap, ground tile, walls and navigation grid.", this);
+            return;
+        }
+
         Stopwatch stopwatch = Stopwatch.StartNew();
         int minX = -width / 2;
         int minY = -height / 2;
@@ -83,8 +94,8 @@ public class StressTestMap : MonoBehaviour
 
         wallCells.RemoveWhere(cell => Mathf.Abs(cell.x) < clearRadius && Mathf.Abs(cell.y) < clearRadius);
 
-        Paint(ground, groundCells);
-        Paint(walls, new List<Vector3Int>(wallCells));
+        PaintGround(groundCells);
+        PaintWalls(new List<Vector3Int>(wallCells));
 
         navigationGrid.BuildGrid();
 
@@ -93,13 +104,24 @@ public class StressTestMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Wipes both tilemaps of <paramref name="layer"/> and paints <paramref name="cells"/> as its data tiles.
+    /// Wipes the ground tilemap and fills <paramref name="cells"/> with the ground tile in one batch.
     /// </summary>
-    private static void Paint(DualGridTilemapModule layer, List<Vector3Int> cells)
+    private void PaintGround(List<Vector3Int> cells)
     {
-        layer.DataTilemap.ClearAllTiles();
-        layer.RenderTilemap.ClearAllTiles();
-        layer.SetDataTiles(cells);
+        TileBase[] tiles = new TileBase[cells.Count];
+        System.Array.Fill(tiles, groundTile);
+        groundTilemap.ClearAllTiles();
+        groundTilemap.SetTiles(cells.ToArray(), tiles);
+    }
+
+    /// <summary>
+    /// Wipes both tilemaps of the walls and paints <paramref name="cells"/> as their data tiles.
+    /// </summary>
+    private void PaintWalls(List<Vector3Int> cells)
+    {
+        walls.DataTilemap.ClearAllTiles();
+        walls.RenderTilemap.ClearAllTiles();
+        walls.SetDataTiles(cells);
     }
 
     /// <summary>

@@ -11,16 +11,16 @@ using UnityEngine.Tilemaps;
 /// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
 /// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
 /// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
-/// forest; the same seed gives the same layout; and <see cref="AreaLayoutWriter"/> writes a layout into a scene so that
-/// the navigation grid blocks exactly the props' cells, so that a <see cref="TerrainBlendRenderer"/> over the layers
-/// follows a layout written over another, and so that the layers' navigation priorities follow that renderer's draw
-/// order.
+/// forest; the same seed gives the same layout; the project's generators list plain ground tiles and the project's
+/// materials in draw order; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn
+/// by a <see cref="TerrainBlendRenderer"/> in the generator's order, with navigation priorities from that order, a
+/// renderer that follows a layout written over another, and a navigation grid that blocks exactly the props' cells.
 /// </summary>
 public class AreaGenerationTests
 {
     private const string ClearingGeneratorPath = "Assets/Settings/Generation/Generator_Clearing.asset";
     private const string VillageForestGeneratorPath = "Assets/Settings/Generation/Generator_VillageForest.asset";
-    private const string GrassTilePath = "Assets/Tiles/tilesets/grass_DualGridRuleTile.asset";
+    private const string TerrainStylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string PropsRootName = "Props";
     private const int SeedCount = 20;
@@ -488,17 +488,22 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// For each generator, writing a layout into a scene with only a grass layer creates the missing path layers in
-    /// order, paints every layer's data tilemap with exactly its cells, sets up each one's rule tile, navigation source
-    /// and draw order, replaces the old props and mob spawn points and moves the start spawn point; the navigation grid
-    /// then blocks exactly the footprint cells, and every mob can walk to the spawn.
+    /// For each generator, writing a layout into a scene whose grass layer is still a dual-grid layer sets every layer
+    /// up as a plain data tilemap at its place under the grid (no module, render tilemap or Tilemap Renderer left),
+    /// holding the layer's tile in exactly the layout's cells, with a navigation source of its terrain type whose
+    /// priority is its index; the grid's terrain renderer draws the layers in that order with their materials and the
+    /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
+    /// points are replaced and the start spawn point moves; the navigation grid then blocks exactly the footprint
+    /// cells, and every mob can walk to the spawn.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
-    public void TheWriter_PaintsEveryLayer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
+    public void TheWriter_SetsUpPlainLayersDrawnByTheRenderer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
-        Grid grid = CreateAreaWithGrass(target);
+        Grid grid = CreateAreaWithDualGridGrass(target);
+        AreaTerrain terrain = grid.gameObject.AddComponent<AreaTerrain>();
+        terrain.Configure(new AreaTerrain.Layer(grid.transform.Find(target.TerrainLayers[0].TilemapName).GetComponent<Tilemap>(), null));
         Transform props = Track(new GameObject(PropsRootName)).transform;
         GameObject stale = new("Stale");
         stale.transform.SetParent(props, false);
@@ -510,22 +515,38 @@ public class AreaGenerationTests
         Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
 
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Assert.That(renderer, Is.Not.Null, "The writer adds the terrain renderer.");
+        Assert.That(renderer.Style, Is.SameAs(target.TerrainStyle));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(layers.Count));
         for (int i = 0; i < layers.Count; i++)
         {
             Transform child = grid.transform.Find(layers[i].TilemapName);
             Assert.That(child, Is.Not.Null, layers[i].TilemapName);
             Assert.That(child.GetSiblingIndex(), Is.EqualTo(i), "Layers are listed bottom first.");
-            DualGridTilemapModule module = child.GetComponent<DualGridTilemapModule>();
-            Assert.That(module.RenderTile, Is.SameAs(layers[i].RuleTile));
+            Assert.That(child.GetComponent<DualGridTilemapModule>(), Is.Null, $"{layers[i].TilemapName} has no module");
+            Assert.That(child.GetComponent<TilemapRenderer>(), Is.Null, $"{layers[i].TilemapName} has no Tilemap Renderer");
+            Assert.That(child.childCount, Is.Zero, $"{layers[i].TilemapName} has no render tilemap");
+            Tilemap tilemap = child.GetComponent<Tilemap>();
+            Assert.That(FilledCells(tilemap).SetEquals(layout.TerrainCells(i)), Is.True, $"{layers[i].TilemapName} cells");
+            foreach (Vector3Int cell in layout.TerrainCells(i))
+            {
+                Assert.That(tilemap.GetTile(cell), Is.SameAs(layers[i].Tile), $"{layers[i].TilemapName} {cell}");
+            }
+
+            SerializedProperty tileAssets = new SerializedObject(tilemap).FindProperty("m_TileAssetArray");
+            Assert.That(tileAssets.arraySize, Is.EqualTo(1), $"{layers[i].TilemapName} keeps no record of the data tiles it held");
+
             NavigationTerrainSource2D source = child.GetComponent<NavigationTerrainSource2D>();
             Assert.That(source.TerrainType, Is.SameAs(layers[i].TerrainType));
-            Assert.That(source.Priority, Is.EqualTo(layers[i].NavigationPriority));
-            TilemapRenderer renderer = module.RenderTilemap.GetComponent<TilemapRenderer>();
-            Assert.That(renderer.sortingLayerName, Is.EqualTo("Terrain"));
-            Assert.That(renderer.sortingOrder, Is.EqualTo(layers[i].SortingOrder));
-            Assert.That(FilledCells(module.DataTilemap).SetEquals(layout.TerrainCells(i)), Is.True, $"{layers[i].TilemapName} cells");
-            Assert.That(FilledCells(module.RenderTilemap), Is.Not.Empty, $"{layers[i].TilemapName} is drawn");
+            Assert.That(source.Priority, Is.EqualTo(i), "A layer's navigation priority is its index, its draw order.");
+            Assert.That(renderer.Layers[i].Tilemap, Is.SameAs(tilemap), $"layer {i}");
+            Assert.That(renderer.Layers[i].Material, Is.SameAs(layers[i].Material), $"layer {i}");
         }
+
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        SerializedObject terrainData = new(terrain);
+        Assert.That(terrainData.FindProperty("layers").GetArrayElementAtIndex(0).FindPropertyRelative("fillTile").objectReferenceValue, Is.SameAs(layers[0].Tile), "The area's terrain fills the grass layer with its tile.");
 
         Assert.That(stale == null, Is.True, "Old props are removed.");
         Assert.That(oldMob == null, Is.True, "Old mob spawn points are removed.");
@@ -569,124 +590,141 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// A terrain renderer over the Village Forest generator's layers stays in step with the writer: after one layout
-    /// is written over another, its control map holds exactly the new layout's cells on every layer, the cells the old
-    /// layout filled and the new one leaves empty included (the writer clears each layer before painting it). The
-    /// renderer is removed before <see cref="TearDown"/> reverts the writer, which destroys the path layers it created.
+    /// The terrain renderer the writer adds stays in step with it: after one layout is written over another, its
+    /// control map holds exactly the new layout's cells on every layer, the cells the old layout filled and the new one
+    /// leaves empty included (the writer clears each layer before painting it).
     /// </summary>
     [Test]
-    public void TheWriter_KeepsATerrainRendererInStep_WhenALayoutIsWrittenOverAnother()
+    public void TheWriter_KeepsItsTerrainRendererInStep_WhenALayoutIsWrittenOverAnother()
     {
-        Grid grid = CreateAreaWithGrass(villageForest);
+        Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout first = villageForest.Generate(3);
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, first), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
-        TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
-        TerrainBlendRenderer.Layer[] rendererLayers = new TerrainBlendRenderer.Layer[layers.Count];
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null, "The renderer the writer added builds.");
+        AreaLayout second = villageForest.Generate(4);
+
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, second), Is.True);
+        renderer.FlushPendingChanges();
+
+        int emptied = 0;
         for (int i = 0; i < layers.Count; i++)
         {
-            rendererLayers[i] = new TerrainBlendRenderer.Layer(grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>(), materials[i]);
-        }
-
-        TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
-        try
-        {
-            renderer.Configure(TestTerrainStyle.Create(created), rendererLayers);
-            AreaLayout second = villageForest.Generate(4);
-
-            Assert.That(AreaLayoutWriter.Write(grid, villageForest, second), Is.True);
-            renderer.FlushPendingChanges();
-
-            int emptied = 0;
-            for (int i = 0; i < layers.Count; i++)
+            HashSet<Vector3Int> cells = new(first.TerrainCells(i));
+            cells.UnionWith(second.TerrainCells(i));
+            byte bit = (byte)(1 << i);
+            foreach (Vector3Int cell in cells)
             {
-                HashSet<Vector3Int> cells = new(first.TerrainCells(i));
-                cells.UnionWith(second.TerrainCells(i));
-                byte bit = (byte)(1 << i);
-                foreach (Vector3Int cell in cells)
-                {
-                    bool filled = second.TerrainCells(i).Contains(cell);
-                    Assert.That((renderer.ControlMap.GetShownCell(cell) & bit) != 0, Is.EqualTo(filled), $"{layers[i].TilemapName} {cell}");
-                    emptied += filled ? 0 : 1;
-                }
+                bool filled = second.TerrainCells(i).Contains(cell);
+                Assert.That((renderer.ControlMap.GetShownCell(cell) & bit) != 0, Is.EqualTo(filled), $"{layers[i].TilemapName} {cell}");
+                emptied += filled ? 0 : 1;
             }
+        }
 
-            Assert.That(emptied, Is.GreaterThan(0), "The second layout leaves some of the first one's cells empty.");
-        }
-        finally
-        {
-            Object.DestroyImmediate(renderer);
-        }
+        Assert.That(emptied, Is.GreaterThan(0), "The second layout leaves some of the first one's cells empty.");
     }
 
     /// <summary>
-    /// In an area drawn by a terrain renderer whose layers are in another order than the generator's (stone drawn under
-    /// gravel), the writer gives each layer's navigation source the layer's place in the renderer, its draw order,
-    /// rather than the generator's priority, so writing puts the two back in step; until then the renderer reports
-    /// the mismatch and still draws. The renderer is removed before <see cref="TearDown"/> reverts the writer.
+    /// In an area whose terrain renderer draws the layers in another order than the generator's (stone under gravel,
+    /// their navigation priorities following that order), with other materials, and draws a tilemap that is not one of
+    /// the generator's layers, writing puts the renderer's layers back in the generator's order with its materials,
+    /// gives each layer's navigation source its index there, and stops drawing the other tilemap with a warning; the
+    /// renderer then builds without reporting a mismatch. The test's own changes go through undo, so the revert in
+    /// <see cref="TearDown"/> only passes through states whose priorities match the draw order.
     /// </summary>
     [Test]
-    public void TheWriter_TakesNavigationPrioritiesFromATerrainRenderersDrawOrder()
+    public void TheWriter_PutsATerrainRenderersLayersInTheGeneratorsOrder()
     {
-        Grid grid = CreateAreaWithGrass(villageForest);
+        Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(3)), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
         Assert.That(layers.Count, Is.EqualTo(3));
-        int[] drawOrder = { 0, 2, 1 };
+        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
+        Undo.RegisterCreatedObjectUndo(water.gameObject, "Create Water");
+        water.transform.SetParent(grid.transform, false);
         TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
-        TerrainBlendRenderer.Layer[] rendererLayers = new TerrainBlendRenderer.Layer[layers.Count];
-        NavigationTerrainSource2D[] sources = new NavigationTerrainSource2D[layers.Count];
+        int[] drawOrder = { 0, 2, 1 };
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Undo.IncrementCurrentGroup();
+        int reorder = Undo.GetCurrentGroup();
+        SerializedObject rendererData = new(renderer);
+        SerializedProperty listed = rendererData.FindProperty("layers");
+        listed.arraySize = 4;
+        for (int i = 0; i < 4; i++)
+        {
+            SerializedProperty layer = listed.GetArrayElementAtIndex(i);
+            layer.FindPropertyRelative("tilemap").objectReferenceValue = i < 3 ? grid.transform.Find(layers[drawOrder[i]].TilemapName).GetComponent<Tilemap>() : water;
+            layer.FindPropertyRelative("material").objectReferenceValue = materials[i < 3 ? drawOrder[i] : 0];
+        }
+
+        rendererData.ApplyModifiedProperties();
+        TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
+        Undo.CollapseUndoOperations(reorder);
+        Assert.That(grid.transform.Find(layers[2].TilemapName).GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(1), "Stone is drawn under gravel.");
+        LogAssert.Expect(LogType.Warning, "Grid: the TerrainBlendRenderer no longer draws Water, which is not one of the ground layers.");
+
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
+
+        Assert.That(renderer.Layers.Count, Is.EqualTo(layers.Count));
         for (int i = 0; i < layers.Count; i++)
         {
-            Transform layer = grid.transform.Find(layers[drawOrder[i]].TilemapName);
-            rendererLayers[i] = new TerrainBlendRenderer.Layer(layer.GetComponent<Tilemap>(), materials[drawOrder[i]]);
-            sources[i] = layer.GetComponent<NavigationTerrainSource2D>();
-            Assert.That(sources[i].Priority, Is.EqualTo(layers[drawOrder[i]].NavigationPriority));
+            Tilemap tilemap = grid.transform.Find(layers[i].TilemapName).GetComponent<Tilemap>();
+            Assert.That(renderer.Layers[i].Tilemap, Is.SameAs(tilemap), $"layer {i}");
+            Assert.That(renderer.Layers[i].Material, Is.SameAs(layers[i].Material), $"layer {i}");
+            Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), layers[i].TilemapName);
         }
 
-        TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
-        try
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// The project's generators (only read) list grass, gravel and stone, bottom first, each with its plain ground tile
+    /// from Assets/Tiles/Ground, its terrain type and the project's material of that name, and draw them with the
+    /// project's terrain style.
+    /// </summary>
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    public void TheGenerators_ListPlainTilesAndTheProjectsMaterials_InDrawOrder(string generatorPath)
+    {
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        string[] names = { "Grass", "Gravel", "Stone" };
+        IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
+
+        Assert.That(target.TerrainStyle, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath)));
+        Assert.That(layers.Count, Is.EqualTo(names.Length));
+        for (int i = 0; i < names.Length; i++)
         {
-            for (int i = 1; i < layers.Count; i++)
-            {
-                LogAssert.Expect(LogType.Error, $"Grid: ground layer {i} ({layers[drawOrder[i]].TilemapName}) has navigation priority {layers[drawOrder[i]].NavigationPriority}, but a ground layer's navigation priority is its place in the layers, its draw order: {i}. Set it from the draw order in the TerrainBlendRenderer inspector.");
-            }
-
-            renderer.Configure(TestTerrainStyle.Create(created), rendererLayers);
-            Assert.That(renderer.ControlMap, Is.Not.Null, "A mismatch is reported but the ground is still drawn.");
-
-            Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
-
-            for (int i = 0; i < layers.Count; i++)
-            {
-                Assert.That(sources[i].Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), layers[drawOrder[i]].TilemapName);
-            }
-
-            Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
-            renderer.RunScheduledRebuild();
-            Assert.That(renderer.ControlMap, Is.Not.Null);
-        }
-        finally
-        {
-            Object.DestroyImmediate(renderer);
+            Assert.That(layers[i].TilemapName, Is.EqualTo($"{names[i]}Tilemap"));
+            Assert.That(layers[i].Tile, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<Tile>($"{TerrainTileWriter.TileFolder}/Tile_{names[i]}.asset")), names[i]);
+            Assert.That(layers[i].Tile.GetType(), Is.EqualTo(typeof(Tile)), $"{names[i]} is a plain tile");
+            Assert.That(layers[i].Material, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/{names[i]}.asset")), names[i]);
+            Assert.That(layers[i].TerrainType, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainType2D>($"Assets/Settings/AI/Terrain_{names[i]}.asset")), names[i]);
         }
     }
 
     /// <summary>
-    /// Builds a grid of one-unit cells carrying a navigation grid, with a dual-grid grass tilemap named like
-    /// <paramref name="target"/>'s first layer but none of its path layers.
+    /// Builds a grid of one-unit cells carrying a navigation grid, with a grass layer named like
+    /// <paramref name="target"/>'s first layer that is still a dual-grid layer (data and render tilemaps of a rule tile
+    /// made for the test, two cells painted far from any layout, a navigation source) but none of its path layers.
     /// </summary>
-    private Grid CreateAreaWithGrass(AreaGenerator target)
+    private Grid CreateAreaWithDualGridGrass(AreaGenerator target)
     {
         Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
         grid.gameObject.AddComponent<NavigationGrid2D>();
+        DualGridRuleTile ruleTile = Track(ScriptableObject.CreateInstance<DualGridRuleTile>());
+        Track(ruleTile.RefreshDataTile());
         DualGridTilemapModule grass = DualGridTilemapModuleEditor.CreateNewDualGridTilemap(grid);
         grass.name = target.TerrainLayers[0].TilemapName;
-        grass.RenderTile = AssetDatabase.LoadAssetAtPath<DualGridRuleTile>(GrassTilePath);
+        grass.RenderTile = ruleTile;
+        grass.SetDataTiles(new[] { new Vector3Int(500, 500, 0), new Vector3Int(501, 500, 0) });
         grass.gameObject.AddComponent<NavigationTerrainSource2D>();
         return grid;
     }

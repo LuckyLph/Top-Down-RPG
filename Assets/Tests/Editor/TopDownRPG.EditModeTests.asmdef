@@ -4,6 +4,7 @@
     "TopDownRPG.Gameplay",
     "TopDownRPG.Core",
     "TopDownRPG.Editor",
+    "TopDownRPG.DevTools",
     "VContainer",
     "Unity.InputSystem",
     "Unity.InputSystem.TestFramework",

@@ -6,7 +6,8 @@
     "VContainer",
     "Unity.2D.Tilemap.Editor",
     "Unity.2D.Tilemap.Extras",
-    "Unity.2D.Tilemap.Extras.Editor"
+    "Unity.2D.Tilemap.Extras.Editor",
+    "Unity.2D.Sprite.Editor"
   ],
   "includePlatforms": [
     "Editor"

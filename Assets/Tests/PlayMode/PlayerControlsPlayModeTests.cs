@@ -345,7 +345,7 @@ public class PlayerControlsPlayModeTests
     /// <summary>
     /// Builds a seven-cell collision wall two cells to the right of the player through the area's
     /// <see cref="AreaTerrain"/> (the Clearing has no walls of its own) and returns a point straight behind it. The
-    /// grid picks the new tiles up by itself.
+    /// grid picks the new tiles up by itself, and the wall's render tilemap draws over the blended ground.
     /// </summary>
     private Vector2 BuildWallInFrontOfThePlayer()
     {
@@ -367,6 +367,16 @@ public class PlayerControlsPlayModeTests
         Assert.That(wallArt, Is.Not.Null, "The collision tilemap is a dual-grid wall tilemap.");
         Assert.That(wallArt.RenderTilemap.HasTile(DualGridUtils.GetRenderTilePosition(wall[0], 3)), Is.True, "Its render tilemap draws the new wall.");
         Assert.That(wallArt.RenderTilemap.gameObject.layer, Is.Not.EqualTo(collision.gameObject.layer), "The wall art is on a layer the camera draws.");
+        TilemapRenderer wallRenderer = wallArt.RenderTilemap.GetComponent<TilemapRenderer>();
+        TerrainBlendRenderer ground = grid.GetComponent<TerrainBlendRenderer>();
+        Assert.That(ground, Is.Not.Null, "The Clearing's ground is the blended terrain.");
+        Assert.That(ground.Chunks, Is.Not.Empty);
+        foreach (MeshRenderer chunk in ground.Chunks)
+        {
+            Assert.That(chunk.sortingLayerID, Is.EqualTo(wallRenderer.sortingLayerID), "The walls and the ground share the Terrain sorting layer.");
+            Assert.That(chunk.sortingOrder, Is.LessThan(wallRenderer.sortingOrder), "The walls draw over the ground.");
+        }
+
         Physics2D.SyncTransforms();
 
         Vector3Int goal = new(start.x + 4, start.y, start.z);

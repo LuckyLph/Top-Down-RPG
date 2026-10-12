@@ -148,6 +148,40 @@ public sealed class SceneGeneratorWindow : EditorWindow
                 AreaGenerator target = generator;
                 EditorApplication.delayCall += () => GenerateInto(grid, target);
             }
+
+            if (GUILayout.Button(new GUIContent("Convert Ground", "Sets the scene's ground layers up as the generator's layers, drawn by the blended terrain, keeping every painted cell; nothing is generated.")))
+            {
+                AreaGenerator target = generator;
+                EditorApplication.delayCall += () => ConvertGround(grid, target);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asks whether to convert the ground layers of <paramref name="grid"/>'s scene to <paramref name="target"/>'s
+    /// terrain layers without repainting them, then runs <see cref="GroundLayerMigration"/> and logs what changed.
+    /// </summary>
+    private static void ConvertGround(Grid grid, AreaGenerator target)
+    {
+        if (grid == null || target == null)
+        {
+            return;
+        }
+
+        string sceneName = grid.gameObject.scene.name;
+        if (!EditorUtility.DisplayDialog(
+            "Convert ground",
+            $"Set the ground layers of {sceneName} up as {target.name}'s terrain layers, drawn by the blended terrain? Every painted cell stays, dual-grid parts are removed, and props, mobs and walls are left alone. Undo reverts it.",
+            "Convert",
+            "Cancel"))
+        {
+            return;
+        }
+
+        List<string> changes = GroundLayerMigration.Migrate(grid, target);
+        if (changes != null)
+        {
+            Debug.Log(changes.Count == 0 ? $"{sceneName}'s ground already matches {target.name}." : $"Converted {sceneName}'s ground to {target.name}:\n{string.Join("\n", changes)}", grid);
         }
     }
 

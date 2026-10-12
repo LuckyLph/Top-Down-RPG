@@ -6,7 +6,8 @@ using UnityEngine.Tilemaps;
 using VContainer;
 
 /// <summary>
-/// The tilemaps of an area that gameplay may change at runtime, and the way to change them so every machine agrees.
+/// The tilemaps of an area that gameplay may change at runtime (a plain ground layer filled with its tile, or the
+/// dual-grid walls painted through their module), and the way to change them so every machine agrees.
 /// Only the machine with authority (the host, or offline) edits, through <see cref="TrySetCells"/>: the tiles change
 /// and every changed cell is recorded in <see cref="Edits"/>, the last write per cell winning.
 /// <see cref="NetworkAreaTerrain"/> sends that record to clients, which apply it with <see cref="ApplyReplicated"/>,
@@ -21,7 +22,7 @@ public class AreaTerrain : MonoBehaviour
     public class Layer
     {
         [SerializeField] private Tilemap tilemap;
-        [Tooltip("Tile written into filled cells. Leave empty on a dual-grid data tilemap: its module paints its own data tile.")]
+        [Tooltip("Tile written into filled cells: a ground layer's plain tile (Tile_Grass and so on). Leave empty on a dual-grid data tilemap (the walls): its module paints its own data tile.")]
         [SerializeField] private TileBase fillTile;
 
         /// <summary>

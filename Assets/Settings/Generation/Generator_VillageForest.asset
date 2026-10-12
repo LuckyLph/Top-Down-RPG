@@ -13,24 +13,22 @@ MonoBehaviour:
   m_Name: Generator_VillageForest
   m_EditorClassIdentifier: TopDownRPG.Editor::VillageForestGenerator
   seed: 1
+  terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
   grass:
     tilemapName: GrassTilemap
-    ruleTile: {fileID: 11400000, guid: a5e4e863827cb05479e7a30ba449016d, type: 2}
+    tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
-    navigationPriority: 0
-    sortingOrder: 0
+    material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   gravel:
     tilemapName: GravelTilemap
-    ruleTile: {fileID: 11400000, guid: bb2cea5267105214793f4627912c3837, type: 2}
+    tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
     terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
-    navigationPriority: 1
-    sortingOrder: 1
+    material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
   stone:
     tilemapName: StoneTilemap
-    ruleTile: {fileID: 11400000, guid: 34350a16e4782c148b0a685de1999ec7, type: 2}
+    tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
     terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
-    navigationPriority: 2
-    sortingOrder: 2
+    material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
   size: {x: 92, y: 62}
   squareness: 4
   edgeWobble: 0.06

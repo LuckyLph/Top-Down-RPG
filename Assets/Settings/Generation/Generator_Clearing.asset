@@ -13,24 +13,22 @@ MonoBehaviour:
   m_Name: Generator_Clearing
   m_EditorClassIdentifier: TopDownRPG.Editor::ClearingGenerator
   seed: 1
+  terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
   grass:
     tilemapName: GrassTilemap
-    ruleTile: {fileID: 11400000, guid: a5e4e863827cb05479e7a30ba449016d, type: 2}
+    tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
-    navigationPriority: 0
-    sortingOrder: 0
+    material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   gravel:
     tilemapName: GravelTilemap
-    ruleTile: {fileID: 11400000, guid: bb2cea5267105214793f4627912c3837, type: 2}
+    tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
     terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
-    navigationPriority: 1
-    sortingOrder: 1
+    material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
   stone:
     tilemapName: StoneTilemap
-    ruleTile: {fileID: 11400000, guid: 34350a16e4782c148b0a685de1999ec7, type: 2}
+    tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
     terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
-    navigationPriority: 2
-    sortingOrder: 2
+    material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
   size: {x: 46, y: 32}
   squareness: 3
   edgeWobble: 0.12
@@ -52,9 +50,9 @@ MonoBehaviour:
     - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
     - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
     - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
-    zone: 0
     count: 160
     spacing: 2
+    zone: 0
   - label: Trees
     prefabs:
     - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
@@ -62,9 +60,9 @@ MonoBehaviour:
     - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
     - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
     - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
-    zone: 1
     count: 12
     spacing: 5
+    zone: 1
   - label: Bushes and rocks
     prefabs:
     - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
@@ -74,9 +72,9 @@ MonoBehaviour:
     - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
     - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
     - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
-    zone: 1
     count: 10
     spacing: 5
+    zone: 1
   - label: Plants
     prefabs:
     - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
@@ -86,9 +84,9 @@ MonoBehaviour:
     - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
     - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
     - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
-    zone: 1
     count: 45
     spacing: 2.2
+    zone: 1
   mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
   mobCount: 3
   mobDistanceFromSpawn: 14

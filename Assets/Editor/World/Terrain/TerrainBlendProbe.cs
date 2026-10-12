@@ -4,19 +4,17 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Editor checks for <see cref="TerrainBlendRenderer"/>: renders a world rectangle through a temporary camera at a
-/// whole number of screen pixels per art pixel and writes it as a PNG, with today's render tilemaps for comparison;
-/// checks the topmost visible layer for detached blobs and holes; measures shimmer at sub-pixel camera offsets, the
-/// cost of a frame, of a rebuild and of switching the look. Any check can run in either look through
-/// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. Shaders compile synchronously during its
-/// renders, since a render skips variants still compiling in the background. It hides renderers only through
-/// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved, and puts back what a render
-/// hid even when the render fails, clearing the dirty mark that setting it leaves: otherwise the next save would write
-/// every prop's sorting order (set in edit mode by its <see cref="YPositionSorter"/>) into the scene as a prefab
-/// override.
+/// whole number of screen pixels per art pixel and writes it as a PNG; checks the topmost visible layer for detached
+/// blobs and holes; measures shimmer at sub-pixel camera offsets, the cost of a frame, of a rebuild and of switching
+/// the look. Any check can run in either look through <see cref="InMode{T}"/>, which puts the renderer's mode back
+/// afterwards. Shaders compile synchronously during its renders, since a render skips variants still compiling in the
+/// background. It hides renderers only through <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and
+/// is not saved, and puts back what a render hid even when the render fails, clearing the dirty mark that setting it
+/// leaves: otherwise the next save would write every prop's sorting order (set in edit mode by its
+/// <see cref="YPositionSorter"/>) into the scene as a prefab override.
 /// </summary>
 public static class TerrainBlendProbe
 {
@@ -205,37 +203,6 @@ public static class TerrainBlendProbe
     }
 
     /// <summary>
-    /// Draws today's render tilemaps of the renderer's layers (the children of each layer's data tilemap that have a
-    /// <see cref="TilemapRenderer"/>) instead of the chunks, or the chunks instead of them, through
-    /// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved. A render tilemap that is
-    /// switched off (an area already converted) stays off; compare against it before converting. Returns how many
-    /// render tilemaps can show.
-    /// </summary>
-    public static int SetRenderTilemapsShown(TerrainBlendRenderer terrain, bool shown)
-    {
-        int showing = 0;
-        foreach (TerrainBlendRenderer.Layer layer in terrain.Layers)
-        {
-            if (layer == null || layer.Tilemap == null)
-            {
-                continue;
-            }
-
-            foreach (TilemapRenderer tilemapRenderer in layer.Tilemap.GetComponentsInChildren<TilemapRenderer>(true))
-            {
-                tilemapRenderer.forceRenderingOff = !shown;
-                if (tilemapRenderer.enabled && tilemapRenderer.gameObject.activeInHierarchy)
-                {
-                    showing++;
-                }
-            }
-        }
-
-        SetChunksHidden(terrain, shown);
-        return showing;
-    }
-
-    /// <summary>
     /// Renders the debug view over the control map's bounds at one screen pixel per art pixel, with every other
     /// renderer left out, and reports per layer the connected regions of pixels where that layer is the topmost one
     /// drawn, listing those under <paramref name="minPixels"/> (detached blobs), and the regions with no ground that
@@ -318,8 +285,7 @@ public static class TerrainBlendProbe
     /// Renders a camera of the given size at <paramref name="zoom"/> screen pixels per art pixel, moved by each of
     /// <paramref name="offsets"/> (in screen pixels, along x and y), and compares each frame with the unmoved frame
     /// shifted by the best whole number of screen pixels. Point-sampled art that only jumps by whole pixels matches
-    /// exactly; any other difference is shimmer. Measures whatever is drawn (chunks, or render tilemaps shown with
-    /// <see cref="SetRenderTilemapsShown"/>), without props.
+    /// exactly; any other difference is shimmer. Measures whatever is drawn but props.
     /// </summary>
     public static string MeasureShimmer(TerrainBlendRenderer terrain, Vector2 centre, int width, int height, int zoom, float[] offsets)
     {

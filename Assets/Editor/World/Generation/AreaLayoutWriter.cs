@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -7,21 +8,25 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Writes an <see cref="AreaLayout"/> into the scene of an area's <see cref="Grid"/> as one undo step. Each terrain
-/// layer's dual-grid data tilemap under the grid is repainted (and created, with its render tilemap and navigation
-/// source, when the scene has none); every prop under the scene's <c>Props</c> root and every
-/// <see cref="MobSpawnPoint"/> is replaced; the party's start <see cref="SpawnPoint"/> moves to the layout's spawn
-/// cell. The collision tilemap and everything else in the scene stay as they are.
+/// layer's data tilemap under the grid is repainted with the layer's plain tile (and created, with its navigation
+/// source, when the scene has none) and is left a plain tilemap: a dual-grid module, render tilemap or Tilemap Renderer
+/// still on it is removed, since every cell is repainted anyway. The grid's <see cref="TerrainBlendRenderer"/> (added
+/// when missing) draws the layers in the generator's order with their materials and the generator's terrain style, each
+/// layer's navigation priority is its place in that order, and the area's <see cref="AreaTerrain"/> fills the layers it
+/// lists with their tiles. Every prop under the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is
+/// replaced, and the party's start <see cref="SpawnPoint"/> moves to the layout's spawn cell. The collision tilemap and
+/// everything else in the scene stay as they are.
 /// </summary>
 public static class AreaLayoutWriter
 {
     public const string MobSpawnsRootName = "MobSpawns";
     public const string StartSpawnId = "start";
-    private const string TerrainSortingLayer = "Terrain";
 
     /// <summary>
     /// Replaces the terrain, props and mob spawns of <paramref name="grid"/>'s scene with <paramref name="layout"/>,
     /// laid out by <paramref name="generator"/>, and moves the start spawn point. Logs an error and changes nothing
-    /// when the grid's cells are not one unit or a terrain layer has no rule tile.
+    /// when the grid's cells are not one unit, the generator has no terrain style or too many layers, or a terrain
+    /// layer lacks a tilemap name, a tile or a material.
     /// </summary>
     public static bool Write(Grid grid, AreaGenerator generator, AreaLayout layout)
     {
@@ -36,12 +41,20 @@ public static class AreaLayoutWriter
         Undo.SetCurrentGroupName($"Generate {scene.name}");
         int undoGroup = Undo.GetCurrentGroup();
 
+        List<string> changes = new();
+        Tilemap[] tilemaps = new Tilemap[layers.Count];
+        TerrainMaterial[] materials = new TerrainMaterial[layers.Count];
+        TileBase[] tiles = new TileBase[layers.Count];
         for (int i = 0; i < layers.Count; i++)
         {
-            DualGridTilemapModule module = PrepareTerrainLayer(grid, layers[i], i);
-            Paint(module, layout.TerrainCells(i));
+            tilemaps[i] = PrepareTerrainLayer(grid, layers[i], i, changes);
+            materials[i] = layers[i].Material;
+            tiles[i] = layers[i].Tile;
+            Paint(tilemaps[i], layers[i].Tile, layout.TerrainCells(i));
         }
 
+        AreaGroundSetup.SetRenderer(grid, generator.TerrainStyle, tilemaps, materials, changes);
+        AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
         WriteProps(grid, scene, layout.Props);
         WriteMobSpawns(grid, scene, layout.Mobs);
         MoveStartSpawn(grid, scene, layout.SpawnCell);
@@ -66,8 +79,9 @@ public static class AreaLayoutWriter
     }
 
     /// <summary>
-    /// Whether the layout can be written: a grid of one-unit cells, a rule tile and a tilemap name on every layer, and
-    /// as many layers in the layout as the generator has. Logs an error for the first problem.
+    /// Whether the layout can be written: a grid of one-unit cells, a terrain style on the generator, at most
+    /// <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a material,
+    /// and as many layers in the layout as the generator has. Logs an error for the first problem.
     /// </summary>
     private static bool CanWrite(Grid grid, AreaGenerator generator, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaLayout layout)
     {
@@ -83,84 +97,53 @@ public static class AreaLayoutWriter
             return false;
         }
 
-        for (int i = 0; i < layers.Count; i++)
-        {
-            if (layers[i] == null || layers[i].RuleTile == null || string.IsNullOrWhiteSpace(layers[i].TilemapName))
-            {
-                Debug.LogError($"{generator.name}: terrain layer {i} needs a tilemap name and a rule tile.", generator);
-                return false;
-            }
-        }
-
-        return true;
+        return AreaGroundSetup.CanSetUp(generator.name, generator.TerrainStyle, layers, generator);
     }
 
     /// <summary>
-    /// The dual-grid module of the grid's child tilemap named after <paramref name="layer"/>, created when missing and
-    /// set up to match it: its rule tile, a navigation source with its terrain type and priority (in an area drawn by a
-    /// <see cref="TerrainBlendRenderer"/>, the priority of the tilemap's place in the renderer's layers, its draw order,
-    /// so the two stay in step), its render tilemap on the Terrain sorting layer at its order, and its place among the
-    /// grid's children.
+    /// The grid's child tilemap named after <paramref name="layer"/>, created when missing, as a plain data tilemap at
+    /// its place among the grid's children: any dual-grid parts or Tilemap Renderer removed, and a navigation source
+    /// with the layer's terrain type and its index as priority, its draw order in the renderer the writer sets up.
     /// </summary>
-    private static DualGridTilemapModule PrepareTerrainLayer(Grid grid, AreaGenerator.TerrainLayer layer, int siblingIndex)
+    private static Tilemap PrepareTerrainLayer(Grid grid, AreaGenerator.TerrainLayer layer, int index, List<string> changes)
     {
         Transform child = grid.transform.Find(layer.TilemapName);
-        DualGridTilemapModule module = child != null ? child.GetComponent<DualGridTilemapModule>() : null;
-        if (module == null)
+        Tilemap tilemap = child != null ? child.GetComponent<Tilemap>() : null;
+        if (child == null)
         {
             GameObject data = new(layer.TilemapName);
             Undo.RegisterCreatedObjectUndo(data, $"Create {layer.TilemapName}");
             data.transform.SetParent(grid.transform, false);
-            data.AddComponent<Tilemap>();
-            module = data.AddComponent<DualGridTilemapModule>();
-            DualGridTilemapModuleEditor.CreateRenderTilemapObject(module);
+            tilemap = data.AddComponent<Tilemap>();
         }
-
-        if (module.RenderTile != layer.RuleTile)
+        else if (tilemap == null)
         {
-            Undo.RecordObject(module, $"Set {layer.TilemapName} rule tile");
-            module.RenderTile = layer.RuleTile;
+            tilemap = Undo.AddComponent<Tilemap>(child.gameObject);
         }
 
-        if (!module.TryGetComponent(out NavigationTerrainSource2D source))
+        AreaGroundSetup.RemoveDualGridParts(tilemap, changes);
+        AreaGroundSetup.SetNavigationSource(tilemap, layer.TerrainType, TerrainBlendRenderer.NavigationPriorityOf(index), changes);
+        if (tilemap.transform.GetSiblingIndex() != index)
         {
-            source = Undo.AddComponent<NavigationTerrainSource2D>(module.gameObject);
+            Undo.SetSiblingIndex(tilemap.transform, index, $"Order {layer.TilemapName}");
         }
 
-        SerializedObject sourceData = new(source);
-        sourceData.FindProperty("terrainType").objectReferenceValue = layer.TerrainType;
-        bool drawn = TerrainBlendRenderer.FindLayerDrawing(module.DataTilemap, out int drawOrder) != null;
-        sourceData.FindProperty("priority").intValue = drawn ? TerrainBlendRenderer.NavigationPriorityOf(drawOrder) : layer.NavigationPriority;
-        sourceData.ApplyModifiedProperties();
-
-        TilemapRenderer renderer = module.RenderTilemap.GetComponent<TilemapRenderer>();
-        if (renderer.sortingLayerName != TerrainSortingLayer || renderer.sortingOrder != layer.SortingOrder)
-        {
-            Undo.RecordObject(renderer, $"Sort {layer.TilemapName}");
-            renderer.sortingLayerName = TerrainSortingLayer;
-            renderer.sortingOrder = layer.SortingOrder;
-        }
-
-        if (module.transform.GetSiblingIndex() != siblingIndex)
-        {
-            Undo.SetSiblingIndex(module.transform, siblingIndex, $"Order {layer.TilemapName}");
-        }
-
-        return module;
+        return tilemap;
     }
 
     /// <summary>
-    /// Clears both tilemaps of <paramref name="module"/> and paints <paramref name="cells"/> as data tiles in one
-    /// batch, recording both tilemaps for undo first.
+    /// Clears <paramref name="tilemap"/> and fills <paramref name="cells"/> with <paramref name="tile"/> in one batch,
+    /// recording the tilemap for undo first.
     /// </summary>
-    private static void Paint(DualGridTilemapModule module, HashSet<Vector3Int> cells)
+    private static void Paint(Tilemap tilemap, TileBase tile, HashSet<Vector3Int> cells)
     {
-        Undo.RegisterCompleteObjectUndo(new Object[] { module.DataTilemap, module.RenderTilemap }, $"Paint {module.name}");
+        Undo.RegisterCompleteObjectUndo(tilemap, $"Paint {tilemap.name}");
         List<Vector3Int> ordered = new(cells);
         ordered.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
-        module.DataTilemap.ClearAllTiles();
-        module.RenderTilemap.ClearAllTiles();
-        module.SetDataTiles(ordered);
+        TileBase[] tiles = new TileBase[ordered.Count];
+        Array.Fill(tiles, tile);
+        tilemap.ClearAllTiles();
+        tilemap.SetTiles(ordered.ToArray(), tiles);
     }
 
     /// <summary>

@@ -17,12 +17,13 @@ using UnityEngine.Tilemaps;
 /// filled. Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile changes on
 /// a layer (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a client) patch
 /// the control map at once, an undo or redo in the editor reads the layers again, and the texture is uploaded once
-/// before the next render; nothing runs per frame while no cell changes. Its <see cref="BlendMode"/>, a developer
-/// toggle, only switches the soft look's shader keyword on the runtime material. The order of its layers is both the
-/// draw order and the navigation priority: a layer whose tilemap has a <see cref="NavigationTerrainSource2D"/> must
-/// have its index as priority (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch
-/// is logged as an error while the ground is still drawn. Reads its style, materials, textures and navigation sources
-/// and never writes them.
+/// before the next render; nothing runs per frame while no cell changes. A brush's hover preview
+/// (<see cref="SetPreview"/>, <see cref="ClearPreview"/>) shows cells of a layer filled or empty the same way without
+/// touching its tilemap. Its <see cref="BlendMode"/>, a developer toggle, only switches the soft look's shader keyword
+/// on the runtime material. The order of its layers is both the draw order and the navigation priority: a layer whose
+/// tilemap has a <see cref="NavigationTerrainSource2D"/> must have its index as priority
+/// (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch is logged as an error while
+/// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -119,6 +120,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Material material;
     [NonSerialized] private bool flushScheduled;
     [NonSerialized] private bool debugView;
+    [NonSerialized] private bool previewGrewBounds;
 #if UNITY_EDITOR
     [NonSerialized] private readonly List<TerrainMaterial> subscribedMaterials = new();
     [NonSerialized] private bool enabledOnce;
@@ -272,6 +274,62 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// Whether the renderer is built and draws <paramref name="tilemap"/> as one of the layers it built from. After an
+    /// inspector change to its layers this follows the old layers until the rebuild.
+    /// </summary>
+    internal bool IsDrawing(Tilemap tilemap)
+    {
+        return controlMap != null && tilemap != null && BuiltLayerIndexOf(tilemap) >= 0;
+    }
+
+    /// <summary>
+    /// Shows the ground layer drawn from <paramref name="tilemap"/> as filled or empty in <paramref name="cells"/>
+    /// (their z is ignored) in place of any preview shown before, without changing the tilemap, navigation or anything
+    /// saved, for a brush's hover in the editor. Adds chunks when filled preview cells grow the control map's bounds,
+    /// and has the texture uploaded before the next render. The preview stays until <see cref="ClearPreview"/> or a
+    /// rebuild. Returns false, changing nothing, when the renderer is not drawing the tilemap
+    /// (<see cref="IsDrawing"/>). Allocates nothing for cells inside the bounds once the preview has held as many
+    /// cells, as long as nothing else waits on the render callback the upload is scheduled on.
+    /// </summary>
+    internal bool SetPreview(Tilemap tilemap, IReadOnlyList<Vector3Int> cells, bool filled)
+    {
+        if (!IsDrawing(tilemap))
+        {
+            return false;
+        }
+
+        BoundsInt before = controlMap.Bounds;
+        controlMap.ClearPreview();
+        controlMap.SetPreview(BuiltLayerIndexOf(tilemap), cells, filled);
+        previewGrewBounds |= controlMap.Bounds != before;
+        FollowControlMapChange(before);
+        return true;
+    }
+
+    /// <summary>
+    /// Removes the preview, so the cells show their real bits again from the next render. When a preview grew the
+    /// bounds since the last clear, reads the layers again so the bounds and chunks shrink back to the filled cells.
+    /// Does nothing when no preview is shown and none grew the bounds.
+    /// </summary>
+    internal void ClearPreview()
+    {
+        if (controlMap == null || (!controlMap.HasPreview && !previewGrewBounds))
+        {
+            return;
+        }
+
+        BoundsInt before = controlMap.Bounds;
+        controlMap.ClearPreview();
+        if (previewGrewBounds)
+        {
+            previewGrewBounds = false;
+            controlMap.Rebuild();
+        }
+
+        FollowControlMapChange(before);
+    }
+
+    /// <summary>
     /// Uploads the control map's pending changes now instead of before the next render, and stops waiting for it.
     /// </summary>
     internal void FlushPendingChanges()
@@ -409,9 +467,9 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
+        BoundsInt before = controlMap.Bounds;
         controlMap.Rebuild();
-        UpdateChunks();
-        ScheduleFlush();
+        FollowControlMapChange(before);
     }
 
     /// <summary>
@@ -529,6 +587,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         controlMap = new TerrainControlMap(layerTilemaps, $"{name} Terrain Control Map");
         controlMap.Apply();
+        previewGrewBounds = false;
         albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
         fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
         heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
@@ -576,8 +635,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// tilemap listed twice, a layer without a material, a material's textures missing or of the wrong size or format,
     /// an unknown sorting layer) and returns whether there was none; a material several layers draw is checked once.
     /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
-    /// drawing (the drawing never reads the priority), and warns when the grid is not made of unrotated one-unit cells,
-    /// which the shader assumes.
+    /// drawing (the drawing never reads the priority), warns about each layer whose tilemap has an enabled
+    /// <see cref="TilemapRenderer"/>, which would draw its tiles' sprites as well, and warns when the grid is not made
+    /// of unrotated one-unit cells, which the shader assumes.
     /// </summary>
     private bool IsUsable()
     {
@@ -630,6 +690,11 @@ public class TerrainBlendRenderer : MonoBehaviour
             if (source != null && source.Priority != NavigationPriorityOf(i))
             {
                 Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) has navigation priority {source.Priority}, but a ground layer's navigation priority is its place in the layers, its draw order: {NavigationPriorityOf(i)}. Set it from the draw order in the {nameof(TerrainBlendRenderer)} inspector.", this);
+            }
+
+            if (layer != null && layer.Tilemap != null && layer.Tilemap.TryGetComponent(out TilemapRenderer tilemapRenderer) && tilemapRenderer.enabled)
+            {
+                Debug.LogWarning($"{name}: ground layer {i} ({layer.Tilemap.name}) has an enabled Tilemap Renderer, which draws its tiles' sprites (their palette swatches) beside the blended ground. A ground layer is a data tilemap: remove its Tilemap Renderer.", this);
             }
         }
 
@@ -883,16 +948,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
-        int layer = -1;
-        for (int i = 0; i < layerTilemaps.Length; i++)
-        {
-            if (layerTilemaps[i] == tilemap)
-            {
-                layer = i;
-                break;
-            }
-        }
-
+        int layer = BuiltLayerIndexOf(tilemap);
         if (layer < 0)
         {
             return;
@@ -900,6 +956,31 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         BoundsInt before = controlMap.Bounds;
         controlMap.Refresh(layer, positions);
+        FollowControlMapChange(before);
+    }
+
+    /// <summary>
+    /// The index of <paramref name="tilemap"/> among the layers the renderer built from, or -1.
+    /// </summary>
+    private int BuiltLayerIndexOf(Tilemap tilemap)
+    {
+        for (int i = 0; i < layerTilemaps.Length; i++)
+        {
+            if (layerTilemaps[i] == tilemap)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// After a change to the control map, adds and removes chunks when its bounds moved from
+    /// <paramref name="before"/>, and has its texture uploaded before the next render when anything changed.
+    /// </summary>
+    private void FollowControlMapChange(BoundsInt before)
+    {
         if (controlMap.Bounds != before)
         {
             UpdateChunks();

@@ -101,11 +101,11 @@ Tilemap:
   m_TileAssetArray:
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {fileID: -5039725417748637065, guid: 34350a16e4782c148b0a685de1999ec7, type: 2}
+    m_Data: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
   m_TileSpriteArray:
   - serializedVersion: 2
     m_RefCount: 1
-    m_Data: {fileID: 730702440, guid: a26bf31cdc10dcd4aa7a38b0a491c704, type: 3}
+    m_Data: {fileID: 21300000, guid: 191351478b57a7243a5e6521b5848702, type: 3}
   m_TileMatrixArray:
   - serializedVersion: 2
     m_RefCount: 1

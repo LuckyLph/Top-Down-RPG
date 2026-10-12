@@ -16,9 +16,13 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
-/// layer, and a material without a height still builds; the style, materials and textures are never written; a layer
-/// without a material, a texture of the wrong size and a tilemap listed twice stop the build, and a broken material
-/// drawn by two layers is reported once; a layer whose navigation priority is not its draw order is reported while the
+/// layer, and a material without a height still builds; a brush's preview shows only in the shown cells, replaces the
+/// last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
+/// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
+/// or allocating per frame;
+/// the style, materials and textures are never written; a layer without a material, a texture of the wrong size and a
+/// tilemap listed twice stop the build, a broken material drawn by two layers is reported once, and a layer with a
+/// Tilemap Renderer is warned about; a layer whose navigation priority is not its draw order is reported while the
 /// ground is still drawn, a change to a layer's navigation source (one added after the build included, which starts
 /// with its layer's priority) rebuilds, the inspector's sync gives each layer's source its draw order with undo, and
 /// only a renderer above a tilemap sets its priority. Each test builds its own style and materials with
@@ -483,6 +487,237 @@ public class TerrainBlendRendererTests
             }
         }, Is.Not.AllocatingGCMemory());
         Assert.That(renderer.ControlMap.UploadCount, Is.EqualTo(uploads));
+    }
+
+    /// <summary>
+    /// A preview shows in the shown cells, filled on an empty cell and empty on a filled one, but not in the real cells
+    /// or the tilemaps, and reaches the texture with the next upload; a preview on another layer replaces it, and
+    /// clearing restores the texels.
+    /// </summary>
+    [Test]
+    public void APreview_ShowsInTheShownCellsOnly_ReplacesTheLast_AndClearingRestoresThem()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        Vector3Int stone = new(7, 8, 0);
+        Vector3Int grass = new(3, 3, 0);
+
+        Assert.That(renderer.SetPreview(layers[2], new[] { stone }, true), Is.True);
+
+        Assert.That(renderer.IsFlushScheduled, Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(stone), Is.EqualTo(5));
+        Assert.That(renderer.ControlMap.GetCell(stone), Is.EqualTo(1));
+        renderer.FlushPendingChanges();
+        Assert.That(TexelOf(renderer, stone), Is.EqualTo(5));
+        Assert.That(layers[2].HasTile(stone), Is.False);
+
+        renderer.SetPreview(layers[0], new[] { grass }, false);
+
+        Assert.That(renderer.ControlMap.GetShownCell(stone), Is.EqualTo(1), "The grass preview replaced the stone one.");
+        Assert.That(renderer.ControlMap.GetShownCell(grass), Is.EqualTo(0));
+        Assert.That(renderer.ControlMap.GetCell(grass), Is.EqualTo(1));
+        renderer.FlushPendingChanges();
+        Assert.That(TexelOf(renderer, stone), Is.EqualTo(1));
+        Assert.That(TexelOf(renderer, grass), Is.EqualTo(0));
+        Assert.That(layers[0].HasTile(grass), Is.True);
+
+        renderer.ClearPreview();
+        renderer.FlushPendingChanges();
+
+        Assert.That(renderer.ControlMap.HasPreview, Is.False);
+        Assert.That(TexelOf(renderer, grass), Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// Only a renderer that is built and drawing a tilemap shows a preview of it: one that is off, or a tilemap it
+    /// does not draw, changes nothing.
+    /// </summary>
+    [Test]
+    public void APreview_NeedsTheRendererDrawingTheTilemap()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        Tilemap other = new GameObject("Other", typeof(Tilemap)).GetComponent<Tilemap>();
+        other.transform.SetParent(root.transform);
+        Vector3Int cell = new(7, 8, 0);
+
+        Assert.That(renderer.IsDrawing(other), Is.False);
+        Assert.That(renderer.SetPreview(other, new[] { cell }, true), Is.False);
+        Assert.That(renderer.ControlMap.HasPreview, Is.False);
+
+        renderer.enabled = false;
+
+        Assert.That(renderer.IsDrawing(layers[2]), Is.False);
+        Assert.That(renderer.SetPreview(layers[2], new[] { cell }, true), Is.False);
+    }
+
+    /// <summary>
+    /// After an inspector change to the layers and before the rebuild it schedules, a preview follows the layers the
+    /// renderer built: a reordered tilemap still shows its built layer's bit and a tilemap just added shows nothing.
+    /// Once rebuilt, the preview follows the new layers.
+    /// </summary>
+    [Test]
+    public void AfterAnInspectorChangeToTheLayers_APreviewFollowsTheBuiltLayersUntilTheRebuild()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
+        water.transform.SetParent(root.transform);
+        Vector3Int cell = new(7, 8, 0);
+        SerializedObject serialized = new(renderer);
+        SerializedProperty layerList = serialized.FindProperty("layers");
+        layerList.MoveArrayElement(2, 1);
+        layerList.arraySize++;
+        SerializedProperty added = layerList.GetArrayElementAtIndex(3);
+        added.FindPropertyRelative("tilemap").objectReferenceValue = water;
+        added.FindPropertyRelative("material").objectReferenceValue = materials[0];
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        Assert.That(renderer.LayerIndexOf(layers[2]), Is.EqualTo(1));
+        Assert.That(renderer.SetPreview(layers[2], new[] { cell }, true), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(cell), Is.EqualTo(5), "Stone is still built as layer 2.");
+        Assert.That(renderer.SetPreview(water, new[] { cell }, true), Is.False);
+        Assert.That(renderer.ControlMap.GetShownCell(cell), Is.EqualTo(5), "A refused preview leaves the last one.");
+
+        renderer.RunScheduledRebuild();
+
+        Assert.That(renderer.SetPreview(layers[2], new[] { cell }, true), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(cell), Is.EqualTo(3), "Stone is now built as layer 1.");
+        Assert.That(renderer.SetPreview(water, new[] { cell }, true), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(cell), Is.EqualTo(9));
+    }
+
+    /// <summary>
+    /// A filled preview outside the bounds grows the control map, adds chunks over it and moves the control rectangle,
+    /// without touching the tilemap; the next render uploads it, once.
+    /// </summary>
+    [Test]
+    public void APreviewOutsideTheBounds_GrowsTheMapAndTheChunks_AndUploadsOnce()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        int chunks = renderer.Chunks.Count;
+        int uploads = renderer.ControlMap.UploadCount;
+        Vector3Int far = new(60, -30, 0);
+
+        renderer.SetPreview(layers[1], new[] { far }, true);
+
+        Assert.That(renderer.ControlMap.Bounds.Contains(far), Is.True);
+        Assert.That(renderer.Chunks.Count, Is.GreaterThan(chunks));
+        Assert.That(Covered(renderer, far), Is.True);
+        Assert.That(renderer.IsFlushScheduled, Is.True);
+        Assert.That(renderer.ControlMap.UploadCount, Is.EqualTo(uploads), "Nothing is uploaded before the next render.");
+
+        RenderOneFrame();
+
+        Assert.That(renderer.RenderCallbackCount, Is.EqualTo(1));
+        Assert.That(renderer.ControlMap.UploadCount, Is.EqualTo(uploads + 1));
+        Assert.That(TexelOf(renderer, far), Is.EqualTo(2));
+        BoundsInt bounds = renderer.ControlMap.Bounds;
+        Assert.That(renderer.RuntimeMaterial.GetVector("_ControlRect"), Is.EqualTo(new Vector4(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y)));
+        Assert.That(layers[1].HasTile(far), Is.False);
+    }
+
+    /// <summary>
+    /// The bounds and chunks a preview grew stay while previews replace it, and clearing shrinks them back to the
+    /// filled cells, destroying the chunks they no longer reach and moving the control rectangle back.
+    /// </summary>
+    [Test]
+    public void ClearingAPreviewThatGrewTheMap_ShrinksItBack()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        BoundsInt bounds = renderer.ControlMap.Bounds;
+        int chunks = renderer.Chunks.Count;
+        Vector3Int far = new(60, -30, 0);
+        renderer.SetPreview(layers[1], new[] { far }, true);
+        List<Object> farChunks = new();
+        foreach (MeshRenderer chunk in renderer.Chunks)
+        {
+            if (Covers(chunk, far))
+            {
+                farChunks.Add(chunk.gameObject);
+                farChunks.Add(chunk.GetComponent<MeshFilter>().sharedMesh);
+            }
+        }
+
+        renderer.SetPreview(layers[1], new[] { new Vector3Int(4, 4, 0) }, true);
+
+        Assert.That(renderer.ControlMap.Bounds.Contains(far), Is.True, "Replacing the preview keeps the grown bounds.");
+        Assert.That(farChunks, Is.Not.Empty);
+
+        renderer.ClearPreview();
+        renderer.FlushPendingChanges();
+
+        Assert.That(renderer.ControlMap.Bounds, Is.EqualTo(bounds));
+        Assert.That(renderer.Chunks.Count, Is.EqualTo(chunks));
+        foreach (Object removed in farChunks)
+        {
+            Assert.That(removed == null, Is.True, $"{removed} was not destroyed.");
+        }
+
+        Assert.That(renderer.RuntimeMaterial.GetVector("_ControlRect"), Is.EqualTo(new Vector4(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y)));
+        Assert.That(TexelOf(renderer, new Vector3Int(4, 4, 0)), Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// Once a preview is uploaded, nothing waits for a render, a later frame runs nothing and allocates nothing, and
+    /// once a few moves have run, moving or clearing a preview inside the bounds allocates nothing either.
+    /// </summary>
+    [Test]
+    public void APreview_SchedulesAndAllocatesNothingPerFrameAfterwards()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        List<Vector3Int> cells = new() { new Vector3Int(4, 4, 0), new Vector3Int(5, 4, 0) };
+        renderer.SetPreview(layers[2], cells, true);
+        RenderOneFrame();
+        int callbacks = renderer.RenderCallbackCount;
+        int uploads = renderer.ControlMap.UploadCount;
+
+        Assert.That(renderer.IsFlushScheduled, Is.False);
+        RenderOneFrame();
+        Assert.That(renderer.RenderCallbackCount, Is.EqualTo(callbacks), "Nothing runs on a frame without changes.");
+        Assert.That(() =>
+        {
+            for (int frame = 0; frame < 10; frame++)
+            {
+                renderer.FlushPendingChanges();
+            }
+        }, Is.Not.AllocatingGCMemory());
+        Assert.That(renderer.ControlMap.UploadCount, Is.EqualTo(uploads));
+
+        for (int x = 0; x < 3; x++)
+        {
+            MovePreview(x);
+        }
+
+        Assert.That(() =>
+        {
+            for (int x = 0; x < 10; x++)
+            {
+                MovePreview(x);
+            }
+        }, Is.Not.AllocatingGCMemory());
+        Assert.That(renderer.ControlMap.UploadCount, Is.EqualTo(uploads + 13));
+
+        void MovePreview(int x)
+        {
+            cells[0] = new Vector3Int(x, 4, 0);
+            renderer.ClearPreview();
+            renderer.SetPreview(layers[2], cells, true);
+            renderer.FlushPendingChanges();
+        }
+    }
+
+    /// <summary>
+    /// A layer whose tilemap has an enabled Tilemap Renderer, which would draw its tiles' sprites as well, is warned
+    /// about, and the ground is still drawn.
+    /// </summary>
+    [Test]
+    public void ALayerWithATilemapRenderer_IsWarnedAbout_AndStillDrawn()
+    {
+        layers[1].gameObject.AddComponent<TilemapRenderer>();
+        LogAssert.Expect(LogType.Warning, "TerrainBlendGrid: ground layer 1 (Gravel) has an enabled Tilemap Renderer, which draws its tiles' sprites (their palette swatches) beside the blended ground. A ground layer is a data tilemap: remove its Tilemap Renderer.");
+
+        TerrainBlendRenderer renderer = CreateRenderer();
+
+        Assert.That(renderer.Chunks, Is.Not.Empty);
     }
 
     /// <summary>

@@ -9,7 +9,7 @@ using UnityEngine.Tilemaps;
 /// <remarks>
 /// It's responsible for updating the RenderTilemap when any tiles are updated in the DataTilemap.
 /// </remarks>
-[CustomGridBrush(true, true, true, "Dual Grid Brush")]
+[CustomGridBrush(true, false, false, "Dual Grid Brush")]
 public class DualGridBrush : GridBrush
 {
     /// <summary>

@@ -10,9 +10,10 @@ using Object = UnityEngine.Object;
 /// Assets/Textures/Terrain, at the paths the material's textures already have there (so their GUIDs stay, even after
 /// the material is renamed) or else named after the material, reimported so <see cref="TerrainTextureDefaults"/>
 /// applies, and the material pointed at them with the base colour, repeat and cell mode they were made for, after which
-/// the renderers drawing the material rebuild. It refuses to overwrite another material's texture, and writes all of a
-/// material's files or none. The pixels depend only on the recipe and its seed, and the PNG encoding only on the pixels,
-/// so a rerun writes byte-identical files.
+/// the renderers drawing the material rebuild, and the swatch of its ground tile (<see cref="TerrainTileWriter"/>)
+/// follows. It refuses to overwrite another material's texture, and writes all of a material's files or none. The
+/// pixels depend only on the recipe and its seed, and the PNG encoding only on the pixels, so a rerun writes
+/// byte-identical files.
 /// </summary>
 public static class TerrainMaterialWriter
 {
@@ -20,8 +21,9 @@ public static class TerrainMaterialWriter
 
     /// <summary>
     /// Generates <paramref name="recipe"/>'s textures for its seed and writes them as its material's, saving the
-    /// material. Logs an error and writes nothing when the recipe has no material, or when a file it would write is
-    /// another material's texture or would take two of the textures.
+    /// material, and rewrites the swatch of the material's ground tile when it has one
+    /// (<see cref="TerrainTileWriter.RefreshSwatch"/>). Logs an error and writes nothing when the recipe has no
+    /// material, or when a file it would write is another material's texture or would take two of the textures.
     /// </summary>
     public static bool Generate(TerrainMaterialRecipe recipe)
     {
@@ -58,6 +60,7 @@ public static class TerrainMaterialWriter
 
         Apply(material, textures, Load(paths.Albedo), Load(paths.CellField), Load(paths.Height));
         AssetDatabase.SaveAssetIfDirty(material);
+        TerrainTileWriter.RefreshSwatch(material, textures);
         return true;
     }
 

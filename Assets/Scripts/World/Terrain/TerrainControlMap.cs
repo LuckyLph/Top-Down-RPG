@@ -64,6 +64,7 @@ public sealed class TerrainControlMap : IDisposable
     public int LayerCount => layers.Length;
     public bool IsEmpty => bounds.size.x <= 0 || bounds.size.y <= 0;
     public bool HasPendingChanges => fullUploadPending || pending.Count > 0;
+    public bool HasPreview => preview.Count > 0;
     internal int UploadCount { get; private set; }
 
     /// <summary>

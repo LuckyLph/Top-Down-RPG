@@ -9,7 +9,8 @@
     "Unity.InputSystem.TestFramework",
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime",
-    "Unity.2D.Tilemap.Extras"
+    "Unity.2D.Tilemap.Extras",
+    "Unity.2D.Tilemap.Editor"
   ],
   "includePlatforms": [
     "Editor"

@@ -73,7 +73,7 @@ public class TerrainTileTests
             Assert.That(tile.GetType(), Is.EqualTo(typeof(Tile)), $"{tile.name} is not a plain tile.");
             Assert.That(tile.colliderType, Is.EqualTo(Tile.ColliderType.None));
             Sprite swatch = AssetDatabase.LoadAssetAtPath<Sprite>(TerrainTileWriter.SwatchPath(material));
-            Assert.That(tile.sprite, Is.SameAs(swatch));
+            Assert.That(tile.sprite == swatch, Is.True, $"{tile.name} shows {material.name}'s swatch.");
             Assert.That(swatch.rect, Is.EqualTo(new Rect(0f, 0f, TerrainStyle.PixelsPerCell, TerrainStyle.PixelsPerCell)));
             Assert.That(swatch.pixelsPerUnit, Is.EqualTo(TerrainStyle.PixelsPerCell));
 

@@ -16,9 +16,9 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
-/// layer, and a material without a height still builds; a fixed time for animated materials reaches the runtime
-/// material and clears without a rebuild; a brush's preview shows only in the shown cells, replaces the
-/// last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
+/// layer, and a material without a height still builds; an animated layer gives the renderer its rate, which the Scene
+/// view follows; a fixed time for animated materials reaches the runtime material and clears without a rebuild; a
+/// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
 /// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
 /// or allocating per frame;
 /// the style, materials and textures are never written; a layer without a material, a texture of the wrong size and a
@@ -439,6 +439,31 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.HeightArray.depth, Is.EqualTo(3));
         Assert.That(renderer.Lut.GetPixel(3, 1).r, Is.EqualTo(0f));
         Assert.That(renderer.Lut.GetPixel(3, 2).r, Is.EqualTo(TerrainMaterial.DefaultHeightScale));
+    }
+
+    /// <summary>
+    /// A renderer drawing only still materials has no animation rate; one drawing an animated material has its frames
+    /// per second, which the Scene view follows for the fastest enabled renderer, and none once disabled.
+    /// </summary>
+    [Test]
+    public void AnAnimatedLayer_GivesTheRendererItsRate_WhichTheSceneViewFollows()
+    {
+        TerrainBlendRenderer still = CreateRenderer();
+        Assert.That(still.AnimationFramesPerSecond, Is.EqualTo(0f));
+        Assert.That(TerrainSceneViewAnimation.FramesPerSecond(new[] { still }), Is.EqualTo(0f));
+        Object.DestroyImmediate(still);
+        root.SetActive(false);
+        SerializedObject animation = new(materials[2]);
+        animation.FindProperty("framesPerSecond").floatValue = 8f;
+        animation.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainBlendRenderer animated = CreateRenderer();
+
+        Assert.That(animated.AnimationFramesPerSecond, Is.EqualTo(8f));
+        Assert.That(TerrainSceneViewAnimation.FramesPerSecond(new[] { animated }), Is.EqualTo(8f));
+        animated.enabled = false;
+        Assert.That(animated.AnimationFramesPerSecond, Is.EqualTo(0f));
+        Assert.That(TerrainSceneViewAnimation.FramesPerSecond(new[] { animated }), Is.EqualTo(0f));
     }
 
     /// <summary>

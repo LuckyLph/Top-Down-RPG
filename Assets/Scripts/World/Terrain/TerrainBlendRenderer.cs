@@ -123,6 +123,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private bool debugView;
     [NonSerialized] private bool timeFixed;
     [NonSerialized] private float fixedTime;
+    [NonSerialized] private float animationFramesPerSecond;
     [NonSerialized] private bool previewGrewBounds;
 #if UNITY_EDITOR
     [NonSerialized] private readonly List<TerrainMaterial> subscribedMaterials = new();
@@ -234,6 +235,12 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal Texture2D Lut => lut;
     internal IReadOnlyList<MeshRenderer> Chunks => chunks;
     internal bool IsFlushScheduled => flushScheduled;
+
+    /// <summary>
+    /// The frames per second of the fastest animated material among the layers it built from, 0 when none is animated
+    /// or nothing is built; the editor repaints the Scene view at that rate so animated ground keeps moving there.
+    /// </summary>
+    internal float AnimationFramesPerSecond => animationFramesPerSecond;
     internal int HandledChangeCount { get; private set; }
     internal int RenderCallbackCount { get; private set; }
 #if UNITY_EDITOR
@@ -598,6 +605,12 @@ public class TerrainBlendRenderer : MonoBehaviour
         {
             layerTilemaps[i] = layers[i].Tilemap;
             materials[i] = layers[i].Material;
+        }
+
+        animationFramesPerSecond = 0f;
+        foreach (TerrainMaterial layerMaterial in materials)
+        {
+            animationFramesPerSecond = Mathf.Max(animationFramesPerSecond, layerMaterial.IsAnimated ? layerMaterial.FramesPerSecond : 0f);
         }
 
         controlMap = new TerrainControlMap(layerTilemaps, $"{name} Terrain Control Map");
@@ -1072,6 +1085,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         heightArray = null;
         lut = null;
         layerTilemaps = new Tilemap[0];
+        animationFramesPerSecond = 0f;
     }
 
     /// <summary>

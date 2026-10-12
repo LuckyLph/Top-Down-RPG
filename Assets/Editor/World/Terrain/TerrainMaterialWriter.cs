@@ -35,7 +35,22 @@ public static class TerrainMaterialWriter
             return false;
         }
 
-        TerrainTextures textures = recipe.Generate(recipe.Seed);
+        return Generate(recipe, recipe.Generate(recipe.Seed));
+    }
+
+    /// <summary>
+    /// Writes <paramref name="textures"/>, which <paramref name="recipe"/> generated for its seed (its inspector's
+    /// preview), as its material's, as <see cref="Generate(TerrainMaterialRecipe)"/> does without generating them again.
+    /// </summary>
+    public static bool Generate(TerrainMaterialRecipe recipe, TerrainTextures textures)
+    {
+        TerrainMaterial material = recipe.Material;
+        if (material == null)
+        {
+            Debug.LogError($"{recipe.name} has no terrain material to fill.", recipe);
+            return false;
+        }
+
         (string Albedo, string CellField, string Height) paths = TargetPaths(material, textures.CellField != null);
         if (!CanWrite(recipe, material, paths))
         {

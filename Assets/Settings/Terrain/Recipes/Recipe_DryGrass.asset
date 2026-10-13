@@ -36,7 +36,7 @@ MonoBehaviour:
     amplitude: 0.25
   grass:
     serializedVersion: 2
-    rgba: 4283340460
+    rgba: 4282812315
   tintWaves:
   - x: 1
     y: 0
@@ -56,10 +56,10 @@ MonoBehaviour:
   grit: 4
   blade:
     serializedVersion: 2
-    rgba: 4281493632
+    rgba: 4281163379
   tip:
     serializedVersion: 2
-    rgba: 4285973722
+    rgba: 4285182148
   spotsPerCell: 3
   jitter: 0.42
   tuftChance: 0.62

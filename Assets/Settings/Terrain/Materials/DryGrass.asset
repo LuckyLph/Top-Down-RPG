@@ -19,7 +19,7 @@ MonoBehaviour:
   outerRadius: 14
   innerRadius: 11
   cellMode: 0
-  baseColour: {r: 0.6745098, g: 0.5882353, b: 0.30588236, a: 1}
+  baseColour: {r: 0.60784316, g: 0.5294118, b: 0.27450982, a: 1}
   keepMargin: 1
   cutGap: 0.5
   cutBevel: 18
@@ -43,10 +43,10 @@ MonoBehaviour:
     rimWidth: 9
     rim:
       serializedVersion: 2
-      key0: {r: 0.87058824, g: 0.8, b: 0.5019608, a: 1}
-      key1: {r: 0.78431374, g: 0.7058824, b: 0.39215687, a: 1}
-      key2: {r: 0.54901963, g: 0.4627451, b: 0.22745098, a: 0}
-      key3: {r: 0.69803923, g: 0.6117647, b: 0.32156864, a: 0}
+      key0: {r: 0.78431374, g: 0.72156864, b: 0.4509804, a: 1}
+      key1: {r: 0.7058824, g: 0.63529414, b: 0.3529412, a: 1}
+      key2: {r: 0.49411765, g: 0.41568628, b: 0.20392157, a: 0}
+      key3: {r: 0.627451, g: 0.54901963, b: 0.2901961, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
       key5: {r: 0, g: 0, b: 0, a: 0}
       key6: {r: 0, g: 0, b: 0, a: 0}
@@ -72,8 +72,8 @@ MonoBehaviour:
       m_NumColorKeys: 4
       m_NumAlphaKeys: 2
     drawOutline: 1
-    outlineColour: {r: 0.43137255, g: 0.36078432, b: 0.17254902, a: 1}
-    shadowColour: {r: 0.47058824, g: 0.39215687, b: 0.19607843, a: 1}
+    outlineColour: {r: 0.3882353, g: 0.3254902, b: 0.15686275, a: 1}
+    shadowColour: {r: 0.42352942, g: 0.3529412, b: 0.1764706, a: 1}
     shadowAlpha: 0.35
     shadowWidth: 1
     tuftHeight: 4.5

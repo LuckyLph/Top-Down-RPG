@@ -4,7 +4,7 @@ An editor tool that fills an area scene with generated content: terrain layers (
 
 ## Using it
 
-1. Open the area scene and make it the active scene.
+1. Open the area scene and make it the active scene. A new area starts from the area template (File > New Scene, `AreaTemplate`), whose grid already holds the six ground layers, empty, and everything else the writer expects.
 2. Open **Tools > TopDownRPG > World > Scene Generator** and pick a generator asset: [Generator_Clearing.asset](../Assets/Settings/Generation/Generator_Clearing.asset), [Generator_VillageForest.asset](../Assets/Settings/Generation/Generator_VillageForest.asset) or [Generator_Lakeside.asset](../Assets/Settings/Generation/Generator_Lakeside.asset).
 3. Tune its settings in the window. A map of the layout redraws on every change, one pixel per cell: grass green, gravel tan, stone grey, blocking footprints dark green, walk-through props light green, mob spawns red, the party spawn cyan. The line under it counts cells, props and mobs, and warnings say what did not fit.
 4. **Random Seed** picks a new seed. The seed is stored on the generator asset, and the same seed and settings always give the same layout.

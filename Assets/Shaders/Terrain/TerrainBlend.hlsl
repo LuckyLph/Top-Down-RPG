@@ -543,13 +543,13 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
 }
 
 // How many pixels of bank show at a pixel inside sunken layer m's edge (its sink depth above 0, water): the sink depth
-// times how much the edge faces up the screen there, so the bank is highest along edges facing up, thins as they turn
-// sideways and is gone along edges facing down. The direction is the bare shape's in crisp, so the bank keeps one height
+// times how much the edge faces up the screen there and how much of it lies over another layer (1 - w[0]), so the bank
+// is highest along edges facing up, thins as they turn sideways and is gone along edges facing down or over nothing. The direction is the bare shape's in crisp, so the bank keeps one height
 // along a straight edge and its foot follows the edge's noise. 0 for a level layer, and deeper inside than the bank and
 // its shadow.
-float TBBankHeight(TBInputs ins, uint m, TBCorner corner, float2 worldPixel, float depth)
+float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float depth)
 {
-    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).a;
+    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).x * (1.0 - w[0]);
     float bank = 0.0;
     [branch]
     if (sink > 0.0 && depth < 2.0 * sink + 1.0)
@@ -564,19 +564,36 @@ float TBBankHeight(TBInputs ins, uint m, TBCorner corner, float2 worldPixel, flo
     return bank;
 }
 
-// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank's face, its lowest
-// pixel darker at the waterline; below it the interior under the rim, which starts at the waterline, darkened by the
+// The colour of sunken layer m's bank at a pixel: the base colours of the layers it meets there, blended by their pair
+// weights, which leave out nothing (w[0]).
+float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
+{
+    float3 face = float3(0.0, 0.0, 0.0);
+    [unroll]
+    for (uint k = 1u; k <= (uint)TB_MAX_LAYERS; k++)
+    {
+        [branch]
+        if (k <= m && w[k] > 0.0)
+        {
+            face += w[k] * TBLut(ins, 2, (int)k).rgb;
+        }
+    }
+    return face / max(1.0 - w[0], 1e-4);
+}
+
+// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the base colour of the layer
+// it meets (TBBankFace), its lowest pixel darker at the waterline; below it the interior under the rim, which starts at the waterline, darkened by the
 // bank's shadow over as many pixels as the bank is high. A level layer has no bank, so this is the interior under the
 // rim. band is how much of the rim soft bands make up (0 in crisp and on the bank).
 float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float band)
 {
     band = 0.0;
-    float bank = TBBankHeight(ins, m, corner, worldPixel, depth);
+    float bank = TBBankHeight(ins, m, w, corner, worldPixel, depth);
     float3 colour;
     [branch]
     if (depth < bank)
     {
-        float3 face = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).rgb;
+        float3 face = TBBankFace(ins, m, w);
         colour = depth >= bank - 1.0 ? face * 0.75 : face;
     }
     else
@@ -587,7 +604,7 @@ float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], floa
         colour = colour * (1.0 - rim.a) + rim.rgb;
         if (below < bank)
         {
-            colour *= 1.0 - TBLut(ins, TB_BANK_COLUMN + 1, 1 + (int)m).x;
+            colour *= 1.0 - TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).y;
         }
     }
     return colour;

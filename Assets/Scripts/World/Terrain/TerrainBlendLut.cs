@@ -10,8 +10,8 @@ using UnityEngine;
 /// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
 /// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
 /// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
-/// <see cref="SparkleTimingColumn"/>, and at <see cref="BankColumn"/> (bank colour, sink depth), (bank shadow), zero for a
-/// material level with the ground. Then one row per pair of
+/// <see cref="SparkleTimingColumn"/>, and at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material level
+/// with the ground. Then one row per pair of
 /// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
 /// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
 /// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
@@ -77,9 +77,7 @@ public static class TerrainBlendLut
 
             if (material.SinkDepth > 0f)
             {
-                Color bank = material.BankColour;
-                texels[row + BankColumn] = new Color(bank.r, bank.g, bank.b, material.SinkDepth);
-                texels[row + BankColumn + 1] = new Color(material.BankShadow, 0f, 0f, 0f);
+                texels[row + BankColumn] = new Color(material.SinkDepth, material.BankShadow, 0f, 0f);
             }
         }
 

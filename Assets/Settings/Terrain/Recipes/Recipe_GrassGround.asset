@@ -62,7 +62,7 @@ MonoBehaviour:
     rgba: 4281895994
   spotsPerCell: 6
   jitter: 0.42
-  tuftChance: 0.89
+  tuftChance: 0.445
   densityWaves:
   - x: 2
     y: 1

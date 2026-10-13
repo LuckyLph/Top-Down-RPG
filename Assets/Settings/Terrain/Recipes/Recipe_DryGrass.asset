@@ -37,7 +37,7 @@ MonoBehaviour:
   grassRecipe: {fileID: 11400000, guid: ee359980e33c6fd4abdac03454d06ff7, type: 2}
   grass:
     serializedVersion: 2
-    rgba: 4282812315
+    rgba: 4283793813
   weedsPerCell: 2.2
   jitter: 0.45
   weedChance: 0.45
@@ -57,19 +57,19 @@ MonoBehaviour:
   footSpread: 3
   curve: 3
   swayMargin: 3
-  seedHeadChance: 0.5
+  seedHeadChance: 0.3
   stem:
     serializedVersion: 2
-    rgba: 4280832104
+    rgba: 4281618020
   leaf:
     serializedVersion: 2
-    rgba: 4282813094
+    rgba: 4283925663
   leafLight:
     serializedVersion: 2
-    rgba: 4284261054
+    rgba: 4285373366
   tip:
     serializedVersion: 2
-    rgba: 4287548640
+    rgba: 4288332759
   shadow:
     serializedVersion: 2
-    rgba: 4280831074
+    rgba: 4281551454

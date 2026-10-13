@@ -657,12 +657,12 @@ public class TerrainBrushTests
     }
 
     /// <summary>
-    /// The control map texture's byte for <paramref name="cell"/>.
+    /// The control map texture's 16-bit texel for <paramref name="cell"/>.
     /// </summary>
-    private byte TexelOf(Vector3Int cell)
+    private ushort TexelOf(Vector3Int cell)
     {
         BoundsInt bounds = renderer.ControlMap.Bounds;
-        return renderer.ControlMap.Texture.GetPixelData<byte>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
+        return renderer.ControlMap.Texture.GetPixelData<ushort>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
     }
 
     /// <summary>

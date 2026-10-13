@@ -17,7 +17,8 @@ using UnityEngine.Tilemaps;
 /// the Village Forest lay their weeds, sand, mud and water out empty, and the default movement profile blocks water and
 /// makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
 /// a <see cref="TerrainBlendRenderer"/> in the generator's order, with navigation priorities from that order, a
-/// renderer that follows a layout written over another, and a navigation grid that blocks exactly the props' cells.
+/// renderer that follows a layout written over another, and a navigation grid that blocks exactly the props' cells, and
+/// writes up to 16 layers but refuses 17.
 /// </summary>
 public class AreaGenerationTests
 {
@@ -789,6 +790,48 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// The writer refuses a generator of 17 layers with an error, changing nothing in the scene, and writes one of
+    /// <see cref="TerrainControlMap.MaxLayers"/> (16): a tilemap per layer, drawn by a renderer that builds them all,
+    /// each layer's cell holding its own bit alone. The layers reuse the Clearing's tiles, terrain types and materials
+    /// under their own tilemap names.
+    /// </summary>
+    [Test]
+    public void TheWriter_WritesSixteenLayers_AndRefusesSeventeen()
+    {
+        Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        IReadOnlyList<AreaGenerator.TerrainLayer> project = generator.TerrainLayers;
+        List<AreaGenerator.TerrainLayer> layers = new();
+        for (int i = 0; i <= TerrainControlMap.MaxLayers; i++)
+        {
+            AreaGenerator.TerrainLayer source = project[i % project.Count];
+            layers.Add(new AreaGenerator.TerrainLayer($"Layer{i}Tilemap", source.Tile, source.TerrainType, source.Material));
+        }
+
+        TestAreaGenerator seventeen = Track(TestAreaGenerator.Create(generator.TerrainStyle, layers));
+        LogAssert.Expect(LogType.Error, "TestGenerator: 17 terrain layers, but the blended terrain draws at most 16.");
+        Assert.That(AreaLayoutWriter.Write(grid, seventeen, seventeen.Generate(1)), Is.False);
+        Assert.That(grid.transform.childCount, Is.EqualTo(0), "Nothing is written.");
+        Assert.That(grid.GetComponent<TerrainBlendRenderer>(), Is.Null);
+
+        layers.RemoveAt(TerrainControlMap.MaxLayers);
+        TestAreaGenerator sixteen = Track(TestAreaGenerator.Create(generator.TerrainStyle, layers));
+        Assert.That(AreaLayoutWriter.Write(grid, sixteen, sixteen.Generate(1)), Is.True);
+
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Assert.That(renderer.Layers.Count, Is.EqualTo(16));
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null, "The renderer builds 16 layers.");
+        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(16));
+        for (int i = 0; i < layers.Count; i++)
+        {
+            Assert.That(renderer.Layers[i].Tilemap.name, Is.EqualTo(layers[i].TilemapName));
+            Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(i, 0, 0)), Is.EqualTo(1 << i), layers[i].TilemapName);
+        }
+    }
+
+    /// <summary>
     /// The terrain renderer the writer adds stays in step with it: after one layout is written over another, its
     /// control map holds exactly the new layout's cells on every layer, the cells the old layout filled and the new one
     /// leaves empty included (the writer clears each layer before painting it).
@@ -815,7 +858,7 @@ public class AreaGenerationTests
         {
             HashSet<Vector3Int> cells = new(first.TerrainCells(i));
             cells.UnionWith(second.TerrainCells(i));
-            byte bit = (byte)(1 << i);
+            int bit = 1 << i;
             foreach (Vector3Int cell in cells)
             {
                 bool filled = second.TerrainCells(i).Contains(cell);

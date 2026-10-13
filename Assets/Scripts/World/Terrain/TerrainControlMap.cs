@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// The ground layers' cells as a texture for the terrain blending shader: one R8 texel per cell over the layers'
-/// bounds plus a margin of empty cells, one bit per layer (bit i for layer i, bottom first). Built from the layers'
-/// tilemaps, then refreshed cell by cell after tile changes, growing when a filled cell lands outside the bounds or in
-/// the margin. <see cref="Bounds"/> are the cells the texture covers (z from 0 to 1; zero width while no layer has a
-/// filled cell). Changed cells are collected and written into the point-filtered texture in one batch by
+/// The ground layers' cells as a texture for the terrain blending shader: one R16 texel per cell over the layers'
+/// bounds plus a margin of empty cells, one bit per layer (bit i for layer i, bottom first, up to
+/// <see cref="MaxLayers"/>). Built from the layers' tilemaps, then refreshed cell by cell after tile changes, growing
+/// when a filled cell lands outside the bounds or in the margin. <see cref="Bounds"/> are the cells the texture covers
+/// (z from 0 to 1; zero width while no layer has a filled cell). Changed cells are collected and written into the point-filtered texture in one batch by
 /// <see cref="Apply"/>, which creates the texture the first time (1 x 1 while the map is empty) and counts its uploads
 /// in <see cref="UploadCount"/> for tests. Preview bits, for a brush's hover, are kept apart from the real ones: they
 /// show in the texture, never reach the tilemaps, and clear without touching the real bits. Owns its texture;
@@ -17,22 +18,22 @@ using UnityEngine.Tilemaps;
 /// </summary>
 public sealed class TerrainControlMap : IDisposable
 {
-    public const int MaxLayers = 8;
+    public const int MaxLayers = 16;
     public const int Margin = 1;
     public const int GrowthSlack = 8;
 
     /// <summary>The layer bits a preview replaces in one cell, and the values it shows instead.</summary>
     private struct PreviewBits
     {
-        public byte Mask;
-        public byte Value;
+        public ushort Mask;
+        public ushort Value;
     }
 
     private readonly Tilemap[] layers;
     private readonly string textureName;
     private readonly List<int> pending = new();
     private readonly Dictionary<Vector3Int, PreviewBits> preview = new();
-    private byte[] cells = new byte[0];
+    private ushort[] cells = new ushort[0];
     private bool[] pendingFlags = new bool[0];
     private BoundsInt bounds;
     private bool fullUploadPending;
@@ -58,6 +59,11 @@ public sealed class TerrainControlMap : IDisposable
         this.textureName = textureName;
         Rebuild();
     }
+
+    /// <summary>
+    /// Whether the graphics device can sample the control map's 16-bit texture.
+    /// </summary>
+    public static bool IsFormatSupported => SystemInfo.IsFormatSupported(GraphicsFormat.R16_UNorm, GraphicsFormatUsage.Sample);
 
     public BoundsInt Bounds => bounds;
     public Texture2D Texture => texture;
@@ -116,7 +122,7 @@ public sealed class TerrainControlMap : IDisposable
         bounds = any
             ? new BoundsInt(min.x - Margin, min.y - Margin, 0, max.x - min.x + 1 + 2 * Margin, max.y - min.y + 1 + 2 * Margin, 1)
             : new BoundsInt(0, 0, 0, 0, 0, 1);
-        cells = new byte[bounds.size.x * bounds.size.y];
+        cells = new ushort[bounds.size.x * bounds.size.y];
         pendingFlags = new bool[cells.Length];
         pending.Clear();
         fullUploadPending = true;
@@ -129,7 +135,7 @@ public sealed class TerrainControlMap : IDisposable
                 continue;
             }
 
-            byte bit = (byte)(1 << layer);
+            ushort bit = (ushort)(1 << layer);
             BoundsInt cellBounds = blockBounds[layer];
             for (int index = 0; index < block.Length; index++)
             {
@@ -172,7 +178,7 @@ public sealed class TerrainControlMap : IDisposable
             Grow(min, max);
         }
 
-        byte bit = (byte)(1 << layer);
+        ushort bit = (ushort)(1 << layer);
         for (int i = 0; i < positions.Length; i++)
         {
             Vector3Int position = positions[i];
@@ -182,7 +188,7 @@ public sealed class TerrainControlMap : IDisposable
             }
 
             int index = IndexOf(position.x, position.y);
-            byte value = tilemap.HasTile(position) ? (byte)(cells[index] | bit) : (byte)(cells[index] & ~bit);
+            ushort value = tilemap.HasTile(position) ? (ushort)(cells[index] | bit) : (ushort)(cells[index] & ~bit);
             if (value != cells[index])
             {
                 cells[index] = value;
@@ -194,17 +200,17 @@ public sealed class TerrainControlMap : IDisposable
     /// <summary>
     /// The real layer bits of <paramref name="cell"/>, without any preview; 0 outside the bounds.
     /// </summary>
-    public byte GetCell(Vector3Int cell)
+    public ushort GetCell(Vector3Int cell)
     {
-        return Contains(cell) ? cells[IndexOf(cell.x, cell.y)] : (byte)0;
+        return Contains(cell) ? cells[IndexOf(cell.x, cell.y)] : (ushort)0;
     }
 
     /// <summary>
     /// The layer bits <paramref name="cell"/> shows: the real bits with any preview applied; 0 outside the bounds.
     /// </summary>
-    public byte GetShownCell(Vector3Int cell)
+    public ushort GetShownCell(Vector3Int cell)
     {
-        return Contains(cell) ? Shown(IndexOf(cell.x, cell.y)) : (byte)0;
+        return Contains(cell) ? Shown(IndexOf(cell.x, cell.y)) : (ushort)0;
     }
 
     /// <summary>
@@ -214,7 +220,7 @@ public sealed class TerrainControlMap : IDisposable
     /// </summary>
     public void SetPreview(int layer, IReadOnlyList<Vector3Int> previewCells, bool filled)
     {
-        byte bit = (byte)(1 << layer);
+        ushort bit = (ushort)(1 << layer);
         if (filled)
         {
             bool grow = false;
@@ -239,7 +245,7 @@ public sealed class TerrainControlMap : IDisposable
             Vector3Int cell = new(previewCells[i].x, previewCells[i].y, 0);
             preview.TryGetValue(cell, out PreviewBits bits);
             bits.Mask |= bit;
-            bits.Value = filled ? (byte)(bits.Value | bit) : (byte)(bits.Value & ~bit);
+            bits.Value = filled ? (ushort)(bits.Value | bit) : (ushort)(bits.Value & ~bit);
             preview[cell] = bits;
             if (Contains(cell))
             {
@@ -279,7 +285,7 @@ public sealed class TerrainControlMap : IDisposable
         int height = Mathf.Max(1, bounds.size.y);
         if (texture == null)
         {
-            texture = new Texture2D(width, height, TextureFormat.R8, false, true)
+            texture = new Texture2D(width, height, TextureFormat.R16, false, true)
             {
                 name = textureName,
                 filterMode = FilterMode.Point,
@@ -294,7 +300,7 @@ public sealed class TerrainControlMap : IDisposable
             fullUploadPending = true;
         }
 
-        NativeArray<byte> data = texture.GetPixelData<byte>(0);
+        NativeArray<ushort> data = texture.GetPixelData<ushort>(0);
         if (fullUploadPending)
         {
             if (cells.Length == 0)
@@ -396,7 +402,7 @@ public sealed class TerrainControlMap : IDisposable
         }
 
         BoundsInt grown = new(xMin, yMin, 0, xMax - xMin + 1, yMax - yMin + 1, 1);
-        byte[] grownCells = new byte[grown.size.x * grown.size.y];
+        ushort[] grownCells = new ushort[grown.size.x * grown.size.y];
         for (int y = bounds.yMin; y < bounds.yMax; y++)
         {
             Array.Copy(cells, (y - bounds.yMin) * bounds.size.x, grownCells, (y - grown.yMin) * grown.size.x + bounds.xMin - grown.xMin, bounds.size.x);
@@ -440,16 +446,16 @@ public sealed class TerrainControlMap : IDisposable
     /// <summary>
     /// The bits cell <paramref name="index"/> shows: its real bits with any preview applied.
     /// </summary>
-    private byte Shown(int index)
+    private ushort Shown(int index)
     {
-        byte value = cells[index];
+        ushort value = cells[index];
         if (preview.Count == 0)
         {
             return value;
         }
 
         Vector3Int cell = new(bounds.xMin + index % bounds.size.x, bounds.yMin + index / bounds.size.x, 0);
-        return preview.TryGetValue(cell, out PreviewBits bits) ? (byte)((value & ~bits.Mask) | (bits.Value & bits.Mask)) : value;
+        return preview.TryGetValue(cell, out PreviewBits bits) ? (ushort)((value & ~bits.Mask) | (bits.Value & bits.Mask)) : value;
     }
 
     /// <summary>

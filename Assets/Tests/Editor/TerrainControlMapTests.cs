@@ -8,8 +8,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for <see cref="TerrainControlMap"/>: layer bits and bounds read from the tilemaps, patches inside the bounds,
-/// growth outside them or in the margin, one upload per batch of changes, and preview bits kept apart from the real
-/// ones.
+/// growth outside them or in the margin, one upload per batch of changes, preview bits kept apart from the real ones,
+/// and all 16 layers' bits round-tripping through the 16-bit texture while a 17th layer is refused.
 /// </summary>
 public class TerrainControlMapTests
 {
@@ -59,7 +59,7 @@ public class TerrainControlMapTests
     }
 
     /// <summary>
-    /// Each cell holds one bit per layer filled there, and the texture holds the same bytes once applied.
+    /// Each cell holds one bit per layer filled there, and the texture holds the same bits once applied.
     /// </summary>
     [Test]
     public void Cells_HoldABitPerFilledLayer()
@@ -76,6 +76,54 @@ public class TerrainControlMapTests
         Assert.That(map.GetCell(new Vector3Int(1, 1, 0)), Is.EqualTo(0));
         Assert.That(Texel(map, new Vector3Int(1, 0, 0)), Is.EqualTo(3));
         Assert.That(Texel(map, new Vector3Int(2, 2, 0)), Is.EqualTo(7));
+    }
+
+    /// <summary>
+    /// With <see cref="TerrainControlMap.MaxLayers"/> layers every bit round-trips through the cells, the preview and
+    /// the 16-bit texture: a cell per layer holds that layer's bit alone, a cell with every layer holds all 16, and a
+    /// preview on the top layer sets and clears bit 15 alone. A map of more layers is refused.
+    /// </summary>
+    [Test]
+    public void SixteenLayers_RoundTripEveryBit_AndASeventeenthIsRefused()
+    {
+        Tilemap[] many = new Tilemap[TerrainControlMap.MaxLayers];
+        for (int i = 0; i < many.Length; i++)
+        {
+            GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
+            layerObject.transform.SetParent(layers[0].transform.parent);
+            many[i] = layerObject.GetComponent<Tilemap>();
+            many[i].SetTile(new Vector3Int(i, 0, 0), tile);
+            many[i].SetTile(new Vector3Int(0, 2, 0), tile);
+        }
+
+        TerrainControlMap map = new(many);
+        maps.Add(map);
+        Vector3Int top = new(3, 4, 0);
+        map.SetPreview(many.Length - 1, new[] { top }, true);
+        map.Apply();
+
+        Assert.That(map.LayerCount, Is.EqualTo(16));
+        for (int i = 0; i < many.Length; i++)
+        {
+            Vector3Int cell = new(i, 0, 0);
+            Assert.That(map.GetCell(cell), Is.EqualTo(1 << i), $"layer {i}");
+            Assert.That(Texel(map, cell), Is.EqualTo(1 << i), $"texel of layer {i}");
+        }
+
+        Assert.That(map.GetCell(new Vector3Int(0, 2, 0)), Is.EqualTo(0xFFFF));
+        Assert.That(Texel(map, new Vector3Int(0, 2, 0)), Is.EqualTo(0xFFFF));
+        Assert.That(map.GetCell(top), Is.EqualTo(0));
+        Assert.That(map.GetShownCell(top), Is.EqualTo(0x8000));
+        Assert.That(Texel(map, top), Is.EqualTo(0x8000));
+
+        map.SetPreview(many.Length - 1, new[] { new Vector3Int(0, 2, 0) }, false);
+        map.Apply();
+        Assert.That(Texel(map, new Vector3Int(0, 2, 0)), Is.EqualTo(0x7FFF));
+        Assert.That(map.GetCell(new Vector3Int(0, 2, 0)), Is.EqualTo(0xFFFF));
+
+        Tilemap[] tooMany = new Tilemap[TerrainControlMap.MaxLayers + 1];
+        many.CopyTo(tooMany, 0);
+        Assert.That(() => new TerrainControlMap(tooMany), Throws.ArgumentException);
     }
 
     /// <summary>
@@ -97,7 +145,7 @@ public class TerrainControlMapTests
         map.Apply();
         Assert.That(map.Texture.width, Is.EqualTo(map.Bounds.size.x));
         Assert.That(map.Texture.height, Is.EqualTo(map.Bounds.size.y));
-        Assert.That(map.Texture.format, Is.EqualTo(TextureFormat.R8));
+        Assert.That(map.Texture.format, Is.EqualTo(TextureFormat.R16));
         Assert.That(map.Texture.filterMode, Is.EqualTo(FilterMode.Point));
     }
 
@@ -126,17 +174,17 @@ public class TerrainControlMapTests
         map.Apply();
         BoundsInt bounds = map.Bounds;
         Texture2D texture = map.Texture;
-        byte[] before = texture.GetPixelData<byte>(0).ToArray();
+        ushort[] before = texture.GetPixelData<ushort>(0).ToArray();
         Vector3Int cell = new(2, 3, 0);
 
         Paint(1, cell);
         Refresh(map, 1, cell);
 
         Assert.That(map.Bounds, Is.EqualTo(bounds));
-        Assert.That(texture.GetPixelData<byte>(0).ToArray(), Is.EqualTo(before), "Nothing is written before Apply.");
+        Assert.That(texture.GetPixelData<ushort>(0).ToArray(), Is.EqualTo(before), "Nothing is written before Apply.");
         Assert.That(map.Apply(), Is.True);
         Assert.That(map.Texture, Is.SameAs(texture));
-        byte[] after = texture.GetPixelData<byte>(0).ToArray();
+        ushort[] after = texture.GetPixelData<ushort>(0).ToArray();
         int index = IndexOf(map, cell);
         for (int i = 0; i < after.Length; i++)
         {
@@ -334,19 +382,19 @@ public class TerrainControlMapTests
     }
 
     /// <summary>
-    /// The texture's byte for <paramref name="cell"/>.
+    /// The texture's 16-bit texel for <paramref name="cell"/>.
     /// </summary>
-    private static byte Texel(TerrainControlMap map, Vector3Int cell)
+    private static ushort Texel(TerrainControlMap map, Vector3Int cell)
     {
         return Texel(map, IndexOf(map, cell));
     }
 
     /// <summary>
-    /// The texture's byte at <paramref name="index"/>.
+    /// The texture's 16-bit texel at <paramref name="index"/>.
     /// </summary>
-    private static byte Texel(TerrainControlMap map, int index)
+    private static ushort Texel(TerrainControlMap map, int index)
     {
-        return map.Texture.GetPixelData<byte>(0)[index];
+        return map.Texture.GetPixelData<ushort>(0)[index];
     }
 
     /// <summary>

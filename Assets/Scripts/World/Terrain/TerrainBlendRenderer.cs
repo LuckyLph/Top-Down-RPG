@@ -96,7 +96,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
-    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 8.")]
+    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 16.")]
     [SerializeField] private Layer[] layers = new Layer[0];
     [Tooltip("Cells per side of each chunk quad; each chunk is culled on its own.")]
     [SerializeField, Min(1)] private int chunkSize = 16;
@@ -274,9 +274,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the topmost visible layer of every pixel as a pure colour instead of the ground (layers 0 to 6 by which of
-    /// red, green and blue are full, layer i lighting the channels of i + 1's bits; layer 7 full red with half green),
-    /// for blob checks. Not saved.
+    /// Shows the topmost visible layer of every pixel as a pure colour instead of the ground (TBDebugColour in the
+    /// terrain shader: a distinct colour per layer, each channel off, at half or full, so no two layers' colours are
+    /// the same up to the lights' intensity), for blob checks. Not saved.
     /// </summary>
     internal void SetDebugView(bool on)
     {
@@ -659,9 +659,10 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// <summary>
     /// Returns false without a word for a renderer not configured at all (no style, no layers) outside play mode, as
     /// right after it is added. Otherwise logs an error for each thing that stops the renderer from drawing (no style
-    /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a layer without a tilemap, a
-    /// tilemap listed twice, a layer without a material, a material's textures missing or of the wrong size or format,
-    /// an unknown sorting layer) and returns whether there was none; a material several layers draw is checked once.
+    /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a graphics device that cannot sample
+    /// the control map's format, a layer without a tilemap, a tilemap listed twice, a layer without a material, a
+    /// material's textures missing or of the wrong size or format, an unknown sorting layer) and returns whether there
+    /// was none; a material several layers draw is checked once.
     /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
     /// drawing (the drawing never reads the priority), warns about each layer whose tilemap has an enabled
     /// <see cref="TilemapRenderer"/>, which would draw its tiles' sprites as well, and warns when the grid is not made
@@ -683,6 +684,12 @@ public class TerrainBlendRenderer : MonoBehaviour
         if (layers == null || layers.Length == 0 || layers.Length > TerrainControlMap.MaxLayers)
         {
             Debug.LogError($"{name}: {nameof(TerrainBlendRenderer)} needs 1 to {TerrainControlMap.MaxLayers} ground layers.", this);
+            return false;
+        }
+
+        if (!TerrainControlMap.IsFormatSupported)
+        {
+            Debug.LogError($"{name}: this graphics device ({SystemInfo.graphicsDeviceType}) cannot sample the R16 control map {nameof(TerrainBlendRenderer)} draws from, so the ground is not drawn.", this);
             return false;
         }
 

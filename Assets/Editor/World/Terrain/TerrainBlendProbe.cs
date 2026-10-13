@@ -21,7 +21,15 @@ public static class TerrainBlendProbe
     private const int ArtPixelsPerUnit = 32;
     private const string EntitiesSortingLayer = "Entities";
     private const string MenuRoot = "Tools/TopDownRPG/World/Terrain/";
-    private const int DebugLayers = 8;
+    private const int DebugLayers = TerrainControlMap.MaxLayers;
+    private const int UnknownClass = DebugLayers + 1;
+
+    private static readonly Vector3Int[] DebugColours =
+    {
+        new(2, 0, 0), new(0, 2, 0), new(2, 2, 0), new(0, 0, 2), new(2, 0, 2), new(0, 2, 2), new(2, 2, 2),
+        new(2, 1, 0), new(2, 0, 1), new(1, 2, 0), new(0, 2, 1), new(1, 0, 2), new(0, 1, 2),
+        new(2, 2, 1), new(2, 1, 2), new(1, 2, 2)
+    };
 
     /// <summary>
     /// Logs the blob check of every terrain renderer in the open scenes, in the crisp look and in the soft one, leaving
@@ -404,27 +412,29 @@ public static class TerrainBlendProbe
     }
 
     /// <summary>
-    /// The name of each layer a debug class can show, for the report: the renderer's layer's material name, else its
-    /// index.
+    /// The name of each class a debug colour can show but nothing, for the report: the renderer's layer's material name,
+    /// else its index, and last the colours that are no layer's.
     /// </summary>
     private static string[] LayerNames(TerrainBlendRenderer terrain)
     {
-        string[] names = new string[DebugLayers];
-        for (int i = 0; i < names.Length; i++)
+        string[] names = new string[UnknownClass];
+        for (int i = 0; i < DebugLayers; i++)
         {
             TerrainMaterial material = i < terrain.Layers.Count ? terrain.Layers[i]?.Material : null;
             names[i] = material != null ? material.name.ToLowerInvariant() : $"layer {i}";
         }
 
+        names[UnknownClass - 1] = "unknown colour";
         return names;
     }
 
     /// <summary>
-    /// The layer a debug view colour shows, plus one (0 for nothing): the channels near the brightest one give the bits
-    /// of layers 0 to 6 plus one, and a channel at about half of it marks layer 7 (TBDebugColour in the terrain shader),
-    /// so the lights' intensity does not matter.
+    /// The layer a debug view colour shows, plus one: 0 for nothing, <see cref="UnknownClass"/> for a colour that is no
+    /// layer's. Each channel reads as off, at half or full against the brightest one, and the three levels are looked
+    /// up in <see cref="DebugColours"/> (TB_DEBUG_COLOURS in the terrain shader), so the lights' intensity does not
+    /// matter.
     /// </summary>
-    private static byte DebugClass(Color32 c)
+    internal static byte DebugClass(Color32 c)
     {
         int brightest = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
         if (brightest < 4)
@@ -432,12 +442,18 @@ public static class TerrainBlendProbe
             return 0;
         }
 
-        bool half = IsHalf(c.r, brightest) || IsHalf(c.g, brightest) || IsHalf(c.b, brightest);
-        int bits = (IsFull(c.r, brightest) ? 1 : 0) | (IsFull(c.g, brightest) ? 2 : 0) | (IsFull(c.b, brightest) ? 4 : 0);
-        return (byte)(half ? DebugLayers : bits);
+        Vector3Int levels = new(Level(c.r, brightest), Level(c.g, brightest), Level(c.b, brightest));
+        for (int i = 0; i < DebugColours.Length; i++)
+        {
+            if (DebugColours[i] == levels)
+            {
+                return (byte)(i + 1);
+            }
+        }
 
-        static bool IsFull(int channel, int max) => channel * 4 >= max * 3;
-        static bool IsHalf(int channel, int max) => channel * 4 >= max && channel * 4 < max * 3;
+        return UnknownClass;
+
+        static int Level(int channel, int max) => channel * 4 >= max * 3 ? 2 : channel * 4 >= max ? 1 : 0;
     }
 
     /// <summary>
@@ -457,7 +473,7 @@ public static class TerrainBlendProbe
         }
 
         bool[] seen = new bool[classes.Length];
-        int[] regions = new int[DebugLayers + 1];
+        int[] regions = new int[UnknownClass + 1];
         StringBuilder small = new();
         StringBuilder holes = new();
         int smallCount = 0;

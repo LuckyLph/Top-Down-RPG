@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
@@ -9,8 +10,9 @@ using UnityEngine.Tilemaps;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for <see cref="TerrainBlendRenderer"/>: tile changes from painting, from <see cref="AreaTerrain"/> on the host
-/// and from replicated edits on a client reach the control map's texture, and so do undos; a render uploads pending
+/// Tests for <see cref="TerrainBlendRenderer"/>: 16 layers build, each drawn on top in its own debug colour, and a
+/// preview on the top layer shows over the others; tile changes from painting, from <see cref="AreaTerrain"/> on the
+/// host and from replicated edits on a client reach the control map's texture, and so do undos; a render uploads pending
 /// changes once and stops listening; the chunks cover the layers and follow the bounds as they grow and shrink;
 /// disabling unsubscribes from everything and destroys what was built; nothing runs or allocates per frame while no
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
@@ -126,6 +128,78 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.Chunks, Is.Not.Empty);
         Assert.That(renderer.IsFlushScheduled, Is.False);
         Assert.That(TexelOf(renderer, new Vector3Int(4, 5, 0)), Is.EqualTo(3));
+    }
+
+    /// <summary>
+    /// A renderer of <see cref="TerrainControlMap.MaxLayers"/> layers (16), each its own material, builds a slice per
+    /// layer and the lookup texture's rows for 16 layers. Over a strip of the bottom layer, with each other layer
+    /// filling its own 3 x 3 block, its debug view shows every layer on top in its block, each in a colour the probe
+    /// tells apart from the others; a preview on the top layer shows that layer over a block, and clearing it shows the
+    /// block's own layer again. Renders from a later editor update, until anything is drawn (at most 30 updates): chunks
+    /// built in one update are drawn from the next, and right after the terrain shader is imported the first render
+    /// draws nothing either.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator SixteenLayers_BuildAndDrawEveryLayer_AndPreviewOnTheTopOne()
+    {
+        const int count = TerrainControlMap.MaxLayers;
+        GameObject gridObject = Track(new GameObject("SixteenLayerGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap[] tilemaps = new Tilemap[count];
+        TerrainBlendRenderer.Layer[] drawn = new TerrainBlendRenderer.Layer[count];
+        for (int i = 0; i < count; i++)
+        {
+            GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
+            layerObject.transform.SetParent(gridObject.transform);
+            tilemaps[i] = layerObject.GetComponent<Tilemap>();
+            drawn[i] = new TerrainBlendRenderer.Layer(tilemaps[i], TestTerrainStyle.PlainMaterial($"Material{i}", TerrainMaterial.CellMode.None, createdObjects));
+        }
+
+        for (int x = 0; x < 4 * count; x++)
+        {
+            for (int y = 0; y < 5; y++)
+            {
+                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
+            }
+        }
+
+        for (int i = 1; i < count; i++)
+        {
+            foreach (Vector3Int cell in BlockCells(i))
+            {
+                tilemaps[i].SetTile(cell, tile);
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, drawn);
+        gridObject.SetActive(true);
+
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(count));
+        Assert.That(renderer.AlbedoArray.depth, Is.EqualTo(count));
+        Assert.That(renderer.HeightArray.depth, Is.EqualTo(count));
+        Assert.That(renderer.Lut.height, Is.EqualTo(TerrainBlendLut.Height(count)));
+        Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(4 * (count - 1) + 1, 2, 0)), Is.EqualTo(0x8001));
+        Rect world = new(0f, 0f, 4 * count, 5f);
+        byte[] shown = new byte[count];
+        for (int frame = 0; frame < 30 && shown[0] == 0; frame++)
+        {
+            yield return null;
+            shown = DebugClasses(renderer, world, count);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            Assert.That(shown[i], Is.EqualTo(i + 1), $"block {i}");
+        }
+
+        Assert.That(renderer.SetPreview(tilemaps[count - 1], BlockCells(0), true), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(1, 2, 0)), Is.EqualTo(0x8001));
+        Assert.That(DebugClasses(renderer, world, count)[0], Is.EqualTo(count), "The preview shows the top layer.");
+
+        renderer.ClearPreview();
+        Assert.That(DebugClasses(renderer, world, count)[0], Is.EqualTo(1), "Clearing the preview shows the bottom layer again.");
     }
 
     /// <summary>
@@ -1193,12 +1267,59 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// The control map texture's byte for <paramref name="cell"/>.
+    /// The 3 x 3 cells of block <paramref name="index"/> of a strip 5 cells high: cells 1 to 3 across and up, from 4
+    /// cells per block along x.
     /// </summary>
-    private static byte TexelOf(TerrainBlendRenderer renderer, Vector3Int cell)
+    private static Vector3Int[] BlockCells(int index)
+    {
+        List<Vector3Int> cells = new();
+        for (int y = 1; y < 4; y++)
+        {
+            for (int x = 1; x < 4; x++)
+            {
+                cells.Add(new Vector3Int(4 * index + x, y, 0));
+            }
+        }
+
+        return cells.ToArray();
+    }
+
+    /// <summary>
+    /// Renders <paramref name="renderer"/>'s debug view over <paramref name="world"/> at one screen pixel per art pixel,
+    /// at a fixed time and with every other renderer left out, and returns the probe's class (the layer on top plus
+    /// one) at the centre of each of the first <paramref name="blocks"/> blocks (<see cref="BlockCells"/>).
+    /// </summary>
+    private static byte[] DebugClasses(TerrainBlendRenderer renderer, Rect world, int blocks)
+    {
+        renderer.SetDebugView(true);
+        renderer.SetFixedTime(0f);
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, true, true, true);
+        try
+        {
+            byte[] classes = new byte[blocks];
+            for (int i = 0; i < blocks; i++)
+            {
+                Color32 colour = pixels.GetPixel(Mathf.RoundToInt((4 * i + 2.5f - world.xMin) * 32f), Mathf.RoundToInt((2.5f - world.yMin) * 32f));
+                classes[i] = TerrainBlendProbe.DebugClass(colour);
+            }
+
+            return classes;
+        }
+        finally
+        {
+            Object.DestroyImmediate(pixels);
+            renderer.SetDebugView(false);
+            renderer.SetFixedTime(null);
+        }
+    }
+
+    /// <summary>
+    /// The control map texture's 16-bit texel for <paramref name="cell"/>.
+    /// </summary>
+    private static ushort TexelOf(TerrainBlendRenderer renderer, Vector3Int cell)
     {
         BoundsInt bounds = renderer.ControlMap.Bounds;
-        return renderer.ControlMap.Texture.GetPixelData<byte>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
+        return renderer.ControlMap.Texture.GetPixelData<ushort>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
     }
 
     /// <summary>

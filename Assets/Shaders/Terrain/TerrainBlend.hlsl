@@ -545,9 +545,9 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
 
 // How many pixels of bank show at a pixel inside sunken layer m's edge (its sink depth above 0, water): the sink depth
 // times how much the edge faces up the screen there and how much of it lies over another layer (1 - w[0]), so the bank
-// is highest along edges facing up, thins as they turn sideways and is gone along edges facing down or over nothing. The direction is the bare shape's in crisp, so the bank keeps one height
-// along a straight edge and its foot follows the edge's noise. 0 for a level layer, and deeper inside than the bank and
-// its shadow.
+// is highest along edges facing up, thins as they turn sideways and is gone along edges facing down or over nothing.
+// The direction is the bare shape's in crisp, so the bank keeps one height along a straight edge and its foot follows
+// the edge's noise. 0 for a level layer, and deeper inside than the bank and its shadow.
 float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float depth)
 {
     float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).x * (1.0 - w[0]);
@@ -582,14 +582,15 @@ float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
     return face / max(1.0 - w[0], 1e-4);
 }
 
-// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank colour of the layer
-// it meets (TBBankFace), its lowest pixel darker at the waterline; below it the interior under the rim, which starts at the waterline, darkened by the
-// bank's shadow over as many pixels as the bank is high. A level layer has no bank, so this is the interior under the
-// rim. band is how much of the rim soft bands make up (0 in crisp and on the bank).
-float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float band)
+// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank colour of the layer it
+// meets (TBBankFace), its lowest pixel darker at the waterline; below it the interior under the rim, which starts at
+// the waterline, darkened by the bank's shadow over as many pixels as the bank is high. A level layer has no bank, so
+// this is the interior under the rim. band is how much of the rim soft bands make up (0 in crisp and on the bank); bank
+// is the bank's height there.
+float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float band, out float bank)
 {
     band = 0.0;
-    float bank = TBBankHeight(ins, m, w, corner, worldPixel, depth);
+    bank = TBBankHeight(ins, m, w, corner, worldPixel, depth);
     float3 colour;
     [branch]
     if (depth < bank)
@@ -609,6 +610,19 @@ float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], floa
         }
     }
     return colour;
+}
+
+// The colour of layer m's edge pixel: edge, or where a sunken layer shows a bank there, the bank's face, so the bank
+// starts at the edge instead of under the layer's outline or rim; blended in where the bank is under a pixel high.
+float3 TBEdgeColour(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float3 edge)
+{
+    float bank = TBBankHeight(ins, m, w, corner, worldPixel, 0.0);
+    [branch]
+    if (bank > 0.0)
+    {
+        edge = lerp(edge, TBBankFace(ins, m, w), saturate(bank));
+    }
+    return edge;
 }
 
 // A hash of the world cell at the corner of a map pixel's corner patch.
@@ -673,8 +687,8 @@ float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float
 // centre moved by its own height (the height texture's green channel times the material's height scale) lies the
 // keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
-// opaque; then the interior under the band or the rim (TBInside, with a sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit
-// like the base colour.
+// opaque, or a sunken layer's bank (TBEdgeColour); then the interior under the band or the rim (TBInside, with a
+// sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit like the base colour.
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float4 shape = ins.shapes[m];
@@ -725,12 +739,13 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         }
         else if (d > -0.5 && d < 0.5)
         {
-            result = float4(edge, 1.0);
+            result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, edge), 1.0);
         }
         else if (d <= -0.5)
         {
             float band;
-            float3 colour = TBInside(ins, m, e, w, -d, pixel, worldPixel, corner, hasCentre, centre, band);
+            float bank;
+            float3 colour = TBInside(ins, m, e, w, -d, pixel, worldPixel, corner, hasCentre, centre, band, bank);
             result = float4(colour + grit * band, 1.0);
         }
     }
@@ -738,10 +753,10 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
 }
 #else
 // Layer m's colour at a pixel, premultiplied: from the outside in, the translucent shadow, the antialiased edge pixel
-// (the outline, or the rim's outer colour where the pair draws none), then the interior under the rim (TBInside, with
-// a sunken layer's bank), with the outline fading into it over the first pixel. Where the pair has tufts, pixels of
-// the edge and of the band outside it that a tuft covers are opaque: the outline along the tuft's border, the rim's
-// outer colour inside it.
+// (the outline, or the rim's outer colour where the pair draws none, or a sunken layer's bank: TBEdgeColour), then the
+// interior under the rim (TBInside, with a sunken layer's bank), with the outline fading into it over the first pixel.
+// Where the pair has tufts, pixels of the edge and of the band outside it that a tuft covers are opaque: the outline
+// along the tuft's border, the rim's outer colour inside it.
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float3 edge = lerp(e.fill, e.outline, e.outlineWeight);
@@ -770,14 +785,15 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     else if (d > -0.5)
     {
         float edgeAlpha = e.shadowAlpha + (1.0 - e.shadowAlpha) * (0.5 - d);
-        result = float4(edge * edgeAlpha, edgeAlpha);
+        result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, edge) * edgeAlpha, edgeAlpha);
     }
     else
     {
         float depth = -d;
         float band;
-        float3 colour = TBInside(ins, m, e, w, depth, pixel, worldPixel, corner, false, (TBCentre)0, band);
-        if (depth < 1.5)
+        float bank;
+        float3 colour = TBInside(ins, m, e, w, depth, pixel, worldPixel, corner, false, (TBCentre)0, band, bank);
+        if (depth < 1.5 && depth >= bank)
         {
             colour = lerp(lerp(colour, e.outline, e.outlineWeight), colour, saturate(depth - 0.5));
         }

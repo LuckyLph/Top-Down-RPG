@@ -10,13 +10,13 @@ using UnityEngine.Tilemaps;
 /// Tests for scene generation: the project's Clearing generator gives playable layouts for many seeds (paths on the
 /// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
 /// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
-/// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the
-/// forest; the Lakeside generator lays every terrain type, a lake off the paths with a beach and a marsh, and keeps
-/// props off the water, the beach and the mud with the beach and every mob within the spawn's reach; the same seed gives
-/// the same layout; the project's generators list plain ground tiles and the project's materials in draw order, the
-/// Clearing and the Village Forest lay their sand, mud and water out empty, and the default movement profile blocks
-/// water and makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn
-/// by a <see cref="TerrainBlendRenderer"/> in the generator's order, with navigation priorities from that order, a
+/// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the forest;
+/// the Lakeside generator lays every terrain type, a lake off the paths with a beach and a marsh, and keeps props off
+/// the water, the beach and the mud with the beach and every mob within the spawn's reach; the same seed gives the same
+/// layout; the project's generators list plain ground tiles and the project's materials in draw order, the Clearing and
+/// the Village Forest lay their weeds, sand, mud and water out empty, and the default movement profile blocks water and
+/// makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
+/// a <see cref="TerrainBlendRenderer"/> in the generator's order, with navigation priorities from that order, a
 /// renderer that follows a layout written over another, and a navigation grid that blocks exactly the props' cells.
 /// </summary>
 public class AreaGenerationTests
@@ -458,8 +458,9 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the lake is
-    /// water off every path and at least the road margin from the road, the beach and the marsh lie beside it and off
+    /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the weeds lie on
+    /// open grass, off the water, the beach, the mud and the paths; the lake is water off every path and at least the
+    /// road margin from the road, the beach and the marsh lie beside it and off
     /// it, and the gravel trail reaches the beach; the spawn is on the road with no footprint or water within its clear
     /// radius.
     /// </summary>
@@ -484,6 +485,8 @@ public class AreaGenerationTests
             }
 
             Assert.That(water.Overlaps(paths) || water.Overlaps(sand) || water.Overlaps(mud), Is.False, $"seed {seed}: the lake covers nothing else");
+            HashSet<Vector3Int> weeds = layout.TerrainCells(AreaLayoutBuilder.WeedsLayer);
+            Assert.That(weeds.Overlaps(water) || weeds.Overlaps(sand) || weeds.Overlaps(mud) || weeds.Overlaps(paths), Is.False, $"seed {seed}: weeds only on open grass");
             foreach (Vector3Int cell in stone)
             {
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.RoadMargin))
@@ -906,12 +909,13 @@ public class AreaGenerationTests
     public void TheGenerators_ListPlainTilesAndTheProjectsMaterials_InDrawOrder(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
-        string[] names = { "Grass", "Sand", "Mud", "Gravel", "Stone", "Water" };
+        string[] names = { "Grass", "Weeds", "Sand", "Mud", "Gravel", "Stone", "Water" };
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
 
         Assert.That(target.TerrainStyle, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath)));
         Assert.That(layers.Count, Is.EqualTo(names.Length));
         Assert.That(layers[AreaLayoutBuilder.GrassLayer].TilemapName, Is.EqualTo("GrassTilemap"));
+        Assert.That(layers[AreaLayoutBuilder.WeedsLayer].TilemapName, Is.EqualTo("WeedsTilemap"));
         Assert.That(layers[AreaLayoutBuilder.SandLayer].TilemapName, Is.EqualTo("SandTilemap"));
         Assert.That(layers[AreaLayoutBuilder.MudLayer].TilemapName, Is.EqualTo("MudTilemap"));
         Assert.That(layers[AreaLayoutBuilder.GravelLayer].TilemapName, Is.EqualTo("GravelTilemap"));
@@ -938,7 +942,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The Clearing and the Village Forest lay their sand, mud and water layers out empty, for painting by hand,
+    /// The Clearing and the Village Forest lay their weeds, sand, mud and water layers out empty, for painting by hand,
     /// whatever the seed.
     /// </summary>
     [Test]
@@ -949,6 +953,7 @@ public class AreaGenerationTests
             foreach (AreaLayout layout in new[] { generator.Generate(seed), VillageForestLayout(seed).Layout })
             {
                 Assert.That(layout.TerrainLayerCount, Is.EqualTo(AreaLayoutBuilder.LayerCount));
+                Assert.That(layout.TerrainCells(AreaLayoutBuilder.WeedsLayer), Is.Empty, $"seed {seed}: weeds");
                 Assert.That(layout.TerrainCells(AreaLayoutBuilder.SandLayer), Is.Empty, $"seed {seed}: sand");
                 Assert.That(layout.TerrainCells(AreaLayoutBuilder.MudLayer), Is.Empty, $"seed {seed}: mud");
                 Assert.That(layout.TerrainCells(AreaLayoutBuilder.WaterLayer), Is.Empty, $"seed {seed}: water");

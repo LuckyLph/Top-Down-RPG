@@ -5,9 +5,10 @@ using UnityEngine;
 /// <summary>
 /// Lays out a lakeside: a grass blob ringed by trees, with a lake in its northern half, a sandy beach on the lake's
 /// southern shore and a muddy marsh around the rest of it, a stone road crossing the south from west to east, a gravel
-/// trail from the road down to the beach, and patches of mud on the open grass, so every terrain type shows. The party
-/// spawns on the road. Blocking props stay off the water, the beach, the mud, the paths, a clearance beside them and
-/// the ground around the spawn; every mob, and the beach, can be walked to from the spawn.
+/// trail from the road down to the beach, and patches of mud and of weeds on the open grass, with weeds fringing the
+/// marsh, so every terrain type shows. The party spawns on the road. Blocking props stay off the water, the beach, the
+/// mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the beach, can be walked to
+/// from the spawn.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Lakeside Generator", fileName = "Generator_Lakeside")]
 public sealed class LakesideGenerator : AreaGenerator
@@ -38,6 +39,8 @@ public sealed class LakesideGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Grass with swaying weeds, drawn over the grass without an edge.")]
+    [SerializeField] private TerrainLayer weeds = new();
     [SerializeField] private TerrainLayer sand = new();
     [SerializeField] private TerrainLayer mud = new();
     [SerializeField] private TerrainLayer gravel = new();
@@ -80,6 +83,12 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField, Min(0)] private int mudPatchCount = 3;
     [Tooltip("Smallest and largest radius in cells of a mud patch.")]
     [SerializeField] private Vector2 mudPatchRadius = new(1.5f, 3.5f);
+    [Tooltip("Width in cells of the band of weeds around the marsh's mud, on the dry grass beyond it; 0 for none.")]
+    [SerializeField, Min(0)] private int weedFringe = 2;
+    [Tooltip("Weed patches on the open grass.")]
+    [SerializeField, Min(0)] private int weedPatchCount = 6;
+    [Tooltip("Smallest and largest radius in cells of a weed patch.")]
+    [SerializeField] private Vector2 weedPatchRadius = new(2f, 4.5f);
     [Tooltip("Depth in cells of the band of grass around the shore that Shore layers fill.")]
     [SerializeField, Min(1)] private int shoreZoneDepth = 3;
 
@@ -125,10 +134,10 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its cells,
-    /// so the road and the trail cross mud and sand and the lake covers everything under it.
+    /// Grass, weeds, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its
+    /// cells, so the road and the trail cross weeds, mud and sand and the lake covers everything under it.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, sand, mud, gravel, stone, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, sand, mud, gravel, stone, water };
 
     /// <summary>
     /// Lays out a lakeside from <paramref name="layoutSeed"/>.
@@ -149,6 +158,7 @@ public sealed class LakesideGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> water;
         private readonly HashSet<Vector3Int> sand;
         private readonly HashSet<Vector3Int> mud;
+        private readonly HashSet<Vector3Int> weeds;
         private readonly List<Vector2> road = new();
         private readonly Dictionary<Vector3Int, int> waterDistance = new();
         private readonly float halfWidth;
@@ -165,14 +175,15 @@ public sealed class LakesideGenerator : AreaGenerator
             water = builder.Layout.TerrainCells(AreaLayoutBuilder.WaterLayer);
             sand = builder.Layout.TerrainCells(AreaLayoutBuilder.SandLayer);
             mud = builder.Layout.TerrainCells(AreaLayoutBuilder.MudLayer);
+            weeds = builder.Layout.TerrainCells(AreaLayoutBuilder.WeedsLayer);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
         }
 
         /// <summary>
-        /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach and the mud patches, picks
-        /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs and
-        /// checks that the beach can be walked to.
+        /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach, the mud patches and the
+        /// weeds, picks the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads
+        /// the mobs and checks that the beach can be walked to.
         /// </summary>
         public AreaLayout Build()
         {
@@ -184,6 +195,7 @@ public sealed class LakesideGenerator : AreaGenerator
             LayTrail();
             LayMarshPatches();
             LayMudPatches();
+            LayWeeds();
             PlaceSpawn();
             builder.ReservePathClearance(settings.pathClearance);
             builder.ReserveDisc(builder.Layout.SpawnCell, settings.spawnClearRadius);
@@ -441,7 +453,54 @@ public sealed class LakesideGenerator : AreaGenerator
         /// </summary>
         private void PaintMudPatch(Vector3Int centre)
         {
-            float radius = builder.Range(settings.mudPatchRadius.x, Mathf.Max(settings.mudPatchRadius.x, settings.mudPatchRadius.y));
+            PaintPatch(centre, settings.mudPatchRadius, mud, cell => builder.EdgeDistance(cell) > settings.borderDepth);
+        }
+
+        /// <summary>
+        /// Lays the weeds: a fringe on the dry grass within the weed fringe of the marsh's mud, then the weed patches,
+        /// wobbly discs centred on random grass cells off the lake, its shore and the paths. Weeds cover no water,
+        /// beach, mud or path.
+        /// </summary>
+        private void LayWeeds()
+        {
+            HashSet<Vector3Int> nearMud = CellsNear(mud, settings.weedFringe);
+            List<Vector3Int> open = new();
+            int away = Mathf.Max(settings.beachWidth, settings.marshWidth) + 2;
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (IsOpenGrass(cell) && settings.weedFringe > 0 && nearMud.Contains(cell) && WaterDistance(cell) > 1)
+                {
+                    weeds.Add(cell);
+                }
+
+                if (IsOpenGrass(cell) && WaterDistance(cell) > away && !builder.IsNearPath(cell))
+                {
+                    open.Add(cell);
+                }
+            }
+
+            for (int i = 0; i < settings.weedPatchCount && open.Count > 0; i++)
+            {
+                PaintPatch(open[builder.Next(open.Count)], settings.weedPatchRadius, weeds, cell => true);
+            }
+        }
+
+        /// <summary>
+        /// Whether <paramref name="cell"/> is grass with no water, beach, mud or path on it.
+        /// </summary>
+        private bool IsOpenGrass(Vector3Int cell)
+        {
+            return builder.Grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !mud.Contains(cell) && !builder.IsPath(cell);
+        }
+
+        /// <summary>
+        /// Paints <paramref name="target"/> in a wobbly disc of a random radius between the two values of
+        /// <paramref name="radii"/> around <paramref name="centre"/>, on dry grass that is neither beach nor path, nor
+        /// mud when painting weeds, and that passes <paramref name="allowed"/>.
+        /// </summary>
+        private void PaintPatch(Vector3Int centre, Vector2 radii, HashSet<Vector3Int> target, Predicate<Vector3Int> allowed)
+        {
+            float radius = builder.Range(radii.x, Mathf.Max(radii.x, radii.y));
             Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
             Predicate<Vector2> contains = builder.WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.25f);
             int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
@@ -450,10 +509,11 @@ public sealed class LakesideGenerator : AreaGenerator
                 for (int dx = -reach; dx <= reach; dx++)
                 {
                     Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
-                    if (builder.Grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !builder.IsPath(cell)
-                        && builder.EdgeDistance(cell) > settings.borderDepth && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
+                    bool free = builder.Grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !builder.IsPath(cell)
+                        && (target != weeds || !mud.Contains(cell));
+                    if (free && allowed(cell) && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
                     {
-                        mud.Add(cell);
+                        target.Add(cell);
                     }
                 }
             }

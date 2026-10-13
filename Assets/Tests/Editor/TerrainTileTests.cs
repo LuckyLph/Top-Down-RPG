@@ -64,7 +64,7 @@ public class TerrainTileTests
     public void EachGroundMaterial_HasAPlainTileShowingItsSwatch()
     {
         List<TerrainMaterial> materials = ProjectMaterials();
-        Assert.That(materials.Count, Is.EqualTo(6));
+        Assert.That(materials.Count, Is.EqualTo(7));
 
         foreach (TerrainMaterial material in materials)
         {

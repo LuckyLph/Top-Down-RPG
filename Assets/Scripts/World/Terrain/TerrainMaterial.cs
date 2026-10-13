@@ -8,7 +8,8 @@ using UnityEngine;
 /// textures and settings and never write it. In the editor, a terrain material recipe generates its textures and writes
 /// their base colour, repeat and cell mode. In the soft look its height texture, times its height scale, moves its
 /// edges. An animated material (water) lights its glint and sparkle pixels in turn and swells its rims in and out, in
-/// the shader alone, at its frames per second; its edges never move. A sunken material (water) lies below the ground
+/// the shader alone, at its frames per second; its edges never move. A swaying material (weeds) leans the pixels its
+/// height texture weighs, its weeds' blades, in a wind that rolls across the ground, in the shader too. A sunken material (water) lies below the ground
 /// around it: along its edges that face up the screen over another material, that material's bank shows inside its
 /// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it.
 /// </summary>
@@ -20,6 +21,7 @@ public class TerrainMaterial : ScriptableObject
     public const float MaxFramesPerSecond = 30f;
     public const float MinPeriod = 0.1f;
     public const float MaxSinkDepth = 6f;
+    public const float MaxSwayAmplitude = 3f;
 
     /// <summary>
     /// What a material's cell field holds and how its chips or stones meet an edge: none, chips drawn whole or left
@@ -79,6 +81,12 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float rimSwell;
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swellPeriod = 4f;
+    [Tooltip("How many pixels the tips of this material's weeds lean at the top of a gust; 0 for none. A pixel leans by this times its weight in the height texture's blue channel (written by a swaying recipe, weeds'), which then holds no glints or sparkles. Needs frames per second above 0.")]
+    [SerializeField, Range(0f, MaxSwayAmplitude)] private float swayAmplitude;
+    [Tooltip("Seconds of one gust, leaning and back.")]
+    [SerializeField, Range(MinPeriod, 30f)] private float swayPeriod = 2.5f;
+    [Tooltip("Cells a gust travels in one period: the wind rolls across the ground this many cells per period, from the bottom left to the top right.")]
+    [SerializeField, Range(1f, 64f)] private float gustLength = 12f;
     [Header("Sunken")]
     [Tooltip("How many pixels of bank show inside this material's edges where they face straight up the screen, as if it lay that far below the ground around it; less as an edge turns sideways, none along edges facing down or over nothing. The bank is the bank colour of the material it meets, its lowest pixel, at the waterline, darker. 0 for a material level with the ground.")]
     [SerializeField, Range(0f, MaxSinkDepth)] private float sinkDepth;
@@ -113,6 +121,10 @@ public class TerrainMaterial : ScriptableObject
     public float SparkleDuty => Mathf.Clamp01(sparkleDuty);
     public float RimSwell => Mathf.Max(rimSwell, 0f);
     public float SwellPeriod => Mathf.Max(swellPeriod, MinPeriod);
+    public bool Sways => IsAnimated && swayAmplitude > 0f;
+    public float SwayAmplitude => Mathf.Clamp(swayAmplitude, 0f, MaxSwayAmplitude);
+    public float SwayPeriod => Mathf.Max(swayPeriod, MinPeriod);
+    public float GustLength => Mathf.Max(gustLength, 1f);
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;

@@ -11,8 +11,9 @@ using UnityEngine.TestTools;
 /// pixel up to its width, the soft look's height scale (held to its bound), band and whole stones reach their rows, an
 /// animated material's animation reaches its layer's row and a still one's leaves it empty, a sunken material's bank
 /// reaches its layer's row and a level one's leaves it empty, the project style's stone over gravel override changes
-/// that pair's row only, and the project's water is animated, sunken and meets sand without an outline. The project's
-/// style and materials are only read.
+/// that pair's row only, and the project's water is animated, sunken and meets sand without an outline; a swaying
+/// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's weeds
+/// sway and meet grass seamlessly with nothing drawn. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -261,6 +262,58 @@ public class TerrainBlendLutTests
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColumn), Is.EqualTo(Color.clear));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn), Is.EqualTo(new Color(4.5f, 0.35f, 0f, 0f)));
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColourColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
+    }
+
+    /// <summary>
+    /// A swaying material's layer row holds its sway amplitude, sway period and gust length, and a still or merely
+    /// animated one's holds nothing there; a pair with a seamless edge writes its rim's outer colour with alpha 0, any
+    /// other pair with alpha 1.
+    /// </summary>
+    [Test]
+    public void ASwayingMaterial_ReachesItsLayerRow_AndASeamlessEdgeMarksItsPair()
+    {
+        TerrainMaterial grass = Material("Grass", 0.1f);
+        TerrainMaterial weeds = Material("Weeds", 0f);
+        SerializedObject settings = new(weeds);
+        settings.FindProperty("framesPerSecond").floatValue = 8f;
+        settings.FindProperty("swayAmplitude").floatValue = 2f;
+        settings.FindProperty("swayPeriod").floatValue = 2.5f;
+        settings.FindProperty("gustLength").floatValue = 12f;
+        settings.FindProperty("edge").FindPropertyRelative("seamless").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, weeds });
+
+        Assert.That(weeds.Sways, Is.True);
+        Assert.That(grass.Sways, Is.False);
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.SwayColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 0f)));
+        Assert.That(texels[TerrainBlendLut.PairRow(2, 1, 0) * TerrainBlendLut.Width + 3].a, Is.Zero, "weeds over grass is seamless");
+        Assert.That(texels[TerrainBlendLut.PairRow(2, 0, -1) * TerrainBlendLut.Width + 3].a, Is.EqualTo(1f), "grass over nothing is not");
+    }
+
+    /// <summary>
+    /// The project's weeds sway and lie level with the ground, and their edge over grass is seamless with no outline,
+    /// rim, shadow or tufts, so a weeds patch shows no edge on grass; over nothing they keep an outlined edge.
+    /// </summary>
+    [Test]
+    public void TheProjectsWeeds_SwayAndMeetGrassSeamlessly()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial grass = AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Grass.asset");
+        TerrainMaterial weeds = AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Weeds.asset");
+
+        TerrainStyle.EdgeSettings overGrass = style.GetEdge(weeds, grass);
+
+        Assert.That(weeds.Sways, Is.True);
+        Assert.That(weeds.SinkDepth, Is.Zero);
+        Assert.That(weeds.Height, Is.Not.Null, "The sway weights live in the height texture.");
+        Assert.That(overGrass.Seamless, Is.True);
+        Assert.That(overGrass.DrawOutline, Is.False);
+        Assert.That(overGrass.RimWidth, Is.Zero);
+        Assert.That(overGrass.ShadowAlpha, Is.Zero);
+        Assert.That(overGrass.TuftHeight, Is.Zero);
+        Assert.That(style.GetEdge(weeds, null).DrawOutline, Is.True);
     }
 
     /// <summary>

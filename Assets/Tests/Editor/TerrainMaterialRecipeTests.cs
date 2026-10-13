@@ -14,14 +14,15 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its
 /// chip's centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone
 /// pixel's alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth
-/// with one value per chip or stone, and glint and sparkle phases only in the water recipes; caustic water's net
-/// breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap, and pond
-/// water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's crests lie
-/// over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, gather in
-/// clusters, and its ridges cast their shade a row below and a pixel to the right; writing the textures to a material
-/// sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild. Recipes and
-/// materials are built in memory with their default settings (the project's Gravel material is only read), and files go
-/// to a temporary folder outside Assets.
+/// with one value per chip or stone, and glint and sparkle phases only in the water recipes and sway weights only in
+/// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column; caustic
+/// water's net breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap,
+/// and pond water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's
+/// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
+/// edge, gather in clusters, and its ridges cast their shade a row below and a pixel to the right; writing the textures
+/// to a material sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild.
+/// Recipes and materials are built in memory with their default settings (the project's Gravel material is only read),
+/// and files go to a temporary folder outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -30,7 +31,7 @@ public class TerrainMaterialRecipeTests
     private static readonly Type[] RecipeTypes =
     {
         typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe),
-        typeof(WaterHighlightsRecipe)
+        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -406,7 +407,7 @@ public class TerrainMaterialRecipeTests
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
-                if (recipeType != typeof(WaterCausticsRecipe) && recipeType != typeof(WaterHighlightsRecipe))
+                if (recipeType != typeof(WaterCausticsRecipe) && recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe))
                 {
                     Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
@@ -953,6 +954,63 @@ public class TerrainMaterialRecipeTests
         }
 
         return Math.Sqrt(variance);
+    }
+
+    /// <summary>
+    /// Weeds repeat the grass recipe's ground: away from the weeds' boxes the albedo and the height's red channel are the
+    /// grass textures', tiled. Inside a box the sway weight is the same along each row and never falls going up, and
+    /// every box lies inside one cell column, so the shader's gust is the same across it; some pixels differ from the
+    /// grass, the blades.
+    /// </summary>
+    [Test]
+    public void Weeds_RepeatTheGrass_AndWeighTheirBoxesByRowInsideOneCellColumn()
+    {
+        GrassTuftsRecipe grass = (GrassTuftsRecipe)CreateRecipe(typeof(GrassTuftsRecipe));
+        WeedsRecipe recipe = (WeedsRecipe)CreateRecipe(typeof(WeedsRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grassRecipe").objectReferenceValue = grass;
+        settings.FindProperty("repeatCells").intValue = 8;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures ground = grass.Generate(grass.Seed);
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        int weighted = 0;
+        int blades = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                int from = (y % ground.Size) * ground.Size + x % ground.Size;
+                Assert.That(textures.Height[i].r, Is.EqualTo(ground.Height[from].r), $"({x}, {y}) height");
+                bool inBox = textures.Height[i].b > 0;
+                weighted += inBox ? 1 : 0;
+                bool differs = !SameColour(textures.Albedo[i], ground.Albedo[from]);
+                blades += differs ? 1 : 0;
+                if (!inBox)
+                {
+                    continue;
+                }
+
+                int right = x + 1;
+                if (right < size && textures.Height[y * size + right].b > 0)
+                {
+                    Assert.That(textures.Height[y * size + right].b, Is.EqualTo(textures.Height[i].b), $"({x}, {y}) a row of a box leans together");
+                    Assert.That(right / TerrainStyle.PixelsPerCell, Is.EqualTo(x / TerrainStyle.PixelsPerCell), $"({x}, {y}) a box keeps to one cell column");
+                }
+
+                int above = TerrainArt.Wrap(y + 1, size) * size + x;
+                if (textures.Height[above].b > 0)
+                {
+                    Assert.That(textures.Height[above].b, Is.GreaterThanOrEqualTo(textures.Height[i].b), $"({x}, {y}) the weight grows going up");
+                }
+            }
+        }
+
+        Assert.That(weighted, Is.GreaterThan(size * size / 50), "the weeds' boxes");
+        Assert.That(blades, Is.GreaterThan(size * size / 200), "the blades");
     }
 
     /// <summary>

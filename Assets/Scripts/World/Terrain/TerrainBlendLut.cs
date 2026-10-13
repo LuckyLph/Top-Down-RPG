@@ -10,14 +10,15 @@ using UnityEngine;
 /// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
 /// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
 /// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
-/// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material level
-/// with the ground, and at <see cref="BankColourColumn"/> its bank colour, the face a sunken layer shows where it cuts
-/// into this one. Then one row per pair of
-/// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
-/// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
-/// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
-/// none), then the rim sampled every half pixel from the edge inwards (colour, how much of the interior it covers).
-/// Colours stay sRGB, as the shader expects.
+/// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material
+/// level with the ground, at <see cref="BankColourColumn"/> its bank colour, the face a sunken layer shows where it
+/// cuts into this one, and for a swaying material at <see cref="SwayColumn"/> (sway amplitude, sway period, gust
+/// length in cells), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
+/// = -1), at <see cref="PairRow"/>: (shadow colour, shadow alpha), (outline colour, 1 when drawn), (shadow width,
+/// rim width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), (the rim's
+/// outer colour, 0 when the edge is seamless, else 1), (the soft band's colour, its width, 0 for none), then the rim
+/// sampled every half pixel from the edge inwards (colour, how much of the interior it covers). Colours stay sRGB, as
+/// the shader expects.
 /// </summary>
 public static class TerrainBlendLut
 {
@@ -27,6 +28,7 @@ public static class TerrainBlendLut
     public const int SparkleTimingColumn = 7;
     public const int BankColumn = 8;
     public const int BankColourColumn = 9;
+    public const int SwayColumn = 10;
     public const int RampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
@@ -78,6 +80,11 @@ public static class TerrainBlendLut
             }
 
             texels[row + BankColourColumn] = material.BankColour;
+            if (material.Sways)
+            {
+                texels[row + SwayColumn] = new Color(material.SwayAmplitude, material.SwayPeriod, material.GustLength, 0f);
+            }
+
             if (material.SinkDepth > 0f)
             {
                 texels[row + BankColumn] = new Color(material.SinkDepth, material.BankShadow, 0f, 0f);
@@ -133,7 +140,7 @@ public static class TerrainBlendLut
         texels[start + 1] = new Color(outline.r, outline.g, outline.b, edge.DrawOutline ? 1f : 0f);
         texels[start + 2] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, wholeStones ? 1f : 0f);
         Color outer = edge.EvaluateRim(0f);
-        texels[start + 3] = new Color(outer.r, outer.g, outer.b, 1f);
+        texels[start + 3] = new Color(outer.r, outer.g, outer.b, edge.Seamless ? 0f : 1f);
         texels[start + 4] = new Color(band.r, band.g, band.b, edge.SoftBandWidth);
         for (int i = 0; i < RampTexels; i++)
         {

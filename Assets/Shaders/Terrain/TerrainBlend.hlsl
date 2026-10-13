@@ -14,6 +14,7 @@
 #define TB_SPARKLE_TIMING_COLUMN 7
 #define TB_BANK_COLUMN 8
 #define TB_BANK_COLOUR_COLUMN 9
+#define TB_SWAY_COLUMN 10
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
@@ -52,7 +53,8 @@ struct TBCorner
 // How an upper layer's edge is drawn at a pixel: the settings of each pair it may be drawn over, blended by weight.
 // In the soft look a pair with a band draws no outline and fills with the band's colour; edge is the colour of the
 // opaque edge pixel, each pair's own (its outline where it draws one, else its fill) blended by weight, and
-// bandWeight is how much of the edge pairs with a band make up.
+// bandWeight is how much of the edge pairs with a band make up. seamless is how much of the edge seamless pairs make
+// up, whose edge pixel shows the layer's own interior.
 struct TBEdge
 {
     float3 shadow;
@@ -64,6 +66,7 @@ struct TBEdge
     float3 edge;
     float tuftHeight;
     float bandWeight;
+    float seamless;
     int firstRow;
 };
 
@@ -305,6 +308,7 @@ TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
             e.outline += w[k] * outline.rgb;
             e.shadowWidth += w[k] * widths.x;
             e.tuftHeight += w[k] * widths.z;
+            e.seamless += w[k] * (1.0 - fill.a);
 #ifdef _TERRAIN_SOFT
             float4 band = TBLut(ins, 4, row);
             float banded = band.a > 0.0 ? 1.0 : 0.0;
@@ -445,7 +449,7 @@ float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
     int row = 1 + (int)m;
     float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, row);
     [branch]
-    if (animation.x > 0.0)
+    if (animation.x > 0.0 && TBLut(ins, TB_SWAY_COLUMN, row).x <= 0.0)
     {
         float code = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0);
         [branch]
@@ -466,6 +470,38 @@ float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
         }
     }
     return colour;
+}
+
+// The texel a swaying layer m (sway amplitude above 0, weeds) shows at a world pixel: the pixel's own, moved left by
+// how far it leans, so the blade standing there leans right. A gust from 0 to 1 rolls over the cells from the bottom
+// left to the top right, a gust length of cells per sway period, each cell a little out of step with its neighbours;
+// it picks a pose, how many whole pixels the tips lean (0 up to the sway amplitude), and a pixel leans by the pose
+// times the square of its weight (the height texture's blue channel), rounded, so the foot stays put, the blade bends
+// most near its tip, and every pose has one fixed shape: the blade steps between a few drawn poses, like a sprite
+// animation, instead of a kink climbing up and down it as the gust grows. A swaying recipe gives every pixel of a
+// weed's box the weight of its row, so the pixels of a row lean together, and keeps each box inside one cell column,
+// so the gust is the same across it. Only the albedo is moved: the height and the edges stay where they are.
+int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel)
+{
+    int row = 1 + (int)m;
+    float4 sway = TBLut(ins, TB_SWAY_COLUMN, row);
+    [branch]
+    if (sway.x > 0.0)
+    {
+        float weight = LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b;
+        [branch]
+        if (weight > 0.0)
+        {
+            float2 cell = floor(worldPixel / ART_PIXELS_PER_UNIT);
+            float jitter = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
+            float time = TBAnimationTime(ins, TBLut(ins, TB_ANIMATION_COLUMN, row).x);
+            float phase = time / sway.y - (cell.x + 0.5 * cell.y) / sway.z + 0.15 * jitter;
+            float pose = round(sway.x * (0.5 - 0.5 * cos(6.28318530718 * phase)));
+            float lean = round(pose * weight * weight);
+            texel = (int2)WrapPixel(worldPixel - float2(lean, 0.0), ins.shapes[m].z);
+        }
+    }
+    return texel;
 }
 
 // How many pixels further in an animated layer's rims reach at a pixel: up to its rim swell, in and out over its
@@ -492,12 +528,12 @@ float TBSwell(TBInputs ins, uint m, float2 worldPixel)
 // the depth is measured where the chip comes nearest the edge, its reach from the centre along the edge's outward
 // direction there. A stone is left out when its centre lies too near the rim, and the others are cut along the rim's
 // line, shaded to the light like the stones' own edges. With hasCentre, known is what the pixel's chip or stone sees
-// at its centre, already worked out by the caller.
+// at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel).
 float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
 {
     float4 shape = ins.shapes[m];
     int2 texel = (int2)WrapPixel(worldPixel, shape.z);
-    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, m).rgb);
+    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, TBSwayTexel(ins, m, worldPixel, texel), m).rgb);
     [branch]
     if (shape.w > 0.5)
     {
@@ -612,8 +648,9 @@ float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], floa
     return colour;
 }
 
-// The colour of layer m's edge pixel: edge, or where a sunken layer shows a bank there, the bank's face, so the bank
-// starts at the edge instead of under the layer's outline or rim; blended in where the bank is under a pixel high.
+// The colour of layer m's edge pixel: edge (the layer's own interior on a seamless pair), or where a sunken layer
+// shows a bank there, the bank's face, so the bank starts at the edge instead of under the layer's outline or rim;
+// blended in where the bank is under a pixel high.
 float3 TBEdgeColour(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float3 edge)
 {
     float bank = TBBankHeight(ins, m, w, corner, worldPixel, 0.0);
@@ -739,7 +776,8 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         }
         else if (d > -0.5 && d < 0.5)
         {
-            result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, edge), 1.0);
+            float3 own = e.seamless > 0.0 ? TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, hasCentre, centre) : edge;
+            result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)), 1.0);
         }
         else if (d <= -0.5)
         {
@@ -785,7 +823,8 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     else if (d > -0.5)
     {
         float edgeAlpha = e.shadowAlpha + (1.0 - e.shadowAlpha) * (0.5 - d);
-        result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, edge) * edgeAlpha, edgeAlpha);
+        float3 own = e.seamless > 0.0 ? TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, false, (TBCentre)0) : edge;
+        result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)) * edgeAlpha, edgeAlpha);
     }
     else
     {

@@ -17,7 +17,7 @@ using UnityEngine.Tilemaps;
 /// detail stream leaves the rest of its layout where it was; the same seed gives the same layout; the project's style
 /// lists every ground material in the shared draw order, the project's generators list only the layers they lay (plain
 /// ground tiles and the project's materials) as a subsequence of it, and the default movement profile blocks water and
-/// makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
+/// makes mud and the shallows cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
 /// a <see cref="TerrainBlendRenderer"/> in the shared order, with navigation priorities from that order, keeping painted
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
 /// a navigation grid that blocks exactly the props' cells, an area of only some layers that still draws and navigates,
@@ -1042,13 +1042,13 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The project's terrain style lists every ground material of Assets/Settings/Terrain/Materials once, in the shared
-    /// draw order of Docs/TerrainTypes.md: grass, dry grass, dirt, sand, mud, gravel, plaza, stone, water.
+    /// draw order of Docs/TerrainTypes.md: grass, dry grass, dirt, sand, mud, gravel, plaza, stone, shallows, water.
     /// </summary>
     [Test]
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "DryGrass", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Water" };
+        string[] order = { "Grass", "DryGrass", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Shallows", "Water" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)
@@ -1064,14 +1064,18 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The default movement profile lets sand, dirt, dry grass and the plaza be walked like grass, mud at a higher cost
-    /// and water not at all.
+    /// The default movement profile lets sand, dirt, dry grass and the plaza be walked like grass, mud and the shallows
+    /// at twice grass's cost, and water not at all, so the cheapest step stays grass's.
     /// </summary>
     [Test]
     public void TheDefaultProfile_WalksSandLikeGrass_MudAtAHigherCost_AndNotWater()
     {
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         profile.TryGetTraversal(ProjectTerrainType("Grass"), out bool grassWalkable, out int grassCost);
+        profile.TryGetTraversal(ProjectTerrainType("Shallows"), out bool shallowsWalkable, out int shallowsCost);
+        Assert.That(shallowsWalkable, Is.True, "The shallows can be waded.");
+        Assert.That(shallowsCost, Is.EqualTo(2 * grassCost), "Wading costs twice as much as walking.");
+        Assert.That(profile.GetMinimumTraversalCost(), Is.EqualTo(grassCost));
         profile.TryGetTraversal(ProjectTerrainType("Mud"), out bool mudWalkable, out int mudCost);
         profile.TryGetTraversal(ProjectTerrainType("Sand"), out bool sandWalkable, out int sandCost);
         profile.TryGetTraversal(ProjectTerrainType("Water"), out bool waterWalkable, out _);

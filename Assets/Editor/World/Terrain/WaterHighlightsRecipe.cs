@@ -10,8 +10,10 @@ using UnityEngine;
 /// middle when long enough, and kept clear of other strokes; it rests in a faint colour, and its glint phases run from
 /// its middle outwards, so each glint appears in the middle, spreads to the ends and fades from the middle out, like a
 /// ripple widening. A sparkle is a pixel of plain water with a sparkle phase of its own, seen only while it twinkles.
-/// No cell field; the base colour is the middle tone, the glint colour the strokes' highlight and the sparkle colour
-/// the sparkles', and the height's per-chip value is 0.5 everywhere.
+/// Shallow water shows its bed (off by default, so deep water has none): a bed tone where a smooth bed field is highest,
+/// under the strokes, and sparse specks of pebbles on plain water. No cell field; the base colour is the middle tone,
+/// the glint colour the strokes' highlight and the sparkle colour the sparkles', and the height's per-chip value is 0.5
+/// everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Highlights", fileName = "Recipe_Water")]
 public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
@@ -61,14 +63,28 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 1f)] private float sparkleChance = 0.6f;
     [Tooltip("The sparkle colour, the material's sparkle colour.")]
     [SerializeField] private Color32 sparkle = new(226, 246, 242, 255);
+    [Header("Bed")]
+    [Tooltip("Share of the water showing the bed tone, where the bed field is highest: the bottom of shallow water seen through it. 0 for none, as in deep water.")]
+    [SerializeField, Range(0f, 1f)] private float bedShare;
+    [Tooltip("The bed seen through the water.")]
+    [SerializeField] private Color32 bed = new(98, 158, 164, 255);
+    [Tooltip("Waves of the bed field. X and Y are how many times a wave repeats across the texture; amplitudes only count relative to each other. Set for a texture of 8 cells.")]
+    [SerializeField] private Wave[] bedWaves = { new(2, 3, 1f), new(3, -2, 0.8f), new(-4, 5, 0.5f), new(6, 4, 0.3f) };
+    [Tooltip("Pebble spots along each side of a world cell, on a jittered grid; 0 for none. A pebble is one pixel of plain water, off the strokes and sparkles.")]
+    [SerializeField, Range(0f, 4f)] private float pebblesPerCell;
+    [Tooltip("Chance that a spot holds a pebble.")]
+    [SerializeField, Range(0f, 1f)] private float pebbleChance = 0.5f;
+    [Tooltip("The pebbles' colour.")]
+    [SerializeField] private Color32 pebble = new(54, 116, 140, 255);
 
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.None;
 
     /// <summary>
-    /// Draws the tone and density waves, the stroke spots and each spot's stroke (kept or not, length, phase, companion
-    /// and its side), the sparkle spots and
-    /// each spot's sparkle (kept or not, phase), then the height waves, and paints the tones, the strokes and the
-    /// glint and sparkle phases.
+    /// Draws the tone waves, the bed waves when the bed shows, the density waves, the stroke spots and each spot's
+    /// stroke (kept or not, length, phase, companion and its side), the sparkle spots and each spot's sparkle (kept or
+    /// not, phase), the pebble spots and each spot's pebble (kept or not) when there are pebbles, then the height waves,
+    /// and paints the tones, the bed, the strokes, the pebbles and the glint and sparkle phases. With no bed and no
+    /// pebbles it draws exactly what it drew before they existed, so deep water keeps its pixels.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
@@ -79,6 +95,19 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
         for (int i = 0; i < albedo.Length; i++)
         {
             albedo[i] = darkerShare > 0f && toneField[i] < darkerBelow ? darker : lighterShare > 0f && toneField[i] > lighterAbove ? lighter : water;
+        }
+
+        if (bedShare > 0f)
+        {
+            double[] bedField = TerrainArt.PeriodicNoise(random, bedWaves, size);
+            double bedAbove = Quantile(bedField, 1.0 - bedShare);
+            for (int i = 0; i < albedo.Length; i++)
+            {
+                if (bedField[i] > bedAbove)
+                {
+                    albedo[i] = bed;
+                }
+            }
         }
 
         double[] density = TerrainArt.PeriodicNoise(random, densityWaves, size);
@@ -112,6 +141,19 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
             if (keep && !taken[pixel])
             {
                 glints[pixel] = TerrainArt.SparkleByte(phase);
+            }
+        }
+
+        if (pebblesPerCell > 0f)
+        {
+            foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(pebblesPerCell), jitter, size))
+            {
+                bool keep = random.NextDouble() < pebbleChance;
+                int pixel = (int)spotY * size + (int)spotX;
+                if (keep && !taken[pixel] && glints[pixel] == 0)
+                {
+                    albedo[pixel] = pebble;
+                }
             }
         }
 

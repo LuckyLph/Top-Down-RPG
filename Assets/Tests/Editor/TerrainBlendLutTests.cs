@@ -14,7 +14,8 @@ using UnityEngine.TestTools;
 /// that pair's row only, and the project's water is animated, sunken and meets sand without an outline; a swaying
 /// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's grass
 /// sways and keeps its edge over nothing; the project's dirt, dry grass and plaza meet the other materials
-/// with the edges and overrides TerrainTypes.md's Phase 3 decided. The project's style and materials are only read.
+/// with the edges and overrides TerrainTypes.md's Phase 3 decided, and its shallows glint, sink less than the water and
+/// take the deep water seamlessly (Phase 4). The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -461,6 +462,51 @@ public class TerrainBlendLutTests
             Assert.That(pair.ShadowColour, Is.EqualTo(stoneOverGravel.ShadowColour));
             Assert.That(pair.SoftWholeStones, Is.True);
         }
+    }
+
+    /// <summary>
+    /// The project's shallows (TerrainTypes.md, Phase 4) glint like water, sink less than it and share its corner radii,
+    /// so their edges coincide where both meet the shore; they meet every material with a soft shore, no outline, and
+    /// over sand with a wet sand shadow; the deep water meets them seamlessly, with no outline or shadow but a rim that
+    /// fades it in, marked seamless in the lookup texture, while it keeps its own edge over sand and its default one
+    /// elsewhere.
+    /// </summary>
+    [Test]
+    public void TheProjectsShallows_GlintSinkLessThanWater_AndTheWaterFadesIntoThem()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial sand = ProjectMaterial("Sand");
+        TerrainMaterial shallows = ProjectMaterial("Shallows");
+        TerrainMaterial water = ProjectMaterial("Water");
+
+        Assert.That(shallows.IsAnimated && !shallows.Sways, Is.True, "The shallows glint.");
+        Assert.That(shallows.Height, Is.Not.Null, "The glint phases live in the height texture.");
+        Assert.That(shallows.SinkDepth, Is.InRange(1f, 2f));
+        Assert.That(shallows.SinkDepth, Is.LessThan(water.SinkDepth));
+        Assert.That(shallows.OuterRadius, Is.EqualTo(water.OuterRadius));
+        Assert.That(shallows.InnerRadius, Is.EqualTo(water.InnerRadius));
+        Assert.That(shallows.Edge.DrawOutline, Is.False, "A soft shore.");
+        foreach (string lowerName in new[] { "Grass", "Mud", "Gravel", "Stone" })
+        {
+            Assert.That(style.GetEdge(shallows, ProjectMaterial(lowerName)), Is.SameAs(shallows.Edge), lowerName);
+        }
+
+        TerrainStyle.EdgeSettings overSand = style.GetEdge(shallows, sand);
+        Assert.That(overSand, Is.Not.SameAs(shallows.Edge));
+        Assert.That(overSand.DrawOutline, Is.False);
+        Assert.That(overSand.ShadowColour.r, Is.GreaterThan(overSand.ShadowColour.b), "A wet sand shadow.");
+
+        TerrainStyle.EdgeSettings intoShallows = style.GetEdge(water, shallows);
+        Assert.That(intoShallows.Seamless, Is.True);
+        Assert.That(intoShallows.DrawOutline, Is.False);
+        Assert.That(intoShallows.ShadowAlpha, Is.Zero);
+        Assert.That(intoShallows.RimWidth, Is.GreaterThan(0f), "The deep water fades in.");
+        Assert.That(style.GetEdge(water, sand), Is.Not.SameAs(intoShallows));
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { sand, shallows, water });
+        Assert.That(PairTexel(texels, 3, 2, 1, 3).a, Is.Zero, "water over shallows is seamless");
+        Assert.That(PairTexel(texels, 3, 2, 0, 3).a, Is.EqualTo(1f), "water over sand is not");
+        Assert.That(PairTexel(texels, 3, 1, 0, 3).a, Is.EqualTo(1f), "shallows over sand is not");
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn).r, Is.EqualTo(shallows.SinkDepth));
     }
 
     /// <summary>

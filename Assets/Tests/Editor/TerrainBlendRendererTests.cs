@@ -18,7 +18,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// cell changes; editing the style or a material it draws rebuilds it, a layer swapped to another material follows only
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
-/// layer, and a material without a height still builds; an animated layer gives the renderer its rate, which the Scene
+/// layer, and a material without a height still builds; a sunken layer shows its bank over an ordinary pair and none
+/// over a seamless one; an animated layer gives the renderer its rate, which the Scene
 /// view follows; a fixed time for animated materials reaches the runtime material and clears without a rebuild; a
 /// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
 /// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
@@ -293,6 +294,99 @@ public class TerrainBlendRendererTests
         Assert.That(underCover.g, Is.GreaterThan(underCover.r), "A weed rooted under the cover shows the ground.");
         Assert.That(belowEdge.g, Is.GreaterThan(belowEdge.r), "A weed rooted below the layer's edge shows the ground.");
         Assert.That(intoCover.g, Is.GreaterThan(intoCover.r), "A weed growing up under the cover shows the ground.");
+    }
+
+    /// <summary>
+    /// A sunken layer (deep water) shows its bank along a top edge over a lower layer it meets with an ordinary pair,
+    /// in that layer's bank colour, and none along a top edge over one it meets seamlessly (shallows, the same water's
+    /// surface), where its own interior runs up to the edge. A blue sunken layer fills the bottom two rows, a green
+    /// layer lies over the left half of the row above it and green ground under everything, each with a red bank colour;
+    /// no edge draws an outline, rim or shadow, and the sunken layer meets the left layer seamlessly. Renders from a later
+    /// editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ASunkenLayer_ShowsNoBank_OverALayerItMeetsSeamlessly()
+    {
+        Color32 green = new(40, 160, 40, 255);
+        Color32 blue = new(30, 60, 200, 255);
+        Color32 red = new(220, 30, 30, 255);
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial ground = SolidMaterial("Ground", green, bare);
+        TerrainMaterial seamlessBelow = SolidMaterial("Shallow", green, bare);
+        TerrainMaterial sunken = SolidMaterial("Sunken", blue, bare);
+        foreach (TerrainMaterial material in new[] { ground, seamlessBelow })
+        {
+            SerializedObject settings = new(material);
+            settings.FindProperty("bankColour").colorValue = red;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        SerializedObject sinking = new(sunken);
+        sinking.FindProperty("sinkDepth").floatValue = 4f;
+        sinking.FindProperty("bankShadow").floatValue = 0f;
+        sinking.ApplyModifiedPropertiesWithoutUndo();
+        TerrainStyle seamlessStyle = TestTerrainStyle.Create(createdObjects, new TerrainStyle.PairOverride(sunken, seamlessBelow, new TerrainStyle.EdgeSettings(0f, null, false, Color.black, Color.black, 0f, 0f, seamless: true)));
+
+        GameObject gridObject = Track(new GameObject("SunkenGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap[] tilemaps = new Tilemap[3];
+        for (int i = 0; i < tilemaps.Length; i++)
+        {
+            tilemaps[i] = new GameObject($"Layer{i}", typeof(Tilemap)).GetComponent<Tilemap>();
+            tilemaps[i].transform.SetParent(gridObject.transform);
+        }
+
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
+            }
+
+            tilemaps[2].SetTile(new Vector3Int(x, 0, 0), tile);
+            tilemaps[2].SetTile(new Vector3Int(x, 1, 0), tile);
+            if (x < 4)
+            {
+                tilemaps[1].SetTile(new Vector3Int(x, 2, 0), tile);
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(seamlessStyle, new TerrainBlendRenderer.Layer(tilemaps[0], ground), new TerrainBlendRenderer.Layer(tilemaps[1], seamlessBelow), new TerrainBlendRenderer.Layer(tilemaps[2], sunken));
+        gridObject.SetActive(true);
+        Rect world = new(0f, 0f, 8f, 4f);
+        Color32 underSeamless = default;
+        Color32 underGround = default;
+        for (int frame = 0; frame < 30 && underGround.a == 0; frame++)
+        {
+            yield return null;
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            underSeamless = pixels.GetPixel(48, 61);
+            underGround = pixels.GetPixel(208, 61);
+            Object.DestroyImmediate(pixels);
+        }
+
+        Assert.That(underGround.r, Is.GreaterThan(underGround.b), "The bank shows over the ground.");
+        Assert.That(underSeamless.b, Is.GreaterThan(underSeamless.r), "No bank shows over the seamless layer.");
+    }
+
+    /// <summary>
+    /// A material named <paramref name="name"/> of one colour, with no cell field and a flat height, and
+    /// <paramref name="edge"/> as its default edge.
+    /// </summary>
+    private TerrainMaterial SolidMaterial(string name, Color32 colour, TerrainStyle.EdgeSettings edge)
+    {
+        Color32[] albedo = new Color32[128 * 128];
+        Color32[] height = new Color32[128 * 128];
+        for (int i = 0; i < albedo.Length; i++)
+        {
+            albedo[i] = colour;
+            height[i] = new Color32(128, 128, 0, 255);
+        }
+
+        TerrainMaterial material = TerrainMaterial.Create(name, Texture($"{name} albedo", albedo), null, 4, TerrainMaterial.CellMode.None, colour, edge, Texture($"{name} height", height));
+        createdObjects.Add(material);
+        return material;
     }
 
     /// <summary>

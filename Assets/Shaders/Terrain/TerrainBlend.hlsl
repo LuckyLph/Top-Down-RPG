@@ -660,14 +660,38 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
     return colour;
 }
 
+// How much of layer m's edge at a pixel lies over another layer along a seamless pair (deep water over shallows): the
+// two are one surface there, so a sunken layer shows no bank over it.
+float TBSeamlessBelow(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
+{
+    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    float seamless = 0.0;
+    [loop]
+    for (uint k = 1u; k <= m; k++)
+    {
+        [branch]
+        if (w[k] > 0.0)
+        {
+            seamless += w[k] * (1.0 - TBLut(ins, 3, firstRow + (int)k).a);
+        }
+    }
+    return seamless;
+}
+
 // How many pixels of bank show at a pixel inside sunken layer m's edge (its sink depth above 0, water): the sink depth
-// times how much the edge faces up the screen there and how much of it lies over another layer (1 - w[0]), so the bank
-// is highest along edges facing up, thins as they turn sideways and is gone along edges facing down or over nothing.
-// The direction is the bare shape's in crisp, so the bank keeps one height along a straight edge and its foot follows
-// the edge's noise. 0 for a level layer, and deeper inside than the bank and its shadow.
+// times how much the edge faces up the screen there and how much of it lies over another layer along a pair that is not
+// seamless (1 - w[0], less TBSeamlessBelow), so the bank is highest along edges facing up, thins as they turn sideways
+// and is gone along edges facing down, over nothing or over a layer of the same surface. The direction is the bare
+// shape's in crisp, so the bank keeps one height along a straight edge and its foot follows the edge's noise. 0 for a
+// level layer, and deeper inside than the bank and its shadow.
 float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float depth)
 {
-    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).x * (1.0 - w[0]);
+    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).x;
+    [branch]
+    if (sink > 0.0)
+    {
+        sink *= (1.0 - w[0]) - TBSeamlessBelow(ins, m, w);
+    }
     float bank = 0.0;
     [branch]
     if (sink > 0.0 && depth < 2.0 * sink + 1.0)
@@ -683,20 +707,36 @@ float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner co
 }
 
 // The colour of sunken layer m's bank at a pixel: the bank colours of the layers it meets there (what each shows when
-// cut, such as the dirt under grass), blended by their pair weights, which leave out nothing (w[0]).
+// cut, such as the dirt under grass), blended by their pair weights, which leave out nothing (w[0]) and the layers met
+// along a seamless pair, which show no bank.
 float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
+    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
     float3 face = float3(0.0, 0.0, 0.0);
+    float seamless = 0.0;
     [loop]
     for (uint k = 1u; k <= m; k++)
     {
         [branch]
         if (w[k] > 0.0)
         {
-            face += w[k] * TBLut(ins, TB_BANK_COLOUR_COLUMN, (int)k).rgb;
+            float open = TBLut(ins, 3, firstRow + (int)k).a;
+            face += w[k] * open * TBLut(ins, TB_BANK_COLOUR_COLUMN, (int)k).rgb;
+            seamless += w[k] * (1.0 - open);
         }
     }
-    return face / max(1.0 - w[0], 1e-4);
+    return face / max(1.0 - w[0] - seamless, 1e-4);
+}
+
+// The edge pixel of layer m along its seamless pairs: its own interior under the rim's first texel, so a seamless pair
+// with a rim (deep water fading in over shallows) starts its rim at the edge, and one without (dry grass over grass)
+// shows the interior alone.
+float3 TBSeamlessEdge(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
+{
+    float3 own = TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, hasCentre, known);
+    float band;
+    float4 rim = TBRamp(ins, e, m, w, 0.0, band);
+    return own * (1.0 - rim.a) + rim.rgb;
 }
 
 // Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank colour of the layer it
@@ -857,7 +897,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         }
         else if (d > -0.5 && d < 0.5)
         {
-            float3 own = e.seamless > 0.0 ? TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, hasCentre, centre) : edge;
+            float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, d, pixel, worldPixel, corner, hasCentre, centre) : edge;
             result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)), 1.0);
         }
         else if (d <= -0.5)
@@ -904,7 +944,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     else if (d > -0.5)
     {
         float edgeAlpha = e.shadowAlpha + (1.0 - e.shadowAlpha) * (0.5 - d);
-        float3 own = e.seamless > 0.0 ? TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, false, (TBCentre)0) : edge;
+        float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, d, pixel, worldPixel, corner, false, (TBCentre)0) : edge;
         result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)) * edgeAlpha, edgeAlpha);
     }
     else

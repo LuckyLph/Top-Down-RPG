@@ -17,7 +17,8 @@ using Object = UnityEngine.Object;
 /// with one value per chip or stone, and glint and sparkle phases only in the water recipes and sway weights only in
 /// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column; caustic
 /// water's net breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap,
-/// and pond water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's
+/// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
+/// pebbles only when asked (shallows); tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
 /// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
 /// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; writing the
@@ -168,7 +169,7 @@ public class TerrainMaterialRecipeTests
     [Test]
     public void TheProjectsMaterials_KeepTheirTexturesInAFolderOfTheirOwn()
     {
-        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza" })
+        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza", "Shallows" })
         {
             TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
             string folder = $"{TerrainMaterialWriter.TextureFolder}/{name}";
@@ -760,6 +761,56 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
+    /// Pond water shows no bed by default (deep water). With a bed share (the Shallows material's), about that share of
+    /// the pixels off the strokes shows the bed tone, the strokes still glint over it, and pebbles lie only on plain
+    /// water, never on a stroke or a sparkle; every pixel the bed and pebbles leave alone keeps its colour and phase.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_ShowTheirBed_OnlyWhenAsked()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 bed = settings.FindProperty("bed").colorValue;
+        Color32 pebble = settings.FindProperty("pebble").colorValue;
+        Color32 resting = settings.FindProperty("resting").colorValue;
+        TerrainTextures deep = recipe.Generate(Seed);
+
+        settings.FindProperty("bedShare").floatValue = 0.3f;
+        settings.FindProperty("pebblesPerCell").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures shallow = recipe.Generate(Seed);
+
+        int bedPixels = 0;
+        int plain = 0;
+        int pebbles = 0;
+        int strokes = 0;
+        for (int i = 0; i < deep.Albedo.Length; i++)
+        {
+            Assert.That(SameColour(deep.Albedo[i], bed) || SameColour(deep.Albedo[i], pebble), Is.False, $"pixel {i}: deep water shows a bed");
+            Color32 colour = shallow.Albedo[i];
+            int code = shallow.Height[i].b;
+            if (SameColour(colour, resting))
+            {
+                strokes++;
+                Assert.That(code > 0 && code < 128, Is.True, $"pixel {i}: a stroke over the bed glints");
+                continue;
+            }
+
+            plain++;
+            bedPixels += SameColour(colour, bed) ? 1 : 0;
+            if (SameColour(colour, pebble))
+            {
+                pebbles++;
+                Assert.That(code, Is.Zero, $"pixel {i}: a pebble on a stroke or a sparkle");
+            }
+        }
+
+        Assert.That((double)bedPixels / plain, Is.InRange(0.22, 0.38), "bed share");
+        Assert.That(strokes, Is.GreaterThan(5));
+        Assert.That(pebbles, Is.GreaterThan(0));
+    }
+
+    /// <summary>
     /// How many sparkle pixels in a row lie at and to the left of (<paramref name="x"/>, <paramref name="y"/>).
     /// </summary>
     private static int RunLength(Color32[] height, int x, int y, int size)
@@ -1265,7 +1316,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(9));
+        Assert.That(checkedRecipes, Is.EqualTo(10));
     }
 
     /// <summary>

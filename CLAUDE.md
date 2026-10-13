@@ -21,6 +21,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/TerrainBlending.md` is the spec for drawing the ground with a blending shader instead of dual-grid tilesets. Follow it when working on ground rendering, terrain materials, the terrain brush or the ground and wall tilesets, and tick off its phase checklist as steps land.
 
+`Docs/TerrainTypes.md` is the plan for the next ground materials (dirt, dry grass, meadow, tall grass, planks, plaza, shallows, ocean, lava, snow, ice, raised ground) and per-area layer sets. Follow it when adding a terrain type or changing which layers an area uses, and tick off its phase checklist as steps land.
+
 `Docs/ArtCredits.md` lists every piece of third-party art with its authors and licence. Add to it in the same commit that imports art, and import nothing whose licence is unknown or restrictive.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.

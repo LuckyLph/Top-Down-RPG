@@ -785,7 +785,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1315498082}
-  - {fileID: 448672627}
   - {fileID: 1651780244}
   - {fileID: 628061827}
   - {fileID: 1043274343}
@@ -1831,91 +1830,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7762586475176888670, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
   m_PrefabInstance: {fileID: 423241250}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &448672624
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 448672627}
-  - component: {fileID: 448672625}
-  - component: {fileID: 448672626}
-  m_Layer: 0
-  m_Name: WeedsTilemap
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!1839735485 &448672625
-Tilemap:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 448672624}
-  m_Enabled: 1
-  m_Tiles: {}
-  m_AnimatedTiles: {}
-  m_TileAssetArray: []
-  m_TileSpriteArray: []
-  m_TileMatrixArray: []
-  m_TileColorArray: []
-  m_TileObjectToInstantiateArray: []
-  m_AnimationFrameRate: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Origin: {x: 0, y: 0, z: 0}
-  m_Size: {x: 0, y: 0, z: 1}
-  m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
-  m_TileOrientation: 0
-  m_TileOrientationMatrix:
-    e00: 1
-    e01: 0
-    e02: 0
-    e03: 0
-    e10: 0
-    e11: 1
-    e12: 0
-    e13: 0
-    e20: 0
-    e21: 0
-    e22: 1
-    e23: 0
-    e30: 0
-    e31: 0
-    e32: 0
-    e33: 1
---- !u!114 &448672626
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 448672624}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 33c305fd5f406cf9dfa12c3ab2e34567, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
-  terrainType: {fileID: 11400000, guid: c43c9e75c7ee91d45aa213ed5a270dc2, type: 2}
-  priority: 1
---- !u!4 &448672627
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 448672624}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 162573764}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &454862527
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3723,7 +3637,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: 81eb8d32cf6eda44589a4da323a86b7c, type: 2}
-  priority: 3
+  priority: 2
 --- !u!4 &628061827
 Transform:
   m_ObjectHideFlags: 0
@@ -5586,7 +5500,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
-  priority: 4
+  priority: 3
 --- !u!1839735485 &1043274346
 Tilemap:
   m_ObjectHideFlags: 0
@@ -23104,7 +23018,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: 9b1cce5b11f53524e9d0e19ded4520f0, type: 2}
-  priority: 2
+  priority: 1
 --- !u!4 &1651780244
 Transform:
   m_ObjectHideFlags: 0
@@ -23702,8 +23616,6 @@ MonoBehaviour:
   layers:
   - tilemap: {fileID: 1315498085}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
-  - tilemap: {fileID: 448672625}
-    material: {fileID: 11400000, guid: b6de2d0d62e71d34fa70dd7ffebb0c03, type: 2}
   - tilemap: {fileID: 1651780242}
     material: {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
   - tilemap: {fileID: 628061825}
@@ -24687,7 +24599,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: c00b3a5a94fb58d44895db1e04a2f1f7, type: 2}
-  priority: 6
+  priority: 5
 --- !u!4 &1779650867
 Transform:
   m_ObjectHideFlags: 0
@@ -26768,7 +26680,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
-  priority: 5
+  priority: 4
 --- !u!1839735485 &2075953399
 Tilemap:
   m_ObjectHideFlags: 0

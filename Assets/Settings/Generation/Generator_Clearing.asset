@@ -19,11 +19,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
-  weeds:
-    tilemapName: WeedsTilemap
-    tile: {fileID: 11400000, guid: 1c59904b9a502ee40a91ec01b67cdc72, type: 2}
-    terrainType: {fileID: 11400000, guid: c43c9e75c7ee91d45aa213ed5a270dc2, type: 2}
-    material: {fileID: 11400000, guid: b6de2d0d62e71d34fa70dd7ffebb0c03, type: 2}
   sand:
     tilemapName: SandTilemap
     tile: {fileID: 11400000, guid: 83e753f40a35db948a5c2da61af65f3a, type: 2}

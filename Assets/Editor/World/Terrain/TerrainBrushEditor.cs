@@ -20,13 +20,16 @@ using UnityEngine.Tilemaps;
 /// brush changes, the paint target changes, after an undo or redo, when a scene closes, before an assembly reload and
 /// when the editor is disabled. During the Scene view's GUI a clear waits for the end of it, so a hover that replaces
 /// the preview uploads once; a clear that happens, and a preview that added chunks, have the Scene view repaint so
-/// they show at once. Updating the preview allocates nothing once its list holds the largest stroke. On every other
-/// tilemap, a renderer that is off or has not built included, it is the <see cref="DualGridBrushEditor"/>.
+/// they show at once. Updating the preview allocates nothing once its list holds the largest stroke. In the Tile
+/// Palette it warns when the picked tile is a ground material's that the target layer is not drawn with
+/// (<see cref="PaletteProblem"/>), naming the area's layer for it or saying the area has none. On every other tilemap,
+/// a renderer that is off or has not built included, it is the <see cref="DualGridBrushEditor"/>.
 /// </summary>
 [CustomEditor(typeof(TerrainBrush))]
 public class TerrainBrushEditor : DualGridBrushEditor
 {
     private readonly List<Vector3Int> previewCells = new();
+    private readonly List<TileBase> pickedTiles = new();
     private TerrainBlendRenderer previewRenderer;
     private GridBrushBase.Tool sceneTool;
     private bool wasExecuting;
@@ -85,6 +88,72 @@ public class TerrainBrushEditor : DualGridBrushEditor
         {
             ClearTerrainPreviewNow();
         }
+    }
+
+    /// <summary>
+    /// Draws the brush's settings in the Tile Palette, then a warning when the picked tiles do not suit the paint
+    /// target's ground layer (<see cref="PaletteProblem"/>).
+    /// </summary>
+    public override void OnPaintInspectorGUI()
+    {
+        base.OnPaintInspectorGUI();
+        pickedTiles.Clear();
+        foreach (GridBrush.BrushCell cell in brush.cells)
+        {
+            pickedTiles.Add(cell.tile);
+        }
+
+        string problem = PaletteProblem(GridPaintingState.scenePaintTarget, pickedTiles);
+        if (problem != null)
+        {
+            EditorGUILayout.HelpBox(problem, MessageType.Warning);
+        }
+    }
+
+    /// <summary>
+    /// Why painting <paramref name="tiles"/> on <paramref name="target"/> would not paint what they show, or null when
+    /// it would or <paramref name="target"/> is no ground layer (a tilemap a <see cref="TerrainBlendRenderer"/> lists).
+    /// A ground layer is drawn with its own material whatever tile its cells hold, so a ground material's tile (see
+    /// <see cref="TerrainTileWriter.MaterialOf"/>) only paints its material on that material's layer: on another layer
+    /// of the area it names the layer to pick instead, and for a material the area has no layer for (each area lists
+    /// only the layers it uses, Docs/TerrainTypes.md) it says so and how to add one.
+    /// </summary>
+    internal static string PaletteProblem(GameObject target, IEnumerable<TileBase> tiles)
+    {
+        if (target == null || !target.TryGetComponent(out Tilemap tilemap))
+        {
+            return null;
+        }
+
+        TerrainBlendRenderer renderer = TerrainBlendRenderer.FindLayerDrawing(tilemap, out int layer);
+        if (renderer == null)
+        {
+            return null;
+        }
+
+        TerrainMaterial drawn = renderer.Layers[layer].Material;
+        foreach (TileBase tile in tiles)
+        {
+            TerrainMaterial material = TerrainTileWriter.MaterialOf(tile);
+            if (material == null || material == drawn)
+            {
+                continue;
+            }
+
+            string drawnName = drawn != null ? drawn.name : "no material";
+            for (int i = 0; i < renderer.Layers.Count; i++)
+            {
+                TerrainBlendRenderer.Layer other = renderer.Layers[i];
+                if (other.Material == material && other.Tilemap != null)
+                {
+                    return $"{tile.name} is {material.name}'s tile, which this area draws on {other.Tilemap.name}; painted on {tilemap.name} it would be drawn as {drawnName}. Pick {other.Tilemap.name} as the paint target.";
+                }
+            }
+
+            return $"{material.name} is not one of this area's ground layers, so {tile.name} painted on {tilemap.name} would be drawn as {drawnName}. To paint {material.name} here, add its layer to the area's generator and run Convert Ground.";
+        }
+
+        return null;
     }
 
     /// <summary>

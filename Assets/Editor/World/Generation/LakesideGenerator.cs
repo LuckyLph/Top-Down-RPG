@@ -134,8 +134,9 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, weeds, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its
-    /// cells, so the road and the trail cross weeds, mud and sand and the lake covers everything under it.
+    /// Grass, weeds, sand, mud, gravel, stone, then water, in the style's layer order: each layer is drawn over the ones
+    /// before it and decides its cells, so the road and the trail cross weeds, mud and sand and the lake covers
+    /// everything under it.
     /// </summary>
     public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, sand, mud, gravel, stone, water };
 
@@ -171,11 +172,11 @@ public sealed class LakesideGenerator : AreaGenerator
         public Run(LakesideGenerator generator, int seed)
         {
             settings = generator;
-            builder = new AreaLayoutBuilder(seed);
-            water = builder.Layout.TerrainCells(AreaLayoutBuilder.WaterLayer);
-            sand = builder.Layout.TerrainCells(AreaLayoutBuilder.SandLayer);
-            mud = builder.Layout.TerrainCells(AreaLayoutBuilder.MudLayer);
-            weeds = builder.Layout.TerrainCells(AreaLayoutBuilder.WeedsLayer);
+            builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
+            water = builder.Layout.TerrainCells(generator.water);
+            sand = builder.Layout.TerrainCells(generator.sand);
+            mud = builder.Layout.TerrainCells(generator.mud);
+            weeds = builder.Layout.TerrainCells(generator.weeds);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
         }

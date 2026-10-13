@@ -15,8 +15,9 @@ public abstract class AreaGenerator : ScriptableObject
 {
     /// <summary>
     /// One ground layer a generator paints: a plain data tilemap holding one plain tile in its filled cells, drawn by
-    /// the area's <see cref="TerrainBlendRenderer"/> with a material. A layer's place in the generator's list is its
-    /// draw order and its navigation priority, so it has neither of its own.
+    /// the area's <see cref="TerrainBlendRenderer"/> with a material. Its material's place in the style's layer order
+    /// decides where it is drawn, and its place among the area's layers is its navigation priority, so it has neither
+    /// of its own.
     /// </summary>
     [Serializable]
     public class TerrainLayer
@@ -85,9 +86,12 @@ public abstract class AreaGenerator : ScriptableObject
     public TerrainStyle TerrainStyle => terrainStyle;
 
     /// <summary>
-    /// The terrain layers this generator paints, bottom first: each one's index is its draw order in the area's
-    /// <see cref="TerrainBlendRenderer"/> and its navigation priority. <see cref="AreaLayout.TerrainCells"/> is indexed
-    /// like this list.
+    /// The terrain layers this generator paints, bottom first: only the ones its areas use, at most
+    /// <see cref="TerrainControlMap.MaxLayers"/>, their materials a subsequence of the style's
+    /// <see cref="TerrainStyle.LayerOrder"/> (each listed there, in its order, none twice). A layer's index here is its
+    /// place among the generator's layers, and in an area drawing nothing else its draw order in the area's
+    /// <see cref="TerrainBlendRenderer"/> and its navigation priority. <see cref="AreaLayout.TerrainCells(int)"/> is
+    /// indexed like this list.
     /// </summary>
     public abstract IReadOnlyList<TerrainLayer> TerrainLayers { get; }
 

@@ -14,13 +14,23 @@ public static class TestTerrainStyle
     public const string ShaderPath = "Assets/Shaders/Terrain/TerrainBlend.shadergraph";
 
     /// <summary>
-    /// A style with the project's terrain shader and <paramref name="pairOverrides"/>, named TerrainStyle.
+    /// A style with the project's terrain shader and <paramref name="pairOverrides"/>, and no layer order, named
+    /// TerrainStyle.
     /// </summary>
     public static TerrainStyle Create(List<Object> created, params TerrainStyle.PairOverride[] pairOverrides)
     {
+        return Create(created, new TerrainMaterial[0], pairOverrides);
+    }
+
+    /// <summary>
+    /// A style with the project's terrain shader, <paramref name="layerOrder"/> as its layer order and
+    /// <paramref name="pairOverrides"/>, named TerrainStyle.
+    /// </summary>
+    public static TerrainStyle Create(List<Object> created, TerrainMaterial[] layerOrder, params TerrainStyle.PairOverride[] pairOverrides)
+    {
         Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPath);
         Assert.That(shader, Is.Not.Null);
-        TerrainStyle style = TerrainStyle.Create(shader, pairOverrides);
+        TerrainStyle style = TerrainStyle.Create(shader, layerOrder, pairOverrides);
         style.name = "TerrainStyle";
         created.Add(style);
         return style;

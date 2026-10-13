@@ -62,16 +62,8 @@ public sealed class VillageForestGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
-    [Tooltip("Generated empty: painted by hand. Grass with swaying weeds, drawn over the grass without an edge.")]
-    [SerializeField] private TerrainLayer weeds = new();
-    [Tooltip("Generated empty: painted by hand.")]
-    [SerializeField] private TerrainLayer sand = new();
-    [Tooltip("Generated empty: painted by hand.")]
-    [SerializeField] private TerrainLayer mud = new();
     [SerializeField] private TerrainLayer gravel = new();
     [SerializeField] private TerrainLayer stone = new();
-    [Tooltip("Generated empty: painted by hand. Drawn over every other layer, so it decides its cells: water cannot be walked.")]
-    [SerializeField] private TerrainLayer water = new();
 
     [Header("Shape")]
     [Tooltip("Width and height of the area in cells, before its outline wobbles.")]
@@ -172,11 +164,10 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, weeds, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its
-    /// cells, so the paths cross weeds, sand and mud and water covers everything. Weeds, sand, mud and water are
-    /// generated empty.
+    /// Grass, gravel, then stone, in the style's layer order: each layer is drawn over the ones before it and decides its
+    /// cells, so the street and the square cover the trails where they meet.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, sand, mud, gravel, stone, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, gravel, stone };
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.
@@ -240,7 +231,7 @@ public sealed class VillageForestGenerator : AreaGenerator
         public Run(VillageForestGenerator generator, int seed)
         {
             settings = generator;
-            builder = new AreaLayoutBuilder(seed);
+            builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
             halfSize = new Vector2(Mathf.Max(24, generator.size.x), Mathf.Max(16, generator.size.y)) * 0.5f;
             villageHalf = new Vector2(Mathf.Max(8, generator.villageSize.x), Mathf.Max(8, generator.villageSize.y)) * 0.5f;
             clearingHalf = new Vector2(Mathf.Max(8, generator.clearingSize.x), Mathf.Max(8, generator.clearingSize.y)) * 0.5f;

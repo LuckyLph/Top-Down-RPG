@@ -149,3 +149,11 @@ MonoBehaviour:
       softBandColour: {r: 0.43137255, g: 0.6745098, b: 0.8, a: 1}
       softWholeStones: 0
       seamless: 1
+  layerOrder:
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  - {fileID: 11400000, guid: b6de2d0d62e71d34fa70dd7ffebb0c03, type: 2}
+  - {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
+  - {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
+  - {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
+  - {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  - {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}

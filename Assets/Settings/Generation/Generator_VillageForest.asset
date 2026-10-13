@@ -19,21 +19,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
-  weeds:
-    tilemapName: WeedsTilemap
-    tile: {fileID: 11400000, guid: 1c59904b9a502ee40a91ec01b67cdc72, type: 2}
-    terrainType: {fileID: 11400000, guid: c43c9e75c7ee91d45aa213ed5a270dc2, type: 2}
-    material: {fileID: 11400000, guid: b6de2d0d62e71d34fa70dd7ffebb0c03, type: 2}
-  sand:
-    tilemapName: SandTilemap
-    tile: {fileID: 11400000, guid: 83e753f40a35db948a5c2da61af65f3a, type: 2}
-    terrainType: {fileID: 11400000, guid: 9b1cce5b11f53524e9d0e19ded4520f0, type: 2}
-    material: {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
-  mud:
-    tilemapName: MudTilemap
-    tile: {fileID: 11400000, guid: d19e7df10fae9cd49b06493643e1c419, type: 2}
-    terrainType: {fileID: 11400000, guid: 81eb8d32cf6eda44589a4da323a86b7c, type: 2}
-    material: {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
   gravel:
     tilemapName: GravelTilemap
     tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
@@ -44,11 +29,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
     terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
     material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
-  water:
-    tilemapName: WaterTilemap
-    tile: {fileID: 11400000, guid: 6819f86dffc046147a17f9a41b30e252, type: 2}
-    terrainType: {fileID: 11400000, guid: c00b3a5a94fb58d44895db1e04a2f1f7, type: 2}
-    material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
   size: {x: 92, y: 62}
   squareness: 4
   edgeWobble: 0.06

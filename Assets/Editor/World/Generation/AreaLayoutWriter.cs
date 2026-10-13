@@ -11,9 +11,10 @@ using UnityEngine.Tilemaps;
 /// layer's data tilemap under the grid is repainted with the layer's plain tile (and created, with its navigation
 /// source, when the scene has none) and is left a plain tilemap: a dual-grid module, render tilemap or Tilemap Renderer
 /// still on it is removed, since every cell is repainted anyway. The grid's <see cref="TerrainBlendRenderer"/> (added
-/// when missing) draws the layers in the generator's order with their materials and the generator's terrain style, each
-/// layer's navigation priority is its place in that order, and the area's <see cref="AreaTerrain"/> fills the layers it
-/// lists with their tiles. Every prop under the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is
+/// when missing) draws the layers in the generator's order with their materials and the generator's terrain style, and
+/// any layer it drew that the generator does not list is kept at its place in the style's layer order when painted,
+/// and removed when empty (<see cref="AreaGroundSetup.SetUpLayers"/>); each layer's navigation priority is its place in
+/// the renderer, and the area's <see cref="AreaTerrain"/> fills the layers it lists with their tiles. Every prop under the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is
 /// replaced, and the party's start <see cref="SpawnPoint"/> moves to the layout's spawn cell. The collision tilemap and
 /// everything else in the scene stay as they are.
 /// </summary>
@@ -25,8 +26,9 @@ public static class AreaLayoutWriter
     /// <summary>
     /// Replaces the terrain, props and mob spawns of <paramref name="grid"/>'s scene with <paramref name="layout"/>,
     /// laid out by <paramref name="generator"/>, and moves the start spawn point. Logs an error and changes nothing
-    /// when the grid's cells are not one unit, the generator has no terrain style or too many layers, or a terrain
-    /// layer lacks a tilemap name, a tile or a material.
+    /// when the grid's cells are not one unit, the layout was laid out with other layers than the generator's, or the
+    /// generator's layers cannot be set up (<see cref="AreaGroundSetup.Problem"/>: no terrain style, too many layers, a
+    /// layer lacking a tilemap name, a tile or a material, or layers out of the style's layer order).
     /// </summary>
     public static bool Write(Grid grid, AreaGenerator generator, AreaLayout layout)
     {
@@ -42,18 +44,14 @@ public static class AreaLayoutWriter
         int undoGroup = Undo.GetCurrentGroup();
 
         List<string> changes = new();
-        Tilemap[] tilemaps = new Tilemap[layers.Count];
-        TerrainMaterial[] materials = new TerrainMaterial[layers.Count];
+        Tilemap[] tilemaps = AreaGroundSetup.SetUpLayers(grid, generator.TerrainStyle, layers, generator.name, changes);
         TileBase[] tiles = new TileBase[layers.Count];
         for (int i = 0; i < layers.Count; i++)
         {
-            tilemaps[i] = AreaGroundSetup.PrepareLayer(grid, layers[i], i, changes);
-            materials[i] = layers[i].Material;
             tiles[i] = layers[i].Tile;
             Paint(tilemaps[i], layers[i].Tile, layout.TerrainCells(i));
         }
 
-        AreaGroundSetup.SetRenderer(grid, generator.TerrainStyle, tilemaps, materials, changes);
         AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
         WriteProps(grid, scene, layout.Props);
         WriteMobSpawns(grid, scene, layout.Mobs);
@@ -79,9 +77,9 @@ public static class AreaLayoutWriter
     }
 
     /// <summary>
-    /// Whether the layout can be written: a grid of one-unit cells, a terrain style on the generator, at most
-    /// <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a material,
-    /// and as many layers in the layout as the generator has. Logs an error for the first problem.
+    /// Whether the layout can be written: a grid of one-unit cells, a layout of the generator's layers (as many, with
+    /// the same materials), and layers that can be set up (<see cref="AreaGroundSetup.CanSetUp"/>). Logs an error for
+    /// the first problem.
     /// </summary>
     private static bool CanWrite(Grid grid, AreaGenerator generator, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaLayout layout)
     {
@@ -95,6 +93,15 @@ public static class AreaLayoutWriter
         {
             Debug.LogError($"The layout has {layout.TerrainLayerCount} terrain layers but {generator.name} has {layers.Count}.", generator);
             return false;
+        }
+
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (layout.TerrainLayers[i] == null || layers[i] == null || layout.TerrainLayers[i].Material != layers[i].Material)
+            {
+                Debug.LogError($"The layout's terrain layer {i} is not {generator.name}'s; generate the layout again.", generator);
+                return false;
+            }
         }
 
         return AreaGroundSetup.CanSetUp(generator.name, generator.TerrainStyle, layers, generator);

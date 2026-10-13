@@ -5,22 +5,14 @@ using Random = System.Random;
 
 /// <summary>
 /// The shared state and steps of one generation, used by the generators' runs: the seeded random source, the layout
-/// being filled with its grass, gravel and stone cells (its weeds, sand, mud and water layers are the generators' own
-/// to fill), how deep each grass cell lies inside the edge, and which cells are kept free of blocking props, covered by
-/// one, or hold a walk-through prop. Iteration always goes through ordered lists, never hash sets, so a seed gives the
-/// same layout every time.
+/// being filled with its grass, gravel and stone cells (its other layers are the generators' own to fill, through
+/// <see cref="AreaLayout.TerrainCells(AreaGenerator.TerrainLayer)"/>), how deep each grass cell lies inside the edge,
+/// and which cells are kept free of blocking props, covered by one, or hold a walk-through prop. Layers are found by the
+/// generator's own layer objects, never by a fixed index, since each generator lists only the layers it uses.
+/// Iteration always goes through ordered lists, never hash sets, so a seed gives the same layout every time.
 /// </summary>
 internal sealed class AreaLayoutBuilder
 {
-    public const int GrassLayer = 0;
-    public const int WeedsLayer = 1;
-    public const int SandLayer = 2;
-    public const int MudLayer = 3;
-    public const int GravelLayer = 4;
-    public const int StoneLayer = 5;
-    public const int WaterLayer = 6;
-    public const int LayerCount = 7;
-
     private const float SampleStep = 0.2f;
     private const float PathEdgeAllowance = 0.05f;
     private const int OutlineHarmonics = 4;
@@ -32,16 +24,17 @@ internal sealed class AreaLayoutBuilder
     private readonly Dictionary<Vector3Int, int> edgeDistance = new();
 
     /// <summary>
-    /// Prepares an empty layout of the generators' seven layers, of which grass, gravel and stone are laid, and a random
-    /// source seeded with <paramref name="seed"/>.
+    /// Prepares an empty layout of <paramref name="layers"/>, a generator's terrain layers, whose
+    /// <paramref name="grass"/>, <paramref name="gravel"/> and <paramref name="stone"/> layers the shared steps lay, and
+    /// a random source seeded with <paramref name="seed"/>.
     /// </summary>
-    public AreaLayoutBuilder(int seed)
+    public AreaLayoutBuilder(int seed, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer grass, AreaGenerator.TerrainLayer gravel, AreaGenerator.TerrainLayer stone)
     {
         random = new Random(seed);
-        Layout = new AreaLayout(LayerCount);
-        Grass = Layout.TerrainCells(GrassLayer);
-        Gravel = Layout.TerrainCells(GravelLayer);
-        Stone = Layout.TerrainCells(StoneLayer);
+        Layout = new AreaLayout(layers);
+        Grass = Layout.TerrainCells(grass);
+        Gravel = Layout.TerrainCells(gravel);
+        Stone = Layout.TerrainCells(stone);
     }
 
     public AreaLayout Layout { get; }

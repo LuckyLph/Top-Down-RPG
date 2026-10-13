@@ -17,17 +17,8 @@ public sealed class SceneGeneratorWindow : EditorWindow
     private const int PreviewMargin = 2;
 
     private static readonly Color32 Background = new(24, 26, 30, 255);
-    private static readonly Color32[] LayerColours =
-    {
-        new(78, 138, 56, 255),
-        new(54, 108, 40, 255),
-        new(226, 204, 150, 255),
-        new(118, 88, 60, 255),
-        new(198, 170, 120, 255),
-        new(150, 148, 142, 255),
-        new(70, 130, 200, 255),
-        new(120, 110, 170, 255)
-    };
+    private static readonly Color32 NoMaterialColour = new(120, 110, 170, 255);
+    private const float RepeatedColourShade = 0.7f;
     private static readonly Color32 BlockingColour = new(24, 66, 30, 255);
     private static readonly Color32 WalkThroughColour = new(150, 206, 110, 255);
     private static readonly Color32 MobColour = new(232, 64, 52, 255);
@@ -115,7 +106,13 @@ public sealed class SceneGeneratorWindow : EditorWindow
             return;
         }
 
-        DrawButtons(grid);
+        string problem = AreaGroundSetup.Problem(generator.name, generator.TerrainStyle, generator.TerrainLayers);
+        DrawButtons(grid, problem == null);
+        if (problem != null)
+        {
+            EditorGUILayout.HelpBox(problem, MessageType.Error);
+        }
+
         DrawPreview();
 
         Editor.CreateCachedEditor(generator, null, ref generatorEditor);
@@ -133,9 +130,10 @@ public sealed class SceneGeneratorWindow : EditorWindow
     /// <summary>
     /// Draws Random Seed, which gives the generator a new seed with undo, Generate, which generates into
     /// <paramref name="grid"/>'s scene once this GUI pass is over, and Convert Ground. Generate and Convert Ground are
-    /// disabled without a target and in play mode, where their changes to the scene would be lost when play stops.
+    /// disabled without a target, when the generator's layers cannot be set up (<paramref name="canSetUp"/> false), and
+    /// in play mode, where their changes to the scene would be lost when play stops.
     /// </summary>
-    private void DrawButtons(Grid grid)
+    private void DrawButtons(Grid grid, bool canSetUp)
     {
         using EditorGUILayout.HorizontalScope row = new();
         if (GUILayout.Button("Random Seed"))
@@ -146,7 +144,7 @@ public sealed class SceneGeneratorWindow : EditorWindow
             MarkPreviewStale();
         }
 
-        using (new EditorGUI.DisabledScope(grid == null || EditorApplication.isPlayingOrWillChangePlaymode))
+        using (new EditorGUI.DisabledScope(grid == null || !canSetUp || EditorApplication.isPlayingOrWillChangePlaymode))
         {
             if (GUILayout.Button("Generate"))
             {
@@ -241,7 +239,7 @@ public sealed class SceneGeneratorWindow : EditorWindow
 
     /// <summary>
     /// Generates the layout for the current settings and seed and paints it one pixel per cell: terrain layers in
-    /// order, blocking footprints, walk-through props, mob spawns and the party spawn.
+    /// order (<see cref="LayerColours"/>), blocking footprints, walk-through props, mob spawns and the party spawn.
     /// </summary>
     private void RebuildPreview()
     {
@@ -271,9 +269,10 @@ public sealed class SceneGeneratorWindow : EditorWindow
         }
 
         Vector3Int origin = bounds.min - new Vector3Int(PreviewMargin, PreviewMargin, 0);
+        Color32[] colours = LayerColours(preview);
         for (int layer = 0; layer < preview.TerrainLayerCount; layer++)
         {
-            Color32 colour = LayerColours[Mathf.Min(layer, LayerColours.Length - 1)];
+            Color32 colour = colours[layer];
             foreach (Vector3Int cell in preview.TerrainCells(layer))
             {
                 Paint(pixels, width, height, cell - origin, colour);
@@ -307,6 +306,34 @@ public sealed class SceneGeneratorWindow : EditorWindow
         Paint(pixels, width, height, preview.SpawnCell - origin, SpawnColour);
         previewTexture.SetPixels32(pixels);
         previewTexture.Apply();
+    }
+
+    /// <summary>
+    /// The preview colour of each of <paramref name="layout"/>'s terrain layers: its material's base colour, a shade
+    /// darker for each earlier layer already shown in that colour (weeds over grass), so the map follows whatever
+    /// layers a generator lists.
+    /// </summary>
+    private static Color32[] LayerColours(AreaLayout layout)
+    {
+        Color32[] colours = new Color32[layout.TerrainLayerCount];
+        for (int i = 0; i < colours.Length; i++)
+        {
+            TerrainMaterial material = layout.TerrainLayers[i] != null ? layout.TerrainLayers[i].Material : null;
+            Color colour = material != null ? material.BaseColour : NoMaterialColour;
+            for (int j = 0; j < i; j++)
+            {
+                TerrainMaterial earlier = layout.TerrainLayers[j] != null ? layout.TerrainLayers[j].Material : null;
+                if (earlier != null && material != null && earlier.BaseColour == material.BaseColour)
+                {
+                    colour *= RepeatedColourShade;
+                }
+            }
+
+            colour.a = 1f;
+            colours[i] = colour;
+        }
+
+        return colours;
     }
 
     /// <summary>

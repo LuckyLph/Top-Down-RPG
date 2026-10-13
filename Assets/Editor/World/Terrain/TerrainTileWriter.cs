@@ -33,6 +33,23 @@ public static class TerrainTileWriter
     }
 
     /// <summary>
+    /// The ground material whose tile <paramref name="tile"/> is (<see cref="TilePath"/> read backwards: the material
+    /// of that name in <see cref="MaterialFolder"/>), or null for any other tile.
+    /// </summary>
+    public static TerrainMaterial MaterialOf(TileBase tile)
+    {
+        string path = tile != null ? AssetDatabase.GetAssetPath(tile) : null;
+        string fileName = Path.GetFileNameWithoutExtension(path);
+        if (string.IsNullOrEmpty(path) || Path.GetDirectoryName(path)?.Replace('\\', '/') != TileFolder || !fileName.StartsWith("Tile_"))
+        {
+            return null;
+        }
+
+        TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{MaterialFolder}/{fileName.Substring("Tile_".Length)}.asset");
+        return material != null && TilePath(material) == path ? material : null;
+    }
+
+    /// <summary>
     /// Where <paramref name="material"/>'s swatch is: its texture files' base name and _swatch.png in
     /// <see cref="SwatchFolder"/>.
     /// </summary>

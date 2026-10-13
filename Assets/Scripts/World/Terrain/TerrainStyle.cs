@@ -5,9 +5,11 @@ using UnityEngine;
 /// <summary>
 /// The look of the blended ground (Docs/TerrainBlending.md): the terrain shader, the settings every edge shares, and
 /// the edges that pairs of an upper <see cref="TerrainMaterial"/> over a lower one (or over nothing) draw in place of
-/// the upper material's default edge, in the crisp look and in the soft one. A <see cref="TerrainBlendRenderer"/>'s
-/// layers each name their own material. Read-only at runtime: the renderer builds its runtime material and textures
-/// from it and never writes it.
+/// the upper material's default edge, in the crisp look and in the soft one, and the project-wide draw order of the
+/// ground materials, bottom first, which every area's list of layers follows (Docs/TerrainTypes.md, "One shared draw
+/// order"), so a pair is always the same material over the same one and its override keeps its meaning. A
+/// <see cref="TerrainBlendRenderer"/>'s layers each name their own material. Read-only at runtime: the renderer builds
+/// its runtime material and textures from it and never writes it.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Style", fileName = "TerrainStyle")]
 public class TerrainStyle : ScriptableObject
@@ -151,12 +153,16 @@ public class TerrainStyle : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float pairBlend = 1.5f;
     [Tooltip("Edges drawn in place of the upper material's default edge, each for one upper material over one lower material or over nothing.")]
     [SerializeField] private PairOverride[] pairOverrides = new PairOverride[0];
+    [Header("Layers")]
+    [Tooltip("Every ground material, bottom first: the order areas draw their layers in. Each area lists a subsequence of it (Docs/TerrainTypes.md).")]
+    [SerializeField] private TerrainMaterial[] layerOrder = new TerrainMaterial[0];
 
     public Shader Shader => shader;
     public float EdgeNoise => edgeNoise;
     public float PairMargin => pairMargin;
     public float PairBlend => pairBlend;
     public IReadOnlyList<PairOverride> PairOverrides => pairOverrides;
+    public IReadOnlyList<TerrainMaterial> LayerOrder => layerOrder;
 
 #if UNITY_EDITOR
     internal event Action Validated;
@@ -186,12 +192,45 @@ public class TerrainStyle : ScriptableObject
     }
 
     /// <summary>
-    /// Creates a style in memory with the given shader and overrides and the default shared settings, for tests.
+    /// The place of <paramref name="material"/> in the layer order, bottom first, or -1 when it is not listed (or is
+    /// null).
+    /// </summary>
+    public int LayerOrderIndexOf(TerrainMaterial material)
+    {
+        if (material == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < layerOrder.Length; i++)
+        {
+            if (layerOrder[i] == material)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Creates a style in memory with the given shader and overrides, the default shared settings and no layer order,
+    /// for tests.
     /// </summary>
     internal static TerrainStyle Create(Shader shader, params PairOverride[] pairOverrides)
     {
+        return Create(shader, new TerrainMaterial[0], pairOverrides);
+    }
+
+    /// <summary>
+    /// Creates a style in memory with the given shader, layer order and overrides and the default shared settings, for
+    /// tests.
+    /// </summary>
+    internal static TerrainStyle Create(Shader shader, TerrainMaterial[] layerOrder, params PairOverride[] pairOverrides)
+    {
         TerrainStyle style = CreateInstance<TerrainStyle>();
         style.shader = shader;
+        style.layerOrder = layerOrder;
         style.pairOverrides = pairOverrides;
         return style;
     }
@@ -199,7 +238,8 @@ public class TerrainStyle : ScriptableObject
 #if UNITY_EDITOR
     /// <summary>
     /// Warns about pair overrides without an upper material or whose lower material is missing, which never apply, and
-    /// tells renderers using this style to rebuild after an inspector change.
+    /// about empty or repeated entries in the layer order, and tells renderers using this style to rebuild after an
+    /// inspector change.
     /// </summary>
     private void OnValidate()
     {
@@ -212,6 +252,18 @@ public class TerrainStyle : ScriptableObject
             else if (pairOverrides[i] != null && pairOverrides[i].HasMissingLower())
             {
                 Debug.LogWarning($"{name}: pair override {i}'s lower material is missing, so it never applies. Clear it to mean over nothing (the map's edge).", this);
+            }
+        }
+
+        for (int i = 0; i < layerOrder.Length; i++)
+        {
+            if (layerOrder[i] == null)
+            {
+                Debug.LogWarning($"{name}: entry {i} of the layer order has no material.", this);
+            }
+            else if (LayerOrderIndexOf(layerOrder[i]) != i)
+            {
+                Debug.LogWarning($"{name}: {layerOrder[i].name} is listed twice in the layer order; only its first place counts.", this);
             }
         }
 

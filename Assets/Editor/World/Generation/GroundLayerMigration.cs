@@ -13,9 +13,11 @@ using UnityEngine.Tilemaps;
 /// first among the grid's children in the generator's order, and each one's navigation source gets the layer's terrain
 /// type and its draw order as priority. The grid's <see cref="TerrainBlendRenderer"/> is added or updated to draw the
 /// layers in the generator's order with their materials and the generator's style, and the area's
-/// <see cref="AreaTerrain"/> fills them with their tiles. An area with none of the layers is refused, and every other
-/// tilemap (the walls), prop and object stays as it is, except that a tilemap the renderer drew besides the terrain
-/// layers stays drawn above them. Running it again changes nothing. The Scene Generator window runs it as Convert
+/// <see cref="AreaTerrain"/> fills them with their tiles. A layer the renderer drew that the generator does not list is
+/// kept, with a warning, at its material's place in the style's layer order when it is painted or the area's terrain
+/// may edit it, and removed when empty (Docs/TerrainTypes.md, Phase 2), so an area keeps what was painted by hand and
+/// sheds the layers it does not use. An area with none of the layers is refused, and every other tilemap (the walls),
+/// prop and object stays as it is. Running it again changes nothing. The Scene Generator window runs it as Convert
 /// Ground.
 /// </summary>
 public static class GroundLayerMigration
@@ -53,18 +55,14 @@ public static class GroundLayerMigration
         Undo.SetCurrentGroupName($"Convert {grid.gameObject.scene.name} ground");
         int undoGroup = Undo.GetCurrentGroup();
         List<string> changes = new();
-        Tilemap[] tilemaps = new Tilemap[layers.Count];
-        TerrainMaterial[] materials = new TerrainMaterial[layers.Count];
+        Tilemap[] tilemaps = AreaGroundSetup.SetUpLayers(grid, style, layers, owner, changes);
         TileBase[] tiles = new TileBase[layers.Count];
         for (int i = 0; i < layers.Count; i++)
         {
-            tilemaps[i] = AreaGroundSetup.PrepareLayer(grid, layers[i], i, changes);
-            materials[i] = layers[i].Material;
             tiles[i] = layers[i].Tile;
             SwapTiles(tilemaps[i], layers[i].Tile, changes);
         }
 
-        AreaGroundSetup.SetRenderer(grid, style, tilemaps, materials, changes);
         AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
         if (changes.Count > 0)
         {

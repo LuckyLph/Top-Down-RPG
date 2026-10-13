@@ -32,7 +32,7 @@ public sealed class TestAreaGenerator : AreaGenerator
     /// </summary>
     public override AreaLayout Generate(int layoutSeed)
     {
-        AreaLayout layout = new(layers.Count);
+        AreaLayout layout = new(layers);
         for (int i = 0; i < layers.Count; i++)
         {
             layout.TerrainCells(i).Add(new Vector3Int(i, 0, 0));

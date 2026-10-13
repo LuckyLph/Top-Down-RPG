@@ -33,8 +33,6 @@ public sealed class ClearingGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
-    [Tooltip("Generated empty: painted by hand. Grass with swaying weeds, drawn over the grass without an edge.")]
-    [SerializeField] private TerrainLayer weeds = new();
     [Tooltip("Generated empty: painted by hand.")]
     [SerializeField] private TerrainLayer sand = new();
     [Tooltip("Generated empty: painted by hand.")]
@@ -92,11 +90,11 @@ public sealed class ClearingGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, weeds, sand, mud, gravel, stone, then water: each layer is drawn over the ones before it and decides its
-    /// cells, so the paths cross weeds, sand and mud and water covers everything. Weeds, sand, mud and water are
-    /// generated empty.
+    /// Grass, sand, mud, gravel, stone, then water, in the style's layer order: each layer is drawn over the ones before
+    /// it and decides its cells, so the paths cross sand and mud and water covers everything. Sand, mud and water are
+    /// generated empty, for painting by hand (Area_Clearing has all three painted).
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, sand, mud, gravel, stone, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, sand, mud, gravel, stone, water };
 
     /// <summary>
     /// Lays out a clearing from <paramref name="layoutSeed"/>.
@@ -124,7 +122,7 @@ public sealed class ClearingGenerator : AreaGenerator
         public Run(ClearingGenerator generator, int seed)
         {
             settings = generator;
-            builder = new AreaLayoutBuilder(seed);
+            builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
             halfWidth = Mathf.Max(4, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(4, generator.size.y) * 0.5f;
         }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -11,8 +12,10 @@ using UnityEngine.Tilemaps;
 /// test) and a plain stone layer, each with a navigation source whose priority is off, dual-grid walls on the collision
 /// tilemap, and an <see cref="AreaTerrain"/> listing the grass and the walls. The conversion keeps every filled cell as
 /// the layer's plain tile, leaves no module or render tilemap, adds the terrain renderer with the layers and materials
-/// in order and the navigation priorities from that order, creates a layer the area lacks empty at its place, sets the
-/// area terrain's fill tiles, leaves the walls alone, is undone in one step, and changes nothing when run again.
+/// in order and the navigation priorities from that order, creates a layer the area lacks empty at its place, keeps a
+/// painted layer it does not list (or an empty one the area terrain edits) at its place in the style's layer order and
+/// removes an empty one, sets the area terrain's fill tiles, leaves the walls alone, is undone in one step, and changes
+/// nothing when run again.
 /// </summary>
 public class GroundLayerMigrationTests
 {
@@ -29,12 +32,16 @@ public class GroundLayerMigrationTests
     private DualGridTilemapModule walls;
     private AreaTerrain terrain;
     private TerrainStyle style;
+    private TerrainMaterial weedsMaterial;
+    private TerrainMaterial sandMaterial;
+    private TerrainMaterial waterMaterial;
     private AreaGenerator.TerrainLayer[] layers;
     private int undoGroup;
 
     /// <summary>
     /// Builds the area's grid, its layers and the layer definitions (tiles, terrain types, materials and a style made
-    /// for the test), and starts the undo group the test's changes are reverted to.
+    /// for the test, whose layer order is grass, weeds, sand, gravel, stone and water), and starts the undo group the
+    /// test's changes are reverted to.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -43,7 +50,10 @@ public class GroundLayerMigrationTests
         undoGroup = Undo.GetCurrentGroup();
         grid = Track(new GameObject("Grid")).AddComponent<Grid>();
         TerrainMaterial[] materials = TestTerrainStyle.PlainMaterials(created);
-        style = TestTerrainStyle.Create(created);
+        weedsMaterial = TestTerrainStyle.PlainMaterial("Weeds", TerrainMaterial.CellMode.None, created);
+        sandMaterial = TestTerrainStyle.PlainMaterial("Sand", TerrainMaterial.CellMode.None, created);
+        waterMaterial = TestTerrainStyle.PlainMaterial("Water", TerrainMaterial.CellMode.None, created);
+        style = TestTerrainStyle.Create(created, new[] { materials[0], weedsMaterial, sandMaterial, materials[1], materials[2], waterMaterial });
         layers = new[]
         {
             new AreaGenerator.TerrainLayer("GrassTilemap", CreateTile("Tile_Grass"), Track(TerrainType2D.Create("grass")), materials[0]),
@@ -195,27 +205,74 @@ public class GroundLayerMigrationTests
     }
 
     /// <summary>
-    /// A tilemap the renderer drew besides the layers stays drawn above them, with its material, and its navigation
-    /// source's priority follows its new place, so it does not go on counting for navigation without being drawn.
+    /// Of the tilemaps the renderer drew besides the layers (water under the grass, then sand, weeds and lava over it),
+    /// the painted ones stay drawn with their materials, each at its material's place in the style's layer order
+    /// (sand between grass and gravel, water above stone) and lava, whose material the order does not list, above them
+    /// all, each with a warning; the empty weeds layer, which nothing edits at runtime, is removed. Every layer drawn
+    /// comes at its place among the grid's children with its index as navigation priority, and a second run changes
+    /// nothing.
     /// </summary>
     [Test]
-    public void Migrate_KeepsDrawingATilemapTheRendererDrewBesidesTheLayers_AboveThem()
+    public void Migrate_KeepsPaintedLayersItDoesNotList_AtTheirPlaceInTheOrder_AndRemovesEmptyOnes()
     {
-        Tilemap water = AddTilemap("WaterTilemap");
-        water.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(Track(TerrainType2D.Create("water")));
+        Tilemap water = AddExtraLayer("WaterTilemap", true, 0);
+        Tilemap sand = AddExtraLayer("SandTilemap", true, 2);
+        Tilemap weeds = AddExtraLayer("WeedsTilemap", false, 3);
+        Tilemap lava = AddExtraLayer("LavaTilemap", true, 4);
+        TerrainMaterial lavaMaterial = TestTerrainStyle.PlainMaterial("Lava", TerrainMaterial.CellMode.None, created);
         grass.GetComponent<NavigationTerrainSource2D>().Configure(layers[0].TerrainType, 1);
         TerrainBlendRenderer existing = grid.gameObject.AddComponent<TerrainBlendRenderer>();
-        existing.Configure(style, new TerrainBlendRenderer.Layer(water, layers[2].Material), new TerrainBlendRenderer.Layer(grass.DataTilemap, layers[0].Material));
+        existing.Configure(
+            style,
+            new TerrainBlendRenderer.Layer(water, waterMaterial),
+            new TerrainBlendRenderer.Layer(grass.DataTilemap, layers[0].Material),
+            new TerrainBlendRenderer.Layer(sand, sandMaterial),
+            new TerrainBlendRenderer.Layer(weeds, weedsMaterial),
+            new TerrainBlendRenderer.Layer(lava, lavaMaterial));
+        LogAssert.Expect(LogType.Warning, new Regex("GroundLayerMigration does not list Water, but WaterTilemap is painted or edited at runtime, so it is kept"));
+        LogAssert.Expect(LogType.Warning, new Regex("GroundLayerMigration does not list Sand, but SandTilemap is painted or edited at runtime, so it is kept"));
+        LogAssert.Expect(LogType.Warning, new Regex("GroundLayerMigration does not list LavaTilemap, which is painted or edited at runtime, so it is kept; TerrainStyle's layer order does not list its material Lava"));
 
         List<string> changes = GroundLayerMigration.Migrate(grid, style, layers);
 
-        Assert.That(existing.Layers.Count, Is.EqualTo(4));
-        Assert.That(existing.Layers[3].Tilemap, Is.SameAs(water));
-        Assert.That(existing.Layers[3].Material, Is.SameAs(layers[2].Material));
-        Assert.That(water.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(3)));
+        Tilemap[] expected = { grass.DataTilemap, sand, gravel.DataTilemap, stone, water, lava };
+        TerrainMaterial[] materials = { layers[0].Material, sandMaterial, layers[1].Material, layers[2].Material, waterMaterial, lavaMaterial };
+        Assert.That(existing.Layers.Count, Is.EqualTo(expected.Length));
+        for (int i = 0; i < expected.Length; i++)
+        {
+            Assert.That(existing.Layers[i].Tilemap, Is.SameAs(expected[i]), $"layer {i}");
+            Assert.That(existing.Layers[i].Material, Is.SameAs(materials[i]), $"layer {i}");
+            Assert.That(expected[i].transform.GetSiblingIndex(), Is.EqualTo(i), $"{expected[i].name} at its place");
+            Assert.That(expected[i].GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), expected[i].name);
+        }
+
+        Assert.That(weeds == null, Is.True, "The empty weeds layer is removed.");
+        Assert.That(changes, Does.Contain("Grid: removed WeedsTilemap: it is empty and GroundLayerMigration does not list it"));
+        Assert.That(changes, Does.Contain("Grid: keeps drawing SandTilemap, now as layer 1"));
+        Assert.That(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero) && lava.HasTile(Vector3Int.zero), Is.True, "The kept layers keep their cells.");
         Assert.That(existing.HasNavigationPrioritiesInStep(), Is.True);
-        Assert.That(changes, Does.Contain("Grid: keeps drawing WaterTilemap, now as layer 3"));
         Assert.That(GroundLayerMigration.Migrate(grid, style, layers), Is.Empty);
+    }
+
+    /// <summary>
+    /// An empty layer the renderer drew besides the layers is kept, at its place in the layer order, when the area's
+    /// terrain lists it, since gameplay may paint it at runtime.
+    /// </summary>
+    [Test]
+    public void Migrate_KeepsAnEmptyLayerTheAreaTerrainEdits()
+    {
+        Tilemap weeds = AddExtraLayer("WeedsTilemap", false, 1);
+        grass.GetComponent<NavigationTerrainSource2D>().Configure(layers[0].TerrainType);
+        terrain.Configure(new AreaTerrain.Layer(grass.DataTilemap, null), new AreaTerrain.Layer(walls.DataTilemap, null), new AreaTerrain.Layer(weeds, null));
+        TerrainBlendRenderer existing = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        existing.Configure(style, new TerrainBlendRenderer.Layer(grass.DataTilemap, layers[0].Material), new TerrainBlendRenderer.Layer(weeds, weedsMaterial));
+
+        GroundLayerMigration.Migrate(grid, style, layers);
+
+        Assert.That(weeds != null, Is.True, "The layer is kept.");
+        Assert.That(existing.Layers.Count, Is.EqualTo(4));
+        Assert.That(existing.Layers[1].Tilemap, Is.SameAs(weeds), "Weeds come right above grass in the layer order.");
+        Assert.That(existing.HasNavigationPrioritiesInStep(), Is.True);
     }
 
     /// <summary>
@@ -433,6 +490,22 @@ public class GroundLayerMigrationTests
         GameObject data = new(name, typeof(Tilemap));
         data.transform.SetParent(grid.transform, false);
         return data.GetComponent<Tilemap>();
+    }
+
+    /// <summary>
+    /// Adds a plain tilemap named <paramref name="name"/> under the grid with a navigation source of a terrain type made
+    /// for the test and <paramref name="priority"/>, holding a tile in cell (0, 0) when <paramref name="painted"/>.
+    /// </summary>
+    private Tilemap AddExtraLayer(string name, bool painted, int priority)
+    {
+        Tilemap tilemap = AddTilemap(name);
+        tilemap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(Track(TerrainType2D.Create(name)), priority);
+        if (painted)
+        {
+            tilemap.SetTile(Vector3Int.zero, CreateTile($"{name}Tile"));
+        }
+
+        return tilemap;
     }
 
     /// <summary>

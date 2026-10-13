@@ -7,18 +7,31 @@ using UnityEngine.Tilemaps;
 /// The steps <see cref="AreaLayoutWriter"/> and <see cref="GroundLayerMigration"/> share to set up an area's ground
 /// layers the way the blended terrain draws them (Docs/TerrainBlending.md): plain data tilemaps without dual-grid parts
 /// or a Tilemap Renderer, first among the Grid's children in draw order (created when missing), each with a navigation
-/// source whose priority is its draw order, drawn by the Grid's
-/// <see cref="TerrainBlendRenderer"/>, and filled by the area's <see cref="AreaTerrain"/> with their plain tiles. Every
+/// source whose priority is its draw order, drawn by the Grid's <see cref="TerrainBlendRenderer"/> in the order of the
+/// style's <see cref="TerrainStyle.LayerOrder"/>, and filled by the area's <see cref="AreaTerrain"/> with their plain
+/// tiles. A layer the area draws that the generator does not list is kept, at its material's place in that order, when
+/// it is painted or <see cref="AreaTerrain"/> may edit it, and removed otherwise (Docs/TerrainTypes.md, Phase 2). Every
 /// change goes through undo, a step whose target is already set changes and records nothing, and each change adds a
 /// line to the caller's list. Only outside play mode, where the changes can be saved.
 /// </summary>
 internal static class AreaGroundSetup
 {
     /// <summary>
+    /// One layer of the area as it will be drawn: a generator's layer, or a layer the area drew that the generator does
+    /// not list, with its tilemap, its material and its material's place in the style's layer order.
+    /// </summary>
+    private sealed class PlannedLayer
+    {
+        public AreaGenerator.TerrainLayer Layer;
+        public Tilemap Tilemap;
+        public TerrainMaterial Material;
+        public int Rank;
+    }
+
+    /// <summary>
     /// Whether ground layers can be set up from <paramref name="layers"/> and <paramref name="style"/>: outside play
-    /// mode (a change to the scene's play-mode copy would be lost when play stops), with a style, and at most
-    /// <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a material.
-    /// Logs an error naming <paramref name="owner"/> for the first problem, pinging <paramref name="context"/>.
+    /// mode (a change to the scene's play-mode copy would be lost when play stops) and with no <see cref="Problem"/>.
+    /// Logs an error for the first problem, pinging <paramref name="context"/>.
     /// </summary>
     public static bool CanSetUp(string owner, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, Object context)
     {
@@ -28,47 +41,279 @@ internal static class AreaGroundSetup
             return false;
         }
 
-        if (style == null)
+        string problem = Problem(owner, style, layers);
+        if (problem != null)
         {
-            Debug.LogError($"{owner}: no terrain style for the area's {nameof(TerrainBlendRenderer)}.", context);
+            Debug.LogError(problem, context);
             return false;
-        }
-
-        if (layers.Count > TerrainControlMap.MaxLayers)
-        {
-            Debug.LogError($"{owner}: {layers.Count} terrain layers, but the blended terrain draws at most {TerrainControlMap.MaxLayers}.", context);
-            return false;
-        }
-
-        for (int i = 0; i < layers.Count; i++)
-        {
-            AreaGenerator.TerrainLayer layer = layers[i];
-            if (layer == null || string.IsNullOrWhiteSpace(layer.TilemapName) || layer.Tile == null || layer.Material == null)
-            {
-                Debug.LogError($"{owner}: terrain layer {i} needs a tilemap name, a tile and a material.", context);
-                return false;
-            }
-
-            for (int j = 0; j < i; j++)
-            {
-                if (layers[j].TilemapName == layer.TilemapName)
-                {
-                    Debug.LogError($"{owner}: terrain layers {j} and {i} both name {layer.TilemapName}; each tilemap is one layer.", context);
-                    return false;
-                }
-            }
         }
 
         return true;
     }
 
     /// <summary>
-    /// The grid's child tilemap named after <paramref name="layer"/>, created empty when missing, as a plain data
-    /// tilemap at place <paramref name="index"/> among the grid's children: any dual-grid parts or Tilemap Renderer
-    /// removed, and a navigation source with the layer's terrain type and its index as priority, its draw order in the
-    /// renderer <see cref="SetRenderer"/> sets up.
+    /// The first reason ground layers cannot be set up from <paramref name="layers"/> and <paramref name="style"/>, as a
+    /// message naming <paramref name="owner"/>, or null when they can: a style, at most
+    /// <see cref="TerrainControlMap.MaxLayers"/> layers with distinct tilemap names, each with a tile and a material,
+    /// and their materials a subsequence of the style's layer order (each listed there, in that order, none twice).
     /// </summary>
-    public static Tilemap PrepareLayer(Grid grid, AreaGenerator.TerrainLayer layer, int index, List<string> changes)
+    public static string Problem(string owner, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers)
+    {
+        if (style == null)
+        {
+            return $"{owner}: no terrain style for the area's {nameof(TerrainBlendRenderer)}.";
+        }
+
+        if (layers.Count > TerrainControlMap.MaxLayers)
+        {
+            return $"{owner}: {layers.Count} terrain layers, but the blended terrain draws at most {TerrainControlMap.MaxLayers}.";
+        }
+
+        int previousRank = -1;
+        for (int i = 0; i < layers.Count; i++)
+        {
+            AreaGenerator.TerrainLayer layer = layers[i];
+            if (layer == null || string.IsNullOrWhiteSpace(layer.TilemapName) || layer.Tile == null || layer.Material == null)
+            {
+                return $"{owner}: terrain layer {i} needs a tilemap name, a tile and a material.";
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                if (layers[j].TilemapName == layer.TilemapName)
+                {
+                    return $"{owner}: terrain layers {j} and {i} both name {layer.TilemapName}; each tilemap is one layer.";
+                }
+
+                if (layers[j].Material == layer.Material)
+                {
+                    return $"{owner}: terrain layers {j} and {i} are both drawn with {layer.Material.name}; an area draws each material once.";
+                }
+            }
+
+            int rank = style.LayerOrderIndexOf(layer.Material);
+            if (rank < 0)
+            {
+                return $"{owner}: terrain layer {i} is drawn with {layer.Material.name}, which {style.name}'s layer order does not list; add it there at its place in the draw order (Docs/TerrainTypes.md).";
+            }
+
+            if (rank < previousRank)
+            {
+                return $"{owner}: terrain layer {i} ({layer.Material.name}) comes before {layers[i - 1].Material.name} in {style.name}'s layer order, so it cannot be listed over it; list the layers in that order.";
+            }
+
+            previousRank = rank;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Sets up <paramref name="layers"/> as the ground layers of <paramref name="grid"/>, drawn with
+    /// <paramref name="style"/>, and returns their tilemaps in the same order, for the caller to fill. Each layer is
+    /// prepared (<see cref="PrepareLayer"/>, created empty when missing). Every other tilemap the grid's renderer drew
+    /// stays drawn when it is painted or the area's <see cref="AreaTerrain"/> lists it, with its material, placed among
+    /// the layers by its material's place in the style's layer order (above them all when the order does not list its
+    /// material), and a warning names it, since <paramref name="owner"/> does not list it; an empty one stops being
+    /// drawn and its tilemap, when a child of the grid, is removed. Past <see cref="TerrainControlMap.MaxLayers"/>
+    /// layers the kept ones from the top stop being drawn, with a warning. Every layer drawn comes first among the
+    /// grid's children in draw order, with its index as navigation priority, and the renderer draws exactly them, in
+    /// that order. The removals are recorded first, then the moves among the grid's children, then the navigation
+    /// priorities, then the renderer: an undo reverts them in reverse, and restoring a removed or moved child rebuilds
+    /// the renderer, which then finds its old layers and their old priorities.
+    /// </summary>
+    public static Tilemap[] SetUpLayers(Grid grid, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, string owner, List<string> changes)
+    {
+        List<PlannedLayer> plan = new();
+        foreach (AreaGenerator.TerrainLayer layer in layers)
+        {
+            plan.Add(new PlannedLayer { Layer = layer, Material = layer.Material, Rank = style.LayerOrderIndexOf(layer.Material) });
+        }
+
+        List<Tilemap> removed = new();
+        foreach (PlannedLayer other in OtherDrawnLayers(grid, layers))
+        {
+            if (!IsPainted(other.Tilemap) && !IsEditedAtRuntime(grid, other.Tilemap))
+            {
+                removed.Add(other.Tilemap);
+                continue;
+            }
+
+            int place = plan.Count;
+            other.Rank = style.LayerOrderIndexOf(other.Material);
+            if (other.Rank < 0)
+            {
+                other.Rank = int.MaxValue;
+                Debug.LogWarning($"{grid.gameObject.scene.name}: {owner} does not list {other.Tilemap.name}, which is painted or edited at runtime, so it is kept; {style.name}'s layer order does not list its material {Name(other.Material)}, so it is drawn above the other layers. Add the material to the layer order.", grid);
+            }
+            else
+            {
+                while (place > 0 && plan[place - 1].Rank > other.Rank)
+                {
+                    place--;
+                }
+
+                Debug.LogWarning($"{grid.gameObject.scene.name}: {owner} does not list {Name(other.Material)}, but {other.Tilemap.name} is painted or edited at runtime, so it is kept, drawn at its place in {style.name}'s layer order.", grid);
+            }
+
+            plan.Insert(place, other);
+        }
+
+        for (int i = plan.Count - 1; plan.Count > TerrainControlMap.MaxLayers && i >= 0; i--)
+        {
+            if (plan[i].Layer == null)
+            {
+                Debug.LogWarning($"{grid.name}: the {nameof(TerrainBlendRenderer)} no longer draws {plan[i].Tilemap.name}: it draws at most {TerrainControlMap.MaxLayers} layers. {plan[i].Tilemap.name}'s navigation source still counts.", grid);
+                changes.Add($"{grid.name}: stopped drawing {plan[i].Tilemap.name}");
+                plan.RemoveAt(i);
+            }
+        }
+
+        foreach (Tilemap tilemap in removed)
+        {
+            if (tilemap.transform.parent == grid.transform)
+            {
+                changes.Add($"{grid.name}: removed {tilemap.name}: it is empty and {owner} does not list it");
+                Undo.DestroyObjectImmediate(tilemap.gameObject);
+            }
+        }
+
+        Tilemap[] tilemaps = new Tilemap[layers.Count];
+        int sibling = 0;
+        foreach (PlannedLayer planned in plan)
+        {
+            if (planned.Layer != null)
+            {
+                planned.Tilemap = PrepareLayer(grid, planned.Layer, sibling, changes);
+                tilemaps[IndexOf(layers, planned.Layer)] = planned.Tilemap;
+                sibling++;
+            }
+            else if (planned.Tilemap.transform.parent == grid.transform)
+            {
+                SetSiblingIndex(planned.Tilemap.transform, sibling, changes);
+                sibling++;
+            }
+        }
+
+        for (int i = 0; i < plan.Count; i++)
+        {
+            if (plan[i].Layer != null)
+            {
+                SetNavigationSource(plan[i].Tilemap, plan[i].Layer.TerrainType, TerrainBlendRenderer.NavigationPriorityOf(i), changes);
+            }
+            else
+            {
+                SetNavigationPriority(plan[i].Tilemap, TerrainBlendRenderer.NavigationPriorityOf(i), changes);
+            }
+        }
+
+        SetRenderer(grid, style, plan, changes);
+        return tilemaps;
+    }
+
+    /// <summary>
+    /// The layers the grid's renderer draws whose tilemap is none of <paramref name="layers"/>' (the grid's child named
+    /// after one), each once, in the renderer's order, with the material it draws them with. Entries without a tilemap
+    /// are left out.
+    /// </summary>
+    private static List<PlannedLayer> OtherDrawnLayers(Grid grid, IReadOnlyList<AreaGenerator.TerrainLayer> layers)
+    {
+        List<PlannedLayer> others = new();
+        if (!grid.TryGetComponent(out TerrainBlendRenderer renderer))
+        {
+            return others;
+        }
+
+        foreach (TerrainBlendRenderer.Layer drawn in renderer.Layers)
+        {
+            Tilemap tilemap = drawn != null ? drawn.Tilemap : null;
+            if (tilemap == null || IsOneOf(grid, layers, tilemap) || others.Exists(other => other.Tilemap == tilemap))
+            {
+                continue;
+            }
+
+            others.Add(new PlannedLayer { Tilemap = tilemap, Material = drawn.Material });
+        }
+
+        return others;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> is the grid's child named after one of <paramref name="layers"/>.
+    /// </summary>
+    private static bool IsOneOf(Grid grid, IReadOnlyList<AreaGenerator.TerrainLayer> layers, Tilemap tilemap)
+    {
+        foreach (AreaGenerator.TerrainLayer layer in layers)
+        {
+            Transform child = grid.transform.Find(layer.TilemapName);
+            if (child != null && child == tilemap.transform)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether any cell of <paramref name="tilemap"/> holds a tile.
+    /// </summary>
+    private static bool IsPainted(Tilemap tilemap)
+    {
+        foreach (Vector3Int cell in tilemap.cellBounds.allPositionsWithin)
+        {
+            if (tilemap.HasTile(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether an <see cref="AreaTerrain"/> in the grid's scene lists <paramref name="tilemap"/>, so gameplay may paint
+    /// it however empty it is saved.
+    /// </summary>
+    private static bool IsEditedAtRuntime(Grid grid, Tilemap tilemap)
+    {
+        foreach (AreaTerrain terrain in SceneQuery.FindAll<AreaTerrain>(grid.gameObject.scene))
+        {
+            SerializedProperty listed = new SerializedObject(terrain).FindProperty("layers");
+            for (int i = 0; i < listed.arraySize; i++)
+            {
+                if (listed.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue == tilemap)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The index of <paramref name="layer"/> in <paramref name="layers"/>.
+    /// </summary>
+    private static int IndexOf(IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer layer)
+    {
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (layers[i] == layer)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// The grid's child tilemap named after <paramref name="layer"/>, created empty when missing, as a plain data
+    /// tilemap at place <paramref name="sibling"/> among the grid's children, any dual-grid parts or Tilemap Renderer
+    /// removed. <see cref="SetUpLayers"/> sets its navigation source afterwards.
+    /// </summary>
+    private static Tilemap PrepareLayer(Grid grid, AreaGenerator.TerrainLayer layer, int sibling, List<string> changes)
     {
         Transform child = grid.transform.Find(layer.TilemapName);
         Tilemap tilemap = child != null ? child.GetComponent<Tilemap>() : null;
@@ -87,12 +332,7 @@ internal static class AreaGroundSetup
         }
 
         RemoveDualGridParts(tilemap, changes);
-        SetNavigationSource(tilemap, layer.TerrainType, TerrainBlendRenderer.NavigationPriorityOf(index), changes);
-        if (tilemap.transform.GetSiblingIndex() != index)
-        {
-            Undo.SetSiblingIndex(tilemap.transform, index, $"Order {layer.TilemapName}");
-            changes.Add($"{layer.TilemapName}: moved to place {index} under {grid.name}");
-        }
+        SetSiblingIndex(tilemap.transform, sibling, changes);
 
         return tilemap;
     }
@@ -159,14 +399,11 @@ internal static class AreaGroundSetup
     }
 
     /// <summary>
-    /// Adds the <see cref="TerrainBlendRenderer"/> of <paramref name="grid"/> when it has none and has it draw
-    /// <paramref name="tilemaps"/> first, bottom first, with <paramref name="materials"/> and <paramref name="style"/>.
-    /// Any other tilemap it drew stays drawn above them, in its old order and with its material, and its navigation
-    /// source's priority follows its new place, so no layer stops being drawn while it still counts for navigation. Past
-    /// <see cref="TerrainControlMap.MaxLayers"/> layers the rest are dropped with a warning, and entries without a
-    /// tilemap are dropped. Its other settings (chunk size, sorting, look) stay as they are.
+    /// Adds the <see cref="TerrainBlendRenderer"/> of <paramref name="grid"/> when it has none and has it draw exactly
+    /// the tilemaps of <paramref name="plan"/>, bottom first, with their materials and <paramref name="style"/>. Its
+    /// other settings (chunk size, sorting, look) stay as they are.
     /// </summary>
-    public static void SetRenderer(Grid grid, TerrainStyle style, IReadOnlyList<Tilemap> tilemaps, IReadOnlyList<TerrainMaterial> materials, List<string> changes)
+    private static void SetRenderer(Grid grid, TerrainStyle style, List<PlannedLayer> plan, List<string> changes)
     {
         if (!grid.TryGetComponent(out TerrainBlendRenderer renderer))
         {
@@ -183,51 +420,37 @@ internal static class AreaGroundSetup
         }
 
         SerializedProperty layers = data.FindProperty("layers");
-        List<Tilemap> drawn = new(tilemaps);
-        List<TerrainMaterial> drawnMaterials = new(materials);
-        for (int i = 0; i < layers.arraySize; i++)
+        if (layers.arraySize != plan.Count)
         {
-            SerializedProperty layer = layers.GetArrayElementAtIndex(i);
-            Tilemap listed = layer.FindPropertyRelative("tilemap").objectReferenceValue as Tilemap;
-            if (listed == null || Contains(drawn, listed))
-            {
-                continue;
-            }
-
-            if (drawn.Count >= TerrainControlMap.MaxLayers)
-            {
-                Debug.LogWarning($"{grid.name}: the {nameof(TerrainBlendRenderer)} no longer draws {listed.name}: it draws at most {TerrainControlMap.MaxLayers} layers. {listed.name}'s navigation source still counts.", renderer);
-                changes.Add($"{grid.name}: stopped drawing {listed.name}");
-                continue;
-            }
-
-            drawn.Add(listed);
-            drawnMaterials.Add(layer.FindPropertyRelative("material").objectReferenceValue as TerrainMaterial);
+            changes.Add($"{grid.name}: draws {plan.Count} layers instead of {layers.arraySize}");
+            layers.arraySize = plan.Count;
         }
 
-        if (layers.arraySize != drawn.Count)
-        {
-            changes.Add($"{grid.name}: draws {drawn.Count} layers instead of {layers.arraySize}");
-            layers.arraySize = drawn.Count;
-        }
-
-        for (int i = 0; i < drawn.Count; i++)
+        for (int i = 0; i < plan.Count; i++)
         {
             SerializedProperty layer = layers.GetArrayElementAtIndex(i);
             SerializedProperty tilemap = layer.FindPropertyRelative("tilemap");
             SerializedProperty material = layer.FindPropertyRelative("material");
-            if (tilemap.objectReferenceValue != drawn[i] || material.objectReferenceValue != drawnMaterials[i])
+            if (tilemap.objectReferenceValue != plan[i].Tilemap || material.objectReferenceValue != plan[i].Material)
             {
-                changes.Add(i < tilemaps.Count ? $"{grid.name}: draws {drawn[i].name} as layer {i} with {Name(drawnMaterials[i])}" : $"{grid.name}: keeps drawing {drawn[i].name}, now as layer {i}");
-                tilemap.objectReferenceValue = drawn[i];
-                material.objectReferenceValue = drawnMaterials[i];
+                changes.Add(plan[i].Layer != null ? $"{grid.name}: draws {plan[i].Tilemap.name} as layer {i} with {Name(plan[i].Material)}" : $"{grid.name}: keeps drawing {plan[i].Tilemap.name}, now as layer {i}");
+                tilemap.objectReferenceValue = plan[i].Tilemap;
+                material.objectReferenceValue = plan[i].Material;
             }
         }
 
         data.ApplyModifiedProperties();
-        for (int i = tilemaps.Count; i < drawn.Count; i++)
+    }
+
+    /// <summary>
+    /// Puts <paramref name="child"/> at place <paramref name="index"/> among its parent's children.
+    /// </summary>
+    private static void SetSiblingIndex(Transform child, int index, List<string> changes)
+    {
+        if (child.GetSiblingIndex() != index)
         {
-            SetNavigationPriority(drawn[i], TerrainBlendRenderer.NavigationPriorityOf(i), changes);
+            Undo.SetSiblingIndex(child, index, $"Order {child.name}");
+            changes.Add($"{child.name}: moved to place {index} under {child.parent.name}");
         }
     }
 
@@ -278,22 +501,6 @@ internal static class AreaGroundSetup
 
             data.ApplyModifiedProperties();
         }
-    }
-
-    /// <summary>
-    /// Whether <paramref name="tilemaps"/> holds <paramref name="candidate"/>.
-    /// </summary>
-    private static bool Contains(IReadOnlyList<Tilemap> tilemaps, Tilemap candidate)
-    {
-        for (int i = 0; i < tilemaps.Count; i++)
-        {
-            if (tilemaps[i] == candidate)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <summary>

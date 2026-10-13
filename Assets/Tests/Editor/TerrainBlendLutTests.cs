@@ -427,6 +427,8 @@ public class TerrainBlendLutTests
         Assert.That(dryOverGrass.ShadowAlpha, Is.Zero);
         Assert.That(dryOverGrass.TuftHeight, Is.GreaterThan(0f), "Straw tufts fray into the grass.");
         Assert.That(style.GetEdge(dryGrass, null), Is.SameAs(dryGrass.Edge));
+        Assert.That(dryGrass.Sways, Is.True, "Its dry stalks sway like the weeds.");
+        Assert.That(dryGrass.SinkDepth, Is.Zero);
         Assert.That(dryGrass.Edge.DrawOutline, Is.True);
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass });
         Assert.That(PairTexel(texels, 2, 1, 0, 3).a, Is.Zero, "dry grass over grass is seamless");

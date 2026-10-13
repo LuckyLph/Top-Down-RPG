@@ -24,7 +24,7 @@ MonoBehaviour:
   cutGap: 0.5
   cutBevel: 18
   heightScale: 2.5
-  framesPerSecond: 0
+  framesPerSecond: 8
   glintColour: {r: 1, g: 1, b: 1, a: 1}
   glintPeriod: 3
   glintDuty: 0.2
@@ -33,7 +33,7 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
-  swayAmplitude: 0
+  swayAmplitude: 2
   swayPeriod: 2.5
   gustLength: 12
   sinkDepth: 0

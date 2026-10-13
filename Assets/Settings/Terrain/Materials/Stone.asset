@@ -24,6 +24,18 @@ MonoBehaviour:
   cutGap: 0.5
   cutBevel: 18
   heightScale: 1.5
+  framesPerSecond: 0
+  glintColour: {r: 1, g: 1, b: 1, a: 1}
+  glintPeriod: 3
+  glintDuty: 0.2
+  sparkleColour: {r: 1, g: 1, b: 1, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.25
+  rimSwell: 0
+  swellPeriod: 4
+  sinkDepth: 0
+  bankShadow: 0.25
+  bankColour: {r: 0.3372549, g: 0.29803923, b: 0.2509804, a: 1}
   edge:
     rimWidth: 1.5
     rim:

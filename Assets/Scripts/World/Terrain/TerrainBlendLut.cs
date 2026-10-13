@@ -10,8 +10,9 @@ using UnityEngine;
 /// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
 /// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
 /// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
-/// <see cref="SparkleTimingColumn"/>, and at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material level
-/// with the ground. Then one row per pair of
+/// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material level
+/// with the ground, and at <see cref="BankColourColumn"/> its bank colour, the face a sunken layer shows where it cuts
+/// into this one. Then one row per pair of
 /// an upper layer u over a lower layer l, or over nothing (l = -1), at <see cref="PairRow"/>: (shadow colour, shadow
 /// alpha), (outline colour, 1 when drawn), (shadow width, rim width, tuft height, 1 when the soft look shows whole
 /// stones, only over a material with cut stones), (the rim's outer colour), (the soft band's colour, its width, 0 for
@@ -25,6 +26,7 @@ public static class TerrainBlendLut
     public const int SparkleColumn = 6;
     public const int SparkleTimingColumn = 7;
     public const int BankColumn = 8;
+    public const int BankColourColumn = 9;
     public const int RampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
@@ -75,6 +77,7 @@ public static class TerrainBlendLut
                 texels[row + SparkleTimingColumn] = new Color(material.SparkleDuty, 0f, 0f, 0f);
             }
 
+            texels[row + BankColourColumn] = material.BankColour;
             if (material.SinkDepth > 0f)
             {
                 texels[row + BankColumn] = new Color(material.SinkDepth, material.BankShadow, 0f, 0f);

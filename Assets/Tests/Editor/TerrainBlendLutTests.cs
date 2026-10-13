@@ -240,7 +240,8 @@ public class TerrainBlendLutTests
 
     /// <summary>
     /// A sunken material's layer row holds its sink depth and bank shadow; a level material's holds nothing there, so
-    /// the shader draws it no bank.
+    /// the shader draws it no bank. Every material's row holds its bank colour, which a sunken layer cutting into it
+    /// shows.
     /// </summary>
     [Test]
     public void ASunkenMaterial_ReachesItsLayerRow_AndALevelOneLeavesItEmpty()
@@ -251,11 +252,15 @@ public class TerrainBlendLutTests
         settings.FindProperty("sinkDepth").floatValue = 4.5f;
         settings.FindProperty("bankShadow").floatValue = 0.35f;
         settings.ApplyModifiedPropertiesWithoutUndo();
+        SerializedObject grassSettings = new(grass);
+        grassSettings.FindProperty("bankColour").colorValue = new Color(0.4f, 0.3f, 0.2f);
+        grassSettings.ApplyModifiedPropertiesWithoutUndo();
 
         Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
 
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColumn), Is.EqualTo(Color.clear));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn), Is.EqualTo(new Color(4.5f, 0.35f, 0f, 0f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColourColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
     }
 
     /// <summary>

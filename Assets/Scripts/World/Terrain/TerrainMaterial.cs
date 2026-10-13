@@ -10,7 +10,7 @@ using UnityEngine;
 /// edges. An animated material (water) lights its glint and sparkle pixels in turn and swells its rims in and out, in
 /// the shader alone, at its frames per second; its edges never move. A sunken material (water) lies below the ground
 /// around it: along its edges that face up the screen over another material, that material's bank shows inside its
-/// edge, in its base colour, and casts a shadow on it.
+/// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
@@ -80,10 +80,12 @@ public class TerrainMaterial : ScriptableObject
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swellPeriod = 4f;
     [Header("Sunken")]
-    [Tooltip("How many pixels of bank show inside this material's edges where they face straight up the screen, as if it lay that far below the ground around it; less as an edge turns sideways, none along edges facing down or over nothing. The bank is the base colour of the material it meets, its lowest pixel, at the waterline, darker. 0 for a material level with the ground.")]
+    [Tooltip("How many pixels of bank show inside this material's edges where they face straight up the screen, as if it lay that far below the ground around it; less as an edge turns sideways, none along edges facing down or over nothing. The bank is the bank colour of the material it meets, its lowest pixel, at the waterline, darker. 0 for a material level with the ground.")]
     [SerializeField, Range(0f, MaxSinkDepth)] private float sinkDepth;
     [Tooltip("How much darker the bank's shadow makes this material just below the bank, over as many pixels as the bank is high.")]
     [SerializeField, Range(0f, 1f)] private float bankShadow = 0.25f;
+    [Tooltip("Colour of this material's face where a sunken material (water) cuts into it, the bank above a pond's top edge: what the ground shows when cut, such as the dirt under grass.")]
+    [SerializeField] private Color bankColour = new(0.38f, 0.29f, 0.2f, 1f);
     [Header("Edge")]
     [Tooltip("How this material's edge is drawn over any material, or over nothing, without a pair override in the style.")]
     [SerializeField] private TerrainStyle.EdgeSettings edge = new();
@@ -113,6 +115,7 @@ public class TerrainMaterial : ScriptableObject
     public float SwellPeriod => Mathf.Max(swellPeriod, MinPeriod);
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
+    public Color BankColour => bankColour;
     public TerrainStyle.EdgeSettings Edge => edge;
 
 #if UNITY_EDITOR

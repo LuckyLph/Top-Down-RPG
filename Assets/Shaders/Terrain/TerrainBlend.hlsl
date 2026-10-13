@@ -13,6 +13,7 @@
 #define TB_SPARKLE_COLUMN 6
 #define TB_SPARKLE_TIMING_COLUMN 7
 #define TB_BANK_COLUMN 8
+#define TB_BANK_COLOUR_COLUMN 9
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
@@ -564,8 +565,8 @@ float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner co
     return bank;
 }
 
-// The colour of sunken layer m's bank at a pixel: the base colours of the layers it meets there, blended by their pair
-// weights, which leave out nothing (w[0]).
+// The colour of sunken layer m's bank at a pixel: the bank colours of the layers it meets there (what each shows when
+// cut, such as the dirt under grass), blended by their pair weights, which leave out nothing (w[0]).
 float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
     float3 face = float3(0.0, 0.0, 0.0);
@@ -575,13 +576,13 @@ float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
         [branch]
         if (k <= m && w[k] > 0.0)
         {
-            face += w[k] * TBLut(ins, 2, (int)k).rgb;
+            face += w[k] * TBLut(ins, TB_BANK_COLOUR_COLUMN, (int)k).rgb;
         }
     }
     return face / max(1.0 - w[0], 1e-4);
 }
 
-// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the base colour of the layer
+// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank colour of the layer
 // it meets (TBBankFace), its lowest pixel darker at the waterline; below it the interior under the rim, which starts at the waterline, darkened by the
 // bank's shadow over as many pixels as the bank is high. A level layer has no bank, so this is the interior under the
 // rim. band is how much of the rim soft bands make up (0 in crisp and on the bank).

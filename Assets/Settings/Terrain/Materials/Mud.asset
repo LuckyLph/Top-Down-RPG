@@ -33,6 +33,9 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
+  sinkDepth: 0
+  bankShadow: 0.25
+  bankColour: {r: 0.32156864, g: 0.23529412, b: 0.15686275, a: 1}
   edge:
     rimWidth: 1.5
     rim:

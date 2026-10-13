@@ -35,6 +35,7 @@ MonoBehaviour:
   swellPeriod: 4.5
   sinkDepth: 4.5
   bankShadow: 0.35
+  bankColour: {r: 0.38, g: 0.29, b: 0.2, a: 1}
   edge:
     rimWidth: 8
     rim:

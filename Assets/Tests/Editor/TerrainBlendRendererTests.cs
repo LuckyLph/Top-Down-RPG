@@ -203,6 +203,99 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A swaying layer's weed is drawn only where its foot and its top stand on the layer: under a weed rooted beneath a
+    /// layer drawn over it, one rooted below the layer's own edge, and one growing up under a layer drawn over it, the
+    /// pixels of its box show the ground from the cell field. The swaying material's textures hold a red weed in every
+    /// cell, its foot 4 px below the cell's top and its box rising 11 rows above it into the cell above (the height's
+    /// green channel its row from under the foot, plus one, the field's alpha 11), over green ground; a cover layer
+    /// fills part of the bottom row and of the third. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ASwayingLayersWeed_ShowsOnlyWhereItsFootStandsOnTheLayer()
+    {
+        const int size = 128;
+        Color32 green = new(40, 160, 40, 255);
+        Color32 red = new(220, 30, 30, 255);
+        Color32[] albedo = new Color32[size * size];
+        Color32[] field = new Color32[size * size];
+        Color32[] height = new Color32[size * size];
+        for (int i = 0; i < albedo.Length; i++)
+        {
+            albedo[i] = green;
+            field[i] = green;
+            height[i] = new Color32(128, 0, 0, 255);
+        }
+
+        for (int column = 0; column < size / 32; column++)
+        {
+            for (int cellRow = 0; cellRow < size / 32; cellRow++)
+            {
+                for (int dy = -1; dy < 12; dy++)
+                {
+                    int i = ((cellRow * 32 + 28 + dy) % size) * size + column * 32 + 16;
+                    height[i].g = (byte)(dy + 2);
+                    field[i].a = 11;
+                    albedo[i] = dy >= 0 ? red : green;
+                }
+            }
+        }
+
+        TerrainMaterial swaying = TerrainMaterial.Create("Swaying", Texture("Swaying albedo", albedo), Texture("Swaying field", field), 4, TerrainMaterial.CellMode.None, green, new TerrainStyle.EdgeSettings(), Texture("Swaying height", height));
+        createdObjects.Add(swaying);
+        SerializedObject sway = new(swaying);
+        sway.FindProperty("framesPerSecond").floatValue = 8f;
+        sway.FindProperty("swayAmplitude").floatValue = 2f;
+        sway.ApplyModifiedPropertiesWithoutUndo();
+        TerrainMaterial cover = TestTerrainStyle.PlainMaterial("Cover", TerrainMaterial.CellMode.None, createdObjects);
+
+        GameObject gridObject = Track(new GameObject("SwayingGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap ground = new GameObject("Ground", typeof(Tilemap)).GetComponent<Tilemap>();
+        ground.transform.SetParent(gridObject.transform);
+        Tilemap over = new GameObject("Over", typeof(Tilemap)).GetComponent<Tilemap>();
+        over.transform.SetParent(gridObject.transform);
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                ground.SetTile(new Vector3Int(x, y, 0), tile);
+            }
+        }
+
+        for (int x = 2; x < 6; x++)
+        {
+            over.SetTile(new Vector3Int(x, 0, 0), tile);
+            over.SetTile(new Vector3Int(x, 2, 0), tile);
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(ground, swaying), new TerrainBlendRenderer.Layer(over, cover));
+        gridObject.SetActive(true);
+        renderer.SetFixedTime(0f);
+        Rect world = new(0f, 0f, 8f, 4f);
+        Color32 rooted = default;
+        Color32 underCover = default;
+        Color32 belowEdge = default;
+        Color32 intoCover = default;
+        for (int frame = 0; frame < 30 && rooted.a == 0; frame++)
+        {
+            yield return null;
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            rooted = pixels.GetPixel(240, 68);
+            underCover = pixels.GetPixel(112, 36);
+            belowEdge = pixels.GetPixel(240, 4);
+            intoCover = pixels.GetPixel(112, 62);
+            Object.DestroyImmediate(pixels);
+        }
+
+        renderer.SetFixedTime(null);
+        Assert.That(rooted.r, Is.GreaterThan(rooted.g), "A weed standing on the layer is drawn.");
+        Assert.That(underCover.g, Is.GreaterThan(underCover.r), "A weed rooted under the cover shows the ground.");
+        Assert.That(belowEdge.g, Is.GreaterThan(belowEdge.r), "A weed rooted below the layer's edge shows the ground.");
+        Assert.That(intoCover.g, Is.GreaterThan(intoCover.r), "A weed growing up under the cover shows the ground.");
+    }
+
+    /// <summary>
     /// Painting a cell on a layer's tilemap updates its texel once the pending changes are uploaded, which waits for
     /// the next render.
     /// </summary>
@@ -1201,6 +1294,17 @@ public class TerrainBlendRendererTests
         Undo.RegisterCompleteObjectUndo(layer, "Paint");
         layer.SetTile(cell, tile);
         Undo.IncrementCurrentGroup();
+    }
+
+    /// <summary>
+    /// A readable 128 px RGBA32 texture with sRGB off holding <paramref name="pixels"/>, destroyed after the test.
+    /// </summary>
+    private Texture2D Texture(string name, Color32[] pixels)
+    {
+        Texture2D texture = Track(new Texture2D(128, 128, TextureFormat.RGBA32, false, true) { name = name, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Point });
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        return texture;
     }
 
     /// <summary>

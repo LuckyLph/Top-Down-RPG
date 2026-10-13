@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Grass
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
   albedo: {fileID: 2800000, guid: f4d660ce2addb4c4fb4b23b4bb3ee9ec, type: 3}
-  cellField: {fileID: 0}
+  cellField: {fileID: 2800000, guid: d31c3910ee15161488db311aeead830f, type: 3}
   height: {fileID: 2800000, guid: 6d214690fac94ce499be18bd2cf165ae, type: 3}
   repeatCells: 8
   outerRadius: 14

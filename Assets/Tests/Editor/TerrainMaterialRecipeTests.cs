@@ -77,7 +77,7 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(first.Size, Is.EqualTo(128));
         Assert.That(first.CellMode, Is.EqualTo(recipe.CellMode));
-        Assert.That(first.CellField != null, Is.EqualTo(recipe.CellMode != TerrainMaterial.CellMode.None));
+        Assert.That(first.CellField != null, Is.EqualTo(recipe.CellMode != TerrainMaterial.CellMode.None || recipe is WeedsRecipe), "a cell field for chips, stones or the ground under weeds");
         Assert.That(Differences(again.Albedo, first.Albedo), Is.Zero);
         Assert.That(Differences(again.CellField, first.CellField), Is.Zero);
         Assert.That(Differences(again.Height, first.Height), Is.Zero);
@@ -400,7 +400,11 @@ public class TerrainMaterialRecipeTests
                 highest = Math.Max(highest, height[i].r);
                 Assert.That(Math.Abs(height[i].r - height[y * size + TerrainArt.Wrap(x + 1, size)].r) / 255.0, Is.LessThanOrEqualTo(0.1 + 1.0 / 255.0), $"({x}, {y})");
                 Assert.That(Math.Abs(height[i].r - height[TerrainArt.Wrap(y + 1, size) * size + x].r) / 255.0, Is.LessThanOrEqualTo(0.1 + 1.0 / 255.0), $"({x}, {y})");
-                if (field == null || field[i].a == 0)
+                if (recipeType == typeof(WeedsRecipe))
+                {
+                    Assert.That(height[i].g, Is.LessThan(32), $"({x}, {y}) a weed's row from under its foot, plus one, or 0");
+                }
+                else if (field == null || field[i].a == 0)
                 {
                     Assert.That(height[i].g, Is.EqualTo(128), $"({x}, {y})");
                 }
@@ -960,9 +964,11 @@ public class TerrainMaterialRecipeTests
 
     /// <summary>
     /// Weeds repeat the grass recipe's ground: away from the weeds' boxes the albedo and the height's red channel are the
-    /// grass textures', tiled. Inside a box the sway weight is the same along each row and never falls going up, and
-    /// every box lies inside one cell column, so the shader's gust is the same across it; some pixels differ from the
-    /// grass, the blades.
+    /// grass textures', tiled, and the cell field is that ground everywhere, the weeds left out. Inside a box the sway
+    /// weight is the same along each row and never falls going up, and every box lies inside one cell column, so the
+    /// shader's gust is the same across it; the height's green channel counts a box's rows from the shadow row (1) up, a
+    /// row up being one more, and is 0 outside every box, and the field's alpha is a box's height in rows above its base
+    /// (255 outside); some pixels differ from the grass, the blades.
     /// </summary>
     [Test]
     public void Weeds_RepeatTheGrass_AndWeighTheirBoxesByRowInsideOneCellColumn()
@@ -987,6 +993,29 @@ public class TerrainMaterialRecipeTests
                 int i = y * size + x;
                 int from = (y % ground.Size) * ground.Size + x % ground.Size;
                 Assert.That(textures.Height[i].r, Is.EqualTo(ground.Height[from].r), $"({x}, {y}) height");
+                Assert.That(SameColour(textures.CellField[i], ground.Albedo[from]), Is.True, $"({x}, {y}) the field is the ground");
+                byte row = textures.Height[i].g;
+                Assert.That(textures.CellField[i].a, row > 0 ? Is.InRange(2, 30) : Is.EqualTo(255), $"({x}, {y}) the field's alpha is a box's height");
+                if (row > 2)
+                {
+                    Assert.That(row - 2, Is.LessThanOrEqualTo(textures.CellField[i].a), $"({x}, {y}) no row of a box lies above its top");
+                }
+
+                if (textures.Height[i].b > 0)
+                {
+                    Assert.That(row, Is.GreaterThan(2), $"({x}, {y}) a leaning pixel lies above its weed's foot");
+                }
+
+                if (row > 1)
+                {
+                    Assert.That(textures.Height[TerrainArt.Wrap(y - 1, size) * size + x].g, Is.EqualTo(row - 1), $"({x}, {y}) the row below is one less");
+                }
+
+                if (row == 0)
+                {
+                    Assert.That(SameColour(textures.Albedo[i], ground.Albedo[from]), Is.True, $"({x}, {y}) outside the boxes the albedo is the ground");
+                }
+
                 bool inBox = textures.Height[i].b > 0;
                 weighted += inBox ? 1 : 0;
                 bool differs = !SameColour(textures.Albedo[i], ground.Albedo[from]);
@@ -1274,7 +1303,7 @@ public class TerrainMaterialRecipeTests
             Assert.That(SameColour(material.SparkleColour, textures.SparkleColour.Value), Is.True, "The sparkle colour is written too.");
         }
 
-        if (textures.CellField == null)
+        if (textures.CellField == null || recipe.CellMode == TerrainMaterial.CellMode.None)
         {
             return;
         }

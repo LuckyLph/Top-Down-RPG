@@ -521,11 +521,13 @@ float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
 // most near its tip, and every pose has one fixed shape: the blade steps between a few drawn poses, like a sprite
 // animation, instead of a kink climbing up and down it as the gust grows. A swaying recipe gives every pixel of a
 // weed's box the weight of its row, so the pixels of a row lean together, and keeps each box inside one cell column,
-// so the gust is the same across it. Only the albedo is moved: the height and the edges stay where they are.
-int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel)
+// so the gust is the same across it. Only the albedo is moved: the height and the edges stay where they are. lean is
+// how many pixels left the texel was read from.
+int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel, out float lean)
 {
     int row = 1 + (int)m;
     float4 sway = TBLut(ins, TB_SWAY_COLUMN, row);
+    lean = 0.0;
     [branch]
     if (sway.x > 0.0)
     {
@@ -538,7 +540,7 @@ int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel)
             float time = TBAnimationTime(ins, TBLut(ins, TB_ANIMATION_COLUMN, row).x);
             float phase = time / sway.y - (cell.x + 0.5 * cell.y) / sway.z + 0.15 * jitter;
             float pose = round(sway.x * (0.5 - 0.5 * cos(6.28318530718 * phase)));
-            float lean = round(pose * weight * weight);
+            lean = round(pose * weight * weight);
             texel = (int2)WrapPixel(worldPixel - float2(lean, 0.0), TBShape(ins, m).z);
         }
     }
@@ -562,6 +564,23 @@ float TBSwell(TBInputs ins, uint m, float2 worldPixel)
     return swell;
 }
 
+// Whether a map pixel lies on swaying layer m where it shows: inside layer m, past its edge pixel, with no layer above it
+// covering the pixel (the layer above's cumulative shape, which counts every layer over m, keeps its edge pixel off it).
+// A weed is drawn only where both its foot and its top do, so one rooted under a path or beyond its layer's edge is left
+// out instead of its top showing alone, and one growing under a path or past its layer's edge instead of standing cut.
+bool TBOpenOn(TBInputs ins, uint m, float2 pixel, float2 worldPixel)
+{
+    TBCorner corner = TBLoadCorner(ins, pixel);
+    float4 terms = TBDistanceTerms(ins, corner, worldPixel);
+    bool rooted = TBLayerDistance(ins, corner, terms, m) <= -0.5;
+    [branch]
+    if (rooted && m + 1u < ins.layers)
+    {
+        rooted = TBLayerDistance(ins, corner, terms, m + 1u) >= 0.5;
+    }
+    return rooted;
+}
+
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
 // margin clear of the rim: its field's alpha holds its reach from its centre pixel. In crisp that reach is stretched
@@ -569,12 +588,33 @@ float TBSwell(TBInputs ins, uint m, float2 worldPixel)
 // the depth is measured where the chip comes nearest the edge, its reach from the centre along the edge's outward
 // direction there. A stone is left out when its centre lies too near the rim, and the others are cut along the rim's
 // line, shaded to the light like the stones' own edges. With hasCentre, known is what the pixel's chip or stone sees
-// at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel).
+// at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel), and a pixel of a weed's
+// box (the height's green channel above 0: its row from the row under the weed's base, plus one) shows the ground under
+// it instead, from the cell field, unless the weed's foot and its top (the field's alpha: the box's rows above its base)
+// both lie where the layer shows (TBOpenOn).
 float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
 {
     float4 shape = TBShape(ins, m);
     int2 texel = (int2)WrapPixel(worldPixel, shape.z);
-    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, TBSwayTexel(ins, m, worldPixel, texel), m).rgb);
+    float lean;
+    int2 shown = TBSwayTexel(ins, m, worldPixel, texel, lean);
+    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, shown, m).rgb);
+    [branch]
+    if (TBLut(ins, TB_SWAY_COLUMN, 1 + (int)m).x > 0.0)
+    {
+        float rows = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, shown, m).g * 255.0);
+        [branch]
+        if (rows > 0.5)
+        {
+            float2 down = float2(-lean, 2.0 - rows);
+            float2 up = down + float2(0.0, round(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, m).a * 255.0));
+            [branch]
+            if (!TBOpenOn(ins, m, pixel + down, worldPixel + down) || !TBOpenOn(ins, m, pixel + up, worldPixel + up))
+            {
+                colour = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m).rgb;
+            }
+        }
+    }
     [branch]
     if (shape.w > 0.5)
     {

@@ -5,13 +5,17 @@ using UnityEngine;
 /// Clumps of taller blades (weeds) over a ground recipe's textures, for a swaying material (Docs/TerrainBlending.md,
 /// Phase 6 notes): the Grass material's weeds over its blade hatch, the DryGrass material's stalks over its straw
 /// (Docs/TerrainTypes.md, Phase 3 notes). The ground is the grass recipe's albedo and height repeated over this
-/// recipe's repeat; without a grass recipe it is the grass colour with grit. A weed is a clump of blades on a jittered grid of spots, kept at a chance plus density
-/// waves: each blade rises from the clump's base, curving to one side, dark at the foot, in one of two leaf greens
-/// above (every other blade) and pale at the tip, some ending in a seed head, over a one-pixel shadow under the base.
-/// Every pixel of a weed's box (its blades and the sway margin to their right) gets the weight of its row in the height
-/// texture's blue channel, from 0 at the base to 255 at the top, which the shader leans by; the box keeps inside one
-/// cell column and clear of the other boxes, so the gust is the same across a box and leaning blades never meet another
-/// weed. No cell field; the base colour is the grass colour.
+/// recipe's repeat; without a grass recipe it is the grass colour with grit. A weed is a clump of blades on a jittered
+/// grid of spots, kept at a chance plus density waves: each blade rises from the clump's base, curving to one side, dark
+/// at the foot, in one of two leaf greens above (every other blade) and pale at the tip, some ending in a seed head,
+/// over a one-pixel shadow under the base. Every pixel of a weed's box (its blades and the sway margin to their right)
+/// gets the weight of its row in the height texture's blue channel, from 0 at the base to 255 at the top, which the
+/// shader leans by; the box keeps inside one cell column and clear of the other boxes, so the gust is the same across a
+/// box and leaning blades never meet another weed. Every pixel of a box, its shadow row included, also gets in the
+/// height's green channel its row counted from the row under the base, plus one (1 for the shadow row, 2 for the base,
+/// 0 outside every box), and the cell field holds the ground without the weeds, its alpha a box's height in rows above
+/// the base (255 outside every box), so the shader can leave out a weed whose foot or top another layer covers or lies
+/// outside its own layer, showing the ground there. The base colour is the grass colour.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Weeds", fileName = "Recipe_Weeds")]
 public sealed class WeedsRecipe : TerrainMaterialRecipe
@@ -62,17 +66,21 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
     /// <summary>
     /// Builds the ground from the grass recipe (or the grass colour, the grit and the height waves), draws the density
     /// waves, the weed spots and each spot's weed (kept or not, blades, their feet, heights, curves and seed heads), and
-    /// paints the weeds over the ground with their sway weights.
+    /// paints the weeds over the ground with their sway weights and rows; the cell field is the ground before the weeds,
+    /// with each box's height in rows above its base as alpha.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
         Color32[] albedo = new Color32[size * size];
         Color32[] height = new Color32[size * size];
         LayGround(random, size, albedo, height);
+        Color32[] ground = (Color32[])albedo.Clone();
 
         double[] density = TerrainArt.PeriodicNoise(random, densityWaves, size);
         double densityTotal = TerrainArt.TotalAmplitude(densityWaves);
         byte[] weights = new byte[size * size];
+        byte[] rows = new byte[size * size];
+        byte[] tops = new byte[size * size];
         bool[] taken = new bool[size * size];
         int fewest = Math.Max(1, Math.Min(blades.x, blades.y));
         int most = Math.Max(fewest, Math.Max(blades.x, blades.y));
@@ -92,22 +100,24 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
 
             if (keep)
             {
-                StampWeed(albedo, weights, taken, size, y, weed);
+                StampWeed(albedo, weights, rows, tops, taken, size, y, weed);
             }
         }
 
         for (int i = 0; i < height.Length; i++)
         {
+            height[i].g = rows[i];
             height[i].b = weights[i];
+            ground[i].a = rows[i] > 0 ? tops[i] : (byte)255;
         }
 
-        return new TerrainTextures(size, grass, CellMode, albedo, null, height);
+        return new TerrainTextures(size, grass, CellMode, albedo, ground, height);
     }
 
     /// <summary>
     /// Fills <paramref name="albedo"/> and <paramref name="height"/> with the ground: the grass recipe's textures
     /// repeated when it is set and its texture size divides <paramref name="size"/>, else the grass colour with grit
-    /// over the smooth height. The blue channel is cleared and the green one is 0.5, as no chip lies here.
+    /// over the smooth height. The blue channel is cleared and the green one is 0.5 until the weeds' rows replace it.
     /// </summary>
     private void LayGround(System.Random random, int size, Color32[] albedo, Color32[] height)
     {
@@ -149,9 +159,10 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
     /// Paints <paramref name="weed"/> with its base on row <paramref name="baseRow"/>, when its box (from the shadow
     /// row under it to its tallest tip, and from its leftmost pixel to the sway margin past its rightmost) lies inside one
     /// cell column and clear of every other box; marks the box, a pixel around it included, taken, and gives every
-    /// pixel of it the weight of its row.
+    /// pixel of it the weight of its row, its row from the shadow row (1 there, 2 at the base) and the box's height in
+    /// rows above its base.
     /// </summary>
-    private void StampWeed(Color32[] albedo, byte[] weights, bool[] taken, int size, int baseRow, Blade[] weed)
+    private void StampWeed(Color32[] albedo, byte[] weights, byte[] rows, byte[] tops, bool[] taken, int size, int baseRow, Blade[] weed)
     {
         int left = int.MaxValue;
         int right = int.MinValue;
@@ -189,6 +200,8 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
                 int i = TerrainArt.Wrap(baseRow + dy, size) * size + x;
                 taken[i] = true;
                 weights[i] = weight;
+                rows[i] = (byte)(dy + 2);
+                tops[i] = (byte)tallest;
             }
         }
 

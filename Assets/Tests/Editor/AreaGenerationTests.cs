@@ -12,17 +12,17 @@ using UnityEngine.Tilemaps;
 /// where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does too, with a village,
 /// a clearing and a forest joined by one connected path network, buildings beside the street with reachable doors, a
 /// paved square, dirt along the trails near the village and most mobs in the forest; the Lakeside generator lays a lake
-/// off the paths with a beach and a marsh, dry grass on the open grass, shallows ringing the beach with a ford across
-/// the lake from the trail and no third look at their corners, and keeps props off the water, the beach and the mud
-/// with the beach and every mob within the spawn's reach; the terrain each generator lays from its detail stream leaves
-/// the rest of its layout where it was, and the Lakeside's two such steps leave each other where they were; the same
+/// off the paths with a beach and a marsh, dry grass on the open grass, small shallow ponds on plain grass apart from
+/// the lake with no third look at their corners, and keeps props off the water, the beach and the mud with the beach
+/// and every mob within the spawn's reach; the terrain each generator lays from its detail stream leaves the rest of
+/// its layout where it was, and the Lakeside's ponds leave its dry grass where it was; the same
 /// seed gives the same layout; the project's style lists every ground material in the shared draw order, the
 /// project's generators list only the layers they lay (plain ground tiles and the project's materials) as a
 /// subsequence of it, and the default movement profile blocks water and makes mud and the shallows cost more; and
 /// <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
 /// a <see cref="TerrainBlendRenderer"/> in the shared order, with navigation priorities from that order, keeping painted
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
-/// a navigation grid that blocks exactly the props' cells and walks the Lakeside's ford at the shallows' cost, an area
+/// a navigation grid that blocks exactly the props' cells and wades the Lakeside's ponds at the shallows' cost, an area
 /// of only some layers that still draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
 /// </summary>
 public class AreaGenerationTests
@@ -466,9 +466,9 @@ public class AreaGenerationTests
     /// <summary>
     /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the dry grass lies
     /// on open grass, off the water and the beach and not on or beside mud, a path or the map's edge, in pieces of four
-    /// cells or more; the lake, its deep water and its shallows, lies off every path and at least the road margin from
-    /// the road, the beach and the marsh lie beside it and off it, and the gravel trail reaches the beach; the spawn is
-    /// on the road with no footprint or water within its clear radius.
+    /// cells or more; the lake lies off every path and the shallow ponds and at least the road margin from the road, the
+    /// beach and the marsh lie beside it and off it, and the gravel trail reaches the beach; the spawn is on the road
+    /// with no footprint or water within its clear radius.
     /// </summary>
     [Test]
     public void LakesideLayouts_LayEveryTerrainType_WithTheLakeOffThePaths()
@@ -477,8 +477,7 @@ public class AreaGenerationTests
         {
             AreaLayout layout = lakeside.Generate(seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
-            HashSet<Vector3Int> water = new(Cells(layout, "Water"));
-            water.UnionWith(Cells(layout, "Shallows"));
+            HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
             HashSet<Vector3Int> mud = Cells(layout, "Mud");
             HashSet<Vector3Int> stone = Cells(layout, "Stone");
@@ -486,7 +485,7 @@ public class AreaGenerationTests
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
             Assert.That(layout.TerrainLayerCount, Is.EqualTo(8));
-            Assert.That(Cells(layout, "Water").Overlaps(Cells(layout, "Shallows")), Is.False, $"seed {seed}: a lake cell is deep or shallow");
+            Assert.That(water.Overlaps(Cells(layout, "Shallows")), Is.False, $"seed {seed}: the ponds lie off the lake");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
@@ -551,125 +550,87 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// For every Lakeside seed the lake keeps the cells it had without its shallows, now deep water or shallows: the
-    /// shallows ring the beach side (most lake cells beside the beach are shallows, and each shallows cell beside the
-    /// shore is beside beach or trail, never the marsh's mud, except at the ford's far end), and a ford of shallows
-    /// starts by the trail's end and crosses the lake to the marsh on its far shore. Wherever the shallows meet two other
-    /// looks at a corner, the one under the shallows' rounded corner is the shallows themselves (under the deep water)
-    /// or the trail running into the lake, never a third look poking out (TerrainTypes.md, Phase 3's Corners note).
+    /// For every Lakeside seed the shallows lie in separate small ponds on the open grass, apart from the lake: at least
+    /// one pond and at most the configured count, each of four cells or more, two cells or more from the others; every
+    /// pond cell and its 8 neighbours are plain grass or pond (no water, dry grass, beach, mud, path or map's edge), with
+    /// no blocking prop, walk-through prop or mob on them and none in the spawn's clear disc; the lake is the same as
+    /// with no ponds. Wherever the ponds meet another look at a corner, no third look shows under a rounded corner
+    /// (TerrainTypes.md, Phase 3's Corners note).
     /// </summary>
     [Test]
-    public void LakesideLayouts_RingTheBeachWithShallows_AndFordTheLakeFromTheTrail()
+    public void LakesideLayouts_LayShallowPonds_ApartFromTheLake_OnPlainGrass()
     {
-        AreaGenerator withoutShallows = Track(Object.Instantiate(lakeside));
-        SerializedObject settings = new(withoutShallows);
-        settings.FindProperty("shallowsWidth").vector2Value = Vector2.zero;
-        settings.FindProperty("fordWidth").intValue = 0;
+        AreaGenerator withoutPonds = Track(Object.Instantiate(lakeside));
+        SerializedObject settings = new(withoutPonds);
+        settings.FindProperty("shallowPondCount").intValue = 0;
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = lakeside.Generate(seed);
-            HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
-            HashSet<Vector3Int> sand = Cells(layout, "Sand");
-            HashSet<Vector3Int> mud = Cells(layout, "Mud");
-            HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
-            HashSet<Vector3Int> lake = new(water);
-            lake.UnionWith(shallows);
-            AreaLayout plain = withoutShallows.Generate(seed);
-
-            Assert.That(plain.TerrainCells(plain.IndexOf(ProjectMaterial("Shallows"))), Is.Empty, $"seed {seed}");
-            Assert.That(lake.SetEquals(Cells(plain, "Water")), Is.True, $"seed {seed}: the shallows are lake cells");
-            Assert.That(water.Count, Is.GreaterThan(shallows.Count), $"seed {seed}: the lake stays mostly deep");
-
-            int besideBeach = 0;
-            int ringed = 0;
-            float middle = 0f;
-            foreach (Vector3Int cell in lake)
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> other = new(Cells(layout, "Water"));
+            foreach (string name in new[] { "DryGrass", "Sand", "Mud", "Gravel", "Stone" })
             {
-                middle += cell.y;
+                other.UnionWith(Cells(layout, name));
             }
 
-            middle /= lake.Count;
-            foreach (Vector3Int cell in lake)
+            HashSet<Vector3Int> props = Footprints(layout);
+            foreach (AreaLayout.Prop prop in layout.Props)
             {
-                bool nearBeach = false;
-                bool nearMud = false;
-                foreach (Vector3Int near in CellsWithin(cell, 1))
-                {
-                    nearBeach |= sand.Contains(near) || gravel.Contains(near);
-                    nearMud |= mud.Contains(near);
-                }
-
-                if (nearBeach && !nearMud)
-                {
-                    besideBeach++;
-                    ringed += shallows.Contains(cell) ? 1 : 0;
-                }
-
-                if (nearMud && shallows.Contains(cell))
-                {
-                    Assert.That(cell.y, Is.GreaterThan(middle), $"seed {seed}: shallows at {cell} beside mud away from the ford's far end");
-                }
+                props.Add(prop.Cell);
             }
 
-            Assert.That(ringed, Is.GreaterThan(besideBeach * 3 / 4), $"seed {seed}: the shallows ring the beach");
+            foreach (AreaLayout.Mob mob in layout.Mobs)
+            {
+                props.Add(mob.Cell);
+            }
 
-            HashSet<Vector3Int> fromBeach = new();
+            AreaLayout plain = withoutPonds.Generate(seed);
+            Assert.That(Cells(plain, "Shallows"), Is.Empty, $"seed {seed}");
+            Assert.That(Cells(layout, "Water").SetEquals(Cells(plain, "Water")), Is.True, $"seed {seed}: the lake is as it was");
+
+            List<HashSet<Vector3Int>> ponds = new();
+            HashSet<Vector3Int> seen = new();
             foreach (Vector3Int cell in shallows)
             {
+                if (seen.Add(cell))
+                {
+                    HashSet<Vector3Int> pond = Reachable(cell, shallows.Contains);
+                    seen.UnionWith(pond);
+                    ponds.Add(pond);
+                    Assert.That(pond.Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of shallows at {cell}");
+                }
+
+                Vector3Int offset = cell - layout.SpawnCell;
+                Assert.That(offset.x * offset.x + offset.y * offset.y, Is.GreaterThan(lakeside.SpawnClearRadius * lakeside.SpawnClearRadius), $"seed {seed}: a pond at {cell} near the spawn");
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    if (sand.Contains(near) || gravel.Contains(near))
-                    {
-                        fromBeach.Add(cell);
-                    }
+                    Assert.That(grass.Contains(near) && !other.Contains(near), Is.True, $"seed {seed}: a pond at {cell} beside {near}, not plain grass");
+                    Assert.That(props.Contains(near), Is.False, $"seed {seed}: a prop or mob on or beside the pond at {cell}");
                 }
-            }
 
-            HashSet<Vector3Int> crossing = new();
-            foreach (Vector3Int cell in fromBeach)
-            {
-                crossing.UnionWith(Reachable(cell, shallows.Contains));
-            }
-
-            bool reachesFarShore = false;
-            foreach (Vector3Int cell in crossing)
-            {
-                foreach (Vector3Int near in CellsWithin(cell, 1))
-                {
-                    reachesFarShore |= mud.Contains(near) && cell.y > middle;
-                }
-            }
-
-            Assert.That(reachesFarShore, Is.True, $"seed {seed}: the ford crosses the lake to its far shore");
-            bool byTheTrail = false;
-            foreach (Vector3Int cell in gravel)
-            {
+                HashSet<Vector3Int> own = Reachable(cell, shallows.Contains);
                 foreach (Vector3Int near in CellsWithin(cell, 2))
                 {
-                    byTheTrail |= crossing.Contains(near);
+                    Assert.That(shallows.Contains(near) && !own.Contains(near), Is.False, $"seed {seed}: two ponds near {cell}");
                 }
             }
 
-            Assert.That(byTheTrail, Is.True, $"seed {seed}: the ford starts by the trail");
-            Assert.That(ShallowsCornerProblems(layout), Is.Empty, $"seed {seed}");
+            Assert.That(ponds.Count, Is.InRange(1, lakeside.ShallowPondCount), $"seed {seed}: ponds");
+            Assert.That(CornerProblems(layout), Is.Empty, $"seed {seed}");
         }
     }
 
     /// <summary>
-    /// The corners of <paramref name="layout"/> where a third look shows under the shallows' rounded corner: at each
-    /// cell corner with a shallows cell among its four cells, every layer whose cells (with those of the layers above
-    /// it, as the renderer counts them) fill one of the four is rounded off there, and the next layer down fills that
-    /// cell's quarter of the corner. That is a problem when the next layer fills just one more cell, beside it, so its
-    /// straight edge runs on where the upper layer turns away, unless it is the shallows under the deep water or a path
-    /// running into the lake.
+    /// The corners of <paramref name="layout"/> around its shallows where a third look shows under a rounded corner: at
+    /// each cell corner with a shallows cell among its four cells, a layer filling one of the four (with the layers
+    /// above it, as the renderer counts them) is rounded off there, and the next layer down fills that cell's quarter of
+    /// the corner. That is a problem when the next layer fills just one more cell, beside it, so its straight edge runs
+    /// on where the upper layer turns away.
     /// </summary>
-    private static List<string> ShallowsCornerProblems(AreaLayout layout)
+    private static List<string> CornerProblems(AreaLayout layout)
     {
-        int shallowsLayer = layout.IndexOf(ProjectMaterial("Shallows"));
-        int waterLayer = layout.IndexOf(ProjectMaterial("Water"));
-        HashSet<int> pathLayers = new() { layout.IndexOf(ProjectMaterial("Gravel")), layout.IndexOf(ProjectMaterial("Stone")) };
         Dictionary<Vector3Int, int> top = new();
         HashSet<Vector3Int> corners = new();
         for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
@@ -680,7 +641,7 @@ public class AreaGenerationTests
             }
         }
 
-        foreach (Vector3Int cell in layout.TerrainCells(shallowsLayer))
+        foreach (Vector3Int cell in layout.TerrainCells(layout.IndexOf(ProjectMaterial("Shallows"))))
         {
             corners.Add(cell);
             corners.Add(cell + Vector3Int.right);
@@ -700,7 +661,6 @@ public class AreaGenerationTests
 
             for (int c = 0; c < 4; c++)
             {
-                int upper = tops[c];
                 int next = -1;
                 int filled = 0;
                 int other = -1;
@@ -721,12 +681,9 @@ public class AreaGenerationTests
                     }
                 }
 
-                bool alone = upper > next && next >= 0;
-                bool beside = filled == 1 && (c ^ other) != 3;
-                bool expected = (upper == waterLayer && next == shallowsLayer) || (upper == shallowsLayer && pathLayers.Contains(next));
-                if (alone && beside && !expected)
+                if (tops[c] > next && next >= 0 && filled == 1 && (c ^ other) != 3)
                 {
-                    problems.Add($"{corner}: layer {next} under layer {upper}'s corner");
+                    problems.Add($"{corner}: layer {next} under layer {tops[c]}'s corner");
                 }
             }
         }
@@ -992,13 +949,12 @@ public class AreaGenerationTests
 
     /// <summary>
     /// On the layers the writer sets up for the Lakeside, the shallows reach navigation through their tilemap's terrain
-    /// source, at their draw order's priority, and the default movement profile's rule: every shallows cell, the ford
-    /// included, can be walked at the shallows' cost of 20 (plus the profile's edge cost beside the deep water), every
-    /// deep water cell is blocked, and a path from the ford's beach end to its far end crosses the lake without stepping
-    /// on deep water.
+    /// source, at their draw order's priority, and the default movement profile's rule: every pond cell can be walked at
+    /// the shallows' cost of 20 (no blocked cell lies beside a pond, so no edge cost), joined to the spawn, while every
+    /// water cell is blocked.
     /// </summary>
     [Test]
-    public void TheWriter_LetsTheFordBeWalkedAtTheShallowsCost_AndKeepsTheDeepWaterBlocked()
+    public void TheWriter_LetsThePondsBeWadedAtTheShallowsCost_AndKeepsTheWaterBlocked()
     {
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
@@ -1010,7 +966,6 @@ public class AreaGenerationTests
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         AreaGenerator.TerrainLayer shallowsLayer = Layer(lakeside, "Shallows");
         NavigationTerrainSource2D source = grid.transform.Find(shallowsLayer.TilemapName).GetComponent<NavigationTerrainSource2D>();
-        HashSet<Vector3Int> water = Cells(layout, "Water");
         HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
 
         navigation.BuildGrid();
@@ -1020,50 +975,20 @@ public class AreaGenerationTests
         profile.TryGetTraversal(ProjectTerrainType("Shallows"), out bool walkable, out int cost);
         Assert.That(walkable, Is.True);
         Assert.That(cost, Is.EqualTo(20));
-        foreach (Vector3Int cell in water)
+        Assert.That(shallows, Is.Not.Empty);
+        foreach (Vector3Int cell in Cells(layout, "Water"))
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"deep water at {cell}");
+            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"water at {cell}");
         }
 
-        Vector3Int south = default;
-        Vector3Int north = default;
-        bool first = true;
         foreach (Vector3Int cell in shallows)
         {
             Assert.That(navigation.IsCellWalkable(cell, profile), Is.True, $"shallows at {cell}");
-            bool besideWater = false;
-            foreach (Vector3Int near in CellsWithin(cell, 1))
-            {
-                besideWater |= water.Contains(near);
-            }
-
-            int expected = cost + (besideWater ? profile.EdgeCost : 0);
+            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"shallows at {cell} reachable");
             foreach (Vector3Int side in Sides)
             {
-                if (navigation.IsCellWalkable(cell + side, profile))
-                {
-                    Assert.That(navigation.MovementCost(cell + side, cell, profile), Is.EqualTo(expected), $"stepping into {cell}");
-                }
+                Assert.That(navigation.MovementCost(cell + side, cell, profile), Is.EqualTo(cost), $"stepping into {cell}");
             }
-
-            if (first || cell.y < south.y)
-            {
-                south = cell;
-            }
-
-            if (first || cell.y > north.y)
-            {
-                north = cell;
-            }
-
-            first = false;
-        }
-
-        PathResult path = navigation.Pathfinder.FindPath(new PathRequest(south, north, false, profile));
-        Assert.That(path.Success && !path.IsPartial, Is.True, "The ford's ends are joined.");
-        foreach (Vector3Int cell in path.Cells)
-        {
-            Assert.That(water.Contains(cell), Is.False, $"the path steps on deep water at {cell}");
         }
     }
 
@@ -1477,10 +1402,11 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For each generator, the terrain it lays from its detail stream at the end (the Clearing's campsite, the Village
-    /// Forest's dirt, the Lakeside's dry grass) leaves the rest of the layout where it was: generated by a copy of the
-    /// generator with that step turned off, every other layer, every mob and the spawn are the same, and so is every
-    /// prop, but for the Clearing's campfire and seats and the props they replaced, all of them within the campsite's
-    /// radius plus three cells of the campfire.
+    /// Forest's dirt, the Lakeside's dry grass and shallow ponds) leaves the rest of the layout where it was: generated
+    /// by a copy of the generator with those steps turned off, every other layer, every mob and the spawn are the same,
+    /// and so is every prop, but for the Clearing's campfire and seats and the props they replaced, all of them within
+    /// the campsite's radius plus three cells of the campfire, and the plants the ponds removed, on, beside or just below
+    /// them.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -1502,8 +1428,7 @@ public class AreaGenerationTests
         else
         {
             settings.FindProperty("dryGrassPatchCount").intValue = 0;
-            settings.FindProperty("shallowsWidth").vector2Value = Vector2.zero;
-            settings.FindProperty("fordWidth").intValue = 0;
+            settings.FindProperty("shallowPondCount").intValue = 0;
             added = "DryGrass";
         }
 
@@ -1514,18 +1439,10 @@ public class AreaGenerationTests
             AreaLayout plain = without.Generate(seed);
             int addedIndex = full.IndexOf(ProjectMaterial(added));
             int shallowsIndex = full.IndexOf(ProjectMaterial("Shallows"));
-            int waterIndex = full.IndexOf(ProjectMaterial("Water"));
             Assert.That(plain.TerrainCells(addedIndex), Is.Empty, $"seed {seed}: the step is off");
             for (int layer = 0; layer < full.TerrainLayerCount; layer++)
             {
-                if (layer == waterIndex && shallowsIndex >= 0)
-                {
-                    HashSet<Vector3Int> lake = new(full.TerrainCells(waterIndex));
-                    lake.UnionWith(full.TerrainCells(shallowsIndex));
-                    Assert.That(plain.TerrainCells(shallowsIndex), Is.Empty, $"seed {seed}: the shallows are off");
-                    Assert.That(lake.SetEquals(plain.TerrainCells(waterIndex)), Is.True, $"seed {seed}: the shallows only turn deep water shallow");
-                }
-                else if (layer != addedIndex && layer != shallowsIndex)
+                if (layer != addedIndex && layer != shallowsIndex)
                 {
                     Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
                 }
@@ -1550,6 +1467,16 @@ public class AreaGenerationTests
                 }
             }
 
+            if (shallowsIndex >= 0)
+            {
+                foreach (Vector3Int cell in full.TerrainCells(shallowsIndex))
+                {
+                    campsite.UnionWith(CellsWithin(cell, 1));
+                    campsite.UnionWith(CellsWithin(cell + new Vector3Int(0, -2, 0), 1));
+                    campsite.UnionWith(CellsWithin(cell + new Vector3Int(0, -3, 0), 1));
+                }
+            }
+
             int kept = 0;
             foreach (AreaLayout.Prop prop in plain.Props)
             {
@@ -1570,29 +1497,64 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(kept, Is.GreaterThan(plain.Props.Count - 8), $"seed {seed}: nearly every prop stays");
+            Assert.That(kept, Is.GreaterThan(plain.Props.Count - 16), $"seed {seed}: nearly every prop stays");
         }
     }
 
     /// <summary>
-    /// The Lakeside's two detail-stream steps draw from streams of their own: with its dry grass turned off, its
-    /// shallows and deep water are laid exactly as before.
+    /// The Lakeside's shallow ponds, laid last, leave everything laid before them where it was: with the ponds turned
+    /// off, every other layer (the dry grass included), the spawn and every mob are the same, and so is every prop but
+    /// the walk-through props the ponds removed, all of them on, beside or up to three rows below a pond.
     /// </summary>
     [Test]
-    public void TheLakesidesShallows_DoNotMoveWithItsDryGrass()
+    public void TheLakesidesPonds_LeaveTheRestOfItsLayoutWhereItWas()
     {
         AreaGenerator without = Track(Object.Instantiate(lakeside));
         SerializedObject settings = new(without);
-        settings.FindProperty("dryGrassPatchCount").intValue = 0;
+        settings.FindProperty("shallowPondCount").intValue = 0;
         settings.ApplyModifiedPropertiesWithoutUndo();
+        int shallowsIndex = lakeside.TerrainLayers.Count - 2;
         for (int seed = 1; seed <= 5; seed++)
         {
             AreaLayout full = lakeside.Generate(seed);
             AreaLayout plain = without.Generate(seed);
+            HashSet<Vector3Int> wet = new();
+            foreach (Vector3Int cell in Cells(full, "Shallows"))
+            {
+                wet.UnionWith(CellsWithin(cell, 1));
+                wet.UnionWith(CellsWithin(cell + new Vector3Int(0, -2, 0), 1));
+                wet.UnionWith(CellsWithin(cell + new Vector3Int(0, -3, 0), 1));
+            }
 
-            Assert.That(Cells(plain, "DryGrass"), Is.Empty, $"seed {seed}");
-            Assert.That(Cells(full, "Shallows").SetEquals(Cells(plain, "Shallows")), Is.True, $"seed {seed}: shallows");
-            Assert.That(Cells(full, "Water").SetEquals(Cells(plain, "Water")), Is.True, $"seed {seed}: water");
+            Assert.That(full.IndexOf(ProjectMaterial("Shallows")), Is.EqualTo(shallowsIndex));
+            for (int layer = 0; layer < full.TerrainLayerCount; layer++)
+            {
+                if (layer != shallowsIndex)
+                {
+                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                }
+            }
+
+            Assert.That(full.SpawnCell, Is.EqualTo(plain.SpawnCell));
+            Assert.That(full.Mobs.Count, Is.EqualTo(plain.Mobs.Count));
+            for (int i = 0; i < full.Mobs.Count; i++)
+            {
+                Assert.That(full.Mobs[i].Cell, Is.EqualTo(plain.Mobs[i].Cell), $"seed {seed}: mob {i}");
+            }
+
+            foreach (AreaLayout.Prop prop in full.Props)
+            {
+                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+            }
+
+            foreach (AreaLayout.Prop prop in plain.Props)
+            {
+                if (!HasProp(full, prop))
+                {
+                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Assert.That(wet.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the ponds");
+                }
+            }
         }
     }
 

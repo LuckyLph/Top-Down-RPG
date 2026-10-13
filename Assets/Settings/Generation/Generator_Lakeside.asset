@@ -72,9 +72,8 @@ MonoBehaviour:
   dryGrassPatchCount: 5
   dryGrassPatchRadius: {x: 2.5, y: 5}
   shoreZoneDepth: 3
-  shallowsWidth: {x: 1, y: 2}
-  fordWidth: 2
-  fordBend: 1
+  shallowPondCount: 3
+  shallowPondRadius: {x: 2, y: 3}
   roadWidth: 3
   roadSouth: 0.5
   roadMeander: 0.12

@@ -9,9 +9,10 @@ using UnityEngine.TestTools;
 /// the upper material's default edge for its own pair of material assets only, one whose lower material is missing is
 /// not taken for one over nothing, layers find their materials' rows whatever the order, the rim is sampled every half
 /// pixel up to its width, the soft look's height scale (held to its bound), band and whole stones reach their rows, an
-/// animated material's animation reaches its layer's row and a still one's leaves it empty, the project style's stone
-/// over gravel override changes that pair's row only, and the project's water is animated and meets sand without an
-/// outline. The project's style and materials are only read.
+/// animated material's animation reaches its layer's row and a still one's leaves it empty, a sunken material's bank
+/// reaches its layer's row and a level one's leaves it empty, the project style's stone over gravel override changes
+/// that pair's row only, and the project's water is animated, sunken and meets sand without an outline. The project's
+/// style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -238,7 +239,30 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// The project's water is animated and drawn over every other material: over sand its style override draws no
+    /// A sunken material's layer row holds its bank colour and sink depth, then its bank shadow; a level material's
+    /// holds nothing there, so the shader draws it no bank.
+    /// </summary>
+    [Test]
+    public void ASunkenMaterial_ReachesItsLayerRow_AndALevelOneLeavesItEmpty()
+    {
+        TerrainMaterial grass = Material("Grass", 0.1f);
+        TerrainMaterial water = Material("Water", 0f);
+        SerializedObject settings = new(water);
+        settings.FindProperty("sinkDepth").floatValue = 4.5f;
+        settings.FindProperty("bankColour").colorValue = new Color(0.4f, 0.3f, 0.2f);
+        settings.FindProperty("bankShadow").floatValue = 0.35f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
+
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColumn + 1), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f, 4.5f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn + 1), Is.EqualTo(new Color(0.35f, 0f, 0f, 0f)));
+    }
+
+    /// <summary>
+    /// The project's water is animated, sunken and drawn over every other material: over sand its style override draws no
     /// outline and a wet sand shadow, while over grass, mud, gravel, stone and nothing it keeps its own default edge,
     /// an outline with a shore rim. Its texture's glint phases are what it animates.
     /// </summary>
@@ -258,6 +282,7 @@ public class TerrainBlendLutTests
         TerrainStyle.EdgeSettings overSand = style.GetEdge(water, materials[1]);
 
         Assert.That(water.IsAnimated, Is.True);
+        Assert.That(water.SinkDepth, Is.GreaterThan(0f), "Water lies below the ground around it.");
         Assert.That(water.Height, Is.Not.Null, "The glint phases live in the height texture.");
         Assert.That(overSand, Is.Not.SameAs(water.Edge));
         Assert.That(overSand.DrawOutline, Is.False);
@@ -272,6 +297,7 @@ public class TerrainBlendLutTests
         for (int i = 0; i < 5; i++)
         {
             Assert.That(materials[i].IsAnimated, Is.False, names[i]);
+            Assert.That(materials[i].SinkDepth, Is.Zero, names[i]);
         }
     }
 

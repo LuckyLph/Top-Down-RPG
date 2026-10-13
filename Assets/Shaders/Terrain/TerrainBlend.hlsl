@@ -12,6 +12,7 @@
 #define TB_GLINT_COLUMN 5
 #define TB_SPARKLE_COLUMN 6
 #define TB_SPARKLE_TIMING_COLUMN 7
+#define TB_BANK_COLUMN 8
 #define TB_RAMP_TEXELS 32
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
@@ -541,6 +542,57 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
     return colour;
 }
 
+// How many pixels of bank show at a pixel inside sunken layer m's edge (its sink depth above 0, water): the sink depth
+// times how much the edge faces up the screen there, so the bank is highest along edges facing up, thins as they turn
+// sideways and is gone along edges facing down. The direction is the bare shape's in crisp, so the bank keeps one height
+// along a straight edge and its foot follows the edge's noise. 0 for a level layer, and deeper inside than the bank and
+// its shadow.
+float TBBankHeight(TBInputs ins, uint m, TBCorner corner, float2 worldPixel, float depth)
+{
+    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).a;
+    float bank = 0.0;
+    [branch]
+    if (sink > 0.0 && depth < 2.0 * sink + 1.0)
+    {
+#ifdef _TERRAIN_SOFT
+        float2 n = TBOutward(ins, corner, m, worldPixel);
+#else
+        float2 n = TBGradient(ins, corner, m, worldPixel, 0.0);
+#endif
+        bank = sink * saturate(n.y);
+    }
+    return bank;
+}
+
+// Layer m's colour at a depth inside its edge, before the edge pixel: within the bank, the bank's face, its lowest
+// pixel darker at the waterline; below it the interior under the rim, which starts at the waterline, darkened by the
+// bank's shadow over as many pixels as the bank is high. A level layer has no bank, so this is the interior under the
+// rim. band is how much of the rim soft bands make up (0 in crisp and on the bank).
+float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float band)
+{
+    band = 0.0;
+    float bank = TBBankHeight(ins, m, corner, worldPixel, depth);
+    float3 colour;
+    [branch]
+    if (depth < bank)
+    {
+        float3 face = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).rgb;
+        colour = depth >= bank - 1.0 ? face * 0.75 : face;
+    }
+    else
+    {
+        float below = depth - bank;
+        colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, hasCentre, known);
+        float4 rim = TBRamp(ins, e, m, w, max(below - TBSwell(ins, m, worldPixel), 0.0), band);
+        colour = colour * (1.0 - rim.a) + rim.rgb;
+        if (below < bank)
+        {
+            colour *= 1.0 - TBLut(ins, TB_BANK_COLUMN + 1, 1 + (int)m).x;
+        }
+    }
+    return colour;
+}
+
 // A hash of the world cell at the corner of a map pixel's corner patch.
 uint TBCornerSeed(TBInputs ins, float2 pixel)
 {
@@ -603,7 +655,7 @@ float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float
 // centre moved by its own height (the height texture's green channel times the material's height scale) lies the
 // keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
-// opaque; then the interior under the band or the rim. No shadow is drawn. Bands are shaded by the cell field's grit
+// opaque; then the interior under the band or the rim (TBInside, with a sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit
 // like the base colour.
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
@@ -659,21 +711,19 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         }
         else if (d <= -0.5)
         {
-            float depth = -d;
-            float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, hasCentre, centre);
             float band;
-            float4 rim = TBRamp(ins, e, m, w, max(depth - TBSwell(ins, m, worldPixel), 0.0), band);
-            colour = colour * (1.0 - rim.a) + rim.rgb + grit * band;
-            result = float4(colour, 1.0);
+            float3 colour = TBInside(ins, m, e, w, -d, pixel, worldPixel, corner, hasCentre, centre, band);
+            result = float4(colour + grit * band, 1.0);
         }
     }
     return result;
 }
 #else
 // Layer m's colour at a pixel, premultiplied: from the outside in, the translucent shadow, the antialiased edge pixel
-// (the outline, or the rim's outer colour where the pair draws none), then the interior under the rim, with the
-// outline fading into it over the first pixel. Where the pair has tufts, pixels of the edge and of the band outside
-// it that a tuft covers are opaque: the outline along the tuft's border, the rim's outer colour inside it.
+// (the outline, or the rim's outer colour where the pair draws none), then the interior under the rim (TBInside, with
+// a sunken layer's bank), with the outline fading into it over the first pixel. Where the pair has tufts, pixels of
+// the edge and of the band outside it that a tuft covers are opaque: the outline along the tuft's border, the rim's
+// outer colour inside it.
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float3 edge = lerp(e.fill, e.outline, e.outlineWeight);
@@ -707,10 +757,8 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     else
     {
         float depth = -d;
-        float3 colour = TBInterior(ins, m, depth, pixel, worldPixel, corner, false, (TBCentre)0);
         float band;
-        float4 rim = TBRamp(ins, e, m, w, max(depth - TBSwell(ins, m, worldPixel), 0.0), band);
-        colour = colour * (1.0 - rim.a) + rim.rgb;
+        float3 colour = TBInside(ins, m, e, w, depth, pixel, worldPixel, corner, false, (TBCentre)0, band);
         if (depth < 1.5)
         {
             colour = lerp(lerp(colour, e.outline, e.outlineWeight), colour, saturate(depth - 0.5));

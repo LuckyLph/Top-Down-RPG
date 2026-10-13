@@ -12,7 +12,7 @@ using UnityEngine.Tilemaps;
 /// where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does too, with a village,
 /// a clearing and a forest joined by one connected path network, buildings beside the street with reachable doors, a
 /// paved square, dirt along the trails near the village and most mobs in the forest; the Lakeside generator lays a lake
-/// off the paths with a beach and a marsh, weeds and dry grass on the open grass, and keeps props off the water, the
+/// off the paths with a beach and a marsh, dry grass on the open grass, and keeps props off the water, the
 /// beach and the mud with the beach and every mob within the spawn's reach; the terrain each generator lays from its
 /// detail stream leaves the rest of its layout where it was; the same seed gives the same layout; the project's style
 /// lists every ground material in the shared draw order, the project's generators list only the layers they lay (plain
@@ -462,9 +462,8 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the weeds lie on
-    /// open grass, off the water, the beach, the mud and the paths, and the dry grass too, not on or beside the weeds or
-    /// a path; the lake is water off every path and at least the
+    /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the dry grass lies
+    /// on open grass, off the water and the beach and not on or beside mud or a path; the lake is water off every path and at least the
     /// road margin from the road, the beach and the marsh lie beside it and off
     /// it, and the gravel trail reaches the beach; the spawn is on the road with no footprint or water within its clear
     /// radius.
@@ -483,7 +482,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> paths = PathCells(layout);
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
-            Assert.That(layout.TerrainLayerCount, Is.EqualTo(8));
+            Assert.That(layout.TerrainLayerCount, Is.EqualTo(7));
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
@@ -491,15 +490,13 @@ public class AreaGenerationTests
             }
 
             Assert.That(water.Overlaps(paths) || water.Overlaps(sand) || water.Overlaps(mud), Is.False, $"seed {seed}: the lake covers nothing else");
-            HashSet<Vector3Int> weeds = Cells(layout, "Weeds");
-            Assert.That(weeds.Overlaps(water) || weeds.Overlaps(sand) || weeds.Overlaps(mud) || weeds.Overlaps(paths), Is.False, $"seed {seed}: weeds only on open grass");
             HashSet<Vector3Int> dryGrass = Cells(layout, "DryGrass");
             Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
             foreach (Vector3Int cell in dryGrass)
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(weeds.Contains(near) || paths.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside weeds or a path");
+                    Assert.That(paths.Contains(near) || mud.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside mud or a path");
                 }
             }
             foreach (Vector3Int cell in stone)
@@ -873,7 +870,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// An area that lists only some of the project's ground layers (grass, mud and water, none of the paths, weeds or
+    /// An area that lists only some of the project's ground layers (grass, mud and water, none of the paths, dry grass or
     /// sand) still draws and navigates: its renderer builds those three layers at their indices in the area, and the
     /// default movement profile still finds the water cell blocked and the mud cell walkable at a higher cost than
     /// grass, since navigation reads each layer's terrain type, not its place in the project's order.
@@ -960,7 +957,7 @@ public class AreaGenerationTests
 
     /// <summary>
     /// In a Village Forest area whose renderer also draws, above its own layers and out of the shared order, a painted
-    /// water layer, a painted sand layer and an empty weeds layer (none of them the generator's), writing puts every
+    /// water layer, a painted sand layer and an empty dry grass layer (none of them the generator's), writing puts every
     /// layer drawn in the style's layer order: grass, dirt, sand, gravel, plaza, stone, water. The painted layers it
     /// does not list keep their cells, their materials and their place in that order, the empty one is removed, each
     /// layer comes at its place among the grid's children with its index as navigation priority, and the renderer then
@@ -979,7 +976,7 @@ public class AreaGenerationTests
         int added = Undo.GetCurrentGroup();
         Tilemap water = AddDrawnLayer(grid, Layer(lakeside, "Water"), true);
         Tilemap sand = AddDrawnLayer(grid, Layer(lakeside, "Sand"), true);
-        Tilemap weeds = AddDrawnLayer(grid, Layer(lakeside, "Weeds"), false);
+        Tilemap dryGrass = AddDrawnLayer(grid, Layer(lakeside, "DryGrass"), false);
         TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
         Undo.CollapseUndoOperations(added);
         Assert.That(renderer.Layers.Count, Is.EqualTo(8));
@@ -1000,7 +997,7 @@ public class AreaGenerationTests
         Assert.That(renderer.Layers[2].Tilemap, Is.SameAs(sand));
         Assert.That(renderer.Layers[6].Tilemap, Is.SameAs(water));
         Assert.That(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), Is.True, "The painted layers keep their cells.");
-        Assert.That(weeds == null, Is.True, "The empty weeds layer is removed.");
+        Assert.That(dryGrass == null, Is.True, "The empty dry grass layer is removed.");
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
         renderer.RunScheduledRebuild();
         Assert.That(renderer.ControlMap, Is.Not.Null);
@@ -1011,11 +1008,11 @@ public class AreaGenerationTests
     /// plain ground tile from Assets/Tiles/Ground, its terrain type and the project's material of the name given, drawn
     /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 16, so
     /// the writer and Convert Ground take them: each lists only what it lays, the Clearing dirt for its campsite, the
-    /// Village Forest dirt and the plaza, the Lakeside dry grass among its eight.
+    /// Village Forest dirt and the plaza, the Lakeside dry grass among its seven.
     /// </summary>
     [TestCase(ClearingGeneratorPath, "Grass", "Dirt", "Gravel", "Stone")]
     [TestCase(VillageForestGeneratorPath, "Grass", "Dirt", "Gravel", "Plaza", "Stone")]
-    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Weeds", "Sand", "Mud", "Gravel", "Stone", "Water")]
+    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Sand", "Mud", "Gravel", "Stone", "Water")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1043,13 +1040,13 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The project's terrain style lists every ground material of Assets/Settings/Terrain/Materials once, in the shared
-    /// draw order of Docs/TerrainTypes.md: grass, dry grass, weeds, dirt, sand, mud, gravel, plaza, stone, water.
+    /// draw order of Docs/TerrainTypes.md: grass, dry grass, dirt, sand, mud, gravel, plaza, stone, water.
     /// </summary>
     [Test]
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "DryGrass", "Weeds", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Water" };
+        string[] order = { "Grass", "DryGrass", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Water" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)

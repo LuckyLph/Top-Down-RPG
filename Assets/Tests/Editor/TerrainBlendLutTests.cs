@@ -12,8 +12,8 @@ using UnityEngine.TestTools;
 /// animated material's animation reaches its layer's row and a still one's leaves it empty, a sunken material's bank
 /// reaches its layer's row and a level one's leaves it empty, the project style's stone over gravel override changes
 /// that pair's row only, and the project's water is animated, sunken and meets sand without an outline; a swaying
-/// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's weeds
-/// sway and meet grass seamlessly with nothing drawn; the project's dirt, dry grass and plaza meet the other materials
+/// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's grass
+/// sways and keeps its edge over nothing; the project's dirt, dry grass and plaza meet the other materials
 /// with the edges and overrides TerrainTypes.md's Phase 3 decided. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
@@ -294,27 +294,22 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// The project's weeds sway and lie level with the ground, and their edge over grass is seamless with no outline,
-    /// rim, shadow or tufts, so a weeds patch shows no edge on grass; over nothing they keep an outlined edge.
+    /// The project's grass, since the weeds merged into it, sways and lies level with the ground, and keeps its outlined
+    /// edge with tufts over nothing, the map's edge; no material named Weeds is left.
     /// </summary>
     [Test]
-    public void TheProjectsWeeds_SwayAndMeetGrassSeamlessly()
+    public void TheProjectsGrass_Sways_AndKeepsItsEdgeOverNothing()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
-        TerrainMaterial grass = AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Grass.asset");
-        TerrainMaterial weeds = AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Weeds.asset");
+        TerrainMaterial grass = ProjectMaterial("Grass");
 
-        TerrainStyle.EdgeSettings overGrass = style.GetEdge(weeds, grass);
-
-        Assert.That(weeds.Sways, Is.True);
-        Assert.That(weeds.SinkDepth, Is.Zero);
-        Assert.That(weeds.Height, Is.Not.Null, "The sway weights live in the height texture.");
-        Assert.That(overGrass.Seamless, Is.True);
-        Assert.That(overGrass.DrawOutline, Is.False);
-        Assert.That(overGrass.RimWidth, Is.Zero);
-        Assert.That(overGrass.ShadowAlpha, Is.Zero);
-        Assert.That(overGrass.TuftHeight, Is.Zero);
-        Assert.That(style.GetEdge(weeds, null).DrawOutline, Is.True);
+        Assert.That(grass.Sways, Is.True);
+        Assert.That(grass.SinkDepth, Is.Zero);
+        Assert.That(grass.Height, Is.Not.Null, "The sway weights live in the height texture.");
+        Assert.That(style.GetEdge(grass, null), Is.SameAs(grass.Edge));
+        Assert.That(grass.Edge.DrawOutline, Is.True);
+        Assert.That(grass.Edge.TuftHeight, Is.GreaterThan(0f));
+        Assert.That(AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Weeds.asset"), Is.Null);
     }
 
     /// <summary>
@@ -352,7 +347,7 @@ public class TerrainBlendLutTests
 
         for (int i = 0; i < 5; i++)
         {
-            Assert.That(materials[i].IsAnimated, Is.False, names[i]);
+            Assert.That(materials[i].IsAnimated, Is.EqualTo(materials[i].Sways), $"{names[i]} is animated only to sway, without glints");
             Assert.That(materials[i].SinkDepth, Is.Zero, names[i]);
         }
     }
@@ -403,9 +398,8 @@ public class TerrainBlendLutTests
     /// <summary>
     /// The project's dirt, dry grass and plaza (TerrainTypes.md, Phase 3) meet the other materials as decided: dry grass
     /// over grass is seamless, with no outline, rim or shadow but tufts, and marked seamless in the lookup texture, while
-    /// over nothing it keeps an outlined edge; weeds over dry grass are seamless too, with shorter tufts than their
-    /// map-edge fringe; dirt draws its default edge, an outline and a fringe of tufts, over grass,
-    /// dry grass, weeds and nothing; sand, mud, gravel and stone draw their own rim and outline over dirt with an earth
+    /// over nothing it keeps an outlined edge; dirt draws its default edge, an outline and a fringe of tufts, over grass,
+    /// dry grass and nothing; sand, mud, gravel and stone draw their own rim and outline over dirt with an earth
     /// shadow in place of their green one; the plaza cuts its slabs like stone, draws stone's default edge over grass,
     /// and its pairs with gravel and stone copy stone over gravel's edge.
     /// </summary>
@@ -427,20 +421,14 @@ public class TerrainBlendLutTests
         Assert.That(dryOverGrass.ShadowAlpha, Is.Zero);
         Assert.That(dryOverGrass.TuftHeight, Is.GreaterThan(0f), "Straw tufts fray into the grass.");
         Assert.That(style.GetEdge(dryGrass, null), Is.SameAs(dryGrass.Edge));
-        Assert.That(dryGrass.Sways, Is.True, "Its dry stalks sway like the weeds.");
+        Assert.That(dryGrass.Sways, Is.True, "Its dry stalks sway like the grass's clumps.");
         Assert.That(dryGrass.SinkDepth, Is.Zero);
         Assert.That(dryGrass.Edge.DrawOutline, Is.True);
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass });
         Assert.That(PairTexel(texels, 2, 1, 0, 3).a, Is.Zero, "dry grass over grass is seamless");
         Assert.That(PairTexel(texels, 2, 1, -1, 3).a, Is.EqualTo(1f), "dry grass over nothing is not");
-        TerrainStyle.EdgeSettings weedsOverDryGrass = style.GetEdge(ProjectMaterial("Weeds"), dryGrass);
-        Assert.That(weedsOverDryGrass.Seamless, Is.True, "Weeds, grass with weeds on it, meet dry grass as grass does.");
-        Assert.That(weedsOverDryGrass.DrawOutline, Is.False);
-        Assert.That(weedsOverDryGrass.RimWidth, Is.Zero);
-        Assert.That(weedsOverDryGrass.TuftHeight, Is.GreaterThan(0f));
-        Assert.That(weedsOverDryGrass.TuftHeight, Is.LessThan(ProjectMaterial("Weeds").Edge.TuftHeight));
 
-        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, ProjectMaterial("Weeds") })
+        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass })
         {
             Assert.That(style.GetEdge(dirt, lower), Is.SameAs(dirt.Edge), lower != null ? lower.name : "nothing");
         }

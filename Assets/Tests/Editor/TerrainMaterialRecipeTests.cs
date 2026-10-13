@@ -1236,7 +1236,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(10));
+        Assert.That(checkedRecipes, Is.EqualTo(9));
     }
 
     /// <summary>

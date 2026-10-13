@@ -2,10 +2,10 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Weeds: the grass's own textures, tiled, with clumps of taller weeds on them, for a swaying material
-/// (Docs/TerrainBlending.md, Phase 6 notes). The ground is the grass recipe's albedo and height repeated over this
-/// recipe's repeat, so a weeds layer over grass with a seamless edge shows no seam; without a grass recipe it is the
-/// grass colour with grit. A weed is a clump of blades on a jittered grid of spots, kept at a chance plus density
+/// Clumps of taller blades (weeds) over a ground recipe's textures, for a swaying material (Docs/TerrainBlending.md,
+/// Phase 6 notes): the Grass material's weeds over its blade hatch, the DryGrass material's stalks over its straw
+/// (Docs/TerrainTypes.md, Phase 3 notes). The ground is the grass recipe's albedo and height repeated over this
+/// recipe's repeat; without a grass recipe it is the grass colour with grit. A weed is a clump of blades on a jittered grid of spots, kept at a chance plus density
 /// waves: each blade rises from the clump's base, curving to one side, dark at the foot, in one of two leaf greens
 /// above (every other blade) and pale at the tip, some ending in a seed head, over a one-pixel shadow under the base.
 /// Every pixel of a weed's box (its blades and the sway margin to their right) gets the weight of its row in the height

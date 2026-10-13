@@ -9,12 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 417cd96ea5d33a1418d642fc4223bd16, type: 3}
+  m_Script: {fileID: 11500000, guid: 54c5b3dfcebf24345bf6b0118f3e692d, type: 3}
   m_Name: Recipe_Grass
-  m_EditorClassIdentifier: TopDownRPG.Editor::GrassTuftsRecipe
+  m_EditorClassIdentifier: TopDownRPG.Editor::WeedsRecipe
   material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
-  seed: 20261012
-  repeatCells: 4
+  seed: 20261019
+  repeatCells: 8
   heightWaves:
   - x: 1
     y: 0
@@ -34,73 +34,42 @@ MonoBehaviour:
   - x: 3
     y: 1
     amplitude: 0.25
+  grassRecipe: {fileID: 11400000, guid: 4113bf75accad604d98c1b47142f85d5, type: 2}
   grass:
     serializedVersion: 2
     rgba: 4280840739
-  tintWaves:
-  - x: 1
-    y: 0
-    amplitude: 1.4
-  - x: 0
-    y: 1
-    amplitude: 1.1
-  - x: 2
-    y: 1
-    amplitude: 0.9
-  - x: 1
-    y: -2
-    amplitude: 0.9
-  - x: 3
-    y: 2
-    amplitude: 0.5
-  grit: 3
-  blade:
-    serializedVersion: 2
-    rgba: 4280178712
-  tip:
-    serializedVersion: 2
-    rgba: 4282159678
-  spotsPerCell: 3
-  jitter: 0.42
-  tuftChance: 0.62
+  weedsPerCell: 2.2
+  jitter: 0.45
+  weedChance: 0.45
   densityWaves:
   - x: 2
     y: 1
-    amplitude: 0.14
+    amplitude: 1
   - x: -1
-    y: 2
-    amplitude: 0.12
+    y: 3
+    amplitude: 0.8
   - x: 3
     y: -2
-    amplitude: 0.08
-  glyphs:
-  - '+.+
-
-    #.#
-
-    .#.'
-  - '+.+.+
-
-    #.#.#
-
-    .#.#.'
-  - '.+
-
-    +#
-
-    #.'
-  - '+...+
-
-    #.+.#
-
-    .#.#.'
-  - '+.
-
-    #+
-
-    .#'
-  - '.+.
-
-    +#+
-
-    #.#'
+    amplitude: 0.6
+  densityAmount: 0.35
+  blades: {x: 5, y: 9}
+  bladeHeight: {x: 7, y: 12}
+  footSpread: 3
+  curve: 3
+  swayMargin: 3
+  seedHeadChance: 0.3
+  stem:
+    serializedVersion: 2
+    rgba: 4280177690
+  leaf:
+    serializedVersion: 2
+    rgba: 4281237556
+  leafLight:
+    serializedVersion: 2
+    rgba: 4281898056
+  tip:
+    serializedVersion: 2
+    rgba: 4282818180
+  shadow:
+    serializedVersion: 2
+    rgba: 4280043542

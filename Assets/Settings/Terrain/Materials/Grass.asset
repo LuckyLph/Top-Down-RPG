@@ -15,7 +15,7 @@ MonoBehaviour:
   albedo: {fileID: 2800000, guid: f4d660ce2addb4c4fb4b23b4bb3ee9ec, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: 6d214690fac94ce499be18bd2cf165ae, type: 3}
-  repeatCells: 4
+  repeatCells: 8
   outerRadius: 14
   innerRadius: 11
   cellMode: 0
@@ -24,7 +24,7 @@ MonoBehaviour:
   cutGap: 0.5
   cutBevel: 18
   heightScale: 2.5
-  framesPerSecond: 0
+  framesPerSecond: 8
   glintColour: {r: 1, g: 1, b: 1, a: 1}
   glintPeriod: 3
   glintDuty: 0.2
@@ -33,6 +33,9 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
+  swayAmplitude: 2
+  swayPeriod: 2.5
+  gustLength: 12
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.3764706, g: 0.2901961, b: 0.19607843, a: 1}
@@ -77,3 +80,4 @@ MonoBehaviour:
     softBandWidth: 0
     softBandColour: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     softWholeStones: 0
+    seamless: 0

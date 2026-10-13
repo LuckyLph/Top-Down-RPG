@@ -24,11 +24,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 6856840c93e18284193bcea589f290d6, type: 2}
     terrainType: {fileID: 11400000, guid: 8c8e691577b8ba4489e176f659ef3974, type: 2}
     material: {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
-  weeds:
-    tilemapName: WeedsTilemap
-    tile: {fileID: 11400000, guid: 1c59904b9a502ee40a91ec01b67cdc72, type: 2}
-    terrainType: {fileID: 11400000, guid: c43c9e75c7ee91d45aa213ed5a270dc2, type: 2}
-    material: {fileID: 11400000, guid: b6de2d0d62e71d34fa70dd7ffebb0c03, type: 2}
   sand:
     tilemapName: SandTilemap
     tile: {fileID: 11400000, guid: 83e753f40a35db948a5c2da61af65f3a, type: 2}
@@ -69,9 +64,6 @@ MonoBehaviour:
   marshPatchCount: 4
   mudPatchCount: 3
   mudPatchRadius: {x: 1.5, y: 3.5}
-  weedFringe: 2
-  weedPatchCount: 6
-  weedPatchRadius: {x: 2, y: 4.5}
   dryGrassPatchCount: 5
   dryGrassPatchRadius: {x: 2.5, y: 5}
   shoreZoneDepth: 3

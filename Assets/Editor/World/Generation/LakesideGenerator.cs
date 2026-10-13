@@ -13,6 +13,7 @@ using UnityEngine;
 public sealed class LakesideGenerator : AreaGenerator
 {
     private const int LakeSearchMargin = 2;
+    private const int MinDryGrassFragment = 4;
 
     /// <summary>
     /// The part of the lakeside a scatter layer fills: the band along its edge, the grass near the lake's shore, or
@@ -461,7 +462,9 @@ public sealed class LakesideGenerator : AreaGenerator
         /// the edge band, away from the lake and its shore and off the paths, on grass that is not water or beach and
         /// not on or beside mud or a path. Mud and the paths are drawn over dry grass, so the renderer takes dry grass to
         /// go on under them; beside a mud or path cell that has only grass under it, the dry grass would show under its
-        /// rounded corners where the two meet grass. Props stand on it as on grass.
+        /// rounded corners where the two meet grass. It also keeps a cell of grass inside the map's edge, where its own
+        /// edge would otherwise meet the grass's fringe. Pieces of fewer than four cells, left where those cells cut a patch
+        /// short, are removed. Props stand on it as on grass.
         /// </summary>
         private void LayDryGrass()
         {
@@ -479,7 +482,32 @@ public sealed class LakesideGenerator : AreaGenerator
 
             for (int i = 0; i < settings.dryGrassPatchCount && open.Count > 0; i++)
             {
-                PaintPatch(open[builder.Next(open.Count)], settings.dryGrassPatchRadius, dryGrass, cell => !nearMud.Contains(cell) && !builder.IsNearPath(cell));
+                PaintPatch(open[builder.Next(open.Count)], settings.dryGrassPatchRadius, dryGrass, cell => !nearMud.Contains(cell) && !builder.IsNearPath(cell) && builder.EdgeDistance(cell) > 2);
+            }
+
+            RemoveFragments(dryGrass, MinDryGrassFragment);
+        }
+
+        /// <summary>
+        /// Removes from <paramref name="cells"/> every 4-connected piece of fewer than <paramref name="smallest"/> cells,
+        /// the scraps a patch leaves where the cells it may not cover cut it short.
+        /// </summary>
+        private void RemoveFragments(HashSet<Vector3Int> cells, int smallest)
+        {
+            HashSet<Vector3Int> seen = new();
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (!cells.Contains(cell) || seen.Contains(cell))
+                {
+                    continue;
+                }
+
+                HashSet<Vector3Int> piece = AreaLayoutBuilder.FloodFill(cell, cells.Contains);
+                seen.UnionWith(piece);
+                if (piece.Count < smallest)
+                {
+                    cells.ExceptWith(piece);
+                }
             }
         }
 

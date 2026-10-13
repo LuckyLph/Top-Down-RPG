@@ -463,7 +463,8 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the dry grass lies
-    /// on open grass, off the water and the beach and not on or beside mud or a path; the lake is water off every path and at least the
+    /// on open grass, off the water and the beach and not on or beside mud, a path or the map's edge, in pieces of four
+    /// cells or more; the lake is water off every path and at least the
     /// road margin from the road, the beach and the marsh lie beside it and off
     /// it, and the gravel trail reaches the beach; the spawn is on the road with no footprint or water within its clear
     /// radius.
@@ -494,9 +495,10 @@ public class AreaGenerationTests
             Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
             foreach (Vector3Int cell in dryGrass)
             {
+                Assert.That(Reachable(cell, dryGrass.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of dry grass at {cell}");
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(paths.Contains(near) || mud.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside mud or a path");
+                    Assert.That(paths.Contains(near) || mud.Contains(near) || !grass.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside mud, a path or the map's edge");
                 }
             }
             foreach (Vector3Int cell in stone)

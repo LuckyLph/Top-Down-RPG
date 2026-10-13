@@ -32,7 +32,7 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
         new(17, -8, 0.45f), new(5, 19, 0.4f), new(21, 1, 0.3f), new(-16, 13, 0.3f), new(9, -23, 0.25f), new(25, 10, 0.2f)
     };
     [Tooltip("Puddles lie where the puddle waves rise above this level: -1 everywhere, 1 nowhere.")]
-    [SerializeField, Range(-1f, 1f)] private float puddleLevel = 0.5f;
+    [SerializeField, Range(-1f, 1f)] private float puddleLevel = 0.47f;
     [Tooltip("Slower waves, normalised into -1 to 1, that lower the puddle and wet levels where they rise and raise them where they fall, so puddles gather in wetter stretches and leave drier ones bare. Set for a texture of 16 cells.")]
     [SerializeField] private Wave[] clusterWaves =
     {
@@ -43,7 +43,7 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     [Tooltip("How much darker the mud is where the cluster waves are highest, and lighter where they are lowest, in 0-255 steps.")]
     [SerializeField, Range(0f, 24f)] private float clusterShade = 6f;
     [Tooltip("The mud is wetter and darker where the puddle waves rise above this level, around the puddles.")]
-    [SerializeField, Range(-1f, 1f)] private float wetLevel = 0.25f;
+    [SerializeField, Range(-1f, 1f)] private float wetLevel = 0.22f;
     [Tooltip("How much darker the wet mud is, in 0-255 steps.")]
     [SerializeField, Range(0f, 48f)] private float wetShade = 8f;
     [Tooltip("The pool of a puddle: muddy water, a little darker than the mud.")]

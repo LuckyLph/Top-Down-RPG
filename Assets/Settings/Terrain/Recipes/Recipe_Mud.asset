@@ -88,7 +88,7 @@ MonoBehaviour:
   - x: 25
     y: 10
     amplitude: 0.2
-  puddleLevel: 0.5
+  puddleLevel: 0.47
   clusterWaves:
   - x: 1
     y: 1
@@ -110,7 +110,7 @@ MonoBehaviour:
     amplitude: 0.5
   clusterAmount: 0.5
   clusterShade: 6
-  wetLevel: 0.25
+  wetLevel: 0.22
   wetShade: 8
   pool:
     serializedVersion: 2

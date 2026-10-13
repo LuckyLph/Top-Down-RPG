@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::SandRipplesRecipe
   material: {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
   seed: 20261016
-  repeatCells: 4
+  repeatCells: 16
   heightWaves:
   - x: 1
     y: 0
@@ -50,30 +50,54 @@ MonoBehaviour:
   - x: -1
     y: 2
     amplitude: 1.5
+  - x: 3
+    y: -2
+    amplitude: 1
   grit: 7
-  ripplesAlongX: 1
-  ripplesAlongY: 9
+  ripplesAlongX: 2
+  ripplesAlongY: 24
   wobbleWaves:
   - x: 2
     y: 0
+    amplitude: 0.38
+  - x: 3
+    y: 1
     amplitude: 0.3
   - x: 1
-    y: 1
-    amplitude: 0.22
-  - x: 3
-    y: -1
-    amplitude: 0.12
-  coverWaves:
-  - x: 1
-    y: 1
-    amplitude: 1
-  - x: 2
-    y: -1
-    amplitude: 0.7
-  - x: -1
     y: 3
+    amplitude: 0.26
+  - x: 5
+    y: -2
+    amplitude: 0.19
+  - x: 7
+    y: 2
+    amplitude: 0.09
+  - x: -4
+    y: 5
+    amplitude: 0.11
+  coverWaves:
+  - x: 3
+    y: 2
+    amplitude: 1
+  - x: -2
+    y: 5
+    amplitude: 0.9
+  - x: 6
+    y: -1
+    amplitude: 0.8
+  - x: 4
+    y: 7
+    amplitude: 0.6
+  - x: 9
+    y: 3
+    amplitude: 0.5
+  - x: -7
+    y: 6
     amplitude: 0.4
-  coverLevel: -0.25
+  - x: 12
+    y: -5
+    amplitude: 0.3
+  coverLevel: 0.15
   trough:
     serializedVersion: 2
     rgba: 4284915388

@@ -17,20 +17,26 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
     [Tooltip("The sand, and the material's base colour.")]
     [SerializeField] private Color32 sand = new(212, 184, 126, 255);
     [Tooltip("Slow tint patches, in 0-255 steps.")]
-    [SerializeField] private Wave[] tintWaves = { new(1, 0, 3f), new(0, 1, 2.5f), new(2, 1, 2f), new(-1, 2, 1.5f) };
+    [SerializeField] private Wave[] tintWaves = { new(1, 0, 3f), new(0, 1, 2.5f), new(2, 1, 2f), new(-1, 2, 1.5f), new(3, -2, 1f) };
     [Tooltip("Per-pixel noise, in 0-255 steps from darkest to lightest.")]
     [SerializeField, Range(0f, 32f)] private float grit = 7f;
     [Header("Ripples")]
-    [Tooltip("Whole ripples across the texture along x; with Ripples Along Y, the ripples run across this direction.")]
-    [SerializeField, Range(-8, 8)] private int ripplesAlongX = 1;
-    [Tooltip("Whole ripples across the texture along y.")]
-    [SerializeField, Range(-16, 16)] private int ripplesAlongY = 9;
-    [Tooltip("Waves that bend the ripples, their amplitude in ripples.")]
-    [SerializeField] private Wave[] wobbleWaves = { new(2, 0, 0.3f), new(1, 1, 0.22f), new(3, -1, 0.12f) };
-    [Tooltip("Waves that decide where ripples show, normalised into -1 to 1 by their total amplitude.")]
-    [SerializeField] private Wave[] coverWaves = { new(1, 1, 1f), new(2, -1, 0.7f), new(-1, 3, 0.4f) };
+    [Tooltip("Whole ripples across the texture along x; with Ripples Along Y, the ripples run across this direction. Set for a texture of 16 cells.")]
+    [SerializeField, Range(-16, 16)] private int ripplesAlongX = 2;
+    [Tooltip("Whole ripples across the texture along y. Set for a texture of 16 cells.")]
+    [SerializeField, Range(-32, 32)] private int ripplesAlongY = 24;
+    [Tooltip("Waves that bend the ripples, their amplitude in ripples. Set for a texture of 16 cells.")]
+    [SerializeField] private Wave[] wobbleWaves =
+    {
+        new(2, 0, 0.38f), new(3, 1, 0.3f), new(1, 3, 0.26f), new(5, -2, 0.19f), new(7, 2, 0.09f), new(-4, 5, 0.11f)
+    };
+    [Tooltip("Waves that decide where ripples show, normalised into -1 to 1 by their total amplitude. Many short ones break the ripples into strokes of many lengths; set for a texture of 16 cells.")]
+    [SerializeField] private Wave[] coverWaves =
+    {
+        new(3, 2, 1f), new(-2, 5, 0.9f), new(6, -1, 0.8f), new(4, 7, 0.6f), new(9, 3, 0.5f), new(-7, 6, 0.4f), new(12, -5, 0.3f)
+    };
     [Tooltip("Ripples show where the cover waves rise above this level: -1 everywhere, 1 nowhere.")]
-    [SerializeField, Range(-1f, 1f)] private float coverLevel = -0.25f;
+    [SerializeField, Range(-1f, 1f)] private float coverLevel = 0.15f;
     [Tooltip("Colour of a ripple's trough, the shaded side under its crest.")]
     [SerializeField] private Color32 trough = new(188, 158, 102, 255);
     [Tooltip("Colour of a ripple's crest, lit from above.")]

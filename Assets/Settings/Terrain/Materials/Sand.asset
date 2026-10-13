@@ -15,7 +15,7 @@ MonoBehaviour:
   albedo: {fileID: 2800000, guid: 77b409542ae97ad4dbd0cb8d7164a543, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: 23e25a4d992b2c344bd086fefc2677b0, type: 3}
-  repeatCells: 4
+  repeatCells: 16
   outerRadius: 14
   innerRadius: 11
   cellMode: 0
@@ -28,6 +28,9 @@ MonoBehaviour:
   glintColour: {r: 1, g: 1, b: 1, a: 1}
   glintPeriod: 3
   glintDuty: 0.2
+  sparkleColour: {r: 1, g: 1, b: 1, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
   edge:

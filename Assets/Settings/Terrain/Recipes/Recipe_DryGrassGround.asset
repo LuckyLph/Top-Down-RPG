@@ -56,13 +56,13 @@ MonoBehaviour:
   grit: 4
   blade:
     serializedVersion: 2
-    rgba: 4281228920
+    rgba: 4281492606
   tip:
     serializedVersion: 2
-    rgba: 4285970638
-  spotsPerCell: 7
+    rgba: 4285706952
+  spotsPerCell: 6
   jitter: 0.42
-  tuftChance: 0.95
+  tuftChance: 0.85
   densityWaves:
   - x: 2
     y: 1
@@ -112,7 +112,7 @@ MonoBehaviour:
     #.#
 
     #.#'
-  patchAmount: 1
+  patchAmount: 0.85
   patchLow:
     serializedVersion: 2
     rgba: 4281225320

@@ -28,12 +28,12 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
     [Tooltip("Waves that bend the ripples, their amplitude in ripples. Set for a texture of 16 cells.")]
     [SerializeField] private Wave[] wobbleWaves =
     {
-        new(2, 0, 0.38f), new(3, 1, 0.3f), new(1, 3, 0.26f), new(5, -2, 0.19f), new(7, 2, 0.09f), new(-4, 5, 0.11f)
+        new(2, 0, 0.2f), new(3, 1, 0.3f), new(1, 3, 0.26f), new(5, -2, 0.19f), new(4, 5, 0.12f), new(-3, 7, 0.1f)
     };
-    [Tooltip("Waves that decide where ripples show, normalised into -1 to 1 by their total amplitude. Many short ones break the ripples into strokes of many lengths; set for a texture of 16 cells.")]
+    [Tooltip("Waves that decide where ripples show, normalised into -1 to 1 by their total amplitude. Waves repeating about as often along y as the ripples, but not quite, break each ripple into strokes at other places than its neighbours, so the strokes do not stack into columns; set for a texture of 16 cells.")]
     [SerializeField] private Wave[] coverWaves =
     {
-        new(3, 2, 1f), new(-2, 5, 0.9f), new(6, -1, 0.8f), new(4, 7, 0.6f), new(9, 3, 0.5f), new(-7, 6, 0.4f), new(12, -5, 0.3f)
+        new(3, 2, 0.6f), new(-2, 5, 0.5f), new(5, 25, 1f), new(-4, 22, 0.9f), new(7, 27, 0.7f), new(-6, 23, 0.6f), new(9, 26, 0.4f)
     };
     [Tooltip("Ripples show where the cover waves rise above this level: -1 everywhere, 1 nowhere.")]
     [SerializeField, Range(-1f, 1f)] private float coverLevel = 0.15f;

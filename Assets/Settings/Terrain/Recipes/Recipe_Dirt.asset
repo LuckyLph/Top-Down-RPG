@@ -1,0 +1,160 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4f7a6a0bf689b74492ba71c08d016b5, type: 3}
+  m_Name: Recipe_Dirt
+  m_EditorClassIdentifier: TopDownRPG.Editor::MudPuddlesRecipe
+  material: {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
+  seed: 20261020
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  mud:
+    serializedVersion: 2
+    rgba: 4282803844
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 4.2
+  - x: 0
+    y: 1
+    amplitude: 3.5
+  - x: 2
+    y: -1
+    amplitude: 2.8
+  - x: 1
+    y: 2
+    amplitude: 2.1
+  grit: 10
+  puddleWaves:
+  - x: 7
+    y: 2
+    amplitude: 1
+  - x: -3
+    y: 8
+    amplitude: 0.9
+  - x: 11
+    y: -5
+    amplitude: 0.8
+  - x: 2
+    y: 13
+    amplitude: 0.7
+  - x: 15
+    y: 3
+    amplitude: 0.6
+  - x: -9
+    y: 11
+    amplitude: 0.55
+  - x: 17
+    y: -8
+    amplitude: 0.45
+  - x: 5
+    y: 19
+    amplitude: 0.4
+  - x: 21
+    y: 1
+    amplitude: 0.3
+  - x: -16
+    y: 13
+    amplitude: 0.3
+  - x: 9
+    y: -23
+    amplitude: 0.25
+  - x: 25
+    y: 10
+    amplitude: 0.2
+  puddleLevel: 1
+  clusterWaves:
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.6
+  - x: 3
+    y: 2
+    amplitude: 1
+  - x: -3
+    y: 4
+    amplitude: 0.8
+  - x: 5
+    y: -2
+    amplitude: 0.6
+  - x: 2
+    y: 6
+    amplitude: 0.5
+  clusterAmount: 0
+  clusterShade: 5
+  wetLevel: 1
+  wetShade: 8
+  pool:
+    serializedVersion: 2
+    rgba: 4281221720
+  bankShade:
+    serializedVersion: 2
+    rgba: 4280430658
+  wetRim:
+    serializedVersion: 2
+    rgba: 4283065984
+  reflection:
+    serializedVersion: 2
+    rgba: 4285432982
+  reflectionChance: 0.02
+  ridgesPerCell: 2
+  ridgeChance: 0.6
+  minRidgeLength: 2
+  maxRidgeLength: 3
+  ridgeLit:
+    serializedVersion: 2
+    rgba: 4283989148
+  ridgeShade:
+    serializedVersion: 2
+    rgba: 4281618022
+  lumpsPerCell: 2
+  jitter: 0.45
+  lumpChance: 0.6
+  lumpLit:
+    serializedVersion: 2
+    rgba: 4287802042
+  lump:
+    serializedVersion: 2
+    rgba: 4285959322
+  lumpShade:
+    serializedVersion: 2
+    rgba: 4282404956
+  cracksPerCell: 1.5
+  crackChance: 0.7
+  minCrackLength: 3
+  maxCrackLength: 6
+  crackTurnChance: 0.45
+  crack:
+    serializedVersion: 2
+    rgba: 4280826962
+  crackLip:
+    serializedVersion: 2
+    rgba: 4284120220

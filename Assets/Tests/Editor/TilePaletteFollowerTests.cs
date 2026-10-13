@@ -6,7 +6,8 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for <see cref="TilePaletteFollower"/>'s choice of palette: an empty ground layer drawn by a terrain renderer
-/// finds the project's palette of its material, a tilemap with tiles painted on it the palette holding one of them, a
+/// finds the project's palette of its material (every material of the style's layer order has one), a tilemap with
+/// tiles painted on it the palette holding one of them, a
 /// dual-grid layer the palette holding its data tile, and an object that is no tilemap or whose tiles no palette holds
 /// finds none; and the Terrain Brush's palette check (<see cref="TerrainBrushEditor.PaletteProblem"/>) for an area that
 /// draws only some of the ground materials. The project's materials, style, tiles and palettes are only read.
@@ -57,6 +58,34 @@ public class TilePaletteFollowerTests
 
         Assert.That(TilePaletteFollower.PaletteFor(sand.gameObject, palettes), Is.SameAs(palettes[2]));
         Assert.That(TilePaletteFollower.PaletteFor(grass.gameObject, palettes), Is.SameAs(palettes[1]));
+    }
+
+    /// <summary>
+    /// For every material of the project style's layer order (dirt, dry grass and plaza among them), an empty layer a
+    /// terrain renderer draws with it finds that material's own palette among all the project's palettes.
+    /// </summary>
+    [Test]
+    public void EveryGroundMaterial_HasAPaletteAnEmptyLayerFinds()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        List<GameObject> palettes = new();
+        foreach (string guid in AssetDatabase.FindAssets("t:GameObject", new[] { PaletteFolder }))
+        {
+            palettes.Add(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid)));
+        }
+
+        Assert.That(style.LayerOrder.Count, Is.EqualTo(10));
+        foreach (TerrainMaterial material in style.LayerOrder)
+        {
+            Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
+            Tilemap layer = AddTilemap(grid, $"{material.name}Tilemap");
+            grid.gameObject.AddComponent<TerrainBlendRenderer>().Configure(style, new TerrainBlendRenderer.Layer(layer, material));
+
+            GameObject palette = TilePaletteFollower.PaletteFor(layer.gameObject, palettes);
+
+            Assert.That(palette, Is.Not.Null, material.name);
+            Assert.That(palette.name, Is.EqualTo($"{material.name}_Palette"), material.name);
+        }
     }
 
     /// <summary>

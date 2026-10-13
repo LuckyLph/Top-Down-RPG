@@ -19,10 +19,12 @@ using Object = UnityEngine.Object;
 /// water's net breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water; tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
-/// edge, gather in clusters, and its ridges cast their shade a row below and a pixel to the right; writing the textures
-/// to a material sets the base colour the textures' base is shaded from and has the renderers drawing it rebuild.
-/// Recipes and materials are built in memory with their default settings (the project's Gravel material is only read),
-/// and files go to a temporary folder outside Assets.
+/// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
+/// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; writing the
+/// textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
+/// rebuild; and every project recipe still generates its material's textures. Recipes and materials are built in memory
+/// with their default settings (the project's materials and recipes are only read), and files go to a temporary folder
+/// outside Assets.
 /// </summary>
 public class TerrainMaterialRecipeTests
 {
@@ -166,7 +168,7 @@ public class TerrainMaterialRecipeTests
     [Test]
     public void TheProjectsMaterials_KeepTheirTexturesInAFolderOfTheirOwn()
     {
-        foreach (string name in new[] { "Grass", "Gravel", "Stone" })
+        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza" })
         {
             TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
             string folder = $"{TerrainMaterialWriter.TextureFolder}/{name}";
@@ -1056,6 +1058,142 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(lit, Is.EqualTo(shaded));
         Assert.That(lit, Is.GreaterThan(20));
+    }
+
+    /// <summary>
+    /// Mud's cracks (the Dirt material's) are grooves lit from the top left: with no puddles, ridges or lumps, every
+    /// crack pixel touches another (a crack is at least two pixels long) and the pixel below and right of it is crack or
+    /// lip, and every lip pixel has a crack pixel above and left of it.
+    /// </summary>
+    [Test]
+    public void MudCracks_AreGroovesWithALitLipBelowAndRight()
+    {
+        MudPuddlesRecipe recipe = (MudPuddlesRecipe)CreateRecipe(typeof(MudPuddlesRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("puddleLevel").floatValue = 1f;
+        settings.FindProperty("wetLevel").floatValue = 1f;
+        settings.FindProperty("clusterAmount").floatValue = 0f;
+        settings.FindProperty("ridgesPerCell").floatValue = 0f;
+        settings.FindProperty("lumpsPerCell").floatValue = 0f;
+        settings.FindProperty("cracksPerCell").floatValue = 1.5f;
+        settings.FindProperty("crackChance").floatValue = 1f;
+        settings.FindProperty("crack").colorValue = new Color32(0, 0, 0, 255);
+        settings.FindProperty("crackLip").colorValue = new Color32(255, 255, 255, 255);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        Color32 black = new(0, 0, 0, 255);
+        Color32 white = new(255, 255, 255, 255);
+        int cracks = 0;
+        int lips = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = textures.Albedo[y * size + x];
+                if (SameColour(colour, black))
+                {
+                    cracks++;
+                    Color32 below = textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
+                    Assert.That(SameColour(below, black) || SameColour(below, white), Is.True, $"({x}, {y}) has a lip");
+                    bool joined = false;
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            joined |= (dx != 0 || dy != 0) && SameColour(textures.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)], black);
+                        }
+                    }
+
+                    Assert.That(joined, Is.True, $"({x}, {y}) is part of a line");
+                }
+                else if (SameColour(colour, white))
+                {
+                    lips++;
+                    Color32 above = textures.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
+                    Assert.That(SameColour(above, black), Is.True, $"({x}, {y}) lies below a crack");
+                }
+            }
+        }
+
+        Assert.That(cracks, Is.GreaterThan(100));
+        Assert.That(lips, Is.GreaterThan(50));
+    }
+
+    /// <summary>
+    /// Stones with no jitter lie on a regular grid with straight cell edges: two per cell side (16 px apart) and moved
+    /// half a pixel by the seed offset, the mortar is exactly the one-pixel rows and columns every 16 px; without the
+    /// offset the edges fall between two pixels and a mortar width of half a pixel leaves no mortar at all.
+    /// </summary>
+    [Test]
+    public void StoneSlabs_OnARegularGrid_HaveOnePixelMortar_WithHalfAPixelSeedOffset()
+    {
+        StoneCobblesRecipe recipe = (StoneCobblesRecipe)CreateRecipe(typeof(StoneCobblesRecipe));
+        Color32 mortar = new(0, 0, 255, 255);
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("jitter").floatValue = 0f;
+        settings.FindProperty("stonesPerCell").floatValue = 2f;
+        settings.FindProperty("mortarWidth").floatValue = 0.5f;
+        settings.FindProperty("mortar").colorValue = mortar;
+        settings.FindProperty("seedOffset").floatValue = 0.5f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures slabs = recipe.Generate(Seed);
+
+        int size = slabs.Size;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                bool onGrid = x % 16 == 0 || y % 16 == 0;
+                Assert.That(SameColour(slabs.Albedo[y * size + x], mortar), Is.EqualTo(onGrid), $"({x}, {y})");
+            }
+        }
+
+        settings.FindProperty("seedOffset").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures unmoved = recipe.Generate(Seed);
+        foreach (Color32 pixel in unmoved.Albedo)
+        {
+            Assert.That(SameColour(pixel, mortar), Is.False, "No mortar between two pixels.");
+        }
+    }
+
+    /// <summary>
+    /// Every recipe asset of the project that fills a material (only read) still generates, for its seed, exactly the
+    /// albedo, cell field and height its material uses, so settings added to a recipe kind (mud's cracks, stone's seed
+    /// offset) leave the materials made before them as they were.
+    /// </summary>
+    [Test]
+    public void TheProjectsRecipes_StillGenerateTheirMaterialsTextures()
+    {
+        int checkedRecipes = 0;
+        foreach (string guid in AssetDatabase.FindAssets($"t:{nameof(TerrainMaterialRecipe)}", new[] { "Assets/Settings/Terrain/Recipes" }))
+        {
+            TerrainMaterialRecipe recipe = AssetDatabase.LoadAssetAtPath<TerrainMaterialRecipe>(AssetDatabase.GUIDToAssetPath(guid));
+            if (recipe == null || recipe.Material == null)
+            {
+                continue;
+            }
+
+            TerrainTextures textures = recipe.Generate(recipe.Seed);
+            TerrainMaterial material = recipe.Material;
+            Assert.That(Differences(Decode(AssetDatabase.GetAssetPath(material.Albedo)), textures.Albedo), Is.Zero, $"{recipe.name} albedo");
+            Assert.That(Differences(Decode(AssetDatabase.GetAssetPath(material.Height)), textures.Height), Is.Zero, $"{recipe.name} height");
+            Assert.That(material.CellField != null, Is.EqualTo(textures.CellField != null), $"{recipe.name} cell field");
+            if (textures.CellField != null)
+            {
+                Assert.That(Differences(Decode(AssetDatabase.GetAssetPath(material.CellField)), textures.CellField), Is.Zero, $"{recipe.name} cell field");
+            }
+
+            checkedRecipes++;
+        }
+
+        Assert.That(checkedRecipes, Is.EqualTo(10));
     }
 
     /// <summary>

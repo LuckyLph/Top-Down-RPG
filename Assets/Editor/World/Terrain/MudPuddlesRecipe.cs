@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -8,14 +9,21 @@ using UnityEngine;
 /// catches the light, with short streaks of reflected light in it. Slower cluster waves lower both levels and darken
 /// the mud in wetter stretches and raise them in drier ones, so the puddles gather in some places and leave others
 /// bare. Ridges are short level rows of lit mud over a row of shade a pixel to their right, lumps of drier mud two
-/// pixels square lit from the top left, both on jittered grids off the puddles and clear of each other. No cell field;
-/// the base colour is the mud colour, and the height's per-chip value is 0.5 everywhere.
+/// pixels square lit from the top left, and cracks (none by default) short wandering grooves with a lit lip below and
+/// right of them, all on jittered grids off the puddles and clear of each other. With the puddles off it is packed
+/// earth (the Dirt material). No cell field; the base colour is the mud colour, and the height's per-chip value is 0.5
+/// everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Mud Puddles", fileName = "Recipe_Mud")]
 public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
 {
     private const int GritSalt = 11;
     private const int ReflectionSalt = 13;
+
+    private static readonly Vector2Int[] CrackSteps =
+    {
+        new(1, 0), new(1, 1), new(0, 1), new(-1, 1), new(-1, 0), new(-1, -1), new(0, -1), new(1, -1)
+    };
 
     [Header("Mud")]
     [Tooltip("The mud, and the material's base colour.")]
@@ -82,13 +90,28 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     [SerializeField] private Color32 lump = new(116, 90, 64, 255);
     [Tooltip("A lump's bottom-right pixel, away from the light.")]
     [SerializeField] private Color32 lumpShade = new(80, 60, 42, 255);
+    [Header("Cracks")]
+    [Tooltip("Crack spots along each side of a cell, on a jittered grid; 0 for none.")]
+    [SerializeField, Range(0f, 8f)] private float cracksPerCell;
+    [Tooltip("Chance that a spot holds a crack, off the puddles and clear of ridges, lumps and other cracks.")]
+    [SerializeField, Range(0f, 1f)] private float crackChance = 0.5f;
+    [Tooltip("Fewest pixels in a crack.")]
+    [SerializeField, Range(2, 12)] private int minCrackLength = 3;
+    [Tooltip("Most pixels in a crack.")]
+    [SerializeField, Range(2, 12)] private int maxCrackLength = 6;
+    [Tooltip("Chance at each pixel of a crack that it turns by an eighth of a turn, left or right.")]
+    [SerializeField, Range(0f, 1f)] private float crackTurnChance = 0.4f;
+    [Tooltip("A crack's pixels, in the shade of the groove.")]
+    [SerializeField] private Color32 crack = new(70, 52, 36, 255);
+    [Tooltip("The pixel below and right of a crack pixel, the groove's far side catching the light.")]
+    [SerializeField] private Color32 crackLip = new(128, 100, 72, 255);
 
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.None;
 
     /// <summary>
     /// Draws the tint, puddle and cluster waves, the ridge spots and each spot's ridge (kept or not, length), the lump
-    /// spots and whether each holds a lump, then the height waves, and paints the mud, its wet patches, puddles, ridges
-    /// and lumps.
+    /// spots and whether each holds a lump, the crack spots and each spot's crack (kept or not, length, directions) when
+    /// there are cracks, then the height waves, and paints the mud, its wet patches, puddles, ridges, lumps and cracks.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
@@ -130,6 +153,30 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
                 if (random.NextDouble() < lumpChance)
                 {
                     StampLump(marks, puddle, size, (int)spotX, (int)spotY);
+                }
+            }
+        }
+
+        if (cracksPerCell > 0f)
+        {
+            int fewest = Math.Min(minCrackLength, maxCrackLength);
+            int most = Math.Max(minCrackLength, maxCrackLength);
+            foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(cracksPerCell), jitter, size))
+            {
+                bool keep = random.NextDouble() < crackChance;
+                int[] directions = new int[random.Next(fewest, most + 1)];
+                directions[0] = random.Next(CrackSteps.Length);
+                for (int k = 1; k < directions.Length; k++)
+                {
+                    double turn = random.NextDouble();
+                    directions[k] = turn < crackTurnChance * 0.5 ? (directions[k - 1] + 1) % CrackSteps.Length
+                        : turn < crackTurnChance ? (directions[k - 1] + CrackSteps.Length - 1) % CrackSteps.Length
+                        : directions[k - 1];
+                }
+
+                if (keep)
+                {
+                    StampCrack(marks, puddle, size, (int)spotX, (int)spotY, directions);
                 }
             }
         }
@@ -225,6 +272,56 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
         marks[pixels[1]] = lump;
         marks[pixels[2]] = lump;
         marks[pixels[3]] = lumpShade;
+    }
+
+    /// <summary>
+    /// Marks a crack from (<paramref name="x"/>, <paramref name="y"/>): its first pixel there, each next one a step in
+    /// its own direction of <paramref name="directions"/> (indices into <see cref="CrackSteps"/>), and a lit lip on the
+    /// pixel below and right of every crack pixel that is not itself crack, wrapping across the texture's edges, unless
+    /// any of it lies on a puddle or touches another mark.
+    /// </summary>
+    private void StampCrack(Color32?[] marks, bool[] puddle, int size, int x, int y, int[] directions)
+    {
+        List<int> groove = new();
+        for (int k = 0; k < directions.Length; k++)
+        {
+            if (k > 0)
+            {
+                x += CrackSteps[directions[k]].x;
+                y += CrackSteps[directions[k]].y;
+            }
+
+            int pixel = TerrainArt.Wrap(y, size) * size + TerrainArt.Wrap(x, size);
+            if (!groove.Contains(pixel))
+            {
+                groove.Add(pixel);
+            }
+        }
+
+        List<int> lip = new();
+        foreach (int pixel in groove)
+        {
+            int below = TerrainArt.Wrap(pixel / size - 1, size) * size + TerrainArt.Wrap(pixel % size + 1, size);
+            if (!groove.Contains(below) && !lip.Contains(below))
+            {
+                lip.Add(below);
+            }
+        }
+
+        if (!IsClear(marks, puddle, size, groove.ToArray()) || !IsClear(marks, puddle, size, lip.ToArray()))
+        {
+            return;
+        }
+
+        foreach (int pixel in groove)
+        {
+            marks[pixel] = crack;
+        }
+
+        foreach (int pixel in lip)
+        {
+            marks[pixel] = crackLip;
+        }
     }
 
     /// <summary>

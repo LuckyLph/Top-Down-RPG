@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 417cd96ea5d33a1418d642fc4223bd16, type: 3}
+  m_Name: Recipe_DryGrass
+  m_EditorClassIdentifier: TopDownRPG.Editor::GrassTuftsRecipe
+  material: {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
+  seed: 20261012
+  repeatCells: 4
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  grass:
+    serializedVersion: 2
+    rgba: 4283340460
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 4.2
+  - x: 0
+    y: 1
+    amplitude: 3.3000002
+  - x: 2
+    y: 1
+    amplitude: 2.6999998
+  - x: 1
+    y: -2
+    amplitude: 2.6999998
+  - x: 3
+    y: 2
+    amplitude: 1.5
+  grit: 4
+  blade:
+    serializedVersion: 2
+    rgba: 4281493632
+  tip:
+    serializedVersion: 2
+    rgba: 4285973722
+  spotsPerCell: 3
+  jitter: 0.42
+  tuftChance: 0.62
+  densityWaves:
+  - x: 2
+    y: 1
+    amplitude: 0.14
+  - x: -1
+    y: 2
+    amplitude: 0.12
+  - x: 3
+    y: -2
+    amplitude: 0.08
+  glyphs:
+  - '+.+
+
+    #.#
+
+    .#.'
+  - '+.+.+
+
+    #.#.#
+
+    .#.#.'
+  - '.+
+
+    +#
+
+    #.'
+  - '+...+
+
+    #.+.#
+
+    .#.#.'
+  - '+.
+
+    #+
+
+    .#'
+  - '.+.
+
+    +#+
+
+    #.#'

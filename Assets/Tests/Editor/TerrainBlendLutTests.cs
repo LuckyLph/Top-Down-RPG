@@ -13,7 +13,8 @@ using UnityEngine.TestTools;
 /// reaches its layer's row and a level one's leaves it empty, the project style's stone over gravel override changes
 /// that pair's row only, and the project's water is animated, sunken and meets sand without an outline; a swaying
 /// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's weeds
-/// sway and meet grass seamlessly with nothing drawn. The project's style and materials are only read.
+/// sway and meet grass seamlessly with nothing drawn; the project's dirt, dry grass and plaza meet the other materials
+/// with the edges and overrides TerrainTypes.md's Phase 3 decided. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -397,6 +398,82 @@ public class TerrainBlendLutTests
                 Assert.That(PairTexel(texels, 3, upper, lower, 2).a, Is.EqualTo(0f), $"{upper} over {lower}");
             }
         }
+    }
+
+    /// <summary>
+    /// The project's dirt, dry grass and plaza (TerrainTypes.md, Phase 3) meet the other materials as decided: dry grass
+    /// over grass is seamless, with no outline, rim or shadow but tufts, and marked seamless in the lookup texture, while
+    /// over nothing it keeps an outlined edge; dirt draws its default edge, an outline and a fringe of tufts, over grass,
+    /// dry grass, weeds and nothing; sand, mud, gravel and stone draw their own rim and outline over dirt with an earth
+    /// shadow in place of their green one; the plaza cuts its slabs like stone, draws stone's default edge over grass,
+    /// and its pairs with gravel and stone copy stone over gravel's edge.
+    /// </summary>
+    [Test]
+    public void TheProjectsDirtDryGrassAndPlaza_MeetTheOtherMaterialsAsDecided()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial grass = ProjectMaterial("Grass");
+        TerrainMaterial dryGrass = ProjectMaterial("DryGrass");
+        TerrainMaterial dirt = ProjectMaterial("Dirt");
+        TerrainMaterial plaza = ProjectMaterial("Plaza");
+        TerrainMaterial gravel = ProjectMaterial("Gravel");
+        TerrainMaterial stone = ProjectMaterial("Stone");
+
+        TerrainStyle.EdgeSettings dryOverGrass = style.GetEdge(dryGrass, grass);
+        Assert.That(dryOverGrass.Seamless, Is.True);
+        Assert.That(dryOverGrass.DrawOutline, Is.False);
+        Assert.That(dryOverGrass.RimWidth, Is.Zero);
+        Assert.That(dryOverGrass.ShadowAlpha, Is.Zero);
+        Assert.That(dryOverGrass.TuftHeight, Is.GreaterThan(0f), "Straw tufts fray into the grass.");
+        Assert.That(style.GetEdge(dryGrass, null), Is.SameAs(dryGrass.Edge));
+        Assert.That(dryGrass.Edge.DrawOutline, Is.True);
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass });
+        Assert.That(PairTexel(texels, 2, 1, 0, 3).a, Is.Zero, "dry grass over grass is seamless");
+        Assert.That(PairTexel(texels, 2, 1, -1, 3).a, Is.EqualTo(1f), "dry grass over nothing is not");
+
+        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, ProjectMaterial("Weeds") })
+        {
+            Assert.That(style.GetEdge(dirt, lower), Is.SameAs(dirt.Edge), lower != null ? lower.name : "nothing");
+        }
+
+        Assert.That(dirt.Edge.DrawOutline, Is.True);
+        Assert.That(dirt.Edge.TuftHeight, Is.GreaterThan(0f), "A fringe of dry blades.");
+        Assert.That(dirt.Cells, Is.EqualTo(TerrainMaterial.CellMode.None));
+
+        foreach (string upperName in new[] { "Sand", "Mud", "Gravel", "Stone" })
+        {
+            TerrainMaterial upper = ProjectMaterial(upperName);
+            TerrainStyle.EdgeSettings overDirt = style.GetEdge(upper, dirt);
+            Assert.That(overDirt, Is.Not.SameAs(upper.Edge), upperName);
+            Assert.That(overDirt.RimWidth, Is.EqualTo(upper.Edge.RimWidth), upperName);
+            Assert.That(overDirt.DrawOutline, Is.EqualTo(upper.Edge.DrawOutline), upperName);
+            Assert.That(upper.Edge.ShadowColour.g, Is.GreaterThan(upper.Edge.ShadowColour.r), $"{upperName}'s default shadow is green");
+            Assert.That(overDirt.ShadowColour.r, Is.GreaterThan(overDirt.ShadowColour.g), $"{upperName}'s shadow over dirt is earth");
+        }
+
+        Assert.That(plaza.Cells, Is.EqualTo(TerrainMaterial.CellMode.CutStones));
+        Assert.That(style.GetEdge(plaza, grass), Is.SameAs(plaza.Edge));
+        Assert.That(plaza.Edge.RimWidth, Is.EqualTo(stone.Edge.RimWidth));
+        Assert.That(plaza.Edge.SoftBandWidth, Is.EqualTo(stone.Edge.SoftBandWidth));
+        TerrainStyle.EdgeSettings stoneOverGravel = style.GetEdge(stone, gravel);
+        foreach (TerrainStyle.EdgeSettings pair in new[] { style.GetEdge(plaza, gravel), style.GetEdge(stone, plaza) })
+        {
+            Assert.That(pair, Is.Not.SameAs(stoneOverGravel));
+            Assert.That(pair.RimWidth, Is.EqualTo(stoneOverGravel.RimWidth));
+            Assert.That(pair.DrawOutline, Is.False);
+            Assert.That(pair.ShadowColour, Is.EqualTo(stoneOverGravel.ShadowColour));
+            Assert.That(pair.SoftWholeStones, Is.True);
+        }
+    }
+
+    /// <summary>
+    /// The project's ground material named <paramref name="name"/>, only read.
+    /// </summary>
+    private static TerrainMaterial ProjectMaterial(string name)
+    {
+        TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
+        Assert.That(material, Is.Not.Null, name);
+        return material;
     }
 
     /// <summary>

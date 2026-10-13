@@ -1032,13 +1032,13 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The project's terrain style lists every ground material of Assets/Settings/Terrain/Materials once, in the shared
-    /// draw order of Docs/TerrainTypes.md: grass, weeds, sand, mud, gravel, stone, water.
+    /// draw order of Docs/TerrainTypes.md: grass, dry grass, weeds, dirt, sand, mud, gravel, plaza, stone, water.
     /// </summary>
     [Test]
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "Weeds", "Sand", "Mud", "Gravel", "Stone", "Water" };
+        string[] order = { "Grass", "DryGrass", "Weeds", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Water" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)
@@ -1054,7 +1054,8 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The default movement profile lets sand be walked like grass, mud at a higher cost and water not at all.
+    /// The default movement profile lets sand, dirt, dry grass and the plaza be walked like grass, mud at a higher cost
+    /// and water not at all.
     /// </summary>
     [Test]
     public void TheDefaultProfile_WalksSandLikeGrass_MudAtAHigherCost_AndNotWater()
@@ -1066,6 +1067,15 @@ public class AreaGenerationTests
         profile.TryGetTraversal(ProjectTerrainType("Water"), out bool waterWalkable, out _);
         Assert.That(grassWalkable && sandWalkable && mudWalkable, Is.True);
         Assert.That(sandCost, Is.EqualTo(grassCost), "Sand costs what grass costs.");
+        foreach (string name in new[] { "Dirt", "DryGrass", "Plaza" })
+        {
+            TerrainType2D type = ProjectTerrainType(name);
+            Assert.That(type, Is.Not.Null, name);
+            profile.TryGetTraversal(type, out bool walkable, out int cost);
+            Assert.That(walkable, Is.True, name);
+            Assert.That(cost, Is.EqualTo(grassCost), $"{name} costs what grass costs.");
+        }
+
         Assert.That(mudCost, Is.GreaterThan(grassCost), "Paths go around mud when they can.");
         Assert.That(waterWalkable, Is.False, "Water cannot be walked.");
     }

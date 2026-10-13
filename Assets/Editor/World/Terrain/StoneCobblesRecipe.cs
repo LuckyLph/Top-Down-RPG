@@ -7,6 +7,8 @@ using UnityEngine;
 /// its own edges. The cell field (cut stones) points every pixel at its stone's centre pixel (its pixel nearest its
 /// seed) and holds the pixel's exact distance to its stone's cell edge, so the terrain shader can leave a stone out or
 /// cut it along the rim; its blue channel is the mortar's shade under every pixel. The base colour is the mortar colour.
+/// With no jitter the seeds lie on a regular grid and the stones are square slabs with straight mortar (the Plaza
+/// material), its width set by the seed offset.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Stone Cobbles", fileName = "Recipe_Stone")]
 public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
@@ -25,6 +27,8 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
     [SerializeField, Range(1f, 8f)] private float stonesPerCell = 4.5f;
     [Tooltip("How far a stone's seed moves from its grid position, in grid steps.")]
     [SerializeField, Range(0f, 0.45f)] private float jitter = 0.32f;
+    [Tooltip("How far every seed moves right and up, in pixels. With no jitter and an even number of pixels between seeds, half a pixel puts every stone's cell edge on a pixel centre, so the mortar is one pixel wide (on a pixel border it is none or two).")]
+    [SerializeField, Range(0f, 1f)] private float seedOffset;
     [Tooltip("Each stone takes one of these colours at random.")]
     [SerializeField] private Color32[] palette =
     {
@@ -47,13 +51,22 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.CutStones;
 
     /// <summary>
-    /// Draws the seeds, a colour and a value per stone, then the height waves; finds each pixel's stone, offset from its
-    /// seed and distance to its cell edge, and paints the mortar, the stones, the cell field and the height.
+    /// Draws the seeds (moved by the seed offset), a colour and a value per stone, then the height waves; finds each
+    /// pixel's stone, offset from its seed and distance to its cell edge, and paints the mortar, the stones, the cell
+    /// field and the height.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
         int cells = SeedsAcross(stonesPerCell);
         (double X, double Y)[] seeds = TerrainArt.JitteredSeeds(random, cells, jitter, size);
+        if (seedOffset > 0f)
+        {
+            for (int s = 0; s < seeds.Length; s++)
+            {
+                seeds[s] = (TerrainArt.Wrap(seeds[s].X + seedOffset, size), TerrainArt.Wrap(seeds[s].Y + seedOffset, size));
+            }
+        }
+
         Color32[] colours = new Color32[seeds.Length];
         for (int s = 0; s < seeds.Length; s++)
         {

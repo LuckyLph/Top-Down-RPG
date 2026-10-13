@@ -4,8 +4,10 @@ using UnityEngine;
 /// <summary>
 /// Grass: dark green with slow tint patches and per-pixel grit, and small tufts of blades, dark strokes with lighter
 /// tips like the marks in the old grass edge, clustering here and there. Tufts sit on a jittered grid of spots; each
-/// spot holds one of the tuft glyphs, centred on it and pointing up, or none. No cell field; the base colour is the
-/// grass colour, and the height's per-chip value is 0.5 everywhere.
+/// spot holds one of the tuft glyphs, centred on it and pointing up, or none. Colour patches (none by default) shift the
+/// ground, the blades and the tips together towards one colour where slow waves are low and another where they are
+/// high, so the hue varies as well as the lightness (the DryGrass material's greener and more golden straw). No cell
+/// field; the base colour is the grass colour, and the height's per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Grass Tufts", fileName = "Recipe_Grass")]
 public sealed class GrassTuftsRecipe : TerrainMaterialRecipe
@@ -45,12 +47,21 @@ public sealed class GrassTuftsRecipe : TerrainMaterialRecipe
         "+.\n#+\n.#",
         ".+.\n+#+\n#.#"
     };
+    [Header("Colour patches")]
+    [Tooltip("How far the colour patches move the grass, its blades and tips towards the low and high colours, from 0 (none) to 1 (all the way where the waves peak).")]
+    [SerializeField, Range(0f, 1f)] private float patchAmount;
+    [Tooltip("The colour the grass shifts towards where the patch waves are low.")]
+    [SerializeField] private Color32 patchLow = new(35, 114, 40, 255);
+    [Tooltip("The colour the grass shifts towards where the patch waves are high.")]
+    [SerializeField] private Color32 patchHigh = new(35, 114, 40, 255);
+    [Tooltip("Slow waves, normalised into -1 to 1, that pick where the grass leans to the low or the high colour.")]
+    [SerializeField] private Wave[] patchWaves = { new(1, 1, 1f), new(2, -1, 0.8f), new(-1, 2, 0.7f), new(3, 1, 0.4f) };
 
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.None;
 
     /// <summary>
     /// Draws the tint and density waves, the tuft spots, whether each holds a tuft and which, then the height waves,
-    /// and paints the grass with its tufts.
+    /// then the colour patch waves when there are colour patches, and paints the grass with its tufts.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
@@ -72,6 +83,8 @@ public sealed class GrassTuftsRecipe : TerrainMaterialRecipe
         }
 
         double[] height = SmoothHeight(random, size);
+        double[] patches = patchAmount > 0f ? TerrainArt.PeriodicNoise(random, patchWaves, size) : null;
+        double patchTotal = TerrainArt.TotalAmplitude(patchWaves);
         Color32[] albedo = new Color32[size * size];
         for (int y = 0; y < size; y++)
         {
@@ -79,16 +92,38 @@ public sealed class GrassTuftsRecipe : TerrainMaterialRecipe
             {
                 int i = y * size + x;
                 double pixelGrit = (TerrainArt.Hash01(x, y, GritSalt) - 0.5) * grit;
+                double patch = patches != null && patchTotal > 0.0 ? patchAmount * patches[i] / patchTotal : 0.0;
                 albedo[i] = marks[i] switch
                 {
-                    BladeMark => TerrainArt.Shade(blade, pixelGrit),
-                    TipMark => TerrainArt.Shade(tip, pixelGrit),
-                    _ => TerrainArt.Shade(grass, tint[i] + pixelGrit)
+                    BladeMark => TerrainArt.Shade(Patched(blade, patch), pixelGrit),
+                    TipMark => TerrainArt.Shade(Patched(tip, patch), pixelGrit),
+                    _ => TerrainArt.Shade(Patched(grass, patch), tint[i] + pixelGrit)
                 };
             }
         }
 
         return new TerrainTextures(size, grass, CellMode, albedo, null, TerrainArt.HeightPixels(height, null, null));
+    }
+
+    /// <summary>
+    /// <paramref name="colour"/> moved by the grass colour's own shift towards the high patch colour at
+    /// <paramref name="patch"/> of the way (0 to 1), or towards the low one at minus it (-1 to 0), so blades and tips
+    /// keep their contrast with the ground under them.
+    /// </summary>
+    private Color32 Patched(Color32 colour, double patch)
+    {
+        if (patch == 0.0)
+        {
+            return colour;
+        }
+
+        Color32 target = patch > 0.0 ? patchHigh : patchLow;
+        double t = Math.Abs(patch);
+        return new Color32(
+            TerrainArt.ToByte(colour.r + (target.r - grass.r) * t),
+            TerrainArt.ToByte(colour.g + (target.g - grass.g) * t),
+            TerrainArt.ToByte(colour.b + (target.b - grass.b) * t),
+            255);
     }
 
     /// <summary>

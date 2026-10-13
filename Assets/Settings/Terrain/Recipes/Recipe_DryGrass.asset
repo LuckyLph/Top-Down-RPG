@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::GrassTuftsRecipe
   material: {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
   seed: 20261012
-  repeatCells: 4
+  repeatCells: 8
   heightWaves:
   - x: 1
     y: 0
@@ -104,3 +104,23 @@ MonoBehaviour:
     +#+
 
     #.#'
+  patchAmount: 0.9
+  patchLow:
+    serializedVersion: 2
+    rgba: 4282549892
+  patchHigh:
+    serializedVersion: 2
+    rgba: 4282286764
+  patchWaves:
+  - x: 1
+    y: 1
+    amplitude: 1
+  - x: 2
+    y: -1
+    amplitude: 0.8
+  - x: -1
+    y: 2
+    amplitude: 0.7
+  - x: 3
+    y: 1
+    amplitude: 0.4

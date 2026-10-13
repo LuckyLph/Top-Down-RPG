@@ -1061,6 +1061,49 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
+    /// The grass recipe's colour patches (the DryGrass material's) shift the hue, not only the lightness: with no grit,
+    /// tint or tufts, the ground's red minus green is one value without them, even with patch colours set but no amount,
+    /// and spreads over more than 20 steps with them.
+    /// </summary>
+    [Test]
+    public void GrassPatches_ShiftTheHue_AndAreOffByDefault()
+    {
+        GrassTuftsRecipe recipe = (GrassTuftsRecipe)CreateRecipe(typeof(GrassTuftsRecipe));
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("tuftChance").floatValue = 0f;
+        settings.FindProperty("densityWaves").arraySize = 0;
+        settings.FindProperty("tintWaves").arraySize = 0;
+        settings.FindProperty("patchLow").colorValue = new Color32(20, 140, 40, 255);
+        settings.FindProperty("patchHigh").colorValue = new Color32(90, 100, 40, 255);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures plain = recipe.Generate(Seed);
+
+        settings.FindProperty("patchAmount").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures patched = recipe.Generate(Seed);
+
+        Assert.That(HueSpread(plain.Albedo), Is.Zero, "No patches: one hue.");
+        Assert.That(HueSpread(patched.Albedo), Is.GreaterThan(20), "Patches move red against green.");
+    }
+
+    /// <summary>
+    /// The range of red minus green over <paramref name="pixels"/>.
+    /// </summary>
+    private static int HueSpread(Color32[] pixels)
+    {
+        int lowest = int.MaxValue;
+        int highest = int.MinValue;
+        foreach (Color32 pixel in pixels)
+        {
+            lowest = Math.Min(lowest, pixel.r - pixel.g);
+            highest = Math.Max(highest, pixel.r - pixel.g);
+        }
+
+        return highest - lowest;
+    }
+
+    /// <summary>
     /// Mud's cracks (the Dirt material's) are grooves lit from the top left: with no puddles, ridges or lumps, every
     /// crack pixel touches another (a crack is at least two pixels long) and the pixel below and right of it is crack or
     /// lip, and every lip pixel has a crack pixel above and left of it.

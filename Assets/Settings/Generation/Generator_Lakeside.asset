@@ -44,6 +44,11 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
     terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
     material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  shallows:
+    tilemapName: ShallowsTilemap
+    tile: {fileID: 11400000, guid: 8bbef410cb323b1439e5b021cd1444e3, type: 2}
+    terrainType: {fileID: 11400000, guid: a6f395241d35f9a48a946ebfa8fd82ba, type: 2}
+    material: {fileID: 11400000, guid: 564b4a55de051dc418fc12f8853293ee, type: 2}
   water:
     tilemapName: WaterTilemap
     tile: {fileID: 11400000, guid: 6819f86dffc046147a17f9a41b30e252, type: 2}
@@ -67,6 +72,9 @@ MonoBehaviour:
   dryGrassPatchCount: 5
   dryGrassPatchRadius: {x: 2.5, y: 5}
   shoreZoneDepth: 3
+  shallowsWidth: {x: 1, y: 2}
+  fordWidth: 2
+  fordBend: 1
   roadWidth: 3
   roadSouth: 0.5
   roadMeander: 0.12

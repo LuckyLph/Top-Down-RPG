@@ -20,6 +20,7 @@ internal sealed class AreaLayoutBuilder
     private const int OutlineHarmonics = 4;
     private const int DetailStreamFactor = 486187739;
     private const int DetailStreamSalt = 1013904223;
+    private const int DetailStreamStep = 668265263;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
 
@@ -78,11 +79,12 @@ internal sealed class AreaLayoutBuilder
     /// From here on every random draw (<see cref="Range"/>, <see cref="Next"/>, <see cref="Shuffle{T}"/>,
     /// <see cref="WobblyShape"/>, <see cref="ScatterProps"/>) comes from a second stream seeded from the layout's seed,
     /// for terrain a generator lays after its props and mobs: what it lays stays deterministic, and adding it changes
-    /// nothing drawn before.
+    /// nothing drawn before. Each <paramref name="stream"/> number gives a stream of its own, so a generator with two
+    /// such steps (the Lakeside's dry grass, then its shallows) can turn one off without moving the other.
     /// </summary>
-    public void StartDetailStream()
+    public void StartDetailStream(int stream = 0)
     {
-        random = new Random(unchecked(seed * DetailStreamFactor + DetailStreamSalt));
+        random = new Random(unchecked(seed * DetailStreamFactor + DetailStreamSalt + stream * DetailStreamStep));
     }
 
     /// <summary>

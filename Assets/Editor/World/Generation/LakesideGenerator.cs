@@ -5,15 +5,18 @@ using UnityEngine;
 /// <summary>
 /// Lays out a lakeside: a grass blob ringed by trees, with a lake in its northern half, a sandy beach on the lake's
 /// southern shore and a muddy marsh around the rest of it, a stone road crossing the south from west to east, a gravel
-/// trail from the road down to the beach, and patches of mud and of dry grass on the open grass. The party spawns on
-/// the road. Blocking props stay off the water, the beach, the mud, the paths, a clearance beside them and the ground
-/// around the spawn; every mob, and the beach, can be walked to from the spawn.
+/// trail from the road down to the beach, patches of mud and of dry grass on the open grass, and shallows ringing the lake
+/// along the beach with a ford across it from the trail. The party spawns on the road. Blocking props stay off the
+/// water, the beach, the mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the
+/// beach, can be walked to from the spawn.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Lakeside Generator", fileName = "Generator_Lakeside")]
 public sealed class LakesideGenerator : AreaGenerator
 {
     private const int LakeSearchMargin = 2;
     private const int MinDryGrassFragment = 4;
+    private const int MinWaterPiece = 6;
+    private const int ShallowsStream = 1;
 
     /// <summary>
     /// The part of the lakeside a scatter layer fills: the band along its edge, the grass near the lake's shore, or
@@ -45,6 +48,8 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField] private TerrainLayer mud = new();
     [SerializeField] private TerrainLayer gravel = new();
     [SerializeField] private TerrainLayer stone = new();
+    [Tooltip("Light water over a visible bed along the beach and across the ford: drawn under the water, which fades into it, and walked at a cost.")]
+    [SerializeField] private TerrainLayer shallows = new();
     [Tooltip("Drawn over every other layer, so it decides its cells: water cannot be walked.")]
     [SerializeField] private TerrainLayer water = new();
 
@@ -90,6 +95,14 @@ public sealed class LakesideGenerator : AreaGenerator
     [Tooltip("Depth in cells of the band of grass around the shore that Shore layers fill.")]
     [SerializeField, Min(1)] private int shoreZoneDepth = 3;
 
+    [Header("Shallows")]
+    [Tooltip("Smallest and largest width in cells of the shallows along the beach, swelling and thinning around the lake; 0 for none. They keep a cell from the marsh's mud.")]
+    [SerializeField] private Vector2 shallowsWidth = new(1f, 2f);
+    [Tooltip("Width in cells of the ford of shallows across the lake from the trail's end to the far shore; 0 for none.")]
+    [SerializeField, Min(0)] private int fordWidth = 2;
+    [Tooltip("How far in cells the ford may bend sideways halfway across.")]
+    [SerializeField, Min(0f)] private float fordBend = 1f;
+
     [Header("Paths")]
     [Tooltip("Width in cells of the stone road crossing the south of the area from west to east.")]
     [SerializeField, Min(1)] private int roadWidth = 3;
@@ -124,6 +137,7 @@ public sealed class LakesideGenerator : AreaGenerator
 
     public int BorderDepth => borderDepth;
     public int DryGrassPatchCount => dryGrassPatchCount;
+    public int FordWidth => fordWidth;
     public int PathClearance => pathClearance;
     public int RoadMargin => roadMargin;
     public int SpawnClearRadius => spawnClearRadius;
@@ -133,11 +147,11 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, dry grass, sand, mud, gravel, stone, then water, in the style's layer order: each layer is drawn over the
-    /// ones before it and decides its cells, so the road and the trail cross mud and sand and the lake covers everything
-    /// under it.
+    /// Grass, dry grass, sand, mud, gravel, stone, shallows, then water, in the style's layer order: each layer is drawn
+    /// over the ones before it and decides its cells, so the road and the trail cross mud and sand, the shallows lie
+    /// under the deep water that fades into them and the lake covers everything under it.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, sand, mud, gravel, stone, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, sand, mud, gravel, stone, shallows, water };
 
     /// <summary>
     /// Lays out a lakeside from <paramref name="layoutSeed"/>.
@@ -149,7 +163,7 @@ public sealed class LakesideGenerator : AreaGenerator
 
     /// <summary>
     /// The state of one generation: the shared builder with the cells laid so far, the road's samples, the lake's
-    /// centre, and how many steps each dry grass cell lies from the water.
+    /// centre, where the trail ends, and how many steps each dry grass cell lies from the water.
     /// </summary>
     private sealed class Run
     {
@@ -159,11 +173,13 @@ public sealed class LakesideGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> sand;
         private readonly HashSet<Vector3Int> mud;
         private readonly HashSet<Vector3Int> dryGrass;
+        private readonly HashSet<Vector3Int> shallows;
         private readonly List<Vector2> road = new();
         private readonly Dictionary<Vector3Int, int> waterDistance = new();
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
+        private Vector3Int? trailEnd;
 
         /// <summary>
         /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
@@ -176,6 +192,7 @@ public sealed class LakesideGenerator : AreaGenerator
             sand = builder.Layout.TerrainCells(generator.sand);
             mud = builder.Layout.TerrainCells(generator.mud);
             dryGrass = builder.Layout.TerrainCells(generator.dryGrass);
+            shallows = builder.Layout.TerrainCells(generator.shallows);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
         }
@@ -183,8 +200,8 @@ public sealed class LakesideGenerator : AreaGenerator
         /// <summary>
         /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach and the mud patches, picks
         /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs,
-        /// checks that the beach can be walked to, then lays the dry grass from the detail stream, so it moves nothing
-        /// laid before it.
+        /// checks that the beach can be walked to, then lays the dry grass and the shallows, each from a detail stream of
+        /// its own, so they move nothing laid before them nor each other.
         /// </summary>
         public AreaLayout Build()
         {
@@ -212,6 +229,7 @@ public sealed class LakesideGenerator : AreaGenerator
             PlaceMobs(reachable);
             CheckBeach(reachable);
             LayDryGrass();
+            LayShallows();
             return builder.Layout;
         }
 
@@ -381,6 +399,7 @@ public sealed class LakesideGenerator : AreaGenerator
                 return;
             }
 
+            trailEnd = target;
             Vector2 end = new(target.x + 0.5f, target.y + 0.5f);
             Vector2 start = road[0];
             foreach (Vector2 sample in road)
@@ -486,6 +505,197 @@ public sealed class LakesideGenerator : AreaGenerator
             }
 
             RemoveFragments(dryGrass, MinDryGrassFragment);
+        }
+
+        /// <summary>
+        /// Lays the shallows from a detail stream of their own: the lake's cells within the shallows width of the beach
+        /// or the trail (in steps through the lake), the width swelling and thinning around the lake with two random
+        /// harmonics of the angle, on cells whose every dry neighbour is beach or trail, so they keep a cell from the
+        /// marsh's mud; then the ford across the lake from the trail's end. Those cells turn from water to shallows, and
+        /// a piece of water too small to read as deep water, cut off between them, turns with them. The shallows go on
+        /// under the water like any lower layer, so where the ring ends along the beach, or the ford meets the far
+        /// shore, they fill the deep water's rounded corner and the shore runs on unbroken; beside mud, a third look
+        /// would show there instead (Docs/TerrainTypes.md, Phase 3's Corners note).
+        /// </summary>
+        private void LayShallows()
+        {
+            builder.StartDetailStream(ShallowsStream);
+            float firstPhase = builder.Range(0f, 2f * Mathf.PI);
+            float secondPhase = builder.Range(0f, 2f * Mathf.PI);
+            float narrowest = Mathf.Max(0f, Mathf.Min(settings.shallowsWidth.x, settings.shallowsWidth.y));
+            float widest = Mathf.Max(0f, Mathf.Max(settings.shallowsWidth.x, settings.shallowsWidth.y));
+            Dictionary<Vector3Int, int> fromBeach = LakeStepsFromBeach();
+            HashSet<Vector3Int> turned = new();
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (!fromBeach.TryGetValue(cell, out int steps))
+                {
+                    continue;
+                }
+
+                Vector2 fromCentre = new Vector2(cell.x + 0.5f, cell.y + 0.5f) - lakeCentre;
+                float angle = Mathf.Atan2(fromCentre.y, fromCentre.x);
+                float swell = 0.5f + 0.5f * (0.6f * Mathf.Sin(3f * angle + firstPhase) + 0.4f * Mathf.Sin(5f * angle + secondPhase));
+                if (steps <= Mathf.RoundToInt(Mathf.Lerp(narrowest, widest, swell)))
+                {
+                    turned.Add(cell);
+                }
+            }
+
+            turned.UnionWith(Ford());
+            if (turned.Count == 0)
+            {
+                return;
+            }
+
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (turned.Contains(cell))
+                {
+                    water.Remove(cell);
+                    shallows.Add(cell);
+                }
+            }
+
+            HashSet<Vector3Int> kept = new(water);
+            RemoveFragments(kept, MinWaterPiece);
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (water.Contains(cell) && !kept.Contains(cell))
+                {
+                    water.Remove(cell);
+                    shallows.Add(cell);
+                }
+            }
+        }
+
+        /// <summary>
+        /// How many steps (8 neighbours) each water cell whose every dry neighbour is beach or trail lies from the beach
+        /// or the trail, through such cells: 1 beside them. Other water cells, and those the steps do not reach, are
+        /// left out, so the shallows grow from the beach in one piece.
+        /// </summary>
+        private Dictionary<Vector3Int, int> LakeStepsFromBeach()
+        {
+            Dictionary<Vector3Int, int> steps = new();
+            Queue<Vector3Int> queue = new();
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (water.Contains(cell) && TouchesBeach(cell) && HasOnlyBeachAshore(cell))
+                {
+                    steps[cell] = 1;
+                    queue.Enqueue(cell);
+                }
+            }
+
+            while (queue.Count > 0)
+            {
+                Vector3Int cell = queue.Dequeue();
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
+                        if (water.Contains(neighbour) && !steps.ContainsKey(neighbour) && HasOnlyBeachAshore(neighbour))
+                        {
+                            steps[neighbour] = steps[cell] + 1;
+                            queue.Enqueue(neighbour);
+                        }
+                    }
+                }
+            }
+
+            return steps;
+        }
+
+        /// <summary>
+        /// Whether one of <paramref name="cell"/>'s 8 neighbours is beach or trail.
+        /// </summary>
+        private bool TouchesBeach(Vector3Int cell)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
+                    if (sand.Contains(neighbour) || builder.Gravel.Contains(neighbour))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Whether each of <paramref name="cell"/>'s 8 neighbours is water, shallows, beach or trail, so shallows there
+        /// meet no third look at a corner.
+        /// </summary>
+        private bool HasOnlyBeachAshore(Vector3Int cell)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
+                    bool lake = water.Contains(neighbour) || shallows.Contains(neighbour);
+                    if (!lake && !sand.Contains(neighbour) && !builder.Gravel.Contains(neighbour))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The water cells of the ford: a band of the ford width from the trail's end straight across the lake to the
+        /// dry cell past the last water cell of that column, bending sideways by up to the ford bend halfway. Its centre
+        /// line runs along a cell border for an even width, so a ford two cells wide is two cells wide. None when the
+        /// ford width is 0 or there is no trail; a warning when no water lies north of the trail's end.
+        /// </summary>
+        private List<Vector3Int> Ford()
+        {
+            List<Vector3Int> ford = new();
+            if (settings.fordWidth <= 0 || !trailEnd.HasValue)
+            {
+                return ford;
+            }
+
+            Vector3Int end = trailEnd.Value;
+            int far = int.MinValue;
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (cell.x == end.x && cell.y > end.y && water.Contains(cell))
+                {
+                    far = Mathf.Max(far, cell.y);
+                }
+            }
+
+            if (far == int.MinValue)
+            {
+                builder.Layout.Warnings.Add("No water lies north of the trail's end, so no ford crosses the lake.");
+                return ford;
+            }
+
+            float x = settings.fordWidth % 2 == 0 ? end.x + 1f : end.x + 0.5f;
+            Vector2 start = new(x, end.y + 0.5f);
+            Vector2 finish = new(x, far + 1.5f);
+            Vector2 bend = Vector2.Lerp(start, finish, 0.5f) + new Vector2(builder.Range(-1f, 1f) * settings.fordBend, 0f);
+            List<Vector2> samples = new();
+            AreaLayoutBuilder.SampleSpline(new[] { start, bend, finish }, samples);
+            HashSet<Vector3Int> band = new();
+            builder.Paint(samples, settings.fordWidth, band);
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (band.Contains(cell) && water.Contains(cell))
+                {
+                    ford.Add(cell);
+                }
+            }
+
+            return ford;
         }
 
         /// <summary>

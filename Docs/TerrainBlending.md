@@ -406,7 +406,7 @@ Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12, with the e
 
 ### Later
 
-- More materials (dirt, snow), and generators that place sand, mud and water (beaches, ponds, mud along trails).
+- More materials (dirt, snow), and sand, mud and water in the Clearing's and the Village Forest's generators (the Lakeside generator lays a lake, a beach, a marsh and mud patches; see [SceneGeneration.md](SceneGeneration.md)).
 - An ocean material from the caustic net (`Recipe_WaterCaustics`), with its own terrain type and edges.
 - Water that flows or moves its shore; a collider for water if something starts pushing bodies around.
 - Renderer feature passes on the `Terrain` sorting layer if a material needs one.

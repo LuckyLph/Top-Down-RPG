@@ -1,0 +1,145 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de01d5000212bf348a778be99ab5a07f, type: 3}
+  m_Name: Generator_Lakeside
+  m_EditorClassIdentifier: TopDownRPG.Editor::LakesideGenerator
+  seed: 1
+  terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
+  grass:
+    tilemapName: GrassTilemap
+    tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
+    terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
+    material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  sand:
+    tilemapName: SandTilemap
+    tile: {fileID: 11400000, guid: 83e753f40a35db948a5c2da61af65f3a, type: 2}
+    terrainType: {fileID: 11400000, guid: 9b1cce5b11f53524e9d0e19ded4520f0, type: 2}
+    material: {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
+  mud:
+    tilemapName: MudTilemap
+    tile: {fileID: 11400000, guid: d19e7df10fae9cd49b06493643e1c419, type: 2}
+    terrainType: {fileID: 11400000, guid: 81eb8d32cf6eda44589a4da323a86b7c, type: 2}
+    material: {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
+  gravel:
+    tilemapName: GravelTilemap
+    tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
+    terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
+    material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
+  stone:
+    tilemapName: StoneTilemap
+    tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
+    terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
+    material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  water:
+    tilemapName: WaterTilemap
+    tile: {fileID: 11400000, guid: 6819f86dffc046147a17f9a41b30e252, type: 2}
+    terrainType: {fileID: 11400000, guid: c00b3a5a94fb58d44895db1e04a2f1f7, type: 2}
+    material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+  size: {x: 64, y: 46}
+  squareness: 3
+  edgeWobble: 0.12
+  lakeSize: {x: 26, y: 13}
+  lakeNorth: 0.35
+  lakeWobble: 0.2
+  minLakeCells: 120
+  roadMargin: 5
+  beachSpread: 70
+  beachWidth: 3
+  marshWidth: 2
+  shoreWobble: 0.6
+  marshPatchCount: 4
+  mudPatchCount: 3
+  mudPatchRadius: {x: 1.5, y: 3.5}
+  shoreZoneDepth: 3
+  roadWidth: 3
+  roadSouth: 0.5
+  roadMeander: 0.12
+  trailWidth: 2
+  pathClearance: 1
+  spawnAlongRoad: -0.55
+  spawnClearRadius: 6
+  borderDepth: 3
+  scatters:
+  - label: Forest edge
+    prefabs:
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
+    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
+    count: 280
+    spacing: 2
+    zone: 0
+  - label: Trees
+    prefabs:
+    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
+    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
+    - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
+    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    count: 16
+    spacing: 5
+    zone: 1
+  - label: Shore bushes
+    prefabs:
+    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
+    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
+    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
+    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
+    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
+    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    count: 10
+    spacing: 4
+    zone: 2
+  - label: Bushes and rocks
+    prefabs:
+    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
+    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
+    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
+    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
+    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
+    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    count: 10
+    spacing: 5
+    zone: 1
+  - label: Shore plants
+    prefabs:
+    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
+    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
+    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
+    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
+    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
+    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    count: 30
+    spacing: 2
+    zone: 2
+  - label: Plants
+    prefabs:
+    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
+    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
+    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
+    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
+    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
+    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    count: 45
+    spacing: 2.2
+    zone: 1
+  mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+  mobCount: 4
+  mobDistanceFromSpawn: 14
+  mobSpacing: 10

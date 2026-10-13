@@ -463,7 +463,8 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the weeds lie on
-    /// open grass, off the water, the beach, the mud and the paths, and the dry grass too, off the weeds as well; the lake is water off every path and at least the
+    /// open grass, off the water, the beach, the mud and the paths, and the dry grass too, not on or beside the weeds or
+    /// a path; the lake is water off every path and at least the
     /// road margin from the road, the beach and the marsh lie beside it and off
     /// it, and the gravel trail reaches the beach; the spawn is on the road with no footprint or water within its clear
     /// radius.
@@ -493,7 +494,14 @@ public class AreaGenerationTests
             HashSet<Vector3Int> weeds = Cells(layout, "Weeds");
             Assert.That(weeds.Overlaps(water) || weeds.Overlaps(sand) || weeds.Overlaps(mud) || weeds.Overlaps(paths), Is.False, $"seed {seed}: weeds only on open grass");
             HashSet<Vector3Int> dryGrass = Cells(layout, "DryGrass");
-            Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(weeds) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
+            Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
+            foreach (Vector3Int cell in dryGrass)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(weeds.Contains(near) || paths.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside weeds or a path");
+                }
+            }
             foreach (Vector3Int cell in stone)
             {
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.RoadMargin))

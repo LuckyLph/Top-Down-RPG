@@ -499,17 +499,20 @@ public sealed class LakesideGenerator : AreaGenerator
 
         /// <summary>
         /// Lays the dry grass patches from the detail stream: wobbly discs centred on random open grass cells inside
-        /// the edge band, away from the lake and its shore and off the paths, on grass that is not water, beach, mud,
-        /// weeds or path. Props stand on it as on grass.
+        /// the edge band, away from the lake and its shore and off the paths, on grass that is not water, beach or mud
+        /// and not on or beside weeds or a path. Weeds and the paths are drawn over dry grass, so the renderer takes dry
+        /// grass to go on under them; beside a weeds or path cell that has only grass under it, the dry grass would show
+        /// under its rounded corners where the two meet grass. Props stand on it as on grass.
         /// </summary>
         private void LayDryGrass()
         {
             builder.StartDetailStream();
+            HashSet<Vector3Int> nearWeeds = CellsNear(weeds, 1);
             List<Vector3Int> open = new();
             int away = settings.shoreZoneDepth + Mathf.Max(settings.beachWidth, settings.marshWidth) + 2;
             foreach (Vector3Int cell in builder.OrderedGrass)
             {
-                if (IsOpenGrass(cell) && !weeds.Contains(cell) && builder.EdgeDistance(cell) > settings.borderDepth && WaterDistance(cell) > away && !builder.IsNearPath(cell))
+                if (IsOpenGrass(cell) && !nearWeeds.Contains(cell) && builder.EdgeDistance(cell) > settings.borderDepth && WaterDistance(cell) > away && !builder.IsNearPath(cell))
                 {
                     open.Add(cell);
                 }
@@ -517,7 +520,7 @@ public sealed class LakesideGenerator : AreaGenerator
 
             for (int i = 0; i < settings.dryGrassPatchCount && open.Count > 0; i++)
             {
-                PaintPatch(open[builder.Next(open.Count)], settings.dryGrassPatchRadius, dryGrass, cell => !mud.Contains(cell) && !weeds.Contains(cell));
+                PaintPatch(open[builder.Next(open.Count)], settings.dryGrassPatchRadius, dryGrass, cell => !mud.Contains(cell) && !nearWeeds.Contains(cell) && !builder.IsNearPath(cell));
             }
         }
 

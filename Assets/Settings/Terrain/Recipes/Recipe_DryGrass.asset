@@ -104,23 +104,26 @@ MonoBehaviour:
     +#+
 
     #.#'
-  patchAmount: 0.9
+  patchAmount: 1
   patchLow:
     serializedVersion: 2
-    rgba: 4282549892
+    rgba: 4281225320
   patchHigh:
     serializedVersion: 2
-    rgba: 4282286764
+    rgba: 4284655300
   patchWaves:
-  - x: 1
+  - x: 2
     y: 1
     amplitude: 1
-  - x: 2
-    y: -1
-    amplitude: 0.8
   - x: -1
-    y: 2
-    amplitude: 0.7
+    y: 3
+    amplitude: 0.9
   - x: 3
+    y: -2
+    amplitude: 0.7
+  - x: 4
     y: 1
+    amplitude: 0.5
+  - x: 1
+    y: -4
     amplitude: 0.4

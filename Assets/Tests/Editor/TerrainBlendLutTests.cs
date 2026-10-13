@@ -403,7 +403,8 @@ public class TerrainBlendLutTests
     /// <summary>
     /// The project's dirt, dry grass and plaza (TerrainTypes.md, Phase 3) meet the other materials as decided: dry grass
     /// over grass is seamless, with no outline, rim or shadow but tufts, and marked seamless in the lookup texture, while
-    /// over nothing it keeps an outlined edge; dirt draws its default edge, an outline and a fringe of tufts, over grass,
+    /// over nothing it keeps an outlined edge; weeds over dry grass are seamless too, with shorter tufts than their
+    /// map-edge fringe; dirt draws its default edge, an outline and a fringe of tufts, over grass,
     /// dry grass, weeds and nothing; sand, mud, gravel and stone draw their own rim and outline over dirt with an earth
     /// shadow in place of their green one; the plaza cuts its slabs like stone, draws stone's default edge over grass,
     /// and its pairs with gravel and stone copy stone over gravel's edge.
@@ -430,6 +431,12 @@ public class TerrainBlendLutTests
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass });
         Assert.That(PairTexel(texels, 2, 1, 0, 3).a, Is.Zero, "dry grass over grass is seamless");
         Assert.That(PairTexel(texels, 2, 1, -1, 3).a, Is.EqualTo(1f), "dry grass over nothing is not");
+        TerrainStyle.EdgeSettings weedsOverDryGrass = style.GetEdge(ProjectMaterial("Weeds"), dryGrass);
+        Assert.That(weedsOverDryGrass.Seamless, Is.True, "Weeds, grass with weeds on it, meet dry grass as grass does.");
+        Assert.That(weedsOverDryGrass.DrawOutline, Is.False);
+        Assert.That(weedsOverDryGrass.RimWidth, Is.Zero);
+        Assert.That(weedsOverDryGrass.TuftHeight, Is.GreaterThan(0f));
+        Assert.That(weedsOverDryGrass.TuftHeight, Is.LessThan(ProjectMaterial("Weeds").Edge.TuftHeight));
 
         foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, ProjectMaterial("Weeds") })
         {

@@ -4,9 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// Lays out an area that joins three environments inside a ring of forest. A village of cottages faces a stone street
-/// that enters from the map edge, with a fountain square, lamp posts, fenced yards and town props. Gravel trails lead
-/// on from the street's end across an open clearing with plants and a few trees, and wind into a dense forest, each
-/// forest trail ending in a glade. The party spawns on the street; most mobs are in the forest, some in the clearing.
+/// that enters from the map edge, with a paved fountain square, lamp posts, fenced yards and town props. Gravel trails
+/// lead on from the street's end across an open clearing with plants and a few trees, and wind into a dense forest, each
+/// forest trail ending in a glade; near the village the trails are worn into shoulders of dirt. The party spawns on the street; most mobs are in the forest, some in the clearing.
 /// Blocking props stay off the paths, a clearance beside them and the ground around the spawn and the glades, and every
 /// path, door and mob can be reached from the spawn.
 /// </summary>
@@ -62,7 +62,11 @@ public sealed class VillageForestGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Worn earth along the trails near the village.")]
+    [SerializeField] private TerrainLayer dirt = new();
     [SerializeField] private TerrainLayer gravel = new();
+    [Tooltip("The square's paving, under the street where they meet.")]
+    [SerializeField] private TerrainLayer plaza = new();
     [SerializeField] private TerrainLayer stone = new();
 
     [Header("Shape")]
@@ -97,6 +101,12 @@ public sealed class VillageForestGenerator : AreaGenerator
     [SerializeField, Min(0)] private int pathClearance = 1;
     [Tooltip("Radius in cells of the open glade at the end of each forest trail.")]
     [SerializeField, Min(0)] private int gladeRadius = 3;
+    [Tooltip("Width in cells of the dirt beside a trail where it leaves the street; it narrows to nothing at the dirt reach.")]
+    [SerializeField, Min(0f)] private float dirtWidth = 2f;
+    [Tooltip("Distance in cells from the street's end, where the trails start, at which the dirt beside them runs out.")]
+    [SerializeField, Min(1f)] private float dirtReach = 18f;
+    [Tooltip("How far in cells smooth noise moves the dirt's edge in and out.")]
+    [SerializeField, Min(0f)] private float dirtWobble = 0.75f;
 
     [Header("Spawn")]
     [Tooltip("Where along the street the party arrives, from 0 (the map edge) to 1 (the village's inner end).")]
@@ -153,6 +163,10 @@ public sealed class VillageForestGenerator : AreaGenerator
     public int PathClearance => pathClearance;
     public int SpawnClearRadius => spawnClearRadius;
     public int ForestTrailCount => forestTrailCount;
+    public float SquareRadius => squareRadius;
+    public float DirtWidth => dirtWidth;
+    public float DirtReach => dirtReach;
+    public float DirtWobble => dirtWobble;
     public GameObject BuildingPrefab => buildingPrefab;
     public int BuildingCount => buildingCount;
     public int DoorColumn => doorColumn;
@@ -164,10 +178,11 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, gravel, then stone, in the style's layer order: each layer is drawn over the ones before it and decides its
-    /// cells, so the street and the square cover the trails where they meet.
+    /// Grass, dirt, gravel, plaza, then stone, in the style's layer order: each layer is drawn over the ones before it
+    /// and decides its cells, so the trails run over their dirt, the square covers the trails where they meet and the
+    /// street runs over the square.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, gravel, stone };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, gravel, plaza, stone };
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.
@@ -231,7 +246,7 @@ public sealed class VillageForestGenerator : AreaGenerator
         public Run(VillageForestGenerator generator, int seed)
         {
             settings = generator;
-            builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
+            builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone, generator.plaza);
             halfSize = new Vector2(Mathf.Max(24, generator.size.x), Mathf.Max(16, generator.size.y)) * 0.5f;
             villageHalf = new Vector2(Mathf.Max(8, generator.villageSize.x), Mathf.Max(8, generator.villageSize.y)) * 0.5f;
             clearingHalf = new Vector2(Mathf.Max(8, generator.clearingSize.x), Mathf.Max(8, generator.clearingSize.y)) * 0.5f;
@@ -245,8 +260,8 @@ public sealed class VillageForestGenerator : AreaGenerator
 
         /// <summary>
         /// Lays the ground and its regions, the street, the spawn, the square, the buildings with their paths and the
-        /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; and checks what the spawn
-        /// can reach.
+        /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; checks what the spawn can
+        /// reach; then lays the dirt along the trails from the detail stream, so it moves nothing laid before it.
         /// </summary>
         public Generation Build()
         {
@@ -287,6 +302,7 @@ public sealed class VillageForestGenerator : AreaGenerator
 
             PlaceMobs();
             CheckReachability();
+            LayDirt();
             return new Generation(builder.Layout, regions);
         }
 
@@ -574,13 +590,15 @@ public sealed class VillageForestGenerator : AreaGenerator
                 {
                     builder.Stone.Remove(cell);
                     builder.Gravel.Remove(cell);
+                    builder.Layout.TerrainCells(settings.plaza).Remove(cell);
                 }
             }
         }
 
         /// <summary>
-        /// Paves a disc of stone opening south off the street at the configured point, around a bed of grass that
-        /// holds the fountain's footprint with the path clearance around it.
+        /// Paves a disc of plaza opening south off the street at the configured point, around a bed of grass that
+        /// holds the fountain's footprint with the path clearance around it. The street's cells in the disc are paved
+        /// too, under the street's stone.
         /// </summary>
         private void LaySquare()
         {
@@ -595,6 +613,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             Vector2 centre = onStreet + new Vector2(0f, -(settings.streetWidth * 0.5f + settings.squareRadius - 0.5f));
             fountainCorner = new Vector3Int(Mathf.RoundToInt(centre.x - covered.x * 0.5f), Mathf.RoundToInt(centre.y - covered.y * 0.5f), 0);
             squareCentre = new Vector2(fountainCorner.x + covered.x * 0.5f, fountainCorner.y + covered.y * 0.5f);
+            HashSet<Vector3Int> paving = builder.Layout.TerrainCells(settings.plaza);
             int bed = settings.pathClearance;
             RectInt bedCells = new(fountainCorner.x - bed, fountainCorner.y - bed, covered.x + 2 * bed, covered.y + 2 * bed);
             float radius = settings.squareRadius;
@@ -602,7 +621,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             {
                 if ((CellCentre(cell) - squareCentre).sqrMagnitude <= radius * radius && !bedCells.Contains(new Vector2Int(cell.x, cell.y)))
                 {
-                    builder.Stone.Add(cell);
+                    paving.Add(cell);
                 }
             }
 
@@ -940,6 +959,73 @@ public sealed class VillageForestGenerator : AreaGenerator
                 if (!reached[i])
                 {
                     builder.Layout.Warnings.Add($"No cell of the {((Region)i).ToString().ToLowerInvariant()} can be reached from the spawn.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Lays dirt beside the gravel trails near the village, from the detail stream: a grass cell off the paths and
+        /// the lots is dirt when it lies within a trail cell's width, which is the dirt width at the street's end, where
+        /// the trails start, and narrows to nothing at the dirt reach from it, moved in and out by smooth noise. Dirt may
+        /// run under a prop beside a trail, since grass goes on under it.
+        /// </summary>
+        private void LayDirt()
+        {
+            if (settings.dirtWidth <= 0f)
+            {
+                return;
+            }
+
+            builder.StartDetailStream();
+            Vector2 junction = street[street.Count - 1];
+            float reach = settings.dirtReach;
+            List<Vector2> sources = new();
+            List<float> widths = new();
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                float distance = Vector2.Distance(CellCentre(cell), junction);
+                if (builder.Gravel.Contains(cell) && distance < reach)
+                {
+                    sources.Add(CellCentre(cell));
+                    widths.Add(settings.dirtWidth * (1f - distance / reach));
+                }
+            }
+
+            float[] waveX = new float[3];
+            float[] waveY = new float[3];
+            float[] phase = new float[3];
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = builder.Range(0f, 2f * Mathf.PI);
+                float wavelength = builder.Range(5f, 9f);
+                waveX[i] = Mathf.Cos(angle) * 2f * Mathf.PI / wavelength;
+                waveY[i] = Mathf.Sin(angle) * 2f * Mathf.PI / wavelength;
+                phase[i] = builder.Range(0f, 2f * Mathf.PI);
+            }
+
+            HashSet<Vector3Int> dirt = builder.Layout.TerrainCells(settings.dirt);
+            float limit = reach + settings.dirtWidth + settings.dirtWobble + 1f;
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                Vector2 centre = CellCentre(cell);
+                if (builder.IsPath(cell) || IsInLot(cell) || Vector2.Distance(centre, junction) > limit)
+                {
+                    continue;
+                }
+
+                float noise = 0f;
+                for (int i = 0; i < 3; i++)
+                {
+                    noise += Mathf.Sin(waveX[i] * centre.x + waveY[i] * centre.y + phase[i]) / 3f;
+                }
+
+                for (int i = 0; i < sources.Count; i++)
+                {
+                    if (widths[i] > 0f && Vector2.Distance(centre, sources[i]) <= widths[i] + settings.dirtWobble * noise)
+                    {
+                        dirt.Add(cell);
+                        break;
+                    }
                 }
             }
         }

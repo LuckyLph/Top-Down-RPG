@@ -9,15 +9,16 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for scene generation: the project's Clearing generator gives playable layouts for many seeds (paths on the
 /// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
-/// where it can walk to the spawn); the Village Forest generator does too, with a village, a clearing and a forest
-/// joined by one connected path network, buildings beside the street with reachable doors, and most mobs in the forest;
-/// the Lakeside generator lays every terrain type, a lake off the paths with a beach and a marsh, and keeps props off
-/// the water, the beach and the mud with the beach and every mob within the spawn's reach; the same seed gives the same
-/// layout; the project's style lists every ground material in the shared draw order, the project's generators list only
-/// the layers they use (plain ground tiles and the project's materials) as a subsequence of it, the Clearing lays its
-/// sand, mud and water out empty, and the default movement profile blocks water and makes mud cost more; and
-/// <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by a
-/// <see cref="TerrainBlendRenderer"/> in the shared order, with navigation priorities from that order, keeping painted
+/// where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does too, with a village,
+/// a clearing and a forest joined by one connected path network, buildings beside the street with reachable doors, a
+/// paved square, dirt along the trails near the village and most mobs in the forest; the Lakeside generator lays a lake
+/// off the paths with a beach and a marsh, weeds and dry grass on the open grass, and keeps props off the water, the
+/// beach and the mud with the beach and every mob within the spawn's reach; the terrain each generator lays from its
+/// detail stream leaves the rest of its layout where it was; the same seed gives the same layout; the project's style
+/// lists every ground material in the shared draw order, the project's generators list only the layers they lay (plain
+/// ground tiles and the project's materials) as a subsequence of it, and the default movement profile blocks water and
+/// makes mud cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
+/// a <see cref="TerrainBlendRenderer"/> in the shared order, with navigation priorities from that order, keeping painted
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
 /// a navigation grid that blocks exactly the props' cells, an area of only some layers that still draws and navigates,
 /// and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
@@ -316,7 +317,7 @@ public class AreaGenerationTests
                 if (prop.Prefab == villageForest.FountainPrefab)
                 {
                     fountains++;
-                    Assert.That(stone.Contains(prop.Cell + new Vector3Int(-clearance - 1, 0, 0)), Is.True, $"seed {seed}: the fountain's square");
+                    Assert.That(Cells(layout, "Plaza").Contains(prop.Cell + new Vector3Int(-clearance - 1, 0, 0)), Is.True, $"seed {seed}: the fountain's square");
                 }
 
                 lamps += prop.Prefab == villageForest.LampPostPrefab ? 1 : 0;
@@ -462,7 +463,7 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For every Lakeside seed, with no warnings: every terrain layer has cells and lies on the grass; the weeds lie on
-    /// open grass, off the water, the beach, the mud and the paths; the lake is water off every path and at least the
+    /// open grass, off the water, the beach, the mud and the paths, and the dry grass too, off the weeds as well; the lake is water off every path and at least the
     /// road margin from the road, the beach and the marsh lie beside it and off
     /// it, and the gravel trail reaches the beach; the spawn is on the road with no footprint or water within its clear
     /// radius.
@@ -481,7 +482,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> paths = PathCells(layout);
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
-            Assert.That(layout.TerrainLayerCount, Is.EqualTo(7));
+            Assert.That(layout.TerrainLayerCount, Is.EqualTo(8));
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
@@ -491,6 +492,8 @@ public class AreaGenerationTests
             Assert.That(water.Overlaps(paths) || water.Overlaps(sand) || water.Overlaps(mud), Is.False, $"seed {seed}: the lake covers nothing else");
             HashSet<Vector3Int> weeds = Cells(layout, "Weeds");
             Assert.That(weeds.Overlaps(water) || weeds.Overlaps(sand) || weeds.Overlaps(mud) || weeds.Overlaps(paths), Is.False, $"seed {seed}: weeds only on open grass");
+            HashSet<Vector3Int> dryGrass = Cells(layout, "DryGrass");
+            Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(weeds) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
             foreach (Vector3Int cell in stone)
             {
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.RoadMargin))
@@ -771,13 +774,13 @@ public class AreaGenerationTests
     [Test]
     public void TheWriter_LetsWaterBlockACell_AndMudBeWalked()
     {
-        Grid grid = CreateAreaWithDualGridGrass(generator);
+        Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = generator.Generate(3);
-        Assert.That(AreaLayoutWriter.Write(grid, generator, layout), Is.True);
-        AreaGenerator.TerrainLayer water = Layer(generator, "Water");
-        AreaGenerator.TerrainLayer mud = Layer(generator, "Mud");
+        AreaLayout layout = lakeside.Generate(3);
+        Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
+        AreaGenerator.TerrainLayer water = Layer(lakeside, "Water");
+        AreaGenerator.TerrainLayer mud = Layer(lakeside, "Mud");
         Vector3Int road = layout.SpawnCell;
         Vector3Int beside = road + new Vector3Int(0, 2, 0);
         grid.transform.Find(water.TilemapName).GetComponent<Tilemap>().SetTile(road, water.Tile);
@@ -950,11 +953,11 @@ public class AreaGenerationTests
     /// <summary>
     /// In a Village Forest area whose renderer also draws, above its own layers and out of the shared order, a painted
     /// water layer, a painted sand layer and an empty weeds layer (none of them the generator's), writing puts every
-    /// layer drawn in the style's layer order: grass, sand, gravel, stone, water. The painted layers it does not list
-    /// keep their cells, their materials and their place in that order, the empty one is removed, each layer comes at
-    /// its place among the grid's children with its index as navigation priority, and the renderer then builds. The
-    /// test's own changes go through undo, so the revert in <see cref="TearDown"/> only passes through states whose
-    /// priorities match the draw order.
+    /// layer drawn in the style's layer order: grass, dirt, sand, gravel, plaza, stone, water. The painted layers it
+    /// does not list keep their cells, their materials and their place in that order, the empty one is removed, each
+    /// layer comes at its place among the grid's children with its index as navigation priority, and the renderer then
+    /// builds. The test's own changes go through undo, so the revert in <see cref="TearDown"/> only passes through
+    /// states whose priorities match the draw order.
     /// </summary>
     [Test]
     public void TheWriter_PutsLayersInTheSharedOrder_KeepingPaintedLayersItDoesNotList_AndRemovingEmptyOnes()
@@ -971,11 +974,11 @@ public class AreaGenerationTests
         Tilemap weeds = AddDrawnLayer(grid, Layer(lakeside, "Weeds"), false);
         TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
         Undo.CollapseUndoOperations(added);
-        Assert.That(renderer.Layers.Count, Is.EqualTo(6));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(8));
 
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
 
-        string[] expected = { "Grass", "Sand", "Gravel", "Stone", "Water" };
+        string[] expected = { "Grass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
         Assert.That(renderer.Layers.Count, Is.EqualTo(expected.Length));
         for (int i = 0; i < expected.Length; i++)
         {
@@ -986,8 +989,8 @@ public class AreaGenerationTests
             Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), tilemap.name);
         }
 
-        Assert.That(renderer.Layers[1].Tilemap, Is.SameAs(sand));
-        Assert.That(renderer.Layers[4].Tilemap, Is.SameAs(water));
+        Assert.That(renderer.Layers[2].Tilemap, Is.SameAs(sand));
+        Assert.That(renderer.Layers[6].Tilemap, Is.SameAs(water));
         Assert.That(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), Is.True, "The painted layers keep their cells.");
         Assert.That(weeds == null, Is.True, "The empty weeds layer is removed.");
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
@@ -999,12 +1002,12 @@ public class AreaGenerationTests
     /// The project's generators (only read) list the ground layers they use, bottom first: each one's tilemap, its
     /// plain ground tile from Assets/Tiles/Ground, its terrain type and the project's material of the name given, drawn
     /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 16, so
-    /// the writer and Convert Ground take them. The Clearing keeps sand, mud and water, painted by hand in
-    /// Area_Clearing, but not weeds; the Village Forest lists only what it lays; the Lakeside lays all seven.
+    /// the writer and Convert Ground take them: each lists only what it lays, the Clearing dirt for its campsite, the
+    /// Village Forest dirt and the plaza, the Lakeside dry grass among its eight.
     /// </summary>
-    [TestCase(ClearingGeneratorPath, "Grass", "Sand", "Mud", "Gravel", "Stone", "Water")]
-    [TestCase(VillageForestGeneratorPath, "Grass", "Gravel", "Stone")]
-    [TestCase(LakesideGeneratorPath, "Grass", "Weeds", "Sand", "Mud", "Gravel", "Stone", "Water")]
+    [TestCase(ClearingGeneratorPath, "Grass", "Dirt", "Gravel", "Stone")]
+    [TestCase(VillageForestGeneratorPath, "Grass", "Dirt", "Gravel", "Plaza", "Stone")]
+    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Weeds", "Sand", "Mud", "Gravel", "Stone", "Water")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1081,18 +1084,254 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The Clearing lays its sand, mud and water layers out empty, for painting by hand, whatever the seed.
+    /// For every Clearing seed the campsite lies on a patch of dirt on the grass, off the paths and outside the spawn's
+    /// clear disc, deeper than the edge band: one campfire stands on the dirt with every seat, and no plant stands on it
+    /// or beside it.
     /// </summary>
     [Test]
-    public void ClearingLayouts_LeaveTheSandMudAndWaterLayersEmpty()
+    public void ClearingLayouts_LayACampsite_OnAPatchOfDirt()
     {
-        for (int seed = 1; seed <= 3; seed++)
+        for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = generator.Generate(seed);
-            Assert.That(Cells(layout, "Sand"), Is.Empty, $"seed {seed}: sand");
-            Assert.That(Cells(layout, "Mud"), Is.Empty, $"seed {seed}: mud");
-            Assert.That(Cells(layout, "Water"), Is.Empty, $"seed {seed}: water");
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            Assert.That(dirt.Count, Is.GreaterThan(10), $"seed {seed}: the campsite's dirt");
+            Assert.That(grass.IsSupersetOf(dirt), Is.True, $"seed {seed}: dirt on grass");
+            Assert.That(dirt.Overlaps(PathCells(layout)), Is.False, $"seed {seed}: dirt off the paths");
+            foreach (Vector3Int cell in dirt)
+            {
+                Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(generator.SpawnClearRadius), $"seed {seed}: dirt at {cell} near the spawn");
+                foreach (Vector3Int near in CellsWithin(cell, generator.BorderDepth))
+                {
+                    Assert.That(grass.Contains(near), Is.True, $"seed {seed}: dirt at {cell} in the edge band");
+                }
+            }
+
+            int fires = 0;
+            int seats = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                bool blocking = PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint);
+                if (prop.Prefab == generator.CampfirePrefab)
+                {
+                    fires++;
+                    Assert.That(dirt.IsSupersetOf(CoveredCells(prop, footprint)), Is.True, $"seed {seed}: the campfire on the dirt");
+                }
+                else if (dirt.Contains(prop.Cell) && ListContains(generator.CampsiteSeats, prop.Prefab))
+                {
+                    seats++;
+                }
+                else if (!blocking)
+                {
+                    foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
+                    {
+                        Assert.That(dirt.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} on or beside the campsite");
+                    }
+                }
+            }
+
+            Assert.That(fires, Is.EqualTo(1), $"seed {seed}: one campfire");
+            Assert.That(seats, Is.EqualTo(generator.SeatCount), $"seed {seed}: seats around the fire");
         }
+    }
+
+    /// <summary>
+    /// For every Village Forest seed the square is plaza on the grass around the fountain, within its radius of the
+    /// fountain, and opens onto the street's stone; dirt lies beside the gravel trails, on the grass and off the
+    /// paths, within its width of a trail and its reach of the street, and under no building or fence.
+    /// </summary>
+    [Test]
+    public void VillageForestLayouts_PaveTheSquare_AndWearDirtAlongTheTrailsNearTheVillage()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = VillageForestLayout(seed).Layout;
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> plaza = Cells(layout, "Plaza");
+            HashSet<Vector3Int> stone = Cells(layout, "Stone");
+            HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            Vector2 fountain = Vector2.zero;
+            HashSet<Vector3Int> builtOn = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint);
+                if (prop.Prefab == villageForest.FountainPrefab)
+                {
+                    Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+                    fountain = new Vector2(prop.Cell.x + covered.x * 0.5f, prop.Cell.y + covered.y * 0.5f);
+                }
+                else if (prop.Prefab == villageForest.BuildingPrefab || prop.Prefab == villageForest.FencePrefab)
+                {
+                    builtOn.UnionWith(CoveredCells(prop, footprint));
+                }
+            }
+
+            Assert.That(plaza.Count, Is.GreaterThan(20), $"seed {seed}: the square");
+            Assert.That(grass.IsSupersetOf(plaza), Is.True, $"seed {seed}: the square on grass");
+            foreach (Vector3Int cell in plaza)
+            {
+                Assert.That(Vector2.Distance(CellCentre(cell), fountain), Is.LessThanOrEqualTo(villageForest.SquareRadius + 1f), $"seed {seed}: plaza at {cell} around the fountain");
+            }
+
+            bool opensOntoStreet = false;
+            foreach (Vector3Int cell in plaza)
+            {
+                foreach (Vector3Int side in Sides)
+                {
+                    opensOntoStreet |= stone.Contains(cell + side) && !plaza.Contains(cell + side);
+                }
+            }
+
+            Assert.That(opensOntoStreet, Is.True, $"seed {seed}: the square opens onto the street");
+
+            Assert.That(dirt, Is.Not.Empty, $"seed {seed}: dirt along the trails");
+            Assert.That(grass.IsSupersetOf(dirt), Is.True, $"seed {seed}: dirt on grass");
+            Assert.That(dirt.Overlaps(PathCells(layout)), Is.False, $"seed {seed}: dirt off the paths");
+            Assert.That(dirt.Overlaps(builtOn), Is.False, $"seed {seed}: dirt under a building or a fence");
+            float width = villageForest.DirtWidth + villageForest.DirtWobble;
+            float reach = villageForest.DirtReach + width + 1f;
+            foreach (Vector3Int cell in dirt)
+            {
+                Assert.That(NearestDistance(cell, gravel), Is.LessThanOrEqualTo(width), $"seed {seed}: dirt at {cell} beside a trail");
+                Assert.That(NearestDistance(cell, stone), Is.LessThanOrEqualTo(reach), $"seed {seed}: dirt at {cell} near the village");
+            }
+        }
+    }
+
+    /// <summary>
+    /// For each generator, the terrain it lays from its detail stream at the end (the Clearing's campsite, the Village
+    /// Forest's dirt, the Lakeside's dry grass) leaves the rest of the layout where it was: generated by a copy of the
+    /// generator with that step turned off, every other layer, every mob and the spawn are the same, and so is every
+    /// prop, but for the Clearing's campfire and seats and the props they replaced, all of them within the campsite's
+    /// radius plus three cells of the campfire.
+    /// </summary>
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    [TestCase(LakesideGeneratorPath)]
+    public void TheDetailStream_LeavesTheRestOfTheLayoutWhereItWas(string generatorPath)
+    {
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaGenerator without = Track(Object.Instantiate(target));
+        SerializedObject settings = new(without);
+        string added = "Dirt";
+        if (target is ClearingGenerator)
+        {
+            settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+        }
+        else if (target is VillageForestGenerator)
+        {
+            settings.FindProperty("dirtWidth").floatValue = 0f;
+        }
+        else
+        {
+            settings.FindProperty("dryGrassPatchCount").intValue = 0;
+            added = "DryGrass";
+        }
+
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        for (int seed = 1; seed <= 5; seed++)
+        {
+            AreaLayout full = target.Generate(seed);
+            AreaLayout plain = without.Generate(seed);
+            int addedIndex = full.IndexOf(ProjectMaterial(added));
+            Assert.That(plain.TerrainCells(addedIndex), Is.Empty, $"seed {seed}: the step is off");
+            for (int layer = 0; layer < full.TerrainLayerCount; layer++)
+            {
+                if (layer != addedIndex)
+                {
+                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                }
+            }
+
+            Assert.That(full.SpawnCell, Is.EqualTo(plain.SpawnCell), $"seed {seed}");
+            Assert.That(full.Mobs.Count, Is.EqualTo(plain.Mobs.Count), $"seed {seed}");
+            for (int i = 0; i < full.Mobs.Count; i++)
+            {
+                Assert.That(full.Mobs[i].Cell, Is.EqualTo(plain.Mobs[i].Cell), $"seed {seed}: mob {i}");
+            }
+
+            HashSet<Vector3Int> campsite = new();
+            foreach (AreaLayout.Prop prop in full.Props)
+            {
+                if (target is ClearingGenerator clearing && prop.Prefab == clearing.CampfirePrefab)
+                {
+                    foreach (Vector3Int cell in CellsWithin(prop.Cell, Mathf.CeilToInt(clearing.CampsiteRadius) + 3))
+                    {
+                        campsite.Add(cell);
+                    }
+                }
+            }
+
+            int kept = 0;
+            foreach (AreaLayout.Prop prop in plain.Props)
+            {
+                if (HasProp(full, prop))
+                {
+                    kept++;
+                    continue;
+                }
+
+                Assert.That(campsite.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} moved off the campsite");
+            }
+
+            foreach (AreaLayout.Prop prop in full.Props)
+            {
+                if (!HasProp(plain, prop))
+                {
+                    Assert.That(campsite.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added off the campsite");
+                }
+            }
+
+            Assert.That(kept, Is.GreaterThan(plain.Props.Count - 8), $"seed {seed}: nearly every prop stays");
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="layout"/> holds a prop of the same prefab, cell and offset as <paramref name="prop"/>.
+    /// </summary>
+    private static bool HasProp(AreaLayout layout, AreaLayout.Prop prop)
+    {
+        foreach (AreaLayout.Prop other in layout.Props)
+        {
+            if (other.Prefab == prop.Prefab && other.Cell == prop.Cell && other.Offset == prop.Offset)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="prefabs"/> holds <paramref name="prefab"/>.
+    /// </summary>
+    private static bool ListContains(IReadOnlyList<GameObject> prefabs, GameObject prefab)
+    {
+        foreach (GameObject listed in prefabs)
+        {
+            if (listed == prefab)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The distance between the centres of <paramref name="cell"/> and the nearest of <paramref name="cells"/>.
+    /// </summary>
+    private static float NearestDistance(Vector3Int cell, HashSet<Vector3Int> cells)
+    {
+        float nearest = float.MaxValue;
+        foreach (Vector3Int other in cells)
+        {
+            nearest = Mathf.Min(nearest, Vector3Int.Distance(cell, other));
+        }
+
+        return nearest;
     }
 
     /// <summary>
@@ -1146,11 +1385,12 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// Every gravel and stone cell of <paramref name="layout"/>.
+    /// Every gravel, plaza and stone cell of <paramref name="layout"/>.
     /// </summary>
     private static HashSet<Vector3Int> PathCells(AreaLayout layout)
     {
         HashSet<Vector3Int> cells = new(Cells(layout, "Gravel"));
+        cells.UnionWith(CellsOrNone(layout, "Plaza"));
         cells.UnionWith(Cells(layout, "Stone"));
         return cells;
     }

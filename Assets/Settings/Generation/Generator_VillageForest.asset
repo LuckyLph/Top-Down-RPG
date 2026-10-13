@@ -19,11 +19,21 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  dirt:
+    tilemapName: DirtTilemap
+    tile: {fileID: 11400000, guid: 7316d30cada0bdd41b534027dffd83c6, type: 2}
+    terrainType: {fileID: 11400000, guid: 50fd8a13dcd00a347be53fb7eb9ab4b0, type: 2}
+    material: {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
   gravel:
     tilemapName: GravelTilemap
     tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
     terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
     material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
+  plaza:
+    tilemapName: PlazaTilemap
+    tile: {fileID: 11400000, guid: 5a398e5a64915554eb6fe46d4b640090, type: 2}
+    terrainType: {fileID: 11400000, guid: 5cfe1f6ae59cc2a44be269639a76602d, type: 2}
+    material: {fileID: 11400000, guid: bab0d18c7763cac4c9ad0143cde4ea4e, type: 2}
   stone:
     tilemapName: StoneTilemap
     tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
@@ -43,6 +53,9 @@ MonoBehaviour:
   trailWinding: 0.45
   pathClearance: 1
   gladeRadius: 3
+  dirtWidth: 2
+  dirtReach: 18
+  dirtWobble: 0.75
   spawnAlongStreet: 0.8
   spawnClearRadius: 6
   buildingPrefab: {fileID: 295165022902028204, guid: 5ea89e9c42aca7f4d91eef902a2f4d45, type: 3}

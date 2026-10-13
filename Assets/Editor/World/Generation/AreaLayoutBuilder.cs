@@ -9,32 +9,44 @@ using Random = System.Random;
 /// <see cref="AreaLayout.TerrainCells(AreaGenerator.TerrainLayer)"/>), how deep each grass cell lies inside the edge,
 /// and which cells are kept free of blocking props, covered by one, or hold a walk-through prop. Layers are found by the
 /// generator's own layer objects, never by a fixed index, since each generator lists only the layers it uses.
-/// Iteration always goes through ordered lists, never hash sets, so a seed gives the same layout every time.
+/// Iteration always goes through ordered lists, never hash sets, so a seed gives the same layout every time. Terrain
+/// laid after everything else draws from a second stream seeded from the same seed (<see cref="StartDetailStream"/>),
+/// so adding such a step leaves every earlier draw, and so every path, prop and mob, where it was.
 /// </summary>
 internal sealed class AreaLayoutBuilder
 {
     private const float SampleStep = 0.2f;
     private const float PathEdgeAllowance = 0.05f;
     private const int OutlineHarmonics = 4;
+    private const int DetailStreamFactor = 486187739;
+    private const int DetailStreamSalt = 1013904223;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
 
-    private readonly Random random;
+    private readonly int seed;
+    private readonly List<HashSet<Vector3Int>> otherPaths = new();
+    private Random random;
     private readonly List<Vector3Int> orderedGrass = new();
     private readonly Dictionary<Vector3Int, int> edgeDistance = new();
 
     /// <summary>
     /// Prepares an empty layout of <paramref name="layers"/>, a generator's terrain layers, whose
     /// <paramref name="grass"/>, <paramref name="gravel"/> and <paramref name="stone"/> layers the shared steps lay, and
-    /// a random source seeded with <paramref name="seed"/>.
+    /// a random source seeded with <paramref name="seed"/>. The cells of <paramref name="otherPaths"/> (the Village
+    /// Forest's plaza) count as paths too, like gravel and stone.
     /// </summary>
-    public AreaLayoutBuilder(int seed, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer grass, AreaGenerator.TerrainLayer gravel, AreaGenerator.TerrainLayer stone)
+    public AreaLayoutBuilder(int seed, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer grass, AreaGenerator.TerrainLayer gravel, AreaGenerator.TerrainLayer stone, params AreaGenerator.TerrainLayer[] otherPaths)
     {
+        this.seed = seed;
         random = new Random(seed);
         Layout = new AreaLayout(layers);
         Grass = Layout.TerrainCells(grass);
         Gravel = Layout.TerrainCells(gravel);
         Stone = Layout.TerrainCells(stone);
+        foreach (AreaGenerator.TerrainLayer layer in otherPaths)
+        {
+            this.otherPaths.Add(Layout.TerrainCells(layer));
+        }
     }
 
     public AreaLayout Layout { get; }
@@ -61,6 +73,17 @@ internal sealed class AreaLayoutBuilder
     /// Cells holding a walk-through prop.
     /// </summary>
     public HashSet<Vector3Int> Decorated { get; } = new();
+
+    /// <summary>
+    /// From here on every random draw (<see cref="Range"/>, <see cref="Next"/>, <see cref="Shuffle{T}"/>,
+    /// <see cref="WobblyShape"/>, <see cref="ScatterProps"/>) comes from a second stream seeded from the layout's seed,
+    /// for terrain a generator lays after its props and mobs: what it lays stays deterministic, and adding it changes
+    /// nothing drawn before.
+    /// </summary>
+    public void StartDetailStream()
+    {
+        random = new Random(unchecked(seed * DetailStreamFactor + DetailStreamSalt));
+    }
 
     /// <summary>
     /// Lays the grass inside a superellipse of <paramref name="halfSize"/> around the origin whose radius wobbles by up
@@ -382,11 +405,76 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Whether <paramref name="cell"/> is a gravel or stone cell.
+    /// Whether <paramref name="cell"/> is a gravel or stone cell, or a cell of one of the other path layers.
     /// </summary>
     public bool IsPath(Vector3Int cell)
     {
-        return Stone.Contains(cell) || Gravel.Contains(cell);
+        if (Stone.Contains(cell) || Gravel.Contains(cell))
+        {
+            return true;
+        }
+
+        foreach (HashSet<Vector3Int> paths in otherPaths)
+        {
+            if (paths.Contains(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Removes every walk-through prop standing on a cell that passes <paramref name="covered"/> and, unless
+    /// <paramref name="walkThroughOnly"/>, every blocking prop whose footprint covers such a cell, freeing their cells.
+    /// </summary>
+    public void RemoveProps(Predicate<Vector3Int> covered, bool walkThroughOnly)
+    {
+        for (int i = Layout.Props.Count - 1; i >= 0; i--)
+        {
+            AreaLayout.Prop prop = Layout.Props[i];
+            if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+            {
+                if (covered(prop.Cell))
+                {
+                    Decorated.Remove(prop.Cell);
+                    Layout.Props.RemoveAt(i);
+                }
+
+                continue;
+            }
+
+            if (walkThroughOnly)
+            {
+                continue;
+            }
+
+            Vector2Int size = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            bool hit = false;
+            for (int dy = 0; dy < size.y; dy++)
+            {
+                for (int dx = 0; dx < size.x; dx++)
+                {
+                    hit |= covered(prop.Cell + new Vector3Int(dx, dy, 0));
+                }
+            }
+
+            if (!hit)
+            {
+                continue;
+            }
+
+            for (int dy = 0; dy < size.y; dy++)
+            {
+                for (int dx = 0; dx < size.x; dx++)
+                {
+                    Occupied.Remove(prop.Cell + new Vector3Int(dx, dy, 0));
+                }
+            }
+
+            Layout.Props.RemoveAt(i);
+        }
     }
 
     /// <summary>

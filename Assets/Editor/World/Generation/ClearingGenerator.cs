@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Lays out a forest clearing: a grass blob with a wobbly outline, crossed west to east by a stone road with gravel
 /// paths branching off it north and south, ringed by a dense band of trees, with props scattered inside, the party
-/// spawn on the road and mobs spread over open ground away from it. Blocking props stay off the paths, a clearance
-/// beside them and the ground around the spawn, and every mob can walk to the spawn.
+/// spawn on the road, mobs spread over open ground away from it, and a campsite (a campfire and seats on a patch of
+/// dirt) on open ground inside. Blocking props stay off the paths, a clearance beside them and the ground around the
+/// spawn, and every mob can walk to the spawn.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Clearing Generator", fileName = "Generator_Clearing")]
 public sealed class ClearingGenerator : AreaGenerator
@@ -33,14 +34,10 @@ public sealed class ClearingGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
-    [Tooltip("Generated empty: painted by hand.")]
-    [SerializeField] private TerrainLayer sand = new();
-    [Tooltip("Generated empty: painted by hand.")]
-    [SerializeField] private TerrainLayer mud = new();
+    [Tooltip("Packed earth around the campsite.")]
+    [SerializeField] private TerrainLayer dirt = new();
     [SerializeField] private TerrainLayer gravel = new();
     [SerializeField] private TerrainLayer stone = new();
-    [Tooltip("Generated empty: painted by hand. Drawn over every other layer, so it decides its cells: water cannot be walked.")]
-    [SerializeField] private TerrainLayer water = new();
 
     [Header("Shape")]
     [Tooltip("Width and height of the clearing in cells, before its outline wobbles.")]
@@ -73,6 +70,17 @@ public sealed class ClearingGenerator : AreaGenerator
     [Tooltip("Scatter layers, placed in this order: earlier layers take the room first.")]
     [SerializeField] private List<Scatter> scatters = new();
 
+    [Header("Campsite")]
+    [Tooltip("Stands in the middle of the campsite; none for no campsite.")]
+    [SerializeField] private GameObject campfirePrefab;
+    [Tooltip("Seats placed around the campfire, picked at random.")]
+    [SerializeField] private List<GameObject> campsiteSeats = new();
+    [SerializeField, Min(0)] private int seatCount = 3;
+    [Tooltip("Smallest distance in cells between two seats.")]
+    [SerializeField, Min(0f)] private float seatSpacing = 1.5f;
+    [Tooltip("Radius in cells of the campsite's patch of dirt, before its outline wobbles.")]
+    [SerializeField, Min(1f)] private float campsiteRadius = 3f;
+
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
     [SerializeField, Min(0)] private int mobCount = 3;
@@ -82,6 +90,11 @@ public sealed class ClearingGenerator : AreaGenerator
     [SerializeField, Min(0f)] private float mobSpacing = 10f;
 
     public int GravelPathCount => gravelPathCount;
+    public int BorderDepth => borderDepth;
+    public GameObject CampfirePrefab => campfirePrefab;
+    public IReadOnlyList<GameObject> CampsiteSeats => campsiteSeats;
+    public int SeatCount => seatCount;
+    public float CampsiteRadius => campsiteRadius;
     public int PathClearance => pathClearance;
     public int SpawnClearRadius => spawnClearRadius;
     public MobController MobPrefab => mobPrefab;
@@ -90,11 +103,11 @@ public sealed class ClearingGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, sand, mud, gravel, stone, then water, in the style's layer order: each layer is drawn over the ones before
-    /// it and decides its cells, so the paths cross sand and mud and water covers everything. Sand, mud and water are
-    /// generated empty, for painting by hand (Area_Clearing has all three painted).
+    /// Grass, dirt, gravel, then stone, in the style's layer order: each layer is drawn over the ones before it and
+    /// decides its cells, so the road and the gravel paths are drawn over the grass and the stone over the gravel where
+    /// they meet.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, sand, mud, gravel, stone, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, gravel, stone };
 
     /// <summary>
     /// Lays out a clearing from <paramref name="layoutSeed"/>.
@@ -128,8 +141,8 @@ public sealed class ClearingGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Lays the grass, the road and the gravel paths, picks the spawn, scatters the props layer by layer and
-        /// spreads the mobs.
+        /// Lays the grass, the road and the gravel paths, picks the spawn, scatters the props layer by layer, spreads
+        /// the mobs, then lays the campsite from the detail stream, so it moves nothing laid before it.
         /// </summary>
         public AreaLayout Build()
         {
@@ -148,7 +161,159 @@ public sealed class ClearingGenerator : AreaGenerator
             }
 
             PlaceMobs();
+            LayCampsite();
             return builder.Layout;
+        }
+
+        /// <summary>
+        /// Picks, from the detail stream, a campsite centre on interior grass: deeper than the edge band plus the
+        /// campsite's radius, with no path within its radius plus the path clearance, and its radius clear of the
+        /// spawn's disc and of every mob; among those, one of the cells with the fewest blocking-prop cells within its
+        /// radius less half a cell, where the fire and the seats go. The props in that circle and the plants on or beside
+        /// the campsite's wobbly patch of dirt (a plant's sprite stands above its cell, so one just below the patch would
+        /// grow over it) are removed; a tree at the patch's rim stays and stands on the dirt, since grass goes on under
+        /// it. The campfire stands in the middle and the seats on the dirt around it. Props are only
+        /// removed, so nothing else moves and the spawn can still reach everything it could. Warns when no cell
+        /// qualifies.
+        /// </summary>
+        private void LayCampsite()
+        {
+            if (settings.campfirePrefab == null)
+            {
+                return;
+            }
+
+            builder.StartDetailStream();
+            float radius = settings.campsiteRadius;
+            int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
+            float site = radius - 0.5f;
+            List<Vector3Int> candidates = new();
+            int fewest = int.MaxValue;
+            foreach (Vector3Int cell in builder.OrderedGrass)
+            {
+                if (builder.EdgeDistance(cell) <= settings.borderDepth + radius || IsNear(cell, radius + settings.pathClearance, builder.IsPath)
+                    || Vector3Int.Distance(cell, builder.Layout.SpawnCell) <= settings.spawnClearRadius + radius || !IsAwayFromMobs(cell, radius + 1f))
+                {
+                    continue;
+                }
+
+                int covered = CoveredCellsWithin(cell, site);
+                if (covered < fewest)
+                {
+                    fewest = covered;
+                    candidates.Clear();
+                }
+
+                if (covered == fewest)
+                {
+                    candidates.Add(cell);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                builder.Layout.Warnings.Add("No open ground inside the clearing has room for the campsite.");
+                return;
+            }
+
+            Vector3Int centre = candidates[builder.Next(candidates.Count)];
+            HashSet<Vector3Int> dirt = builder.Layout.TerrainCells(settings.dirt);
+            Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
+            builder.RemoveProps(cell => Vector2.Distance(new Vector2(cell.x + 0.5f, cell.y + 0.5f), middle) <= site, false);
+            Predicate<Vector2> contains = builder.WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.2f);
+            List<Vector3Int> ring = new();
+            for (int dy = -reach; dy <= reach; dy++)
+            {
+                for (int dx = -reach; dx <= reach; dx++)
+                {
+                    Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
+                    Vector2 cellCentre = new(cell.x + 0.5f, cell.y + 0.5f);
+                    if (builder.Grass.Contains(cell) && !builder.IsPath(cell) && contains(cellCentre))
+                    {
+                        dirt.Add(cell);
+                        float distance = Vector2.Distance(cellCentre, middle);
+                        if (distance >= 1.5f && distance <= radius - 0.5f)
+                        {
+                            ring.Add(cell);
+                        }
+                    }
+                }
+            }
+
+            builder.RemoveProps(cell => IsNear(cell, 1f, dirt.Contains), true);
+            if (!PropGridSnapping.TryGetFootprint(settings.campfirePrefab, out Rect footprint))
+            {
+                builder.Layout.Warnings.Add("The campfire prefab has no footprint; no campfire was placed.");
+                return;
+            }
+
+            Vector2Int fire = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            if (!builder.TryPlaceFootprint(settings.campfirePrefab, new Vector3Int(centre.x - (fire.x - 1) / 2, centre.y, 0)))
+            {
+                builder.Layout.Warnings.Add("The campfire did not fit on its campsite.");
+                return;
+            }
+
+            builder.ScatterProps(settings.campsiteSeats, settings.seatCount, settings.seatSpacing, ring);
+        }
+
+        /// <summary>
+        /// Whether a cell within <paramref name="steps"/> steps (8 neighbours) of <paramref name="cell"/> passes
+        /// <paramref name="test"/>.
+        /// </summary>
+        private static bool IsNear(Vector3Int cell, float steps, Predicate<Vector3Int> test)
+        {
+            int reach = Mathf.CeilToInt(steps);
+            for (int dy = -reach; dy <= reach; dy++)
+            {
+                for (int dx = -reach; dx <= reach; dx++)
+                {
+                    if (test(cell + new Vector3Int(dx, dy, 0)))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// How many cells covered by a blocking prop have their centre within <paramref name="distance"/> of
+        /// <paramref name="cell"/>'s centre.
+        /// </summary>
+        private int CoveredCellsWithin(Vector3Int cell, float distance)
+        {
+            int reach = Mathf.CeilToInt(distance);
+            int count = 0;
+            for (int dy = -reach; dy <= reach; dy++)
+            {
+                for (int dx = -reach; dx <= reach; dx++)
+                {
+                    if (dx * dx + dy * dy <= distance * distance && builder.Occupied.Contains(cell + new Vector3Int(dx, dy, 0)))
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Whether every mob spawn lies more than <paramref name="distance"/> from <paramref name="cell"/>.
+        /// </summary>
+        private bool IsAwayFromMobs(Vector3Int cell, float distance)
+        {
+            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
+            {
+                if (Vector3Int.Distance(cell, mob.Cell) <= distance)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

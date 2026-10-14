@@ -14,25 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::WaterHighlightsRecipe
   material: {fileID: 11400000, guid: 5f63d80b3867b24499510c1bf8b7fa87, type: 2}
   seed: 20261028
-  repeatCells: 8
+  repeatCells: 16
   heightWaves:
-  - x: 1
+  - x: 2
     y: 0
     amplitude: 1
   - x: 0
-    y: 1
-    amplitude: 0.9
-  - x: 1
-    y: 1
-    amplitude: 0.7
-  - x: 2
-    y: -1
-    amplitude: 0.5
-  - x: -1
     y: 2
+    amplitude: 0.9
+  - x: 2
+    y: 2
+    amplitude: 0.7
+  - x: 4
+    y: -2
+    amplitude: 0.5
+  - x: -2
+    y: 4
     amplitude: 0.45
-  - x: 3
-    y: 1
+  - x: 6
+    y: 2
     amplitude: 0.25
   water:
     serializedVersion: 2
@@ -44,35 +44,38 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4293974709
   toneWaves:
-  - x: 1
-    y: 1
-    amplitude: 1
   - x: 2
+    y: 2
+    amplitude: 1
+  - x: 4
     y: -1
     amplitude: 0.8
   - x: 1
-    y: 2
+    y: 4
     amplitude: 0.6
-  - x: 3
-    y: 2
-    amplitude: 0.4
-  - x: -2
+  - x: 5
     y: 3
+    amplitude: 0.4
+  - x: -3
+    y: 5
     amplitude: 0.35
+  - x: 1
+    y: 1
+    amplitude: 0.3
   darkerShare: 0.3
   lighterShare: 0.25
   strokesPerCell: 1
   jitter: 0.45
   strokeChance: 0.5
   densityWaves:
-  - x: 1
-    y: 3
-    amplitude: 1
   - x: 2
-    y: 5
+    y: 6
+    amplitude: 1
+  - x: 3
+    y: 9
     amplitude: 0.7
   - x: -1
-    y: 4
+    y: 8
     amplitude: 0.5
   densityAmount: 0.4
   minLength: 3
@@ -114,14 +117,21 @@ MonoBehaviour:
   pebble:
     serializedVersion: 2
     rgba: 4287394870
-  cracksPerCell: 0.8
-  crackChance: 0.7
-  minCrackLength: 10
-  maxCrackLength: 16
-  crackTurnChance: 0.12
+  cracksPerCell: 0.5
+  crackChance: 0.75
+  minCrackLength: 26
+  maxCrackLength: 48
+  minCrackRun: 4
+  maxCrackRun: 9
+  crackBend: 30
+  crackBranchChance: 0.4
+  crackFade: 3
   crack:
     serializedVersion: 2
-    rgba: 4294767848
+    rgba: 4294635746
+  crackFaint:
+    serializedVersion: 2
+    rgba: 4294238916
   crackLip:
     serializedVersion: 2
-    rgba: 4291997310
+    rgba: 4292787858

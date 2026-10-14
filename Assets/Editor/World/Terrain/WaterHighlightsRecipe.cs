@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -12,11 +13,13 @@ using UnityEngine;
 /// its middle outwards, so each glint appears in the middle, spreads to the ends and fades from the middle out, like a
 /// ripple widening. A sparkle is a pixel of plain water with a sparkle phase of its own, seen only while it twinkles.
 /// Shallow water shows its bed (off by default, so deep water has none): a bed tone where a smooth bed field is highest,
-/// under the strokes, and sparse specks of pebbles on plain water. With cracks (none by default), short wandering lines
-/// with a lip below and right of them, clear of the strokes, the sparkles and each other, and its strokes slanted into
-/// diagonal glare (level by default), it is a cracked sheet that still glints (ice, Docs/TerrainTypes.md, Phase 7
-/// notes); without strokes only its sparkles light up. No cell field; the base colour is the middle tone, the glint colour the
-/// strokes' highlight and the sparkle colour the sparkles', and the height's per-chip value is 0.5 everywhere.
+/// under the strokes, and sparse specks of pebbles on plain water. With cracks (none by default), fractures of straight
+/// runs at any angle, bending to either side of one heading in turn, sometimes forking once, their tips fading into the
+/// surface and a lip below and right of the rest, clear of the strokes, the sparkles and each other, and its strokes
+/// slanted into diagonal glare (level by default), it is a cracked sheet that still glints (ice, Docs/TerrainTypes.md,
+/// Phase 7 notes); without strokes only its sparkles light up. No cell field; the base colour is the middle tone, the
+/// glint colour the strokes' highlight and the sparkle colour the sparkles', and the height's per-chip value is 0.5
+/// everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Highlights", fileName = "Recipe_Water")]
 public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
@@ -82,18 +85,28 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     [Tooltip("The pebbles' colour.")]
     [SerializeField] private Color32 pebble = new(54, 116, 140, 255);
     [Header("Cracks")]
-    [Tooltip("Crack spots along each side of a world cell, on a jittered grid; 0 for none. A crack is a line that wanders from its spot, off the strokes and sparkles and clear of other cracks.")]
+    [Tooltip("Crack spots along each side of a world cell, on a jittered grid; 0 for none. A crack is a fracture from its spot whose straight runs bend to either side of one heading in turn, off the strokes and sparkles and clear of other cracks.")]
     [SerializeField, Range(0f, 4f)] private float cracksPerCell;
     [Tooltip("Chance that a spot holds a crack.")]
     [SerializeField, Range(0f, 1f)] private float crackChance = 0.5f;
-    [Tooltip("Fewest pixels in a crack.")]
-    [SerializeField, Range(2, 16)] private int minCrackLength = 4;
-    [Tooltip("Most pixels in a crack.")]
-    [SerializeField, Range(2, 16)] private int maxCrackLength = 10;
-    [Tooltip("Chance at each pixel of a crack that it turns by an eighth of a turn, left or right.")]
-    [SerializeField, Range(0f, 1f)] private float crackTurnChance = 0.3f;
+    [Tooltip("Fewest pixels in a crack, its branches aside.")]
+    [SerializeField, Range(2, 64)] private int minCrackLength = 4;
+    [Tooltip("Most pixels in a crack, its branches aside.")]
+    [SerializeField, Range(2, 64)] private int maxCrackLength = 10;
+    [Tooltip("Fewest pixels a crack runs straight before it bends.")]
+    [SerializeField, Range(1, 16)] private int minCrackRun = 3;
+    [Tooltip("Most pixels a crack runs straight before it bends.")]
+    [SerializeField, Range(1, 16)] private int maxCrackRun = 6;
+    [Tooltip("Most degrees a run turns off the crack's heading, to the other side of it from the run before; each turns between a quarter of this and all of it.")]
+    [SerializeField, Range(0f, 90f)] private float crackBend = 30f;
+    [Tooltip("Chance at each bend that a straight branch forks off it, a run or longer, 25 to 57 degrees off the run before it on the side away from the next run; a crack forks once at most.")]
+    [SerializeField, Range(0f, 1f)] private float crackBranchChance;
+    [Tooltip("Pixels at each end of a crack and at the tip of each branch in the faint colour, without a lip.")]
+    [SerializeField, Range(0, 8)] private int crackFade;
     [Tooltip("A crack's pixels.")]
     [SerializeField] private Color32 crack = new(226, 240, 250, 255);
+    [Tooltip("A crack's pixels at its ends and tips, fading into the surface.")]
+    [SerializeField] private Color32 crackFaint = new(190, 216, 236, 255);
     [Tooltip("The pixel below and right of a crack pixel, the crack's far side.")]
     [SerializeField] private Color32 crackLip = new(120, 168, 204, 255);
 
@@ -174,16 +187,14 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
 
         if (cracksPerCell > 0f)
         {
-            int fewest = Math.Min(minCrackLength, maxCrackLength);
-            int most = Math.Max(minCrackLength, maxCrackLength);
             bool[] cracked = new bool[size * size];
             foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(cracksPerCell), jitter, size))
             {
                 bool keep = random.NextDouble() < crackChance;
-                int[] directions = TerrainArt.CrackDirections(random, fewest, most, crackTurnChance);
+                (List<int> groove, List<int> faint) = Fracture(random, (int)spotX, (int)spotY, size);
                 if (keep)
                 {
-                    StampCrack(albedo, glints, taken, cracked, size, (int)spotX, (int)spotY, directions);
+                    StampCrack(albedo, glints, taken, cracked, size, groove, faint);
                 }
             }
         }
@@ -209,15 +220,112 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     }
 
     /// <summary>
-    /// Paints a crack from (<paramref name="x"/>, <paramref name="y"/>) along <paramref name="directions"/>
-    /// (<see cref="TerrainArt.CrackPixels"/>), its groove in the crack colour and its lip in the lip colour, and marks
-    /// them cracked, unless any of its pixels lies on a stroke or its surroundings, on a sparkle, or within a pixel of
-    /// another crack.
+    /// A fracture from the middle of pixel (<paramref name="x"/>, <paramref name="y"/>), drawn from
+    /// <paramref name="random"/> in order: its length, its heading and the side its first run turns to, then for each
+    /// straight run its length and how far it turns off the heading, and at each bend after it whether a branch forks
+    /// there (only the crack's first fork is drawn), the branch's angle off the run, away from the side the next run turns
+    /// to so the two spread apart, and its length. Each run and the branch are traced a pixel at a time along their longer
+    /// axis (<see cref="Trace"/>). Its pixels as indices, wrapped: the faint ones, the crack fade's pixels at the crack's
+    /// two ends and at the branch's tip, and the groove, the rest.
     /// </summary>
-    private void StampCrack(Color32[] albedo, byte[] glints, bool[] taken, bool[] cracked, int size, int x, int y, int[] directions)
+    private (List<int> Groove, List<int> Faint) Fracture(System.Random random, int x, int y, int size)
     {
-        (List<int> groove, List<int> lip) = TerrainArt.CrackPixels(x, y, directions, size);
+        int fewestRun = Math.Min(minCrackRun, maxCrackRun);
+        int mostRun = Math.Max(minCrackRun, maxCrackRun);
+        int length = random.Next(Math.Min(minCrackLength, maxCrackLength), Math.Max(minCrackLength, maxCrackLength) + 1);
+        double heading = TerrainArt.Uniform(random, 0.0, 2.0 * Math.PI);
+        double side = random.NextDouble() < 0.5 ? 1.0 : -1.0;
+        double bend = crackBend * Math.PI / 180.0;
+        List<int> trunk = new() { TerrainArt.Wrap(y, size) * size + TerrainArt.Wrap(x, size) };
+        List<int> branch = new();
+        double atX = x + 0.5;
+        double atY = y + 0.5;
+        while (trunk.Count < length)
+        {
+            int run = random.Next(fewestRun, mostRun + 1);
+            double angle = heading + side * TerrainArt.Uniform(random, 0.25, 1.0) * bend;
+            side = -side;
+            (atX, atY) = Trace(trunk, atX, atY, angle, Math.Min(run, length - trunk.Count), size);
+            if (trunk.Count >= length)
+            {
+                break;
+            }
+
+            bool fork = random.NextDouble() < crackBranchChance && branch.Count == 0;
+            double branchAngle = angle - side * TerrainArt.Uniform(random, 0.45, 1.0);
+            int branchLength = random.Next(fewestRun, Math.Max(fewestRun, length - trunk.Count) + 1);
+            if (fork)
+            {
+                Trace(branch, atX, atY, branchAngle, branchLength, size);
+            }
+        }
+
+        List<int> faint = new();
+        for (int k = 0; k < trunk.Count; k++)
+        {
+            if (k < crackFade || k >= trunk.Count - crackFade)
+            {
+                faint.Add(trunk[k]);
+            }
+        }
+
+        for (int k = Math.Max(0, branch.Count - crackFade); k < branch.Count; k++)
+        {
+            faint.Add(branch[k]);
+        }
+
+        List<int> groove = new();
+        foreach (int pixel in trunk.Concat(branch))
+        {
+            if (!faint.Contains(pixel) && !groove.Contains(pixel))
+            {
+                groove.Add(pixel);
+            }
+        }
+
+        return (groove, faint);
+    }
+
+    /// <summary>
+    /// Adds <paramref name="count"/> pixels to <paramref name="line"/> going from (<paramref name="x"/>,
+    /// <paramref name="y"/>) at <paramref name="angle"/> radians, each a step of one pixel along the angle's longer axis
+    /// so every pixel touches the one before it, wrapped, and returns where the line ends.
+    /// </summary>
+    private static (double X, double Y) Trace(List<int> line, double x, double y, double angle, int count, int size)
+    {
+        double dx = Math.Cos(angle);
+        double dy = Math.Sin(angle);
+        double longer = Math.Max(Math.Abs(dx), Math.Abs(dy));
+        for (int k = 0; k < count; k++)
+        {
+            x += dx / longer;
+            y += dy / longer;
+            line.Add(TerrainArt.Wrap((int)Math.Floor(y), size) * size + TerrainArt.Wrap((int)Math.Floor(x), size));
+        }
+
+        return (x, y);
+    }
+
+    /// <summary>
+    /// Paints a crack: its <paramref name="groove"/> in the crack colour, its <paramref name="faint"/> pixels in the
+    /// faint colour, and its lip, the pixel below and right of each groove pixel that is not part of the crack, in the
+    /// lip colour, and marks them cracked, unless any of its pixels lies on a stroke or its surroundings, on a sparkle, or
+    /// within a pixel of another crack.
+    /// </summary>
+    private void StampCrack(Color32[] albedo, byte[] glints, bool[] taken, bool[] cracked, int size, List<int> groove, List<int> faint)
+    {
+        List<int> lip = new();
+        foreach (int pixel in groove)
+        {
+            int below = TerrainArt.Wrap(pixel / size - 1, size) * size + TerrainArt.Wrap(pixel % size + 1, size);
+            if (!groove.Contains(below) && !faint.Contains(below) && !lip.Contains(below))
+            {
+                lip.Add(below);
+            }
+        }
+
         List<int> pixels = new(groove);
+        pixels.AddRange(faint);
         pixels.AddRange(lip);
         foreach (int pixel in pixels)
         {
@@ -243,6 +351,12 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
         foreach (int pixel in groove)
         {
             albedo[pixel] = crack;
+            cracked[pixel] = true;
+        }
+
+        foreach (int pixel in faint)
+        {
+            albedo[pixel] = crackFaint;
             cracked[pixel] = true;
         }
 

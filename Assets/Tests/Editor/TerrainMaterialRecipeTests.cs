@@ -977,7 +977,8 @@ public class TerrainMaterialRecipeTests
     /// <summary>
     /// Pond water has no cracks by default: the crack colours change no pixel. With cracks (the Ice material's), every
     /// crack pixel touches another and the pixel below and right of it is crack or lip, every lip pixel has a crack
-    /// pixel above and left of it, and no crack or lip pixel glints, sparkles or lies within a pixel of a stroke.
+    /// pixel above and left of it, and no crack or lip pixel glints, sparkles or lies within a pixel of a stroke. With a
+    /// fade and forks, the cracks' tips are faint, each faint pixel joined to the crack or another faint one.
     /// </summary>
     [Test]
     public void WaterHighlights_Cracks_AreLinesWithALipBelowAndRight_ClearOfTheStrokesAndSparkles()
@@ -1043,6 +1044,39 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(cracks, Is.GreaterThan(50));
         Assert.That(lips, Is.GreaterThan(25));
+
+        Color32 red = new(255, 0, 0, 255);
+        settings.FindProperty("crackFaint").colorValue = red;
+        settings.FindProperty("crackFade").intValue = 2;
+        settings.FindProperty("crackBranchChance").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures faded = recipe.Generate(Seed);
+        int faint = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                if (!SameColour(faded.Albedo[y * size + x], red))
+                {
+                    continue;
+                }
+
+                faint++;
+                bool joined = false;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Color32 near = faded.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
+                        joined |= (dx != 0 || dy != 0) && (SameColour(near, black) || SameColour(near, red));
+                    }
+                }
+
+                Assert.That(joined, Is.True, $"({x}, {y}) is part of a crack");
+            }
+        }
+
+        Assert.That(faint, Is.GreaterThan(cracks / 10));
     }
 
     /// <summary>

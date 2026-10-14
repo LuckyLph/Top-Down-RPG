@@ -19,9 +19,11 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
 /// layer, and a material without a height still builds; a sunken layer shows its bank over an ordinary pair and none
-/// over a seamless one; a bridge leaves the layers under it their own edges beside it, and a layer that turns to its
-/// runs turns its textures where it runs across; an animated layer gives the renderer its rate, which the Scene
-/// view follows; a fixed time for animated materials reaches the runtime material and clears without a rebuild; a
+/// over a seamless one; a bridge leaves the layers under it their own edges beside it and hides the edge of a layer
+/// painted under it where both end together, and a layer that turns to its runs turns its textures where it runs
+/// across; an animated layer gives the renderer its rate, which the Scene view follows; a fixed time for animated
+/// materials reaches the runtime material and clears without a rebuild, and the layer count the shader reads is the
+/// built one until a rebuild; a
 /// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
 /// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
 /// or allocating per frame;
@@ -607,6 +609,73 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// Where a bridge ends on the edge of a layer painted under it, with another layer between the two in the draw
+    /// order, the lower layer's edge is not drawn beneath the bridge's: the ground (an 8 x 4 block casting a yellow
+    /// shadow over nothing) and a red bridge column across it both end at the map's bottom edge, and below the bridge
+    /// nothing is drawn, while below the ground beside it the ground's shadow shows. A blue layer between them fills a
+    /// corner away from the bridge. No edge has noise. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ABridgeEndingOnALowerLayersEdge_HidesThatEdgeBeneathIt()
+    {
+        SetEdgeNoise(0f);
+        Color32 green = new(40, 160, 40, 255);
+        Color32 blue = new(30, 60, 200, 255);
+        Color32 red = new(220, 30, 30, 255);
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainStyle.EdgeSettings shadowed = new(0f, null, false, Color.black, new Color(1f, 1f, 0f), 1f, 3f);
+        TerrainMaterial ground = SolidMaterial("Ground", green, shadowed);
+        TerrainMaterial water = SolidMaterial("Water", blue, bare);
+        TerrainMaterial dock = SolidMaterial("Dock", red, bare);
+        SerializedObject settings = new(dock);
+        settings.FindProperty("bridge").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        GameObject gridObject = Track(new GameObject("BridgeEdgeGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap[] tilemaps = new Tilemap[3];
+        for (int i = 0; i < tilemaps.Length; i++)
+        {
+            tilemaps[i] = new GameObject($"Layer{i}", typeof(Tilemap)).GetComponent<Tilemap>();
+            tilemaps[i].transform.SetParent(gridObject.transform);
+        }
+
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
+                if (x >= 6 && y >= 2)
+                {
+                    tilemaps[1].SetTile(new Vector3Int(x, y, 0), tile);
+                }
+
+                if (x == 3 || x == 4)
+                {
+                    tilemaps[2].SetTile(new Vector3Int(x, y, 0), tile);
+                }
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(tilemaps[0], ground), new TerrainBlendRenderer.Layer(tilemaps[1], water), new TerrainBlendRenderer.Layer(tilemaps[2], dock));
+        gridObject.SetActive(true);
+        Rect world = new(0f, -1f, 8f, 5f);
+        Color32 drawn = default;
+        for (int frame = 0; frame < 30 && drawn.r == 0; frame++)
+        {
+            yield return null;
+            drawn = RenderedPixel(renderer, world, 128, 64);
+        }
+
+        Assert.That(drawn.r, Is.GreaterThan(200), "The bridge is drawn over the ground.");
+        Color32 belowGround = RenderedPixel(renderer, world, 40, 30);
+        Assert.That(belowGround.r, Is.GreaterThan(100), "The ground casts its shadow below its edge.");
+        Assert.That(belowGround.g, Is.GreaterThan(100));
+        Color32 belowBridge = RenderedPixel(renderer, world, 128, 30);
+        Assert.That(belowBridge.r + belowBridge.g + belowBridge.b, Is.Zero, "Below the bridge the ground's edge is not drawn.");
+    }
+
+    /// <summary>
     /// A layer that turns to its runs reads its textures turned a quarter in cells where it runs further left and right
     /// than up and down, and as they are elsewhere: an albedo striped across its x (red then blue every 16 px) shows its
     /// stripes along x in a run going up and along y in a run going across. Renders from a later editor update, until
@@ -1067,6 +1136,39 @@ public class TerrainBlendRendererTests
         Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(3f, 0f, 0f, 0f)));
         Assert.That(renderer.IsRebuildScheduled, Is.False);
         Assert.That(renderer.IsFlushScheduled, Is.False);
+    }
+
+    /// <summary>
+    /// The layer count the runtime material receives is the one the renderer was built with: after an inspector change
+    /// adds a layer, a fixed time or the debug view set before the rebuild still hands the shader the built count, which
+    /// the lookup texture's rows follow, and the rebuild hands it the new one.
+    /// </summary>
+    [Test]
+    public void TheLayerCountTheShaderReads_IsTheBuiltOne_UntilTheRebuild()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        int infoId = Shader.PropertyToID("_TerrainInfo");
+        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
+        water.transform.SetParent(root.transform);
+        SerializedObject serialized = new(renderer);
+        SerializedProperty layerList = serialized.FindProperty("layers");
+        layerList.arraySize++;
+        SerializedProperty added = layerList.GetArrayElementAtIndex(3);
+        added.FindPropertyRelative("tilemap").objectReferenceValue = water;
+        added.FindPropertyRelative("material").objectReferenceValue = materials[0];
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        renderer.SetFixedTime(2.5f);
+        renderer.SetDebugView(true);
+
+        Assert.That(renderer.IsRebuildScheduled, Is.True);
+        Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(3f, 1f, 1f, 2.5f)));
+        Assert.That(renderer.Lut.height, Is.EqualTo(TerrainBlendLut.Height(3)));
+
+        renderer.RunScheduledRebuild();
+
+        Assert.That(renderer.RuntimeMaterial.GetVector(infoId), Is.EqualTo(new Vector4(4f, 1f, 1f, 2.5f)));
+        Assert.That(renderer.Lut.height, Is.EqualTo(TerrainBlendLut.Height(4)));
     }
 
     /// <summary>

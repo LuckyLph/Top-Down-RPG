@@ -177,6 +177,40 @@ void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel, out float d[T
     }
 }
 
+// The bridge layers (TBInputs.bridges) that cover the corner patch, as bits: those whose distance is not TB_FAR.
+uint TBBridgesAt(TBInputs ins, float d[TB_MAX_LAYERS])
+{
+    uint found = 0u;
+    uint bridges = ins.bridges;
+    [loop]
+    while (bridges != 0u)
+    {
+        uint b = firstbitlow(bridges);
+        bridges &= bridges - 1u;
+        found |= b < ins.layers && d[b] < TB_FAR ? 1u << b : 0u;
+    }
+    return found;
+}
+
+// Whether a bridge layer among bridges (TBBridgesAt) higher up than the layer above m has its edge within the pair
+// margin of m's edge at a pixel. The layer above m counts every layer over it but the bridges (TBCounted), so where a
+// bridge ends on the edge of a layer painted under it, TBVisible does not hide that layer there; it draws its edge pixel
+// and what lies inside, which fill the bridge's corners, but neither its shadow nor its tufts, which would show past
+// the bridge's own edge.
+bool TBNearBridgeEdge(TBInputs ins, float d[TB_MAX_LAYERS], uint bridges, uint m)
+{
+    bool found = false;
+    uint above = bridges & ~((1u << min(m + 2u, 31u)) - 1u);
+    [loop]
+    while (above != 0u && !found)
+    {
+        uint b = firstbitlow(above);
+        above &= above - 1u;
+        found = d[b] - d[m] < ins.globals.y;
+    }
+    return found;
+}
+
 // Whether a layer is drawn at a pixel: it covers the pixel's corner patch and its edge lies at least the pair margin
 // beyond the edge of the layer above it, so where two edges coincide only the upper one is drawn.
 bool TBVisible(TBInputs ins, float d[TB_MAX_LAYERS], uint m)

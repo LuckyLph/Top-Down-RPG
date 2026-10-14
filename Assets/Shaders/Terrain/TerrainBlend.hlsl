@@ -14,7 +14,8 @@
 #include "Assets/Shaders/Terrain/TerrainBlendDebug.hlsl"
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
-// composites the layers bottom up, each drawn over the layer below it with that pair's edge, in the crisp look or,
+// composites the layers bottom up, each drawn over the layer below it with that pair's edge (without its shadow or
+// tufts where a bridge ends on its edge, TBNearBridgeEdge), in the crisp look or,
 // with the keyword _TERRAIN_SOFT, the soft one. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
 // visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
 // draws animated materials at the time Info.w instead of the frame's.
@@ -57,17 +58,32 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         }
     }
 
+    uint bridges = 0u;
+    [branch]
+    if (ins.bridges != 0u)
+    {
+        bridges = TBBridgesAt(ins, d);
+    }
+
     float4 acc = float4(0.0, 0.0, 0.0, 0.0);
     int top = -1;
     [loop]
     for (uint n = start; n < count; n++)
     {
+        bool bridged = false;
         [branch]
-        if (TBVisible(ins, d, n))
+        if (bridges != 0u)
+        {
+            bridged = TBNearBridgeEdge(ins, d, bridges, n);
+        }
+
+        [branch]
+        if (TBVisible(ins, d, n) && (!bridged || d[n] < 0.5))
         {
             float w[TB_MAX_LAYERS + 1];
             TBPairWeights(ins, d, n, w);
             TBEdge e = TBGetEdge(ins, n, w);
+            e.tuftHeight = bridged ? 0.0 : e.tuftHeight;
             float4 c = TBLayer(ins, n, e, w, d[n], pixel, worldPixel, corner);
             acc = c + acc * (1.0 - c.a);
             if (c.a >= 0.5)

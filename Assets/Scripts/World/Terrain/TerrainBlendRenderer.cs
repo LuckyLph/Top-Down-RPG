@@ -961,14 +961,15 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Tells the material how many layers there are, whether to draw the debug view, and the fixed time animated
+    /// Tells the material how many layers it was built with (the lookup texture's rows follow that count, not the
+    /// layers the inspector may have changed since), whether to draw the debug view, and the fixed time animated
     /// materials are drawn at, if any.
     /// </summary>
     private void UpdateInfo()
     {
         if (material != null)
         {
-            material.SetVector(InfoId, new Vector4(layers.Length, debugView ? 1f : 0f, timeFixed ? 1f : 0f, fixedTime));
+            material.SetVector(InfoId, new Vector4(layerTilemaps.Length, debugView ? 1f : 0f, timeFixed ? 1f : 0f, fixedTime));
         }
     }
 

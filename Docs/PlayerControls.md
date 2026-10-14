@@ -211,6 +211,17 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - Optional cast modes (indicator on hold, click to confirm) as a player setting, with the same choice for attack move (LoL's default: the key arms it and a left click gives it).
 - A gamepad scheme.
 
+## Slipping on ice
+
+Planned in [TerrainTypes.md](TerrainTypes.md)'s Phase 7, not built: until it is, ice is walked like grass. This is a sketch to settle before building it, not a decision.
+
+- **What slips.** On ice a unit keeps some of its speed: it eases towards the velocity its path asks for instead of taking it at once, so it slides on when it stops and swings wide when it turns. Today `PlayerMotor2D` sets the body's velocity to the path follower's each fixed step, and `MobMotor2D` moves its velocity towards the target velocity by a fixed acceleration step. Both would take a traction (1 everywhere but ice) that scales how fast the velocity may change: a player gets an acceleration it does not have today, a mob a smaller step on ice. Ice keeps its path cost of grass, so routes do not avoid it; whether they should (a cost above 10) is a question for play.
+- **Where traction comes from.** A per-terrain value on `TerrainMovementProfile2D`, beside walkability and cost, so the data lives where movement already reads the ground, and a lookup of the terrain type under a unit's feet from the area's `NavigationGrid2D` (the top layer of the cell, as for cost), reached through `ActiveNavigationGrid` for players and the area's grid for mobs. No new scene content and nothing replicated: every machine loads the same ground.
+- **Authority.** Slipping is part of movement, so it runs where movement runs: the owner moves its own player (the Networking table above) and the host its mobs, and `NetworkTransform` carries the result as today. A client cannot make its player slip less than the host would, since only the owner's simulation matters for its own body under the current trust model; if movement ever becomes server-authoritative with client prediction, traction has to be part of the shared, clock-driven movement step so the prediction and the server agree, which a profile value read from the same scene gives.
+- **Navigation and path following.** A sliding body overshoots waypoints and corners: `PathFollower2D` would need to brake ahead of a stop or a sharp turn on ice (start slowing by the stopping distance the traction gives) or accept a larger arrival distance there, and its stall time must not count a slide as stuck. Water has no collider and is unwalkable only through navigation (TerrainBlending.md's Phase 5 notes), so a slide must not carry a body onto water or another unwalkable cell: either the motor clamps its velocity at unwalkable cells, as `MobSeparation2D.ClampToWalkable` does for separation, or water gets a collider on a layer of its own. Click-to-move's straight-line shortcut stays as it is.
+- **Open questions.** Do mobs slip too, or only players? Do dashes and knockbacks (`Ability` cast movement) slip? Is ice also faster or slower to walk, or only harder to stop on? Does sliding into another unit push it?
+- **Tests** when built: EditMode, with `ManualClock`, a motor on ice stops further and turns wider than on grass, never enters an unwalkable cell, and a path follower still arrives; a profile without traction behaves exactly as today. Checked in Multiplayer Play Mode with a host and a client sliding on the same ice.
+
 ## Testing
 
 - EditMode (with `ManualClock` and fakes): every `PlayerOrders` transition, including pause and resume around casts and Stop clearing the paused order; range checks; target loss; cooldowns and each failure reason; each targeting and movement mode; unit filters (enemy, ally, the caster as an ally); buffering (non-bufferable fails, bufferable fires after the running cast, newest press wins, expiry, dropped on a new order or Stop, re-validated when it fires); target picker rules (closest living unit, the dead ignored, right team, no line-of-sight test); attack move (walks to its point with nothing in range, takes the enemy in range closest to its point, walks on after a kill, Stop, clicks, paused by casts) and the nearest-enemy query (collider range, the dead, props and players ignored); input service bindings and the UI-blocking check; path follower parity with the old mob agent.
@@ -219,4 +230,6 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ## Open questions
 
-None at the moment. Add new ones here as implementation raises them.
+- Slipping on ice: the open questions of [Slipping on ice](#slipping-on-ice) above.
+
+Add new ones here as implementation raises them.

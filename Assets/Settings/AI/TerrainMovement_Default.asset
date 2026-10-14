@@ -30,4 +30,7 @@ MonoBehaviour:
   - terrainType: {fileID: 11400000, guid: 6dc80e20dd3cd0f4f8d916ee1fc7d43b, type: 2}
     isWalkable: 1
     traversalCost: 15
+  - terrainType: {fileID: 11400000, guid: 0d76f979ad20ca845a12be76540aff6b, type: 2}
+    isWalkable: 0
+    traversalCost: 10
   edgeCost: 5

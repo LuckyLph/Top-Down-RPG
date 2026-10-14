@@ -1906,7 +1906,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(15));
+        Assert.That(checkedRecipes, Is.EqualTo(16));
     }
 
     /// <summary>

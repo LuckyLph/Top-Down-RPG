@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
+  m_Name: Ocean
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  albedo: {fileID: 2800000, guid: 455bd1e87ef40b04d9247bf50790056c, type: 3}
+  cellField: {fileID: 0}
+  height: {fileID: 2800000, guid: 54ef5149645025b41b8f0126255c753f, type: 3}
+  repeatCells: 16
+  outerRadius: 14
+  innerRadius: 11
+  cellMode: 0
+  baseColour: {r: 0.10980392, g: 0.3137255, b: 0.5568628, a: 1}
+  keepMargin: 1
+  cutGap: 0.5
+  cutBevel: 18
+  heightScale: 1.5
+  framesPerSecond: 8
+  glintColour: {r: 0.25882354, g: 0.5254902, b: 0.7529412, a: 1}
+  glintPeriod: 2
+  glintDuty: 0.5
+  sparkleColour: {r: 0.8862745, g: 0.9647059, b: 0.9490196, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.25
+  rimSwell: 2.5
+  swellPeriod: 5
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  wholeClumps: 0
+  sinkDepth: 6
+  bankShadow: 0.4
+  bankColour: {r: 0.54901963, g: 0.4627451, b: 0.32156864, a: 1}
+  bridge: 0
+  turnToRuns: 0
+  edge:
+    rimWidth: 12
+    rim:
+      serializedVersion: 2
+      key0: {r: 0.9411765, g: 0.972549, b: 0.98039216, a: 1}
+      key1: {r: 0.74509805, g: 0.8862745, b: 0.9411765, a: 1}
+      key2: {r: 0.43137255, g: 0.6666667, b: 0.83137256, a: 0.9}
+      key3: {r: 0.8235294, g: 0.9254902, b: 0.95686275, a: 0.7}
+      key4: {r: 0.3137255, g: 0.54901963, b: 0.7529412, a: 0.6}
+      key5: {r: 0.1882353, g: 0.41568628, b: 0.6509804, a: 0.35}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 13631
+      ctime1: 19136
+      ctime2: 30015
+      ctime3: 35520
+      ctime4: 49151
+      ctime5: 65535
+      ctime6: 0
+      ctime7: 0
+      atime0: 13631
+      atime1: 19136
+      atime2: 30015
+      atime3: 35520
+      atime4: 49151
+      atime5: 65535
+      atime6: 0
+      atime7: 0
+      m_Mode: 1
+      m_ColorSpace: -1
+      m_NumColorKeys: 6
+      m_NumAlphaKeys: 6
+    drawOutline: 1
+    outlineColour: {r: 0.14117648, g: 0.24313726, b: 0.2509804, a: 1}
+    shadowColour: {r: 0.07058824, g: 0.15686275, b: 0.11764706, a: 1}
+    shadowAlpha: 0.25
+    shadowWidth: 1
+    tuftHeight: 0
+    softBandWidth: 0
+    softBandColour: {r: 0.76862746, g: 0.89411765, b: 0.9411765, a: 1}
+    softWholeStones: 0
+    seamless: 0

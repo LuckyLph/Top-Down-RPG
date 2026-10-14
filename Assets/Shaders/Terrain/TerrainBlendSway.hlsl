@@ -4,7 +4,7 @@
 #include "Assets/Shaders/Terrain/TerrainBlendShape.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendAnimation.hlsl"
 
-// The texel a swaying layer m (sway amplitude above 0, weeds) shows at a world pixel: the pixel's own, moved left by
+// The texel a swaying layer m (sway amplitude above 0, grass) shows at a world pixel: the pixel's own, moved left by
 // how far it leans, so the blade standing there leans right. A gust from 0 to 1 rolls over the cells from the bottom
 // left to the top right, a gust length of cells per sway period, each cell a little out of step with its neighbours;
 // it picks a pose, how many whole pixels the tips lean (0 up to the sway amplitude), and a pixel leans by the pose

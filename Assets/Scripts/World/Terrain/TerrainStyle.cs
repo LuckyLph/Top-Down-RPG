@@ -22,7 +22,7 @@ public class TerrainStyle : ScriptableObject
     /// tufts growing out of the edge. Soft look: the same edge pixel and rim, unless a band of one colour replaces both,
     /// or, over a material with cut stones, whole stones make the edge. A seamless edge draws its edge pixel with the
     /// upper material's own interior, so with no outline, rim or shadow the upper material blends into a lower one of the
-    /// same look (weeds over grass).
+    /// same look (meadow over grass).
     /// </summary>
     [Serializable]
     public class EdgeSettings
@@ -48,7 +48,7 @@ public class TerrainStyle : ScriptableObject
         [SerializeField] private Color softBandColour = Color.gray;
         [Tooltip("Soft look, over a material with cut stones: each stone is drawn whole or not at all, kept where its centre, moved by its own height (the height texture's green channel times the material's height scale), lies the keep margin inside the edge, so whole cobbles make the edge. No band or rim is drawn there.")]
         [SerializeField] private bool softWholeStones;
-        [Tooltip("Draw the edge pixel with this material's own interior instead of the outline or the rim's outer colour, so with no outline, rim or shadow the edge does not show: for a material that looks like the one under it, such as weeds over grass.")]
+        [Tooltip("Draw the edge pixel with this material's own interior instead of the outline or the rim's outer colour, so with no outline, rim or shadow the edge does not show: for a material that looks like the one under it, such as meadow over grass.")]
         [SerializeField] private bool seamless;
 
         /// <summary>

@@ -8,8 +8,8 @@ using UnityEngine;
 /// textures and settings and never write it. In the editor, a terrain material recipe generates its textures and writes
 /// their base colour, repeat and cell mode. In the soft look its height texture, times its height scale, moves its
 /// edges. An animated material (water) lights its glint and sparkle pixels in turn and swells its rims in and out, in
-/// the shader alone, at its frames per second; its edges never move. A swaying material (weeds) leans the pixels its
-/// height texture weighs, its weeds' blades, in a wind that rolls across the ground, in the shader too, and with whole
+/// the shader alone, at its frames per second; its edges never move. A swaying material (grass) leans the pixels its
+/// height texture weighs, the blades of its clumps, in a wind that rolls across the ground, in the shader too, and with whole
 /// clumps each weed leans as one in the gust at its foot while the ground inside its box stays put. A sunken material
 /// (water) lies below the ground
 /// around it: along its edges that face up the screen over another material, that material's bank shows inside its
@@ -85,7 +85,7 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float rimSwell;
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swellPeriod = 4f;
-    [Tooltip("How many pixels the tips of this material's weeds lean at the top of a gust; 0 for none. A pixel leans by this times its weight in the height texture's blue channel (written by a swaying recipe, weeds'), which then holds no glints or sparkles. Needs frames per second above 0.")]
+    [Tooltip("How many pixels the tips of this material's weeds lean at the top of a gust; 0 for none. A pixel leans by this times its weight in the height texture's blue channel (written by a swaying recipe, the weeds recipe that draws the grass's clumps), which then holds no glints or sparkles. Needs frames per second above 0.")]
     [SerializeField, Range(0f, MaxSwayAmplitude)] private float swayAmplitude;
     [Tooltip("Seconds of one gust, leaning and back.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swayPeriod = 2.5f;

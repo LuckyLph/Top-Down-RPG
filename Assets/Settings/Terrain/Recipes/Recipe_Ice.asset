@@ -117,21 +117,13 @@ MonoBehaviour:
   pebble:
     serializedVersion: 2
     rgba: 4287394870
-  cracksPerCell: 0.5
-  crackChance: 0.75
-  minCrackLength: 26
-  maxCrackLength: 48
-  minCrackRun: 4
-  maxCrackRun: 9
-  crackBend: 30
-  crackBranchChance: 0.4
-  crackFade: 3
-  crack:
+  shinesPerCell: 0.55
+  shineChance: 0.6
+  shineRadius: {x: 2.2, y: 3.6}
+  shineSquash: 0.65
+  shine:
     serializedVersion: 2
-    rgba: 4294635746
-  crackFaint:
+    rgba: 4294965484
+  shineEdge:
     serializedVersion: 2
-    rgba: 4294238916
-  crackLip:
-    serializedVersion: 2
-    rgba: 4292787858
+    rgba: 4294436552

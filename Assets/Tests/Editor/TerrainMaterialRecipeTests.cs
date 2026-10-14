@@ -20,7 +20,7 @@ using Object = UnityEngine.Object;
 /// sway; caustic water's net breathes between two courses, runs sideways when flattened and breaks into ripples
 /// with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
-/// pebbles only when asked (shallows), without strokes writes only sparkle phases, and with cracks draws lines clear of
+/// pebbles only when asked (shallows), without strokes writes only sparkle phases, and with shines draws spots clear of
 /// its strokes and with a slant its strokes diagonally (ice); tufts point up; sand's
 /// crests lie over their troughs, and its clumps and sparkles (snow) appear only when asked, clumps lit from the top
 /// left; mud's puddles are shaded under their top-left bank and lit on their bottom-right
@@ -975,13 +975,12 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Pond water has no cracks by default: the crack colours change no pixel. With cracks (the Ice material's), every
-    /// crack pixel touches another and the pixel below and right of it is crack or lip, every lip pixel has a crack
-    /// pixel above and left of it, and no crack or lip pixel glints, sparkles or lies within a pixel of a stroke. With a
-    /// fade and forks, the cracks' tips are faint, each faint pixel joined to the crack or another faint one.
+    /// Pond water has no shines by default: the shine colours change no pixel. With shines (the Ice material's), every
+    /// core pixel has its four neighbours in the shine, the cores lie towards the light, with more edge below and right
+    /// of them than above and left, and no shine pixel glints, sparkles or lies within a pixel of a stroke.
     /// </summary>
     [Test]
-    public void WaterHighlights_Cracks_AreLinesWithALipBelowAndRight_ClearOfTheStrokesAndSparkles()
+    public void WaterHighlights_Shines_AreSpotsWithACoreTowardsTheLight_ClearOfTheStrokesAndSparkles()
     {
         WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
         SerializedObject settings = new(recipe);
@@ -989,94 +988,75 @@ public class TerrainMaterialRecipeTests
         TerrainTextures water = recipe.Generate(Seed);
         Color32 black = new(0, 0, 0, 255);
         Color32 white = new(255, 255, 255, 255);
-        settings.FindProperty("crack").colorValue = black;
-        settings.FindProperty("crackLip").colorValue = white;
+        settings.FindProperty("shine").colorValue = black;
+        settings.FindProperty("shineEdge").colorValue = white;
         settings.ApplyModifiedPropertiesWithoutUndo();
-        Assert.That(Differences(recipe.Generate(Seed).Albedo, water.Albedo), Is.Zero, "the crack colours without cracks");
+        Assert.That(Differences(recipe.Generate(Seed).Albedo, water.Albedo), Is.Zero, "the shine colours without shines");
 
-        settings.FindProperty("cracksPerCell").floatValue = 1.5f;
-        settings.FindProperty("crackChance").floatValue = 1f;
+        settings.FindProperty("shinesPerCell").floatValue = 1.5f;
+        settings.FindProperty("shineChance").floatValue = 1f;
+        settings.FindProperty("shineRadius").vector2Value = new Vector2(2.5f, 3.5f);
         settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures shiny = recipe.Generate(Seed);
 
-        TerrainTextures cracked = recipe.Generate(Seed);
-
-        int size = cracked.Size;
-        int cracks = 0;
-        int lips = 0;
+        int size = shiny.Size;
+        int cores = 0;
+        int edges = 0;
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                Color32 colour = cracked.Albedo[y * size + x];
-                bool crack = SameColour(colour, black);
-                if (!crack && !SameColour(colour, white))
+                Color32 colour = shiny.Albedo[y * size + x];
+                bool core = SameColour(colour, black);
+                if (!core && !SameColour(colour, white))
                 {
                     continue;
                 }
 
-                Assert.That(cracked.Height[y * size + x].b, Is.Zero, $"({x}, {y}) glints or sparkles");
-                bool joined = false;
+                Assert.That(shiny.Height[y * size + x].b, Is.Zero, $"({x}, {y}) glints or sparkles");
                 for (int dy = -1; dy <= 1; dy++)
                 {
                     for (int dx = -1; dx <= 1; dx++)
                     {
-                        Color32 near = cracked.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
+                        Color32 near = shiny.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
                         Assert.That(SameColour(near, resting), Is.False, $"({x}, {y}) touches a stroke");
-                        joined |= (dx != 0 || dy != 0) && SameColour(near, black);
+                        if (core && Math.Abs(dx) + Math.Abs(dy) == 1)
+                        {
+                            Assert.That(SameColour(near, black) || SameColour(near, white), Is.True, $"({x}, {y}) is a core inside its shine");
+                        }
                     }
                 }
 
-                if (crack)
+                if (core)
                 {
-                    cracks++;
-                    Color32 below = cracked.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
-                    Assert.That(SameColour(below, black) || SameColour(below, white), Is.True, $"({x}, {y}) has a lip");
-                    Assert.That(joined, Is.True, $"({x}, {y}) is part of a line");
+                    cores++;
                 }
                 else
                 {
-                    lips++;
-                    Color32 above = cracked.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
-                    Assert.That(SameColour(above, black), Is.True, $"({x}, {y}) lies below a crack");
+                    edges++;
                 }
             }
         }
 
-        Assert.That(cracks, Is.GreaterThan(50));
-        Assert.That(lips, Is.GreaterThan(25));
-
-        Color32 red = new(255, 0, 0, 255);
-        settings.FindProperty("crackFaint").colorValue = red;
-        settings.FindProperty("crackFade").intValue = 2;
-        settings.FindProperty("crackBranchChance").floatValue = 1f;
-        settings.ApplyModifiedPropertiesWithoutUndo();
-        TerrainTextures faded = recipe.Generate(Seed);
-        int faint = 0;
-        for (int y = 0; y < size; y++)
+        Assert.That(cores, Is.GreaterThan(30));
+        Assert.That(edges, Is.GreaterThan(cores));
+        int edgesBelowRight = 0;
+        int edgesAboveLeft = 0;
+        for (int y = 1; y < size - 1; y++)
         {
-            for (int x = 0; x < size; x++)
+            for (int x = 1; x < size - 1; x++)
             {
-                if (!SameColour(faded.Albedo[y * size + x], red))
+                if (!SameColour(shiny.Albedo[y * size + x], black))
                 {
                     continue;
                 }
 
-                faint++;
-                bool joined = false;
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        Color32 near = faded.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
-                        joined |= (dx != 0 || dy != 0) && (SameColour(near, black) || SameColour(near, red));
-                    }
-                }
-
-                Assert.That(joined, Is.True, $"({x}, {y}) is part of a crack");
+                edgesAboveLeft += SameColour(shiny.Albedo[(y + 1) * size + x - 1], white) ? 1 : 0;
+                edgesBelowRight += SameColour(shiny.Albedo[(y - 1) * size + x + 1], white) ? 1 : 0;
             }
         }
 
-        Assert.That(faint, Is.GreaterThan(cracks / 10));
+        Assert.That(edgesBelowRight, Is.GreaterThan(edgesAboveLeft), "more edge below and right of the cores than above and left");
     }
 
     /// <summary>

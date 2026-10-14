@@ -54,6 +54,11 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 6819f86dffc046147a17f9a41b30e252, type: 2}
     terrainType: {fileID: 11400000, guid: c00b3a5a94fb58d44895db1e04a2f1f7, type: 2}
     material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+  planks:
+    tilemapName: PlanksTilemap
+    tile: {fileID: 11400000, guid: 64d49b15b311a9e41a8929de7a3c2edb, type: 2}
+    terrainType: {fileID: 11400000, guid: 9b000e197cd29744ab41b23cf431b650, type: 2}
+    material: {fileID: 11400000, guid: 5eb334efbb2b6d94ca2851debf87ee1e, type: 2}
   size: {x: 64, y: 46}
   squareness: 3
   edgeWobble: 0.12
@@ -74,6 +79,9 @@ MonoBehaviour:
   shoreZoneDepth: 3
   shallowPondCount: 3
   shallowPondRadius: {x: 2, y: 3}
+  dockWidth: 3
+  dockReach: {x: 4, y: 6}
+  dockClearance: 2
   roadWidth: 3
   roadSouth: 0.5
   roadMeander: 0.12

@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Lays out a lakeside: a grass blob ringed by trees, with a lake in its northern half, a sandy beach on the lake's
 /// southern shore and a muddy marsh around the rest of it, a stone road crossing the south from west to east, a gravel
-/// trail from the road down to the beach, patches of mud and of dry grass on the open grass, and small shallow ponds
-/// apart from the lake. The party spawns on the road. Blocking props stay off the
+/// trail from the road down to the beach, patches of mud and of dry grass on the open grass, small shallow ponds
+/// apart from the lake, and a wooden dock from the trail's end across the beach into the lake. The party spawns on the
+/// road. Blocking props stay off the
 /// water, the beach, the mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the
 /// beach, can be walked to from the spawn.
 /// </summary>
@@ -49,8 +50,10 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField] private TerrainLayer stone = new();
     [Tooltip("Light water over a visible bed, in small ponds on the open grass, walked at a cost.")]
     [SerializeField] private TerrainLayer shallows = new();
-    [Tooltip("Drawn over every other layer, so it decides its cells: water cannot be walked.")]
+    [Tooltip("Drawn over every other layer but the planks, so it decides its cells: water cannot be walked.")]
     [SerializeField] private TerrainLayer water = new();
+    [Tooltip("The dock's boards, drawn over everything, the water included, so a dock over the lake can be walked.")]
+    [SerializeField] private TerrainLayer planks = new();
 
     [Header("Shape")]
     [Tooltip("Width and height of the area in cells, before its outline wobbles.")]
@@ -100,6 +103,14 @@ public sealed class LakesideGenerator : AreaGenerator
     [Tooltip("Smallest and largest radius in cells of a shallow pond.")]
     [SerializeField] private Vector2 shallowPondRadius = new(2f, 3f);
 
+    [Header("Dock")]
+    [Tooltip("Width in cells of the dock that runs on from the trail's end across the beach into the lake.")]
+    [SerializeField, Min(1)] private int dockWidth = 3;
+    [Tooltip("Fewest and most rows of the dock over open water, past the shore: it reaches as far as it fits up to the most, and is left out, with a warning, when not even the fewest fit. A most of 0 lays no dock.")]
+    [SerializeField] private Vector2Int dockReach = new(4, 6);
+    [Tooltip("Cells around the dock's part over the lake that must be water (or the beach it starts from), so its sides and end meet only water.")]
+    [SerializeField, Min(1)] private int dockClearance = 2;
+
     [Header("Paths")]
     [Tooltip("Width in cells of the stone road crossing the south of the area from west to east.")]
     [SerializeField, Min(1)] private int roadWidth = 3;
@@ -135,6 +146,9 @@ public sealed class LakesideGenerator : AreaGenerator
     public int BorderDepth => borderDepth;
     public int DryGrassPatchCount => dryGrassPatchCount;
     public int ShallowPondCount => shallowPondCount;
+    public int DockWidth => dockWidth;
+    public Vector2Int DockReach => dockReach;
+    public int DockClearance => dockClearance;
     public int PathClearance => pathClearance;
     public int RoadMargin => roadMargin;
     public int SpawnClearRadius => spawnClearRadius;
@@ -144,11 +158,11 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, dry grass, sand, mud, gravel, stone, shallows, then water, in the style's layer order: each layer is drawn
-    /// over the ones before it and decides its cells, so the road and the trail cross mud and sand and the lake covers
-    /// everything under it.
+    /// Grass, dry grass, sand, mud, gravel, stone, shallows, water, then planks, in the style's layer order: each layer
+    /// is drawn over the ones before it and decides its cells, so the road and the trail cross mud and sand, the lake
+    /// covers everything under it and the dock lies over the lake and the beach.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, sand, mud, gravel, stone, shallows, water };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, sand, mud, gravel, stone, shallows, water, planks };
 
     /// <summary>
     /// Lays out a lakeside from <paramref name="layoutSeed"/>.
@@ -160,7 +174,7 @@ public sealed class LakesideGenerator : AreaGenerator
 
     /// <summary>
     /// The state of one generation: the shared builder with the cells laid so far, the road's samples, the lake's
-    /// centre, and how many steps each dry grass cell lies from the water.
+    /// centre, the trail's end, and how many steps each dry grass cell lies from the water.
     /// </summary>
     private sealed class Run
     {
@@ -171,11 +185,13 @@ public sealed class LakesideGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> mud;
         private readonly HashSet<Vector3Int> dryGrass;
         private readonly HashSet<Vector3Int> shallows;
+        private readonly HashSet<Vector3Int> planks;
         private readonly List<Vector2> road = new();
         private readonly Dictionary<Vector3Int, int> waterDistance = new();
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
+        private Vector3Int? trailEnd;
 
         /// <summary>
         /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
@@ -189,6 +205,7 @@ public sealed class LakesideGenerator : AreaGenerator
             mud = builder.Layout.TerrainCells(generator.mud);
             dryGrass = builder.Layout.TerrainCells(generator.dryGrass);
             shallows = builder.Layout.TerrainCells(generator.shallows);
+            planks = builder.Layout.TerrainCells(generator.planks);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
         }
@@ -196,8 +213,8 @@ public sealed class LakesideGenerator : AreaGenerator
         /// <summary>
         /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach and the mud patches, picks
         /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs,
-        /// checks that the beach can be walked to, then lays the dry grass and the shallow ponds from the detail stream, so
-        /// they move nothing laid before them.
+        /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds and the dock from the detail
+        /// stream, so they move nothing laid before them.
         /// </summary>
         public AreaLayout Build()
         {
@@ -226,6 +243,7 @@ public sealed class LakesideGenerator : AreaGenerator
             CheckBeach(reachable);
             LayDryGrass();
             LayShallowPonds();
+            LayDock();
             return builder.Layout;
         }
 
@@ -395,6 +413,7 @@ public sealed class LakesideGenerator : AreaGenerator
                 return;
             }
 
+            trailEnd = target;
             Vector2 end = new(target.x + 0.5f, target.y + 0.5f);
             Vector2 start = road[0];
             foreach (Vector2 sample in road)
@@ -566,6 +585,203 @@ public sealed class LakesideGenerator : AreaGenerator
             }
 
             builder.RemoveProps(wet.Contains, true);
+        }
+
+        /// <summary>
+        /// Lays the dock, last, after the shallow ponds, so nothing laid before it moves; it draws nothing from the
+        /// random streams, so it does not depend on the dry grass or the ponds either: planks the dock width wide over
+        /// the trail's end, from the row of the trail's last cell (the tip its brush leaves above its end) north across
+        /// the beach and into the lake, as many rows over open water as fit up to the most of the dock reach
+        /// (<see cref="TryDock"/>). Its cells on the beach are sand or the trail's gravel, beside sand, water or gravel; its
+        /// rows in the lake are all water, and every cell within the dock clearance of them is water or the beach. It
+        /// is centred on the trail's end where it fits, else moved sideways a column at a time while it still covers
+        /// the end, first looking for a place where the shore runs level across the dock and a cell beyond each side,
+        /// so the water's edge meets the dock's sides straight. The planks are a bridge, so the sand and the trail's
+        /// gravel under its beach end and the water under its lake end stay as they are and only the planks are added.
+        /// The walk-through props on or beside the dock or up to three rows below it are removed, as the ponds remove
+        /// them. Warns when no dock fits.
+        /// </summary>
+        private void LayDock()
+        {
+            int longest = Mathf.Max(settings.dockReach.x, settings.dockReach.y);
+            if (trailEnd == null || longest <= 0)
+            {
+                return;
+            }
+
+            int width = Mathf.Max(1, settings.dockWidth);
+            int shortest = Mathf.Clamp(Mathf.Min(settings.dockReach.x, settings.dockReach.y), 1, longest);
+            int centred = trailEnd.Value.x - (width - 1) / 2;
+            List<Vector3Int> dock = null;
+            for (int pass = 0; pass < 2 && dock == null; pass++)
+            {
+                for (int shift = 0; shift < width && dock == null; shift++)
+                {
+                    foreach (int left in new[] { centred - shift, centred + shift })
+                    {
+                        if (dock == null && left <= trailEnd.Value.x && left + width > trailEnd.Value.x)
+                        {
+                            dock = TryDock(left, width, shortest, longest, pass == 0);
+                        }
+                    }
+                }
+            }
+
+            if (dock == null)
+            {
+                builder.Layout.Warnings.Add($"No dock of {shortest} rows over the water fits from the trail's end at {trailEnd.Value} across the beach.");
+                return;
+            }
+
+            planks.UnionWith(dock);
+            HashSet<Vector3Int> near = CellsNear(planks, 1);
+            foreach (Vector3Int cell in planks)
+            {
+                for (int dy = -3; dy <= -2; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        near.Add(cell + new Vector3Int(dx, dy, 0));
+                    }
+                }
+            }
+
+            builder.RemoveProps(near.Contains, true);
+        }
+
+        /// <summary>
+        /// The cells of a dock <paramref name="width"/> wide from column <paramref name="left"/>, starting on the row of
+        /// the trail's last cell: its rows on the beach up to the first row it finds all water, each on the beach
+        /// (<see cref="IsDockRowOnBeach"/>), then as many of <paramref name="reach"/> rows over open water as keep the
+        /// dock clearance around them water or beach; null when it crosses more than the beach or fewer than
+        /// <paramref name="shortest"/> rows fit, or, with <paramref name="level"/>, when the shore steps across the dock
+        /// or beside it.
+        /// </summary>
+        private List<Vector3Int> TryDock(int left, int width, int shortest, int reach, bool level)
+        {
+            List<Vector3Int> dock = new();
+            int row = trailEnd.Value.y + 1;
+            for (int beach = 0; !IsDockRowInWater(left, width, row); beach++, row++)
+            {
+                if (beach > settings.beachWidth * 2 || !IsDockRowOnBeach(left, width, row))
+                {
+                    return null;
+                }
+
+                AddDockRow(dock, left, width, row);
+            }
+
+            int shore = row;
+            if (level && !IsLevelShore(left, width, shore))
+            {
+                return null;
+            }
+
+            int fits = 0;
+            for (int rows = 1; rows <= reach && IsDockRowInWater(left, width, shore + rows - 1); rows++)
+            {
+                if (IsClearAround(left, width, shore, rows))
+                {
+                    fits = rows;
+                }
+            }
+
+            if (fits < shortest)
+            {
+                return null;
+            }
+
+            for (int k = 0; k < fits; k++)
+            {
+                AddDockRow(dock, left, width, shore + k);
+            }
+
+            return dock;
+        }
+
+        /// <summary>
+        /// Whether the shore runs level across the dock and a cell beyond each side: on row <paramref name="shore"/>
+        /// those cells are all water and on the row below it none is.
+        /// </summary>
+        private bool IsLevelShore(int left, int width, int shore)
+        {
+            for (int x = left - 1; x <= left + width; x++)
+            {
+                if (!water.Contains(new Vector3Int(x, shore, 0)) || water.Contains(new Vector3Int(x, shore - 1, 0)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Adds the dock's <paramref name="width"/> cells from column <paramref name="left"/> on <paramref name="row"/>.
+        /// </summary>
+        private static void AddDockRow(List<Vector3Int> dock, int left, int width, int row)
+        {
+            for (int x = left; x < left + width; x++)
+            {
+                dock.Add(new Vector3Int(x, row, 0));
+            }
+        }
+
+        /// <summary>
+        /// Whether every cell of the dock's row <paramref name="row"/> is water.
+        /// </summary>
+        private bool IsDockRowInWater(int left, int width, int row)
+        {
+            for (int x = left; x < left + width; x++)
+            {
+                if (!water.Contains(new Vector3Int(x, row, 0)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Whether the dock can cross <paramref name="row"/> on the beach: each of its cells is sand, the trail's gravel
+        /// or water (where the shore steps across the dock), and the cells beside them are too.
+        /// </summary>
+        private bool IsDockRowOnBeach(int left, int width, int row)
+        {
+            for (int x = left - 1; x <= left + width; x++)
+            {
+                Vector3Int cell = new(x, row, 0);
+                bool shore = sand.Contains(cell) || water.Contains(cell) || builder.Gravel.Contains(cell);
+                if (!shore || mud.Contains(cell) || builder.Stone.Contains(cell) || dryGrass.Contains(cell) || shallows.Contains(cell))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Whether every cell within the dock clearance of the dock's first <paramref name="rows"/> rows over the water,
+        /// from row <paramref name="shore"/>, is water or the beach (sand), so the dock's sides and end meet only water.
+        /// </summary>
+        private bool IsClearAround(int left, int width, int shore, int rows)
+        {
+            int clearance = Mathf.Max(1, settings.dockClearance);
+            for (int y = shore; y < shore + rows + clearance; y++)
+            {
+                for (int x = left - clearance; x < left + width + clearance; x++)
+                {
+                    Vector3Int cell = new(x, y, 0);
+                    if (!water.Contains(cell) && !sand.Contains(cell))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

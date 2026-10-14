@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
 
@@ -24,7 +23,9 @@ using UnityEngine.Tilemaps;
 /// per frame here. The order of its layers is both the draw order and the navigation priority: a layer whose
 /// tilemap has a <see cref="NavigationTerrainSource2D"/> must have its index as priority
 /// (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch is logged as an error while
-/// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them.
+/// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them. Its
+/// chunks are a <see cref="TerrainChunkSet"/>, its build checks <see cref="TerrainBlendChecks"/>, and in the editor
+/// <see cref="TerrainBlendRebuilds"/> decides when an inspector change rebuilds it.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -69,22 +70,6 @@ public class TerrainBlendRenderer : MonoBehaviour
         public TerrainMaterial Material => material;
     }
 
-    /// <summary>One chunk quad: its renderer and its mesh.</summary>
-    private sealed class Chunk
-    {
-        /// <summary>
-        /// Holds <paramref name="renderer"/> and <paramref name="mesh"/>.
-        /// </summary>
-        public Chunk(MeshRenderer renderer, Mesh mesh)
-        {
-            Renderer = renderer;
-            Mesh = mesh;
-        }
-
-        public MeshRenderer Renderer { get; }
-        public Mesh Mesh { get; }
-    }
-
     private static readonly int ControlMapId = Shader.PropertyToID("_ControlMap");
     private static readonly int LutId = Shader.PropertyToID("_TerrainLut");
     private static readonly int AlbedoArrayId = Shader.PropertyToID("_AlbedoArray");
@@ -93,6 +78,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int ControlRectId = Shader.PropertyToID("_ControlRect");
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
     private const string SoftKeywordName = "_TERRAIN_SOFT";
+    private static readonly MeshRenderer[] NoChunks = new MeshRenderer[0];
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
@@ -107,9 +93,6 @@ public class TerrainBlendRenderer : MonoBehaviour
     [Tooltip("Developer toggle for the look: crisp (designed edges with rims and outlines) or soft (shapes blended from the cells and the materials' heights). Switching only flips the shader keyword, rebuilding nothing. Keep areas saved as Crisp.")]
     [SerializeField] private BlendMode mode;
 
-    private readonly Dictionary<Vector2Int, Chunk> chunksByKey = new();
-    private readonly List<MeshRenderer> chunks = new();
-    private readonly List<Vector2Int> staleChunks = new();
     private Action<ScriptableRenderContext, List<Camera>> flushHandler;
     private Grid grid;
     private Tilemap[] layerTilemaps = new Tilemap[0];
@@ -119,6 +102,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Texture2DArray heightArray;
     private Texture2D lut;
     private Material material;
+    private TerrainChunkSet chunkSet;
     [NonSerialized] private bool flushScheduled;
     [NonSerialized] private bool debugView;
     [NonSerialized] private bool timeFixed;
@@ -126,16 +110,8 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private float animationFramesPerSecond;
     [NonSerialized] private bool previewGrewBounds;
 #if UNITY_EDITOR
-    [NonSerialized] private readonly List<TerrainMaterial> subscribedMaterials = new();
     [NonSerialized] private bool enabledOnce;
-    [NonSerialized] private TerrainStyle subscribedStyle;
-    [NonSerialized] private bool rebuildScheduled;
-    [NonSerialized] private TerrainStyle builtStyle;
-    [NonSerialized] private readonly List<Tilemap> builtTilemaps = new();
-    [NonSerialized] private readonly List<TerrainMaterial> builtMaterials = new();
-    [NonSerialized] private int builtChunkSize;
-    [NonSerialized] private string builtSortingLayerName;
-    [NonSerialized] private int builtSortingOrder;
+    [NonSerialized] private TerrainBlendRebuilds rebuilds;
 #endif
 
     public TerrainStyle Style => style;
@@ -233,7 +209,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal Texture2DArray FieldArray => fieldArray;
     internal Texture2DArray HeightArray => heightArray;
     internal Texture2D Lut => lut;
-    internal IReadOnlyList<MeshRenderer> Chunks => chunks;
+    internal IReadOnlyList<MeshRenderer> Chunks => chunkSet != null ? chunkSet.Renderers : NoChunks;
     internal bool IsFlushScheduled => flushScheduled;
 
     /// <summary>
@@ -245,7 +221,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal int RenderCallbackCount { get; private set; }
 #if UNITY_EDITOR
     internal int HandledUndoCount { get; private set; }
-    internal bool IsRebuildScheduled => rebuildScheduled;
+    internal bool IsRebuildScheduled => Rebuilds.IsScheduled;
+
+    private TerrainBlendRebuilds Rebuilds => rebuilds ??= new TerrainBlendRebuilds(RebuildIfEnabled);
 #endif
 
     /// <summary>
@@ -412,70 +390,10 @@ public class TerrainBlendRenderer : MonoBehaviour
     private void OnValidate()
     {
         ApplyMode();
-        if (enabledOnce && BuildInputsChanged())
+        if (enabledOnce && Rebuilds.Changed(style, layers, chunkSize, sortingLayerName, sortingOrder))
         {
-            ScheduleRebuild();
+            Rebuilds.Schedule();
         }
-    }
-
-    /// <summary>
-    /// Remembers what the build reads (the style, the layers' tilemaps and materials, the chunk size and the sorting),
-    /// for <see cref="BuildInputsChanged"/>.
-    /// </summary>
-    private void RememberBuildInputs()
-    {
-        builtStyle = style;
-        builtTilemaps.Clear();
-        builtMaterials.Clear();
-        if (layers != null)
-        {
-            foreach (Layer layer in layers)
-            {
-                builtTilemaps.Add(layer?.Tilemap);
-                builtMaterials.Add(layer?.Material);
-            }
-        }
-
-        builtChunkSize = chunkSize;
-        builtSortingLayerName = sortingLayerName;
-        builtSortingOrder = sortingOrder;
-    }
-
-    /// <summary>
-    /// Whether anything the last build read has changed since.
-    /// </summary>
-    private bool BuildInputsChanged()
-    {
-        int count = layers?.Length ?? 0;
-        if (!ReferenceEquals(style, builtStyle) || count != builtTilemaps.Count || chunkSize != builtChunkSize
-            || sortingLayerName != builtSortingLayerName || sortingOrder != builtSortingOrder)
-        {
-            return true;
-        }
-
-        for (int i = 0; i < count; i++)
-        {
-            if (!ReferenceEquals(layers[i]?.Tilemap, builtTilemaps[i]) || !ReferenceEquals(layers[i]?.Material, builtMaterials[i]))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Rebuilds after the editor finishes its current work, once however often asked.
-    /// </summary>
-    private void ScheduleRebuild()
-    {
-        if (rebuildScheduled)
-        {
-            return;
-        }
-
-        rebuildScheduled = true;
-        UnityEditor.EditorApplication.delayCall += RunScheduledRebuild;
     }
 
     /// <summary>
@@ -500,43 +418,17 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// </summary>
     internal void RunScheduledRebuild()
     {
-        if (!rebuildScheduled)
-        {
-            return;
-        }
-
-        rebuildScheduled = false;
-        if (this != null && isActiveAndEnabled)
-        {
-            Rebuild();
-        }
+        Rebuilds.RunScheduled();
     }
 
     /// <summary>
-    /// Has inspector changes to the style and to each layer's material (once per material, however many layers draw
-    /// it) schedule a rebuild.
+    /// Rebuilds unless the renderer has been destroyed or disabled since a rebuild was scheduled.
     /// </summary>
-    private void FollowStyleAndMaterials()
+    private void RebuildIfEnabled()
     {
-        if (style != null)
+        if (this != null && isActiveAndEnabled)
         {
-            subscribedStyle = style;
-            subscribedStyle.Validated += ScheduleRebuild;
-        }
-
-        if (layers == null)
-        {
-            return;
-        }
-
-        foreach (Layer layer in layers)
-        {
-            TerrainMaterial layerMaterial = layer?.Material;
-            if (layerMaterial != null && !subscribedMaterials.Contains(layerMaterial))
-            {
-                subscribedMaterials.Add(layerMaterial);
-                layerMaterial.Validated += ScheduleRebuild;
-            }
+            Rebuild();
         }
     }
 
@@ -549,38 +441,16 @@ public class TerrainBlendRenderer : MonoBehaviour
     {
         if (enabledOnce && isActiveAndEnabled)
         {
-            ScheduleRebuild();
+            Rebuilds.Schedule();
         }
-    }
-
-    /// <summary>
-    /// Stops following the style and the materials.
-    /// </summary>
-    private void StopFollowingStyleAndMaterials()
-    {
-        if (subscribedStyle != null)
-        {
-            subscribedStyle.Validated -= ScheduleRebuild;
-        }
-
-        subscribedStyle = null;
-        foreach (TerrainMaterial subscribed in subscribedMaterials)
-        {
-            if (subscribed != null)
-            {
-                subscribed.Validated -= ScheduleRebuild;
-            }
-        }
-
-        subscribedMaterials.Clear();
     }
 #endif
 
     /// <summary>
     /// Builds the control map, texture arrays, lookup texture, runtime material and chunks; logs what is wrong and
-    /// builds nothing when the style, layers or materials are not usable. In the editor it follows the inspector
-    /// changes of its style and of its layers' materials either way, so fixing one rebuilds a renderer that could not
-    /// build.
+    /// builds nothing when the style, layers or materials are not usable (<see cref="TerrainBlendChecks"/>). In the
+    /// editor it follows the inspector changes of its style and of its layers' materials either way
+    /// (<see cref="TerrainBlendRebuilds"/>), so fixing one rebuilds a renderer that could not build.
     /// </summary>
     private void Build()
     {
@@ -590,10 +460,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        RememberBuildInputs();
-        FollowStyleAndMaterials();
+        Rebuilds.Remember(style, layers, chunkSize, sortingLayerName, sortingOrder);
+        Rebuilds.Follow(style, layers);
 #endif
-        if (!IsUsable())
+        if (!TerrainBlendChecks.IsUsable(this, grid, sortingLayerName))
         {
             return;
         }
@@ -630,6 +500,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         ApplyMode();
         UpdateControlRect();
         UpdateInfo();
+        chunkSet = new TerrainChunkSet(gameObject, grid, chunkSize);
         UpdateChunks();
     }
 
@@ -654,137 +525,6 @@ public class TerrainBlendRenderer : MonoBehaviour
         {
             Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {SoftKeywordName} keyword, so the soft look draws as crisp.", this);
         }
-    }
-
-    /// <summary>
-    /// Returns false without a word for a renderer not configured at all (no style, no layers) outside play mode, as
-    /// right after it is added. Otherwise logs an error for each thing that stops the renderer from drawing (no style
-    /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a graphics device that cannot sample
-    /// the control map's format, a layer without a tilemap, a tilemap listed twice, a layer without a material, a
-    /// material's textures missing or of the wrong size or format, an unknown sorting layer) and returns whether there
-    /// was none; a material several layers draw is checked once.
-    /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
-    /// drawing (the drawing never reads the priority), warns about each layer whose tilemap has an enabled
-    /// <see cref="TilemapRenderer"/>, which would draw its tiles' sprites as well, and warns when the grid is not made
-    /// of unrotated one-unit cells, which the shader assumes.
-    /// </summary>
-    private bool IsUsable()
-    {
-        if (style == null && (layers == null || layers.Length == 0) && !Application.isPlaying)
-        {
-            return false;
-        }
-
-        if (style == null || style.Shader == null)
-        {
-            Debug.LogError($"{name}: {nameof(TerrainBlendRenderer)} needs a terrain style with a shader.", this);
-            return false;
-        }
-
-        if (layers == null || layers.Length == 0 || layers.Length > TerrainControlMap.MaxLayers)
-        {
-            Debug.LogError($"{name}: {nameof(TerrainBlendRenderer)} needs 1 to {TerrainControlMap.MaxLayers} ground layers.", this);
-            return false;
-        }
-
-        if (!TerrainControlMap.IsFormatSupported)
-        {
-            Debug.LogError($"{name}: this graphics device ({SystemInfo.graphicsDeviceType}) cannot sample the R16 control map {nameof(TerrainBlendRenderer)} draws from, so the ground is not drawn.", this);
-            return false;
-        }
-
-        bool usable = true;
-        List<TerrainMaterial> checkedMaterials = new();
-        for (int i = 0; i < layers.Length; i++)
-        {
-            Layer layer = layers[i];
-            int first = LayerIndexOf(layer?.Tilemap);
-            int earlier = first >= 0 && first < i ? first : -1;
-            if (layer == null || layer.Tilemap == null)
-            {
-                Debug.LogError($"{name}: ground layer {i} has no tilemap.", this);
-                usable = false;
-            }
-            else if (earlier >= 0)
-            {
-                Debug.LogError($"{name}: ground layers {earlier} and {i} both list {layer.Tilemap.name}; each tilemap is one layer.", this);
-                usable = false;
-            }
-            else if (layer.Material == null)
-            {
-                Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) has no material.", this);
-                usable = false;
-            }
-            else if (!checkedMaterials.Contains(layer.Material))
-            {
-                checkedMaterials.Add(layer.Material);
-                usable &= HasUsableTextures(layer.Material);
-            }
-
-            NavigationTerrainSource2D source = NavigationSourceOf(i);
-            if (source != null && source.Priority != NavigationPriorityOf(i))
-            {
-                Debug.LogError($"{name}: ground layer {i} ({layer.Tilemap.name}) has navigation priority {source.Priority}, but a ground layer's navigation priority is its place in the layers, its draw order: {NavigationPriorityOf(i)}. Set it from the draw order in the {nameof(TerrainBlendRenderer)} inspector.", this);
-            }
-
-            if (layer != null && layer.Tilemap != null && layer.Tilemap.TryGetComponent(out TilemapRenderer tilemapRenderer) && tilemapRenderer.enabled)
-            {
-                Debug.LogWarning($"{name}: ground layer {i} ({layer.Tilemap.name}) has an enabled Tilemap Renderer, which draws its tiles' sprites (their palette swatches) beside the blended ground. A ground layer is a data tilemap: remove its Tilemap Renderer.", this);
-            }
-        }
-
-        if (!SortingLayer.IsValid(SortingLayer.NameToID(sortingLayerName)))
-        {
-            Debug.LogError($"{name}: there is no sorting layer named {sortingLayerName}.", this);
-            usable = false;
-        }
-
-        if (grid.cellSize.x != 1f || grid.cellSize.y != 1f || grid.cellLayout != GridLayout.CellLayout.Rectangle || grid.transform.rotation != Quaternion.identity)
-        {
-            Debug.LogWarning($"{name}: {nameof(TerrainBlendRenderer)} assumes an unrotated rectangular grid of one-unit cells.", this);
-        }
-
-        return usable;
-    }
-
-    /// <summary>
-    /// Logs an error and returns false when <paramref name="terrainMaterial"/> has no albedo, lacks the cell field its
-    /// cell mode needs, or has a texture (the height included) that is not repeat x 32 px square RGBA32 with sRGB off.
-    /// A material without a height texture is usable: the soft look moves its edges by nothing.
-    /// </summary>
-    private static bool HasUsableTextures(TerrainMaterial terrainMaterial)
-    {
-        if (terrainMaterial.Albedo == null)
-        {
-            Debug.LogError($"Terrain material {terrainMaterial.name} has no albedo texture.", terrainMaterial);
-            return false;
-        }
-
-        if (terrainMaterial.Cells != TerrainMaterial.CellMode.None && terrainMaterial.CellField == null)
-        {
-            Debug.LogError($"Terrain material {terrainMaterial.name} has chips or stones but no cell field texture.", terrainMaterial);
-            return false;
-        }
-
-        return HasUsableFormat(terrainMaterial, terrainMaterial.Albedo)
-            && (terrainMaterial.CellField == null || HasUsableFormat(terrainMaterial, terrainMaterial.CellField))
-            && (terrainMaterial.Height == null || HasUsableFormat(terrainMaterial, terrainMaterial.Height));
-    }
-
-    /// <summary>
-    /// Logs an error and returns false unless <paramref name="texture"/> is the material's repeat x 32 px square and
-    /// RGBA32 with sRGB off, so it can be copied into the arrays as it is.
-    /// </summary>
-    private static bool HasUsableFormat(TerrainMaterial terrainMaterial, Texture2D texture)
-    {
-        int size = terrainMaterial.RepeatPixels;
-        if (texture.width == size && texture.height == size && texture.graphicsFormat == GraphicsFormat.R8G8B8A8_UNorm)
-        {
-            return true;
-        }
-
-        Debug.LogError($"{texture.name} of terrain material {terrainMaterial.name} must be {size} px square (its repeat of {terrainMaterial.RepeatCells} cells) and RGBA32 with sRGB off.", texture);
-        return false;
     }
 
     /// <summary>
@@ -823,126 +563,12 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes the chunks the control map's bounds no longer reach (after an undo shrank them), creates the chunks
-    /// covering the bounds that do not exist yet and fits every chunk's quad to the bounds. Chunks sit on a fixed grid
-    /// of <see cref="chunkSize"/> cells, so growing bounds only add chunks.
+    /// Fits the chunks to the control map's bounds (<see cref="TerrainChunkSet.Fit"/>): removes those the bounds no longer
+    /// reach, as after an undo shrank them, and adds those growing bounds need.
     /// </summary>
     private void UpdateChunks()
     {
-        BoundsInt bounds = controlMap.Bounds;
-        staleChunks.Clear();
-        foreach (KeyValuePair<Vector2Int, Chunk> entry in chunksByKey)
-        {
-            if (controlMap.IsEmpty || !Overlaps(entry.Key, bounds))
-            {
-                staleChunks.Add(entry.Key);
-            }
-        }
-
-        foreach (Vector2Int key in staleChunks)
-        {
-            DestroyChunk(key);
-        }
-
-        if (controlMap.IsEmpty)
-        {
-            return;
-        }
-
-        int sortingLayerId = SortingLayer.NameToID(sortingLayerName);
-        for (int cy = FloorDiv(bounds.yMin, chunkSize); cy <= FloorDiv(bounds.yMax - 1, chunkSize); cy++)
-        {
-            for (int cx = FloorDiv(bounds.xMin, chunkSize); cx <= FloorDiv(bounds.xMax - 1, chunkSize); cx++)
-            {
-                Vector2Int key = new(cx, cy);
-                if (!chunksByKey.TryGetValue(key, out Chunk chunk))
-                {
-                    chunk = CreateChunk(key, sortingLayerId);
-                }
-
-                int xMin = Mathf.Max(cx * chunkSize, bounds.xMin);
-                int yMin = Mathf.Max(cy * chunkSize, bounds.yMin);
-                int xMax = Mathf.Min((cx + 1) * chunkSize, bounds.xMax);
-                int yMax = Mathf.Min((cy + 1) * chunkSize, bounds.yMax);
-                SetQuad(chunk.Mesh, xMin, yMin, xMax, yMax);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Whether the chunk at chunk coordinates <paramref name="key"/> covers any cell of <paramref name="bounds"/>.
-    /// </summary>
-    private bool Overlaps(Vector2Int key, BoundsInt bounds)
-    {
-        return key.x * chunkSize < bounds.xMax && (key.x + 1) * chunkSize > bounds.xMin
-            && key.y * chunkSize < bounds.yMax && (key.y + 1) * chunkSize > bounds.yMin;
-    }
-
-    /// <summary>
-    /// Creates the chunk at chunk coordinates <paramref name="key"/>: a child object, never saved or shown in the
-    /// hierarchy, with a mesh renderer of the runtime material on the sorting layer.
-    /// </summary>
-    private Chunk CreateChunk(Vector2Int key, int sortingLayerId)
-    {
-        string chunkName = $"{name} Terrain Chunk {key.x},{key.y}";
-        Mesh mesh = new() { name = chunkName, hideFlags = HideFlags.DontSave };
-        GameObject chunkObject = new(chunkName) { hideFlags = HideFlags.HideAndDontSave, layer = gameObject.layer };
-        chunkObject.transform.SetParent(transform, false);
-        chunkObject.AddComponent<MeshFilter>().sharedMesh = mesh;
-        MeshRenderer meshRenderer = chunkObject.AddComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = material;
-        meshRenderer.sortingLayerID = sortingLayerId;
-        meshRenderer.sortingOrder = sortingOrder;
-        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = false;
-        meshRenderer.lightProbeUsage = LightProbeUsage.Off;
-        meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        meshRenderer.allowOcclusionWhenDynamic = false;
-        Chunk chunk = new(meshRenderer, mesh);
-        chunksByKey.Add(key, chunk);
-        chunks.Add(meshRenderer);
-        return chunk;
-    }
-
-    /// <summary>
-    /// Destroys the chunk at chunk coordinates <paramref name="key"/>, its object and its mesh.
-    /// </summary>
-    private void DestroyChunk(Vector2Int key)
-    {
-        Chunk chunk = chunksByKey[key];
-        chunksByKey.Remove(key);
-        for (int i = chunks.Count - 1; i >= 0; i--)
-        {
-            if (ReferenceEquals(chunks[i], chunk.Renderer))
-            {
-                chunks.RemoveAt(i);
-            }
-        }
-
-        if (chunk.Renderer != null)
-        {
-            DestroyRuntime(chunk.Renderer.gameObject);
-        }
-
-        DestroyRuntime(chunk.Mesh);
-    }
-
-    /// <summary>
-    /// Makes <paramref name="mesh"/> a quad over the cells from (<paramref name="xMin"/>, <paramref name="yMin"/>) to
-    /// (<paramref name="xMax"/>, <paramref name="yMax"/>), exclusive, in this object's space.
-    /// </summary>
-    private void SetQuad(Mesh mesh, int xMin, int yMin, int xMax, int yMax)
-    {
-        Vector3 min = grid.CellToLocal(new Vector3Int(xMin, yMin, 0));
-        Vector3 max = grid.CellToLocal(new Vector3Int(xMax, yMax, 0));
-        mesh.Clear();
-        mesh.SetVertices(new[] { new Vector3(min.x, min.y, 0f), new Vector3(max.x, min.y, 0f), new Vector3(min.x, max.y, 0f), new Vector3(max.x, max.y, 0f) });
-        mesh.SetNormals(new[] { Vector3.back, Vector3.back, Vector3.back, Vector3.back });
-        mesh.SetTangents(new[] { new Vector4(1f, 0f, 0f, 1f), new Vector4(1f, 0f, 0f, 1f), new Vector4(1f, 0f, 0f, 1f), new Vector4(1f, 0f, 0f, 1f) });
-        mesh.SetColors(new[] { Color.white, Color.white, Color.white, Color.white });
-        mesh.SetUVs(0, new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one });
-        mesh.SetTriangles(new[] { 0, 2, 1, 1, 2, 3 }, 0);
-        mesh.RecalculateBounds();
+        chunkSet.Fit(controlMap.Bounds, controlMap.IsEmpty, material, SortingLayer.NameToID(sortingLayerName), sortingOrder);
     }
 
     /// <summary>
@@ -1066,20 +692,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        StopFollowingStyleAndMaterials();
+        Rebuilds.StopFollowing();
 #endif
-        foreach (Chunk chunk in chunksByKey.Values)
-        {
-            if (chunk.Renderer != null)
-            {
-                DestroyRuntime(chunk.Renderer.gameObject);
-            }
-
-            DestroyRuntime(chunk.Mesh);
-        }
-
-        chunksByKey.Clear();
-        chunks.Clear();
+        chunkSet?.Clear();
+        chunkSet = null;
         controlMap?.Dispose();
         controlMap = null;
         DestroyRuntime(material);
@@ -1114,13 +730,5 @@ public class TerrainBlendRenderer : MonoBehaviour
         {
             DestroyImmediate(target);
         }
-    }
-
-    /// <summary>
-    /// <paramref name="value"/> divided by <paramref name="divisor"/>, rounded down.
-    /// </summary>
-    private static int FloorDiv(int value, int divisor)
-    {
-        return value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor);
     }
 }

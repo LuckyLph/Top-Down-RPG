@@ -20,11 +20,6 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     private const int GritSalt = 11;
     private const int ReflectionSalt = 13;
 
-    private static readonly Vector2Int[] CrackSteps =
-    {
-        new(1, 0), new(1, 1), new(0, 1), new(-1, 1), new(-1, 0), new(-1, -1), new(0, -1), new(1, -1)
-    };
-
     [Header("Mud")]
     [Tooltip("The mud, and the material's base colour.")]
     [SerializeField] private Color32 mud = new(104, 80, 56, 255);
@@ -164,16 +159,7 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
             foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(cracksPerCell), jitter, size))
             {
                 bool keep = random.NextDouble() < crackChance;
-                int[] directions = new int[random.Next(fewest, most + 1)];
-                directions[0] = random.Next(CrackSteps.Length);
-                for (int k = 1; k < directions.Length; k++)
-                {
-                    double turn = random.NextDouble();
-                    directions[k] = turn < crackTurnChance * 0.5 ? (directions[k - 1] + 1) % CrackSteps.Length
-                        : turn < crackTurnChance ? (directions[k - 1] + CrackSteps.Length - 1) % CrackSteps.Length
-                        : directions[k - 1];
-                }
-
+                int[] directions = TerrainArt.CrackDirections(random, fewest, most, crackTurnChance);
                 if (keep)
                 {
                     StampCrack(marks, puddle, size, (int)spotX, (int)spotY, directions);
@@ -275,39 +261,13 @@ public sealed class MudPuddlesRecipe : TerrainMaterialRecipe
     }
 
     /// <summary>
-    /// Marks a crack from (<paramref name="x"/>, <paramref name="y"/>): its first pixel there, each next one a step in
-    /// its own direction of <paramref name="directions"/> (indices into <see cref="CrackSteps"/>), and a lit lip on the
-    /// pixel below and right of every crack pixel that is not itself crack, wrapping across the texture's edges, unless
-    /// any of it lies on a puddle or touches another mark.
+    /// Marks a crack from (<paramref name="x"/>, <paramref name="y"/>) along <paramref name="directions"/>
+    /// (<see cref="TerrainArt.CrackPixels"/>), its groove in the crack colour and a lit lip below and right of it,
+    /// unless any of it lies on a puddle or touches another mark.
     /// </summary>
     private void StampCrack(Color32?[] marks, bool[] puddle, int size, int x, int y, int[] directions)
     {
-        List<int> groove = new();
-        for (int k = 0; k < directions.Length; k++)
-        {
-            if (k > 0)
-            {
-                x += CrackSteps[directions[k]].x;
-                y += CrackSteps[directions[k]].y;
-            }
-
-            int pixel = TerrainArt.Wrap(y, size) * size + TerrainArt.Wrap(x, size);
-            if (!groove.Contains(pixel))
-            {
-                groove.Add(pixel);
-            }
-        }
-
-        List<int> lip = new();
-        foreach (int pixel in groove)
-        {
-            int below = TerrainArt.Wrap(pixel / size - 1, size) * size + TerrainArt.Wrap(pixel % size + 1, size);
-            if (!groove.Contains(below) && !lip.Contains(below))
-            {
-                lip.Add(below);
-            }
-        }
-
+        (List<int> groove, List<int> lip) = TerrainArt.CrackPixels(x, y, directions, size);
         if (!IsClear(marks, puddle, size, groove.ToArray()) || !IsClear(marks, puddle, size, lip.ToArray()))
         {
             return;

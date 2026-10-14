@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
+  m_Name: Ice
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  albedo: {fileID: 2800000, guid: 724d59745ee24f14383b9d16fe38d444, type: 3}
+  cellField: {fileID: 0}
+  height: {fileID: 2800000, guid: b71e473ef5808014c9e6918f1d04bf17, type: 3}
+  repeatCells: 8
+  outerRadius: 14
+  innerRadius: 11
+  cellMode: 0
+  baseColour: {r: 0.6745098, g: 0.83137256, b: 0.9254902, a: 1}
+  keepMargin: 1
+  cutGap: 0.5
+  cutBevel: 18
+  heightScale: 1.5
+  framesPerSecond: 8
+  glintColour: {r: 0.95686275, g: 0.9882353, b: 1, a: 1}
+  glintPeriod: 3.5
+  glintDuty: 0.3
+  sparkleColour: {r: 1, g: 1, b: 1, a: 1}
+  sparklePeriod: 5
+  sparkleDuty: 0.2
+  rimSwell: 0
+  swellPeriod: 4
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  wholeClumps: 0
+  sinkDepth: 0
+  bankShadow: 0.25
+  bankColour: {r: 0.53333336, g: 0.69803923, b: 0.8156863, a: 1}
+  bridge: 0
+  turnToRuns: 0
+  edge:
+    rimWidth: 2
+    rim:
+      serializedVersion: 2
+      key0: {r: 0.8627451, g: 0.93333334, b: 0.98039216, a: 1}
+      key1: {r: 0.7372549, g: 0.87058824, b: 0.9490196, a: 0}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    drawOutline: 1
+    outlineColour: {r: 0.32941177, g: 0.5019608, b: 0.6509804, a: 1}
+    shadowColour: {r: 0.14117648, g: 0.21960784, b: 0.30588236, a: 1}
+    shadowAlpha: 0.3
+    shadowWidth: 1
+    tuftHeight: 0
+    softBandWidth: 0
+    softBandColour: {r: 0.8627451, g: 0.93333334, b: 0.98039216, a: 1}
+    softWholeStones: 0
+    seamless: 0

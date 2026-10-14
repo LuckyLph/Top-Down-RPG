@@ -20,7 +20,9 @@ using Object = UnityEngine.Object;
 /// sway; caustic water's net breathes between two courses, runs sideways when flattened and breaks into ripples
 /// with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
-/// pebbles only when asked (shallows), and without strokes writes only sparkle phases (snow); tufts point up; sand's
+/// pebbles only when asked (shallows), without strokes writes only sparkle phases and with drifts lights them towards
+/// the light (snow), and with cracks draws lines clear of its strokes and with a slant its strokes diagonally (ice);
+/// tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
 /// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
 /// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; planks point
@@ -973,6 +975,199 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
+    /// Pond water has no drifts by default: the darkest tone changes no pixel. With a drift share (the Snow material's),
+    /// about that share of the pixels lies in drifts, in the darkest, darker or lighter tone or the middle one, the rest
+    /// in the middle tone, and the drifts are lit towards the light: from a shaded pixel, a lit one lies up and to the
+    /// left within a few pixels far more often than down and to the right.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_Drifts_AreLitTowardsTheLight_AndOffByDefault()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        TerrainTextures water = recipe.Generate(Seed);
+        Color32 middle = new(200, 200, 200, 255);
+        Color32 darker = new(120, 120, 120, 255);
+        Color32 darkest = new(60, 60, 60, 255);
+        Color32 lighter = new(250, 250, 250, 255);
+        settings.FindProperty("darkest").colorValue = darkest;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(Differences(recipe.Generate(Seed).Albedo, water.Albedo), Is.Zero, "the darkest tone without drifts");
+
+        settings.FindProperty("water").colorValue = middle;
+        settings.FindProperty("darker").colorValue = darker;
+        settings.FindProperty("lighter").colorValue = lighter;
+        settings.FindProperty("driftShare").floatValue = 0.4f;
+        settings.FindProperty("darkerShare").floatValue = 0.4f;
+        settings.FindProperty("darkestShare").floatValue = 0.12f;
+        settings.FindProperty("lighterShare").floatValue = 0.3f;
+        settings.FindProperty("strokeChance").floatValue = 0f;
+        settings.FindProperty("densityAmount").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures drifts = recipe.Generate(Seed);
+
+        int size = drifts.Size;
+        int shaded = 0;
+        int deepest = 0;
+        int lit = 0;
+        int litTowardsLight = 0;
+        int litAwayFromLight = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = drifts.Albedo[y * size + x];
+                Assert.That(SameColour(colour, middle) || SameColour(colour, darker) || SameColour(colour, darkest) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is no tone");
+                lit += SameColour(colour, lighter) ? 1 : 0;
+                deepest += SameColour(colour, darkest) ? 1 : 0;
+                if (!SameColour(colour, darker) && !SameColour(colour, darkest))
+                {
+                    continue;
+                }
+
+                shaded++;
+                litTowardsLight += LitWithin(drifts.Albedo, lighter, x, y, -1, 1, size) ? 1 : 0;
+                litAwayFromLight += LitWithin(drifts.Albedo, lighter, x, y, 1, -1, size) ? 1 : 0;
+            }
+        }
+
+        double pixels = size * size;
+        Assert.That(shaded / pixels, Is.InRange(0.4 * 0.4 - 0.03, 0.4 * 0.4 + 0.03), "shaded share");
+        Assert.That(deepest / pixels, Is.InRange(0.4 * 0.12 - 0.02, 0.4 * 0.12 + 0.02), "darkest share");
+        Assert.That(lit / pixels, Is.InRange(0.4 * 0.3 - 0.03, 0.4 * 0.3 + 0.03), "lit share");
+        Assert.That(litTowardsLight, Is.GreaterThan(3 * litAwayFromLight), "drifts are lit on their side facing the light");
+    }
+
+    /// <summary>
+    /// Whether a pixel of <paramref name="lit"/> lies within 8 diagonal steps of (<paramref name="x"/>,
+    /// <paramref name="y"/>) along (<paramref name="dx"/>, <paramref name="dy"/>).
+    /// </summary>
+    private static bool LitWithin(Color32[] albedo, Color32 lit, int x, int y, int dx, int dy, int size)
+    {
+        for (int step = 1; step <= 8; step++)
+        {
+            if (SameColour(albedo[TerrainArt.Wrap(y + step * dy, size) * size + TerrainArt.Wrap(x + step * dx, size)], lit))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Pond water has no cracks by default: the crack colours change no pixel. With cracks (the Ice material's), every
+    /// crack pixel touches another and the pixel below and right of it is crack or lip, every lip pixel has a crack
+    /// pixel above and left of it, and no crack or lip pixel glints, sparkles or lies within a pixel of a stroke.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_Cracks_AreLinesWithALipBelowAndRight_ClearOfTheStrokesAndSparkles()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 resting = settings.FindProperty("resting").colorValue;
+        TerrainTextures water = recipe.Generate(Seed);
+        Color32 black = new(0, 0, 0, 255);
+        Color32 white = new(255, 255, 255, 255);
+        settings.FindProperty("crack").colorValue = black;
+        settings.FindProperty("crackLip").colorValue = white;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(Differences(recipe.Generate(Seed).Albedo, water.Albedo), Is.Zero, "the crack colours without cracks");
+
+        settings.FindProperty("cracksPerCell").floatValue = 1.5f;
+        settings.FindProperty("crackChance").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures cracked = recipe.Generate(Seed);
+
+        int size = cracked.Size;
+        int cracks = 0;
+        int lips = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = cracked.Albedo[y * size + x];
+                bool crack = SameColour(colour, black);
+                if (!crack && !SameColour(colour, white))
+                {
+                    continue;
+                }
+
+                Assert.That(cracked.Height[y * size + x].b, Is.Zero, $"({x}, {y}) glints or sparkles");
+                bool joined = false;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Color32 near = cracked.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
+                        Assert.That(SameColour(near, resting), Is.False, $"({x}, {y}) touches a stroke");
+                        joined |= (dx != 0 || dy != 0) && SameColour(near, black);
+                    }
+                }
+
+                if (crack)
+                {
+                    cracks++;
+                    Color32 below = cracked.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
+                    Assert.That(SameColour(below, black) || SameColour(below, white), Is.True, $"({x}, {y}) has a lip");
+                    Assert.That(joined, Is.True, $"({x}, {y}) is part of a line");
+                }
+                else
+                {
+                    lips++;
+                    Color32 above = cracked.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
+                    Assert.That(SameColour(above, black), Is.True, $"({x}, {y}) lies below a crack");
+                }
+            }
+        }
+
+        Assert.That(cracks, Is.GreaterThan(50));
+        Assert.That(lips, Is.GreaterThan(25));
+    }
+
+    /// <summary>
+    /// With a slant of 1 (the Ice material's) and no companions, every stroke is a diagonal rising to the right: no
+    /// stroke pixel has another beside it on its row, and each has one up and right or down and left of it.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_SlantedStrokes_RiseDiagonally()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 resting = settings.FindProperty("resting").colorValue;
+        settings.FindProperty("slant").floatValue = 1f;
+        settings.FindProperty("companionChance").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures slanted = recipe.Generate(Seed);
+
+        int size = slanted.Size;
+        int strokePixels = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                if (!SameColour(slanted.Albedo[y * size + x], resting))
+                {
+                    continue;
+                }
+
+                strokePixels++;
+                bool left = SameColour(slanted.Albedo[y * size + TerrainArt.Wrap(x - 1, size)], resting);
+                bool right = SameColour(slanted.Albedo[y * size + TerrainArt.Wrap(x + 1, size)], resting);
+                bool upRight = SameColour(slanted.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x + 1, size)], resting);
+                bool downLeft = SameColour(slanted.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x - 1, size)], resting);
+                Assert.That(left || right, Is.False, $"({x}, {y}) has a stroke pixel beside it on its row");
+                Assert.That(upRight || downLeft, Is.True, $"({x}, {y}) is not on a diagonal");
+            }
+        }
+
+        Assert.That(strokePixels, Is.GreaterThan(20));
+    }
+
+    /// <summary>
     /// How many sparkle pixels in a row lie at and to the left of (<paramref name="x"/>, <paramref name="y"/>).
     /// </summary>
     private static int RunLength(Color32[] height, int x, int y, int size)
@@ -1651,7 +1846,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(13));
+        Assert.That(checkedRecipes, Is.EqualTo(15));
     }
 
     /// <summary>

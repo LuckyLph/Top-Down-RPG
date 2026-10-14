@@ -6,12 +6,20 @@ using UnityEngine;
 /// The maths the terrain material recipes share, on square textures that repeat every <c>size</c> pixels and are
 /// indexed row by row from the bottom, y up, like <see cref="Texture2D.SetPixels32"/>: periodic noise made of whole
 /// waves, jittered seeds on a grid, a hash per pixel, colour shading, wrapped offsets, lighting from the top left as in
-/// the terrain shader, and the height texture's pixels.
+/// the terrain shader, the height texture's pixels, and wandering cracks.
 /// </summary>
 public static class TerrainArt
 {
     public const double LightX = -0.6;
     public const double LightY = 0.8;
+
+    /// <summary>
+    /// The eight steps a crack can take, an eighth of a turn apart, anticlockwise from right.
+    /// </summary>
+    public static readonly Vector2Int[] CrackSteps =
+    {
+        new(1, 0), new(1, 1), new(0, 1), new(-1, 1), new(-1, 0), new(-1, -1), new(0, -1), new(1, -1)
+    };
 
     /// <summary>
     /// Smooth noise that repeats every <paramref name="size"/> pixels: the sum of <paramref name="waves"/>, each a sine
@@ -241,5 +249,63 @@ public static class TerrainArt
     public static byte SparkleByte(double phase)
     {
         return (byte)(128 + Math.Min(127, (int)Math.Floor(Wrap(phase, 1) * 128.0)));
+    }
+
+    /// <summary>
+    /// The directions of a crack of <paramref name="fewest"/> to <paramref name="most"/> pixels, drawn from
+    /// <paramref name="random"/> in order: its length, its first direction (an index into <see cref="CrackSteps"/>),
+    /// then for each next pixel whether it turns an eighth of a turn left or right, each at half of
+    /// <paramref name="turnChance"/>, or goes on.
+    /// </summary>
+    public static int[] CrackDirections(System.Random random, int fewest, int most, double turnChance)
+    {
+        int[] directions = new int[random.Next(fewest, most + 1)];
+        directions[0] = random.Next(CrackSteps.Length);
+        for (int k = 1; k < directions.Length; k++)
+        {
+            double turn = random.NextDouble();
+            directions[k] = turn < turnChance * 0.5 ? (directions[k - 1] + 1) % CrackSteps.Length
+                : turn < turnChance ? (directions[k - 1] + CrackSteps.Length - 1) % CrackSteps.Length
+                : directions[k - 1];
+        }
+
+        return directions;
+    }
+
+    /// <summary>
+    /// A crack from (<paramref name="x"/>, <paramref name="y"/>) on a texture that repeats every
+    /// <paramref name="size"/> pixels: its groove, the first pixel there and each next one a step in its own direction of
+    /// <paramref name="directions"/>, and its lip, the pixel below and right of every groove pixel that is not itself
+    /// groove, as pixel indices, wrapped, each listed once.
+    /// </summary>
+    public static (List<int> Groove, List<int> Lip) CrackPixels(int x, int y, int[] directions, int size)
+    {
+        List<int> groove = new();
+        for (int k = 0; k < directions.Length; k++)
+        {
+            if (k > 0)
+            {
+                x += CrackSteps[directions[k]].x;
+                y += CrackSteps[directions[k]].y;
+            }
+
+            int pixel = Wrap(y, size) * size + Wrap(x, size);
+            if (!groove.Contains(pixel))
+            {
+                groove.Add(pixel);
+            }
+        }
+
+        List<int> lip = new();
+        foreach (int pixel in groove)
+        {
+            int below = Wrap(pixel / size - 1, size) * size + Wrap(pixel % size + 1, size);
+            if (!groove.Contains(below) && !lip.Contains(below))
+            {
+                lip.Add(below);
+            }
+        }
+
+        return (groove, lip);
     }
 }

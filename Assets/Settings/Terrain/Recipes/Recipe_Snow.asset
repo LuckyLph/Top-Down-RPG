@@ -1,0 +1,138 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a52dd248cb786a643895ee7bf5572cc3, type: 3}
+  m_Name: Recipe_Snow
+  m_EditorClassIdentifier: TopDownRPG.Editor::WaterHighlightsRecipe
+  material: {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
+  seed: 20261027
+  repeatCells: 8
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  water:
+    serializedVersion: 2
+    rgba: 4294240996
+  darker:
+    serializedVersion: 2
+    rgba: 4293843660
+  lighter:
+    serializedVersion: 2
+    rgba: 4294834420
+  toneWaves:
+  - x: 1
+    y: 3
+    amplitude: 1
+  - x: 2
+    y: 4
+    amplitude: 0.7
+  - x: -1
+    y: 4
+    amplitude: 0.7
+  - x: 3
+    y: 5
+    amplitude: 0.4
+  - x: -2
+    y: 3
+    amplitude: 0.6
+  - x: 1
+    y: 6
+    amplitude: 0.3
+  - x: 3
+    y: 1
+    amplitude: 0.4
+  darkerShare: 0.4
+  lighterShare: 0.3
+  driftShare: 0.35
+  darkest:
+    serializedVersion: 2
+    rgba: 4293183672
+  darkestShare: 0.12
+  strokesPerCell: 1.6
+  jitter: 0.45
+  strokeChance: 0
+  densityWaves:
+  - x: 1
+    y: 3
+    amplitude: 1
+  - x: 2
+    y: 5
+    amplitude: 0.7
+  - x: -1
+    y: 4
+    amplitude: 0.5
+  densityAmount: 0
+  minLength: 3
+  maxLength: 10
+  bowLength: 17
+  slant: 0
+  companionChance: 0.4
+  resting:
+    serializedVersion: 2
+    rgba: 4289492018
+  highlight:
+    serializedVersion: 2
+    rgba: 4294967295
+  spread: 0.15
+  sparklesPerCell: 1.6
+  sparkleChance: 0.7
+  sparkle:
+    serializedVersion: 2
+    rgba: 4294967295
+  bedShare: 0
+  bed:
+    serializedVersion: 2
+    rgba: 4288978530
+  bedWaves:
+  - x: 2
+    y: 3
+    amplitude: 1
+  - x: 3
+    y: -2
+    amplitude: 0.8
+  - x: -4
+    y: 5
+    amplitude: 0.5
+  - x: 6
+    y: 4
+    amplitude: 0.3
+  pebblesPerCell: 0
+  pebbleChance: 0.5
+  pebble:
+    serializedVersion: 2
+    rgba: 4287394870
+  cracksPerCell: 0
+  crackChance: 0.5
+  minCrackLength: 4
+  maxCrackLength: 10
+  crackTurnChance: 0.3
+  crack:
+    serializedVersion: 2
+    rgba: 4294635746
+  crackLip:
+    serializedVersion: 2
+    rgba: 4291602552

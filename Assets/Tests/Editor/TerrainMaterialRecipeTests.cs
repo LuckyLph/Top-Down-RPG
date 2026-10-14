@@ -1195,6 +1195,7 @@ public class TerrainMaterialRecipeTests
         settings.FindProperty("speckChance").floatValue = 0f;
         settings.FindProperty("clumpsPerCell").floatValue = 1.5f;
         settings.FindProperty("clumpChance").floatValue = 1f;
+        settings.FindProperty("clumpStretch").floatValue = 2f;
         settings.FindProperty("sparklesPerCell").floatValue = 1f;
         settings.ApplyModifiedPropertiesWithoutUndo();
 

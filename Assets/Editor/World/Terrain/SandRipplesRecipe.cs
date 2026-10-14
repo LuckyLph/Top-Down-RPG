@@ -7,8 +7,8 @@ using UnityEngine;
 /// trough under a lit crest, so it reads as a ridge lit from above; ripples run across their direction, whole ripples
 /// across the texture, wobble with smooth waves and fade out where another smooth wave falls below a level, leaving
 /// patches of flat sand. Specks are single pixels on a jittered grid. Two settings, off by default, make snow of it
-/// (Docs/TerrainTypes.md, Phase 7 notes): clumps, small rounded lumps on another jittered grid, lit on the side facing
-/// the light and shaded on the side away from it, with a shadow under that side, kept apart from each other; and
+/// (Docs/TerrainTypes.md, Phase 7 notes): clumps, low rounded bumps on another jittered grid, stretched across the
+/// screen, lit along their edge facing the light and shaded along the edge away from it, kept apart from each other; and
 /// sparkles, pixels off the clumps' shade with a sparkle phase each, which an animated material lights in turn. No cell
 /// field; the base colour is the sand colour, the sparkle colour the sparkles' when there are any, and the height's
 /// per-chip value is 0.5 everywhere.
@@ -60,17 +60,19 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
     [SerializeField] private Color32 darkSpeck = new(150, 122, 82, 255);
     [SerializeField] private Color32 lightSpeck = new(242, 228, 196, 255);
     [Header("Clumps")]
-    [Tooltip("Clump spots along each side of a cell, on a jittered grid; 0 for none. A clump is a small rounded lump, lit from the top left, kept apart from the others.")]
+    [Tooltip("Clump spots along each side of a cell, on a jittered grid; 0 for none. A clump is a low rounded bump in the ground, lit along its edge facing the light (from the top left) and shaded along the edge away from it, kept apart from the others.")]
     [SerializeField, Range(0f, 4f)] private float clumpsPerCell;
     [Tooltip("Chance that a spot holds a clump.")]
     [SerializeField, Range(0f, 1f)] private float clumpChance = 0.5f;
-    [Tooltip("Smallest and largest radius of a clump, in pixels.")]
+    [Tooltip("Smallest and largest height of a clump from its middle, in pixels.")]
     [SerializeField] private Vector2 clumpRadius = new(1.2f, 2.2f);
-    [Tooltip("A clump's pixels facing the light.")]
+    [Tooltip("How many times wider than tall a clump is: 1 for round lumps, more for low bumps lying across the screen.")]
+    [SerializeField, Range(1f, 4f)] private float clumpStretch = 1f;
+    [Tooltip("A clump's edge facing the light.")]
     [SerializeField] private Color32 clumpLit = new(250, 252, 255, 255);
-    [Tooltip("A clump's pixels between its lit and shaded sides.")]
+    [Tooltip("A clump's middle, and its edge between its lit and shaded sides.")]
     [SerializeField] private Color32 clump = new(238, 242, 250, 255);
-    [Tooltip("A clump's pixels facing away from the light, and the shadow under that side.")]
+    [Tooltip("A clump's edge facing away from the light.")]
     [SerializeField] private Color32 clumpShade = new(204, 216, 238, 255);
     [Header("Sparkles")]
     [Tooltip("Sparkle spots along each side of a cell, on a jittered grid; 0 for none. A sparkle is one pixel off the clumps' shade, seen only while it twinkles on an animated material.")]
@@ -173,15 +175,16 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
     }
 
     /// <summary>
-    /// Marks a clump of <paramref name="radius"/> pixels around (<paramref name="x"/>, <paramref name="y"/>): each pixel
-    /// whose centre lies within the radius in the lit, middle or shaded colour by how far it faces the light
-    /// (<see cref="TerrainArt.LightX"/>, <see cref="TerrainArt.LightY"/>), and the pixels just outside it on the side away
-    /// from the light in the shaded colour, its shadow, wrapping across the texture's edges; unless any of them lies on
-    /// or beside another clump.
+    /// Marks a clump around (<paramref name="x"/>, <paramref name="y"/>), an ellipse <paramref name="radius"/> pixels
+    /// tall from its middle and the clump stretch times as wide: each pixel whose centre lies inside it in the middle
+    /// colour, but in its outer half in the lit or shaded colour where it faces the light
+    /// (<see cref="TerrainArt.LightX"/>, <see cref="TerrainArt.LightY"/>) or away from it, wrapping across the texture's
+    /// edges; unless any of them lies on or beside another clump.
     /// </summary>
     private void StampClump(Color32?[] clumps, int size, double x, double y, double radius)
     {
-        int reach = (int)Math.Ceiling(radius) + 1;
+        double width = radius * Math.Max(1f, clumpStretch);
+        int reach = (int)Math.Ceiling(width) + 1;
         List<(int Pixel, Color32 Colour)> pixels = new();
         for (int dy = -reach; dy <= reach; dy++)
         {
@@ -189,18 +192,15 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
             {
                 int px = (int)Math.Floor(x) + dx;
                 int py = (int)Math.Floor(y) + dy;
-                double ox = px + 0.5 - x;
-                double oy = py + 0.5 - y;
-                double distance = Math.Sqrt(ox * ox + oy * oy);
-                double facing = distance > 0.0 ? (ox * TerrainArt.LightX + oy * TerrainArt.LightY) / distance : 1.0;
+                double nx = (px + 0.5 - x) / width;
+                double ny = (py + 0.5 - y) / radius;
+                double distance = Math.Sqrt(nx * nx + ny * ny);
+                double facing = distance > 0.0 ? (nx * TerrainArt.LightX + ny * TerrainArt.LightY) / distance : 1.0;
                 int pixel = TerrainArt.Wrap(py, size) * size + TerrainArt.Wrap(px, size);
-                if (distance <= radius)
+                if (distance <= 1.0)
                 {
-                    pixels.Add((pixel, facing > 0.35 ? clumpLit : facing < -0.35 ? clumpShade : clump));
-                }
-                else if (distance <= radius + 1.0 && facing < -0.5)
-                {
-                    pixels.Add((pixel, clumpShade));
+                    bool rim = distance > 0.5;
+                    pixels.Add((pixel, rim && facing > 0.35 ? clumpLit : rim && facing < -0.35 ? clumpShade : clump));
                 }
             }
         }

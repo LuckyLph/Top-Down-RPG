@@ -117,16 +117,17 @@ MonoBehaviour:
     rgba: 4294966780
   clumpsPerCell: 0.9
   clumpChance: 0.55
-  clumpRadius: {x: 1.5, y: 2.6}
+  clumpRadius: {x: 1.2, y: 2}
+  clumpStretch: 2.2
   clumpLit:
     serializedVersion: 2
-    rgba: 4294966522
+    rgba: 4294834420
   clump:
     serializedVersion: 2
-    rgba: 4294636270
+    rgba: 4294240996
   clumpShade:
     serializedVersion: 2
-    rgba: 4293843662
+    rgba: 4293975764
   sparklesPerCell: 1.4
   sparkleChance: 0.6
   sparkle:

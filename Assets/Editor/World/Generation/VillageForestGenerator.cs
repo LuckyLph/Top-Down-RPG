@@ -6,7 +6,9 @@ using UnityEngine;
 /// Lays out an area that joins three environments inside a ring of forest. A village of cottages faces a stone street
 /// that enters from the map edge, with a paved fountain square, lamp posts, fenced yards and town props. Gravel trails
 /// lead on from the street's end across an open clearing with plants and a few trees, and wind into a dense forest, each
-/// forest trail ending in a glade; near the village the trails are worn into shoulders of dirt. The party spawns on the street; most mobs are in the forest, some in the clearing.
+/// forest trail ending in a glade; near the village the trails are worn into shoulders of dirt. Tall grass grows along
+/// the forest's edge and flower meadows in the clearing. The party spawns on the street; most mobs are in the forest,
+/// some in the clearing.
 /// Blocking props stay off the paths, a clearance beside them and the ground around the spawn and the glades, and every
 /// path, door and mob can be reached from the spawn.
 /// </summary>
@@ -59,9 +61,15 @@ public sealed class VillageForestGenerator : AreaGenerator
     private const int TrailPointStride = 5;
     private const int TrailTargetTries = 24;
     private const float RuledOutRadius = 8f;
+    private const int MinPatchPiece = 4;
+    private const int MeadowCentreClearance = 2;
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Flower meadows on the clearing's open grass.")]
+    [SerializeField] private TerrainLayer meadow = new();
+    [Tooltip("Tall grass along the forest's edge, where it meets the clearing and the village.")]
+    [SerializeField] private TerrainLayer tallGrass = new();
     [Tooltip("Worn earth along the trails near the village.")]
     [SerializeField] private TerrainLayer dirt = new();
     [SerializeField] private TerrainLayer gravel = new();
@@ -107,6 +115,18 @@ public sealed class VillageForestGenerator : AreaGenerator
     [SerializeField, Min(1f)] private float dirtReach = 18f;
     [Tooltip("How far in cells smooth noise moves the dirt's edge in and out.")]
     [SerializeField, Min(0f)] private float dirtWobble = 0.75f;
+
+    [Header("Meadows and tall grass")]
+    [Tooltip("Flower meadows laid on the clearing's open grass, a cell from the paths, the dirt and the tall grass.")]
+    [SerializeField, Min(0)] private int meadowCount = 3;
+    [Tooltip("Smallest and largest radius in cells of a meadow.")]
+    [SerializeField] private Vector2 meadowRadius = new(3.5f, 6f);
+    [Tooltip("Patches of tall grass laid across the forest's edge, where the forest meets the clearing or the village.")]
+    [SerializeField, Min(0)] private int tallGrassCount = 8;
+    [Tooltip("Smallest and largest radius in cells of a tall grass patch.")]
+    [SerializeField] private Vector2 tallGrassRadius = new(2f, 3.5f);
+    [Tooltip("How far in cells from the forest's edge, on either side of it, tall grass may grow.")]
+    [SerializeField, Min(1)] private int tallGrassReach = 3;
 
     [Header("Spawn")]
     [Tooltip("Where along the street the party arrives, from 0 (the map edge) to 1 (the village's inner end).")]
@@ -167,6 +187,11 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float DirtWidth => dirtWidth;
     public float DirtReach => dirtReach;
     public float DirtWobble => dirtWobble;
+    public int MeadowCount => meadowCount;
+    public Vector2 MeadowRadius => meadowRadius;
+    public int TallGrassCount => tallGrassCount;
+    public Vector2 TallGrassRadius => tallGrassRadius;
+    public int TallGrassReach => tallGrassReach;
     public GameObject BuildingPrefab => buildingPrefab;
     public int BuildingCount => buildingCount;
     public int DoorColumn => doorColumn;
@@ -178,11 +203,11 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, dirt, gravel, plaza, then stone, in the style's layer order: each layer is drawn over the ones before it
-    /// and decides its cells, so the trails run over their dirt, the square covers the trails where they meet and the
-    /// street runs over the square.
+    /// Grass, meadow, tall grass, dirt, gravel, plaza, then stone, in the style's layer order: each layer is drawn over
+    /// the ones before it and decides its cells, so the trails run over their dirt, the square covers the trails where
+    /// they meet and the street runs over the square.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, gravel, plaza, stone };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, meadow, tallGrass, dirt, gravel, plaza, stone };
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.
@@ -261,7 +286,8 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// <summary>
         /// Lays the ground and its regions, the street, the spawn, the square, the buildings with their paths and the
         /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; checks what the spawn can
-        /// reach; then lays the dirt along the trails from the detail stream, so it moves nothing laid before it.
+        /// reach; then, from the detail stream, so they move nothing laid before them, lays the dirt along the trails, the
+        /// tall grass along the forest's edge and the meadows in the clearing.
         /// </summary>
         public Generation Build()
         {
@@ -302,7 +328,10 @@ public sealed class VillageForestGenerator : AreaGenerator
 
             PlaceMobs();
             CheckReachability();
+            builder.StartDetailStream();
             LayDirt();
+            LayTallGrass();
+            LayMeadows();
             return new Generation(builder.Layout, regions);
         }
 
@@ -964,7 +993,7 @@ public sealed class VillageForestGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Lays dirt beside the gravel trails near the village, from the detail stream: a grass cell off the paths and
+        /// Lays dirt beside the gravel trails near the village, on the detail stream: a grass cell off the paths and
         /// the lots is dirt when it lies within a trail cell's width, which is the dirt width at the street's end, where
         /// the trails start, and narrows to nothing at the dirt reach from it, moved in and out by smooth noise. Dirt may
         /// run under a prop beside a trail, since grass goes on under it.
@@ -976,7 +1005,6 @@ public sealed class VillageForestGenerator : AreaGenerator
                 return;
             }
 
-            builder.StartDetailStream();
             Vector2 junction = street[street.Count - 1];
             float reach = settings.dirtReach;
             List<Vector2> sources = new();
@@ -1028,6 +1056,95 @@ public sealed class VillageForestGenerator : AreaGenerator
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Lays the tall grass across the forest's edge, on the detail stream after the dirt: the tall grass count of
+        /// wobbly patches of a radius between the two values of the tall grass radius, each centred on a random cell of
+        /// the edge band where tall grass may grow that holds none yet. The edge band is every grass cell with a cell of
+        /// the other side (forest against the clearing or the village) within the tall grass reach (8 neighbours), so a
+        /// patch straddles the edge, under the first trees and out onto the open ground. Tall grass stays a cell from the
+        /// paths, the dirt and the lots and two cells inside the map's edge, so it meets only grass and no third look shows
+        /// under a rounded corner (Docs/TerrainTypes.md, Phase 3's Corners note); pieces of fewer than four cells are
+        /// dropped. Trees and other blocking props stand in it; the walk-through props (plants) on it are removed, since a
+        /// mushroom or a fern drawn over the blades would stand on top of them. Props are only removed, so nothing else
+        /// moves.
+        /// </summary>
+        private void LayTallGrass()
+        {
+            if (settings.tallGrassCount == 0)
+            {
+                return;
+            }
+
+            HashSet<Vector3Int> nearDirt = AreaLayoutBuilder.CellsNear(builder.Layout.TerrainCells(settings.dirt), 1);
+            Predicate<Vector3Int> allowed = cell => IsOnForestEdge(cell, settings.tallGrassReach) && builder.EdgeDistance(cell) > 2
+                && !builder.IsNearPath(cell) && !nearDirt.Contains(cell) && !IsNearLot(cell);
+            HashSet<Vector3Int> tall = builder.Layout.TerrainCells(settings.tallGrass);
+            builder.PaintPatches(tall, settings.tallGrassCount, settings.tallGrassRadius, allowed, 0);
+            builder.RemoveFragments(tall, MinPatchPiece);
+            builder.RemoveProps(tall.Contains, true);
+        }
+
+        /// <summary>
+        /// Whether a cell of the other side of the forest's edge lies within <paramref name="reach"/> steps (8 neighbours)
+        /// of <paramref name="cell"/>: a clearing or village cell for a forest cell, a forest cell for the others.
+        /// </summary>
+        private bool IsOnForestEdge(Vector3Int cell, int reach)
+        {
+            if (!regions.TryGetValue(cell, out Region own))
+            {
+                return false;
+            }
+
+            for (int dy = -reach; dy <= reach; dy++)
+            {
+                for (int dx = -reach; dx <= reach; dx++)
+                {
+                    if (regions.TryGetValue(cell + new Vector3Int(dx, dy, 0), out Region other) && (other == Region.Forest) != (own == Region.Forest))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Lays the meadows, on the detail stream after the tall grass: the meadow count of wobbly patches of a radius
+        /// between the two values of the meadow radius, on the cells where a meadow may lie: clearing cells a cell from the
+        /// paths, the dirt and the tall grass and two cells inside the map's edge, so a meadow meets only grass and no
+        /// third look shows under a rounded corner. Each is centred on a random cell that is no meadow yet with every cell
+        /// within two steps such a cell, so a patch is not cut down to a sliver at once. Pieces of fewer than four cells
+        /// are dropped. Props stand on it as on grass, the plants among the flowers.
+        /// </summary>
+        private void LayMeadows()
+        {
+            HashSet<Vector3Int> meadows = builder.Layout.TerrainCells(settings.meadow);
+            List<Vector3Int> others = new(builder.Layout.TerrainCells(settings.dirt));
+            others.AddRange(builder.Layout.TerrainCells(settings.tallGrass));
+            HashSet<Vector3Int> near = AreaLayoutBuilder.CellsNear(others, 1);
+            Predicate<Vector3Int> allowed = cell => regions.TryGetValue(cell, out Region region) && region == Region.Clearing
+                && builder.EdgeDistance(cell) > 2 && !builder.IsNearPath(cell) && !near.Contains(cell);
+            builder.PaintPatches(meadows, settings.meadowCount, settings.meadowRadius, allowed, MeadowCentreClearance);
+            builder.RemoveFragments(meadows, MinPatchPiece);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="cell"/> or one of its 8 neighbours lies in one of the lots.
+        /// </summary>
+        private bool IsNearLot(Vector3Int cell)
+        {
+            foreach (RectInt lot in lots)
+            {
+                if (cell.x >= lot.xMin - 1 && cell.x <= lot.xMax && cell.y >= lot.yMin - 1 && cell.y <= lot.yMax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

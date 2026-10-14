@@ -24,6 +24,16 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 6856840c93e18284193bcea589f290d6, type: 2}
     terrainType: {fileID: 11400000, guid: 8c8e691577b8ba4489e176f659ef3974, type: 2}
     material: {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
+  meadow:
+    tilemapName: MeadowTilemap
+    tile: {fileID: 11400000, guid: eaf6b764d6bf14b47a58f752144849e7, type: 2}
+    terrainType: {fileID: 11400000, guid: 13e9e3db8be044343b788db2e6f2fa22, type: 2}
+    material: {fileID: 11400000, guid: c1db5ae30d8e6b347918810fecb85dfe, type: 2}
+  tallGrass:
+    tilemapName: TallGrassTilemap
+    tile: {fileID: 11400000, guid: a08c8d2fdd88c6449ab40f68a3d683c5, type: 2}
+    terrainType: {fileID: 11400000, guid: e05707ac7374db84cb8ff3ea397252c2, type: 2}
+    material: {fileID: 11400000, guid: 6531cbe7d6da4924bbc02b4f6abc0ba6, type: 2}
   sand:
     tilemapName: SandTilemap
     tile: {fileID: 11400000, guid: 83e753f40a35db948a5c2da61af65f3a, type: 2}
@@ -79,6 +89,11 @@ MonoBehaviour:
   shoreZoneDepth: 3
   shallowPondCount: 3
   shallowPondRadius: {x: 2, y: 3}
+  meadowCount: 2
+  meadowRadius: {x: 3, y: 5}
+  tallGrassCount: 7
+  tallGrassRadius: {x: 2, y: 3.5}
+  tallGrassReach: 3
   dockWidth: 3
   dockReach: {x: 4, y: 6}
   dockClearance: 2

@@ -486,7 +486,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> paths = PathCells(layout);
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
-            Assert.That(layout.TerrainLayerCount, Is.EqualTo(9));
+            Assert.That(layout.TerrainLayerCount, Is.EqualTo(11));
             Assert.That(water.Overlaps(Cells(layout, "Shallows")), Is.False, $"seed {seed}: the ponds lie off the lake");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
@@ -620,7 +620,7 @@ public class AreaGenerationTests
             }
 
             Assert.That(ponds.Count, Is.InRange(1, lakeside.ShallowPondCount), $"seed {seed}: ponds");
-            Assert.That(CornerProblems(layout), Is.Empty, $"seed {seed}");
+            Assert.That(CornerProblems(layout, "Shallows"), Is.Empty, $"seed {seed}");
         }
     }
 
@@ -948,13 +948,13 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The corners of <paramref name="layout"/> around its shallows where a third look shows under a rounded corner: at
-    /// each cell corner with a shallows cell among its four cells, a layer filling one of the four (with the layers
-    /// above it, as the renderer counts them) is rounded off there, and the next layer down fills that cell's quarter of
-    /// the corner. That is a problem when the next layer fills just one more cell, beside it, so its straight edge runs
-    /// on where the upper layer turns away.
+    /// The corners of <paramref name="layout"/> around the cells of <paramref name="materials"/> where a third look shows
+    /// under a rounded corner: at each cell corner with such a cell among its four cells, a layer filling one of the four
+    /// (with the layers above it, as the renderer counts them) is rounded off there, and the next layer down fills that
+    /// cell's quarter of the corner. That is a problem when the next layer fills just one more cell, beside it, so its
+    /// straight edge runs on where the upper layer turns away.
     /// </summary>
-    private static List<string> CornerProblems(AreaLayout layout)
+    private static List<string> CornerProblems(AreaLayout layout, params string[] materials)
     {
         Dictionary<Vector3Int, int> top = new();
         HashSet<Vector3Int> corners = new();
@@ -966,12 +966,15 @@ public class AreaGenerationTests
             }
         }
 
-        foreach (Vector3Int cell in layout.TerrainCells(layout.IndexOf(ProjectMaterial("Shallows"))))
+        foreach (string material in materials)
         {
-            corners.Add(cell);
-            corners.Add(cell + Vector3Int.right);
-            corners.Add(cell + Vector3Int.up);
-            corners.Add(cell + new Vector3Int(1, 1, 0));
+            foreach (Vector3Int cell in layout.TerrainCells(layout.IndexOf(ProjectMaterial(material))))
+            {
+                corners.Add(cell);
+                corners.Add(cell + Vector3Int.right);
+                corners.Add(cell + Vector3Int.up);
+                corners.Add(cell + new Vector3Int(1, 1, 0));
+            }
         }
 
         List<string> problems = new();
@@ -1320,6 +1323,67 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// On the layers the writer sets up for the Village Forest and the Lakeside, the meadow and tall grass reach
+    /// navigation through their tilemaps' terrain sources, at their draw order's priorities, and are walked like grass:
+    /// every cell of them not under a footprint is walkable and joined to the spawn, and stepping into one with no
+    /// blocked cell around it costs grass's 10.
+    /// </summary>
+    [TestCase(VillageForestGeneratorPath)]
+    [TestCase(LakesideGeneratorPath)]
+    public void TheWriter_LetsTheMeadowsAndTallGrassBeWalkedAtGrasssCost(string generatorPath)
+    {
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        Grid grid = CreateAreaWithDualGridGrass(target);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        AreaLayout layout = target.Generate(1);
+        Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
+        NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
+        navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
+        TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
+        profile.TryGetTraversal(ProjectTerrainType("Grass"), out _, out int grassCost);
+        HashSet<Vector3Int> footprints = Footprints(layout);
+
+        navigation.BuildGrid();
+
+        foreach (string name in new[] { "Meadow", "TallGrass" })
+        {
+            NavigationTerrainSource2D source = grid.transform.Find(Layer(target, name).TilemapName).GetComponent<NavigationTerrainSource2D>();
+            Assert.That(source.TerrainType, Is.SameAs(ProjectTerrainType(name)), name);
+            Assert.That(source.Priority, Is.EqualTo(layout.IndexOf(ProjectMaterial(name))), name);
+            int open = 0;
+            foreach (Vector3Int cell in Cells(layout, name))
+            {
+                if (footprints.Contains(cell))
+                {
+                    continue;
+                }
+
+                Assert.That(navigation.IsCellWalkable(cell, profile), Is.True, $"{name} at {cell}");
+                Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"{name} at {cell} reachable");
+                bool clear = true;
+                foreach (Vector3Int near in CellsWithin(cell, 2))
+                {
+                    clear &= !footprints.Contains(near);
+                }
+
+                if (!clear)
+                {
+                    continue;
+                }
+
+                open++;
+                foreach (Vector3Int side in Sides)
+                {
+                    Assert.That(navigation.MovementCost(cell + side, cell, profile), Is.EqualTo(grassCost), $"stepping into {name} at {cell}");
+                }
+            }
+
+            Assert.That(open, Is.GreaterThan(0), $"{name} cells with nothing blocked around them");
+        }
+    }
+
+    /// <summary>
     /// The writer refuses a generator of 17 layers with an error, changing nothing in the scene, and writes one of
     /// <see cref="TerrainControlMap.MaxLayers"/> (16): a tilemap per layer, drawn by a renderer that builds them all,
     /// each layer's cell holding its own bit alone. The layers reuse the Clearing's grass tile and terrain type under
@@ -1476,10 +1540,10 @@ public class AreaGenerationTests
     /// <summary>
     /// In a Village Forest area whose renderer also draws, above its own layers and out of the shared order, a painted
     /// water layer, a painted sand layer and an empty dry grass layer (none of them the generator's), writing puts every
-    /// layer drawn in the style's layer order: grass, dirt, sand, gravel, plaza, stone, water. The painted layers it
-    /// does not list keep their cells, their materials and their place in that order, the empty one is removed, each
-    /// layer comes at its place among the grid's children with its index as navigation priority, and the renderer then
-    /// builds. The test's own changes go through undo, so the revert in <see cref="TearDown"/> only passes through
+    /// layer drawn in the style's layer order: grass, meadow, tall grass, dirt, sand, gravel, plaza, stone, water. The
+    /// painted layers it does not list keep their cells, their materials and their place in that order, the empty one is
+    /// removed, each layer comes at its place among the grid's children with its index as navigation priority, and the
+    /// renderer then builds. The test's own changes go through undo, so the revert in <see cref="TearDown"/> only passes through
     /// states whose priorities match the draw order.
     /// </summary>
     [Test]
@@ -1497,11 +1561,11 @@ public class AreaGenerationTests
         Tilemap dryGrass = AddDrawnLayer(grid, Layer(lakeside, "DryGrass"), false);
         TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
         Undo.CollapseUndoOperations(added);
-        Assert.That(renderer.Layers.Count, Is.EqualTo(8));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(10));
 
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
 
-        string[] expected = { "Grass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
+        string[] expected = { "Grass", "Meadow", "TallGrass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
         Assert.That(renderer.Layers.Count, Is.EqualTo(expected.Length));
         for (int i = 0; i < expected.Length; i++)
         {
@@ -1512,8 +1576,8 @@ public class AreaGenerationTests
             Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), tilemap.name);
         }
 
-        Assert.That(renderer.Layers[2].Tilemap, Is.SameAs(sand));
-        Assert.That(renderer.Layers[6].Tilemap, Is.SameAs(water));
+        Assert.That(renderer.Layers[4].Tilemap, Is.SameAs(sand));
+        Assert.That(renderer.Layers[8].Tilemap, Is.SameAs(water));
         Assert.That(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), Is.True, "The painted layers keep their cells.");
         Assert.That(dryGrass == null, Is.True, "The empty dry grass layer is removed.");
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
@@ -1526,11 +1590,12 @@ public class AreaGenerationTests
     /// plain ground tile from Assets/Tiles/Ground, its terrain type and the project's material of the name given, drawn
     /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 16, so
     /// the writer and Convert Ground take them: each lists only what it lays, the Clearing dirt for its campsite, the
-    /// Village Forest dirt and the plaza, the Lakeside dry grass among its seven.
+    /// Village Forest the meadow, tall grass, dirt and the plaza, the Lakeside dry grass, the meadow and tall grass among
+    /// its eleven.
     /// </summary>
     [TestCase(ClearingGeneratorPath, "Grass", "Dirt", "Gravel", "Stone")]
-    [TestCase(VillageForestGeneratorPath, "Grass", "Dirt", "Gravel", "Plaza", "Stone")]
-    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
+    [TestCase(VillageForestGeneratorPath, "Grass", "Meadow", "TallGrass", "Dirt", "Gravel", "Plaza", "Stone")]
+    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Meadow", "TallGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1730,11 +1795,11 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For each generator, the terrain it lays from its detail stream at the end (the Clearing's campsite, the Village
-    /// Forest's dirt, the Lakeside's dry grass and shallow ponds) leaves the rest of the layout where it was: generated
-    /// by a copy of the generator with those steps turned off, every other layer, every mob and the spawn are the same,
-    /// and so is every prop, but for the Clearing's campfire and seats and the props they replaced, all of them within
-    /// the campsite's radius plus three cells of the campfire, and the plants the ponds removed, on, beside or just below
-    /// them.
+    /// Forest's dirt, tall grass and meadows, the Lakeside's dry grass, shallow ponds, tall grass and meadows) leaves
+    /// the rest of the layout where it was: generated by a copy of the generator with those steps turned off, every
+    /// other layer, every mob and the spawn are the same, and so is every prop, but for the Clearing's campfire and
+    /// seats and the props they replaced, all of them within the campsite's radius plus three cells of the campfire,
+    /// the plants the ponds removed, on, beside or just below them, and the plants the tall grass removed, on it.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -1744,7 +1809,7 @@ public class AreaGenerationTests
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
         AreaGenerator without = Track(Object.Instantiate(target));
         SerializedObject settings = new(without);
-        string added = "Dirt";
+        string[] added = { "Dirt" };
         if (target is ClearingGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
@@ -1752,12 +1817,17 @@ public class AreaGenerationTests
         else if (target is VillageForestGenerator)
         {
             settings.FindProperty("dirtWidth").floatValue = 0f;
+            settings.FindProperty("tallGrassCount").intValue = 0;
+            settings.FindProperty("meadowCount").intValue = 0;
+            added = new[] { "Dirt", "TallGrass", "Meadow" };
         }
         else
         {
             settings.FindProperty("dryGrassPatchCount").intValue = 0;
             settings.FindProperty("shallowPondCount").intValue = 0;
-            added = "DryGrass";
+            settings.FindProperty("tallGrassCount").intValue = 0;
+            settings.FindProperty("meadowCount").intValue = 0;
+            added = new[] { "DryGrass", "TallGrass", "Meadow" };
         }
 
         settings.ApplyModifiedPropertiesWithoutUndo();
@@ -1765,12 +1835,17 @@ public class AreaGenerationTests
         {
             AreaLayout full = target.Generate(seed);
             AreaLayout plain = without.Generate(seed);
-            int addedIndex = full.IndexOf(ProjectMaterial(added));
+            List<int> addedIndices = new();
+            foreach (string name in added)
+            {
+                addedIndices.Add(full.IndexOf(ProjectMaterial(name)));
+                Assert.That(plain.TerrainCells(addedIndices[addedIndices.Count - 1]), Is.Empty, $"seed {seed}: the {name} step is off");
+            }
+
             int shallowsIndex = full.IndexOf(ProjectMaterial("Shallows"));
-            Assert.That(plain.TerrainCells(addedIndex), Is.Empty, $"seed {seed}: the step is off");
             for (int layer = 0; layer < full.TerrainLayerCount; layer++)
             {
-                if (layer != addedIndex && layer != shallowsIndex)
+                if (!addedIndices.Contains(layer) && layer != shallowsIndex)
                 {
                     Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
                 }
@@ -1793,6 +1868,12 @@ public class AreaGenerationTests
                         campsite.Add(cell);
                     }
                 }
+            }
+
+            int tallGrassIndex = full.IndexOf(ProjectMaterial("TallGrass"));
+            if (tallGrassIndex >= 0)
+            {
+                campsite.UnionWith(full.TerrainCells(tallGrassIndex));
             }
 
             if (shallowsIndex >= 0)
@@ -1825,26 +1906,296 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(kept, Is.GreaterThan(plain.Props.Count - 16), $"seed {seed}: nearly every prop stays");
+            Assert.That(kept, Is.GreaterThan(plain.Props.Count - 24), $"seed {seed}: nearly every prop stays");
         }
     }
 
     /// <summary>
-    /// The Lakeside's shallow ponds, laid last, leave everything laid before them where it was: with the ponds turned
-    /// off, every other layer (the dry grass included), the spawn and every mob are the same, and so is every prop but
-    /// the walk-through props the ponds removed, all of them on, beside or up to three rows below a pond.
+    /// For every Village Forest seed the meadows lie in the clearing and the tall grass across the forest's edge: both
+    /// on grass, in pieces of four cells or more, two cells or more inside the map's edge, a cell or more from every path
+    /// and every dirt cell and from each other, the tall grass off every building and fence and within its reach of the
+    /// other side of the forest's edge (a clearing or village cell for a forest cell, a forest cell for the others), with
+    /// no walk-through prop on it; and around both, no third look shows under a rounded corner (TerrainTypes.md, Phase
+    /// 3's Corners note).
+    /// </summary>
+    [Test]
+    public void VillageForestLayouts_LayMeadowsInTheClearing_AndTallGrassAcrossTheForestsEdge()
+    {
+        int reach = villageForest.TallGrassReach;
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            VillageForestGenerator.Generation generation = VillageForestLayout(seed);
+            AreaLayout layout = generation.Layout;
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> meadow = Cells(layout, "Meadow");
+            HashSet<Vector3Int> tall = Cells(layout, "TallGrass");
+            HashSet<Vector3Int> paths = PathCells(layout);
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            HashSet<Vector3Int> builtOn = new();
+            HashSet<Vector3Int> plants = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    plants.Add(prop.Cell);
+                }
+                else if (prop.Prefab == villageForest.BuildingPrefab || prop.Prefab == villageForest.FencePrefab)
+                {
+                    builtOn.UnionWith(CoveredCells(prop, footprint));
+                }
+            }
+
+            Assert.That(meadow, Is.Not.Empty, $"seed {seed}: meadows");
+            Assert.That(tall, Is.Not.Empty, $"seed {seed}: tall grass");
+            foreach ((HashSet<Vector3Int> cells, HashSet<Vector3Int> other, string name) in new[] { (meadow, tall, "meadow"), (tall, meadow, "tall grass") })
+            {
+                foreach (Vector3Int cell in cells)
+                {
+                    Assert.That(Reachable(cell, cells.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of {name} at {cell}");
+                    foreach (Vector3Int near in CellsWithin(cell, 2))
+                    {
+                        Assert.That(grass.Contains(near), Is.True, $"seed {seed}: {name} at {cell} within two cells of the map's edge");
+                    }
+
+                    foreach (Vector3Int near in CellsWithin(cell, 1))
+                    {
+                        Assert.That(paths.Contains(near) || dirt.Contains(near) || other.Contains(near), Is.False, $"seed {seed}: {name} at {cell} beside {near}");
+                    }
+                }
+            }
+
+            foreach (Vector3Int cell in meadow)
+            {
+                Assert.That(generation.Regions[cell], Is.EqualTo(VillageForestGenerator.Region.Clearing), $"seed {seed}: meadow at {cell} outside the clearing");
+            }
+
+            foreach (Vector3Int cell in tall)
+            {
+                Assert.That(builtOn.Contains(cell), Is.False, $"seed {seed}: tall grass under a building or fence at {cell}");
+                Assert.That(plants.Contains(cell), Is.False, $"seed {seed}: a plant on the tall grass at {cell}");
+                bool forest = generation.Regions[cell] == VillageForestGenerator.Region.Forest;
+                bool edge = false;
+                foreach (Vector3Int near in CellsWithin(cell, reach))
+                {
+                    edge |= generation.Regions.TryGetValue(near, out VillageForestGenerator.Region region) && (region == VillageForestGenerator.Region.Forest) != forest;
+                }
+
+                Assert.That(edge, Is.True, $"seed {seed}: tall grass at {cell} away from the forest's edge");
+            }
+
+            Assert.That(CornerProblems(layout, "Meadow", "TallGrass"), Is.Empty, $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// The Village Forest's tall grass and meadows, laid last on the detail stream, leave everything laid before them
+    /// where it was: with both turned off, every other layer (the dirt included), the spawn and every mob are the same,
+    /// and so is every prop but the walk-through props the tall grass removed, all of them on it.
+    /// </summary>
+    [Test]
+    public void TheVillageForestsMeadowsAndTallGrass_LeaveTheRestOfItsLayoutWhereItWas()
+    {
+        AreaGenerator without = Track(Object.Instantiate(villageForest));
+        SerializedObject settings = new(without);
+        settings.FindProperty("tallGrassCount").intValue = 0;
+        settings.FindProperty("meadowCount").intValue = 0;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        for (int seed = 1; seed <= 5; seed++)
+        {
+            AreaLayout full = VillageForestLayout(seed).Layout;
+            AreaLayout plain = without.Generate(seed);
+            int meadowIndex = full.IndexOf(ProjectMaterial("Meadow"));
+            int tallIndex = full.IndexOf(ProjectMaterial("TallGrass"));
+            HashSet<Vector3Int> tall = full.TerrainCells(tallIndex);
+            Assert.That(plain.TerrainCells(meadowIndex), Is.Empty, $"seed {seed}");
+            Assert.That(plain.TerrainCells(tallIndex), Is.Empty, $"seed {seed}");
+            for (int layer = 0; layer < full.TerrainLayerCount; layer++)
+            {
+                if (layer != meadowIndex && layer != tallIndex)
+                {
+                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                }
+            }
+
+            Assert.That(full.SpawnCell, Is.EqualTo(plain.SpawnCell));
+            Assert.That(full.Mobs.Count, Is.EqualTo(plain.Mobs.Count));
+            for (int i = 0; i < full.Mobs.Count; i++)
+            {
+                Assert.That(full.Mobs[i].Cell, Is.EqualTo(plain.Mobs[i].Cell), $"seed {seed}: mob {i}");
+            }
+
+            foreach (AreaLayout.Prop prop in full.Props)
+            {
+                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+            }
+
+            foreach (AreaLayout.Prop prop in plain.Props)
+            {
+                if (!HasProp(full, prop))
+                {
+                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Assert.That(tall.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// For every Lakeside seed the meadows lie on the open grass inside the band of trees and the tall grass along the
+    /// trees or the marsh: both on grass, in pieces of four cells or more, two cells or more inside the map's edge, a
+    /// cell or more from every other look (water, sand, mud, the paths, dry grass, the ponds and the dock) and from each
+    /// other, the meadows deeper than the band of trees, the tall grass within its reach of that band or of the mud, with
+    /// no walk-through prop on it; and around both, no third look shows under a rounded corner.
+    /// </summary>
+    [Test]
+    public void LakesideLayouts_LayMeadowsOnTheOpenGrass_AndTallGrassAlongTheTreesAndTheMarsh()
+    {
+        int reach = lakeside.TallGrassReach;
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = lakeside.Generate(seed);
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> meadow = Cells(layout, "Meadow");
+            HashSet<Vector3Int> tall = Cells(layout, "TallGrass");
+            HashSet<Vector3Int> mud = Cells(layout, "Mud");
+            HashSet<Vector3Int> others = new();
+            foreach (string name in new[] { "DryGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks" })
+            {
+                others.UnionWith(Cells(layout, name));
+            }
+
+            HashSet<Vector3Int> plants = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
+                {
+                    plants.Add(prop.Cell);
+                }
+            }
+
+            Assert.That(meadow, Is.Not.Empty, $"seed {seed}: meadows");
+            Assert.That(tall, Is.Not.Empty, $"seed {seed}: tall grass");
+            foreach ((HashSet<Vector3Int> cells, HashSet<Vector3Int> other, string name) in new[] { (meadow, tall, "meadow"), (tall, meadow, "tall grass") })
+            {
+                foreach (Vector3Int cell in cells)
+                {
+                    Assert.That(Reachable(cell, cells.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of {name} at {cell}");
+                    foreach (Vector3Int near in CellsWithin(cell, 2))
+                    {
+                        Assert.That(grass.Contains(near), Is.True, $"seed {seed}: {name} at {cell} within two cells of the map's edge");
+                    }
+
+                    foreach (Vector3Int near in CellsWithin(cell, 1))
+                    {
+                        Assert.That(others.Contains(near) || other.Contains(near), Is.False, $"seed {seed}: {name} at {cell} beside {near}");
+                    }
+                }
+            }
+
+            foreach (Vector3Int cell in meadow)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, lakeside.BorderDepth))
+                {
+                    Assert.That(grass.Contains(near), Is.True, $"seed {seed}: meadow at {cell} in the band of trees");
+                }
+            }
+
+            foreach (Vector3Int cell in tall)
+            {
+                Assert.That(plants.Contains(cell), Is.False, $"seed {seed}: a plant on the tall grass at {cell}");
+                bool nearTreesOrMud = false;
+                foreach (Vector3Int near in CellsWithin(cell, lakeside.BorderDepth + reach))
+                {
+                    nearTreesOrMud |= !grass.Contains(near);
+                }
+
+                foreach (Vector3Int near in CellsWithin(cell, reach))
+                {
+                    nearTreesOrMud |= mud.Contains(near);
+                }
+
+                Assert.That(nearTreesOrMud, Is.True, $"seed {seed}: tall grass at {cell} away from the trees and the marsh");
+            }
+
+            Assert.That(CornerProblems(layout, "Meadow", "TallGrass"), Is.Empty, $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// The Lakeside's tall grass and meadows, laid last, leave everything laid before them where it was: with both
+    /// turned off, every other layer, the spawn and every mob are the same, and so is every prop but the walk-through
+    /// props the tall grass removed, all of them on it.
+    /// </summary>
+    [Test]
+    public void TheLakesidesMeadowsAndTallGrass_LeaveTheRestOfItsLayoutWhereItWas()
+    {
+        AreaGenerator without = Track(Object.Instantiate(lakeside));
+        SerializedObject settings = new(without);
+        settings.FindProperty("tallGrassCount").intValue = 0;
+        settings.FindProperty("meadowCount").intValue = 0;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        for (int seed = 1; seed <= 5; seed++)
+        {
+            AreaLayout full = lakeside.Generate(seed);
+            AreaLayout plain = without.Generate(seed);
+            int meadowIndex = full.IndexOf(ProjectMaterial("Meadow"));
+            int tallIndex = full.IndexOf(ProjectMaterial("TallGrass"));
+            HashSet<Vector3Int> tall = full.TerrainCells(tallIndex);
+            Assert.That(plain.TerrainCells(meadowIndex), Is.Empty, $"seed {seed}");
+            Assert.That(plain.TerrainCells(tallIndex), Is.Empty, $"seed {seed}");
+            for (int layer = 0; layer < full.TerrainLayerCount; layer++)
+            {
+                if (layer != meadowIndex && layer != tallIndex)
+                {
+                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                }
+            }
+
+            Assert.That(full.SpawnCell, Is.EqualTo(plain.SpawnCell));
+            Assert.That(full.Mobs.Count, Is.EqualTo(plain.Mobs.Count));
+            for (int i = 0; i < full.Mobs.Count; i++)
+            {
+                Assert.That(full.Mobs[i].Cell, Is.EqualTo(plain.Mobs[i].Cell), $"seed {seed}: mob {i}");
+            }
+
+            foreach (AreaLayout.Prop prop in full.Props)
+            {
+                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+            }
+
+            foreach (AreaLayout.Prop prop in plain.Props)
+            {
+                if (!HasProp(full, prop))
+                {
+                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Assert.That(tall.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The Lakeside's shallow ponds leave everything laid before them where it was: with the ponds turned off (and the
+    /// tall grass and meadows laid after them on the same stream turned off on both sides), every other layer (the dry
+    /// grass included), the spawn and every mob are the same, and so is every prop but the walk-through props the ponds
+    /// removed, all of them on, beside or up to three rows below a pond.
     /// </summary>
     [Test]
     public void TheLakesidesPonds_LeaveTheRestOfItsLayoutWhereItWas()
     {
-        AreaGenerator without = Track(Object.Instantiate(lakeside));
+        AreaGenerator withPonds = Track(Object.Instantiate(lakeside));
+        SerializedObject pondSettings = new(withPonds);
+        pondSettings.FindProperty("tallGrassCount").intValue = 0;
+        pondSettings.FindProperty("meadowCount").intValue = 0;
+        pondSettings.ApplyModifiedPropertiesWithoutUndo();
+        AreaGenerator without = Track(Object.Instantiate(withPonds));
         SerializedObject settings = new(without);
         settings.FindProperty("shallowPondCount").intValue = 0;
         settings.ApplyModifiedPropertiesWithoutUndo();
         int shallowsIndex = lakeside.TerrainLayers.Count - 3;
         for (int seed = 1; seed <= 5; seed++)
         {
-            AreaLayout full = lakeside.Generate(seed);
+            AreaLayout full = withPonds.Generate(seed);
             AreaLayout plain = without.Generate(seed);
             HashSet<Vector3Int> wet = new();
             foreach (Vector3Int cell in Cells(full, "Shallows"))

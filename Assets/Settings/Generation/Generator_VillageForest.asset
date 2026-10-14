@@ -19,6 +19,16 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  meadow:
+    tilemapName: MeadowTilemap
+    tile: {fileID: 11400000, guid: eaf6b764d6bf14b47a58f752144849e7, type: 2}
+    terrainType: {fileID: 11400000, guid: 13e9e3db8be044343b788db2e6f2fa22, type: 2}
+    material: {fileID: 11400000, guid: c1db5ae30d8e6b347918810fecb85dfe, type: 2}
+  tallGrass:
+    tilemapName: TallGrassTilemap
+    tile: {fileID: 11400000, guid: a08c8d2fdd88c6449ab40f68a3d683c5, type: 2}
+    terrainType: {fileID: 11400000, guid: e05707ac7374db84cb8ff3ea397252c2, type: 2}
+    material: {fileID: 11400000, guid: 6531cbe7d6da4924bbc02b4f6abc0ba6, type: 2}
   dirt:
     tilemapName: DirtTilemap
     tile: {fileID: 11400000, guid: 7316d30cada0bdd41b534027dffd83c6, type: 2}
@@ -56,6 +66,11 @@ MonoBehaviour:
   dirtWidth: 2
   dirtReach: 18
   dirtWobble: 0.75
+  meadowCount: 3
+  meadowRadius: {x: 3.5, y: 6}
+  tallGrassCount: 8
+  tallGrassRadius: {x: 2, y: 3.5}
+  tallGrassReach: 3
   spawnAlongStreet: 0.8
   spawnClearRadius: 6
   buildingPrefab: {fileID: 295165022902028204, guid: 5ea89e9c42aca7f4d91eef902a2f4d45, type: 3}

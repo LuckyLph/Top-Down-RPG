@@ -6,10 +6,10 @@ using UnityEngine;
 /// Lays out a lakeside: a grass blob ringed by trees, with a lake in its northern half, a sandy beach on the lake's
 /// southern shore and a muddy marsh around the rest of it, a stone road crossing the south from west to east, a gravel
 /// trail from the road down to the beach, patches of mud and of dry grass on the open grass, small shallow ponds
-/// apart from the lake, and a wooden dock from the trail's end across the beach into the lake. The party spawns on the
-/// road. Blocking props stay off the
-/// water, the beach, the mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the
-/// beach, can be walked to from the spawn.
+/// apart from the lake, a wooden dock from the trail's end across the beach into the lake, tall grass along the trees
+/// and the marsh and flower meadows on the open grass. The party spawns on the road. Blocking props stay off the water,
+/// the beach, the mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the beach,
+/// can be walked to from the spawn.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Lakeside Generator", fileName = "Generator_Lakeside")]
 public sealed class LakesideGenerator : AreaGenerator
@@ -17,6 +17,8 @@ public sealed class LakesideGenerator : AreaGenerator
     private const int LakeSearchMargin = 2;
     private const int MinDryGrassFragment = 4;
     private const int MinPondPiece = 4;
+    private const int MinPatchPiece = 4;
+    private const int MeadowCentreClearance = 2;
 
     /// <summary>
     /// The part of the lakeside a scatter layer fills: the band along its edge, the grass near the lake's shore, or
@@ -44,6 +46,10 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField] private TerrainLayer grass = new();
     [Tooltip("Straw-coloured grass in patches away from the lake, drawn over the grass without an edge.")]
     [SerializeField] private TerrainLayer dryGrass = new();
+    [Tooltip("Flower meadows on the open grass.")]
+    [SerializeField] private TerrainLayer meadow = new();
+    [Tooltip("Tall grass along the trees around the edge and along the marsh.")]
+    [SerializeField] private TerrainLayer tallGrass = new();
     [SerializeField] private TerrainLayer sand = new();
     [SerializeField] private TerrainLayer mud = new();
     [SerializeField] private TerrainLayer gravel = new();
@@ -103,6 +109,18 @@ public sealed class LakesideGenerator : AreaGenerator
     [Tooltip("Smallest and largest radius in cells of a shallow pond.")]
     [SerializeField] private Vector2 shallowPondRadius = new(2f, 3f);
 
+    [Header("Meadows and tall grass")]
+    [Tooltip("Flower meadows laid on the open grass inside the band of trees, a cell from every other look.")]
+    [SerializeField, Min(0)] private int meadowCount = 2;
+    [Tooltip("Smallest and largest radius in cells of a meadow.")]
+    [SerializeField] private Vector2 meadowRadius = new(3f, 5f);
+    [Tooltip("Patches of tall grass laid along the inner edge of the band of trees and around the marsh's mud.")]
+    [SerializeField, Min(0)] private int tallGrassCount = 7;
+    [Tooltip("Smallest and largest radius in cells of a tall grass patch.")]
+    [SerializeField] private Vector2 tallGrassRadius = new(2f, 3.5f);
+    [Tooltip("How far in cells from the band of trees, or from the mud, tall grass may grow.")]
+    [SerializeField, Min(1)] private int tallGrassReach = 3;
+
     [Header("Dock")]
     [Tooltip("Width in cells of the dock that runs on from the trail's end across the beach into the lake.")]
     [SerializeField, Min(1)] private int dockWidth = 3;
@@ -146,6 +164,9 @@ public sealed class LakesideGenerator : AreaGenerator
     public int BorderDepth => borderDepth;
     public int DryGrassPatchCount => dryGrassPatchCount;
     public int ShallowPondCount => shallowPondCount;
+    public int MeadowCount => meadowCount;
+    public int TallGrassCount => tallGrassCount;
+    public int TallGrassReach => tallGrassReach;
     public int DockWidth => dockWidth;
     public Vector2Int DockReach => dockReach;
     public int DockClearance => dockClearance;
@@ -158,11 +179,11 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, dry grass, sand, mud, gravel, stone, shallows, water, then planks, in the style's layer order: each layer
-    /// is drawn over the ones before it and decides its cells, so the road and the trail cross mud and sand, the lake
-    /// covers everything under it and the dock lies over the lake and the beach.
+    /// Grass, dry grass, meadow, tall grass, sand, mud, gravel, stone, shallows, water, then planks, in the style's layer
+    /// order: each layer is drawn over the ones before it and decides its cells, so the road and the trail cross mud and
+    /// sand, the lake covers everything under it and the dock lies over the lake and the beach.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, sand, mud, gravel, stone, shallows, water, planks };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, meadow, tallGrass, sand, mud, gravel, stone, shallows, water, planks };
 
     /// <summary>
     /// Lays out a lakeside from <paramref name="layoutSeed"/>.
@@ -186,6 +207,8 @@ public sealed class LakesideGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> dryGrass;
         private readonly HashSet<Vector3Int> shallows;
         private readonly HashSet<Vector3Int> planks;
+        private readonly HashSet<Vector3Int> meadow;
+        private readonly HashSet<Vector3Int> tallGrass;
         private readonly List<Vector2> road = new();
         private readonly Dictionary<Vector3Int, int> waterDistance = new();
         private readonly float halfWidth;
@@ -206,6 +229,8 @@ public sealed class LakesideGenerator : AreaGenerator
             dryGrass = builder.Layout.TerrainCells(generator.dryGrass);
             shallows = builder.Layout.TerrainCells(generator.shallows);
             planks = builder.Layout.TerrainCells(generator.planks);
+            meadow = builder.Layout.TerrainCells(generator.meadow);
+            tallGrass = builder.Layout.TerrainCells(generator.tallGrass);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
         }
@@ -213,8 +238,8 @@ public sealed class LakesideGenerator : AreaGenerator
         /// <summary>
         /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach and the mud patches, picks
         /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs,
-        /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds and the dock from the detail
-        /// stream, so they move nothing laid before them.
+        /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds, the dock, the tall grass and
+        /// the meadows from the detail stream, so they move nothing laid before them.
         /// </summary>
         public AreaLayout Build()
         {
@@ -244,6 +269,8 @@ public sealed class LakesideGenerator : AreaGenerator
             LayDryGrass();
             LayShallowPonds();
             LayDock();
+            LayTallGrass();
+            LayMeadows();
             return builder.Layout;
         }
 
@@ -276,7 +303,7 @@ public sealed class LakesideGenerator : AreaGenerator
             lakeCentre = new Vector2(builder.Range(-0.2f, 0.2f) * halfWidth, settings.lakeNorth * halfHeight);
             Vector2 halfLake = new(Mathf.Max(3, settings.lakeSize.x) * 0.5f, Mathf.Max(3, settings.lakeSize.y) * 0.5f);
             Predicate<Vector2> contains = builder.WobblyShape(lakeCentre, halfLake, 2.5f, settings.lakeWobble);
-            HashSet<Vector3Int> nearRoad = CellsNear(builder.Stone, settings.roadMargin);
+            HashSet<Vector3Int> nearRoad = AreaLayoutBuilder.CellsNear(builder.Stone, settings.roadMargin);
             List<Vector3Int> inside = new();
             foreach (Vector3Int cell in builder.OrderedGrass)
             {
@@ -502,7 +529,7 @@ public sealed class LakesideGenerator : AreaGenerator
         private void LayDryGrass()
         {
             builder.StartDetailStream();
-            HashSet<Vector3Int> nearMud = CellsNear(mud, 1);
+            HashSet<Vector3Int> nearMud = AreaLayoutBuilder.CellsNear(mud, 1);
             List<Vector3Int> open = new();
             int away = settings.shoreZoneDepth + Mathf.Max(settings.beachWidth, settings.marshWidth) + 2;
             foreach (Vector3Int cell in builder.OrderedGrass)
@@ -518,7 +545,7 @@ public sealed class LakesideGenerator : AreaGenerator
                 PaintPatch(open[builder.Next(open.Count)], settings.dryGrassPatchRadius, dryGrass, cell => !nearMud.Contains(cell) && !builder.IsNearPath(cell) && builder.EdgeDistance(cell) > 2);
             }
 
-            RemoveFragments(dryGrass, MinDryGrassFragment);
+            builder.RemoveFragments(dryGrass, MinDryGrassFragment);
         }
 
         /// <summary>
@@ -548,7 +575,7 @@ public sealed class LakesideGenerator : AreaGenerator
                 blocked.Add(mob.Cell);
             }
 
-            HashSet<Vector3Int> near = CellsNear(blocked, 1);
+            HashSet<Vector3Int> near = AreaLayoutBuilder.CellsNear(blocked, 1);
             Vector3Int spawn = builder.Layout.SpawnCell;
             int clear = settings.spawnClearRadius;
             HashSet<Vector3Int> fits = new();
@@ -565,14 +592,14 @@ public sealed class LakesideGenerator : AreaGenerator
 
             for (int i = 0; i < settings.shallowPondCount && centres.Count > 0; i++)
             {
-                HashSet<Vector3Int> apart = CellsNear(shallows, 2);
+                HashSet<Vector3Int> apart = AreaLayoutBuilder.CellsNear(shallows, 2);
                 PaintPatch(centres[builder.Next(centres.Count)], settings.shallowPondRadius, shallows, cell => fits.Contains(cell) && !apart.Contains(cell));
-                HashSet<Vector3Int> taken = CellsNear(shallows, 2);
+                HashSet<Vector3Int> taken = AreaLayoutBuilder.CellsNear(shallows, 2);
                 centres.RemoveAll(taken.Contains);
             }
 
-            RemoveFragments(shallows, MinPondPiece);
-            HashSet<Vector3Int> wet = CellsNear(shallows, 1);
+            builder.RemoveFragments(shallows, MinPondPiece);
+            HashSet<Vector3Int> wet = AreaLayoutBuilder.CellsNear(shallows, 1);
             foreach (Vector3Int cell in shallows)
             {
                 for (int dy = -3; dy <= -2; dy++)
@@ -634,7 +661,7 @@ public sealed class LakesideGenerator : AreaGenerator
             }
 
             planks.UnionWith(dock);
-            HashSet<Vector3Int> near = CellsNear(planks, 1);
+            HashSet<Vector3Int> near = AreaLayoutBuilder.CellsNear(planks, 1);
             foreach (Vector3Int cell in planks)
             {
                 for (int dy = -3; dy <= -2; dy++)
@@ -785,34 +812,73 @@ public sealed class LakesideGenerator : AreaGenerator
         }
 
         /// <summary>
+        /// Lays the tall grass, last but for the meadows, on the detail stream after the shallow ponds (the dock draws
+        /// nothing from it), so nothing laid before it moves: the tall grass count of wobbly patches of a radius between
+        /// the two values of the tall grass radius, each centred on a random cell where tall grass may grow: within the
+        /// tall grass reach (8 neighbours) of the band of trees along the edge or of the mud, two cells inside the map's
+        /// edge, and a cell from every other look (water, beach, mud, paths, dry grass, the ponds and the dock), so it meets
+        /// only grass and no third look shows under a rounded corner (Docs/TerrainTypes.md, Phase 3's Corners note).
+        /// Pieces of fewer than four cells are dropped. Trees stand in it; the walk-through props (plants) on it are
+        /// removed, since a mushroom or a fern drawn over the blades would stand on top of them.
+        /// </summary>
+        private void LayTallGrass()
+        {
+            if (settings.tallGrassCount == 0)
+            {
+                return;
+            }
+
+            HashSet<Vector3Int> others = OtherLooks();
+            HashSet<Vector3Int> nearOthers = AreaLayoutBuilder.CellsNear(others, 1);
+            HashSet<Vector3Int> nearMud = AreaLayoutBuilder.CellsNear(mud, settings.tallGrassReach);
+            int edge = settings.borderDepth + settings.tallGrassReach;
+            Predicate<Vector3Int> allowed = cell => builder.Grass.Contains(cell) && builder.EdgeDistance(cell) > 2 && !nearOthers.Contains(cell)
+                && (builder.EdgeDistance(cell) <= edge || nearMud.Contains(cell));
+            builder.PaintPatches(tallGrass, settings.tallGrassCount, settings.tallGrassRadius, allowed, 0);
+            builder.RemoveFragments(tallGrass, MinPatchPiece);
+            builder.RemoveProps(tallGrass.Contains, true);
+        }
+
+        /// <summary>
+        /// Lays the meadows, last, on the detail stream after the tall grass: the meadow count of wobbly patches of a
+        /// radius between the two values of the meadow radius, on open grass inside the band of trees a cell from every
+        /// other look (the tall grass included), each centred on a random cell with every cell within two steps such a
+        /// cell, so a patch is not cut down to a sliver at once. A meadow so meets only grass. Pieces of fewer than four
+        /// cells are dropped. Props stand on it as on grass, the plants among the flowers.
+        /// </summary>
+        private void LayMeadows()
+        {
+            HashSet<Vector3Int> others = OtherLooks();
+            others.UnionWith(tallGrass);
+            HashSet<Vector3Int> nearOthers = AreaLayoutBuilder.CellsNear(others, 1);
+            Predicate<Vector3Int> allowed = cell => builder.Grass.Contains(cell) && builder.EdgeDistance(cell) > settings.borderDepth && !nearOthers.Contains(cell);
+            builder.PaintPatches(meadow, settings.meadowCount, settings.meadowRadius, allowed, MeadowCentreClearance);
+            builder.RemoveFragments(meadow, MinPatchPiece);
+        }
+
+        /// <summary>
+        /// Every cell of a look other than the grass laid before the tall grass and the meadows: the water, the beach,
+        /// the mud, the paths, the dry grass, the ponds and the dock.
+        /// </summary>
+        private HashSet<Vector3Int> OtherLooks()
+        {
+            HashSet<Vector3Int> cells = new(water);
+            cells.UnionWith(sand);
+            cells.UnionWith(mud);
+            cells.UnionWith(builder.Gravel);
+            cells.UnionWith(builder.Stone);
+            cells.UnionWith(dryGrass);
+            cells.UnionWith(shallows);
+            cells.UnionWith(planks);
+            return cells;
+        }
+
+        /// <summary>
         /// Whether <paramref name="cell"/> is grass with no dry grass, water, beach, mud or path on it.
         /// </summary>
         private bool IsPlainGrass(Vector3Int cell)
         {
             return IsOpenGrass(cell) && !dryGrass.Contains(cell);
-        }
-
-        /// <summary>
-        /// Removes from <paramref name="cells"/> every 4-connected piece of fewer than <paramref name="smallest"/> cells,
-        /// the scraps a patch leaves where the cells it may not cover cut it short.
-        /// </summary>
-        private void RemoveFragments(HashSet<Vector3Int> cells, int smallest)
-        {
-            HashSet<Vector3Int> seen = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
-            {
-                if (!cells.Contains(cell) || seen.Contains(cell))
-                {
-                    continue;
-                }
-
-                HashSet<Vector3Int> piece = AreaLayoutBuilder.FloodFill(cell, cells.Contains);
-                seen.UnionWith(piece);
-                if (piece.Count < smallest)
-                {
-                    cells.ExceptWith(piece);
-                }
-            }
         }
 
         /// <summary>
@@ -830,22 +896,7 @@ public sealed class LakesideGenerator : AreaGenerator
         /// </summary>
         private void PaintPatch(Vector3Int centre, Vector2 radii, HashSet<Vector3Int> target, Predicate<Vector3Int> allowed)
         {
-            float radius = builder.Range(radii.x, Mathf.Max(radii.x, radii.y));
-            Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
-            Predicate<Vector2> contains = builder.WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.25f);
-            int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
-            for (int dy = -reach; dy <= reach; dy++)
-            {
-                for (int dx = -reach; dx <= reach; dx++)
-                {
-                    Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
-                    bool free = builder.Grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !builder.IsPath(cell);
-                    if (free && allowed(cell) && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
-                    {
-                        target.Add(cell);
-                    }
-                }
-            }
+            builder.PaintPatch(centre, radii, target, cell => !water.Contains(cell) && !sand.Contains(cell) && !builder.IsPath(cell) && allowed(cell));
         }
 
         /// <summary>
@@ -981,26 +1032,6 @@ public sealed class LakesideGenerator : AreaGenerator
         private int WaterDistance(Vector3Int cell)
         {
             return waterDistance.TryGetValue(cell, out int distance) ? distance : int.MaxValue;
-        }
-
-        /// <summary>
-        /// Every cell within <paramref name="steps"/> steps (8 neighbours) of a cell of <paramref name="cells"/>.
-        /// </summary>
-        private static HashSet<Vector3Int> CellsNear(HashSet<Vector3Int> cells, int steps)
-        {
-            HashSet<Vector3Int> near = new();
-            foreach (Vector3Int cell in cells)
-            {
-                for (int dy = -steps; dy <= steps; dy++)
-                {
-                    for (int dx = -steps; dx <= steps; dx++)
-                    {
-                        near.Add(cell + new Vector3Int(dx, dy, 0));
-                    }
-                }
-            }
-
-            return near;
         }
     }
 }

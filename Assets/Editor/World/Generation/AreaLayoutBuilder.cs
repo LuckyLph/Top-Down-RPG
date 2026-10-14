@@ -478,6 +478,118 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// Adds to <paramref name="target"/> the grass cells that pass <paramref name="allowed"/> inside a wobbly disc
+    /// around <paramref name="centre"/>, of a random radius between the two values of <paramref name="radii"/> and four
+    /// fifths as tall as wide.
+    /// </summary>
+    public void PaintPatch(Vector3Int centre, Vector2 radii, HashSet<Vector3Int> target, Predicate<Vector3Int> allowed)
+    {
+        float radius = Range(radii.x, Mathf.Max(radii.x, radii.y));
+        Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
+        Predicate<Vector2> contains = WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.25f);
+        int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
+                if (Grass.Contains(cell) && allowed(cell) && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
+                {
+                    target.Add(cell);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Paints up to <paramref name="count"/> patches (<see cref="PaintPatch"/>) of a radius between the two values of
+    /// <paramref name="radii"/> into <paramref name="target"/>, on the grass cells that pass <paramref name="allowed"/>,
+    /// each centred on a random grass cell, in grass order, that is not in <paramref name="target"/> yet and whose cells
+    /// within <paramref name="centreClearance"/> steps (8 neighbours) all pass <paramref name="allowed"/>, so a patch is
+    /// not cut down to a sliver at once. Stops early when no such cell is left.
+    /// </summary>
+    public void PaintPatches(HashSet<Vector3Int> target, int count, Vector2 radii, Predicate<Vector3Int> allowed, int centreClearance)
+    {
+        List<Vector3Int> centres = new();
+        foreach (Vector3Int cell in orderedGrass)
+        {
+            if (AllWithin(cell, centreClearance, allowed))
+            {
+                centres.Add(cell);
+            }
+        }
+
+        for (int i = 0; i < count && centres.Count > 0; i++)
+        {
+            PaintPatch(centres[Next(centres.Count)], radii, target, allowed);
+            centres.RemoveAll(target.Contains);
+        }
+    }
+
+    /// <summary>
+    /// Whether every cell within <paramref name="steps"/> steps (8 neighbours) of <paramref name="cell"/>, the cell
+    /// included, passes <paramref name="test"/>.
+    /// </summary>
+    public static bool AllWithin(Vector3Int cell, int steps, Predicate<Vector3Int> test)
+    {
+        for (int dy = -steps; dy <= steps; dy++)
+        {
+            for (int dx = -steps; dx <= steps; dx++)
+            {
+                if (!test(cell + new Vector3Int(dx, dy, 0)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Removes from <paramref name="cells"/> every 4-connected piece of fewer than <paramref name="smallest"/> cells,
+    /// the scraps a patch leaves where the cells it may not cover cut it short.
+    /// </summary>
+    public void RemoveFragments(HashSet<Vector3Int> cells, int smallest)
+    {
+        HashSet<Vector3Int> seen = new();
+        foreach (Vector3Int cell in orderedGrass)
+        {
+            if (!cells.Contains(cell) || seen.Contains(cell))
+            {
+                continue;
+            }
+
+            HashSet<Vector3Int> piece = FloodFill(cell, cells.Contains);
+            seen.UnionWith(piece);
+            if (piece.Count < smallest)
+            {
+                cells.ExceptWith(piece);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Every cell within <paramref name="steps"/> steps (8 neighbours) of a cell of <paramref name="cells"/>.
+    /// </summary>
+    public static HashSet<Vector3Int> CellsNear(IEnumerable<Vector3Int> cells, int steps)
+    {
+        HashSet<Vector3Int> near = new();
+        foreach (Vector3Int cell in cells)
+        {
+            for (int dy = -steps; dy <= steps; dy++)
+            {
+                for (int dx = -steps; dx <= steps; dx++)
+                {
+                    near.Add(cell + new Vector3Int(dx, dy, 0));
+                }
+            }
+        }
+
+        return near;
+    }
+
+    /// <summary>
     /// Whether <paramref name="cell"/> or one of its 8 neighbours is a path cell.
     /// </summary>
     public bool IsNearPath(Vector3Int cell)

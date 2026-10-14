@@ -179,8 +179,8 @@ public sealed class PlankBoardsRecipe : TerrainMaterialRecipe
     /// <summary>
     /// For every row of boards, the cell borders its joints lie on (a cell's index for its left border), in order along x
     /// from a random first one: boards of a random length between the shortest and longest, the last one taking what is
-    /// left (never under the shortest, so at times over the longest), and each joint kept off the joints of the row below
-    /// where another draw allows.
+    /// left (never under the shortest, so at times over the longest), and each joint kept off the joints of the two rows
+    /// below where another draw allows.
     /// </summary>
     private List<int>[] LayJoints(System.Random random, int rows, int cells)
     {
@@ -189,7 +189,11 @@ public sealed class PlankBoardsRecipe : TerrainMaterialRecipe
         List<int>[] joints = new List<int>[rows];
         for (int row = 0; row < rows; row++)
         {
-            HashSet<int> below = row > 0 ? new HashSet<int>(joints[row - 1]) : new HashSet<int>();
+            HashSet<int> below = new();
+            for (int back = 1; back <= 2 && row - back >= 0; back++)
+            {
+                below.UnionWith(joints[row - back]);
+            }
             int first = random.Next(cells);
             for (int attempt = 0; attempt < 6 && below.Contains(first); attempt++)
             {

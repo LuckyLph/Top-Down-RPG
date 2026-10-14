@@ -23,7 +23,7 @@ MonoBehaviour:
   keepMargin: -0.5
   cutGap: 0
   cutBevel: 18
-  heightScale: 1
+  heightScale: 0
   framesPerSecond: 0
   glintColour: {r: 1, g: 1, b: 1, a: 1}
   glintPeriod: 3

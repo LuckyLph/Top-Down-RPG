@@ -85,6 +85,7 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float rimSwell;
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swellPeriod = 4f;
+    [Header("Sway")]
     [Tooltip("How many pixels the tips of this material's weeds lean at the top of a gust; 0 for none. A pixel leans by this times its weight in the height texture's blue channel (written by a swaying recipe, the weeds recipe that draws the grass's clumps), which then holds no glints or sparkles. Needs frames per second above 0.")]
     [SerializeField, Range(0f, MaxSwayAmplitude)] private float swayAmplitude;
     [Tooltip("Seconds of one gust, leaning and back.")]

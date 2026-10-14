@@ -146,7 +146,7 @@ public sealed class ClearingGenerator : AreaGenerator
         /// </summary>
         public AreaLayout Build()
         {
-            builder.LayGrass(new Vector2(halfWidth, halfHeight), settings.squareness, settings.edgeWobble);
+            builder.LayGround(new Vector2(halfWidth, halfHeight), settings.squareness, settings.edgeWobble);
             LayRoad();
             LayGravelPaths();
             PlaceSpawn();
@@ -166,15 +166,9 @@ public sealed class ClearingGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Picks, from the detail stream, a campsite centre on interior grass: deeper than the edge band plus the
-        /// campsite's radius, with no path within its radius plus the path clearance, and its radius clear of the
-        /// spawn's disc and of every mob; among those, one of the cells with the fewest blocking-prop cells within its
-        /// radius less half a cell, where the fire and the seats go. The props in that circle and the plants on or beside
-        /// the campsite's wobbly patch of dirt (a plant's sprite stands above its cell, so one just below the patch would
-        /// grow over it) are removed; a tree at the patch's rim stays and stands on the dirt, since grass goes on under
-        /// it. The campfire stands in the middle and the seats on the dirt around it. Props are only
-        /// removed, so nothing else moves and the spawn can still reach everything it could. Warns when no cell
-        /// qualifies.
+        /// Lays the campsite from the detail stream, so it moves nothing laid before it: a campfire and seats on a
+        /// wobbly patch of dirt on interior grass, away from the paths, the spawn and the mobs
+        /// (<see cref="AreaLayoutBuilder.LayCampsite"/>).
         /// </summary>
         private void LayCampsite()
         {
@@ -184,136 +178,8 @@ public sealed class ClearingGenerator : AreaGenerator
             }
 
             builder.StartDetailStream();
-            float radius = settings.campsiteRadius;
-            int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
-            float site = radius - 0.5f;
-            List<Vector3Int> candidates = new();
-            int fewest = int.MaxValue;
-            foreach (Vector3Int cell in builder.OrderedGrass)
-            {
-                if (builder.EdgeDistance(cell) <= settings.borderDepth + radius || IsNear(cell, radius + settings.pathClearance, builder.IsPath)
-                    || Vector3Int.Distance(cell, builder.Layout.SpawnCell) <= settings.spawnClearRadius + radius || !IsAwayFromMobs(cell, radius + 1f))
-                {
-                    continue;
-                }
-
-                int covered = CoveredCellsWithin(cell, site);
-                if (covered < fewest)
-                {
-                    fewest = covered;
-                    candidates.Clear();
-                }
-
-                if (covered == fewest)
-                {
-                    candidates.Add(cell);
-                }
-            }
-
-            if (candidates.Count == 0)
-            {
-                builder.Layout.Warnings.Add("No open ground inside the clearing has room for the campsite.");
-                return;
-            }
-
-            Vector3Int centre = candidates[builder.Next(candidates.Count)];
-            HashSet<Vector3Int> dirt = builder.Layout.TerrainCells(settings.dirt);
-            Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
-            builder.RemoveProps(cell => Vector2.Distance(new Vector2(cell.x + 0.5f, cell.y + 0.5f), middle) <= site, false);
-            Predicate<Vector2> contains = builder.WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.2f);
-            List<Vector3Int> ring = new();
-            for (int dy = -reach; dy <= reach; dy++)
-            {
-                for (int dx = -reach; dx <= reach; dx++)
-                {
-                    Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
-                    Vector2 cellCentre = new(cell.x + 0.5f, cell.y + 0.5f);
-                    if (builder.Grass.Contains(cell) && !builder.IsPath(cell) && contains(cellCentre))
-                    {
-                        dirt.Add(cell);
-                        float distance = Vector2.Distance(cellCentre, middle);
-                        if (distance >= 1.5f && distance <= radius - 0.5f)
-                        {
-                            ring.Add(cell);
-                        }
-                    }
-                }
-            }
-
-            builder.RemoveProps(cell => IsNear(cell, 1f, dirt.Contains), true);
-            if (!PropGridSnapping.TryGetFootprint(settings.campfirePrefab, out Rect footprint))
-            {
-                builder.Layout.Warnings.Add("The campfire prefab has no footprint; no campfire was placed.");
-                return;
-            }
-
-            Vector2Int fire = PropGridSnapping.CellsCovered(footprint, Vector2.one);
-            if (!builder.TryPlaceFootprint(settings.campfirePrefab, new Vector3Int(centre.x - (fire.x - 1) / 2, centre.y, 0)))
-            {
-                builder.Layout.Warnings.Add("The campfire did not fit on its campsite.");
-                return;
-            }
-
-            builder.ScatterProps(settings.campsiteSeats, settings.seatCount, settings.seatSpacing, ring);
-        }
-
-        /// <summary>
-        /// Whether a cell within <paramref name="steps"/> steps (8 neighbours) of <paramref name="cell"/> passes
-        /// <paramref name="test"/>.
-        /// </summary>
-        private static bool IsNear(Vector3Int cell, float steps, Predicate<Vector3Int> test)
-        {
-            int reach = Mathf.CeilToInt(steps);
-            for (int dy = -reach; dy <= reach; dy++)
-            {
-                for (int dx = -reach; dx <= reach; dx++)
-                {
-                    if (test(cell + new Vector3Int(dx, dy, 0)))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// How many cells covered by a blocking prop have their centre within <paramref name="distance"/> of
-        /// <paramref name="cell"/>'s centre.
-        /// </summary>
-        private int CoveredCellsWithin(Vector3Int cell, float distance)
-        {
-            int reach = Mathf.CeilToInt(distance);
-            int count = 0;
-            for (int dy = -reach; dy <= reach; dy++)
-            {
-                for (int dx = -reach; dx <= reach; dx++)
-                {
-                    if (dx * dx + dy * dy <= distance * distance && builder.Occupied.Contains(cell + new Vector3Int(dx, dy, 0)))
-                    {
-                        count++;
-                    }
-                }
-            }
-
-            return count;
-        }
-
-        /// <summary>
-        /// Whether every mob spawn lies more than <paramref name="distance"/> from <paramref name="cell"/>.
-        /// </summary>
-        private bool IsAwayFromMobs(Vector3Int cell, float distance)
-        {
-            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
-            {
-                if (Vector3Int.Distance(cell, mob.Cell) <= distance)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
+            builder.LayCampsite(campsite, builder.Layout.TerrainCells(settings.dirt), settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => true);
         }
 
         /// <summary>
@@ -376,7 +242,7 @@ public sealed class ClearingGenerator : AreaGenerator
         private void ScatterProps(Scatter scatter)
         {
             List<Vector3Int> candidates = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 bool inBorder = builder.EdgeDistance(cell) <= settings.borderDepth;
                 if (inBorder == (scatter.Zone == Zone.Border))

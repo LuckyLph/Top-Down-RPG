@@ -5,8 +5,9 @@ using Random = System.Random;
 
 /// <summary>
 /// The shared state and steps of one generation, used by the generators' runs: the seeded random source, the layout
-/// being filled with its grass, gravel and stone cells (its other layers are the generators' own to fill, through
-/// <see cref="AreaLayout.TerrainCells(AreaGenerator.TerrainLayer)"/>), how deep each grass cell lies inside the edge,
+/// being filled with its ground (the base layer every other one lies on: grass, or the snowfield's snow), gravel and
+/// stone cells (its other layers are the generators' own to fill, through
+/// <see cref="AreaLayout.TerrainCells(AreaGenerator.TerrainLayer)"/>), how deep each ground cell lies inside the edge,
 /// and which cells are kept free of blocking props, covered by one, or hold a walk-through prop. Layers are found by the
 /// generator's own layer objects, never by a fixed index, since each generator lists only the layers it uses.
 /// Iteration always goes through ordered lists, never hash sets, so a seed gives the same layout every time. Terrain
@@ -23,24 +24,50 @@ internal sealed class AreaLayoutBuilder
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
 
+    /// <summary>
+    /// A campsite's settings for <see cref="LayCampsite"/>: the campfire in its middle, the seats around it, how many
+    /// and how far apart, and the radius of its patch of dirt.
+    /// </summary>
+    public sealed class Campsite
+    {
+        /// <summary>
+        /// A campsite of <paramref name="campfire"/> and <paramref name="seatCount"/> of <paramref name="seats"/>,
+        /// <paramref name="seatSpacing"/> apart, on dirt of <paramref name="radius"/>.
+        /// </summary>
+        public Campsite(GameObject campfire, IReadOnlyList<GameObject> seats, int seatCount, float seatSpacing, float radius)
+        {
+            Campfire = campfire;
+            Seats = seats;
+            SeatCount = seatCount;
+            SeatSpacing = seatSpacing;
+            Radius = radius;
+        }
+
+        public GameObject Campfire { get; }
+        public IReadOnlyList<GameObject> Seats { get; }
+        public int SeatCount { get; }
+        public float SeatSpacing { get; }
+        public float Radius { get; }
+    }
+
     private readonly int seed;
     private readonly List<HashSet<Vector3Int>> otherPaths = new();
     private Random random;
-    private readonly List<Vector3Int> orderedGrass = new();
+    private readonly List<Vector3Int> orderedGround = new();
     private readonly Dictionary<Vector3Int, int> edgeDistance = new();
 
     /// <summary>
     /// Prepares an empty layout of <paramref name="layers"/>, a generator's terrain layers, whose
-    /// <paramref name="grass"/>, <paramref name="gravel"/> and <paramref name="stone"/> layers the shared steps lay, and
+    /// <paramref name="ground"/>, <paramref name="gravel"/> and <paramref name="stone"/> layers the shared steps lay, and
     /// a random source seeded with <paramref name="seed"/>. The cells of <paramref name="otherPaths"/> (the Village
     /// Forest's plaza) count as paths too, like gravel and stone.
     /// </summary>
-    public AreaLayoutBuilder(int seed, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer grass, AreaGenerator.TerrainLayer gravel, AreaGenerator.TerrainLayer stone, params AreaGenerator.TerrainLayer[] otherPaths)
+    public AreaLayoutBuilder(int seed, IReadOnlyList<AreaGenerator.TerrainLayer> layers, AreaGenerator.TerrainLayer ground, AreaGenerator.TerrainLayer gravel, AreaGenerator.TerrainLayer stone, params AreaGenerator.TerrainLayer[] otherPaths)
     {
         this.seed = seed;
         random = new Random(seed);
         Layout = new AreaLayout(layers);
-        Grass = Layout.TerrainCells(grass);
+        Ground = Layout.TerrainCells(ground);
         Gravel = Layout.TerrainCells(gravel);
         Stone = Layout.TerrainCells(stone);
         foreach (AreaGenerator.TerrainLayer layer in otherPaths)
@@ -50,14 +77,17 @@ internal sealed class AreaLayoutBuilder
     }
 
     public AreaLayout Layout { get; }
-    public HashSet<Vector3Int> Grass { get; }
+    /// <summary>
+    /// The ground: the base layer the area's outline is laid in, which every other layer lies on.
+    /// </summary>
+    public HashSet<Vector3Int> Ground { get; }
     public HashSet<Vector3Int> Gravel { get; }
     public HashSet<Vector3Int> Stone { get; }
 
     /// <summary>
-    /// The grass cells in the order they were laid, rows from the bottom and cells from the left.
+    /// The ground cells in the order they were laid, rows from the bottom and cells from the left.
     /// </summary>
-    public IReadOnlyList<Vector3Int> OrderedGrass => orderedGrass;
+    public IReadOnlyList<Vector3Int> OrderedGround => orderedGround;
 
     /// <summary>
     /// Cells kept free of blocking props.
@@ -86,11 +116,11 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Lays the grass inside a superellipse of <paramref name="halfSize"/> around the origin whose radius wobbles by up
+    /// Lays the ground inside a superellipse of <paramref name="halfSize"/> around the origin whose radius wobbles by up
     /// to <paramref name="edgeWobble"/> (<see cref="WobblyShape"/>), keeps only its largest 4-connected region, and
-    /// records how deep every grass cell lies inside the edge.
+    /// records how deep every ground cell lies inside the edge.
     /// </summary>
-    public void LayGrass(Vector2 halfSize, float squareness, float edgeWobble)
+    public void LayGround(Vector2 halfSize, float squareness, float edgeWobble)
     {
         Predicate<Vector2> contains = WobblyShape(Vector2.zero, halfSize, squareness, edgeWobble);
         int reachX = Mathf.CeilToInt(halfSize.x * (1f + edgeWobble)) + 1;
@@ -145,8 +175,8 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// How many steps (8 neighbours) <paramref name="cell"/> is from the nearest cell without grass: 1 on the edge,
-    /// growing inwards, and 0 off the grass.
+    /// How many steps (8 neighbours) <paramref name="cell"/> is from the nearest cell without ground: 1 on the edge,
+    /// growing inwards, and 0 off the ground.
     /// </summary>
     public int EdgeDistance(Vector3Int cell)
     {
@@ -154,7 +184,7 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Adds to <paramref name="target"/> every grass cell whose centre lies within half of <paramref name="width"/> of a
+    /// Adds to <paramref name="target"/> every ground cell whose centre lies within half of <paramref name="width"/> of a
     /// sample, so the band is never narrower than the width.
     /// </summary>
     public void Paint(List<Vector2> samples, int width, HashSet<Vector3Int> target)
@@ -170,7 +200,7 @@ internal sealed class AreaLayoutBuilder
                 {
                     Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
                     Vector2 cellCentre = new(cell.x + 0.5f, cell.y + 0.5f);
-                    if ((cellCentre - sample).sqrMagnitude <= radius * radius && Grass.Contains(cell))
+                    if ((cellCentre - sample).sqrMagnitude <= radius * radius && Ground.Contains(cell))
                     {
                         target.Add(cell);
                     }
@@ -180,8 +210,8 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Puts the party spawn on the first of <paramref name="preferred"/> whose cell has grass all around it for
-    /// <paramref name="clearRadius"/> cells; falls back to the grass cell furthest from the edge, with a warning, when
+    /// Puts the party spawn on the first of <paramref name="preferred"/> whose cell has ground all around it for
+    /// <paramref name="clearRadius"/> cells; falls back to the ground cell furthest from the edge, with a warning, when
     /// none has.
     /// </summary>
     public void PlaceSpawn(IReadOnlyList<Vector2> preferred, int clearRadius)
@@ -197,8 +227,8 @@ internal sealed class AreaLayoutBuilder
             }
         }
 
-        Vector3Int deepest = orderedGrass.Count > 0 ? orderedGrass[0] : Vector3Int.zero;
-        foreach (Vector3Int cell in orderedGrass)
+        Vector3Int deepest = orderedGround.Count > 0 ? orderedGround[0] : Vector3Int.zero;
+        foreach (Vector3Int cell in orderedGround)
         {
             if (edgeDistance[cell] > edgeDistance[deepest])
             {
@@ -207,7 +237,7 @@ internal sealed class AreaLayoutBuilder
         }
 
         Layout.SpawnCell = deepest;
-        Layout.Warnings.Add($"No path cell has {clearRadius} cells of grass around it; the spawn is at the deepest grass cell.");
+        Layout.Warnings.Add($"No path cell has {clearRadius} cells of ground around it; the spawn is at the deepest ground cell.");
     }
 
     /// <summary>
@@ -215,7 +245,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public void ReservePathClearance(int clearance)
     {
-        foreach (Vector3Int cell in orderedGrass)
+        foreach (Vector3Int cell in orderedGround)
         {
             if (IsPath(cell))
             {
@@ -303,7 +333,7 @@ internal sealed class AreaLayoutBuilder
 
     /// <summary>
     /// Places the blocking <paramref name="prefab"/> with its footprint's bottom-left cell on <paramref name="corner"/>
-    /// when every cell it covers is free grass. Returns whether it was placed.
+    /// when every cell it covers is free ground. Returns whether it was placed.
     /// </summary>
     public bool TryPlaceFootprint(GameObject prefab, Vector3Int corner)
     {
@@ -323,7 +353,7 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Whether every cell of the <paramref name="covered"/> block from <paramref name="corner"/> is grass that is not
+    /// Whether every cell of the <paramref name="covered"/> block from <paramref name="corner"/> is ground that is not
     /// reserved, covered or decorated.
     /// </summary>
     public bool IsFree(Vector3Int corner, Vector2Int covered)
@@ -333,7 +363,7 @@ internal sealed class AreaLayoutBuilder
             for (int dx = 0; dx < covered.x; dx++)
             {
                 Vector3Int part = corner + new Vector3Int(dx, dy, 0);
-                if (!Grass.Contains(part) || Reserved.Contains(part) || Occupied.Contains(part) || Decorated.Contains(part))
+                if (!Ground.Contains(part) || Reserved.Contains(part) || Occupied.Contains(part) || Decorated.Contains(part))
                 {
                     return false;
                 }
@@ -348,18 +378,18 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public HashSet<Vector3Int> ReachableFromSpawn()
     {
-        return FloodFill(Layout.SpawnCell, cell => Grass.Contains(cell) && !Occupied.Contains(cell));
+        return FloodFill(Layout.SpawnCell, cell => Ground.Contains(cell) && !Occupied.Contains(cell));
     }
 
     /// <summary>
-    /// The cells of <paramref name="reachable"/>, in grass order, where a mob may spawn: deeper inside the edge than
+    /// The cells of <paramref name="reachable"/>, in ground order, where a mob may spawn: deeper inside the edge than
     /// <paramref name="borderDepth"/>, not next to a blocking prop, and at least <paramref name="distanceFromSpawn"/>
     /// from the spawn.
     /// </summary>
     public List<Vector3Int> MobCells(HashSet<Vector3Int> reachable, int borderDepth, float distanceFromSpawn)
     {
         List<Vector3Int> cells = new();
-        foreach (Vector3Int cell in orderedGrass)
+        foreach (Vector3Int cell in orderedGround)
         {
             if (reachable.Contains(cell) && edgeDistance[cell] > borderDepth && !TouchesProp(cell)
                 && Vector3Int.Distance(cell, Layout.SpawnCell) >= distanceFromSpawn)
@@ -478,7 +508,7 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Adds to <paramref name="target"/> the grass cells that pass <paramref name="allowed"/> inside a wobbly disc
+    /// Adds to <paramref name="target"/> the ground cells that pass <paramref name="allowed"/> inside a wobbly disc
     /// around <paramref name="centre"/>, of a random radius between the two values of <paramref name="radii"/> and four
     /// fifths as tall as wide.
     /// </summary>
@@ -493,7 +523,7 @@ internal sealed class AreaLayoutBuilder
             for (int dx = -reach; dx <= reach; dx++)
             {
                 Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
-                if (Grass.Contains(cell) && allowed(cell) && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
+                if (Ground.Contains(cell) && allowed(cell) && contains(new Vector2(cell.x + 0.5f, cell.y + 0.5f)))
                 {
                     target.Add(cell);
                 }
@@ -503,15 +533,15 @@ internal sealed class AreaLayoutBuilder
 
     /// <summary>
     /// Paints up to <paramref name="count"/> patches (<see cref="PaintPatch"/>) of a radius between the two values of
-    /// <paramref name="radii"/> into <paramref name="target"/>, on the grass cells that pass <paramref name="allowed"/>,
-    /// each centred on a random grass cell, in grass order, that is not in <paramref name="target"/> yet and whose cells
+    /// <paramref name="radii"/> into <paramref name="target"/>, on the ground cells that pass <paramref name="allowed"/>,
+    /// each centred on a random ground cell, in ground order, that is not in <paramref name="target"/> yet and whose cells
     /// within <paramref name="centreClearance"/> steps (8 neighbours) all pass <paramref name="allowed"/>, so a patch is
     /// not cut down to a sliver at once. Stops early when no such cell is left.
     /// </summary>
     public void PaintPatches(HashSet<Vector3Int> target, int count, Vector2 radii, Predicate<Vector3Int> allowed, int centreClearance)
     {
         List<Vector3Int> centres = new();
-        foreach (Vector3Int cell in orderedGrass)
+        foreach (Vector3Int cell in orderedGround)
         {
             if (AllWithin(cell, centreClearance, allowed))
             {
@@ -553,7 +583,7 @@ internal sealed class AreaLayoutBuilder
     public void RemoveFragments(HashSet<Vector3Int> cells, int smallest)
     {
         HashSet<Vector3Int> seen = new();
-        foreach (Vector3Int cell in orderedGrass)
+        foreach (Vector3Int cell in orderedGround)
         {
             if (!cells.Contains(cell) || seen.Contains(cell))
             {
@@ -625,6 +655,94 @@ internal sealed class AreaLayoutBuilder
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Picks a campsite centre on interior ground that passes <paramref name="allowed"/>: deeper than
+    /// <paramref name="borderDepth"/> plus the campsite's radius, with no path within its radius plus
+    /// <paramref name="pathClearance"/>, and its radius clear of the spawn's disc of <paramref name="spawnClearRadius"/>
+    /// and of every mob; among those, one of the cells with the fewest blocking-prop cells within its radius less half a
+    /// cell, where the fire and the seats go. The props in that circle and the plants on or beside the campsite's wobbly
+    /// patch of dirt, added to <paramref name="dirt"/> (a plant's sprite stands above its cell, so one just below the
+    /// patch would grow over it), are removed; a tree at the patch's rim stays and stands on the dirt, since the ground
+    /// goes on under it. The campfire stands in the middle and the seats on the dirt around it. Props are only removed,
+    /// so nothing else moves and the spawn can still reach everything it could. Draws from the current stream (a
+    /// generator calls <see cref="StartDetailStream"/> first). Warns and returns false when no cell qualifies or the
+    /// campfire does not fit.
+    /// </summary>
+    public bool LayCampsite(Campsite campsite, HashSet<Vector3Int> dirt, int borderDepth, int pathClearance, int spawnClearRadius, Predicate<Vector3Int> allowed)
+    {
+        float radius = campsite.Radius;
+        int reach = Mathf.CeilToInt(radius * 1.3f) + 1;
+        float site = radius - 0.5f;
+        List<Vector3Int> candidates = new();
+        int fewest = int.MaxValue;
+        foreach (Vector3Int cell in orderedGround)
+        {
+            if (EdgeDistance(cell) <= borderDepth + radius || IsWithin(cell, radius + pathClearance, IsPath)
+                || Vector3Int.Distance(cell, Layout.SpawnCell) <= spawnClearRadius + radius || !IsAwayFromMobs(cell, radius + 1f) || !allowed(cell))
+            {
+                continue;
+            }
+
+            int covered = CoveredCellsWithin(cell, site);
+            if (covered < fewest)
+            {
+                fewest = covered;
+                candidates.Clear();
+            }
+
+            if (covered == fewest)
+            {
+                candidates.Add(cell);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            Layout.Warnings.Add("No open ground has room for the campsite.");
+            return false;
+        }
+
+        Vector3Int centre = candidates[Next(candidates.Count)];
+        Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
+        RemoveProps(cell => Vector2.Distance(new Vector2(cell.x + 0.5f, cell.y + 0.5f), middle) <= site, false);
+        Predicate<Vector2> contains = WobblyShape(middle, new Vector2(radius, radius * 0.8f), 2f, 0.2f);
+        List<Vector3Int> ring = new();
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                Vector3Int cell = centre + new Vector3Int(dx, dy, 0);
+                Vector2 cellCentre = new(cell.x + 0.5f, cell.y + 0.5f);
+                if (Ground.Contains(cell) && !IsPath(cell) && contains(cellCentre))
+                {
+                    dirt.Add(cell);
+                    float distance = Vector2.Distance(cellCentre, middle);
+                    if (distance >= 1.5f && distance <= radius - 0.5f)
+                    {
+                        ring.Add(cell);
+                    }
+                }
+            }
+        }
+
+        RemoveProps(cell => IsWithin(cell, 1f, dirt.Contains), true);
+        if (!PropGridSnapping.TryGetFootprint(campsite.Campfire, out Rect footprint))
+        {
+            Layout.Warnings.Add("The campfire prefab has no footprint; no campfire was placed.");
+            return false;
+        }
+
+        Vector2Int fire = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+        if (!TryPlaceFootprint(campsite.Campfire, new Vector3Int(centre.x - (fire.x - 1) / 2, centre.y, 0)))
+        {
+            Layout.Warnings.Add("The campfire did not fit on its campsite.");
+            return false;
+        }
+
+        ScatterProps(campsite.Seats, campsite.SeatCount, campsite.SeatSpacing, ring);
+        return true;
     }
 
     /// <summary>
@@ -737,7 +855,66 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Adds the largest 4-connected region of <paramref name="cells"/> to the grass, in the order the cells were
+    /// Whether a cell within <paramref name="steps"/> steps (8 neighbours) of <paramref name="cell"/> passes
+    /// <paramref name="test"/>.
+    /// </summary>
+    private static bool IsWithin(Vector3Int cell, float steps, Predicate<Vector3Int> test)
+    {
+        int reach = Mathf.CeilToInt(steps);
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                if (test(cell + new Vector3Int(dx, dy, 0)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// How many cells covered by a blocking prop have their centre within <paramref name="distance"/> of
+    /// <paramref name="cell"/>'s centre.
+    /// </summary>
+    private int CoveredCellsWithin(Vector3Int cell, float distance)
+    {
+        int reach = Mathf.CeilToInt(distance);
+        int count = 0;
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                if (dx * dx + dy * dy <= distance * distance && Occupied.Contains(cell + new Vector3Int(dx, dy, 0)))
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Whether every mob spawn lies more than <paramref name="distance"/> from <paramref name="cell"/>.
+    /// </summary>
+    private bool IsAwayFromMobs(Vector3Int cell, float distance)
+    {
+        foreach (AreaLayout.Mob mob in Layout.Mobs)
+        {
+            if (Vector3Int.Distance(cell, mob.Cell) <= distance)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Adds the largest 4-connected region of <paramref name="cells"/> to the ground, in the order the cells were
     /// listed.
     /// </summary>
     private void KeepLargestRegion(List<Vector3Int> cells)
@@ -763,19 +940,19 @@ internal sealed class AreaLayoutBuilder
         {
             if (largest.Contains(cell))
             {
-                Grass.Add(cell);
-                orderedGrass.Add(cell);
+                Ground.Add(cell);
+                orderedGround.Add(cell);
             }
         }
     }
 
     /// <summary>
-    /// Records for every grass cell how many steps (8 neighbours) it is from the nearest cell without grass.
+    /// Records for every ground cell how many steps (8 neighbours) it is from the nearest cell without ground.
     /// </summary>
     private void MeasureEdgeDistance()
     {
         Queue<Vector3Int> queue = new();
-        foreach (Vector3Int cell in orderedGrass)
+        foreach (Vector3Int cell in orderedGround)
         {
             if (TouchesOutside(cell))
             {
@@ -793,7 +970,7 @@ internal sealed class AreaLayoutBuilder
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
-                    if (Grass.Contains(neighbour) && !edgeDistance.ContainsKey(neighbour))
+                    if (Ground.Contains(neighbour) && !edgeDistance.ContainsKey(neighbour))
                     {
                         edgeDistance[neighbour] = next;
                         queue.Enqueue(neighbour);
@@ -804,7 +981,7 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Whether one of the 8 neighbours of <paramref name="cell"/> has no grass.
+    /// Whether one of the 8 neighbours of <paramref name="cell"/> has no ground.
     /// </summary>
     private bool TouchesOutside(Vector3Int cell)
     {
@@ -812,7 +989,7 @@ internal sealed class AreaLayoutBuilder
         {
             for (int dx = -1; dx <= 1; dx++)
             {
-                if (!Grass.Contains(cell + new Vector3Int(dx, dy, 0)))
+                if (!Ground.Contains(cell + new Vector3Int(dx, dy, 0)))
                 {
                     return true;
                 }
@@ -824,7 +1001,7 @@ internal sealed class AreaLayoutBuilder
 
     /// <summary>
     /// Places a blocking prop whose footprint stands on <paramref name="cell"/>, centred on it as far as its width
-    /// allows, when every cell it covers is free grass and it is far enough from the props in
+    /// allows, when every cell it covers is free ground and it is far enough from the props in
     /// <paramref name="placed"/>.
     /// </summary>
     private void TryPlaceBlocking(GameObject prefab, Rect footprint, Vector3Int cell, float spacing, List<Vector2> placed)

@@ -291,7 +291,7 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// </summary>
         public Generation Build()
         {
-            builder.LayGrass(halfSize, settings.squareness, settings.edgeWobble);
+            builder.LayGround(halfSize, settings.squareness, settings.edgeWobble);
             AssignRegions();
             LayStreet();
             PlaceSpawn();
@@ -348,7 +348,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             clearingCentre = new Vector2(-side * builder.Range(0.25f, 0.4f) * halfSize.x, north * builder.Range(0.05f, 0.3f) * halfSize.y);
             Predicate<Vector2> inVillage = builder.WobblyShape(villageCentre, villageHalf, VillageSquareness, settings.regionWobble);
             Predicate<Vector2> inClearing = builder.WobblyShape(clearingCentre, clearingHalf, ClearingSquareness, settings.regionWobble);
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 Vector2 centre = CellCentre(cell);
                 Region region = Region.Forest;
@@ -380,7 +380,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             AreaLayoutBuilder.SampleSpline(points, street);
             HashSet<Vector3Int> cells = new();
             builder.Paint(street, settings.streetWidth, cells);
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (cells.Contains(cell))
                 {
@@ -444,7 +444,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             int depth = settings.borderDepth + settings.gladeRadius + 1;
             List<Vector3Int> cells = new();
             List<float> distances = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (regions[cell] == Region.Forest && builder.EdgeDistance(cell) >= depth)
                 {
@@ -613,7 +613,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             }
 
             HashSet<Vector3Int> network = AreaLayoutBuilder.FloodFill(builder.Layout.SpawnCell, builder.IsPath);
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (!network.Contains(cell))
                 {
@@ -646,7 +646,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             int bed = settings.pathClearance;
             RectInt bedCells = new(fountainCorner.x - bed, fountainCorner.y - bed, covered.x + 2 * bed, covered.y + 2 * bed);
             float radius = settings.squareRadius;
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if ((CellCentre(cell) - squareCentre).sqrMagnitude <= radius * radius && !bedCells.Contains(new Vector2Int(cell.x, cell.y)))
                 {
@@ -739,7 +739,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             foreach (Vector2Int position in lot.allPositionsWithin)
             {
                 Vector3Int cell = new(position.x, position.y, 0);
-                if (!builder.Grass.Contains(cell) || builder.IsPath(cell) || builder.Occupied.Contains(cell)
+                if (!builder.Ground.Contains(cell) || builder.IsPath(cell) || builder.Occupied.Contains(cell)
                     || builder.EdgeDistance(cell) <= settings.borderDepth || regions[cell] == Region.Clearing)
                 {
                     return false;
@@ -751,7 +751,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             for (int y = bottom - 1; y >= pathEnd; y--)
             {
                 Vector3Int cell = new(door, y, 0);
-                if (!builder.Grass.Contains(cell) || builder.Occupied.Contains(cell))
+                if (!builder.Ground.Contains(cell) || builder.Occupied.Contains(cell))
                 {
                     return false;
                 }
@@ -873,7 +873,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             float inner = settings.squareRadius + settings.pathClearance + 0.5f;
             float outer = inner + 2f;
             List<Vector3Int> ring = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 float distance = Vector2.Distance(CellCentre(cell), squareCentre);
                 if (distance > inner && distance <= outer && cell.y <= squareCentre.y)
@@ -891,7 +891,7 @@ public sealed class VillageForestGenerator : AreaGenerator
         private void ScatterProps(Scatter scatter)
         {
             List<Vector3Int> candidates = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (regions[cell] == scatter.Region)
                 {
@@ -963,7 +963,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             HashSet<Vector3Int> reachable = builder.ReachableFromSpawn();
             int stranded = 0;
             bool[] reached = new bool[3];
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 bool isReachable = reachable.Contains(cell);
                 stranded += builder.IsPath(cell) && !isReachable ? 1 : 0;
@@ -1009,7 +1009,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             float reach = settings.dirtReach;
             List<Vector2> sources = new();
             List<float> widths = new();
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 float distance = Vector2.Distance(CellCentre(cell), junction);
                 if (builder.Gravel.Contains(cell) && distance < reach)
@@ -1033,7 +1033,7 @@ public sealed class VillageForestGenerator : AreaGenerator
 
             HashSet<Vector3Int> dirt = builder.Layout.TerrainCells(settings.dirt);
             float limit = reach + settings.dirtWidth + settings.dirtWobble + 1f;
-            foreach (Vector3Int cell in builder.OrderedGrass)
+            foreach (Vector3Int cell in builder.OrderedGround)
             {
                 Vector2 centre = CellCentre(cell);
                 if (builder.IsPath(cell) || IsInLot(cell) || Vector2.Distance(centre, junction) > limit)

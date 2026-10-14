@@ -26,7 +26,8 @@ public class AreaTemplateTests
     {
         "Assets/Settings/Generation/Generator_Clearing.asset",
         "Assets/Settings/Generation/Generator_VillageForest.asset",
-        "Assets/Settings/Generation/Generator_Lakeside.asset"
+        "Assets/Settings/Generation/Generator_Lakeside.asset",
+        "Assets/Settings/Generation/Generator_Snowfield.asset"
     };
 
     private Scene template;
@@ -115,16 +116,23 @@ public class AreaTemplateTests
     /// Each project generator's layout can be written into the template, which the generator trims to its own layers:
     /// the layers it does not list, all empty, are removed, and the renderer draws exactly the generator's, in its
     /// order. The renderer then builds, and the navigation grid blocks exactly the footprint cells and the water,
-    /// except under a dock, on the grass.
+    /// except under a dock, on the ground. A generator whose ground is not grass (the Snowfield's snow) has the area's
+    /// terrain pointed at its ground layer first, as a new area of that ground is, or the template's empty grass layer,
+    /// which the area's terrain lists, would be kept.
     /// </summary>
     [TestCase("Assets/Settings/Generation/Generator_Clearing.asset")]
     [TestCase("Assets/Settings/Generation/Generator_VillageForest.asset")]
     [TestCase("Assets/Settings/Generation/Generator_Lakeside.asset")]
+    [TestCase("Assets/Settings/Generation/Generator_Snowfield.asset")]
     public void TheTemplate_TakesAGeneratedLayout_TrimmedToTheGeneratorsLayers(string generatorPath)
     {
         Grid grid = TemplateGrid();
         AreaGenerator generator = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
         AreaLayout layout = generator.Generate(3);
+        SerializedObject terrain = new(grid.GetComponent<AreaTerrain>());
+        SerializedProperty groundEntry = terrain.FindProperty("layers").GetArrayElementAtIndex(0).FindPropertyRelative("tilemap");
+        groundEntry.objectReferenceValue = grid.transform.Find(generator.TerrainLayers[0].TilemapName).GetComponent<Tilemap>();
+        terrain.ApplyModifiedProperties();
 
         Assert.That(AreaLayoutWriter.Write(grid, generator, layout), Is.True);
 
@@ -151,7 +159,6 @@ public class AreaTemplateTests
         navigation.BuildGrid();
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         TerrainMaterial water = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Water.asset");
-        TerrainMaterial grass = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Grass.asset");
         TerrainMaterial planks = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Planks.asset");
         HashSet<Vector3Int> blocked = layout.IndexOf(water) >= 0 ? new HashSet<Vector3Int>(layout.TerrainCells(layout.IndexOf(water))) : new HashSet<Vector3Int>();
         if (layout.IndexOf(planks) >= 0)
@@ -173,7 +180,7 @@ public class AreaTemplateTests
             }
         }
 
-        foreach (Vector3Int cell in layout.TerrainCells(layout.IndexOf(grass)))
+        foreach (Vector3Int cell in layout.TerrainCells(0))
         {
             Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!blocked.Contains(cell)), $"cell {cell}");
         }

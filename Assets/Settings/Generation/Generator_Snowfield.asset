@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b98c37c9ce562f7458a6021c758aa98d, type: 3}
+  m_Name: Generator_Snowfield
+  m_EditorClassIdentifier: TopDownRPG.Editor::SnowfieldGenerator
+  seed: 1
+  terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
+  snow:
+    tilemapName: SnowTilemap
+    tile: {fileID: 11400000, guid: f98f30220c924b6468a691bcc3874561, type: 2}
+    terrainType: {fileID: 11400000, guid: 6dc80e20dd3cd0f4f8d916ee1fc7d43b, type: 2}
+    material: {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
+  dirt:
+    tilemapName: DirtTilemap
+    tile: {fileID: 11400000, guid: 7316d30cada0bdd41b534027dffd83c6, type: 2}
+    terrainType: {fileID: 11400000, guid: 50fd8a13dcd00a347be53fb7eb9ab4b0, type: 2}
+    material: {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
+  ice:
+    tilemapName: IceTilemap
+    tile: {fileID: 11400000, guid: 4081cb464e5e0f14590cdf692b02544d, type: 2}
+    terrainType: {fileID: 11400000, guid: 21c36d6b87c7bd6498d42c7c500b999d, type: 2}
+    material: {fileID: 11400000, guid: 5f63d80b3867b24499510c1bf8b7fa87, type: 2}
+  gravel:
+    tilemapName: GravelTilemap
+    tile: {fileID: 11400000, guid: df3b3901f4c98814da6d3be0d460b898, type: 2}
+    terrainType: {fileID: 11400000, guid: 84fe749f3c3fc9a4c901c4334249a25e, type: 2}
+    material: {fileID: 11400000, guid: 26331364302bb8b4da233d510b020898, type: 2}
+  stone:
+    tilemapName: StoneTilemap
+    tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
+    terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
+    material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  water:
+    tilemapName: WaterTilemap
+    tile: {fileID: 11400000, guid: 6819f86dffc046147a17f9a41b30e252, type: 2}
+    terrainType: {fileID: 11400000, guid: c00b3a5a94fb58d44895db1e04a2f1f7, type: 2}
+    material: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+  size: {x: 60, y: 44}
+  squareness: 3
+  edgeWobble: 0.12
+  lakeSize: {x: 24, y: 12}
+  lakeNorth: 0.35
+  lakeWobble: 0.2
+  minLakeCells: 100
+  roadMargin: 5
+  shoreZoneDepth: 3
+  holeCount: 1
+  holeRadius: {x: 1.5, y: 2.2}
+  holeMargin: 2
+  roadWidth: 3
+  roadSouth: 0.5
+  roadMeander: 0.12
+  trailWidth: 2
+  pathClearance: 1
+  spawnAlongRoad: -0.55
+  spawnClearRadius: 6
+  borderDepth: 3
+  scatters:
+  - label: Forest edge
+    prefabs:
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
+    - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
+    count: 280
+    spacing: 2
+    zone: 0
+  - label: Pines
+    prefabs:
+    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
+    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    count: 14
+    spacing: 5
+    zone: 1
+  - label: Shore rocks
+    prefabs:
+    - {fileID: 8993580074442915344, guid: d01aae66b338d8a438e6193e0e9093ae, type: 3}
+    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
+    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    count: 8
+    spacing: 4
+    zone: 2
+  - label: Rocks and stumps
+    prefabs:
+    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
+    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    - {fileID: 8993580074442915344, guid: d01aae66b338d8a438e6193e0e9093ae, type: 3}
+    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    - {fileID: 1859510483508918577, guid: 6835e6cceb8ef064a97a56d4654e60da, type: 3}
+    count: 10
+    spacing: 5
+    zone: 1
+  - label: Stumps
+    prefabs:
+    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    count: 8
+    spacing: 4
+    zone: 1
+  campfirePrefab: {fileID: 2892346520759183888, guid: 193de885211366947a6a5863b9c2a30b, type: 3}
+  campsiteSeats:
+  - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+  - {fileID: 3441148661069680234, guid: eb43bdcc29407b942862df09465cb8f2, type: 3}
+  - {fileID: 7050435574996827108, guid: c9bd549b1e162a345ac977df4968cb09, type: 3}
+  seatCount: 3
+  seatSpacing: 1.5
+  campsiteRadius: 3
+  mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+  mobCount: 4
+  mobDistanceFromSpawn: 14
+  mobSpacing: 10

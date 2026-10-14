@@ -281,7 +281,7 @@ public class TerrainBlendRendererTests
         Color32 underCover = default;
         Color32 belowEdge = default;
         Color32 intoCover = default;
-        for (int frame = 0; frame < 30 && rooted.a == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(rooted); frame++)
         {
             yield return null;
             Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
@@ -522,7 +522,7 @@ public class TerrainBlendRendererTests
         Rect world = new(0f, 0f, 8f, 4f);
         Color32 underSeamless = default;
         Color32 underGround = default;
-        for (int frame = 0; frame < 30 && underGround.a == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(underGround); frame++)
         {
             yield return null;
             Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
@@ -584,7 +584,7 @@ public class TerrainBlendRendererTests
         gridObject.SetActive(true);
         Rect world = new(0f, 0f, 8f, 4f);
         Color32 beside = default;
-        for (int frame = 0; frame < 30 && beside.a == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(beside); frame++)
         {
             yield return null;
             beside = RenderedPixel(renderer, world, 94, 62);
@@ -597,7 +597,7 @@ public class TerrainBlendRendererTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         renderer.RunScheduledRebuild();
         Color32 bridged = default;
-        for (int frame = 0; frame < 30 && bridged.a == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(bridged); frame++)
         {
             yield return null;
             bridged = RenderedPixel(renderer, world, 94, 62);
@@ -661,7 +661,7 @@ public class TerrainBlendRendererTests
         gridObject.SetActive(true);
         Rect world = new(0f, -1f, 8f, 5f);
         Color32 drawn = default;
-        for (int frame = 0; frame < 30 && drawn.r == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(drawn); frame++)
         {
             yield return null;
             drawn = RenderedPixel(renderer, world, 128, 64);
@@ -720,7 +720,7 @@ public class TerrainBlendRendererTests
         gridObject.SetActive(true);
         Rect world = new(0f, 0f, 10f, 8f);
         Color32 first = default;
-        for (int frame = 0; frame < 30 && first.a == 0; frame++)
+        for (int frame = 0; frame < 30 && !IsDrawn(first); frame++)
         {
             yield return null;
             first = RenderedPixel(renderer, world, 2 * 32 + 16, 4);
@@ -751,6 +751,15 @@ public class TerrainBlendRendererTests
         Color32 colour = pixels.GetPixel(x, y);
         Object.DestroyImmediate(pixels);
         return colour;
+    }
+
+    /// <summary>
+    /// Whether a rendered pixel shows anything: the probe's camera clears to opaque black, so a render that drew nothing,
+    /// as the first one after the terrain shader is imported, reads black there.
+    /// </summary>
+    private static bool IsDrawn(Color32 pixel)
+    {
+        return pixel.r + pixel.g + pixel.b > 0;
     }
 
     /// <summary>

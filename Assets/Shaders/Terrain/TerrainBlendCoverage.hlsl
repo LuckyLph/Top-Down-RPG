@@ -1,0 +1,68 @@
+#ifndef TOPDOWNRPG_TERRAIN_BLEND_COVERAGE_INCLUDED
+#define TOPDOWNRPG_TERRAIN_BLEND_COVERAGE_INCLUDED
+
+#include "Assets/Shaders/Terrain/TerrainBlendLook.hlsl"
+
+// Every layer's signed distance in pixels at a corner patch (TBLayerDistance); TB_FAR for the layers above the
+// patch's highest filled layer (TBLayersAt), which cover none of its cells, and past the area's layers.
+void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel, out float d[TB_MAX_LAYERS])
+{
+    float4 terms = TBDistanceTerms(ins, corner, worldPixel);
+    [unroll]
+    for (uint u = 0u; u < (uint)TB_MAX_LAYERS; u++)
+    {
+        d[u] = TB_FAR;
+    }
+    uint count = TBLayersAt(ins, corner);
+    [loop]
+    for (uint l = 0u; l < count; l++)
+    {
+        d[l] = TBLayerDistance(ins, corner, terms, l);
+    }
+}
+
+// The bridge layers (TBInputs.bridges) that cover the corner patch, as bits: those whose distance is not TB_FAR.
+uint TBBridgesAt(TBInputs ins, float d[TB_MAX_LAYERS])
+{
+    uint found = 0u;
+    uint bridges = ins.bridges;
+    [loop]
+    while (bridges != 0u)
+    {
+        uint b = firstbitlow(bridges);
+        bridges &= bridges - 1u;
+        found |= b < ins.layers && d[b] < TB_FAR ? 1u << b : 0u;
+    }
+    return found;
+}
+
+// Whether a bridge layer among bridges (TBBridgesAt) higher up than the layer above m has its edge within the pair
+// margin of m's edge at a pixel. The layer above m counts every layer over it but the bridges (TBCounted), so where a
+// bridge ends on the edge of a layer painted under it, TBVisible does not hide that layer there; it draws its edge
+// pixel and what lies inside, which fill the bridge's corners, but neither its shadow nor its tufts, which would show
+// past the bridge's own edge.
+bool TBNearBridgeEdge(TBInputs ins, float d[TB_MAX_LAYERS], uint bridges, uint m)
+{
+    bool found = false;
+    uint above = bridges & ~((1u << min(m + 2u, 31u)) - 1u);
+    [loop]
+    while (above != 0u && !found)
+    {
+        uint b = firstbitlow(above);
+        above &= above - 1u;
+        found = d[b] - d[m] < ins.globals.y;
+    }
+    return found;
+}
+
+// Whether a layer is drawn at a pixel: it covers the pixel's corner patch and its edge lies at least the pair margin
+// beyond the edge of the layer above it, so where two edges coincide only the upper one is drawn.
+bool TBVisible(TBInputs ins, float d[TB_MAX_LAYERS], uint m)
+{
+    bool present = d[m] < TB_FAR;
+    uint up = min(m + 1u, (uint)TB_MAX_LAYERS - 1u);
+    bool covered = m + 1u < ins.layers && d[up] < TB_FAR && d[up] - d[m] < ins.globals.y;
+    return present && !covered;
+}
+
+#endif

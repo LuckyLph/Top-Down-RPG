@@ -49,6 +49,41 @@ struct TBCorner
     uint bridges;
 };
 
+// How an upper layer's edge is drawn at a pixel: the settings of each pair it may be drawn over, blended by weight.
+// In the soft look a pair with a band draws no outline and fills with the band's colour; edge is the colour of the
+// opaque edge pixel, each pair's own (its outline where it draws one, else its fill) blended by weight, and
+// bandWeight is how much of the edge pairs with a band make up. seamless is how much of the edge seamless pairs make
+// up, whose edge pixel shows the layer's own interior.
+struct TBEdge
+{
+    float3 shadow;
+    float shadowAlpha;
+    float shadowWidth;
+    float3 outline;
+    float outlineWeight;
+    float3 fill;
+    float3 edge;
+    float tuftHeight;
+    float bandWeight;
+    float seamless;
+    int firstRow;
+};
+
+// What a chip or stone sees at its centre pixel, decided from the corner patch around that centre, so every pixel of
+// it agrees: how deep inside layer m the centre lies, the rim width of the pair drawn there (in the soft look the
+// band's width where the pair has one, and none where it shows whole stones), how much of that pair shows whole
+// stones in the soft look, and the outward direction of the shape there (soft only). A pair shows whole stones only
+// where the centre lies at least TB_WHOLE_CLEARANCE pixels inside the lower layer, so a stone never reaches past a
+// strip of the lower layer that thins out (where stone, gravel and grass meet) and cuts it into pieces; nearer, the
+// pair's rim cuts the stones as in crisp.
+struct TBCentre
+{
+    float depth;
+    float rim;
+    float whole;
+    float2 outward;
+};
+
 // One texel of the lookup texture.
 float4 TBLut(TBInputs ins, int column, int row)
 {

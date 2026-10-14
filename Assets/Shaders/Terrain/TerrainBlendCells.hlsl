@@ -1,42 +1,11 @@
 #ifndef TOPDOWNRPG_TERRAIN_BLEND_CELLS_INCLUDED
 #define TOPDOWNRPG_TERRAIN_BLEND_CELLS_INCLUDED
 
-#include "Assets/Shaders/Terrain/TerrainBlendShape.hlsl"
-
-// What a chip or stone sees at its centre pixel, decided from the corner patch around that centre, so every pixel of
-// it agrees: how deep inside layer m the centre lies, the rim width of the pair drawn there (in the soft look the
-// band's width where the pair has one, and none where it shows whole stones), how much of that pair shows whole
-// stones in the soft look, and the outward direction of the shape there (soft only). A pair shows whole stones only
-// where the centre lies at least TB_WHOLE_CLEARANCE pixels inside the lower layer, so a stone never reaches past a
-// strip of the lower layer that thins out (where stone, gravel and grass meet) and cuts it into pieces; nearer, the
-// pair's rim cuts the stones as in crisp.
-struct TBCentre
-{
-    float depth;
-    float rim;
-    float whole;
-    float2 outward;
-};
-
-// Adds one pair's part to what a chip or stone sees at its centre (TBCentre): the rim width of the pair at row, by its
-// weight; in the soft look the band's width where it has one, none where it shows whole stones, which it does only
-// when clear says the centre lies TB_WHOLE_CLEARANCE inside the lower layer (always over nothing).
-void TBAddCentrePair(TBInputs ins, int row, float weight, bool clear, inout TBCentre centre)
-{
-    float4 widths = TBLut(ins, 2, row);
-#ifdef _TERRAIN_SOFT
-    float band = TBLut(ins, 4, row).a;
-    float whole = widths.w > 0.5 && clear ? 1.0 : 0.0;
-    centre.rim += weight * (whole > 0.5 ? 0.0 : (band > 0.0 ? band : widths.y));
-    centre.whole += weight * whole;
-#else
-    centre.rim += weight * widths.y;
-#endif
-}
+#include "Assets/Shaders/Terrain/TerrainBlendLook.hlsl"
 
 // What the chip or stone whose centre is a map pixel sees there (see TBCentre), its pairs weighted as TBPairWeights
-// weights them, worked out going down from layer m one layer at a time; in the soft look the outward direction only
-// when asked for, since only whole chips use it.
+// weights them, worked out going down from layer m one layer at a time, and what else its look needs (TBCentreOutward:
+// in the soft look the outward direction when asked for).
 TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool outward)
 {
     TBCentre centre = (TBCentre)0;
@@ -68,13 +37,7 @@ TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool 
     {
         TBAddCentrePair(ins, firstRow, remaining, true, centre);
     }
-#ifdef _TERRAIN_SOFT
-    [branch]
-    if (outward)
-    {
-        centre.outward = TBOutward(ins, corner, m, worldPixel);
-    }
-#endif
+    TBCentreOutward(ins, corner, m, worldPixel, outward, centre);
     return centre;
 }
 

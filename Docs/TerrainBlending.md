@@ -105,7 +105,7 @@ The maths of the 64 px path tilesets (removed in Phase 4 with `pathtiles.py`, wh
 | `TerrainMaterial` | ScriptableObject, one per material: albedo, optional cell field and height textures, repeat in cells, corner radii, chip settings, base colour, the soft look's height scale, its animation (frames per second, glints, rim swell; Phase 5) and default edge settings. Read-only at runtime; its recipe writes the textures, repeat, cell mode and base colour in the editor. |
 | `TerrainStyle` | ScriptableObject: the shader, the shared settings and the pair overrides, keyed by material asset. Read-only at runtime. |
 
-Shaders in `Assets/Shaders`: `Terrain/TerrainBlend.shadergraph` (Sprite Lit, a Custom Function node calling `Terrain/TerrainBlend.hlsl`), the HLSL it includes in `Terrain/`, a file per concern (inputs, shapes, runs, edges, cells, animation, sway, banks, interior, layer, debug; see [Architecture.md](Architecture.md#world-and-areas) and Phase 11 of [TerrainTypes.md](TerrainTypes.md)), and shared helpers in `Include/`.
+Shaders in `Assets/Shaders`: `Terrain/TerrainBlend.shadergraph` (Sprite Lit, a Custom Function node calling `Terrain/TerrainBlend.hlsl`), the HLSL it includes in `Terrain/`, a file per concern (inputs, shapes, each look's functions in a file of its own, coverage, runs, edges, cells, animation, sway, banks, interior, each look's layer, debug; see [Architecture.md](Architecture.md#world-and-areas) and Phase 11 of [TerrainTypes.md](TerrainTypes.md)), and shared helpers in `Include/`.
 
 ### Editor (`TopDownRPG.Editor`)
 

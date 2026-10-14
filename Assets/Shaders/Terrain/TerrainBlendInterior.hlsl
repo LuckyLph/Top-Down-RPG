@@ -10,18 +10,16 @@
 
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
-// margin clear of the rim: its field's alpha holds its reach from its centre pixel. In crisp that reach is stretched
-// by the edge noise's steepest slope, since the distance can fall that much faster than the pixels move away; in soft
-// the depth is measured where the chip comes nearest the edge, its reach from the centre along the edge's outward
-// direction there. A stone is left out when its centre lies too near the rim, and the others are cut along the rim's
-// line, shaded to the light like the stones' own edges. With hasCentre, known is what the pixel's chip or stone sees
-// at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel); where they lean whole
-// (its sway row's last value), a leaning pixel that would show a texel of the ground (one the cell field holds
-// unchanged) shows the ground under itself instead, so only the weeds' own pixels move. A pixel of a weed's box (the height's
-// green channel above 0: its row from the row under the weed's base, plus one) shows the ground under it instead, from
-// the cell field, unless the weed's foot and its top (the field's alpha: the box's rows above its base) both lie where
-// the layer shows (TBOpenOn). A layer that turns to its runs reads all of it turned a quarter where its cell runs
-// across (TBTurned), and turns the offsets it reads back into the world (TBUnturn).
+// margin clear of the rim: its field's alpha holds its reach from its centre pixel. Its look measures where it comes
+// nearest the edge (TBChipNearest). A stone is left out when its centre lies too near the rim, and the others are cut
+// along the rim's line, shaded to the light like the stones' own edges. With hasCentre, known is what the pixel's chip
+// or stone sees at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel); where they
+// lean whole (its sway row's last value), a leaning pixel that would show a texel of the ground (one the cell field
+// holds unchanged) shows the ground under itself instead, so only the weeds' own pixels move. A pixel of a weed's box
+// (the height's green channel above 0: its row from the row under the weed's base, plus one) shows the ground under it
+// instead, from the cell field, unless the weed's foot and its top (the field's alpha: the box's rows above its base)
+// both lie where the layer shows (TBOpenOn). A layer that turns to its runs reads all of it turned a quarter where its
+// cell runs across (TBTurned), and turns the offsets it reads back into the world (TBUnturn).
 float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
 {
     float4 shape = TBShape(ins, m);
@@ -77,12 +75,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
             }
             float inside = depth - centre.rim;
             float border = f.a * 255.0 / 16.0;
-#ifdef _TERRAIN_SOFT
-            float2 reach = shape.w < 1.5 ? border * centre.outward : float2(0.0, 0.0);
-            float nearest = shape.w < 1.5 ? TBDepthAt(ins, m, pixel + offset + reach, worldPixel + offset + reach) : centre.depth;
-#else
-            float nearest = centre.depth - (shape.w < 1.5 ? border * (1.0 + PERIODIC_NOISE_MAX_SLOPE * ins.globals.x) : 0.0);
-#endif
+            float nearest = TBChipNearest(ins, m, shape, centre, border, pixel + offset, worldPixel + offset);
             if (nearest < centre.rim + chip.x)
             {
                 colour = base;

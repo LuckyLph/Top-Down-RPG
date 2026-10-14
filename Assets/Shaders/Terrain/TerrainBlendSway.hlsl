@@ -1,7 +1,7 @@
 #ifndef TOPDOWNRPG_TERRAIN_BLEND_SWAY_INCLUDED
 #define TOPDOWNRPG_TERRAIN_BLEND_SWAY_INCLUDED
 
-#include "Assets/Shaders/Terrain/TerrainBlendShape.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendLook.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendAnimation.hlsl"
 
 // The texel a swaying layer m (sway amplitude above 0, grass) shows at a world pixel: the pixel's own, moved left by

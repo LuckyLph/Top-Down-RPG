@@ -3,6 +3,8 @@
 
 #include "Assets/Shaders/Terrain/TerrainBlendInputs.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendShape.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendLook.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendCoverage.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendRuns.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendEdges.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendCells.hlsl"

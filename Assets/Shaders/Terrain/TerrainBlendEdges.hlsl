@@ -1,27 +1,7 @@
 #ifndef TOPDOWNRPG_TERRAIN_BLEND_EDGES_INCLUDED
 #define TOPDOWNRPG_TERRAIN_BLEND_EDGES_INCLUDED
 
-#include "Assets/Shaders/Terrain/TerrainBlendShape.hlsl"
-
-// How an upper layer's edge is drawn at a pixel: the settings of each pair it may be drawn over, blended by weight.
-// In the soft look a pair with a band draws no outline and fills with the band's colour; edge is the colour of the
-// opaque edge pixel, each pair's own (its outline where it draws one, else its fill) blended by weight, and
-// bandWeight is how much of the edge pairs with a band make up. seamless is how much of the edge seamless pairs make
-// up, whose edge pixel shows the layer's own interior.
-struct TBEdge
-{
-    float3 shadow;
-    float shadowAlpha;
-    float shadowWidth;
-    float3 outline;
-    float outlineWeight;
-    float3 fill;
-    float3 edge;
-    float tuftHeight;
-    float bandWeight;
-    float seamless;
-    int firstRow;
-};
+#include "Assets/Shaders/Terrain/TerrainBlendLook.hlsl"
 
 // The weight of each pair layer m may be drawn over at a pixel: index j + 1 for lower layer j, index 0 for nothing.
 // Going down from m, a lower layer that covers the pixel takes the remaining weight in proportion to how far its edge
@@ -49,8 +29,8 @@ void TBPairWeights(TBInputs ins, float d[TB_MAX_LAYERS], uint m, out float w[TB_
     w[0] = remaining;
 }
 
-// The edge settings of layer m at a pixel, blended from the pairs it is drawn over. In the soft look a pair with a
-// band draws no outline and fills its edge pixel with the band's colour.
+// The edge settings of layer m at a pixel, blended from the pairs it is drawn over, each pair's look-specific part
+// added by TBAddPairEdge.
 TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
     TBEdge e = (TBEdge)0;
@@ -72,24 +52,14 @@ TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
             e.shadowWidth += w[k] * widths.x;
             e.tuftHeight += w[k] * widths.z;
             e.seamless += w[k] * (1.0 - fill.a);
-#ifdef _TERRAIN_SOFT
-            float4 band = TBLut(ins, 4, row);
-            float banded = band.a > 0.0 ? 1.0 : 0.0;
-            float3 filled = lerp(fill.rgb, band.rgb, banded);
-            e.fill += w[k] * filled;
-            e.edge += w[k] * lerp(filled, outline.rgb, outline.a * (1.0 - banded));
-            e.bandWeight += w[k] * banded;
-#else
-            e.outlineWeight += w[k] * outline.a;
-            e.fill += w[k] * fill.rgb;
-#endif
+            TBAddPairEdge(ins, row, w[k], outline, fill, e);
         }
     }
     return e;
 }
 
-// The rim at a depth inside the edge, premultiplied: its colour and how much of the interior it covers. In the soft
-// look a pair with a band covers the interior with the band's colour up to the band's width instead; band is how much
+// The rim at a depth inside the edge, premultiplied: its colour and how much of the interior it covers, each pair's
+// texel as its look reads it (TBRampTexel: in the soft look a band instead where the pair has one); band is how much
 // of the result such bands make up (0 in crisp).
 float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float depth, out float band)
 {
@@ -102,16 +72,7 @@ float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float 
         [branch]
         if (w[k] > 0.0)
         {
-            float4 r = TBLut(ins, column, e.firstRow + (int)k);
-#ifdef _TERRAIN_SOFT
-            float4 settings = TBLut(ins, 4, e.firstRow + (int)k);
-            if (settings.a > 0.0)
-            {
-                float cover = depth < settings.a ? 1.0 : 0.0;
-                r = float4(settings.rgb, cover);
-                band += w[k] * cover;
-            }
-#endif
+            float4 r = TBRampTexel(ins, e.firstRow + (int)k, w[k], depth, TBLut(ins, column, e.firstRow + (int)k), band);
             result += w[k] * float4(r.rgb * r.a, r.a);
         }
     }
@@ -165,18 +126,14 @@ float TBTuftReach(float u, uint seed, float height)
 }
 
 // Whether a pixel near layer m's edge (d its distance) lies in a tuft, and on the tuft's border. Its position along
-// the edge is its position along the bare shape's tangent, so each spike stands straight out of the edge and every
+// the edge is its position along the tangent of TBEdgeDirection, so each spike stands straight out of the edge and every
 // pixel between its tip and the edge belongs to it, and that position agrees between patches along the straight edge
 // where they meet. Spikes keep to straight edges, fading out within a few degrees of curve, since around a corner the
 // normals spread or close up and a spike's pixels could meet the edge by a corner alone.
 // Returns 0 outside a tuft, 1 inside, 2 on its border.
 float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float2 worldPixel, float height)
 {
-#ifdef _TERRAIN_SOFT
-    float2 n = TBOutward(ins, corner, m, worldPixel);
-#else
-    float2 n = TBGradient(ins, corner, m, worldPixel, 0.0);
-#endif
+    float2 n = TBEdgeDirection(ins, corner, m, worldPixel);
     float u = dot(corner.uv, float2(-n.y, n.x));
     uint seed = TBCornerSeed(ins, pixel);
     float scaled = height * saturate(1.0 - 8.0 * abs(n.x * n.y));

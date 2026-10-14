@@ -1169,8 +1169,8 @@ public class TerrainMaterialRecipeTests
 
     /// <summary>
     /// Flowers are off by default: flower colours and colour waves set without a flower chance change no pixel. With a
-    /// chance, some kept spots become flower clusters whose petals and hearts all lie inside a box, above its base, so
-    /// they sway with it and keep the clump contract; clusters take the colour of the colour waves' band where they stand,
+    /// chance, some kept spots become flower clusters whose petals and hearts all lie inside a box, above its base, at
+    /// the full sway weight, so every head leans whole, and keep the clump contract; clusters take the colour of the colour waves' band where they stand,
     /// so with one wave once across the texture and two colours, each colour fills many columns on its own and only the
     /// columns around the two band borders hold both.
     /// </summary>
@@ -1230,6 +1230,7 @@ public class TerrainMaterialRecipeTests
                 }
 
                 Assert.That(textures.Height[y * size + x].g, Is.GreaterThan(2), $"({x}, {y}) a flower stands above its box's base");
+                Assert.That(textures.Height[y * size + x].b, Is.EqualTo(255), $"({x}, {y}) a head leans whole");
                 hearts += heart ? 1 : 0;
                 redColumns[x] += isRed ? 1 : 0;
                 blueColumns[x] += isBlue ? 1 : 0;

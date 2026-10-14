@@ -36,6 +36,7 @@ MonoBehaviour:
   swayAmplitude: 3
   swayPeriod: 2.5
   gustLength: 12
+  wholeClumps: 1
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.3764706, g: 0.2901961, b: 0.19607843, a: 1}

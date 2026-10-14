@@ -14,7 +14,7 @@ using UnityEngine;
 /// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material
 /// level with the ground, at <see cref="BankColourColumn"/> its bank colour, the face a sunken layer shows where it
 /// cuts into this one, and for a swaying material at <see cref="SwayColumn"/> (sway amplitude, sway period, gust
-/// length in cells), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
+/// length in cells, 1 when its clumps lean whole), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
 /// = -1), at <see cref="PairRow"/>: (shadow colour, shadow alpha), (outline colour, 1 when drawn), (shadow width,
 /// rim width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), (the rim's
 /// outer colour, 0 when the edge is seamless, else 1), (the soft band's colour, its width, 0 for none), then the rim
@@ -83,7 +83,7 @@ public static class TerrainBlendLut
             texels[row + BankColourColumn] = material.BankColour;
             if (material.Sways)
             {
-                texels[row + SwayColumn] = new Color(material.SwayAmplitude, material.SwayPeriod, material.GustLength, 0f);
+                texels[row + SwayColumn] = new Color(material.SwayAmplitude, material.SwayPeriod, material.GustLength, material.WholeClumps ? 1f : 0f);
             }
 
             if (material.SinkDepth > 0f)

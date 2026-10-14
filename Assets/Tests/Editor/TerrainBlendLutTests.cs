@@ -269,9 +269,9 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// A swaying material's layer row holds its sway amplitude, sway period and gust length, and a still or merely
-    /// animated one's holds nothing there; a pair with a seamless edge writes its rim's outer colour with alpha 0, any
-    /// other pair with alpha 1.
+    /// A swaying material's layer row holds its sway amplitude, sway period and gust length, and 1 last when its clumps
+    /// lean whole (0 by default), and a still or merely animated one's holds nothing there; a pair with a seamless edge
+    /// writes its rim's outer colour with alpha 0, any other pair with alpha 1.
     /// </summary>
     [Test]
     public void ASwayingMaterial_ReachesItsLayerRow_AndASeamlessEdgeMarksItsPair()
@@ -294,6 +294,10 @@ public class TerrainBlendLutTests
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 0f)));
         Assert.That(texels[TerrainBlendLut.PairRow(2, 1, 0) * TerrainBlendLut.Width + 3].a, Is.Zero, "weeds over grass is seamless");
         Assert.That(texels[TerrainBlendLut.PairRow(2, 0, -1) * TerrainBlendLut.Width + 3].a, Is.EqualTo(1f), "grass over nothing is not");
+
+        settings.FindProperty("wholeClumps").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(LayerTexel(TerrainBlendLut.BuildTexels(Style(), new[] { grass, weeds }), 1, TerrainBlendLut.SwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 1f)));
     }
 
     /// <summary>
@@ -581,7 +585,8 @@ public class TerrainBlendLutTests
 
     /// <summary>
     /// The project's meadow and tall grass (TerrainTypes.md, Phase 6) come right after dry grass in the shared order,
-    /// level, with no cell field, and sway in the grass's wind, tall grass further than the grass. The meadow is
+    /// level, with no cell field, and sway in the grass's wind, tall grass further than the grass, their clumps leaning
+    /// whole (the grass's and dry grass's do not). The meadow is
     /// seamless over the grass, with no outline, rim, shadow or tufts (its ground is the grass's), and seamless over dry
     /// grass with green tufts, marked seamless in the lookup texture, and keeps the grass's edge over nothing; tall grass
     /// draws its default edge over every grass and over nothing: an outline, a shadow and a fringe of tufts, not
@@ -610,6 +615,8 @@ public class TerrainBlendLutTests
 
         Assert.That(meadow.SwayAmplitude, Is.EqualTo(grass.SwayAmplitude));
         Assert.That(tallGrass.SwayAmplitude, Is.GreaterThan(grass.SwayAmplitude));
+        Assert.That(meadow.WholeClumps && tallGrass.WholeClumps, Is.True, "Their flowers and tall blades lean whole over still ground.");
+        Assert.That(grass.WholeClumps || dryGrass.WholeClumps, Is.False, "The grass and dry grass sway as they always did.");
 
         TerrainStyle.EdgeSettings meadowOverGrass = style.GetEdge(meadow, grass);
         Assert.That(meadowOverGrass.Seamless, Is.True);

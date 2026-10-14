@@ -9,7 +9,9 @@ using UnityEngine;
 /// their base colour, repeat and cell mode. In the soft look its height texture, times its height scale, moves its
 /// edges. An animated material (water) lights its glint and sparkle pixels in turn and swells its rims in and out, in
 /// the shader alone, at its frames per second; its edges never move. A swaying material (weeds) leans the pixels its
-/// height texture weighs, its weeds' blades, in a wind that rolls across the ground, in the shader too. A sunken material (water) lies below the ground
+/// height texture weighs, its weeds' blades, in a wind that rolls across the ground, in the shader too, and with whole
+/// clumps each weed leans as one in the gust at its foot while the ground inside its box stays put. A sunken material
+/// (water) lies below the ground
 /// around it: along its edges that face up the screen over another material, that material's bank shows inside its
 /// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it. A bridge
 /// (planks) lies on what is painted under it, so the layers under it do not go on beneath it, and a material that
@@ -89,6 +91,8 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(MinPeriod, 30f)] private float swayPeriod = 2.5f;
     [Tooltip("Cells a gust travels in one period: the wind rolls across the ground this many cells per period, from the bottom left to the top right.")]
     [SerializeField, Range(1f, 64f)] private float gustLength = 12f;
+    [Tooltip("Each weed leans whole: its gust is taken at the cell of its foot, so a weed that crosses a cell row does not shear, and only its own pixels move: where a leaning pixel would show the ground inside its box (a texel the cell field holds unchanged), the ground stays where it is instead of sliding sideways with the weed.")]
+    [SerializeField] private bool wholeClumps;
     [Header("Sunken")]
     [Tooltip("How many pixels of bank show inside this material's edges where they face straight up the screen, as if it lay that far below the ground around it; less as an edge turns sideways, none along edges facing down or over nothing. The bank is the bank colour of the material it meets, its lowest pixel, at the waterline, darker. 0 for a material level with the ground.")]
     [SerializeField, Range(0f, MaxSinkDepth)] private float sinkDepth;
@@ -132,6 +136,7 @@ public class TerrainMaterial : ScriptableObject
     public float SwayAmplitude => Mathf.Clamp(swayAmplitude, 0f, MaxSwayAmplitude);
     public float SwayPeriod => Mathf.Max(swayPeriod, MinPeriod);
     public float GustLength => Mathf.Max(gustLength, 1f);
+    public bool WholeClumps => wholeClumps;
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;

@@ -13,13 +13,14 @@ using UnityEngine;
 /// is at a chance a flower cluster instead: short stems each topped by a flower head of one glyph, in one petal and
 /// heart colour picked by slow colour waves where the cluster stands, so clusters of one colour gather in drifts. Every
 /// pixel of a weed's box (its blades or stems and heads, and the sway margin to their right) gets the weight of its row
-/// in the height texture's blue channel, from 0 at the base to 255 at the top, which the shader leans by; the box keeps
-/// inside one cell column and clear of the other boxes, so the gust is the same across a box and leaning blades never
-/// meet another weed. Every pixel of a box, its shadow row included, also gets in the height's green channel its row
-/// counted from the row under the base, plus one (1 for the shadow row, 2 for the base, 0 outside every box), and the
-/// cell field holds the ground without the weeds, its alpha a box's height in rows above the base (255 outside every
-/// box), so the shader can leave out a weed whose foot or top another layer covers or lies outside its own layer,
-/// showing the ground there. The base colour is the grass colour.
+/// in the height texture's blue channel, from 0 at the base to 255 at the top (a flower cluster's from its lowest head
+/// up, so its heads lean whole), which the shader leans by; the box keeps inside one cell column and clear of the
+/// other boxes, so the gust is the same across a box and leaning blades never meet another weed. Every pixel of a box,
+/// its shadow row included, also gets in the height's green channel its row counted from the row under the base, plus
+/// one (1 for the shadow row, 2 for the base, 0 outside every box), and the cell field holds the ground without the
+/// weeds, its alpha a box's height in rows above the base (255 outside every box), so the shader can leave out a weed
+/// whose foot or top another layer covers or lies outside its own layer, showing the ground there. The base colour is
+/// the grass colour.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Weeds", fileName = "Recipe_Weeds")]
 public sealed class WeedsRecipe : TerrainMaterialRecipe
@@ -271,7 +272,8 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
     /// (from the shadow row under it to its highest pixel, and from its leftmost pixel to the sway margin past its
     /// rightmost) lies inside one cell column and clear of every other box; marks the box, a pixel around it included,
     /// taken, and gives every pixel of it the weight of its row, its row from the shadow row (1 there, 2 at the base)
-    /// and the box's height in rows above its base.
+    /// and the box's height in rows above its base. A cluster's weight reaches its top at the lowest head and stays
+    /// there above it, so every head leans whole while the stems bend under it.
     /// </summary>
     private void Stamp(Color32[] albedo, byte[] weights, byte[] rows, byte[] tops, bool[] taken, int size, int baseRow, Blade[] weed, string[] head, FlowerColour colour)
     {
@@ -287,10 +289,12 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
         int left = int.MaxValue;
         int right = int.MinValue;
         int tallest = 0;
+        int rigidFrom = int.MaxValue;
         foreach (Blade blade in weed)
         {
             if (head != null)
             {
+                rigidFrom = Math.Min(rigidFrom, blade.Height);
                 int headLeft = blade.Foot + blade.Curve - headWidth / 2;
                 left = Math.Min(left, Math.Min(Math.Min(blade.Foot, blade.Foot + blade.Curve), headLeft));
                 right = Math.Max(right, Math.Max(Math.Max(blade.Foot, blade.Foot + blade.Curve), headLeft + headWidth - 1));
@@ -321,9 +325,10 @@ public sealed class WeedsRecipe : TerrainMaterialRecipe
             }
         }
 
+        int bend = Math.Min(tallest, rigidFrom);
         for (int dy = -1; dy <= tallest; dy++)
         {
-            byte weight = (byte)(dy <= 0 ? 0 : Math.Min(255, (int)Math.Round(255.0 * dy / tallest)));
+            byte weight = (byte)(dy <= 0 ? 0 : Math.Min(255, (int)Math.Round(255.0 * Math.Min(dy, bend) / bend)));
             for (int x = left; x <= right; x++)
             {
                 int i = TerrainArt.Wrap(baseRow + dy, size) * size + x;

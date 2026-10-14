@@ -298,6 +298,168 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A swaying layer whose clumps lean whole moves only its weeds' own pixels, each weed as one: over the frames of a
+    /// gust, a weed whose upper half crosses a cell row shows the same lean in every row of that half (all at the full
+    /// weight), and a mark of the ground inside its box stays where it is, while the weed does lean in some frame. The
+    /// same textures without whole clumps lean the rows on either side of the cell row by different amounts in some
+    /// frame, and slide the ground mark with them. Each of the textures' 16 cells holds a red weed whose base lies 8 px
+    /// under the top of its cell, so its box crosses into the cell above, its rows from the fifth up at the full weight,
+    /// and a blue ground mark beside its top, in the albedo and the cell field alike, over green ground. Renders from a
+    /// later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerWhoseClumpsLeanWhole_MovesEachWeedAsOne_OverStillGround()
+    {
+        const int size = 128;
+        const int baseRow = 24;
+        Color32 green = new(40, 160, 40, 255);
+        Color32 red = new(220, 30, 30, 255);
+        Color32 blue = new(30, 30, 220, 255);
+        Color32[] albedo = new Color32[size * size];
+        Color32[] field = new Color32[size * size];
+        Color32[] height = new Color32[size * size];
+        for (int i = 0; i < albedo.Length; i++)
+        {
+            albedo[i] = green;
+            field[i] = green;
+            height[i] = new Color32(128, 0, 0, 255);
+        }
+
+        for (int column = 0; column < size / 32; column++)
+        {
+            for (int cellRow = 0; cellRow < size / 32; cellRow++)
+            {
+                for (int dy = -1; dy <= 10; dy++)
+                {
+                    int y = (cellRow * 32 + baseRow + dy) % size;
+                    for (int x = column * 32 + 10; x <= column * 32 + 20; x++)
+                    {
+                        int i = y * size + x;
+                        height[i].g = (byte)(dy + 2);
+                        height[i].b = (byte)(dy <= 0 ? 0 : 255 * Mathf.Min(dy, 5) / 5);
+                        field[i].a = 10;
+                    }
+
+                    if (dy >= 0)
+                    {
+                        albedo[y * size + column * 32 + 12] = red;
+                    }
+                }
+
+                int mark = ((cellRow * 32 + baseRow + 10) % size) * size + column * 32 + 18;
+                albedo[mark] = blue;
+                field[mark] = new Color32(blue.r, blue.g, blue.b, 10);
+            }
+        }
+
+        Texture2D albedoTexture = Texture("Whole albedo", albedo);
+        Texture2D fieldTexture = Texture("Whole field", field);
+        Texture2D heightTexture = Texture("Whole height", height);
+        TerrainBlendRenderer[] renderers = new TerrainBlendRenderer[2];
+        for (int r = 0; r < 2; r++)
+        {
+            TerrainMaterial swaying = TerrainMaterial.Create(r == 0 ? "Whole" : "Sheared", albedoTexture, fieldTexture, 4, TerrainMaterial.CellMode.None, green, new TerrainStyle.EdgeSettings(), heightTexture);
+            createdObjects.Add(swaying);
+            SerializedObject sway = new(swaying);
+            sway.FindProperty("framesPerSecond").floatValue = 8f;
+            sway.FindProperty("swayAmplitude").floatValue = 2f;
+            sway.FindProperty("wholeClumps").boolValue = r == 0;
+            sway.ApplyModifiedPropertiesWithoutUndo();
+            GameObject gridObject = Track(new GameObject($"WholeGrid{r}", typeof(Grid)));
+            gridObject.transform.position = new Vector3(r * 40f, 0f, 0f);
+            gridObject.SetActive(false);
+            Tilemap ground = new GameObject("Ground", typeof(Tilemap)).GetComponent<Tilemap>();
+            ground.transform.SetParent(gridObject.transform, false);
+            for (int x = 0; x < 6; x++)
+            {
+                for (int y = 0; y < 4; y++)
+                {
+                    ground.SetTile(new Vector3Int(x, y, 0), tile);
+                }
+            }
+
+            renderers[r] = gridObject.AddComponent<TerrainBlendRenderer>();
+            renderers[r].Configure(style, new TerrainBlendRenderer.Layer(ground, swaying));
+            gridObject.SetActive(true);
+        }
+
+        int drawn = 0;
+        for (int frame = 0; frame < 30 && drawn == 0; frame++)
+        {
+            yield return null;
+            renderers[0].SetFixedTime(0f);
+            Texture2D pixels = TerrainBlendProbe.Render(renderers[0], new Rect(0f, 0f, 6f, 4f), 1, false, true, true);
+            drawn = pixels.GetPixel(32 + 12, 32 + baseRow + 2).a > 0f ? 1 : 0;
+            Object.DestroyImmediate(pixels);
+        }
+
+        Assert.That(drawn, Is.EqualTo(1), "The layer is drawn.");
+        int leaned = 0;
+        int sheared = 0;
+        int slid = 0;
+        for (int step = 0; step <= 20; step++)
+        {
+            for (int r = 0; r < 2; r++)
+            {
+                renderers[r].SetFixedTime(step * 0.125f);
+                Texture2D pixels = TerrainBlendProbe.Render(renderers[r], new Rect(r * 40f, 0f, 6f, 4f), 1, false, true, true);
+                for (int cell = 1; cell <= 4; cell++)
+                {
+                    int left = cell * 32;
+                    int top = 32 + baseRow + 10;
+                    int below = Lean(pixels, left, 32 + baseRow + 6);
+                    int above = Lean(pixels, left, top);
+                    bool markStays = IsBlue(pixels.GetPixel(left + 18, top));
+                    if (r == 0)
+                    {
+                        Assert.That(above, Is.EqualTo(below), $"t {step * 0.125f}, cell {cell}: the weed leans as one across the cell row");
+                        Assert.That(markStays, Is.True, $"t {step * 0.125f}, cell {cell}: the ground stays");
+                        leaned += above > 0 ? 1 : 0;
+                    }
+                    else
+                    {
+                        sheared += above != below ? 1 : 0;
+                        slid += markStays ? 0 : 1;
+                    }
+                }
+
+                Object.DestroyImmediate(pixels);
+                renderers[r].SetFixedTime(null);
+            }
+        }
+
+        Assert.That(leaned, Is.GreaterThan(0), "The weeds lean in some frame.");
+        Assert.That(sheared, Is.GreaterThan(0), "Without whole clumps a weed shears across the cell row in some frame.");
+        Assert.That(slid, Is.GreaterThan(0), "Without whole clumps the ground slides with the weeds.");
+    }
+
+    /// <summary>
+    /// How many pixels right of its column (12 px into the cell from <paramref name="left"/>) the red weed shows in row
+    /// <paramref name="row"/> of <paramref name="pixels"/>, or -1 when it shows nowhere within 4 px.
+    /// </summary>
+    private static int Lean(Texture2D pixels, int left, int row)
+    {
+        for (int offset = 0; offset <= 4; offset++)
+        {
+            Color pixel = pixels.GetPixel(left + 12 + offset, row);
+            if (pixel.r > pixel.g && pixel.r > pixel.b)
+            {
+                return offset;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="pixel"/> is mostly blue.
+    /// </summary>
+    private static bool IsBlue(Color pixel)
+    {
+        return pixel.b > pixel.r && pixel.b > pixel.g;
+    }
+
+    /// <summary>
     /// A sunken layer (deep water) shows its bank along a top edge over a lower layer it meets with an ordinary pair,
     /// in that layer's bank colour, and none along a top edge over one it meets seamlessly (shallows, the same water's
     /// surface), where its own interior runs up to the edge. A blue sunken layer fills the bottom two rows, a green

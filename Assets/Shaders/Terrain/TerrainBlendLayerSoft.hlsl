@@ -10,7 +10,8 @@
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
 // opaque, or a sunken layer's bank (TBEdgeColour); then the interior under the band or the rim (TBInside, with a
 // sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit like the base colour. A layer that
-// turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does.
+// turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does. The
+// interior is worked out once for the edge pixel and the inside (TBLayerInterior).
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float4 shape = TBShape(ins, m);
@@ -56,20 +57,21 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
             tuft = TBTuft(ins, corner, m, d, pixel, worldPixel, e.tuftHeight);
         }
 
+        float bank;
+        float3 interior = TBLayerInterior(ins, m, e, w, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, hasCentre, centre, bank);
         if (tuft > 0.5)
         {
             result = float4(tuft > 1.5 ? edge : e.fill, 1.0);
         }
         else if (d > -0.5 && d < 0.5)
         {
-            float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, d, pixel, worldPixel, corner, hasCentre, centre) : edge;
+            float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, interior) : edge;
             result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)), 1.0);
         }
         else if (d <= -0.5)
         {
             float band;
-            float bank;
-            float3 colour = TBInside(ins, m, e, w, -d, pixel, worldPixel, corner, hasCentre, centre, band, bank);
+            float3 colour = TBInside(ins, m, e, w, -d, worldPixel, interior, bank, band);
             result = float4(colour + grit * band, 1.0);
         }
     }

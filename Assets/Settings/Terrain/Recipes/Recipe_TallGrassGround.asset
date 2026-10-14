@@ -1,0 +1,192 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 417cd96ea5d33a1418d642fc4223bd16, type: 3}
+  m_Name: Recipe_TallGrassGround
+  m_EditorClassIdentifier: TopDownRPG.Editor::GrassTuftsRecipe
+  material: {fileID: 0}
+  seed: 20261026
+  repeatCells: 8
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  grass:
+    serializedVersion: 2
+    rgba: 4279914526
+  tintWaves:
+  - x: 1
+    y: 0
+    amplitude: 1.4
+  - x: 0
+    y: 1
+    amplitude: 1.1
+  - x: 2
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: -2
+    amplitude: 0.9
+  - x: 3
+    y: 2
+    amplitude: 0.5
+  grit: 3
+  blade:
+    serializedVersion: 2
+    rgba: 4280579130
+  tip:
+    serializedVersion: 2
+    rgba: 4282033256
+  spotsPerCell: 8
+  jitter: 0.42
+  tuftChance: 0.95
+  densityWaves:
+  - x: 2
+    y: 1
+    amplitude: 0.14
+  - x: -1
+    y: 2
+    amplitude: 0.12
+  - x: 3
+    y: -2
+    amplitude: 0.08
+  glyphs:
+  - '+
+
+    #
+
+    #
+
+    #
+
+    #
+
+    #'
+  - '.+
+
+    .#
+
+    #.
+
+    #.
+
+    #.
+
+    #.'
+  - '+.
+
+    #.
+
+    .#
+
+    .#
+
+    .#'
+  - '+.+
+
+    #.#
+
+    #.#
+
+    #.#
+
+    .#.'
+  - '..+
+
+    .+#
+
+    .#.
+
+    #..
+
+    #..
+
+    #..'
+  - '+..
+
+    #+.
+
+    .#.
+
+    ..#
+
+    ..#'
+  - '+.+
+
+    #.#
+
+    #.#
+
+    #.#
+
+    #.#
+
+    .#.'
+  - '+
+
+    #
+
+    #
+
+    #
+
+    #
+
+    #
+
+    #'
+  - '.+.
+
+    +#+
+
+    #.#
+
+    #.#
+
+    #.#'
+  patchAmount: 0.5
+  patchLow:
+    serializedVersion: 2
+    rgba: 4279912474
+  patchHigh:
+    serializedVersion: 2
+    rgba: 4280049708
+  patchWaves:
+  - x: 2
+    y: 1
+    amplitude: 1
+  - x: -1
+    y: 3
+    amplitude: 0.9
+  - x: 3
+    y: -2
+    amplitude: 0.7
+  - x: 4
+    y: 1
+    amplitude: 0.5
+  - x: 1
+    y: -4
+    amplitude: 0.4

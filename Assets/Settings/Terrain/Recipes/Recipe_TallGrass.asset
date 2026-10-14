@@ -1,0 +1,98 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54c5b3dfcebf24345bf6b0118f3e692d, type: 3}
+  m_Name: Recipe_TallGrass
+  m_EditorClassIdentifier: TopDownRPG.Editor::WeedsRecipe
+  material: {fileID: 11400000, guid: 6531cbe7d6da4924bbc02b4f6abc0ba6, type: 2}
+  seed: 20261025
+  repeatCells: 8
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  grassRecipe: {fileID: 11400000, guid: 55363ad290a590343b7bf2bcd9041dea, type: 2}
+  grass:
+    serializedVersion: 2
+    rgba: 4279914526
+  weedsPerCell: 3
+  jitter: 0.45
+  weedChance: 0.9
+  densityWaves:
+  - x: 2
+    y: 1
+    amplitude: 1
+  - x: -1
+    y: 3
+    amplitude: 0.8
+  - x: 3
+    y: -2
+    amplitude: 0.6
+  densityAmount: 0.25
+  blades: {x: 5, y: 8}
+  bladeHeight: {x: 13, y: 21}
+  footSpread: 4
+  curve: 3
+  swayMargin: 3
+  seedHeadChance: 0.15
+  stem:
+    serializedVersion: 2
+    rgba: 4279652898
+  leaf:
+    serializedVersion: 2
+    rgba: 4280580670
+  leafLight:
+    serializedVersion: 2
+    rgba: 4281638496
+  tip:
+    serializedVersion: 2
+    rgba: 4284269206
+  shadow:
+    serializedVersion: 2
+    rgba: 4279517208
+  flowerChance: 0
+  flowerStems: {x: 2, y: 5}
+  stemHeight: {x: 3, y: 7}
+  stemSpread: 4
+  stemCurve: 1
+  flowerHeads:
+  - '.o.
+
+    oco
+
+    .o.'
+  flowerColours: []
+  flowerColourWaves:
+  - x: 1
+    y: 1
+    amplitude: 1
+  - x: 1
+    y: -1
+    amplitude: 0.8
+  - x: 2
+    y: 1
+    amplitude: 0.4
+  flowerColourMix: 0.15

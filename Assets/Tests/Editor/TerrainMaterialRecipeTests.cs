@@ -15,8 +15,10 @@ using Object = UnityEngine.Object;
 /// chip's centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone
 /// pixel's alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth
 /// with one value per chip or stone, and glint and sparkle phases only in the water recipes and sway weights only in
-/// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column; caustic
-/// water's net breathes between two courses, runs sideways when flattened and breaks into ripples with a junction gap,
+/// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column, draw
+/// flowers only when asked, in boxes and in drifts of one colour, and keep that contract with the project materials'
+/// sway; caustic water's net breathes between two courses, runs sideways when flattened and breaks into ripples
+/// with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
 /// pebbles only when asked (shallows); tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
@@ -171,7 +173,7 @@ public class TerrainMaterialRecipeTests
     [Test]
     public void TheProjectsMaterials_KeepTheirTexturesInAFolderOfTheirOwn()
     {
-        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza", "Shallows", "Planks" })
+        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Meadow", "TallGrass", "Dirt", "Plaza", "Shallows", "Planks" })
         {
             TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
             string folder = $"{TerrainMaterialWriter.TextureFolder}/{name}";
@@ -1159,6 +1161,171 @@ public class TerrainMaterialRecipeTests
         TerrainTextures ground = grass.Generate(grass.Seed);
         TerrainTextures textures = recipe.Generate(Seed);
 
+        (int weighted, int blades) = AssertClumpContract(textures, ground, 0f);
+
+        Assert.That(weighted, Is.GreaterThan(textures.Size * textures.Size / 50), "the weeds' boxes");
+        Assert.That(blades, Is.GreaterThan(textures.Size * textures.Size / 200), "the blades");
+    }
+
+    /// <summary>
+    /// Flowers are off by default: flower colours and colour waves set without a flower chance change no pixel. With a
+    /// chance, some kept spots become flower clusters whose petals and hearts all lie inside a box, above its base, so
+    /// they sway with it and keep the clump contract; clusters take the colour of the colour waves' band where they stand,
+    /// so with one wave once across the texture and two colours, each colour fills many columns on its own and only the
+    /// columns around the two band borders hold both.
+    /// </summary>
+    [Test]
+    public void Flowers_StandInBoxesInDriftsOfOneColour_AndAreOffByDefault()
+    {
+        GrassTuftsRecipe grass = (GrassTuftsRecipe)CreateRecipe(typeof(GrassTuftsRecipe));
+        WeedsRecipe plain = (WeedsRecipe)CreateRecipe(typeof(WeedsRecipe));
+        SetFlowerGround(plain, grass);
+        TerrainTextures unflowered = plain.Generate(Seed);
+
+        WeedsRecipe recipe = (WeedsRecipe)CreateRecipe(typeof(WeedsRecipe));
+        SetFlowerGround(recipe, grass);
+        Color32 red = new(255, 0, 0, 255);
+        Color32 blue = new(0, 0, 255, 255);
+        Color32 white = new(255, 255, 255, 255);
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("flowerStems").vector2IntValue = new Vector2Int(1, 3);
+        settings.FindProperty("stemSpread").intValue = 2;
+        SerializedProperty colours = settings.FindProperty("flowerColours");
+        colours.arraySize = 2;
+        colours.GetArrayElementAtIndex(0).FindPropertyRelative("petal").colorValue = red;
+        colours.GetArrayElementAtIndex(0).FindPropertyRelative("heart").colorValue = white;
+        colours.GetArrayElementAtIndex(1).FindPropertyRelative("petal").colorValue = blue;
+        colours.GetArrayElementAtIndex(1).FindPropertyRelative("heart").colorValue = white;
+        SerializedProperty waves = settings.FindProperty("flowerColourWaves");
+        waves.arraySize = 1;
+        waves.GetArrayElementAtIndex(0).FindPropertyRelative("x").intValue = 1;
+        waves.GetArrayElementAtIndex(0).FindPropertyRelative("y").intValue = 0;
+        waves.GetArrayElementAtIndex(0).FindPropertyRelative("amplitude").floatValue = 1f;
+        settings.FindProperty("flowerColourMix").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures withoutChance = recipe.Generate(Seed);
+        Assert.That(Differences(unflowered.Albedo, withoutChance.Albedo), Is.Zero, "No flower chance: the albedo of a recipe without flowers.");
+        Assert.That(Differences(unflowered.Height, withoutChance.Height), Is.Zero, "No flower chance: the height of a recipe without flowers.");
+
+        settings.FindProperty("flowerChance").floatValue = 0.8f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures textures = recipe.Generate(Seed);
+        AssertClumpContract(textures, grass.Generate(grass.Seed), 0f);
+
+        int size = textures.Size;
+        int[] redColumns = new int[size];
+        int[] blueColumns = new int[size];
+        int hearts = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 pixel = textures.Albedo[y * size + x];
+                bool isRed = SameColour(pixel, red);
+                bool isBlue = SameColour(pixel, blue);
+                bool heart = SameColour(pixel, white);
+                if (!isRed && !isBlue && !heart)
+                {
+                    continue;
+                }
+
+                Assert.That(textures.Height[y * size + x].g, Is.GreaterThan(2), $"({x}, {y}) a flower stands above its box's base");
+                hearts += heart ? 1 : 0;
+                redColumns[x] += isRed ? 1 : 0;
+                blueColumns[x] += isBlue ? 1 : 0;
+            }
+        }
+
+        int mixed = 0;
+        int redOnly = 0;
+        int blueOnly = 0;
+        for (int band = 0; band < size; band += 8)
+        {
+            int reds = 0;
+            int blues = 0;
+            for (int x = band; x < band + 8; x++)
+            {
+                reds += redColumns[x];
+                blues += blueColumns[x];
+            }
+
+            mixed += reds > 0 && blues > 0 ? 1 : 0;
+            redOnly += reds > 0 && blues == 0 ? 1 : 0;
+            blueOnly += blues > 0 && reds == 0 ? 1 : 0;
+        }
+
+        Assert.That(hearts, Is.GreaterThan(20), "Flower hearts.");
+        Assert.That(redOnly, Is.GreaterThan(8), "A drift of red flowers.");
+        Assert.That(blueOnly, Is.GreaterThan(8), "A drift of blue flowers.");
+        Assert.That(mixed, Is.LessThanOrEqualTo(6), "Only the bands around the two borders mix.");
+    }
+
+    /// <summary>
+    /// Gives <paramref name="recipe"/> <paramref name="grass"/> as its ground, an 8-cell repeat and four weed spots per
+    /// cell side.
+    /// </summary>
+    private static void SetFlowerGround(WeedsRecipe recipe, GrassTuftsRecipe grass)
+    {
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("grassRecipe").objectReferenceValue = grass;
+        settings.FindProperty("repeatCells").intValue = 8;
+        settings.FindProperty("weedsPerCell").floatValue = 4f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// The project's swaying recipes (grass, dry grass, the meadow and tall grass, only read) generate the same textures
+    /// twice and keep the clump contract with their materials' sway: a sway margin of at least the material's sway
+    /// amplitude, which is at most <see cref="TerrainMaterial.MaxSwayAmplitude"/>, every box inside one cell column, and
+    /// every weed pixel still inside its box's row when it leans by its row's lean at the full amplitude, so a leaning tip
+    /// is never cut. All four sway in one wind (the grass's period and gust length); tall grass is taller than the grass
+    /// and sways further.
+    /// </summary>
+    [TestCase("Recipe_Grass")]
+    [TestCase("Recipe_DryGrass")]
+    [TestCase("Recipe_Meadow")]
+    [TestCase("Recipe_TallGrass")]
+    public void TheProjectsSwayingRecipes_KeepTheClumpContract_WithTheirMaterialsSway(string recipeName)
+    {
+        WeedsRecipe recipe = AssetDatabase.LoadAssetAtPath<WeedsRecipe>($"Assets/Settings/Terrain/Recipes/{recipeName}.asset");
+        TerrainMaterial material = recipe.Material;
+        SerializedObject settings = new(recipe);
+        GrassTuftsRecipe grass = (GrassTuftsRecipe)settings.FindProperty("grassRecipe").objectReferenceValue;
+        Assert.That(material.Sways, Is.True, recipeName);
+        Assert.That(material.SwayAmplitude, Is.LessThanOrEqualTo(TerrainMaterial.MaxSwayAmplitude));
+        Assert.That(settings.FindProperty("swayMargin").intValue, Is.GreaterThanOrEqualTo(Mathf.CeilToInt(material.SwayAmplitude)), "The margin holds the lean.");
+
+        TerrainTextures textures = recipe.Generate(recipe.Seed);
+        TerrainTextures again = recipe.Generate(recipe.Seed);
+        Assert.That(Differences(textures.Albedo, again.Albedo) + Differences(textures.Height, again.Height) + Differences(textures.CellField, again.CellField), Is.Zero, "The same seed, the same textures.");
+        (int weighted, int blades) = AssertClumpContract(textures, grass.Generate(grass.Seed), material.SwayAmplitude);
+        Assert.That(weighted, Is.GreaterThan(textures.Size * textures.Size / 50), "the boxes");
+        Assert.That(blades, Is.GreaterThan(textures.Size * textures.Size / 200), "the blades");
+
+        WeedsRecipe grassRecipe = AssetDatabase.LoadAssetAtPath<WeedsRecipe>("Assets/Settings/Terrain/Recipes/Recipe_Grass.asset");
+        TerrainMaterial grassMaterial = grassRecipe.Material;
+        Assert.That(material.SwayPeriod, Is.EqualTo(grassMaterial.SwayPeriod), "One wind.");
+        Assert.That(material.GustLength, Is.EqualTo(grassMaterial.GustLength), "One wind.");
+        Assert.That(material.FramesPerSecond, Is.EqualTo(grassMaterial.FramesPerSecond), "One wind.");
+        if (recipeName == "Recipe_TallGrass")
+        {
+            Assert.That(material.SwayAmplitude, Is.GreaterThan(grassMaterial.SwayAmplitude));
+            Assert.That(settings.FindProperty("bladeHeight").vector2IntValue.y, Is.GreaterThan(new SerializedObject(grassRecipe).FindProperty("bladeHeight").vector2IntValue.y));
+        }
+    }
+
+    /// <summary>
+    /// Asserts the clump contract a swaying recipe's <paramref name="textures"/> keep over their
+    /// <paramref name="ground"/> recipe's: away from the boxes the albedo and the height's red channel are the ground's,
+    /// tiled, and the cell field is that ground everywhere; inside a box the sway weight is the same along each row and
+    /// never falls going up, and every box lies inside one cell column; the height's green channel counts a box's rows
+    /// from the shadow row (1) up, a row up being one more, and is 0 outside every box, and the field's alpha is a box's
+    /// height in rows above its base (255 outside). With an <paramref name="amplitude"/> above 0, every pixel a weed
+    /// covers (differing from the ground) leans by its row's lean at that amplitude to a pixel of the same row of its
+    /// box. Returns how many pixels are weighted and how many differ from the ground.
+    /// </summary>
+    private static (int Weighted, int Blades) AssertClumpContract(TerrainTextures textures, TerrainTextures ground, float amplitude)
+    {
         int size = textures.Size;
         int weighted = 0;
         int blades = 0;
@@ -1213,11 +1380,18 @@ public class TerrainMaterialRecipeTests
                 {
                     Assert.That(textures.Height[above].b, Is.GreaterThanOrEqualTo(textures.Height[i].b), $"({x}, {y}) the weight grows going up");
                 }
+
+                if (differs && amplitude > 0f)
+                {
+                    float weight = textures.Height[i].b / 255f;
+                    int lean = Mathf.RoundToInt(Mathf.Round(amplitude) * weight * weight);
+                    Assert.That(x + lean, Is.LessThan(size), $"({x}, {y}) leans inside the texture");
+                    Assert.That(textures.Height[y * size + x + lean].b, Is.EqualTo(textures.Height[i].b), $"({x}, {y}) a leaning tip stays in its box");
+                }
             }
         }
 
-        Assert.That(weighted, Is.GreaterThan(size * size / 50), "the weeds' boxes");
-        Assert.That(blades, Is.GreaterThan(size * size / 200), "the blades");
+        return (weighted, blades);
     }
 
     /// <summary>
@@ -1441,7 +1615,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(11));
+        Assert.That(checkedRecipes, Is.EqualTo(13));
     }
 
     /// <summary>

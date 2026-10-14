@@ -580,6 +580,72 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
+    /// The project's meadow and tall grass (TerrainTypes.md, Phase 6) come right after dry grass in the shared order,
+    /// level, with no cell field, and sway in the grass's wind, tall grass further than the grass. The meadow is
+    /// seamless over the grass, with no outline, rim, shadow or tufts (its ground is the grass's), and seamless over dry
+    /// grass with green tufts, marked seamless in the lookup texture, and keeps the grass's edge over nothing; tall grass
+    /// draws its default edge over every grass and over nothing: an outline, a shadow and a fringe of tufts, not
+    /// seamless. Both show the grass's bank where water cuts into them.
+    /// </summary>
+    [Test]
+    public void TheProjectsMeadowAndTallGrass_SwayInTheGrasssWind_AndMeetTheGrassAsDecided()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial grass = ProjectMaterial("Grass");
+        TerrainMaterial dryGrass = ProjectMaterial("DryGrass");
+        TerrainMaterial meadow = ProjectMaterial("Meadow");
+        TerrainMaterial tallGrass = ProjectMaterial("TallGrass");
+
+        Assert.That(style.LayerOrderIndexOf(meadow), Is.EqualTo(style.LayerOrderIndexOf(dryGrass) + 1));
+        Assert.That(style.LayerOrderIndexOf(tallGrass), Is.EqualTo(style.LayerOrderIndexOf(dryGrass) + 2));
+        foreach (TerrainMaterial material in new[] { meadow, tallGrass })
+        {
+            Assert.That(material.Sways, Is.True, material.name);
+            Assert.That(material.SwayPeriod, Is.EqualTo(grass.SwayPeriod), material.name);
+            Assert.That(material.GustLength, Is.EqualTo(grass.GustLength), material.name);
+            Assert.That(material.SinkDepth, Is.Zero, material.name);
+            Assert.That(material.Cells, Is.EqualTo(TerrainMaterial.CellMode.None), material.name);
+            Assert.That(material.BankColour, Is.EqualTo(grass.BankColour), material.name);
+        }
+
+        Assert.That(meadow.SwayAmplitude, Is.EqualTo(grass.SwayAmplitude));
+        Assert.That(tallGrass.SwayAmplitude, Is.GreaterThan(grass.SwayAmplitude));
+
+        TerrainStyle.EdgeSettings meadowOverGrass = style.GetEdge(meadow, grass);
+        Assert.That(meadowOverGrass.Seamless, Is.True);
+        Assert.That(meadowOverGrass.DrawOutline, Is.False);
+        Assert.That(meadowOverGrass.RimWidth, Is.Zero);
+        Assert.That(meadowOverGrass.ShadowAlpha, Is.Zero);
+        Assert.That(meadowOverGrass.TuftHeight, Is.Zero, "The same ground: nothing to fray.");
+        TerrainStyle.EdgeSettings meadowOverDryGrass = style.GetEdge(meadow, dryGrass);
+        Assert.That(meadowOverDryGrass, Is.Not.SameAs(meadowOverGrass));
+        Assert.That(meadowOverDryGrass.Seamless, Is.True);
+        Assert.That(meadowOverDryGrass.TuftHeight, Is.GreaterThan(0f), "Green tufts fray into the straw.");
+        Assert.That(style.GetEdge(meadow, null), Is.SameAs(meadow.Edge));
+        Assert.That(meadow.Edge.DrawOutline, Is.EqualTo(grass.Edge.DrawOutline));
+        Assert.That(meadow.Edge.RimWidth, Is.EqualTo(grass.Edge.RimWidth));
+        Assert.That(meadow.Edge.TuftHeight, Is.EqualTo(grass.Edge.TuftHeight));
+
+        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, meadow })
+        {
+            Assert.That(style.GetEdge(tallGrass, lower), Is.SameAs(tallGrass.Edge), lower != null ? lower.name : "nothing");
+        }
+
+        Assert.That(tallGrass.Edge.Seamless, Is.False);
+        Assert.That(tallGrass.Edge.DrawOutline, Is.True);
+        Assert.That(tallGrass.Edge.ShadowAlpha, Is.GreaterThan(0f));
+        Assert.That(tallGrass.Edge.TuftHeight, Is.GreaterThan(grass.Edge.TuftHeight), "A fringe of blades.");
+
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass, meadow, tallGrass });
+        Assert.That(PairTexel(texels, 4, 2, 0, 3).a, Is.Zero, "meadow over grass is seamless");
+        Assert.That(PairTexel(texels, 4, 2, 1, 3).a, Is.Zero, "meadow over dry grass is seamless");
+        Assert.That(PairTexel(texels, 4, 2, -1, 3).a, Is.EqualTo(1f), "meadow over nothing is not");
+        Assert.That(PairTexel(texels, 4, 3, 0, 3).a, Is.EqualTo(1f), "tall grass over grass is not");
+        Assert.That(PairTexel(texels, 4, 3, 2, 3).a, Is.EqualTo(1f), "tall grass over the meadow is not");
+        Assert.That(LayerTexel(texels, 3, TerrainBlendLut.SwayColumn).r, Is.EqualTo(tallGrass.SwayAmplitude));
+    }
+
+    /// <summary>
     /// The project's ground material named <paramref name="name"/>, only read.
     /// </summary>
     private static TerrainMaterial ProjectMaterial(string name)

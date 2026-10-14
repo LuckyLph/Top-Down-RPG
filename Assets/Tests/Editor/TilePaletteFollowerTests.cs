@@ -74,7 +74,7 @@ public class TilePaletteFollowerTests
             palettes.Add(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid)));
         }
 
-        Assert.That(style.LayerOrder.Count, Is.EqualTo(11));
+        Assert.That(style.LayerOrder.Count, Is.EqualTo(13));
         foreach (TerrainMaterial material in style.LayerOrder)
         {
             Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();

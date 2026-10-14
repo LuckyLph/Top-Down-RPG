@@ -269,11 +269,16 @@ Notes:
 
 ### Phase 7: snow and ice
 
-- [ ] Shader: sparkles without glints for a material (snow), already possible by writing only sparkle phases; check and document.
+- [x] Shader: sparkles without glints for a material (snow), already possible by writing only sparkle phases; check and document.
 - [ ] `Snow`: white with blue shading and drifts, cost 15, a soft rim over everything.
 - [ ] `Ice`: pale sheets with cracks and glints, an outlined edge.
 - [ ] A snowy area generator, or a snow variant of the Clearing, using a per-area layer set without grass-only materials.
 - [ ] Slipping on ice is gameplay: plan it with [PlayerControls.md](PlayerControls.md) before building it; until then ice walks like grass.
+
+Notes:
+
+- **The baseline**, at HEAD before any change of this phase (e6f546c), taken as Phase 11's: Area_Clearing, Area_VillageForest and Area_Lakeside, each opened on its own, over the control map's bounds at one screen pixel per art pixel, in both looks at fixed times of 1.5 s and 2.75 s, the debug view as `CheckBlobs` renders it in both looks, and `CheckBlobs` in both looks (blob counts as in Phase 6, no blob under 200 px, no holes); and Phase 11's test scene, rebuilt from its description by a script kept outside the project (vignettes of the fifteen pair overrides, a strip of every material but grass reaching the map's bottom edge, the lake with its beach, shallows and turned boardwalk, the second pond with a boardwalk to the top edge, the gravel path with meadow and tall grass patches crossed by a stone road). Its blob check in crisp: grass 1, dry grass 3, meadow 5, tall grass 3, dirt 5, sand 5, mud 2, gravel 6, plaza 3, stone 5, shallows 5, water 7, planks 5, no blob under 200 px and no holes, the counts Phase 11 gave but for its grass blobs, which the bridge fix removed; in soft five 1 or 2 px grass blobs and one 1 px meadow blob where the meadow and tall grass strips leave the grass for the map's edge (three looks meeting under a corner, Architecture.md's Known gaps). Each set was captured twice and the two runs are byte for byte the same (28 files); the first soft render of a session comes back black while the variant compiles, so the captures run after a first soft render.
+- **Sparkles without glints: no shader change.** `TBGlint` lights the glint colour only for a height code of 1 to 127 and the sparkle colour only for 128 to 255, and reads the glint period and duty only for a glint code, so a material whose recipe writes only sparkle phases lights only its sparkles, whatever its glint settings; its rim swell is a setting of its own (0 for none). The water highlights recipe writes glint phases only on its strokes, so with a stroke chance and a density amount of 0 it writes sparkle phases alone, its sparkles where they lie with strokes (every random draw is made either way). Two tests hold this: `TerrainBlendRendererTests.ALayerWithOnlySparklePhases_LightsOnlyItsSparkles` renders a material with glints set to stay lit all the time and only sparkle phases in its height, and finds no glint colour anywhere and its sparkles lit for their duty and out after it (written with glint phases instead, it fails), and `TerrainMaterialRecipeTests.WaterHighlights_WithoutStrokes_WriteOnlySparklePhases` checks the recipe.
 
 ### Phase 8: ocean
 

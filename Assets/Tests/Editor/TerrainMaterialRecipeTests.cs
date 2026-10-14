@@ -20,7 +20,7 @@ using Object = UnityEngine.Object;
 /// sway; caustic water's net breathes between two courses, runs sideways when flattened and breaks into ripples
 /// with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
-/// pebbles only when asked (shallows); tufts point up; sand's
+/// pebbles only when asked (shallows), and without strokes writes only sparkle phases (snow); tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
 /// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
 /// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; planks point
@@ -935,6 +935,41 @@ public class TerrainMaterialRecipeTests
         Assert.That((double)bedPixels / plain, Is.InRange(0.22, 0.38), "bed share");
         Assert.That(strokes, Is.GreaterThan(5));
         Assert.That(pebbles, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// Pond water with a stroke chance and density amount of 0 has no strokes, so its height holds only sparkle phases
+    /// (or none): a material that sparkles without glints, as snow does, needs no other setting. Its sparkles sit where
+    /// they sit with strokes, on the pixels no stroke took.
+    /// </summary>
+    [Test]
+    public void WaterHighlights_WithoutStrokes_WriteOnlySparklePhases()
+    {
+        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 resting = settings.FindProperty("resting").colorValue;
+        TerrainTextures withStrokes = recipe.Generate(Seed);
+        settings.FindProperty("strokeChance").floatValue = 0f;
+        settings.FindProperty("densityAmount").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures sparkling = recipe.Generate(Seed);
+
+        int sparkles = 0;
+        for (int i = 0; i < sparkling.Albedo.Length; i++)
+        {
+            int code = sparkling.Height[i].b;
+            Assert.That(code > 0 && code < 128, Is.False, $"pixel {i} holds a glint phase");
+            Assert.That(SameColour(sparkling.Albedo[i], resting), Is.False, $"pixel {i} is a stroke");
+            if (withStrokes.Height[i].b >= 128)
+            {
+                Assert.That(code, Is.EqualTo(withStrokes.Height[i].b), $"pixel {i}: a sparkle moved");
+            }
+
+            sparkles += code >= 128 ? 1 : 0;
+        }
+
+        Assert.That(sparkles, Is.GreaterThan(0));
     }
 
     /// <summary>

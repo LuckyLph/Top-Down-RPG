@@ -21,7 +21,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// layer, and a material without a height still builds; a sunken layer shows its bank over an ordinary pair and none
 /// over a seamless one; a bridge leaves the layers under it their own edges beside it and hides the edge of a layer
 /// painted under it where both end together, and a layer that turns to its runs turns its textures where it runs
-/// across; an animated layer gives the renderer its rate, which the Scene view follows; a fixed time for animated
+/// across; an animated layer whose height holds only sparkle phases lights only its sparkles; an animated layer gives
+/// the renderer its rate, which the Scene view follows; a fixed time for animated
 /// materials reaches the runtime material and clears without a rebuild, and the layer count the shader reads is the
 /// built one until a rebuild; a
 /// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
@@ -459,6 +460,104 @@ public class TerrainBlendRendererTests
     private static bool IsBlue(Color pixel)
     {
         return pixel.b > pixel.r && pixel.b > pixel.g;
+    }
+
+    /// <summary>
+    /// An animated layer whose height holds only sparkle phases lights only its sparkles, never its glint colour, even
+    /// with glints set to stay lit all the time: snow sparkles without glints by its recipe writing no glint phase. The
+    /// material is one dark blue with sparkle phases of 0 at a few interior texels, glinting red every second for all of
+    /// it and sparkling green every second for half of it. At 0.25 s the sparkle texels show green and every other pixel
+    /// keeps its colour; at 0.75 s the sparkles are out and they show the blue again; no pixel is ever red. Renders from
+    /// a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerWithOnlySparklePhases_LightsOnlyItsSparkles()
+    {
+        const int size = 128;
+        Color32 blue = new(30, 60, 140, 255);
+        Color32[] albedo = new Color32[size * size];
+        Color32[] height = new Color32[size * size];
+        for (int i = 0; i < albedo.Length; i++)
+        {
+            albedo[i] = blue;
+            height[i] = new Color32(128, 128, 0, 255);
+        }
+
+        Vector2Int[] sparkles = { new(40, 40), new(80, 56), new(60, 90) };
+        foreach (Vector2Int sparkle in sparkles)
+        {
+            height[sparkle.y * size + sparkle.x].b = 128;
+        }
+
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial sparkling = TerrainMaterial.Create("Sparkling", Texture("Sparkling albedo", albedo), null, 4, TerrainMaterial.CellMode.None, blue, bare, Texture("Sparkling height", height));
+        createdObjects.Add(sparkling);
+        SerializedObject animation = new(sparkling);
+        animation.FindProperty("framesPerSecond").floatValue = 8f;
+        animation.FindProperty("glintColour").colorValue = Color.red;
+        animation.FindProperty("glintPeriod").floatValue = 1f;
+        animation.FindProperty("glintDuty").floatValue = 1f;
+        animation.FindProperty("sparkleColour").colorValue = Color.green;
+        animation.FindProperty("sparklePeriod").floatValue = 1f;
+        animation.FindProperty("sparkleDuty").floatValue = 0.5f;
+        animation.ApplyModifiedPropertiesWithoutUndo();
+
+        GameObject gridObject = Track(new GameObject("SparklingGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap ground = new GameObject("Ground", typeof(Tilemap)).GetComponent<Tilemap>();
+        ground.transform.SetParent(gridObject.transform);
+        for (int x = 0; x < 4; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                ground.SetTile(new Vector3Int(x, y, 0), tile);
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(ground, sparkling));
+        gridObject.SetActive(true);
+        Rect world = new(0f, 0f, 4f, 4f);
+        Color32 plain = default;
+        for (int frame = 0; frame < 30 && !IsDrawn(plain); frame++)
+        {
+            yield return null;
+            renderer.SetFixedTime(0.25f);
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            plain = pixels.GetPixel(20, 20);
+            Object.DestroyImmediate(pixels);
+        }
+
+        Assert.That(IsDrawn(plain), Is.True, "The layer is drawn.");
+        foreach (float time in new[] { 0.25f, 0.75f })
+        {
+            renderer.SetFixedTime(time);
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            int lit = 0;
+            for (int y = 16; y < size - 16; y++)
+            {
+                for (int x = 16; x < size - 16; x++)
+                {
+                    Color32 pixel = pixels.GetPixel(x, y);
+                    Assert.That(pixel.r > pixel.g && pixel.r > pixel.b, Is.False, $"t {time}: no pixel glints, at ({x}, {y})");
+                    bool sparkle = System.Array.IndexOf(sparkles, new Vector2Int(x, y)) >= 0;
+                    if (sparkle && time < 0.5f)
+                    {
+                        Assert.That(pixel.g, Is.GreaterThan(pixel.b), $"t {time}: the sparkle at ({x}, {y}) is lit");
+                        lit++;
+                    }
+                    else
+                    {
+                        Assert.That(pixel, Is.EqualTo(plain), $"t {time}: ({x}, {y}) keeps its colour");
+                    }
+                }
+            }
+
+            Object.DestroyImmediate(pixels);
+            Assert.That(lit, Is.EqualTo(time < 0.5f ? sparkles.Length : 0), $"t {time}: lit sparkles");
+        }
+
+        renderer.SetFixedTime(null);
     }
 
     /// <summary>

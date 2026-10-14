@@ -294,6 +294,20 @@ Notes:
 - [ ] The cliff blocks movement: the writer puts wall cells (the collision tilemap) along a raised layer's lower edges, except where a ramp or stairs are laid.
 - [ ] A generator that lays a plateau with a ramp.
 
+### Phase 11: shader and renderer review
+
+`TerrainBlend.hlsl` has grown phase by phase into one 1,180-line file that every ground pixel runs through: the control map and layer masks, bridges and layers that turn to their runs, the crisp and soft shape distances, pair weights and edge settings, rims, tufts, chips and cut stones, glints, sparkles and rim swell, swaying clumps and their border checks, sunken banks, seamless edges, the composite and the debug view, about 45 functions with the two looks interleaved through `#ifdef _TERRAIN_SOFT`. Each phase added a material setting and a branch on a lookup texel, so every variant compiles every feature (the compile test takes 69 s) and every pixel checks features its area may not use. The lookup texture's layout is kept in step by hand: `TerrainBlendLut`'s column constants and the shader's `#define`s are two copies of the same numbers, row types reuse the same columns for other values, and the first columns of each row are positional. `TerrainBlendRenderer` (1,125 lines) builds the textures and chunks, follows tile changes and undo, drives brush previews, checks navigation priorities and serves the debug and probe seams; `TerrainMaterial` carries some thirty settings in one flat list. Before more effects arrive (snow's sparkles, the ocean, lava, raised ground) the design should be reviewed and, where it pays, split. This phase can run before Phases 7 to 10, whatever its number.
+
+- [ ] Map the shader: its responsibilities, which run per pixel, per layer, per pair or per feature, what each costs (`TerrainBlendProbe.MeasureCost` with a feature on and off, compile time per variant) and which inputs each reads. Note the map in this phase's notes.
+- [ ] Decide the split, weighing each against compile time, draw cost and the risk of changing a pixel:
+  - files by concern (layer masks and shapes, pair edges and rims, the material interior: cells, animation, sway, banks, turning; the composite; the debug view), with no change in what is compiled;
+  - the two looks as separate functions or files rather than interleaved `#ifdef`s;
+  - features an area does not use compiled out (shader keywords or variants chosen by the renderer from its materials) against today's run-time branches, counting the variants each would add;
+  - one source of truth for the lookup texture's layout (named columns per row type, shared by the C# writer and the shader, with a test that the two agree).
+- [ ] Review the renderer for the same: building, change tracking and undo, previews, navigation checks and the editor and test seams as separate pieces where that makes them clearer, and `TerrainMaterial`'s settings grouped (animation, sway, sinking, placement) without losing serialized data (`FormerlySerializedAs`, or a migration through the editor).
+- [ ] Carry out the parts that were decided, one step at a time: after each, the Clearing, the Village Forest and the Lakeside render byte for byte as before in both looks (whole-area captures at a fixed time against the committed shader), the compile test takes no longer, and `MeasureCost` (Phase 1's setup) shows no slower frame.
+- [ ] Tests follow the new seams (the lookup layout test above, the existing shader, LUT and renderer suites), and [Architecture.md](Architecture.md)'s terrain sections and [TerrainBlending.md](TerrainBlending.md) describe the new structure.
+
 ## Testing
 
 Each phase adds the tests the existing materials have: the recipe's determinism, PNGs and look (`TerrainMaterialRecipeTests`), the lookup texture's new settings (`TerrainBlendLutTests`), the tile and palette (`TerrainTileTests`), the generators' layouts over many seeds (`AreaGenerationTests`), and the template (`AreaTemplateTests`). Shader effects are checked by eye with `TerrainBlendProbe` captures at fixed times, in both looks, and noted in the phase's notes, as in TerrainBlending.md.

@@ -39,39 +39,36 @@ MonoBehaviour:
     rgba: 4294240996
   darker:
     serializedVersion: 2
-    rgba: 4293843660
+    rgba: 4294107864
   lighter:
     serializedVersion: 2
-    rgba: 4294834420
+    rgba: 4294702576
   toneWaves:
+  - x: 0
+    y: 2
+    amplitude: 1
   - x: 1
     y: 3
-    amplitude: 1
-  - x: 2
-    y: 4
     amplitude: 0.7
   - x: -1
-    y: 4
-    amplitude: 0.7
-  - x: 3
-    y: 5
-    amplitude: 0.4
-  - x: -2
-    y: 3
+    y: 2
     amplitude: 0.6
-  - x: 1
-    y: 6
-    amplitude: 0.3
-  - x: 3
+  - x: 2
+    y: 3
+    amplitude: 0.35
+  - x: 2
     y: 1
     amplitude: 0.4
-  darkerShare: 0.4
-  lighterShare: 0.3
+  - x: -3
+    y: 4
+    amplitude: 0.2
+  darkerShare: 0.45
+  lighterShare: 0.25
   driftShare: 0.35
   darkest:
     serializedVersion: 2
     rgba: 4293183672
-  darkestShare: 0.12
+  darkestShare: 0
   strokesPerCell: 1.6
   jitter: 0.45
   strokeChance: 0

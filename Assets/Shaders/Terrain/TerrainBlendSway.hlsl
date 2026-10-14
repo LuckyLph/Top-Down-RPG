@@ -18,8 +18,8 @@
 // the edges stay where they are. lean is how many pixels left the texel was read from.
 int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel, out float lean)
 {
-    int row = 1 + (int)m;
-    float4 sway = TBLut(ins, TB_SWAY_COLUMN, row);
+    int row = TBLayerRow(m);
+    float4 sway = TBLut(ins, TB_LAYER_SWAY_COLUMN, row);
     lean = 0.0;
     [branch]
     if (sway.x > 0.0)
@@ -36,7 +36,7 @@ int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel, out float 
             }
 
             float jitter = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
-            float time = TBAnimationTime(ins, TBLut(ins, TB_ANIMATION_COLUMN, row).x);
+            float time = TBAnimationTime(ins, TBLut(ins, TB_LAYER_ANIMATION_COLUMN, row).x);
             float phase = time / sway.y - (cell.x + 0.5 * cell.y) / sway.z + 0.15 * jitter;
             float pose = round(sway.x * (0.5 - 0.5 * cos(6.28318530718 * phase)));
             lean = round(pose * weight * weight);

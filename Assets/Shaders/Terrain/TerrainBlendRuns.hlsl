@@ -28,7 +28,7 @@ bool TBTurned(TBInputs ins, uint m, float2 pixel)
 {
     bool turned = false;
     [branch]
-    if (TBLut(ins, 3, 1 + (int)m).y > 0.5)
+    if (TBLut(ins, TB_LAYER_HEIGHT_COLUMN, TBLayerRow(m)).y > 0.5)
     {
         int2 cell = (int2)floor((pixel + 0.5) / ART_PIXELS_PER_UNIT);
         int across = TBRun(ins, cell, int2(1, 0), m) + TBRun(ins, cell, int2(-1, 0), m);

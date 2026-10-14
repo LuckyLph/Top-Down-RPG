@@ -31,7 +31,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     ins.height = Height;
     ins.rect = ControlRect;
     ins.layers = (uint)clamp(Info.x, 0.0, (float)TB_MAX_LAYERS);
-    ins.globals = TBLut(ins, 0, 0);
+    ins.globals = TBLut(ins, TB_SHARED_COLUMN, TB_SHARED_ROW);
     ins.time = Info.z > 0.5 ? Info.w : _TimeParameters.x;
     ins.bridges = (uint)(ins.globals.w + 0.5);
 

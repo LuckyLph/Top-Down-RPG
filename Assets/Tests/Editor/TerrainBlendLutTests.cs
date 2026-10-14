@@ -1,4 +1,8 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -17,10 +21,12 @@ using UnityEngine.TestTools;
 /// with the edges and overrides TerrainTypes.md's Phase 3 decided, and its shallows glint, sink less than the water and
 /// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits and materials that turn to their runs mark
 /// their layer's row, and the project's planks are a level bridge drawn last with a shadow of their own on the water
-/// (Phase 5). The project's style and materials are only read.
+/// (Phase 5); the shader's layout defines and the constants agree. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
+    private const string LayoutPath = "Assets/Shaders/Terrain/TerrainBlendLut.hlsl";
+
     private readonly List<Object> created = new();
 
     /// <summary>
@@ -124,12 +130,12 @@ public class TerrainBlendLutTests
 
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { stone, grass });
 
-        Assert.That(texels[0], Is.EqualTo(new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, 0f)));
-        Color stoneLayer = texels[1 * TerrainBlendLut.Width];
+        Assert.That(texels[TerrainBlendLut.SharedRow * TerrainBlendLut.Width + TerrainBlendLut.SharedColumn], Is.EqualTo(new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, 0f)));
+        Color stoneLayer = LayerTexel(texels, 0, TerrainBlendLut.LayerShapeColumn);
         Assert.That(stoneLayer.b, Is.EqualTo(64f));
         Assert.That(stoneLayer.a, Is.EqualTo((float)TerrainMaterial.CellMode.CutStones));
-        Assert.That(texels[1 * TerrainBlendLut.Width + 2], Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
-        Color grassLayer = texels[2 * TerrainBlendLut.Width];
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerBaseColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
+        Color grassLayer = LayerTexel(texels, 1, TerrainBlendLut.LayerShapeColumn);
         Assert.That(grassLayer.b, Is.EqualTo(128f));
         Assert.That(grassLayer.a, Is.EqualTo(0f));
     }
@@ -148,7 +154,7 @@ public class TerrainBlendLutTests
 
         Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass });
 
-        int ramp = TerrainBlendLut.PairRow(1, 0, -1) * TerrainBlendLut.Width + TerrainBlendLut.RampColumn;
+        int ramp = TerrainBlendLut.PairRow(1, 0, -1) * TerrainBlendLut.Width + TerrainBlendLut.PairRampColumn;
         Assert.That(texels[ramp], Is.EqualTo(Color.red));
         Assert.That(texels[ramp + 1], Is.EqualTo(Color.red));
         Assert.That(texels[ramp + 2], Is.EqualTo(Color.blue));
@@ -175,17 +181,17 @@ public class TerrainBlendLutTests
 
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, gravel, stone });
 
-        Assert.That(LayerTexel(texels, 0, 3).r, Is.EqualTo(0f), "Grass has no height texture.");
-        Assert.That(LayerTexel(texels, 1, 3).r, Is.EqualTo(1.25f));
-        Assert.That(LayerTexel(texels, 2, 3).r, Is.EqualTo(TerrainMaterial.MaxHeightScale), "Stone's 9 px is held to the bound.");
-        Assert.That(PairTexel(texels, 3, 1, 0, 4), Is.EqualTo(new Color(dirt.r, dirt.g, dirt.b, 1.5f)));
-        Assert.That(PairTexel(texels, 3, 2, 1, 2).a, Is.EqualTo(1f), "Stone over gravel shows whole stones.");
-        Assert.That(PairTexel(texels, 3, 2, 0, 2).a, Is.EqualTo(0f));
-        Assert.That(PairTexel(texels, 3, 2, -1, 2).a, Is.EqualTo(0f));
-        Assert.That(PairTexel(texels, 3, 1, 0, 2).a, Is.EqualTo(0f), "Gravel has chips, not cut stones.");
-        Assert.That(LayerTexel(texels, 2, 1).a, Is.EqualTo(1f));
-        Assert.That(LayerTexel(texels, 1, 1).a, Is.EqualTo(0f));
-        Assert.That(LayerTexel(texels, 0, 1).a, Is.EqualTo(0f));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerHeightColumn).r, Is.EqualTo(0f), "Grass has no height texture.");
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerHeightColumn).r, Is.EqualTo(1.25f));
+        Assert.That(LayerTexel(texels, 2, TerrainBlendLut.LayerHeightColumn).r, Is.EqualTo(TerrainMaterial.MaxHeightScale), "Stone's 9 px is held to the bound.");
+        Assert.That(PairTexel(texels, 3, 1, 0, TerrainBlendLut.PairBandColumn), Is.EqualTo(new Color(dirt.r, dirt.g, dirt.b, 1.5f)));
+        Assert.That(PairTexel(texels, 3, 2, 1, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(1f), "Stone over gravel shows whole stones.");
+        Assert.That(PairTexel(texels, 3, 2, 0, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 2, -1, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 1, 0, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(0f), "Gravel has chips, not cut stones.");
+        Assert.That(LayerTexel(texels, 2, TerrainBlendLut.LayerChipsColumn).a, Is.EqualTo(1f));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerChipsColumn).a, Is.EqualTo(0f));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerChipsColumn).a, Is.EqualTo(0f));
     }
 
     /// <summary>
@@ -234,13 +240,13 @@ public class TerrainBlendLutTests
 
         Assert.That(grass.IsAnimated, Is.False);
         Assert.That(water.IsAnimated, Is.True);
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.AnimationColumn), Is.EqualTo(Color.clear));
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.GlintColumn), Is.EqualTo(Color.clear));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.AnimationColumn), Is.EqualTo(new Color(8f, 3.2f, 0.18f, 1.5f)));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.GlintColumn), Is.EqualTo(new Color(0.8f, 0.9f, 1f, 4.5f)));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SparkleColumn), Is.EqualTo(new Color(0.9f, 1f, 0.95f, 4f)));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SparkleTimingColumn), Is.EqualTo(new Color(0.25f, 0f, 0f, 0f)));
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.SparkleColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerAnimationColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerGlintColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerAnimationColumn), Is.EqualTo(new Color(8f, 3.2f, 0.18f, 1.5f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerGlintColumn), Is.EqualTo(new Color(0.8f, 0.9f, 1f, 4.5f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSparkleColumn), Is.EqualTo(new Color(0.9f, 1f, 0.95f, 4f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSparkleTimingColumn), Is.EqualTo(new Color(0.25f, 0f, 0f, 0f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerSparkleColumn), Is.EqualTo(Color.clear));
     }
 
     /// <summary>
@@ -263,9 +269,9 @@ public class TerrainBlendLutTests
 
         Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
 
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColumn), Is.EqualTo(Color.clear));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn), Is.EqualTo(new Color(4.5f, 0.35f, 0f, 0f)));
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.BankColourColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerBankColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerBankColumn), Is.EqualTo(new Color(4.5f, 0.35f, 0f, 0f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerBankColourColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
     }
 
     /// <summary>
@@ -290,14 +296,14 @@ public class TerrainBlendLutTests
 
         Assert.That(weeds.Sways, Is.True);
         Assert.That(grass.Sways, Is.False);
-        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.SwayColumn), Is.EqualTo(Color.clear));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.SwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 0f)));
-        Assert.That(texels[TerrainBlendLut.PairRow(2, 1, 0) * TerrainBlendLut.Width + 3].a, Is.Zero, "weeds over grass is seamless");
-        Assert.That(texels[TerrainBlendLut.PairRow(2, 0, -1) * TerrainBlendLut.Width + 3].a, Is.EqualTo(1f), "grass over nothing is not");
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerSwayColumn), Is.EqualTo(Color.clear));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 0f)));
+        Assert.That(PairTexel(texels, 2, 1, 0, TerrainBlendLut.PairFillColumn).a, Is.Zero, "weeds over grass is seamless");
+        Assert.That(PairTexel(texels, 2, 0, -1, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "grass over nothing is not");
 
         settings.FindProperty("wholeClumps").boolValue = true;
         settings.ApplyModifiedPropertiesWithoutUndo();
-        Assert.That(LayerTexel(TerrainBlendLut.BuildTexels(Style(), new[] { grass, weeds }), 1, TerrainBlendLut.SwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 1f)));
+        Assert.That(LayerTexel(TerrainBlendLut.BuildTexels(Style(), new[] { grass, weeds }), 1, TerrainBlendLut.LayerSwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 1f)));
     }
 
     /// <summary>
@@ -384,8 +390,8 @@ public class TerrainBlendLutTests
         Assert.That(stoneOverGravel.DrawOutline, Is.False);
         Assert.That(stoneOverGravel.RimWidth, Is.LessThan(materials[2].Edge.RimWidth));
         Assert.That(stoneOverGravel.SoftWholeStones, Is.True);
-        Assert.That(PairTexel(texels, 3, 2, 1, 1).a, Is.EqualTo(0f));
-        Assert.That(PairTexel(texels, 3, 2, 1, 2).a, Is.EqualTo(1f));
+        Assert.That(PairTexel(texels, 3, 2, 1, TerrainBlendLut.PairOutlineColumn).a, Is.EqualTo(0f));
+        Assert.That(PairTexel(texels, 3, 2, 1, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(1f));
         for (int upper = 0; upper < 3; upper++)
         {
             for (int lower = -1; lower < upper; lower++)
@@ -397,7 +403,7 @@ public class TerrainBlendLutTests
 
                 TerrainMaterial lowerMaterial = lower < 0 ? null : materials[lower];
                 Assert.That(style.GetEdge(materials[upper], lowerMaterial), Is.SameAs(materials[upper].Edge), $"{upper} over {lower}");
-                Assert.That(PairTexel(texels, 3, upper, lower, 2).a, Is.EqualTo(0f), $"{upper} over {lower}");
+                Assert.That(PairTexel(texels, 3, upper, lower, TerrainBlendLut.PairWidthsColumn).a, Is.EqualTo(0f), $"{upper} over {lower}");
             }
         }
     }
@@ -432,8 +438,8 @@ public class TerrainBlendLutTests
         Assert.That(dryGrass.SinkDepth, Is.Zero);
         Assert.That(dryGrass.Edge.DrawOutline, Is.True);
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass });
-        Assert.That(PairTexel(texels, 2, 1, 0, 3).a, Is.Zero, "dry grass over grass is seamless");
-        Assert.That(PairTexel(texels, 2, 1, -1, 3).a, Is.EqualTo(1f), "dry grass over nothing is not");
+        Assert.That(PairTexel(texels, 2, 1, 0, TerrainBlendLut.PairFillColumn).a, Is.Zero, "dry grass over grass is seamless");
+        Assert.That(PairTexel(texels, 2, 1, -1, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "dry grass over nothing is not");
 
         foreach (TerrainMaterial lower in new[] { null, grass, dryGrass })
         {
@@ -509,10 +515,10 @@ public class TerrainBlendLutTests
         Assert.That(intoShallows.RimWidth, Is.GreaterThan(0f), "The deep water fades in.");
         Assert.That(style.GetEdge(water, sand), Is.Not.SameAs(intoShallows));
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { sand, shallows, water });
-        Assert.That(PairTexel(texels, 3, 2, 1, 3).a, Is.Zero, "water over shallows is seamless");
-        Assert.That(PairTexel(texels, 3, 2, 0, 3).a, Is.EqualTo(1f), "water over sand is not");
-        Assert.That(PairTexel(texels, 3, 1, 0, 3).a, Is.EqualTo(1f), "shallows over sand is not");
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn).r, Is.EqualTo(shallows.SinkDepth));
+        Assert.That(PairTexel(texels, 3, 2, 1, TerrainBlendLut.PairFillColumn).a, Is.Zero, "water over shallows is seamless");
+        Assert.That(PairTexel(texels, 3, 2, 0, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "water over sand is not");
+        Assert.That(PairTexel(texels, 3, 1, 0, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "shallows over sand is not");
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerBankColumn).r, Is.EqualTo(shallows.SinkDepth));
     }
 
     /// <summary>
@@ -541,12 +547,12 @@ public class TerrainBlendLutTests
 
         Assert.That(plain[0].a, Is.Zero, "No bridge.");
         Assert.That(TerrainBlendLut.BridgeBits(new[] { grass, water }), Is.Zero);
-        Assert.That(texels[0].a, Is.EqualTo(8f), "Layer 3 is a bridge.");
+        Assert.That(texels[TerrainBlendLut.SharedRow * TerrainBlendLut.Width + TerrainBlendLut.SharedColumn].a, Is.EqualTo(8f), "Layer 3 is a bridge.");
         Assert.That(TerrainBlendLut.BridgeBits(new[] { dock, grass, dock }), Is.EqualTo(5f));
-        Assert.That(LayerTexel(texels, 0, 3).g, Is.Zero);
-        Assert.That(LayerTexel(texels, 1, 3).g, Is.Zero);
-        Assert.That(LayerTexel(texels, 2, 3).g, Is.EqualTo(1f), "The walk turns to its runs.");
-        Assert.That(LayerTexel(texels, 3, 3).g, Is.EqualTo(1f), "The dock turns to its runs.");
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerHeightColumn).g, Is.Zero);
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerHeightColumn).g, Is.Zero);
+        Assert.That(LayerTexel(texels, 2, TerrainBlendLut.LayerHeightColumn).g, Is.EqualTo(1f), "The walk turns to its runs.");
+        Assert.That(LayerTexel(texels, 3, TerrainBlendLut.LayerHeightColumn).g, Is.EqualTo(1f), "The dock turns to its runs.");
     }
 
     /// <summary>
@@ -644,12 +650,12 @@ public class TerrainBlendLutTests
         Assert.That(tallGrass.Edge.TuftHeight, Is.GreaterThan(grass.Edge.TuftHeight), "A fringe of blades.");
 
         Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass, meadow, tallGrass });
-        Assert.That(PairTexel(texels, 4, 2, 0, 3).a, Is.Zero, "meadow over grass is seamless");
-        Assert.That(PairTexel(texels, 4, 2, 1, 3).a, Is.Zero, "meadow over dry grass is seamless");
-        Assert.That(PairTexel(texels, 4, 2, -1, 3).a, Is.EqualTo(1f), "meadow over nothing is not");
-        Assert.That(PairTexel(texels, 4, 3, 0, 3).a, Is.EqualTo(1f), "tall grass over grass is not");
-        Assert.That(PairTexel(texels, 4, 3, 2, 3).a, Is.EqualTo(1f), "tall grass over the meadow is not");
-        Assert.That(LayerTexel(texels, 3, TerrainBlendLut.SwayColumn).r, Is.EqualTo(tallGrass.SwayAmplitude));
+        Assert.That(PairTexel(texels, 4, 2, 0, TerrainBlendLut.PairFillColumn).a, Is.Zero, "meadow over grass is seamless");
+        Assert.That(PairTexel(texels, 4, 2, 1, TerrainBlendLut.PairFillColumn).a, Is.Zero, "meadow over dry grass is seamless");
+        Assert.That(PairTexel(texels, 4, 2, -1, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "meadow over nothing is not");
+        Assert.That(PairTexel(texels, 4, 3, 0, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "tall grass over grass is not");
+        Assert.That(PairTexel(texels, 4, 3, 2, TerrainBlendLut.PairFillColumn).a, Is.EqualTo(1f), "tall grass over the meadow is not");
+        Assert.That(LayerTexel(texels, 3, TerrainBlendLut.LayerSwayColumn).r, Is.EqualTo(tallGrass.SwayAmplitude));
     }
 
     /// <summary>
@@ -663,11 +669,63 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
+    /// The lookup texture's layout is named twice, by <see cref="TerrainBlendLut"/>'s constants and by the #defines of the
+    /// shader's TerrainBlendLut.hlsl: every constant has a define named TB_ and its name in capitals with underscores,
+    /// with the same value, and every define is one of the constants.
+    /// </summary>
+    [Test]
+    public void TheShadersLayoutDefines_MatchTheConstants()
+    {
+        Dictionary<string, string> defines = new();
+        foreach (string line in File.ReadAllLines(LayoutPath))
+        {
+            Match match = Regex.Match(line, @"^#define (TB_\w+) (\S+)$");
+            if (match.Success)
+            {
+                defines.Add(match.Groups[1].Value, match.Groups[2].Value);
+            }
+        }
+
+        List<string> problems = new();
+        HashSet<string> named = new();
+        foreach (FieldInfo field in typeof(TerrainBlendLut).GetFields(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (!field.IsLiteral)
+            {
+                continue;
+            }
+
+            string define = "TB_" + Regex.Replace(field.Name, "(?<=[a-z])(?=[A-Z])", "_").ToUpperInvariant();
+            named.Add(define);
+            double expected = System.Convert.ToDouble(field.GetRawConstantValue(), CultureInfo.InvariantCulture);
+            if (!defines.TryGetValue(define, out string value))
+            {
+                problems.Add($"{define} is not defined");
+            }
+            else if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double actual) || actual != expected)
+            {
+                problems.Add($"{define} is {value}, but {nameof(TerrainBlendLut)}.{field.Name} is {expected.ToString(CultureInfo.InvariantCulture)}");
+            }
+        }
+
+        foreach (string define in defines.Keys)
+        {
+            if (!named.Contains(define))
+            {
+                problems.Add($"{define} is no constant of {nameof(TerrainBlendLut)}");
+            }
+        }
+
+        Assert.That(named, Is.Not.Empty);
+        Assert.That(problems, Is.Empty);
+    }
+
+    /// <summary>
     /// The texel at <paramref name="column"/> of layer <paramref name="layer"/>'s row.
     /// </summary>
     private static Color LayerTexel(Color[] texels, int layer, int column)
     {
-        return texels[(1 + layer) * TerrainBlendLut.Width + column];
+        return texels[TerrainBlendLut.LayerRow(layer) * TerrainBlendLut.Width + column];
     }
 
     /// <summary>
@@ -684,7 +742,7 @@ public class TerrainBlendLutTests
     /// </summary>
     private static float ShadowAlpha(Color[] texels, int layers, int upper, int lower)
     {
-        return texels[TerrainBlendLut.PairRow(layers, upper, lower) * TerrainBlendLut.Width].a;
+        return texels[TerrainBlendLut.PairRow(layers, upper, lower) * TerrainBlendLut.Width + TerrainBlendLut.PairShadowColumn].a;
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
     float lean;
     int2 shown = TBSwayTexel(ins, m, sampled, texel, lean);
     float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, shown, m).rgb);
-    float4 sway = TBLut(ins, TB_SWAY_COLUMN, 1 + (int)m);
+    float4 sway = TBLut(ins, TB_LAYER_SWAY_COLUMN, TBLayerRow(m));
     [branch]
     if (sway.x > 0.0)
     {
@@ -63,9 +63,9 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
         [branch]
         if (f.a > 0.0)
         {
-            int row = 1 + (int)m;
-            float4 chip = TBLut(ins, 1, row);
-            float3 base = TBLut(ins, 2, row).rgb + (f.b * 255.0 - 128.0) / 255.0;
+            int row = TBLayerRow(m);
+            float4 chip = TBLut(ins, TB_LAYER_CHIPS_COLUMN, row);
+            float3 base = TBLut(ins, TB_LAYER_BASE_COLUMN, row).rgb + (f.b * 255.0 - 128.0) / 255.0;
             float2 offset = TBUnturn(round(f.rg * 255.0) - 128.0, turned);
             TBCentre centre = known;
             [branch]
@@ -131,7 +131,7 @@ float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], floa
         colour = colour * (1.0 - rim.a) + rim.rgb;
         if (below < bank)
         {
-            colour *= 1.0 - TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).y;
+            colour *= 1.0 - TBLut(ins, TB_LAYER_BANK_COLUMN, TBLayerRow(m)).y;
         }
     }
     return colour;

@@ -17,21 +17,21 @@ float TBAnimationTime(TBInputs ins, float framesPerSecond)
 // last quarter of it. Other layers and texels keep their colour.
 float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
 {
-    int row = 1 + (int)m;
-    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, row);
+    int row = TBLayerRow(m);
+    float4 animation = TBLut(ins, TB_LAYER_ANIMATION_COLUMN, row);
     [branch]
-    if (animation.x > 0.0 && TBLut(ins, TB_SWAY_COLUMN, row).x <= 0.0)
+    if (animation.x > 0.0 && TBLut(ins, TB_LAYER_SWAY_COLUMN, row).x <= 0.0)
     {
         float code = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0);
         [branch]
         if (code > 0.5)
         {
             bool sparkle = code > 127.5;
-            float4 glint = TBLut(ins, TB_GLINT_COLUMN, row);
-            float4 sparkleLook = TBLut(ins, TB_SPARKLE_COLUMN, row);
+            float4 glint = TBLut(ins, TB_LAYER_GLINT_COLUMN, row);
+            float4 sparkleLook = TBLut(ins, TB_LAYER_SPARKLE_COLUMN, row);
             float phase = sparkle ? (code - 128.0) / 128.0 : (code - 1.0) / 127.0;
             float period = sparkle ? sparkleLook.a : animation.y;
-            float duty = sparkle ? TBLut(ins, TB_SPARKLE_TIMING_COLUMN, row).x : animation.z;
+            float duty = sparkle ? TBLut(ins, TB_LAYER_SPARKLE_TIMING_COLUMN, row).x : animation.z;
             float cycle = frac(TBAnimationTime(ins, animation.x) / period + phase);
             if (cycle < duty)
             {
@@ -48,12 +48,12 @@ float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
 // shore. 0 for a still layer. The edge itself never moves.
 float TBSwell(TBInputs ins, uint m, float2 worldPixel)
 {
-    float4 animation = TBLut(ins, TB_ANIMATION_COLUMN, 1 + (int)m);
+    float4 animation = TBLut(ins, TB_LAYER_ANIMATION_COLUMN, TBLayerRow(m));
     float swell = 0.0;
     [branch]
     if (animation.x > 0.0 && animation.w > 0.0)
     {
-        float period = TBLut(ins, TB_GLINT_COLUMN, 1 + (int)m).a;
+        float period = TBLut(ins, TB_LAYER_GLINT_COLUMN, TBLayerRow(m)).a;
         float phase = TBAnimationTime(ins, animation.x) / period + 0.6 * PeriodicEdgeNoise(worldPixel);
         swell = animation.w * (0.5 - 0.5 * cos(6.28318530718 * phase));
     }

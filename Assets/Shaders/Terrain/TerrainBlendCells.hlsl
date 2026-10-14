@@ -13,7 +13,7 @@ TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool 
     float4 terms = TBDistanceTerms(ins, corner, worldPixel);
     float up = TBLayerDistance(ins, corner, terms, m);
     centre.depth = -up;
-    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    int firstRow = TBFirstPairRow(ins, m);
     float remaining = 1.0;
     float blend = max(ins.globals.z, 0.001);
     [loop]

@@ -16,7 +16,7 @@ float4 TBCellHeights(TBInputs ins, TBCorner corner, float2 worldPixel)
         if (corner.cells[k] != 0u)
         {
             uint top = TBTopLayer(corner.cells[k]);
-            float scale = TBLut(ins, 3, 1 + (int)top).x;
+            float scale = TBLut(ins, TB_LAYER_HEIGHT_COLUMN, TBLayerRow(top)).x;
             int2 texel = (int2)WrapPixel(worldPixel, TBShape(ins, top).z);
             heights[k] = scale * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, top).r - 1.0);
         }
@@ -113,7 +113,7 @@ float TBDepthAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel)
 // it draws one, else its fill.
 void TBAddPairEdge(TBInputs ins, int row, float weight, float4 outline, float4 fill, inout TBEdge e)
 {
-    float4 band = TBLut(ins, 4, row);
+    float4 band = TBLut(ins, TB_PAIR_BAND_COLUMN, row);
     float banded = band.a > 0.0 ? 1.0 : 0.0;
     float3 filled = lerp(fill.rgb, band.rgb, banded);
     e.fill += weight * filled;
@@ -125,7 +125,7 @@ void TBAddPairEdge(TBInputs ins, int row, float weight, float4 outline, float4 f
 // its width instead, added by weight to band, how much of the rim such bands make up.
 float4 TBRampTexel(TBInputs ins, int row, float weight, float depth, float4 r, inout float band)
 {
-    float4 settings = TBLut(ins, 4, row);
+    float4 settings = TBLut(ins, TB_PAIR_BAND_COLUMN, row);
     if (settings.a > 0.0)
     {
         float cover = depth < settings.a ? 1.0 : 0.0;
@@ -140,8 +140,8 @@ float4 TBRampTexel(TBInputs ins, int row, float weight, float depth, float4 r, i
 // the centre lies TB_WHOLE_CLEARANCE inside the lower layer (always over nothing).
 void TBAddCentrePair(TBInputs ins, int row, float weight, bool clear, inout TBCentre centre)
 {
-    float4 widths = TBLut(ins, 2, row);
-    float band = TBLut(ins, 4, row).a;
+    float4 widths = TBLut(ins, TB_PAIR_WIDTHS_COLUMN, row);
+    float band = TBLut(ins, TB_PAIR_BAND_COLUMN, row).a;
     float whole = widths.w > 0.5 && clear ? 1.0 : 0.0;
     centre.rim += weight * (whole > 0.5 ? 0.0 : (band > 0.0 ? band : widths.y));
     centre.whole += weight * whole;
@@ -171,7 +171,7 @@ float TBChipNearest(TBInputs ins, uint m, float4 shape, TBCentre centre, float b
 // which leave the layer below showing between them.
 bool TBOpaqueInside(TBInputs ins, uint m)
 {
-    return TBLut(ins, 1, 1 + (int)m).w < 0.5;
+    return TBLut(ins, TB_LAYER_CHIPS_COLUMN, TBLayerRow(m)).w < 0.5;
 }
 
 #endif

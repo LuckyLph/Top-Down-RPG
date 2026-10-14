@@ -1,18 +1,10 @@
 #ifndef TOPDOWNRPG_TERRAIN_BLEND_INPUTS_INCLUDED
 #define TOPDOWNRPG_TERRAIN_BLEND_INPUTS_INCLUDED
 
+#include "Assets/Shaders/Terrain/TerrainBlendLut.hlsl"
+
 #define TB_MAX_LAYERS 16
 #define TB_FAR 100.0
-#define TB_RAMP_COLUMN 5
-#define TB_ANIMATION_COLUMN 4
-#define TB_GLINT_COLUMN 5
-#define TB_SPARKLE_COLUMN 6
-#define TB_SPARKLE_TIMING_COLUMN 7
-#define TB_BANK_COLUMN 8
-#define TB_BANK_COLOUR_COLUMN 9
-#define TB_SWAY_COLUMN 10
-#define TB_RAMP_TEXELS 32
-#define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
 #define TB_WHOLE_CLEARANCE 10.0
 #define TB_RUN_REACH 3
@@ -90,10 +82,23 @@ float4 TBLut(TBInputs ins, int column, int row)
     return LOAD_TEXTURE2D(ins.lut.tex, int2(column, row));
 }
 
+// The lookup texture's row of layer l (TerrainBlendLut.LayerRow).
+int TBLayerRow(uint l)
+{
+    return 1 + (int)l;
+}
+
+// The lookup texture's first pair row of upper layer m, its pair over nothing; its pair over lower layer j follows at
+// j + 1 rows further (TerrainBlendLut.PairRow).
+int TBFirstPairRow(TBInputs ins, uint m)
+{
+    return 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+}
+
 // Layer l's shape from its row of the lookup texture: outer and inner corner radii, repeat in pixels, cell mode.
 float4 TBShape(TBInputs ins, uint l)
 {
-    return TBLut(ins, 0, 1 + (int)l);
+    return TBLut(ins, TB_LAYER_SHAPE_COLUMN, TBLayerRow(l));
 }
 
 // sRGB colour to the colour the target expects.

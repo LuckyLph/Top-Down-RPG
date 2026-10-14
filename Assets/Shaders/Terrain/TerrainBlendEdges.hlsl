@@ -34,7 +34,7 @@ void TBPairWeights(TBInputs ins, float d[TB_MAX_LAYERS], uint m, out float w[TB_
 TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
     TBEdge e = (TBEdge)0;
-    e.firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    e.firstRow = TBFirstPairRow(ins, m);
     [loop]
     for (uint k = 0u; k <= m; k++)
     {
@@ -42,10 +42,10 @@ TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
         if (w[k] > 0.0)
         {
             int row = e.firstRow + (int)k;
-            float4 shadow = TBLut(ins, 0, row);
-            float4 outline = TBLut(ins, 1, row);
-            float4 widths = TBLut(ins, 2, row);
-            float4 fill = TBLut(ins, 3, row);
+            float4 shadow = TBLut(ins, TB_PAIR_SHADOW_COLUMN, row);
+            float4 outline = TBLut(ins, TB_PAIR_OUTLINE_COLUMN, row);
+            float4 widths = TBLut(ins, TB_PAIR_WIDTHS_COLUMN, row);
+            float4 fill = TBLut(ins, TB_PAIR_FILL_COLUMN, row);
             e.shadow += w[k] * shadow.rgb;
             e.shadowAlpha += w[k] * shadow.a;
             e.outline += w[k] * outline.rgb;
@@ -65,7 +65,7 @@ float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float 
 {
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
     band = 0.0;
-    int column = TB_RAMP_COLUMN + (int)min(floor(depth / TB_RAMP_STEP), TB_RAMP_TEXELS - 1.0);
+    int column = TB_PAIR_RAMP_COLUMN + (int)min(floor(depth / TB_RAMP_STEP), TB_RAMP_TEXELS - 1.0);
     [loop]
     for (uint k = 0u; k <= m; k++)
     {
@@ -83,7 +83,7 @@ float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float 
 // two are one surface there, so a sunken layer shows no bank over it.
 float TBSeamlessBelow(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
-    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    int firstRow = TBFirstPairRow(ins, m);
     float seamless = 0.0;
     [loop]
     for (uint k = 1u; k <= m; k++)
@@ -91,7 +91,7 @@ float TBSeamlessBelow(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
         [branch]
         if (w[k] > 0.0)
         {
-            seamless += w[k] * (1.0 - TBLut(ins, 3, firstRow + (int)k).a);
+            seamless += w[k] * (1.0 - TBLut(ins, TB_PAIR_FILL_COLUMN, firstRow + (int)k).a);
         }
     }
     return seamless;

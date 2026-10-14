@@ -69,7 +69,7 @@ float4 TBRampTexel(TBInputs ins, int row, float weight, float depth, float4 r, i
 // weight. clear, whether the centre lies TB_WHOLE_CLEARANCE inside the lower layer, only matters in the soft look.
 void TBAddCentrePair(TBInputs ins, int row, float weight, bool clear, inout TBCentre centre)
 {
-    float4 widths = TBLut(ins, 2, row);
+    float4 widths = TBLut(ins, TB_PAIR_WIDTHS_COLUMN, row);
     centre.rim += weight * widths.y;
 }
 

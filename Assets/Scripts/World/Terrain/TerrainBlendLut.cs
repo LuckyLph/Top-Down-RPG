@@ -4,36 +4,62 @@ using UnityEngine;
 /// <summary>
 /// The terrain style and materials as data for the terrain blending shader (Assets/Shaders/Terrain/TerrainBlend.hlsl):
 /// a small point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with,
-/// holding both looks, so switching between them needs no rebuild. Row 0 holds the shared settings (edge noise, pair
-/// margin, pair blend, and the bridge layers as bits: bit i for a layer i whose material is a bridge). Rows 1 to L hold
-/// each layer's material: (outer radius, inner radius, repeat in pixels, cell mode), (keep margin, cut gap, cut bevel, 1
-/// when the material has cut stones and one of the layer's pairs shows them whole in the soft look), (base colour),
-/// (soft height scale, 0 without a height texture, 1 when the material turns to its runs), and for an animated
-/// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
-/// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
-/// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material
-/// level with the ground, at <see cref="BankColourColumn"/> its bank colour, the face a sunken layer shows where it
-/// cuts into this one, and for a swaying material at <see cref="SwayColumn"/> (sway amplitude, sway period, gust
-/// length in cells, 1 when its clumps lean whole), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
-/// = -1), at <see cref="PairRow"/>: (shadow colour, shadow alpha), (outline colour, 1 when drawn), (shadow width,
-/// rim width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), (the rim's
-/// outer colour, 0 when the edge is seamless, else 1), (the soft band's colour, its width, 0 for none), then the rim
-/// sampled every half pixel from the edge inwards (colour, how much of the interior it covers). Colours stay sRGB, as
-/// the shader expects.
+/// holding both looks, so switching between them needs no rebuild. Its layout is named twice, by the constants here and
+/// by the #defines of Assets/Shaders/Terrain/TerrainBlendLut.hlsl (TB_ and the constant's name in capitals with
+/// underscores), which TerrainBlendLutTests checks agree. Row <see cref="SharedRow"/> holds the shared settings at
+/// <see cref="SharedColumn"/>: (edge noise, pair margin, pair blend, the bridge layers as bits: bit i for a layer i whose
+/// material is a bridge). Row <see cref="LayerRow"/> holds a layer's material: at <see cref="LayerShapeColumn"/>
+/// (outer radius, inner radius, repeat in pixels, cell mode), at <see cref="LayerChipsColumn"/> (keep margin, cut gap,
+/// cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them whole in the soft look), at
+/// <see cref="LayerBaseColumn"/> its base colour, at <see cref="LayerHeightColumn"/> (soft height scale, 0 without a
+/// height texture, 1 when the material turns to its runs), for an animated material at
+/// <see cref="LayerAnimationColumn"/> (frames per second, glint period, glint duty, rim swell), at
+/// <see cref="LayerGlintColumn"/> (glint colour, swell period), at <see cref="LayerSparkleColumn"/> (sparkle colour,
+/// sparkle period) and at <see cref="LayerSparkleTimingColumn"/> (sparkle duty), zero otherwise, at
+/// <see cref="LayerBankColumn"/> (sink depth, bank shadow), zero for a material level with the ground, at
+/// <see cref="LayerBankColourColumn"/> its bank colour, the face a sunken layer shows where it cuts into this one, and
+/// for a swaying material at <see cref="LayerSwayColumn"/> (sway amplitude, sway period, gust length in cells, 1 when its
+/// clumps lean whole), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
+/// = -1), at <see cref="PairRow"/>: at <see cref="PairShadowColumn"/> (shadow colour, shadow alpha), at
+/// <see cref="PairOutlineColumn"/> (outline colour, 1 when drawn), at <see cref="PairWidthsColumn"/> (shadow width, rim
+/// width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), at
+/// <see cref="PairFillColumn"/> (the rim's outer colour, 0 when the edge is seamless, else 1), at
+/// <see cref="PairBandColumn"/> (the soft band's colour, its width, 0 for none), then from <see cref="PairRampColumn"/>
+/// the rim sampled every <see cref="RampStep"/> pixels from the edge inwards, <see cref="RampTexels"/> texels (colour,
+/// how much of the interior it covers). Colours stay sRGB, as the shader expects.
 /// </summary>
 public static class TerrainBlendLut
 {
-    public const int AnimationColumn = 4;
-    public const int GlintColumn = 5;
-    public const int SparkleColumn = 6;
-    public const int SparkleTimingColumn = 7;
-    public const int BankColumn = 8;
-    public const int BankColourColumn = 9;
-    public const int SwayColumn = 10;
-    public const int RampColumn = 5;
+    public const int SharedRow = 0;
+    public const int SharedColumn = 0;
+    public const int LayerShapeColumn = 0;
+    public const int LayerChipsColumn = 1;
+    public const int LayerBaseColumn = 2;
+    public const int LayerHeightColumn = 3;
+    public const int LayerAnimationColumn = 4;
+    public const int LayerGlintColumn = 5;
+    public const int LayerSparkleColumn = 6;
+    public const int LayerSparkleTimingColumn = 7;
+    public const int LayerBankColumn = 8;
+    public const int LayerBankColourColumn = 9;
+    public const int LayerSwayColumn = 10;
+    public const int PairShadowColumn = 0;
+    public const int PairOutlineColumn = 1;
+    public const int PairWidthsColumn = 2;
+    public const int PairFillColumn = 3;
+    public const int PairBandColumn = 4;
+    public const int PairRampColumn = 5;
     public const int RampTexels = 32;
     public const float RampStep = 0.5f;
-    public const int Width = RampColumn + RampTexels;
+    public const int Width = PairRampColumn + RampTexels;
+
+    /// <summary>
+    /// The row holding layer <paramref name="layer"/>'s material.
+    /// </summary>
+    public static int LayerRow(int layer)
+    {
+        return 1 + layer;
+    }
 
     /// <summary>
     /// The row holding layer <paramref name="upper"/>'s edge over layer <paramref name="lower"/> (-1 for nothing) for
@@ -61,34 +87,34 @@ public static class TerrainBlendLut
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
-        texels[0] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, BridgeBits(layerMaterials));
+        texels[SharedRow * Width + SharedColumn] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, BridgeBits(layerMaterials));
         for (int layer = 0; layer < layers; layer++)
         {
             TerrainMaterial material = layerMaterials[layer];
-            int row = (1 + layer) * Width;
-            texels[row] = new Color(material.OuterRadius, material.InnerRadius, material.RepeatPixels, (float)material.Cells);
-            texels[row + 1] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
-            texels[row + 2] = material.BaseColour;
-            texels[row + 3] = new Color(material.Height != null ? material.HeightScale : 0f, material.TurnsToRuns ? 1f : 0f, 0f, 0f);
+            int row = LayerRow(layer) * Width;
+            texels[row + LayerShapeColumn] = new Color(material.OuterRadius, material.InnerRadius, material.RepeatPixels, (float)material.Cells);
+            texels[row + LayerChipsColumn] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
+            texels[row + LayerBaseColumn] = material.BaseColour;
+            texels[row + LayerHeightColumn] = new Color(material.Height != null ? material.HeightScale : 0f, material.TurnsToRuns ? 1f : 0f, 0f, 0f);
             if (material.IsAnimated)
             {
                 Color glint = material.GlintColour;
-                texels[row + AnimationColumn] = new Color(material.FramesPerSecond, material.GlintPeriod, material.GlintDuty, material.RimSwell);
-                texels[row + GlintColumn] = new Color(glint.r, glint.g, glint.b, material.SwellPeriod);
+                texels[row + LayerAnimationColumn] = new Color(material.FramesPerSecond, material.GlintPeriod, material.GlintDuty, material.RimSwell);
+                texels[row + LayerGlintColumn] = new Color(glint.r, glint.g, glint.b, material.SwellPeriod);
                 Color sparkle = material.SparkleColour;
-                texels[row + SparkleColumn] = new Color(sparkle.r, sparkle.g, sparkle.b, material.SparklePeriod);
-                texels[row + SparkleTimingColumn] = new Color(material.SparkleDuty, 0f, 0f, 0f);
+                texels[row + LayerSparkleColumn] = new Color(sparkle.r, sparkle.g, sparkle.b, material.SparklePeriod);
+                texels[row + LayerSparkleTimingColumn] = new Color(material.SparkleDuty, 0f, 0f, 0f);
             }
 
-            texels[row + BankColourColumn] = material.BankColour;
+            texels[row + LayerBankColourColumn] = material.BankColour;
             if (material.Sways)
             {
-                texels[row + SwayColumn] = new Color(material.SwayAmplitude, material.SwayPeriod, material.GustLength, material.WholeClumps ? 1f : 0f);
+                texels[row + LayerSwayColumn] = new Color(material.SwayAmplitude, material.SwayPeriod, material.GustLength, material.WholeClumps ? 1f : 0f);
             }
 
             if (material.SinkDepth > 0f)
             {
-                texels[row + BankColumn] = new Color(material.SinkDepth, material.BankShadow, 0f, 0f);
+                texels[row + LayerBankColumn] = new Color(material.SinkDepth, material.BankShadow, 0f, 0f);
             }
         }
 
@@ -103,7 +129,7 @@ public static class TerrainBlendLut
                 WriteEdge(texels, PairRow(layers, upper, lower) * Width, edge, wholeStones);
                 if (wholeStones)
                 {
-                    texels[(1 + upper) * Width + 1].a = 1f;
+                    texels[LayerRow(upper) * Width + LayerChipsColumn].a = 1f;
                 }
             }
         }
@@ -155,16 +181,16 @@ public static class TerrainBlendLut
         Color shadow = edge.ShadowColour;
         Color outline = edge.OutlineColour;
         Color band = edge.SoftBandColour;
-        texels[start] = new Color(shadow.r, shadow.g, shadow.b, edge.ShadowAlpha);
-        texels[start + 1] = new Color(outline.r, outline.g, outline.b, edge.DrawOutline ? 1f : 0f);
-        texels[start + 2] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, wholeStones ? 1f : 0f);
+        texels[start + PairShadowColumn] = new Color(shadow.r, shadow.g, shadow.b, edge.ShadowAlpha);
+        texels[start + PairOutlineColumn] = new Color(outline.r, outline.g, outline.b, edge.DrawOutline ? 1f : 0f);
+        texels[start + PairWidthsColumn] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, wholeStones ? 1f : 0f);
         Color outer = edge.EvaluateRim(0f);
-        texels[start + 3] = new Color(outer.r, outer.g, outer.b, edge.Seamless ? 0f : 1f);
-        texels[start + 4] = new Color(band.r, band.g, band.b, edge.SoftBandWidth);
+        texels[start + PairFillColumn] = new Color(outer.r, outer.g, outer.b, edge.Seamless ? 0f : 1f);
+        texels[start + PairBandColumn] = new Color(band.r, band.g, band.b, edge.SoftBandWidth);
         for (int i = 0; i < RampTexels; i++)
         {
             float depth = (i + 0.5f) * RampStep;
-            texels[start + RampColumn + i] = depth < edge.RimWidth ? edge.EvaluateRim(depth / edge.RimWidth) : Color.clear;
+            texels[start + PairRampColumn + i] = depth < edge.RimWidth ? edge.EvaluateRim(depth / edge.RimWidth) : Color.clear;
         }
     }
 }

@@ -11,7 +11,7 @@
 // the edge's noise). 0 for a level layer, and deeper inside than the bank and its shadow.
 float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner corner, float2 worldPixel, float depth)
 {
-    float sink = TBLut(ins, TB_BANK_COLUMN, 1 + (int)m).x;
+    float sink = TBLut(ins, TB_LAYER_BANK_COLUMN, TBLayerRow(m)).x;
     [branch]
     if (sink > 0.0)
     {
@@ -32,7 +32,7 @@ float TBBankHeight(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], TBCorner co
 // along a seamless pair, which show no bank.
 float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 {
-    int firstRow = 1 + (int)ins.layers + (int)m * ((int)ins.layers + 1);
+    int firstRow = TBFirstPairRow(ins, m);
     float3 face = float3(0.0, 0.0, 0.0);
     float seamless = 0.0;
     [loop]
@@ -41,8 +41,8 @@ float3 TBBankFace(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
         [branch]
         if (w[k] > 0.0)
         {
-            float open = TBLut(ins, 3, firstRow + (int)k).a;
-            face += w[k] * open * TBLut(ins, TB_BANK_COLOUR_COLUMN, (int)k).rgb;
+            float open = TBLut(ins, TB_PAIR_FILL_COLUMN, firstRow + (int)k).a;
+            face += w[k] * open * TBLut(ins, TB_LAYER_BANK_COLOUR_COLUMN, TBLayerRow(k - 1u)).rgb;
             seamless += w[k] * (1.0 - open);
         }
     }

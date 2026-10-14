@@ -21,7 +21,9 @@ using Object = UnityEngine.Object;
 /// pebbles only when asked (shallows); tufts point up; sand's
 /// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
 /// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
-/// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; writing the
+/// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; planks point
+/// every pixel straight across its board, with butt joints on the cell borders staggered from row to row, and are lit
+/// along their top rows and left ends; writing the
 /// textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
 /// rebuild; and every project recipe still generates its material's textures. Recipes and materials are built in memory
 /// with their default settings (the project's materials and recipes are only read), and files go to a temporary folder
@@ -34,7 +36,7 @@ public class TerrainMaterialRecipeTests
     private static readonly Type[] RecipeTypes =
     {
         typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe),
-        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe)
+        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe), typeof(PlankBoardsRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -169,7 +171,7 @@ public class TerrainMaterialRecipeTests
     [Test]
     public void TheProjectsMaterials_KeepTheirTexturesInAFolderOfTheirOwn()
     {
-        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza", "Shallows" })
+        foreach (string name in new[] { "Grass", "Gravel", "Stone", "DryGrass", "Dirt", "Plaza", "Shallows", "Planks" })
         {
             TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"Assets/Settings/Terrain/Materials/{name}.asset");
             string folder = $"{TerrainMaterialWriter.TextureFolder}/{name}";
@@ -333,6 +335,129 @@ public class TerrainMaterialRecipeTests
 
         depths.Sort();
         Assert.That(depths[depths.Count / 2], Is.GreaterThan(2.5));
+    }
+
+    /// <summary>
+    /// Planks lie in rows of boards 8 px apart (four to a cell) with butt joints on the cell borders: every pixel has
+    /// alpha and points straight across its board (no offset along x) at the board's middle row in its own row of
+    /// boards, which points at itself; its alpha / 16 is its distance to its board's edge, the nearer of the row's gap
+    /// row, at the bottom, the next row's, and the row's joints, which are the columns where the middle row is gap and lie
+    /// on cell borders, at least one per row; the gaps show the base colour shaded by the blue channel; and the joints of
+    /// neighbouring rows seldom meet.
+    /// </summary>
+    [Test]
+    public void PlankBoards_CellField_PointsAcrossEachBoard_WithJointsOnTheCellBorders()
+    {
+        TerrainTextures textures = CreateRecipe(typeof(PlankBoardsRecipe)).Generate(Seed);
+        int size = textures.Size;
+        Color32[] field = textures.CellField;
+        const int pitch = 8;
+        int rows = size / pitch;
+        List<int>[] joints = new List<int>[rows];
+        for (int row = 0; row < rows; row++)
+        {
+            joints[row] = new List<int>();
+            for (int x = 0; x < size; x++)
+            {
+                if (field[(row * pitch + pitch / 2) * size + x].a < 8)
+                {
+                    Assert.That(x % TerrainStyle.PixelsPerCell, Is.Zero, $"row {row}: a joint at {x} off the cell borders");
+                    joints[row].Add(x);
+                }
+            }
+
+            Assert.That(joints[row], Is.Not.Empty, $"row {row}");
+        }
+
+        int gaps = 0;
+        for (int y = 0; y < size; y++)
+        {
+            int row = y / pitch;
+            int rowStart = row * pitch;
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                Color32 texel = field[i];
+                Assert.That(texel.r, Is.EqualTo(128), $"({x}, {y}) points along its board.");
+                Assert.That(texel.g - 128, Is.EqualTo(rowStart + pitch / 2 - y), $"({x}, {y}) points at its board's middle row.");
+                Color32 centre = field[CentreOf(texel, x, y, size)];
+                Assert.That(centre.r == 128 && centre.g == 128, Is.True, $"({x}, {y})");
+                int along = int.MaxValue;
+                foreach (int joint in joints[row])
+                {
+                    along = Math.Min(along, Math.Abs(TerrainArt.WrapDelta(x - joint, size)));
+                }
+
+                int border = Math.Min(Math.Min(y - rowStart, rowStart + pitch - y), along);
+                Assert.That(texel.a, Is.EqualTo(Mathf.Clamp(border * 16, 1, 255)), $"({x}, {y})");
+                if (texel.a < 8)
+                {
+                    gaps++;
+                    Assert.That(SameColour(textures.Albedo[i], ShadedBase(textures.BaseColour, texel.b)), Is.True, $"({x}, {y}) is a gap");
+                }
+            }
+        }
+
+        Assert.That(gaps, Is.GreaterThan(size * rows));
+        int meeting = 0;
+        for (int row = 0; row < rows; row++)
+        {
+            foreach (int joint in joints[row])
+            {
+                if (joints[(row + 1) % rows].Contains(joint))
+                {
+                    meeting++;
+                    break;
+                }
+            }
+        }
+
+        Assert.That(meeting, Is.LessThanOrEqualTo(rows / 4), "Joints of neighbouring rows stagger.");
+    }
+
+    /// <summary>
+    /// Boards are lit from the top left, as the terrain shader lights the ground: on average a board's top row is
+    /// lighter than its bottom row, and its first column after a joint lighter than its last before the next one.
+    /// </summary>
+    [Test]
+    public void PlankBoards_AreLitAlongTheirTopAndLeftEdges()
+    {
+        TerrainTextures textures = CreateRecipe(typeof(PlankBoardsRecipe)).Generate(Seed);
+        int size = textures.Size;
+        double top = 0.0;
+        double bottom = 0.0;
+        double left = 0.0;
+        double right = 0.0;
+        int ends = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = textures.Albedo[y * size + x];
+                double brightness = (colour.r + colour.g + colour.b) / 3.0;
+                if (y % 8 == 7)
+                {
+                    top += brightness;
+                }
+                else if (y % 8 == 1)
+                {
+                    bottom += brightness;
+                }
+
+                if (y % 8 == 4 && textures.CellField[y * size + x].a < 8)
+                {
+                    Color32 after = textures.Albedo[y * size + TerrainArt.Wrap(x + 1, size)];
+                    Color32 before = textures.Albedo[y * size + TerrainArt.Wrap(x - 1, size)];
+                    left += (after.r + after.g + after.b) / 3.0;
+                    right += (before.r + before.g + before.b) / 3.0;
+                    ends++;
+                }
+            }
+        }
+
+        Assert.That(top, Is.GreaterThan(bottom + 10.0 * size * size / 8), "Top rows are lighter.");
+        Assert.That(ends, Is.GreaterThan(5));
+        Assert.That(left / ends, Is.GreaterThan(right / ends + 5.0), "Left ends are lighter.");
     }
 
     /// <summary>
@@ -1316,7 +1441,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(10));
+        Assert.That(checkedRecipes, Is.EqualTo(11));
     }
 
     /// <summary>

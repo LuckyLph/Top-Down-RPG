@@ -19,6 +19,7 @@
 #define TB_RAMP_STEP 0.5
 #define TB_DIAGONAL_GAP 4.0
 #define TB_WHOLE_CLEARANCE 10.0
+#define TB_RUN_REACH 3
 
 static const float2 TB_LIGHT = float2(-0.6, 0.8);
 
@@ -27,7 +28,8 @@ static const float2 TB_LIGHT = float2(-0.6, 0.8);
 // lower one or over nothing (its edge in both looks). rect.xy is the world position of control map cell (0, 0),
 // rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array's red and green channels; both looks
 // read its blue channel, the glint and sparkle phases of animated materials. time is the time animated materials are
-// drawn at. A layer's shape (radii, repeat, cell mode) is read from its row when needed (TBShape).
+// drawn at. bridges holds a bit for each layer whose material is a bridge (row 0's last value). A layer's shape
+// (radii, repeat, cell mode) is read from its row when needed (TBShape).
 struct TBInputs
 {
     UnityTexture2D control;
@@ -39,14 +41,16 @@ struct TBInputs
     uint layers;
     float4 globals;
     float time;
+    uint bridges;
 };
 
-// The four cells around the corner nearest a pixel (down-left, down-right, up-left, up-right) and the pixel centre
-// relative to that corner, in pixels.
+// The four cells around the corner nearest a pixel (down-left, down-right, up-left, up-right), the pixel centre
+// relative to that corner, in pixels, and the bridge layers' bits (TBInputs.bridges).
 struct TBCorner
 {
     uint4 cells;
     float2 uv;
+    uint bridges;
 };
 
 // How an upper layer's edge is drawn at a pixel: the settings of each pair it may be drawn over, blended by weight.
@@ -127,23 +131,80 @@ TBCorner TBLoadCorner(TBInputs ins, float2 pixel)
     corner.uv = centre - c * ART_PIXELS_PER_UNIT;
     int2 ci = (int2)c;
     corner.cells = uint4(TBCell(ins, ci + int2(-1, -1)), TBCell(ins, ci + int2(0, -1)), TBCell(ins, ci + int2(-1, 0)), TBCell(ins, ci));
+    corner.bridges = ins.bridges;
     return corner;
 }
 
+// The bits of a cell that count for a layer's shape: every bit but those of the bridge layers above it, which lie on
+// what is painted under them without carrying it on (a dock over the beach does not take the water under it).
+uint TBCounted(uint cell, uint bridges, uint layer)
+{
+    return cell & ~(bridges & ~(1u << layer));
+}
+
 // Which of the four cells a layer covers: a cell counts for a layer when that layer or any layer above it is filled,
-// so a lower layer continues under the upper ones.
+// so a lower layer continues under the upper ones, except under a bridge layer (TBCounted).
 uint TBMask(TBCorner corner, uint layer)
 {
     uint mask = 0u;
     [unroll]
     for (uint k = 0u; k < 4u; k++)
     {
-        if ((corner.cells[k] >> layer) != 0u)
+        if ((TBCounted(corner.cells[k], corner.bridges, layer) >> layer) != 0u)
         {
             mask |= 1u << k;
         }
     }
     return mask;
+}
+
+// How many cells in a row, up to TB_RUN_REACH, layer m covers from a cell of the control map in one direction, the
+// cell itself left out.
+int TBRun(TBInputs ins, int2 cell, int2 direction, uint m)
+{
+    int run = 0;
+    [loop]
+    for (int i = 1; i <= TB_RUN_REACH; i++)
+    {
+        if ((TBCounted(TBCell(ins, cell + direction * i), ins.bridges, m) >> m) == 0u)
+        {
+            break;
+        }
+        run = i;
+    }
+    return run;
+}
+
+// Whether layer m's textures are turned a quarter at a map pixel: only for a layer that turns to its runs (its row's
+// height column, second value), in a cell where the layer runs further across, left and right, than up and down,
+// counting up to TB_RUN_REACH cells each way; a tie keeps the textures as they are. What runs along a texture's x
+// (a board) then lies across the layer's run, whichever way the run goes.
+bool TBTurned(TBInputs ins, uint m, float2 pixel)
+{
+    bool turned = false;
+    [branch]
+    if (TBLut(ins, 3, 1 + (int)m).y > 0.5)
+    {
+        int2 cell = (int2)floor((pixel + 0.5) / ART_PIXELS_PER_UNIT);
+        int across = TBRun(ins, cell, int2(1, 0), m) + TBRun(ins, cell, int2(-1, 0), m);
+        int along = TBRun(ins, cell, int2(0, 1), m) + TBRun(ins, cell, int2(0, -1), m);
+        turned = across > along;
+    }
+    return turned;
+}
+
+// The position a layer's textures are read at for a world pixel: the pixel itself, or turned a quarter, so the texture's
+// x runs up the world and its top towards the left, which keeps the light's side on the top-left of what it shows.
+float2 TBSampled(float2 worldPixel, bool turned)
+{
+    return turned ? float2(worldPixel.y, -worldPixel.x) : worldPixel;
+}
+
+// An offset read from a texture (a cell field's, a clump's rows) as an offset in the world: turned back a quarter
+// where the texture was turned (TBSampled).
+float2 TBUnturn(float2 offset, bool turned)
+{
+    return turned ? float2(-offset.y, offset.x) : offset;
 }
 
 // The highest layer filled in a cell (0 for an empty cell): its highest set bit.
@@ -591,13 +652,16 @@ bool TBOpenOn(TBInputs ins, uint m, float2 pixel, float2 worldPixel)
 // at its centre, already worked out by the caller. A swaying layer's weeds lean (TBSwayTexel), and a pixel of a weed's
 // box (the height's green channel above 0: its row from the row under the weed's base, plus one) shows the ground under
 // it instead, from the cell field, unless the weed's foot and its top (the field's alpha: the box's rows above its base)
-// both lie where the layer shows (TBOpenOn).
+// both lie where the layer shows (TBOpenOn). A layer that turns to its runs reads all of it turned a quarter where its
+// cell runs across (TBTurned), and turns the offsets it reads back into the world (TBUnturn).
 float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
 {
     float4 shape = TBShape(ins, m);
-    int2 texel = (int2)WrapPixel(worldPixel, shape.z);
+    bool turned = TBTurned(ins, m, pixel);
+    float2 sampled = TBSampled(worldPixel, turned);
+    int2 texel = (int2)WrapPixel(sampled, shape.z);
     float lean;
-    int2 shown = TBSwayTexel(ins, m, worldPixel, texel, lean);
+    int2 shown = TBSwayTexel(ins, m, sampled, texel, lean);
     float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, shown, m).rgb);
     [branch]
     if (TBLut(ins, TB_SWAY_COLUMN, 1 + (int)m).x > 0.0)
@@ -606,8 +670,8 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
         [branch]
         if (rows > 0.5)
         {
-            float2 down = float2(-lean, 2.0 - rows);
-            float2 up = down + float2(0.0, round(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, m).a * 255.0));
+            float2 down = TBUnturn(float2(-lean, 2.0 - rows), turned);
+            float2 up = down + TBUnturn(float2(0.0, round(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, m).a * 255.0)), turned);
             [branch]
             if (!TBOpenOn(ins, m, pixel + down, worldPixel + down) || !TBOpenOn(ins, m, pixel + up, worldPixel + up))
             {
@@ -625,7 +689,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
             int row = 1 + (int)m;
             float4 chip = TBLut(ins, 1, row);
             float3 base = TBLut(ins, 2, row).rgb + (f.b * 255.0 - 128.0) / 255.0;
-            float2 offset = round(f.rg * 255.0) - 128.0;
+            float2 offset = TBUnturn(round(f.rg * 255.0) - 128.0, turned);
             TBCentre centre = known;
             [branch]
             if (!hasCentre)
@@ -846,11 +910,11 @@ float TBTuft(TBInputs ins, TBCorner corner, uint m, float d, float2 pixel, float
 // keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
 // opaque, or a sunken layer's bank (TBEdgeColour); then the interior under the band or the rim (TBInside, with a
-// sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit like the base colour.
+// sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit like the base colour. A layer that
+// turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does.
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float4 shape = TBShape(ins, m);
-    int2 texel = (int2)WrapPixel(worldPixel, shape.z);
     float grit = 0.0;
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
     bool decided = false;
@@ -859,13 +923,15 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     [branch]
     if (shape.w > 0.5)
     {
+        bool turned = TBTurned(ins, m, pixel);
+        int2 texel = (int2)WrapPixel(TBSampled(worldPixel, turned), shape.z);
         float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m);
         grit = (f.b * 255.0 - 128.0) / 255.0;
         float4 chip = TBLut(ins, 1, 1 + (int)m);
         [branch]
         if (chip.w > 0.5)
         {
-            float2 offset = round(f.rg * 255.0) - 128.0;
+            float2 offset = TBUnturn(round(f.rg * 255.0) - 128.0, turned);
             centre = TBCentreAt(ins, m, pixel + offset, worldPixel + offset, false);
             hasCentre = true;
             if (centre.whole >= 0.5)
@@ -1026,6 +1092,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     ins.layers = (uint)clamp(Info.x, 0.0, (float)TB_MAX_LAYERS);
     ins.globals = TBLut(ins, 0, 0);
     ins.time = Info.z > 0.5 ? Info.w : _TimeParameters.x;
+    ins.bridges = (uint)(ins.globals.w + 0.5);
 
     float2 worldPixel = SnapToArtPixel(WorldPos.xy);
     float2 pixel = worldPixel - ControlRect.xy * ART_PIXELS_PER_UNIT;

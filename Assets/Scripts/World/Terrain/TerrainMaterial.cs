@@ -11,7 +11,9 @@ using UnityEngine;
 /// the shader alone, at its frames per second; its edges never move. A swaying material (weeds) leans the pixels its
 /// height texture weighs, its weeds' blades, in a wind that rolls across the ground, in the shader too. A sunken material (water) lies below the ground
 /// around it: along its edges that face up the screen over another material, that material's bank shows inside its
-/// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it.
+/// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it. A bridge
+/// (planks) lies on what is painted under it, so the layers under it do not go on beneath it, and a material that
+/// turns to its runs turns its textures a quarter where its layer runs left and right, so its boards lie across the run.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
@@ -94,6 +96,11 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float bankShadow = 0.25f;
     [Tooltip("Colour of this material's face where a sunken material (water) cuts into it, the bank above a pond's top edge: what the ground shows when cut, such as the dirt under grass.")]
     [SerializeField] private Color bankColour = new(0.38f, 0.29f, 0.2f, 1f);
+    [Header("Placement")]
+    [Tooltip("Lies on whatever is painted under it, like a dock or a bridge, instead of the layers under it going on beneath it: a lower layer's shape counts this layer's cells only where that layer (or another above it that is no bridge) is painted, so beside it each lower layer keeps its own edge. Without it, the water under a dock's sea end would also reach under its beach end and round off there.")]
+    [SerializeField] private bool bridge;
+    [Tooltip("Turns the textures a quarter in a cell where this layer runs further left and right than up and down (up to 3 cells each way; a tie keeps them), so what runs along the texture's x, such as a board, lies across a path of this layer whichever way it goes.")]
+    [SerializeField] private bool turnToRuns;
     [Header("Edge")]
     [Tooltip("How this material's edge is drawn over any material, or over nothing, without a pair override in the style.")]
     [SerializeField] private TerrainStyle.EdgeSettings edge = new();
@@ -128,6 +135,8 @@ public class TerrainMaterial : ScriptableObject
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;
+    public bool Bridge => bridge;
+    public bool TurnsToRuns => turnToRuns;
     public TerrainStyle.EdgeSettings Edge => edge;
 
 #if UNITY_EDITOR

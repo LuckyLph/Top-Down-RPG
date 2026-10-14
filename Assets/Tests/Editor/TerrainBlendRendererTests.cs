@@ -19,7 +19,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// the new one, and fixing a material rebuilds a renderer that could not build; the mode switches the soft keyword on
 /// the runtime material, across rebuilds, without scheduling a rebuild or allocating; the height array has a slice per
 /// layer, and a material without a height still builds; a sunken layer shows its bank over an ordinary pair and none
-/// over a seamless one; an animated layer gives the renderer its rate, which the Scene
+/// over a seamless one; a bridge leaves the layers under it their own edges beside it, and a layer that turns to its
+/// runs turns its textures where it runs across; an animated layer gives the renderer its rate, which the Scene
 /// view follows; a fixed time for animated materials reaches the runtime material and clears without a rebuild; a
 /// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
 /// cells, grows the map and the chunks with one upload and shrinks them back once cleared, and leaves nothing running
@@ -368,6 +369,165 @@ public class TerrainBlendRendererTests
 
         Assert.That(underGround.r, Is.GreaterThan(underGround.b), "The bank shows over the ground.");
         Assert.That(underSeamless.b, Is.GreaterThan(underSeamless.r), "No bank shows over the seamless layer.");
+    }
+
+    /// <summary>
+    /// A bridge (a dock) lies on what is painted under it: where it crosses a shore from water onto the ground, the
+    /// water keeps its own straight edge beside it, while an ordinary layer in its place carries the water on under its
+    /// ground end, so the water's rounded inner corner reaches onto the ground beside it. Green ground fills an 8 x 4
+    /// block, blue water its top two rows, and a red layer crosses the shore in a two-cell column; no edge draws an
+    /// outline, rim or shadow, and the edges have no noise. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ABridge_LeavesTheLayersUnderItTheirOwnEdges()
+    {
+        SetEdgeNoise(0f);
+        Color32 green = new(40, 160, 40, 255);
+        Color32 blue = new(30, 60, 200, 255);
+        Color32 red = new(220, 30, 30, 255);
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial ground = SolidMaterial("Ground", green, bare);
+        TerrainMaterial water = SolidMaterial("Water", blue, bare);
+        TerrainMaterial dock = SolidMaterial("Dock", red, bare);
+        GameObject gridObject = Track(new GameObject("BridgeGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap[] tilemaps = new Tilemap[3];
+        for (int i = 0; i < tilemaps.Length; i++)
+        {
+            tilemaps[i] = new GameObject($"Layer{i}", typeof(Tilemap)).GetComponent<Tilemap>();
+            tilemaps[i].transform.SetParent(gridObject.transform);
+        }
+
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
+                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
+                if (y >= 2)
+                {
+                    tilemaps[1].SetTile(new Vector3Int(x, y, 0), tile);
+                }
+
+                if (x == 3 || x == 4)
+                {
+                    tilemaps[2].SetTile(new Vector3Int(x, y, 0), tile);
+                }
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(tilemaps[0], ground), new TerrainBlendRenderer.Layer(tilemaps[1], water), new TerrainBlendRenderer.Layer(tilemaps[2], dock));
+        gridObject.SetActive(true);
+        Rect world = new(0f, 0f, 8f, 4f);
+        Color32 beside = default;
+        for (int frame = 0; frame < 30 && beside.a == 0; frame++)
+        {
+            yield return null;
+            beside = RenderedPixel(renderer, world, 94, 62);
+        }
+
+        Assert.That(beside.b, Is.GreaterThan(beside.g), "An ordinary layer carries the water on under its ground end.");
+
+        SerializedObject settings = new(dock);
+        settings.FindProperty("bridge").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        renderer.RunScheduledRebuild();
+        Color32 bridged = default;
+        for (int frame = 0; frame < 30 && bridged.a == 0; frame++)
+        {
+            yield return null;
+            bridged = RenderedPixel(renderer, world, 94, 62);
+        }
+
+        Assert.That(bridged.g, Is.GreaterThan(bridged.b), "Beside a bridge the water keeps its straight shore.");
+        Assert.That(RenderedPixel(renderer, world, 112, 62).r, Is.GreaterThan(200), "The bridge is drawn over the ground.");
+        Assert.That(RenderedPixel(renderer, world, 112, 100).r, Is.GreaterThan(200), "The bridge is drawn over the water.");
+    }
+
+    /// <summary>
+    /// A layer that turns to its runs reads its textures turned a quarter in cells where it runs further left and right
+    /// than up and down, and as they are elsewhere: an albedo striped across its x (red then blue every 16 px) shows its
+    /// stripes along x in a run going up and along y in a run going across. Renders from a later editor update, until
+    /// anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerThatTurnsToItsRuns_TurnsItsTexturesWhereItRunsAcross()
+    {
+        SetEdgeNoise(0f);
+        Color32 red = new(220, 30, 30, 255);
+        Color32 blue = new(30, 60, 200, 255);
+        Color32[] stripes = new Color32[128 * 128];
+        Color32[] height = new Color32[128 * 128];
+        for (int i = 0; i < stripes.Length; i++)
+        {
+            stripes[i] = (i % 128) % 32 < 16 ? red : blue;
+            height[i] = new Color32(128, 128, 0, 255);
+        }
+
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial boards = TerrainMaterial.Create("Boards", Texture("Boards albedo", stripes), null, 4, TerrainMaterial.CellMode.None, red, bare, Texture("Boards height", height));
+        createdObjects.Add(boards);
+        SerializedObject settings = new(boards);
+        settings.FindProperty("turnToRuns").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        GameObject gridObject = Track(new GameObject("TurnGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap tilemap = new GameObject("Boards", typeof(Tilemap)).GetComponent<Tilemap>();
+        tilemap.transform.SetParent(gridObject.transform);
+        for (int x = 0; x < 6; x++)
+        {
+            tilemap.SetTile(new Vector3Int(x, 0, 0), tile);
+        }
+
+        for (int y = 2; y < 8; y++)
+        {
+            tilemap.SetTile(new Vector3Int(8, y, 0), tile);
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(tilemap, boards));
+        gridObject.SetActive(true);
+        Rect world = new(0f, 0f, 10f, 8f);
+        Color32 first = default;
+        for (int frame = 0; frame < 30 && first.a == 0; frame++)
+        {
+            yield return null;
+            first = RenderedPixel(renderer, world, 2 * 32 + 16, 4);
+        }
+
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        Color32 acrossLow = pixels.GetPixel(2 * 32 + 4, 8);
+        Color32 acrossHigh = pixels.GetPixel(2 * 32 + 4, 24);
+        Color32 acrossRight = pixels.GetPixel(2 * 32 + 20, 8);
+        Color32 upLeft = pixels.GetPixel(8 * 32 + 4, 4 * 32 + 8);
+        Color32 upRight = pixels.GetPixel(8 * 32 + 20, 4 * 32 + 8);
+        Color32 upHigher = pixels.GetPixel(8 * 32 + 4, 4 * 32 + 24);
+        Object.DestroyImmediate(pixels);
+
+        Assert.That(SameStripe(acrossLow, acrossRight), Is.True, "Across a turned run the stripes run along x.");
+        Assert.That(SameStripe(acrossLow, acrossHigh), Is.False, "A turned run changes stripe going up.");
+        Assert.That(SameStripe(upLeft, upHigher), Is.True, "Up an unturned run the stripes run along y.");
+        Assert.That(SameStripe(upLeft, upRight), Is.False, "An unturned run changes stripe going across.");
+    }
+
+    /// <summary>
+    /// The colour <paramref name="renderer"/> draws at pixel (<paramref name="x"/>, <paramref name="y"/>) of
+    /// <paramref name="world"/> rendered at one screen pixel per art pixel, with every other renderer left out.
+    /// </summary>
+    private static Color32 RenderedPixel(TerrainBlendRenderer renderer, Rect world, int x, int y)
+    {
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        Color32 colour = pixels.GetPixel(x, y);
+        Object.DestroyImmediate(pixels);
+        return colour;
+    }
+
+    /// <summary>
+    /// Whether two pixels show the same stripe, red or blue.
+    /// </summary>
+    private static bool SameStripe(Color32 a, Color32 b)
+    {
+        return a.r > a.b == b.r > b.b;
     }
 
     /// <summary>

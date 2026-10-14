@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
+  m_Name: Planks
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  albedo: {fileID: 2800000, guid: d851900072fff8342b20600599de32bf, type: 3}
+  cellField: {fileID: 2800000, guid: 11f516d42b1897243854497cdf15fadf, type: 3}
+  height: {fileID: 2800000, guid: bbdb87ff9fec81a4089b6666df1d673b, type: 3}
+  repeatCells: 8
+  outerRadius: 2
+  innerRadius: 2
+  cellMode: 2
+  baseColour: {r: 0.15686275, g: 0.11372549, b: 0.08235294, a: 1}
+  keepMargin: -0.5
+  cutGap: 0
+  cutBevel: 18
+  heightScale: 1
+  framesPerSecond: 0
+  glintColour: {r: 1, g: 1, b: 1, a: 1}
+  glintPeriod: 3
+  glintDuty: 0.2
+  sparkleColour: {r: 1, g: 1, b: 1, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.25
+  rimSwell: 0
+  swellPeriod: 4
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  sinkDepth: 0
+  bankShadow: 0.25
+  bankColour: {r: 0.27450982, g: 0.19607843, b: 0.13333334, a: 1}
+  bridge: 1
+  turnToRuns: 1
+  edge:
+    rimWidth: 0
+    rim:
+      serializedVersion: 2
+      key0: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+      key1: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    drawOutline: 1
+    outlineColour: {r: 0.19607843, g: 0.13725491, b: 0.09411765, a: 1}
+    shadowColour: {r: 0.10980392, g: 0.078431375, b: 0.047058824, a: 1}
+    shadowAlpha: 0.35
+    shadowWidth: 1.5
+    tuftHeight: 0
+    softBandWidth: 0
+    softBandColour: {r: 0.38431373, g: 0.34509805, b: 0.29803923, a: 1}
+    softWholeStones: 0
+    seamless: 0

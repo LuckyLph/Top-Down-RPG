@@ -15,7 +15,9 @@ using UnityEngine.TestTools;
 /// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's grass
 /// sways and keeps its edge over nothing; the project's dirt, dry grass and plaza meet the other materials
 /// with the edges and overrides TerrainTypes.md's Phase 3 decided, and its shallows glint, sink less than the water and
-/// take the deep water seamlessly (Phase 4). The project's style and materials are only read.
+/// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits and materials that turn to their runs mark
+/// their layer's row, and the project's planks are a level bridge drawn last with a shadow of their own on the water
+/// (Phase 5). The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -507,6 +509,74 @@ public class TerrainBlendLutTests
         Assert.That(PairTexel(texels, 3, 2, 0, 3).a, Is.EqualTo(1f), "water over sand is not");
         Assert.That(PairTexel(texels, 3, 1, 0, 3).a, Is.EqualTo(1f), "shallows over sand is not");
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.BankColumn).r, Is.EqualTo(shallows.SinkDepth));
+    }
+
+    /// <summary>
+    /// Row 0's last value holds a bit for every layer whose material is a bridge, and a layer row's height column marks
+    /// a material that turns to its runs; neither is set for ordinary materials, so their rows and row 0 are as before.
+    /// </summary>
+    [Test]
+    public void BridgesAndMaterialsThatTurnToTheirRuns_ReachTheirRows()
+    {
+        TerrainMaterial grass = Material("Grass", 0.1f);
+        TerrainMaterial water = Material("Water", 0.2f);
+        TerrainMaterial dock = Material("Dock", 0.3f);
+        TerrainMaterial walk = Material("Walk", 0.3f);
+        foreach (TerrainMaterial material in new[] { dock, walk })
+        {
+            SerializedObject settings = new(material);
+            settings.FindProperty("bridge").boolValue = material == dock;
+            settings.FindProperty("turnToRuns").boolValue = true;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        TerrainStyle style = Style();
+
+        Color[] plain = TerrainBlendLut.BuildTexels(style, new[] { grass, water });
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, water, walk, dock });
+
+        Assert.That(plain[0].a, Is.Zero, "No bridge.");
+        Assert.That(TerrainBlendLut.BridgeBits(new[] { grass, water }), Is.Zero);
+        Assert.That(texels[0].a, Is.EqualTo(8f), "Layer 3 is a bridge.");
+        Assert.That(TerrainBlendLut.BridgeBits(new[] { dock, grass, dock }), Is.EqualTo(5f));
+        Assert.That(LayerTexel(texels, 0, 3).g, Is.Zero);
+        Assert.That(LayerTexel(texels, 1, 3).g, Is.Zero);
+        Assert.That(LayerTexel(texels, 2, 3).g, Is.EqualTo(1f), "The walk turns to its runs.");
+        Assert.That(LayerTexel(texels, 3, 3).g, Is.EqualTo(1f), "The dock turns to its runs.");
+    }
+
+    /// <summary>
+    /// The project's planks (TerrainTypes.md, Phase 5) are a level, still bridge that turns to its runs, drawn last in
+    /// the shared order, with nearly square corners and boards cut along the rim; they draw a dark outline and an earthy
+    /// shadow over every material, and over the water and the shallows a wider, darker shadow of their own.
+    /// </summary>
+    [Test]
+    public void TheProjectsPlanks_AreALevelBridgeDrawnLast_WithAShadowOnTheWater()
+    {
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
+        TerrainMaterial planks = ProjectMaterial("Planks");
+
+        Assert.That(style.LayerOrderIndexOf(planks), Is.EqualTo(style.LayerOrder.Count - 1), "Planks are drawn last.");
+        Assert.That(planks.Bridge && planks.TurnsToRuns, Is.True);
+        Assert.That(planks.SinkDepth, Is.Zero);
+        Assert.That(planks.IsAnimated, Is.False);
+        Assert.That(planks.Cells, Is.EqualTo(TerrainMaterial.CellMode.CutStones));
+        Assert.That(planks.OuterRadius, Is.LessThanOrEqualTo(3f));
+        Assert.That(planks.Edge.DrawOutline, Is.True);
+        foreach (string lowerName in new[] { "Grass", "Sand", "Gravel", "Stone", "Mud", "Dirt" })
+        {
+            Assert.That(style.GetEdge(planks, ProjectMaterial(lowerName)), Is.SameAs(planks.Edge), lowerName);
+        }
+
+        foreach (string lowerName in new[] { "Water", "Shallows" })
+        {
+            TerrainStyle.EdgeSettings overWater = style.GetEdge(planks, ProjectMaterial(lowerName));
+            Assert.That(overWater, Is.Not.SameAs(planks.Edge), lowerName);
+            Assert.That(overWater.DrawOutline, Is.True, lowerName);
+            Assert.That(overWater.ShadowWidth, Is.GreaterThan(planks.Edge.ShadowWidth), lowerName);
+            Assert.That(overWater.ShadowAlpha, Is.GreaterThan(planks.Edge.ShadowAlpha), lowerName);
+            Assert.That(overWater.ShadowColour.b, Is.GreaterThan(overWater.ShadowColour.r), $"{lowerName}: a shadow on the water");
+        }
     }
 
     /// <summary>

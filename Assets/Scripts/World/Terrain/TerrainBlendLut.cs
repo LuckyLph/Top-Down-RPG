@@ -5,9 +5,10 @@ using UnityEngine;
 /// The terrain style and materials as data for the terrain blending shader (Assets/Shaders/Terrain/TerrainBlend.hlsl):
 /// a small point-filtered RGBA float texture read with Load, for a renderer's layers and the materials they draw with,
 /// holding both looks, so switching between them needs no rebuild. Row 0 holds the shared settings (edge noise, pair
-/// margin, pair blend). Rows 1 to L hold each layer's material: (outer radius, inner radius, repeat in pixels, cell
-/// mode), (keep margin, cut gap, cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them
-/// whole in the soft look), (base colour), (soft height scale, 0 without a height texture), and for an animated
+/// margin, pair blend, and the bridge layers as bits: bit i for a layer i whose material is a bridge). Rows 1 to L hold
+/// each layer's material: (outer radius, inner radius, repeat in pixels, cell mode), (keep margin, cut gap, cut bevel, 1
+/// when the material has cut stones and one of the layer's pairs shows them whole in the soft look), (base colour),
+/// (soft height scale, 0 without a height texture, 1 when the material turns to its runs), and for an animated
 /// material (frames per second, glint period, glint duty, rim swell), (glint colour, swell period), (sparkle colour,
 /// sparkle period), (sparkle duty), zero otherwise, from <see cref="AnimationColumn"/> to
 /// <see cref="SparkleTimingColumn"/>, at <see cref="BankColumn"/> (sink depth, bank shadow), zero for a material
@@ -60,7 +61,7 @@ public static class TerrainBlendLut
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
-        texels[0] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, 0f);
+        texels[0] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, BridgeBits(layerMaterials));
         for (int layer = 0; layer < layers; layer++)
         {
             TerrainMaterial material = layerMaterials[layer];
@@ -68,7 +69,7 @@ public static class TerrainBlendLut
             texels[row] = new Color(material.OuterRadius, material.InnerRadius, material.RepeatPixels, (float)material.Cells);
             texels[row + 1] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
             texels[row + 2] = material.BaseColour;
-            texels[row + 3] = new Color(material.Height != null ? material.HeightScale : 0f, 0f, 0f, 0f);
+            texels[row + 3] = new Color(material.Height != null ? material.HeightScale : 0f, material.TurnsToRuns ? 1f : 0f, 0f, 0f);
             if (material.IsAnimated)
             {
                 Color glint = material.GlintColour;
@@ -126,6 +127,24 @@ public static class TerrainBlendLut
         texture.SetPixels(BuildTexels(style, layerMaterials));
         texture.Apply(false, false);
         return texture;
+    }
+
+    /// <summary>
+    /// The bits of the layers drawing a bridge material (<see cref="TerrainMaterial.Bridge"/>), bit i for layer i, as
+    /// the shader reads them from row 0: a float holds every one of 16 bits exactly.
+    /// </summary>
+    public static float BridgeBits(IReadOnlyList<TerrainMaterial> layerMaterials)
+    {
+        int bits = 0;
+        for (int layer = 0; layer < layerMaterials.Count; layer++)
+        {
+            if (layerMaterials[layer] != null && layerMaterials[layer].Bridge)
+            {
+                bits |= 1 << layer;
+            }
+        }
+
+        return bits;
     }
 
     /// <summary>

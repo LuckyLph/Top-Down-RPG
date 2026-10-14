@@ -1231,13 +1231,13 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The project's terrain style lists every ground material of Assets/Settings/Terrain/Materials once, in the shared
-    /// draw order of Docs/TerrainTypes.md: grass, dry grass, dirt, sand, mud, gravel, plaza, stone, shallows, water.
+    /// draw order of Docs/TerrainTypes.md: grass, dry grass, dirt, sand, mud, gravel, plaza, stone, shallows, water, planks.
     /// </summary>
     [Test]
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "DryGrass", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Shallows", "Water" };
+        string[] order = { "Grass", "DryGrass", "Dirt", "Sand", "Mud", "Gravel", "Plaza", "Stone", "Shallows", "Water", "Planks" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)
@@ -1253,7 +1253,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The default movement profile lets sand, dirt, dry grass and the plaza be walked like grass, mud and the shallows
+    /// The default movement profile lets sand, dirt, dry grass, the plaza and the planks be walked like grass, mud and the shallows
     /// at twice grass's cost, and water not at all, so the cheapest step stays grass's.
     /// </summary>
     [Test]
@@ -1270,7 +1270,7 @@ public class AreaGenerationTests
         profile.TryGetTraversal(ProjectTerrainType("Water"), out bool waterWalkable, out _);
         Assert.That(grassWalkable && sandWalkable && mudWalkable, Is.True);
         Assert.That(sandCost, Is.EqualTo(grassCost), "Sand costs what grass costs.");
-        foreach (string name in new[] { "Dirt", "DryGrass", "Plaza" })
+        foreach (string name in new[] { "Dirt", "DryGrass", "Plaza", "Planks" })
         {
             TerrainType2D type = ProjectTerrainType(name);
             Assert.That(type, Is.Not.Null, name);

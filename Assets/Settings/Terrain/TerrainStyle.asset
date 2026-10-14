@@ -501,6 +501,94 @@ MonoBehaviour:
       softBandColour: {r: 0.21960784, g: 0.49411765, b: 0.6745098, a: 1}
       softWholeStones: 0
       seamless: 1
+  - upper: {fileID: 11400000, guid: 5eb334efbb2b6d94ca2851debf87ee1e, type: 2}
+    lower: {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+    edge:
+      rimWidth: 0
+      rim:
+        serializedVersion: 2
+        key0: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+        key1: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+        key2: {r: 0, g: 0, b: 0, a: 0}
+        key3: {r: 0, g: 0, b: 0, a: 0}
+        key4: {r: 0, g: 0, b: 0, a: 0}
+        key5: {r: 0, g: 0, b: 0, a: 0}
+        key6: {r: 0, g: 0, b: 0, a: 0}
+        key7: {r: 0, g: 0, b: 0, a: 0}
+        ctime0: 0
+        ctime1: 65535
+        ctime2: 0
+        ctime3: 0
+        ctime4: 0
+        ctime5: 0
+        ctime6: 0
+        ctime7: 0
+        atime0: 0
+        atime1: 65535
+        atime2: 0
+        atime3: 0
+        atime4: 0
+        atime5: 0
+        atime6: 0
+        atime7: 0
+        m_Mode: 0
+        m_ColorSpace: -1
+        m_NumColorKeys: 2
+        m_NumAlphaKeys: 2
+      drawOutline: 1
+      outlineColour: {r: 0.19607843, g: 0.13725491, b: 0.09411765, a: 1}
+      shadowColour: {r: 0.047058824, g: 0.11764706, b: 0.1882353, a: 1}
+      shadowAlpha: 0.5
+      shadowWidth: 2.5
+      tuftHeight: 0
+      softBandWidth: 0
+      softBandColour: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+      softWholeStones: 0
+      seamless: 0
+  - upper: {fileID: 11400000, guid: 5eb334efbb2b6d94ca2851debf87ee1e, type: 2}
+    lower: {fileID: 11400000, guid: 564b4a55de051dc418fc12f8853293ee, type: 2}
+    edge:
+      rimWidth: 0
+      rim:
+        serializedVersion: 2
+        key0: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+        key1: {r: 0.2901961, g: 0.21176471, b: 0.14901961, a: 1}
+        key2: {r: 0, g: 0, b: 0, a: 0}
+        key3: {r: 0, g: 0, b: 0, a: 0}
+        key4: {r: 0, g: 0, b: 0, a: 0}
+        key5: {r: 0, g: 0, b: 0, a: 0}
+        key6: {r: 0, g: 0, b: 0, a: 0}
+        key7: {r: 0, g: 0, b: 0, a: 0}
+        ctime0: 0
+        ctime1: 65535
+        ctime2: 0
+        ctime3: 0
+        ctime4: 0
+        ctime5: 0
+        ctime6: 0
+        ctime7: 0
+        atime0: 0
+        atime1: 65535
+        atime2: 0
+        atime3: 0
+        atime4: 0
+        atime5: 0
+        atime6: 0
+        atime7: 0
+        m_Mode: 0
+        m_ColorSpace: -1
+        m_NumColorKeys: 2
+        m_NumAlphaKeys: 2
+      drawOutline: 1
+      outlineColour: {r: 0.19607843, g: 0.13725491, b: 0.09411765, a: 1}
+      shadowColour: {r: 0.047058824, g: 0.11764706, b: 0.1882353, a: 1}
+      shadowAlpha: 0.5
+      shadowWidth: 2.5
+      tuftHeight: 0
+      softBandWidth: 0
+      softBandColour: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+      softWholeStones: 0
+      seamless: 0
   layerOrder:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   - {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
@@ -512,3 +600,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
   - {fileID: 11400000, guid: 564b4a55de051dc418fc12f8853293ee, type: 2}
   - {fileID: 11400000, guid: 8117c62c7a0ccaf4090c342e8ee2c35e, type: 2}
+  - {fileID: 11400000, guid: 5eb334efbb2b6d94ca2851debf87ee1e, type: 2}

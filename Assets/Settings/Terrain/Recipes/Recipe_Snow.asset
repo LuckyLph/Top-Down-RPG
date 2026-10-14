@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a52dd248cb786a643895ee7bf5572cc3, type: 3}
+  m_Script: {fileID: 11500000, guid: 2d451989de3b57147b50950e956b6789, type: 3}
   m_Name: Recipe_Snow
-  m_EditorClassIdentifier: TopDownRPG.Editor::WaterHighlightsRecipe
+  m_EditorClassIdentifier: TopDownRPG.Editor::SandRipplesRecipe
   material: {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
   seed: 20261027
   repeatCells: 16
@@ -34,114 +34,101 @@ MonoBehaviour:
   - x: 3
     y: 1
     amplitude: 0.25
-  water:
+  sand:
     serializedVersion: 2
     rgba: 4294240996
-  darker:
-    serializedVersion: 2
-    rgba: 4294107864
-  lighter:
-    serializedVersion: 2
-    rgba: 4294702576
-  toneWaves:
-  - x: 0
-    y: 4
-    amplitude: 0.7
-  - x: 1
-    y: 5
-    amplitude: 0.7
-  - x: -2
-    y: 5
-    amplitude: 0.6
-  - x: 3
-    y: 6
-    amplitude: 0.4
-  - x: 3
-    y: 2
-    amplitude: 0.4
-  - x: -5
-    y: 7
-    amplitude: 0.25
-  - x: 1
-    y: 2
-    amplitude: 0.9
-  - x: 2
-    y: 1
-    amplitude: 0.7
-  - x: 1
-    y: -1
-    amplitude: 0.7
+  tintWaves:
   - x: 1
     y: 0
-    amplitude: 0.5
-  darkerShare: 0.45
-  lighterShare: 0.25
-  driftShare: 0.35
-  darkest:
-    serializedVersion: 2
-    rgba: 4293183672
-  darkestShare: 0
-  strokesPerCell: 1.6
-  jitter: 0.45
-  strokeChance: 0
-  densityWaves:
-  - x: 1
-    y: 3
-    amplitude: 1
+    amplitude: 2.5
+  - x: 0
+    y: 1
+    amplitude: 2
   - x: 2
-    y: 5
-    amplitude: 0.7
+    y: 1
+    amplitude: 1.6
   - x: -1
-    y: 4
-    amplitude: 0.5
-  densityAmount: 0
-  minLength: 3
-  maxLength: 10
-  bowLength: 17
-  slant: 0
-  companionChance: 0.4
-  resting:
-    serializedVersion: 2
-    rgba: 4289492018
-  highlight:
-    serializedVersion: 2
-    rgba: 4294967295
-  spread: 0.15
-  sparklesPerCell: 1.6
-  sparkleChance: 0.7
-  sparkle:
-    serializedVersion: 2
-    rgba: 4294967295
-  bedShare: 0
-  bed:
-    serializedVersion: 2
-    rgba: 4288978530
-  bedWaves:
-  - x: 2
-    y: 3
-    amplitude: 1
+    y: 2
+    amplitude: 1.2
   - x: 3
     y: -2
     amplitude: 0.8
-  - x: -4
+  grit: 1.5
+  ripplesAlongX: 2
+  ripplesAlongY: 24
+  wobbleWaves:
+  - x: 2
+    y: 0
+    amplitude: 0.35
+  - x: 3
+    y: 1
+    amplitude: 0.45
+  - x: 1
+    y: 3
+    amplitude: 0.4
+  - x: 5
+    y: -2
+    amplitude: 0.3
+  - x: 4
+    y: 5
+    amplitude: 0.2
+  - x: -3
+    y: 7
+    amplitude: 0.15
+  coverWaves:
+  - x: 3
+    y: 2
+    amplitude: 0.6
+  - x: -2
     y: 5
     amplitude: 0.5
-  - x: 6
-    y: 4
-    amplitude: 0.3
-  pebblesPerCell: 0
-  pebbleChance: 0.5
-  pebble:
+  - x: 5
+    y: 25
+    amplitude: 1
+  - x: -4
+    y: 22
+    amplitude: 0.9
+  - x: 7
+    y: 27
+    amplitude: 0.7
+  - x: -6
+    y: 23
+    amplitude: 0.6
+  - x: 9
+    y: 26
+    amplitude: 0.4
+  coverLevel: 0.3
+  trough:
     serializedVersion: 2
-    rgba: 4287394870
-  cracksPerCell: 0
-  crackChance: 0.5
-  minCrackLength: 4
-  maxCrackLength: 10
-  crackTurnChance: 0.3
-  crack:
+    rgba: 4293974734
+  crest:
     serializedVersion: 2
-    rgba: 4294635746
-  crackLip:
+    rgba: 4294900214
+  bandWidth: 1
+  specksPerCell: 2
+  jitter: 0.45
+  speckChance: 0.25
+  lightChance: 1
+  darkSpeck:
     serializedVersion: 2
-    rgba: 4291602552
+    rgba: 4283595414
+  lightSpeck:
+    serializedVersion: 2
+    rgba: 4294966780
+  clumpsPerCell: 0.9
+  clumpChance: 0.55
+  clumpRadius: {x: 1.5, y: 2.6}
+  clumpLit:
+    serializedVersion: 2
+    rgba: 4294966522
+  clump:
+    serializedVersion: 2
+    rgba: 4294636270
+  clumpShade:
+    serializedVersion: 2
+    rgba: 4293843662
+  sparklesPerCell: 1.4
+  sparkleChance: 0.6
+  sparkle:
+    serializedVersion: 2
+    rgba: 4294967295

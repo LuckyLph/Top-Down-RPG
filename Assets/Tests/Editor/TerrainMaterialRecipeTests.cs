@@ -20,10 +20,10 @@ using Object = UnityEngine.Object;
 /// sway; caustic water's net breathes between two courses, runs sideways when flattened and breaks into ripples
 /// with a junction gap,
 /// and pond water's strokes glint from their middle out while its sparkles sit on plain water, and it shows a bed with
-/// pebbles only when asked (shallows), without strokes writes only sparkle phases and with drifts lights them towards
-/// the light (snow), and with cracks draws lines clear of its strokes and with a slant its strokes diagonally (ice);
-/// tufts point up; sand's
-/// crests lie over their troughs; mud's puddles are shaded under their top-left bank and lit on their bottom-right
+/// pebbles only when asked (shallows), without strokes writes only sparkle phases, and with cracks draws lines clear of
+/// its strokes and with a slant its strokes diagonally (ice); tufts point up; sand's
+/// crests lie over their troughs, and its clumps and sparkles (snow) appear only when asked, clumps lit from the top
+/// left; mud's puddles are shaded under their top-left bank and lit on their bottom-right
 /// edge, gather in clusters, its ridges cast their shade a row below and a pixel to the right and its cracks are grooves
 /// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; planks point
 /// every pixel straight across its board, with butt joints on the cell borders staggered from row to row, and are lit
@@ -975,88 +975,6 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Pond water has no drifts by default: the darkest tone changes no pixel. With a drift share (the Snow material's),
-    /// about that share of the pixels lies in drifts, in the darkest, darker or lighter tone or the middle one, the rest
-    /// in the middle tone, and the drifts are lit towards the light: from a shaded pixel, a lit one lies up and to the
-    /// left within a few pixels far more often than down and to the right.
-    /// </summary>
-    [Test]
-    public void WaterHighlights_Drifts_AreLitTowardsTheLight_AndOffByDefault()
-    {
-        WaterHighlightsRecipe recipe = (WaterHighlightsRecipe)CreateRecipe(typeof(WaterHighlightsRecipe));
-        SerializedObject settings = new(recipe);
-        TerrainTextures water = recipe.Generate(Seed);
-        Color32 middle = new(200, 200, 200, 255);
-        Color32 darker = new(120, 120, 120, 255);
-        Color32 darkest = new(60, 60, 60, 255);
-        Color32 lighter = new(250, 250, 250, 255);
-        settings.FindProperty("darkest").colorValue = darkest;
-        settings.ApplyModifiedPropertiesWithoutUndo();
-        Assert.That(Differences(recipe.Generate(Seed).Albedo, water.Albedo), Is.Zero, "the darkest tone without drifts");
-
-        settings.FindProperty("water").colorValue = middle;
-        settings.FindProperty("darker").colorValue = darker;
-        settings.FindProperty("lighter").colorValue = lighter;
-        settings.FindProperty("driftShare").floatValue = 0.4f;
-        settings.FindProperty("darkerShare").floatValue = 0.4f;
-        settings.FindProperty("darkestShare").floatValue = 0.12f;
-        settings.FindProperty("lighterShare").floatValue = 0.3f;
-        settings.FindProperty("strokeChance").floatValue = 0f;
-        settings.FindProperty("densityAmount").floatValue = 0f;
-        settings.ApplyModifiedPropertiesWithoutUndo();
-
-        TerrainTextures drifts = recipe.Generate(Seed);
-
-        int size = drifts.Size;
-        int shaded = 0;
-        int deepest = 0;
-        int lit = 0;
-        int litTowardsLight = 0;
-        int litAwayFromLight = 0;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                Color32 colour = drifts.Albedo[y * size + x];
-                Assert.That(SameColour(colour, middle) || SameColour(colour, darker) || SameColour(colour, darkest) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is no tone");
-                lit += SameColour(colour, lighter) ? 1 : 0;
-                deepest += SameColour(colour, darkest) ? 1 : 0;
-                if (!SameColour(colour, darker) && !SameColour(colour, darkest))
-                {
-                    continue;
-                }
-
-                shaded++;
-                litTowardsLight += LitWithin(drifts.Albedo, lighter, x, y, -1, 1, size) ? 1 : 0;
-                litAwayFromLight += LitWithin(drifts.Albedo, lighter, x, y, 1, -1, size) ? 1 : 0;
-            }
-        }
-
-        double pixels = size * size;
-        Assert.That(shaded / pixels, Is.InRange(0.4 * 0.4 - 0.03, 0.4 * 0.4 + 0.03), "shaded share");
-        Assert.That(deepest / pixels, Is.InRange(0.4 * 0.12 - 0.02, 0.4 * 0.12 + 0.02), "darkest share");
-        Assert.That(lit / pixels, Is.InRange(0.4 * 0.3 - 0.03, 0.4 * 0.3 + 0.03), "lit share");
-        Assert.That(litTowardsLight, Is.GreaterThan(3 * litAwayFromLight), "drifts are lit on their side facing the light");
-    }
-
-    /// <summary>
-    /// Whether a pixel of <paramref name="lit"/> lies within 8 diagonal steps of (<paramref name="x"/>,
-    /// <paramref name="y"/>) along (<paramref name="dx"/>, <paramref name="dy"/>).
-    /// </summary>
-    private static bool LitWithin(Color32[] albedo, Color32 lit, int x, int y, int dx, int dy, int size)
-    {
-        for (int step = 1; step <= 8; step++)
-        {
-            if (SameColour(albedo[TerrainArt.Wrap(y + step * dy, size) * size + TerrainArt.Wrap(x + step * dx, size)], lit))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// Pond water has no cracks by default: the crack colours change no pixel. With cracks (the Ice material's), every
     /// crack pixel touches another and the pixel below and right of it is crack or lip, every lip pixel has a crack
     /// pixel above and left of it, and no crack or lip pixel glints, sparkles or lies within a pixel of a stroke.
@@ -1246,6 +1164,133 @@ public class TerrainMaterialRecipeTests
 
         Assert.That(crests, Is.EqualTo(8 * size));
         Assert.That(troughs, Is.EqualTo(crests));
+    }
+
+    /// <summary>
+    /// Sand has no clumps or sparkles by default: their colours change no pixel and its height holds no phase. With
+    /// clumps and sparkles (the Snow material's), on flat sand: in every clump the lit pixels lie up and to the left of
+    /// the shaded ones (their mean position against the shade's points towards the light), clumps are kept apart, the height holds
+    /// only sparkle phases and none on a clump's shade, and the textures bring the sparkle colour.
+    /// </summary>
+    [Test]
+    public void SandClumps_AreLitFromTheTopLeft_AndSparklesOnlyWhenAsked()
+    {
+        SandRipplesRecipe recipe = (SandRipplesRecipe)CreateRecipe(typeof(SandRipplesRecipe));
+        SerializedObject settings = new(recipe);
+        TerrainTextures sand = recipe.Generate(Seed);
+        Color32 lit = new(255, 255, 255, 255);
+        Color32 middle = new(128, 128, 128, 255);
+        Color32 shade = new(0, 0, 0, 255);
+        settings.FindProperty("clumpLit").colorValue = lit;
+        settings.FindProperty("clump").colorValue = middle;
+        settings.FindProperty("clumpShade").colorValue = shade;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures unchanged = recipe.Generate(Seed);
+        Assert.That(Differences(unchanged.Albedo, sand.Albedo), Is.Zero, "the clump colours without clumps");
+        Assert.That(Differences(unchanged.Height, sand.Height), Is.Zero, "no sparkles by default");
+        Assert.That(unchanged.SparkleColour.HasValue, Is.False);
+
+        settings.FindProperty("grit").floatValue = 0f;
+        settings.FindProperty("coverLevel").floatValue = 1f;
+        settings.FindProperty("speckChance").floatValue = 0f;
+        settings.FindProperty("clumpsPerCell").floatValue = 1.5f;
+        settings.FindProperty("clumpChance").floatValue = 1f;
+        settings.FindProperty("sparklesPerCell").floatValue = 1f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures snow = recipe.Generate(Seed);
+
+        int size = snow.Size;
+        int litCount = 0;
+        int shadeCount = 0;
+        int sparkles = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color32 colour = snow.Albedo[y * size + x];
+                int code = snow.Height[y * size + x].b;
+                Assert.That(code > 0 && code < 128, Is.False, $"({x}, {y}) holds a glint phase");
+                sparkles += code >= 128 ? 1 : 0;
+                if (SameColour(colour, lit))
+                {
+                    litCount++;
+                }
+                else if (SameColour(colour, shade))
+                {
+                    Assert.That(code, Is.Zero, $"({x}, {y}): a sparkle on a clump's shade");
+                    shadeCount++;
+                }
+            }
+        }
+
+        Assert.That(litCount, Is.GreaterThan(20));
+        Assert.That(shadeCount, Is.GreaterThan(20));
+        Assert.That(sparkles, Is.GreaterThan(0));
+        Assert.That(snow.SparkleColour.HasValue, Is.True);
+        HashSet<Vector3Int> clumpPixels = new();
+        for (int i = 0; i < snow.Albedo.Length; i++)
+        {
+            Color32 colour = snow.Albedo[i];
+            if (SameColour(colour, lit) || SameColour(colour, middle) || SameColour(colour, shade))
+            {
+                clumpPixels.Add(new Vector3Int(i % size, i / size, 0));
+            }
+        }
+
+        int clumps = 0;
+        HashSet<Vector3Int> seen = new();
+        foreach (Vector3Int pixel in clumpPixels)
+        {
+            if (!seen.Add(pixel))
+            {
+                continue;
+            }
+
+            clumps++;
+            Queue<Vector3Int> queue = new();
+            queue.Enqueue(pixel);
+            Vector2 litInClump = Vector2.zero;
+            Vector2 shadeInClump = Vector2.zero;
+            int lits = 0;
+            int shades = 0;
+            while (queue.Count > 0)
+            {
+                Vector3Int cell = queue.Dequeue();
+                Color32 colour = snow.Albedo[cell.y * size + cell.x];
+                Vector2 offset = new(TerrainArt.WrapDelta(cell.x - pixel.x, size), TerrainArt.WrapDelta(cell.y - pixel.y, size));
+                if (SameColour(colour, lit))
+                {
+                    litInClump += offset;
+                    lits++;
+                }
+                else if (SameColour(colour, shade))
+                {
+                    shadeInClump += offset;
+                    shades++;
+                }
+
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Vector3Int next = new(TerrainArt.Wrap(cell.x + dx, size), TerrainArt.Wrap(cell.y + dy, size), 0);
+                        if (clumpPixels.Contains(next) && seen.Add(next))
+                        {
+                            queue.Enqueue(next);
+                        }
+                    }
+                }
+            }
+
+            if (lits > 0 && shades > 0)
+            {
+                Vector2 towardsLight = litInClump / lits - shadeInClump / shades;
+                Assert.That(towardsLight.x * (float)TerrainArt.LightX + towardsLight.y * (float)TerrainArt.LightY, Is.GreaterThan(0f), $"the clump at {pixel} is lit away from the light");
+            }
+        }
+
+        Assert.That(clumps, Is.GreaterThan(10));
     }
 
     /// <summary>

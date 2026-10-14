@@ -12,13 +12,10 @@ using UnityEngine;
 /// its middle outwards, so each glint appears in the middle, spreads to the ends and fades from the middle out, like a
 /// ripple widening. A sparkle is a pixel of plain water with a sparkle phase of its own, seen only while it twinkles.
 /// Shallow water shows its bed (off by default, so deep water has none): a bed tone where a smooth bed field is highest,
-/// under the strokes, and sparse specks of pebbles on plain water. The same flat tones, highlights and sparkles make
-/// other still surfaces (Docs/TerrainTypes.md, Phase 7 notes): with drifts (off by default), the tone field's highest
-/// share is drifts shaded by their slope towards the light, lit on the side facing it and in two shades on the side
-/// facing away, over the middle tone between them, and without strokes only the sparkles light up (snow); with cracks
-/// (none by default), short wandering lines with a lip below and right of them, clear of the strokes, the sparkles and
-/// each other, and its strokes slanted into diagonal glare (level by default), it is a cracked sheet that still glints
-/// (ice). No cell field; the base colour is the middle tone, the glint colour the
+/// under the strokes, and sparse specks of pebbles on plain water. With cracks (none by default), short wandering lines
+/// with a lip below and right of them, clear of the strokes, the sparkles and each other, and its strokes slanted into
+/// diagonal glare (level by default), it is a cracked sheet that still glints (ice, Docs/TerrainTypes.md, Phase 7
+/// notes); without strokes only its sparkles light up. No cell field; the base colour is the middle tone, the glint colour the
 /// strokes' highlight and the sparkle colour the sparkles', and the height's per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Water Highlights", fileName = "Recipe_Water")]
@@ -37,13 +34,6 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 1f)] private float darkerShare = 0.3f;
     [Tooltip("Share of the water in the lighter tone.")]
     [SerializeField, Range(0f, 1f)] private float lighterShare = 0.2f;
-    [Header("Drifts")]
-    [Tooltip("Share of the surface in drifts, where the tone field is highest; 0 for none, as water. Inside the drifts the tones follow the field's slope towards the light (from the top left) instead of its value: the darker and darkest tones at those shares of each drift's pixels facing away from it most, the lighter at its share facing it most, and the middle tone between the drifts (snow).")]
-    [SerializeField, Range(0f, 1f)] private float driftShare;
-    [Tooltip("With drifts, the deepest shade, at this share of the drifts' pixels facing away from the light most.")]
-    [SerializeField] private Color32 darkest = new(30, 88, 144, 255);
-    [Tooltip("With drifts, share of the drifts' pixels in the darkest tone, within the darker share.")]
-    [SerializeField, Range(0f, 1f)] private float darkestShare = 0.1f;
     [Header("Strokes")]
     [Tooltip("Stroke spots along each side of a world cell, on a jittered grid.")]
     [SerializeField, Range(0.25f, 4f)] private float strokesPerCell = 1.6f;
@@ -115,13 +105,12 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     /// not, phase), the pebble spots and each spot's pebble (kept or not) when there are pebbles, the crack spots and
     /// each spot's crack (kept or not, its directions) when there are cracks, then the height waves, and paints the
     /// tones, the bed, the strokes, the pebbles, the cracks and the glint and sparkle phases. With no bed, pebbles or
-    /// cracks it draws exactly what it drew before they existed, so deep water keeps its pixels; drifts draw nothing
-    /// more.
+    /// cracks it draws exactly what it drew before they existed, so deep water keeps its pixels.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
         double[] toneField = TerrainArt.PeriodicNoise(random, toneWaves, size);
-        Color32[] albedo = driftShare > 0f ? PaintDrifts(toneField, size) : PaintTones(toneField);
+        Color32[] albedo = PaintTones(toneField);
 
         if (bedShare > 0f)
         {
@@ -220,61 +209,6 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     }
 
     /// <summary>
-    /// Drifts where <paramref name="toneField"/> lies in its highest drift share, each pixel of them in a tone cut from
-    /// the field's slope towards the light among the drifts' pixels (the darkest, darker and lighter shares), and the
-    /// middle tone between them.
-    /// </summary>
-    private Color32[] PaintDrifts(double[] toneField, int size)
-    {
-        double driftAbove = Quantile(toneField, 1.0 - driftShare);
-        double[] slope = SlopeTowardsLight(toneField, size);
-        List<double> driftSlopes = new();
-        for (int i = 0; i < toneField.Length; i++)
-        {
-            if (toneField[i] > driftAbove)
-            {
-                driftSlopes.Add(slope[i]);
-            }
-        }
-
-        double[] slopes = driftSlopes.ToArray();
-        double darkestBelow = Quantile(slopes, darkestShare);
-        double darkerBelow = Quantile(slopes, darkerShare);
-        double lighterAbove = Quantile(slopes, 1.0 - lighterShare);
-        Color32[] albedo = new Color32[toneField.Length];
-        for (int i = 0; i < albedo.Length; i++)
-        {
-            albedo[i] = toneField[i] <= driftAbove || slopes.Length == 0 ? water
-                : darkestShare > 0f && slope[i] < darkestBelow ? darkest
-                : darkerShare > 0f && slope[i] < darkerBelow ? darker
-                : lighterShare > 0f && slope[i] > lighterAbove ? lighter
-                : water;
-        }
-
-        return albedo;
-    }
-
-    /// <summary>
-    /// How steeply <paramref name="field"/> rises towards the light (from the top left, <see cref="TerrainArt.LightX"/>
-    /// and <see cref="TerrainArt.LightY"/>) at every pixel, from central differences that wrap across the texture.
-    /// </summary>
-    private static double[] SlopeTowardsLight(double[] field, int size)
-    {
-        double[] slope = new double[size * size];
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                double dx = field[y * size + TerrainArt.Wrap(x + 1, size)] - field[y * size + TerrainArt.Wrap(x - 1, size)];
-                double dy = field[TerrainArt.Wrap(y + 1, size) * size + x] - field[TerrainArt.Wrap(y - 1, size) * size + x];
-                slope[y * size + x] = -0.5 * (dx * TerrainArt.LightX + dy * TerrainArt.LightY);
-            }
-        }
-
-        return slope;
-    }
-
-    /// <summary>
     /// Paints a crack from (<paramref name="x"/>, <paramref name="y"/>) along <paramref name="directions"/>
     /// (<see cref="TerrainArt.CrackPixels"/>), its groove in the crack colour and its lip in the lip colour, and marks
     /// them cracked, unless any of its pixels lies on a stroke or its surroundings, on a sparkle, or within a pixel of
@@ -320,15 +254,10 @@ public sealed class WaterHighlightsRecipe : TerrainMaterialRecipe
     }
 
     /// <summary>
-    /// The value of <paramref name="field"/> below which <paramref name="share"/> of its pixels lie, 0 for no pixels.
+    /// The value of <paramref name="field"/> below which <paramref name="share"/> of its pixels lie.
     /// </summary>
     private static double Quantile(double[] field, double share)
     {
-        if (field.Length == 0)
-        {
-            return 0.0;
-        }
-
         double[] sorted = (double[])field.Clone();
         Array.Sort(sorted);
         int index = Mathf.Clamp((int)Math.Floor(share * sorted.Length), 0, sorted.Length - 1);

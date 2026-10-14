@@ -61,11 +61,6 @@ MonoBehaviour:
     amplitude: 0.35
   darkerShare: 0.3
   lighterShare: 0.25
-  driftShare: 0
-  darkest:
-    serializedVersion: 2
-    rgba: 4287649822
-  darkestShare: 0.1
   strokesPerCell: 1
   jitter: 0.45
   strokeChance: 0.5

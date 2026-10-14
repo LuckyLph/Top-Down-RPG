@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Sand: pale and grainy, with slow tint patches, wind ripples and a few dark and light specks. A ripple is a shaded
 /// trough under a lit crest, so it reads as a ridge lit from above; ripples run across their direction, whole ripples
 /// across the texture, wobble with smooth waves and fade out where another smooth wave falls below a level, leaving
-/// patches of flat sand. Specks are single pixels on a jittered grid. No cell field; the base colour is the sand
-/// colour, and the height's per-chip value is 0.5 everywhere.
+/// patches of flat sand. Specks are single pixels on a jittered grid. Two settings, off by default, make snow of it
+/// (Docs/TerrainTypes.md, Phase 7 notes): clumps, small rounded lumps on another jittered grid, lit on the side facing
+/// the light and shaded on the side away from it, with a shadow under that side, kept apart from each other; and
+/// sparkles, pixels off the clumps' shade with a sparkle phase each, which an animated material lights in turn. No cell
+/// field; the base colour is the sand colour, the sparkle colour the sparkles' when there are any, and the height's
+/// per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Sand Ripples", fileName = "Recipe_Sand")]
 public sealed class SandRipplesRecipe : TerrainMaterialRecipe
@@ -54,12 +59,35 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
     [SerializeField, Range(0f, 1f)] private float lightChance = 0.45f;
     [SerializeField] private Color32 darkSpeck = new(150, 122, 82, 255);
     [SerializeField] private Color32 lightSpeck = new(242, 228, 196, 255);
+    [Header("Clumps")]
+    [Tooltip("Clump spots along each side of a cell, on a jittered grid; 0 for none. A clump is a small rounded lump, lit from the top left, kept apart from the others.")]
+    [SerializeField, Range(0f, 4f)] private float clumpsPerCell;
+    [Tooltip("Chance that a spot holds a clump.")]
+    [SerializeField, Range(0f, 1f)] private float clumpChance = 0.5f;
+    [Tooltip("Smallest and largest radius of a clump, in pixels.")]
+    [SerializeField] private Vector2 clumpRadius = new(1.2f, 2.2f);
+    [Tooltip("A clump's pixels facing the light.")]
+    [SerializeField] private Color32 clumpLit = new(250, 252, 255, 255);
+    [Tooltip("A clump's pixels between its lit and shaded sides.")]
+    [SerializeField] private Color32 clump = new(238, 242, 250, 255);
+    [Tooltip("A clump's pixels facing away from the light, and the shadow under that side.")]
+    [SerializeField] private Color32 clumpShade = new(204, 216, 238, 255);
+    [Header("Sparkles")]
+    [Tooltip("Sparkle spots along each side of a cell, on a jittered grid; 0 for none. A sparkle is one pixel off the clumps' shade, seen only while it twinkles on an animated material.")]
+    [SerializeField, Range(0f, 4f)] private float sparklesPerCell;
+    [Tooltip("Chance that a spot holds a sparkle.")]
+    [SerializeField, Range(0f, 1f)] private float sparkleChance = 0.6f;
+    [Tooltip("The sparkle colour, the material's sparkle colour.")]
+    [SerializeField] private Color32 sparkle = new(255, 255, 255, 255);
 
     public override TerrainMaterial.CellMode CellMode => TerrainMaterial.CellMode.None;
 
     /// <summary>
-    /// Draws the tint, wobble and cover waves, the speck spots and each spot's speck (kept or not, light or dark), then
-    /// the height waves, and paints the sand, its ripples and its specks.
+    /// Draws the tint, wobble and cover waves, the speck spots and each spot's speck (kept or not, light or dark), the
+    /// clump spots and each spot's clump (kept or not, radius) when there are clumps, the sparkle spots and each spot's
+    /// sparkle (kept or not, phase) when there are sparkles, then the height waves, and paints the sand, its ripples, its
+    /// specks, its clumps and its sparkle phases. With no clumps and no sparkles it draws exactly what it drew before
+    /// they existed, so the sand keeps its pixels.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
@@ -76,6 +104,38 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
             if (keep)
             {
                 specks[(int)spotY * size + (int)spotX] = light ? lightSpeck : darkSpeck;
+            }
+        }
+
+        Color32?[] clumps = new Color32?[size * size];
+        if (clumpsPerCell > 0f)
+        {
+            float smallest = Mathf.Min(clumpRadius.x, clumpRadius.y);
+            float largest = Mathf.Max(clumpRadius.x, clumpRadius.y);
+            foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(clumpsPerCell), jitter, size))
+            {
+                bool keep = random.NextDouble() < clumpChance;
+                double radius = TerrainArt.Uniform(random, smallest, largest);
+                if (keep)
+                {
+                    StampClump(clumps, size, spotX, spotY, radius);
+                }
+            }
+        }
+
+        byte[] glints = null;
+        if (sparklesPerCell > 0f)
+        {
+            glints = new byte[size * size];
+            foreach ((double spotX, double spotY) in TerrainArt.JitteredSeeds(random, SeedsAcross(sparklesPerCell), jitter, size))
+            {
+                bool keep = random.NextDouble() < sparkleChance;
+                double phase = random.NextDouble();
+                int pixel = (int)spotY * size + (int)spotX;
+                if (keep && !(clumps[pixel].HasValue && SameColour(clumps[pixel].Value, clumpShade)))
+                {
+                    glints[pixel] = TerrainArt.SparkleByte(phase);
+                }
             }
         }
 
@@ -105,10 +165,73 @@ public sealed class SandRipplesRecipe : TerrainMaterialRecipe
                     }
                 }
 
-                albedo[i] = specks[i] ?? colour;
+                albedo[i] = clumps[i] ?? specks[i] ?? colour;
             }
         }
 
-        return new TerrainTextures(size, sand, CellMode, albedo, null, TerrainArt.HeightPixels(height, null, null));
+        return new TerrainTextures(size, sand, CellMode, albedo, null, TerrainArt.HeightPixels(height, null, null, glints), null, glints != null ? sparkle : (Color32?)null);
+    }
+
+    /// <summary>
+    /// Marks a clump of <paramref name="radius"/> pixels around (<paramref name="x"/>, <paramref name="y"/>): each pixel
+    /// whose centre lies within the radius in the lit, middle or shaded colour by how far it faces the light
+    /// (<see cref="TerrainArt.LightX"/>, <see cref="TerrainArt.LightY"/>), and the pixels just outside it on the side away
+    /// from the light in the shaded colour, its shadow, wrapping across the texture's edges; unless any of them lies on
+    /// or beside another clump.
+    /// </summary>
+    private void StampClump(Color32?[] clumps, int size, double x, double y, double radius)
+    {
+        int reach = (int)Math.Ceiling(radius) + 1;
+        List<(int Pixel, Color32 Colour)> pixels = new();
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                int px = (int)Math.Floor(x) + dx;
+                int py = (int)Math.Floor(y) + dy;
+                double ox = px + 0.5 - x;
+                double oy = py + 0.5 - y;
+                double distance = Math.Sqrt(ox * ox + oy * oy);
+                double facing = distance > 0.0 ? (ox * TerrainArt.LightX + oy * TerrainArt.LightY) / distance : 1.0;
+                int pixel = TerrainArt.Wrap(py, size) * size + TerrainArt.Wrap(px, size);
+                if (distance <= radius)
+                {
+                    pixels.Add((pixel, facing > 0.35 ? clumpLit : facing < -0.35 ? clumpShade : clump));
+                }
+                else if (distance <= radius + 1.0 && facing < -0.5)
+                {
+                    pixels.Add((pixel, clumpShade));
+                }
+            }
+        }
+
+        foreach ((int pixel, Color32 _) in pixels)
+        {
+            int px = pixel % size;
+            int py = pixel / size;
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (clumps[TerrainArt.Wrap(py + dy, size) * size + TerrainArt.Wrap(px + dx, size)].HasValue)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        foreach ((int pixel, Color32 colour) in pixels)
+        {
+            clumps[pixel] = colour;
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> are the same colour.
+    /// </summary>
+    private static bool SameColour(Color32 a, Color32 b)
+    {
+        return a.r == b.r && a.g == b.g && a.b == b.b;
     }
 }

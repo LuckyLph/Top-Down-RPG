@@ -135,7 +135,7 @@ public sealed class VillageForestGenerator : AreaGenerator
     [SerializeField, Min(0)] private int spawnClearRadius = 6;
 
     [Header("Village")]
-    [Tooltip("Building placed along the north side of the street, facing it.")]
+    [Tooltip("Building placed along the north side of the street, facing it; none for no buildings.")]
     [SerializeField] private GameObject buildingPrefab;
     [SerializeField, Min(0)] private int buildingCount = 3;
     [Tooltip("Column of the building's footprint, counted from its left, in front of which its door is.")]
@@ -153,7 +153,7 @@ public sealed class VillageForestGenerator : AreaGenerator
     [SerializeField] private GameObject lampPostPrefab;
     [Tooltip("Distance in cells between lamp posts along the street, which alternate sides.")]
     [SerializeField, Min(1f)] private float lampSpacing = 7f;
-    [Tooltip("Centrepiece of the square, on a bed of grass inside the paving.")]
+    [Tooltip("Centrepiece of the square, on a bed of grass inside the paving; none for no square.")]
     [SerializeField] private GameObject fountainPrefab;
     [Tooltip("Where along the street the square opens to the south, from 0 (the map edge) to 1 (the village's inner end).")]
     [SerializeField, Range(0f, 1f)] private float squareAlongStreet = 0.45f;
@@ -627,13 +627,18 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// <summary>
         /// Paves a disc of plaza opening south off the street at the configured point, around a bed of grass that
         /// holds the fountain's footprint with the path clearance around it. The street's cells in the disc are paved
-        /// too, under the street's stone.
+        /// too, under the street's stone. Lays no square without a fountain.
         /// </summary>
         private void LaySquare()
         {
-            if (settings.fountainPrefab == null || !PropGridSnapping.TryGetFootprint(settings.fountainPrefab, out Rect footprint))
+            if (settings.fountainPrefab == null)
             {
-                builder.Layout.Warnings.Add("No fountain prefab with a footprint is set; the village has no square.");
+                return;
+            }
+
+            if (!PropGridSnapping.TryGetFootprint(settings.fountainPrefab, out Rect footprint))
+            {
+                builder.Layout.Warnings.Add("The fountain prefab has no footprint; the village has no square.");
                 return;
             }
 
@@ -670,7 +675,8 @@ public sealed class VillageForestGenerator : AreaGenerator
 
         /// <summary>
         /// Walks the street from the map edge towards its inner end, where the trails start, and puts a building on
-        /// every lot that fits along its north side, until the configured number stand. Warns when fewer fit.
+        /// every lot that fits along its north side, until the configured number stand. Warns when fewer fit. Places
+        /// none without a building.
         /// </summary>
         private void PlaceBuildings()
         {
@@ -681,9 +687,14 @@ public sealed class VillageForestGenerator : AreaGenerator
             }
 
             GameObject prefab = settings.buildingPrefab;
-            if (prefab == null || !PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            if (prefab == null)
             {
-                builder.Layout.Warnings.Add("No building prefab with a footprint is set; no buildings were placed.");
+                return;
+            }
+
+            if (!PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            {
+                builder.Layout.Warnings.Add("The building prefab has no footprint; no buildings were placed.");
                 return;
             }
 

@@ -11,9 +11,24 @@ using UnityEngine.Tilemaps;
 /// </summary>
 public class PropGridSnappingTests
 {
-    private const string TreePath = "Assets/Prefabs/Props/Trees/Tree_Pine.prefab";
-    private const string CottagePath = "Assets/Prefabs/Props/Buildings/Cottage.prefab";
-    private const string GrassPath = "Assets/Prefabs/Props/Plants/Grass_Tall.prefab";
+    private const string PropPath = "Assets/Prefabs/Props/Prop.prefab";
+    private const string BlockingPropPath = "Assets/Prefabs/Props/BlockingProp.prefab";
+
+    private static readonly Rect[] PropFootprints =
+    {
+        new(-0.82f, -0.02f, 1.69f, 0.68f),
+        new(-1.44f, 0f, 2.81f, 0.72f),
+        new(-0.47f, 0f, 0.97f, 0.44f),
+        new(-0.31f, 0f, 0.53f, 0.25f),
+        new(-0.47f, 0f, 1f, 0.31f),
+        new(-4.38f, 0f, 8.75f, 2.53f),
+        new(-0.97f, 0f, 1.94f, 1.13f),
+        new(-0.94f, 0f, 1.84f, 0.25f),
+        new(-0.34f, 0f, 0.69f, 0.5f),
+        new(-0.38f, 0f, 0.75f, 0.84f),
+        new(-0.44f, 0f, 0.91f, 0.88f),
+        new(-0.5f, 0f, 1f, 0.5f),
+    };
 
     private readonly List<Object> created = new();
 
@@ -103,18 +118,18 @@ public class PropGridSnappingTests
     }
 
     /// <summary>
-    /// A prop prefab's footprint is the box collider on its root; a walk-through prop has none and only snaps to the
-    /// pixel grid.
+    /// A prop prefab's footprint is the box collider on its root (the blocking base prop's here); a walk-through prop
+    /// (the base prop) has none and only snaps to the pixel grid.
     /// </summary>
     [Test]
     public void Footprints_ComeFromTheRootCollider_AndWalkThroughPropsSnapToPixels()
     {
         Grid grid = CreateGrid(Vector3.zero);
-        GameObject tree = AssetDatabase.LoadAssetAtPath<GameObject>(TreePath);
-        GameObject grass = AssetDatabase.LoadAssetAtPath<GameObject>(GrassPath);
+        GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath);
+        GameObject grass = AssetDatabase.LoadAssetAtPath<GameObject>(PropPath);
 
-        BoxCollider2D box = tree.GetComponent<BoxCollider2D>();
-        Assert.That(PropGridSnapping.TryGetFootprint(tree, out Rect footprint), Is.True);
+        BoxCollider2D box = blocking.GetComponent<BoxCollider2D>();
+        Assert.That(PropGridSnapping.TryGetFootprint(blocking, out Rect footprint), Is.True);
         Assert.That(footprint.position, Is.EqualTo(box.offset - box.size * 0.5f));
         Assert.That(footprint.size, Is.EqualTo(box.size));
         Assert.That(PropGridSnapping.TryGetFootprint(grass, out _), Is.False);
@@ -122,16 +137,16 @@ public class PropGridSnappingTests
     }
 
     /// <summary>
-    /// For a tree and a cottage placed at their snapped positions, the cells predicted by
-    /// <see cref="PropGridSnapping.BlockedCells"/> are exactly the cells the navigation grid blocks.
+    /// For a one-cell blocking prop and one with a cottage's footprint placed at their snapped positions, the cells
+    /// predicted by <see cref="PropGridSnapping.BlockedCells"/> are exactly the cells the navigation grid blocks.
     /// </summary>
     [Test]
     public void PredictedCells_AreTheCellsTheNavigationGridBlocks()
     {
         NavigationGrid2D navigation = CreateGround(14, 8);
         Grid grid = navigation.GetComponent<Grid>();
-        BoundsInt treeCells = PlaceSnapped(grid, TreePath, new Vector2(2.7f, 2.3f));
-        BoundsInt cottageCells = PlaceSnapped(grid, CottagePath, new Vector2(8.2f, 3.6f));
+        BoundsInt treeCells = PlaceSnapped(grid, AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath), new Vector2(2.7f, 2.3f));
+        BoundsInt cottageCells = PlaceSnapped(grid, BlockingProp(new Vector2(8.75f, 2.53f)), new Vector2(8.2f, 3.6f));
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
 
         navigation.BuildGrid();
@@ -150,40 +165,32 @@ public class PropGridSnappingTests
     }
 
     /// <summary>
-    /// For every blocking prop, the root <see cref="PropGridSnapping.RootOnCells"/> gives for a bottom-left cell is
-    /// already snapped, and the prop then blocks exactly <see cref="PropGridSnapping.CellsCovered"/> cells from that
-    /// cell, on a grid at the origin and on a shifted one.
+    /// For the footprints of the props the generators were built with (trees, bushes, rocks, a cottage, a fountain, a
+    /// fence, a lamp post, spires) and the blocking base prop's, the root <see cref="PropGridSnapping.RootOnCells"/>
+    /// gives for a bottom-left cell is already snapped, and the prop then blocks exactly
+    /// <see cref="PropGridSnapping.CellsCovered"/> cells from that cell, on a grid at the origin and on a shifted one.
     /// </summary>
     [Test]
     public void RootOnCells_PutsEveryFootprintOnExactlyTheCellsItCovers()
     {
         Grid[] grids = { CreateGrid(Vector3.zero), CreateGrid(new Vector3(0.5f, 0.25f, 0f)) };
         Vector3Int[] corners = { new(0, 0, 0), new(3, -2, 0), new(-7, 5, 0) };
-        int checkedProps = 0;
-        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Props" }))
+        foreach (Rect footprint in PropFootprints)
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
-            if (!PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
-            {
-                continue;
-            }
-
-            checkedProps++;
             Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
             foreach (Grid grid in grids)
             {
                 foreach (Vector3Int corner in corners)
                 {
                     Vector3 root = PropGridSnapping.RootOnCells(grid, corner, footprint);
-                    Assert.That(Vector3.Distance(PropGridSnapping.SnapBlocking(grid, root, footprint), root), Is.LessThan(0.0001f), $"{prefab.name} at {corner}");
+                    Assert.That(Vector3.Distance(PropGridSnapping.SnapBlocking(grid, root, footprint), root), Is.LessThan(0.0001f), $"{footprint} at {corner}");
                     BoundsInt blocked = PropGridSnapping.BlockedCells(grid, root, footprint);
-                    Assert.That(blocked.position, Is.EqualTo(corner), $"{prefab.name} at {corner}");
-                    Assert.That(blocked.size, Is.EqualTo(new Vector3Int(covered.x, covered.y, 1)), $"{prefab.name} at {corner}");
+                    Assert.That(blocked.position, Is.EqualTo(corner), $"{footprint} at {corner}");
+                    Assert.That(blocked.size, Is.EqualTo(new Vector3Int(covered.x, covered.y, 1)), $"{footprint} at {corner}");
                 }
             }
         }
 
-        Assert.That(checkedProps, Is.GreaterThan(10));
         Assert.That(PropGridSnapping.CellsCovered(Footprint(1.5f, 1f), Vector2.one), Is.EqualTo(new Vector2Int(2, 1)));
         Assert.That(PropGridSnapping.CellsCovered(Footprint(0.5f, 1.2f), Vector2.one), Is.EqualTo(new Vector2Int(1, 2)));
     }
@@ -230,12 +237,25 @@ public class PropGridSnappingTests
     }
 
     /// <summary>
-    /// Places the prefab at <paramref name="path"/> where <see cref="PropGridSnapping.Snap"/> puts it for
+    /// A blocking prop like the blocking base prop, with a footprint of <paramref name="size"/> centred on its root
+    /// and standing on it, destroyed after the test.
+    /// </summary>
+    private GameObject BlockingProp(Vector2 size)
+    {
+        GameObject prop = Track(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath)));
+        BoxCollider2D box = prop.GetComponent<BoxCollider2D>();
+        box.size = size;
+        box.offset = new Vector2(0f, size.y * 0.5f);
+        prop.transform.position = new Vector3(-100f, -100f, 0f);
+        return prop;
+    }
+
+    /// <summary>
+    /// Places a copy of <paramref name="prefab"/> where <see cref="PropGridSnapping.Snap"/> puts it for
     /// <paramref name="pointer"/>, and returns the cells it predicts the prop blocks.
     /// </summary>
-    private BoundsInt PlaceSnapped(Grid grid, string path, Vector2 pointer)
+    private BoundsInt PlaceSnapped(Grid grid, GameObject prefab, Vector2 pointer)
     {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         GameObject instance = Track(Object.Instantiate(prefab));
         instance.transform.position = PropGridSnapping.Snap(grid, pointer, prefab);
         PropGridSnapping.TryGetFootprint(prefab, out Rect footprint);

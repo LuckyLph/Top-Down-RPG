@@ -4,15 +4,21 @@ Third-party art in the project, where it comes from and what its licence asks. A
 
 ## Sources
 
-| Source | Authors | Licence | Files in this project |
+No third-party prop or terrain art is in the project now. The player's and the mobs' sprites (`Assets/Sprites/Character`, `Assets/Sprites/Mobs`), the weapon slash (`Assets/Sprites/Weapons`) and the UI sprites (`Assets/Sprites/UI`, `Assets/Textures/UI`) are not listed yet.
+
+The walls sheet in `Assets/Tiles/tilesets` (`walls.png`, regenerated at 32 px in terrain blending Phase 4 and written in the editor by its recipe, `Assets/Settings/Terrain/Recipes/Recipe_Walls.asset`, through `WallSheetWriter`) and the blended terrain's material textures (`Assets/Textures/Terrain`, written in the editor by the terrain material recipes in `Assets/Settings/Terrain/Recipes` through `TerrainMaterialWriter`), with the Tile Palette swatches cut from them (`Assets/Sprites/Terrain`, written by `TerrainTileWriter`), were generated in this project and use no third-party art. The hand-drawn `grass.png` tileset, whose source was never found, and the generated `stone_path.png` and `gravel_path.png` tilesets were removed in Phase 4: the generated materials draw the ground in every area.
+
+## Removed
+
+The prop art below came over from the earlier project `projet-synthese`, which used it without credits, and was removed with its 65 prop prefabs (the `Trees`, `Bushes`, `Rocks`, `Plants`, `Statues`, `Town` and `Buildings` folders of `Assets/Prefabs/Props`), so the game holds no borrowed props; the generators place no props until the game has its own (see SceneGeneration.md). The four sheets were unmodified copies (the LPC atlas matched the original download byte for byte), their sprites slices, not edited pixels. Should any of it come back, it needs its row in Sources again.
+
+| Source | Authors | Licence | Files it was |
 |---|---|---|---|
 | [Mage City Arcanos](https://opengameart.org/content/mage-city-arcanos) | Hyptosis | CC0 (credit welcome, not required: "Hyptosis", or a link to www.lorestrome.com) | `Assets/Sprites/Props/magecity.png` |
 | [LPC Tile Atlas](https://opengameart.org/content/lpc-tile-atlas) | Liberated Pixel Cup artists: Lanea Zimmerman (Sharm), Stephen Challener (Redshrike), Charles Sanchez (CharlesGabriel), Manuel Riecke (MrBeast), Daniel Armstrong (HughSpectrum), Casper Nilsson, Daniel Eddeland, Johann Charlot, Skyler Robert Colladay | CC-BY-SA 3.0 or GPL 3.0; used here under CC-BY-SA 3.0 | `Assets/Sprites/Props/terrain_atlas.png` |
 | [2d Lost Garden Zelda style tiles resized to 32x32 with additions](https://opengameart.org/node/11758) | Daniel Cook (2d Circle Graphic Archive), Jetrel (mockups resized to 32x32), Bertram (improvements), Zabin (modifications and additions), Saphy (TMW) (tall grass) | CC-BY 3.0; asks for a link back to OpenGameArt and the submission | `Assets/Sprites/Props/mountain_landscape.png` |
 | [2d lost Garden tileset transition to Jetrel's Wood tileset](https://opengameart.org/node/12667) | Jetrel, Daniel Cook, Bertram, Zabin | CC-BY-SA 3.0 | `Assets/Sprites/Props/wood_tileset.png` |
 | [RPG Tiles: Cobble stone paths & town objects](https://opengameart.org/content/rpg-tiles-cobble-stone-paths-town-objects) | Zabin, Daneeklu, Jetrel, Hyptosis, Redshrike, Bertram (the page says who did what) | CC-BY-SA 3.0; Redshrike's table and Hyptosis' grass, cliff and water also CC-BY 3.0 | Crops of `PathAndObjects.png`: `Assets/Sprites/Props/props1.png`–`props17.png` |
-
-All of it came over from the earlier project `projet-synthese`, which used it without credits. The four sheets in `Assets/Sprites/Props` are unmodified copies (the LPC atlas matches the original download byte for byte); their sprites are slices, not edited pixels. Characters, mobs and UI art are not listed yet. The walls sheet in `Assets/Tiles/tilesets` (`walls.png`, regenerated at 32 px in terrain blending Phase 4 and written in the editor by its recipe, `Assets/Settings/Terrain/Recipes/Recipe_Walls.asset`, through `WallSheetWriter`) and the blended terrain's material textures (`Assets/Textures/Terrain`: grass, sand, mud, gravel, stone and water, written in the editor by the terrain material recipes in `Assets/Settings/Terrain/Recipes` through `TerrainMaterialWriter`), with the Tile Palette swatches cut from them (`Assets/Sprites/Terrain`, written by `TerrainTileWriter`), were generated in this project and use no third-party art. The hand-drawn `grass.png` tileset, whose source was never found, and the generated `stone_path.png` and `gravel_path.png` tilesets were removed in Phase 4: the generated materials draw the ground in every area.
 
 ## What the licences ask
 

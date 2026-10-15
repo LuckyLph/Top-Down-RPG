@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Editor::SnowfieldGenerator
   seed: 1
   terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
+  raisedTile: {fileID: 0}
+  rampTile: {fileID: 0}
   snow:
     tilemapName: SnowTilemap
     tile: {fileID: 11400000, guid: f98f30220c924b6468a691bcc3874561, type: 2}
@@ -66,53 +68,32 @@ MonoBehaviour:
   borderDepth: 3
   scatters:
   - label: Forest edge
-    prefabs:
-    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
-    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
-    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
-    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
-    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
-    - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
+    prefabs: []
     count: 280
     spacing: 2
     zone: 0
   - label: Pines
-    prefabs:
-    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
-    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
-    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
+    prefabs: []
     count: 14
     spacing: 5
     zone: 1
   - label: Shore rocks
-    prefabs:
-    - {fileID: 8993580074442915344, guid: d01aae66b338d8a438e6193e0e9093ae, type: 3}
-    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
-    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
+    prefabs: []
     count: 8
     spacing: 4
     zone: 2
   - label: Rocks and stumps
-    prefabs:
-    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
-    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
-    - {fileID: 8993580074442915344, guid: d01aae66b338d8a438e6193e0e9093ae, type: 3}
-    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
-    - {fileID: 1859510483508918577, guid: 6835e6cceb8ef064a97a56d4654e60da, type: 3}
+    prefabs: []
     count: 10
     spacing: 5
     zone: 1
   - label: Stumps
-    prefabs:
-    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
+    prefabs: []
     count: 8
     spacing: 4
     zone: 1
-  campfirePrefab: {fileID: 2892346520759183888, guid: 193de885211366947a6a5863b9c2a30b, type: 3}
-  campsiteSeats:
-  - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
-  - {fileID: 3441148661069680234, guid: eb43bdcc29407b942862df09465cb8f2, type: 3}
-  - {fileID: 7050435574996827108, guid: c9bd549b1e162a345ac977df4968cb09, type: 3}
+  campfirePrefab: {fileID: 0}
+  campsiteSeats: []
   seatCount: 3
   seatSpacing: 1.5
   campsiteRadius: 3

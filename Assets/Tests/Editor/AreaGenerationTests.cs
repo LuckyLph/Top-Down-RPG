@@ -7,7 +7,9 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Tests for scene generation: the project's Clearing generator gives playable layouts for many seeds (paths on the
+/// Tests for scene generation. The project's generators place no props for now (their borrowed art was removed), and
+/// lay their layouts without warnings; every other test runs them with test props (<see cref="TestPropPrefabs"/>) in
+/// place of the props they were built with. The Clearing generator gives playable layouts for many seeds (paths on the
 /// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
 /// where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does too, with a village,
 /// a clearing and a forest joined by one connected path network, buildings beside the street with reachable doors, a
@@ -52,6 +54,15 @@ public class AreaGenerationTests
     private const int MinRegionCells = 300;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
+    private static readonly Dictionary<string, string> ScatterKinds = new()
+    {
+        { "Generator_Clearing", "BBBW" },
+        { "Generator_VillageForest", "BBWBBWBBW" },
+        { "Generator_Lakeside", "BBBBWW" },
+        { "Generator_Snowfield", "BBMMW" },
+        { "Generator_Coast", "BBBBWW" },
+        { "Generator_LavaFields", "BBBBW" },
+    };
     private static readonly VillageForestGenerator.Region[] Regions =
     {
         VillageForestGenerator.Region.Village,
@@ -61,6 +72,7 @@ public class AreaGenerationTests
 
     private readonly List<Object> created = new();
     private readonly Dictionary<int, VillageForestGenerator.Generation> villageForestLayouts = new();
+    private TestPropPrefabs testProps;
     private ClearingGenerator generator;
     private VillageForestGenerator villageForest;
     private LakesideGenerator lakeside;
@@ -70,24 +82,36 @@ public class AreaGenerationTests
     private int undoGroup;
 
     /// <summary>
-    /// Loads the project's generators, which the tests only read, and starts the undo group the test's scene changes
-    /// are reverted to.
+    /// Saves the test props once for the fixture.
+    /// </summary>
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        testProps = TestPropPrefabs.Create();
+    }
+
+    /// <summary>
+    /// Removes the test props.
+    /// </summary>
+    [OneTimeTearDown]
+    public void OneTimeTearDown()
+    {
+        TestPropPrefabs.Delete();
+    }
+
+    /// <summary>
+    /// Copies the project's generators with the test props (<see cref="WithTestProps{T}"/>), leaving the project's
+    /// assets as they are, and starts the undo group the test's scene changes are reverted to.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
-        generator = AssetDatabase.LoadAssetAtPath<ClearingGenerator>(ClearingGeneratorPath);
-        Assert.That(generator, Is.Not.Null, $"{ClearingGeneratorPath} should exist.");
-        villageForest = AssetDatabase.LoadAssetAtPath<VillageForestGenerator>(VillageForestGeneratorPath);
-        Assert.That(villageForest, Is.Not.Null, $"{VillageForestGeneratorPath} should exist.");
-        lakeside = AssetDatabase.LoadAssetAtPath<LakesideGenerator>(LakesideGeneratorPath);
-        Assert.That(lakeside, Is.Not.Null, $"{LakesideGeneratorPath} should exist.");
-        snowfield = AssetDatabase.LoadAssetAtPath<SnowfieldGenerator>(SnowfieldGeneratorPath);
-        Assert.That(snowfield, Is.Not.Null, $"{SnowfieldGeneratorPath} should exist.");
-        coast = AssetDatabase.LoadAssetAtPath<CoastGenerator>(CoastGeneratorPath);
-        Assert.That(coast, Is.Not.Null, $"{CoastGeneratorPath} should exist.");
-        lavaFields = AssetDatabase.LoadAssetAtPath<LavaFieldsGenerator>(LavaFieldsGeneratorPath);
-        Assert.That(lavaFields, Is.Not.Null, $"{LavaFieldsGeneratorPath} should exist.");
+        generator = WithTestProps(AssetDatabase.LoadAssetAtPath<ClearingGenerator>(ClearingGeneratorPath));
+        villageForest = WithTestProps(AssetDatabase.LoadAssetAtPath<VillageForestGenerator>(VillageForestGeneratorPath));
+        lakeside = WithTestProps(AssetDatabase.LoadAssetAtPath<LakesideGenerator>(LakesideGeneratorPath));
+        snowfield = WithTestProps(AssetDatabase.LoadAssetAtPath<SnowfieldGenerator>(SnowfieldGeneratorPath));
+        coast = WithTestProps(AssetDatabase.LoadAssetAtPath<CoastGenerator>(CoastGeneratorPath));
+        lavaFields = WithTestProps(AssetDatabase.LoadAssetAtPath<LavaFieldsGenerator>(LavaFieldsGeneratorPath));
         Undo.IncrementCurrentGroup();
         undoGroup = Undo.GetCurrentGroup();
     }
@@ -117,6 +141,29 @@ public class AreaGenerationTests
         }
 
         created.Clear();
+    }
+
+    /// <summary>
+    /// The project's generators place no props for now, since the borrowed art their props used was removed, and lay
+    /// every layout without a warning, their mobs still spread over it.
+    /// </summary>
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    [TestCase(LakesideGeneratorPath)]
+    [TestCase(SnowfieldGeneratorPath)]
+    [TestCase(CoastGeneratorPath)]
+    [TestCase(LavaFieldsGeneratorPath)]
+    public void TheProjectsGenerators_PlaceNoProps_AndWarnOfNothing(string generatorPath)
+    {
+        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        for (int seed = 1; seed <= 5; seed++)
+        {
+            AreaLayout layout = target.Generate(seed);
+
+            Assert.That(layout.Props, Is.Empty, $"seed {seed}: props");
+            Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: warnings");
+            Assert.That(layout.Mobs, Is.Not.Empty, $"seed {seed}: mobs");
+        }
     }
 
     /// <summary>
@@ -2135,7 +2182,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne(string generatorPath)
     {
-        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
         AreaLayout first = target.Generate(7);
         AreaLayout again = target.Generate(7);
         AreaLayout other = target.Generate(8);
@@ -2187,7 +2234,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheWriter_SetsUpPlainLayersDrawnByTheRenderer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
-        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
         Grid grid = CreateAreaWithDualGridGrass(target);
         AreaTerrain terrain = grid.gameObject.AddComponent<AreaTerrain>();
         terrain.Configure(new AreaTerrain.Layer(grid.transform.Find(target.TerrainLayers[0].TilemapName).GetComponent<Tilemap>(), null));
@@ -2380,7 +2427,8 @@ public class AreaGenerationTests
     /// On the layers the writer sets up for the Village Forest and the Lakeside, the meadow and tall grass reach
     /// navigation through their tilemaps' terrain sources, at their draw order's priorities, and are walked like grass:
     /// every cell of them not under a footprint is walkable and joined to the spawn, and stepping into one with no
-    /// blocked cell around it costs grass's 10.
+    /// blocked cell around it costs grass's 10. Runs the project's generators, without props, since the test props
+    /// leave no tall grass along the Village Forest's dense forest edge clear of a footprint.
     /// </summary>
     [TestCase(VillageForestGeneratorPath)]
     [TestCase(LakesideGeneratorPath)]
@@ -2655,7 +2703,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath, "Dirt", "Gravel", "Stone", "Lava")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
-        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
         TerrainStyle style = target.TerrainStyle;
 
@@ -2877,7 +2925,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheDetailStream_LeavesTheRestOfTheLayoutWhereItWas(string generatorPath)
     {
-        AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
+        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
         AreaGenerator without = Track(Object.Instantiate(target));
         SerializedObject settings = new(without);
         string[] added = { "Dirt" };
@@ -3638,6 +3686,75 @@ public class AreaGenerationTests
     private static Vector2 CellCentre(Vector3Int cell)
     {
         return new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+    }
+
+    /// <summary>
+    /// A copy of the project's generator <paramref name="asset"/>, destroyed after the test, with the test props in
+    /// place of the props it was built with: blocking, mixed or walk-through props in each scatter layer as
+    /// <see cref="ScatterKinds"/> lists them, the test campfire and seats, and for the Village Forest the test
+    /// building, fence, lamp post, fountain and town props.
+    /// </summary>
+    private T WithTestProps<T>(T asset) where T : AreaGenerator
+    {
+        Assert.That(asset, Is.Not.Null, "The project's generator should exist.");
+        T copy = Track(Object.Instantiate(asset));
+        SerializedObject settings = new(copy);
+        SerializedProperty scatters = settings.FindProperty("scatters");
+        string kinds = ScatterKinds[asset.name];
+        Assert.That(scatters.arraySize, Is.EqualTo(kinds.Length), $"{asset.name}'s scatter layers");
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            IReadOnlyList<GameObject> props = kinds[i] == 'B' ? testProps.BlockingProps : kinds[i] == 'M' ? testProps.MixedProps : testProps.WalkThroughProps;
+            SetList(scatters.GetArrayElementAtIndex(i).FindPropertyRelative("prefabs"), props);
+        }
+
+        SetIfPresent(settings, "campfirePrefab", testProps.Campfire);
+        SetListIfPresent(settings, "campsiteSeats", testProps.Seats);
+        SetIfPresent(settings, "buildingPrefab", testProps.Building);
+        SetIfPresent(settings, "fencePrefab", testProps.Fence);
+        SetIfPresent(settings, "lampPostPrefab", testProps.LampPost);
+        SetIfPresent(settings, "fountainPrefab", testProps.Fountain);
+        SetListIfPresent(settings, "townProps", testProps.TownProps);
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        return copy;
+    }
+
+    /// <summary>
+    /// Sets the object field <paramref name="name"/> of <paramref name="settings"/> to <paramref name="prefab"/> when
+    /// the generator has one.
+    /// </summary>
+    private static void SetIfPresent(SerializedObject settings, string name, GameObject prefab)
+    {
+        SerializedProperty property = settings.FindProperty(name);
+        if (property != null)
+        {
+            property.objectReferenceValue = prefab;
+        }
+    }
+
+    /// <summary>
+    /// Sets the list field <paramref name="name"/> of <paramref name="settings"/> to <paramref name="prefabs"/> when
+    /// the generator has one.
+    /// </summary>
+    private static void SetListIfPresent(SerializedObject settings, string name, IReadOnlyList<GameObject> prefabs)
+    {
+        SerializedProperty property = settings.FindProperty(name);
+        if (property != null)
+        {
+            SetList(property, prefabs);
+        }
+    }
+
+    /// <summary>
+    /// Fills the serialized list <paramref name="list"/> with <paramref name="prefabs"/>.
+    /// </summary>
+    private static void SetList(SerializedProperty list, IReadOnlyList<GameObject> prefabs)
+    {
+        list.arraySize = prefabs.Count;
+        for (int i = 0; i < prefabs.Count; i++)
+        {
+            list.GetArrayElementAtIndex(i).objectReferenceValue = prefabs[i];
+        }
     }
 
     /// <summary>

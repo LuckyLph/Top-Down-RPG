@@ -6,28 +6,19 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: one variant of <c>Prop</c> or <c>BlockingProp</c>
-/// per sliced prop sprite, laid out like the player and mob prefabs (the root at the base, a <c>Visuals</c> child
-/// holding the sprite and its sorter), the footprints of blocking props, and how a placed prop blocks navigation.
+/// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
+/// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
+/// <c>Visuals</c> child holding the sprite and its sorter), the footprints of blocking props, and how a placed prop
+/// blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
     private const string PropsFolder = "Assets/Prefabs/Props";
     private const string PropPath = PropsFolder + "/Prop.prefab";
     private const string BlockingPropPath = PropsFolder + "/BlockingProp.prefab";
-    private const string TreePath = PropsFolder + "/Trees/Tree_Pine.prefab";
-    private const string GrassPath = PropsFolder + "/Plants/Grass_Tall.prefab";
     private const string VisualsName = "Visuals";
     private const float VisualsHeight = 0.5f;
     private const float OnePixel = 1f / 32f;
-
-    private static readonly string[] PropSheets =
-    {
-        "Assets/Sprites/Props/magecity.png",
-        "Assets/Sprites/Props/terrain_atlas.png",
-        "Assets/Sprites/Props/mountain_landscape.png",
-        "Assets/Sprites/Props/wood_tileset.png",
-    };
 
     private readonly List<Object> created = new();
 
@@ -49,38 +40,28 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every sprite sliced from the prop sheets has exactly one prefab named after it, and every prop prefab is a
-    /// variant of <c>Prop</c> or <c>BlockingProp</c>, which is itself a variant of <c>Prop</c>.
+    /// <c>BlockingProp</c> is a variant of <c>Prop</c>, and every other prop prefab is a variant of one of them.
     /// </summary>
     [Test]
-    public void EveryPropSprite_HasOnePrefab_ThatIsAVariantOfABaseProp()
+    public void EveryProp_IsAVariantOfABaseProp()
     {
         GameObject prop = AssetDatabase.LoadAssetAtPath<GameObject>(PropPath);
         GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath);
         Assert.That(prop, Is.Not.Null);
         Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(blocking), Is.SameAs(prop));
 
-        string[] spriteNames = PropSheets
-            .SelectMany(AssetDatabase.LoadAllAssetsAtPath)
-            .OfType<Sprite>()
-            .Select(sprite => sprite.name)
-            .OrderBy(name => name)
-            .ToArray();
-        List<GameObject> props = LoadPropPrefabs();
-
-        Assert.That(props.Select(p => p.name).OrderBy(name => name), Is.EqualTo(spriteNames));
-        foreach (GameObject propPrefab in props)
+        foreach (GameObject propPrefab in LoadPropPrefabs().Where(p => p != prop && p != blocking))
         {
             GameObject source = PrefabUtility.GetCorrespondingObjectFromSource(propPrefab);
             Assert.That(source == prop || source == blocking, Is.True, $"{propPrefab.name} should be a variant of Prop or BlockingProp.");
-            Assert.That(Visuals(propPrefab).GetComponent<SpriteRenderer>().sprite.name, Is.EqualTo(propPrefab.name));
         }
     }
 
     /// <summary>
-    /// Like the player, every prop keeps its sprite and sorter on a visible <c>Visuals</c> child half a unit above the
-    /// root (it may be nudged sideways to centre the art on the footprint), with the sprite pivoted so its base meets
-    /// the root, drawn on the Entities sorting layer and sorted with no offset; the root itself draws nothing.
+    /// Like the player, every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child half a unit
+    /// above the root (it may be nudged sideways to centre the art on the footprint), drawn on the Entities sorting
+    /// layer and sorted with no offset, a sprite, where it has one, pivoted so its base meets the root; the root
+    /// itself draws nothing.
     /// </summary>
     [Test]
     public void Props_KeepTheirSpriteOnAVisualsChild_HalfAUnitAboveTheirBase()
@@ -95,8 +76,12 @@ public class PropPrefabTests
             Assert.That(visuals.gameObject.layer, Is.Not.EqualTo(obstacles), $"{propPrefab.name}'s visuals must be on a layer the camera draws.");
 
             SpriteRenderer renderer = visuals.GetComponent<SpriteRenderer>();
+            Assert.That(renderer, Is.Not.Null, propPrefab.name);
             Assert.That(renderer.sortingLayerName, Is.EqualTo("Entities"), propPrefab.name);
-            Assert.That(VisualsHeight + renderer.sprite.bounds.min.y, Is.EqualTo(0f).Within(0.001f), $"{propPrefab.name}'s sprite should stand on the root.");
+            if (renderer.sprite != null)
+            {
+                Assert.That(VisualsHeight + renderer.sprite.bounds.min.y, Is.EqualTo(0f).Within(0.001f), $"{propPrefab.name}'s sprite should stand on the root.");
+            }
 
             YPositionSorter sorter = visuals.GetComponent<YPositionSorter>();
             Assert.That(sorter, Is.Not.Null, propPrefab.name);
@@ -106,8 +91,8 @@ public class PropPrefabTests
 
     /// <summary>
     /// A blocking prop's root is on the Obstacles layer and holds its only collider, a solid box starting within a
-    /// pixel of the root and lying within the sprite's width as drawn, like the feet collider on the player's root (it
-    /// may be off centre, to follow the art); a walk-through prop has no collider at all.
+    /// pixel of the root and, where it has a sprite, lying within the sprite's width as drawn, like the feet collider
+    /// on the player's root (it may be off centre, to follow the art); a walk-through prop has no collider at all.
     /// </summary>
     [Test]
     public void BlockingProps_HaveAFootprintAtTheirBase_AndOthersNoCollider()
@@ -117,7 +102,7 @@ public class PropPrefabTests
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
             Collider2D[] colliders = propPrefab.GetComponentsInChildren<Collider2D>(true);
-            if (PrefabUtility.GetCorrespondingObjectFromSource(propPrefab) != blocking)
+            if (propPrefab != blocking && PrefabUtility.GetCorrespondingObjectFromSource(propPrefab) != blocking)
             {
                 Assert.That(colliders, Is.Empty, $"{propPrefab.name} is walk-through.");
                 continue;
@@ -134,60 +119,29 @@ public class PropPrefabTests
             Assert.That(footprint.offset.y - footprint.size.y * 0.5f, Is.EqualTo(0f).Within(OnePixel), $"{propPrefab.name}'s footprint should start at its base.");
 
             Transform visuals = Visuals(propPrefab);
-            Bounds sprite = visuals.GetComponent<SpriteRenderer>().sprite.bounds;
-            float spriteLeft = visuals.localPosition.x + sprite.min.x;
-            float spriteRight = visuals.localPosition.x + sprite.max.x;
+            Sprite art = visuals.GetComponent<SpriteRenderer>().sprite;
+            if (art == null)
+            {
+                continue;
+            }
+
+            float spriteLeft = visuals.localPosition.x + art.bounds.min.x;
+            float spriteRight = visuals.localPosition.x + art.bounds.max.x;
             Assert.That(footprint.offset.x - footprint.size.x * 0.5f, Is.GreaterThanOrEqualTo(spriteLeft - OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
             Assert.That(footprint.offset.x + footprint.size.x * 0.5f, Is.LessThanOrEqualTo(spriteRight + OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
         }
     }
 
     /// <summary>
-    /// No prop slice takes in a strip of a neighbouring tile: inside each sprite's rect, the columns and the rows that
-    /// hold any opaque pixel form one unbroken run, so nothing sits apart from the art beyond an empty column or row.
-    /// The sheets are read from their files, since their textures are not readable.
+    /// A blocking prop placed in a cell the way the placement tool snaps it blocks that cell, and only that one, on a
+    /// grid whose obstacle layers include Obstacles, while a walk-through prop placed in another cell blocks nothing.
     /// </summary>
     [Test]
-    public void PropSlices_HoldNoStripCutOffFromTheirArt()
-    {
-        foreach (string sheet in PropSheets)
-        {
-            Texture2D pixels = Track(new Texture2D(2, 2, TextureFormat.RGBA32, false));
-            Assert.That(pixels.LoadImage(System.IO.File.ReadAllBytes(sheet)), Is.True, sheet);
-            Color32[] block = pixels.GetPixels32();
-            foreach (Sprite sprite in AssetDatabase.LoadAllAssetsAtPath(sheet).OfType<Sprite>())
-            {
-                RectInt rect = new((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
-                bool[] columns = new bool[rect.width];
-                bool[] rows = new bool[rect.height];
-                for (int y = 0; y < rect.height; y++)
-                {
-                    for (int x = 0; x < rect.width; x++)
-                    {
-                        if (block[(rect.y + y) * pixels.width + rect.x + x].a > 0)
-                        {
-                            columns[x] = true;
-                            rows[y] = true;
-                        }
-                    }
-                }
-
-                Assert.That(Runs(columns), Is.EqualTo(1), $"{sprite.name}'s columns hold a strip cut off from its art.");
-                Assert.That(Runs(rows), Is.EqualTo(1), $"{sprite.name}'s rows hold a strip cut off from its art.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// A tree placed in a cell the way the placement tool snaps it blocks that cell, and only that one, on a grid whose
-    /// obstacle layers include Obstacles, while tall grass placed in another cell blocks nothing.
-    /// </summary>
-    [Test]
-    public void APlacedTree_BlocksItsCell_AndGrassBlocksNothing()
+    public void APlacedBlockingProp_BlocksItsCell_AndAWalkThroughPropNothing()
     {
         NavigationGrid2D grid = CreateGround(5);
-        Place(grid, TreePath, new Vector2(2.5f, 2.05f));
-        Place(grid, GrassPath, new Vector2(0.5f, 0.05f));
+        Place(grid, BlockingPropPath, new Vector2(2.5f, 2.05f));
+        Place(grid, PropPath, new Vector2(0.5f, 0.05f));
         grid.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
 
         grid.BuildGrid();
@@ -201,30 +155,12 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// How many unbroken runs of set entries <paramref name="filled"/> holds.
-    /// </summary>
-    private static int Runs(bool[] filled)
-    {
-        int runs = 0;
-        for (int i = 0; i < filled.Length; i++)
-        {
-            if (filled[i] && (i == 0 || !filled[i - 1]))
-            {
-                runs++;
-            }
-        }
-
-        return runs;
-    }
-
-    /// <summary>
-    /// Every prefab under the props folder except the two base prefabs.
+    /// Every prefab under the props folder, the two base prefabs included.
     /// </summary>
     private static List<GameObject> LoadPropPrefabs()
     {
         return AssetDatabase.FindAssets("t:Prefab", new[] { PropsFolder })
             .Select(AssetDatabase.GUIDToAssetPath)
-            .Where(path => path != PropPath && path != BlockingPropPath)
             .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
             .ToList();
     }

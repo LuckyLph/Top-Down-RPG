@@ -65,80 +65,37 @@ MonoBehaviour:
   borderDepth: 3
   scatters:
   - label: Forest edge
-    prefabs:
-    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
-    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
-    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
-    - {fileID: 8987851016107319666, guid: bb42c2b225f856d40891c9d93e11a2d0, type: 3}
-    - {fileID: 3111850073584865477, guid: 1b506e50ce287af4ead006e146cc14b0, type: 3}
-    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
-    - {fileID: 4376086452572983829, guid: 421c8de35fb59d3458e1e482f9218b81, type: 3}
+    prefabs: []
     count: 280
     spacing: 2
     zone: 0
   - label: Trees
-    prefabs:
-    - {fileID: 4388577992891763384, guid: 573cd1d59be63fa43a515d9668374239, type: 3}
-    - {fileID: 2421921179223461047, guid: 757c41c05fe79394c94b41924581cfb3, type: 3}
-    - {fileID: 3729970661336900478, guid: 0a966d7e2ee0dd346bc98b0573ae7fdc, type: 3}
-    - {fileID: 1477420212486388421, guid: 5484f5b62cdf55446a685f574a9bd485, type: 3}
-    - {fileID: 7358450606353750730, guid: eacfa14eba7456147964fc7385c4335c, type: 3}
+    prefabs: []
     count: 16
     spacing: 5
     zone: 1
   - label: Shore bushes
-    prefabs:
-    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
-    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
-    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
-    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
-    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
-    - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
-    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    prefabs: []
     count: 10
     spacing: 4
     zone: 2
   - label: Bushes and rocks
-    prefabs:
-    - {fileID: 1048531727195382808, guid: 68f399262f8391147a3b9c0a57150c02, type: 3}
-    - {fileID: 880470557445547522, guid: 6355c93bb85a8b34889409a7d03e005e, type: 3}
-    - {fileID: 9095094825987416084, guid: 9216834c7e2a11147b0e438bbad1517d, type: 3}
-    - {fileID: 5572641826194004967, guid: 5c84ff9d66263104c99db9a83d4bd9a6, type: 3}
-    - {fileID: 6161754733737503434, guid: 6c18c2a3577f7e341beb442a8aa1fd4d, type: 3}
-    - {fileID: 8086078591804953482, guid: 9a632cca22c8b7d4eae90134a68fee7c, type: 3}
-    - {fileID: 1956432541963562730, guid: 112641db5c4576d4786f3d9bfd8d09fd, type: 3}
+    prefabs: []
     count: 10
     spacing: 5
     zone: 1
   - label: Shore plants
-    prefabs:
-    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
-    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
-    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
-    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
-    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
-    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
-    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    prefabs: []
     count: 30
     spacing: 2
     zone: 2
   - label: Plants
-    prefabs:
-    - {fileID: 8372862467559619993, guid: 742209d7214a4ac45a95a13f8800536d, type: 3}
-    - {fileID: 2439095358815396623, guid: d9188edcecebbd945a66b3fcebf50cf8, type: 3}
-    - {fileID: 1645667793964377754, guid: d6dfb721d3708644396e2860ae990367, type: 3}
-    - {fileID: 5277618659792105870, guid: 9714c6d6f3f4ab342a99125037c92f60, type: 3}
-    - {fileID: 7972223607005261296, guid: eb242ceb637bfb047a72ec8093ce49af, type: 3}
-    - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
-    - {fileID: 207579693715265645, guid: c038351a5cdf30845b8963b7a2bf28df, type: 3}
+    prefabs: []
     count: 45
     spacing: 2.2
     zone: 1
-  campfirePrefab: {fileID: 2892346520759183888, guid: 193de885211366947a6a5863b9c2a30b, type: 3}
-  campsiteSeats:
-  - {fileID: 1117523291863313933, guid: fdc9a3e89086f78428c4d38974153398, type: 3}
-  - {fileID: 3441148661069680234, guid: eb43bdcc29407b942862df09465cb8f2, type: 3}
-  - {fileID: 7050435574996827108, guid: c9bd549b1e162a345ac977df4968cb09, type: 3}
+  campfirePrefab: {fileID: 0}
+  campsiteSeats: []
   seatCount: 3
   seatSpacing: 1.5
   campsiteRadius: 3

@@ -17,7 +17,10 @@ using UnityEngine.Tilemaps;
 /// no third look under a rounded corner, and keeps props off the water, the beach and the mud with the beach and every
 /// mob within the spawn's reach; the Snowfield generator lays a frozen lake with a hole of open water that meets only
 /// ice, a trail that stops short of the ice, and a campsite on dirt away from the ice and the paths, with props off the
-/// ice and every mob and the ice within the spawn's reach; the terrain each generator lays from its detail stream leaves the rest of its layout
+/// ice and every mob and the ice within the spawn's reach; the Coast generator lays a beach, a band of shallows and the
+/// ocean out to the map's northern edge, each band meeting only the next, a trail that ends on the beach short of the
+/// sea and a campsite away from the coast, with props off the coast and the beach and every mob within the spawn's
+/// reach; the terrain each generator lays from its detail stream leaves the rest of its layout
 /// where it was, and the Lakeside's ponds leave its dry grass where it was and its dock everything else; the same
 /// seed gives the same layout; the project's style lists every ground material in the shared draw order, the
 /// project's generators list only the layers they lay (plain ground tiles and the project's materials) as a
@@ -27,7 +30,7 @@ using UnityEngine.Tilemaps;
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
 /// a navigation grid that blocks exactly the props' cells, wades the Lakeside's ponds at the shallows' cost and walks
 /// its dock over the lake at grass's cost, the water beside it blocked, walks the Snowfield's snow at its cost and its
-/// ice like grass with its hole blocked, an area
+/// ice like grass with its hole blocked, wades the Coast's shallows and blocks its ocean, an area
 /// of only some layers that still draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
 /// </summary>
 public class AreaGenerationTests
@@ -36,6 +39,7 @@ public class AreaGenerationTests
     private const string VillageForestGeneratorPath = "Assets/Settings/Generation/Generator_VillageForest.asset";
     private const string LakesideGeneratorPath = "Assets/Settings/Generation/Generator_Lakeside.asset";
     private const string SnowfieldGeneratorPath = "Assets/Settings/Generation/Generator_Snowfield.asset";
+    private const string CoastGeneratorPath = "Assets/Settings/Generation/Generator_Coast.asset";
     private const string TerrainStylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string PropsRootName = "Props";
@@ -56,6 +60,7 @@ public class AreaGenerationTests
     private VillageForestGenerator villageForest;
     private LakesideGenerator lakeside;
     private SnowfieldGenerator snowfield;
+    private CoastGenerator coast;
     private int undoGroup;
 
     /// <summary>
@@ -73,6 +78,8 @@ public class AreaGenerationTests
         Assert.That(lakeside, Is.Not.Null, $"{LakesideGeneratorPath} should exist.");
         snowfield = AssetDatabase.LoadAssetAtPath<SnowfieldGenerator>(SnowfieldGeneratorPath);
         Assert.That(snowfield, Is.Not.Null, $"{SnowfieldGeneratorPath} should exist.");
+        coast = AssetDatabase.LoadAssetAtPath<CoastGenerator>(CoastGeneratorPath);
+        Assert.That(coast, Is.Not.Null, $"{CoastGeneratorPath} should exist.");
         Undo.IncrementCurrentGroup();
         undoGroup = Undo.GetCurrentGroup();
     }
@@ -1226,6 +1233,322 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// For every Coast seed, with no warnings: every layer has cells and lies on the grass; the ocean is one 4-connected
+    /// piece and meets only the shallows, the shallows meet only the ocean and the beach (8 neighbours), so no third look
+    /// shows under a rounded corner around the coast (TerrainTypes.md, Phase 3's Corners note); and down every column of
+    /// the middle three quarters of the area, the coast runs from the map's northern edge as ocean, then at least a row
+    /// of shallows, then at least two rows of beach, with no sea or beach further south. On the map's edge, where the
+    /// bands run out, each meets the next with a corner (Architecture.md's Known gaps); those are not counted.
+    /// </summary>
+    [Test]
+    public void CoastLayouts_LayABeachShallowsAndTheOcean_OutToTheMapsNorthernEdge()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = coast.Generate(seed);
+            Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: {string.Join("; ", layout.Warnings)}");
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
+            {
+                Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
+                Assert.That(layout.TerrainCells(layer).IsSubsetOf(grass), Is.True, $"seed {seed}: layer {layer} lies on the grass");
+            }
+
+            HashSet<Vector3Int> sand = Cells(layout, "Sand");
+            HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
+            HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
+            Vector3Int anyOcean = default;
+            foreach (Vector3Int cell in ocean)
+            {
+                anyOcean = cell;
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(!grass.Contains(near) || ocean.Contains(near) || shallows.Contains(near), Is.True, $"seed {seed}: the ocean at {cell} meets {near}");
+                }
+            }
+
+            foreach (Vector3Int cell in shallows)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(!grass.Contains(near) || ocean.Contains(near) || shallows.Contains(near) || sand.Contains(near), Is.True, $"seed {seed}: the shallows at {cell} meet {near}");
+                }
+            }
+
+            Assert.That(Reachable(anyOcean, ocean.Contains).Count, Is.EqualTo(ocean.Count), $"seed {seed}: the ocean is one piece");
+            BoundsInt bounds = BoundsOf(grass);
+            int margin = bounds.size.x / 8;
+            for (int x = bounds.xMin + margin; x < bounds.xMax - margin; x++)
+            {
+                int y = bounds.yMax - 1;
+                while (!grass.Contains(new Vector3Int(x, y, 0)))
+                {
+                    y--;
+                }
+
+                int oceanRows = 0;
+                while (ocean.Contains(new Vector3Int(x, y, 0)))
+                {
+                    oceanRows++;
+                    y--;
+                }
+
+                int shallowsRows = 0;
+                while (shallows.Contains(new Vector3Int(x, y, 0)))
+                {
+                    shallowsRows++;
+                    y--;
+                }
+
+                int beachRows = 0;
+                while (sand.Contains(new Vector3Int(x, y, 0)))
+                {
+                    beachRows++;
+                    y--;
+                }
+
+                Assert.That(oceanRows, Is.GreaterThan(0), $"seed {seed}: column {x} reaches the map's edge as ocean");
+                Assert.That(shallowsRows, Is.GreaterThan(0), $"seed {seed}: column {x} has shallows");
+                Assert.That(beachRows, Is.GreaterThan(1), $"seed {seed}: column {x} has a beach");
+                for (; y >= bounds.yMin; y--)
+                {
+                    Vector3Int cell = new(x, y, 0);
+                    Assert.That(ocean.Contains(cell) || shallows.Contains(cell) || sand.Contains(cell), Is.False, $"seed {seed}: coast at {cell} south of the beach");
+                }
+            }
+
+            Assert.That(InlandCornerProblems(layout, "Sand", "Shallows", "Ocean"), Is.Empty, $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// For every Coast seed the trail leaves the road and ends on the beach; no path or dirt cell lies on or beside the
+    /// shallows or the ocean, and the road keeps the road margin from the beach and the sea; the campsite has one
+    /// campfire and every seat on its dirt, no dirt on or beside the beach or a path, and no walk-through prop on or
+    /// beside the dirt; and no third look shows under a rounded corner around the trail or the dirt.
+    /// </summary>
+    [Test]
+    public void CoastLayouts_EndTheTrailOnTheBeach_AndKeepThePathsAndTheCampsiteOffTheSea()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = coast.Generate(seed);
+            HashSet<Vector3Int> sand = Cells(layout, "Sand");
+            HashSet<Vector3Int> sea = new(Cells(layout, "Shallows"));
+            sea.UnionWith(Cells(layout, "Ocean"));
+            HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
+            HashSet<Vector3Int> stone = Cells(layout, "Stone");
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            HashSet<Vector3Int> paths = PathCells(layout);
+            HashSet<Vector3Int> dry = new(paths);
+            dry.UnionWith(dirt);
+            foreach (Vector3Int cell in dry)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(sea.Contains(near), Is.False, $"seed {seed}: {cell} beside the sea");
+                }
+            }
+
+            foreach (Vector3Int cell in stone)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, coast.RoadMargin))
+                {
+                    Assert.That(sea.Contains(near) || sand.Contains(near), Is.False, $"seed {seed}: the road at {cell} within the road margin of the coast");
+                }
+            }
+
+            bool leavesTheRoad = false;
+            foreach (Vector3Int cell in gravel)
+            {
+                foreach (Vector3Int side in Sides)
+                {
+                    leavesTheRoad |= stone.Contains(cell + side);
+                }
+            }
+
+            Assert.That(leavesTheRoad, Is.True, $"seed {seed}: the trail leaves the road");
+            Assert.That(gravel.Overlaps(sand), Is.True, $"seed {seed}: the trail reaches the beach");
+            foreach (Vector3Int cell in dirt)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(sand.Contains(near) || paths.Contains(near), Is.False, $"seed {seed}: dirt at {cell} beside the beach or a path");
+                }
+            }
+
+            int campfires = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (prop.Prefab == coast.CampfirePrefab)
+                {
+                    campfires++;
+                    Assert.That(dirt.Contains(prop.Cell), Is.True, $"seed {seed}: the campfire stands on the dirt");
+                }
+                else if (ListContains(coast.CampsiteSeats, prop.Prefab) && dirt.Contains(prop.Cell))
+                {
+                    continue;
+                }
+                else if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
+                {
+                    foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
+                    {
+                        Assert.That(dirt.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on or beside the dirt");
+                    }
+                }
+            }
+
+            Assert.That(campfires, Is.EqualTo(1), $"seed {seed}: campfires");
+            Assert.That(CornerProblems(layout, "Dirt", "Gravel"), Is.Empty, $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// For every Coast seed blocking footprints cover grass off the coast, apart; walk-through props stand on grass off
+    /// the coast and outside every footprint; the spawn is on the road with no footprint within its clear radius; every
+    /// mob stands on land off the shallows and the ocean, far enough from the spawn and from each other; and the spawn
+    /// can walk to every mob, every beach cell and every trail cell, around the footprints and the ocean.
+    /// </summary>
+    [Test]
+    public void CoastLayouts_KeepPropsOffTheCoast_AndLetTheSpawnReachTheBeachAndEveryMob()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = coast.Generate(seed);
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> sand = Cells(layout, "Sand");
+            HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
+            HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
+            HashSet<Vector3Int> coastCells = new(sand);
+            coastCells.UnionWith(shallows);
+            coastCells.UnionWith(ocean);
+            HashSet<Vector3Int> footprints = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    Assert.That(grass.Contains(prop.Cell) && !coastCells.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                    continue;
+                }
+
+                foreach (Vector3Int cell in CoveredCells(prop, footprint))
+                {
+                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: footprints overlap at {cell}");
+                    Assert.That(grass.Contains(cell) && !coastCells.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {cell} off the grass or on the coast");
+                }
+            }
+
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
+                {
+                    Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                }
+            }
+
+            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            foreach (Vector3Int cell in footprints)
+            {
+                Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(coast.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
+            }
+
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell) && !ocean.Contains(cell));
+            Assert.That(layout.Mobs.Count, Is.EqualTo(coast.MobCount), $"seed {seed}: mobs");
+            for (int i = 0; i < layout.Mobs.Count; i++)
+            {
+                AreaLayout.Mob mob = layout.Mobs[i];
+                Assert.That(shallows.Contains(mob.Cell) || ocean.Contains(mob.Cell), Is.False, $"seed {seed}: a mob in the sea");
+                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} unreachable");
+                Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(coast.MobDistanceFromSpawn), $"seed {seed}");
+                for (int j = i + 1; j < layout.Mobs.Count; j++)
+                {
+                    Assert.That(Vector3Int.Distance(mob.Cell, layout.Mobs[j].Cell), Is.GreaterThanOrEqualTo(coast.MobSpacing), $"seed {seed}");
+                }
+            }
+
+            HashSet<Vector3Int> walked = new(sand);
+            walked.UnionWith(Cells(layout, "Gravel"));
+            foreach (Vector3Int cell in walked)
+            {
+                Assert.That(reachable.Contains(cell), Is.True, $"seed {seed}: {cell} on the beach or the trail unreachable");
+            }
+        }
+    }
+
+    /// <summary>
+    /// On the layers the writer sets up for the Coast, the shallows and the ocean reach navigation through their
+    /// tilemaps' terrain sources at their draw order's priorities, and the default movement profile's rules: stepping
+    /// into a cell of shallows with no blocked cell beside it costs the shallows' 20, every cell of the ocean is blocked,
+    /// so no unit walks onto the sea or off the map's northern edge (the top cell of every column of the middle three
+    /// quarters is blocked), and every beach cell is joined to the spawn.
+    /// </summary>
+    [Test]
+    public void TheWriter_WadesTheCoastsShallows_AndBlocksItsOcean()
+    {
+        Grid grid = CreateAreaWithDualGridGrass(coast);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        AreaLayout layout = coast.Generate(1);
+        Assert.That(AreaLayoutWriter.Write(grid, coast, layout), Is.True);
+        NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
+        navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
+        TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
+        navigation.BuildGrid();
+
+        foreach (string name in new[] { "Sand", "Shallows", "Ocean" })
+        {
+            NavigationTerrainSource2D source = grid.transform.Find(Layer(coast, name).TilemapName).GetComponent<NavigationTerrainSource2D>();
+            Assert.That(source.TerrainType, Is.SameAs(ProjectTerrainType(name)), name);
+            Assert.That(source.Priority, Is.EqualTo(layout.IndexOf(ProjectMaterial(name))), name);
+        }
+
+        HashSet<Vector3Int> grass = Cells(layout, "Grass");
+        HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
+        HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
+        HashSet<Vector3Int> blocked = new(ocean);
+        blocked.UnionWith(Footprints(layout));
+        foreach (Vector3Int cell in ocean)
+        {
+            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"the ocean at {cell}");
+        }
+
+        int wades = 0;
+        foreach (Vector3Int cell in shallows)
+        {
+            bool open = true;
+            foreach (Vector3Int near in CellsWithin(cell, 1))
+            {
+                open &= !blocked.Contains(near) && grass.Contains(near);
+            }
+
+            if (open)
+            {
+                Assert.That(navigation.MovementCost(cell + Vector3Int.down, cell, profile), Is.EqualTo(20), $"wading into the shallows at {cell}");
+                wades++;
+            }
+        }
+
+        Assert.That(wades, Is.GreaterThan(10));
+        BoundsInt bounds = BoundsOf(grass);
+        int margin = bounds.size.x / 8;
+        for (int x = bounds.xMin + margin; x < bounds.xMax - margin; x++)
+        {
+            int y = bounds.yMax - 1;
+            while (!grass.Contains(new Vector3Int(x, y, 0)))
+            {
+                y--;
+            }
+
+            Assert.That(navigation.IsCellWalkable(new Vector3Int(x, y, 0), profile), Is.False, $"the map's northern edge at column {x}");
+        }
+
+        foreach (Vector3Int cell in Cells(layout, "Sand"))
+        {
+            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the beach at {cell} reachable");
+        }
+    }
+
+    /// <summary>
     /// The corners of <paramref name="layout"/> around the cells of <paramref name="materials"/> where a third look shows
     /// under a rounded corner: at each cell corner with such a cell among its four cells, a layer filling one of the four
     /// (with the layers above it, as the renderer counts them) is rounded off there, and the next layer down fills that
@@ -1233,6 +1556,25 @@ public class AreaGenerationTests
     /// straight edge runs on where the upper layer turns away.
     /// </summary>
     private static List<string> CornerProblems(AreaLayout layout, params string[] materials)
+    {
+        return CornerProblems(layout, true, materials);
+    }
+
+    /// <summary>
+    /// The corners <see cref="CornerProblems(AreaLayout, string[])"/> finds, less those on the map's edge (a corner with
+    /// a cell off the ground), where every band that runs out to the edge meets the next one with such a corner
+    /// (Architecture.md's Known gaps).
+    /// </summary>
+    private static List<string> InlandCornerProblems(AreaLayout layout, params string[] materials)
+    {
+        return CornerProblems(layout, false, materials);
+    }
+
+    /// <summary>
+    /// The corners of <paramref name="layout"/> around the cells of <paramref name="materials"/> where a third look
+    /// shows under a rounded corner, those on the map's edge only when <paramref name="atMapEdge"/>.
+    /// </summary>
+    private static List<string> CornerProblems(AreaLayout layout, bool atMapEdge, string[] materials)
     {
         Dictionary<Vector3Int, int> top = new();
         HashSet<Vector3Int> corners = new();
@@ -1263,6 +1605,11 @@ public class AreaGenerationTests
             for (int k = 0; k < 4; k++)
             {
                 tops[k] = top.TryGetValue(cells[k], out int layer) ? layer : -1;
+            }
+
+            if (!atMapEdge && System.Array.IndexOf(tops, -1) >= 0)
+            {
+                continue;
             }
 
             for (int c = 0; c < 4; c++)
@@ -1389,6 +1736,7 @@ public class AreaGenerationTests
     [TestCase(VillageForestGeneratorPath)]
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
+    [TestCase(CoastGeneratorPath)]
     public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1428,12 +1776,13 @@ public class AreaGenerationTests
     /// priority is its index; the grid's terrain renderer draws the layers in that order with their materials and the
     /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
     /// points are replaced and the start spawn point moves; the navigation grid then blocks exactly the footprint
-    /// cells and the water, and every mob can walk to the spawn.
+    /// cells, the water and the ocean, and every mob can walk to the spawn.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
+    [TestCase(CoastGeneratorPath)]
     public void TheWriter_SetsUpPlainLayersDrawnByTheRenderer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1515,6 +1864,7 @@ public class AreaGenerationTests
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         HashSet<Vector3Int> footprints = Footprints(layout);
         HashSet<Vector3Int> water = new(CellsOrNone(layout, "Water"));
+        water.UnionWith(CellsOrNone(layout, "Ocean"));
         water.ExceptWith(CellsOrNone(layout, "Planks"));
         foreach (Vector3Int cell in layout.TerrainCells(0))
         {
@@ -1878,6 +2228,7 @@ public class AreaGenerationTests
     [TestCase(VillageForestGeneratorPath, "Grass", "Meadow", "TallGrass", "Dirt", "Gravel", "Plaza", "Stone")]
     [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Meadow", "TallGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
     [TestCase(SnowfieldGeneratorPath, "Snow", "Dirt", "Ice", "Gravel", "Stone", "Water")]
+    [TestCase(CoastGeneratorPath, "Grass", "Dirt", "Sand", "Gravel", "Stone", "Shallows", "Ocean")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -2095,6 +2446,7 @@ public class AreaGenerationTests
     [TestCase(VillageForestGeneratorPath)]
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
+    [TestCase(CoastGeneratorPath)]
     public void TheDetailStream_LeavesTheRestOfTheLayoutWhereItWas(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -2118,6 +2470,10 @@ public class AreaGenerationTests
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
             added = new[] { "Water", "Dirt" };
         }
+        else if (target is CoastGenerator)
+        {
+            settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+        }
         else
         {
             settings.FindProperty("dryGrassPatchCount").intValue = 0;
@@ -2139,7 +2495,7 @@ public class AreaGenerationTests
                 Assert.That(plain.TerrainCells(addedIndices[addedIndices.Count - 1]), Is.Empty, $"seed {seed}: the {name} step is off");
             }
 
-            int shallowsIndex = full.IndexOf(ProjectMaterial("Shallows"));
+            int shallowsIndex = target is LakesideGenerator ? full.IndexOf(ProjectMaterial("Shallows")) : -1;
             for (int layer = 0; layer < full.TerrainLayerCount; layer++)
             {
                 if (!addedIndices.Contains(layer) && layer != shallowsIndex)
@@ -2168,6 +2524,13 @@ public class AreaGenerationTests
                 else if (target is SnowfieldGenerator snowy && prop.Prefab == snowy.CampfirePrefab)
                 {
                     foreach (Vector3Int cell in CellsWithin(prop.Cell, Mathf.CeilToInt(snowy.CampsiteRadius) + 3))
+                    {
+                        campsite.Add(cell);
+                    }
+                }
+                else if (target is CoastGenerator coastal && prop.Prefab == coastal.CampfirePrefab)
+                {
+                    foreach (Vector3Int cell in CellsWithin(prop.Cell, Mathf.CeilToInt(coastal.CampsiteRadius) + 3))
                     {
                         campsite.Add(cell);
                     }

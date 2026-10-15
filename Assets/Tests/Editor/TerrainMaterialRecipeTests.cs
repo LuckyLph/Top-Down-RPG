@@ -1681,6 +1681,53 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
+    /// The ocean's arch and fade are off by default and change only its crests: with an arch, the albedo and the set of
+    /// crest pixels stay as they were and some crest phases move (a crest's middle runs ahead); with a fade, the albedo
+    /// stays as it was and fewer pixels carry crests, every one of them a crest pixel without it.
+    /// </summary>
+    [Test]
+    public void OceanWaves_ArchAndFade_ChangeOnlyTheCrests()
+    {
+        OceanWavesRecipe plain = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
+        OceanWavesRecipe arched = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
+        OceanWavesRecipe faded = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
+        SerializedObject defaults = new(plain);
+        Assert.That(defaults.FindProperty("arch").floatValue, Is.Zero);
+        Assert.That(defaults.FindProperty("fade").floatValue, Is.Zero);
+        SerializedObject archSettings = new(arched);
+        archSettings.FindProperty("arch").floatValue = 8f;
+        archSettings.ApplyModifiedPropertiesWithoutUndo();
+        SerializedObject fadeSettings = new(faded);
+        fadeSettings.FindProperty("fade").floatValue = 0.3f;
+        fadeSettings.ApplyModifiedPropertiesWithoutUndo();
+
+        TerrainTextures before = plain.Generate(Seed);
+        TerrainTextures withArch = arched.Generate(Seed);
+        TerrainTextures withFade = faded.Generate(Seed);
+
+        Assert.That(Differences(before.Albedo, withArch.Albedo), Is.Zero);
+        Assert.That(Differences(before.Albedo, withFade.Albedo), Is.Zero);
+        int moved = 0;
+        int crests = 0;
+        int fadedCrests = 0;
+        for (int i = 0; i < before.Height.Length; i++)
+        {
+            bool crest = before.Height[i].b > 0 && before.Height[i].b < 128;
+            bool archedCrest = withArch.Height[i].b > 0 && withArch.Height[i].b < 128;
+            bool fadedCrest = withFade.Height[i].b > 0 && withFade.Height[i].b < 128;
+            Assert.That(archedCrest, Is.EqualTo(crest), $"pixel {i}");
+            Assert.That(!fadedCrest || crest, Is.True, $"pixel {i}");
+            crests += crest ? 1 : 0;
+            fadedCrests += fadedCrest ? 1 : 0;
+            moved += crest && withArch.Height[i].b != before.Height[i].b ? 1 : 0;
+        }
+
+        Assert.That(moved, Is.GreaterThan(crests / 4), "the arch moves the crests' phases");
+        Assert.That(fadedCrests, Is.LessThan(crests), "the fade breaks up the crests' ends");
+        Assert.That(fadedCrests, Is.GreaterThan(crests / 4));
+    }
+
+    /// <summary>
     /// Every recipe asset of the project that fills a material (only read) still generates, for its seed, exactly the
     /// albedo, cell field and height its material uses, so settings added to a recipe kind (mud's cracks, stone's seed
     /// offset) leave the materials made before them as they were.

@@ -9,15 +9,19 @@ using UnityEngine;
 /// material's glint duty times the spacing, a crest's thickness) moves down by one spacing per glint period. The crests
 /// come in families, each with its own phase offset, its own sideways bend (smooth noise along x that pushes a crest up
 /// or down, so it runs wavy rather than straight) and its own smooth mask (2D noise; where a family's mask is highest
-/// and above the crest level, its crests pass): a crest is drawn only across its family's patches, which change slowly
+/// and above the crest level, its crests pass). A crest is drawn only across its family's patches, which change slowly
 /// down the texture, so each crest grows and shrinks as it travels and gives way to another family's crests further
-/// on. Between crests the pixels keep their tone. A few pixels off the crests sparkle. No cell field; the base colour
-/// is the middle tone, the glint colour the crests' and the sparkle colour the sparkles', and the height's per-chip
-/// value is 0.5 everywhere.
+/// on; its middle, where the mask is highest, runs ahead towards the shore by up to the arch, so the crest curves like
+/// a wave rolling in, and its ends, where the mask is within the fade of the crest level, break up into scattered
+/// pixels. Between crests the pixels keep their tone. A few pixels off the crests sparkle. No cell field;
+/// the base colour is the middle tone, the glint colour the crests' and the sparkle colour the sparkles', and the
+/// height's per-chip value is 0.5 everywhere.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Recipe/Ocean Waves", fileName = "Recipe_Ocean")]
 public sealed class OceanWavesRecipe : TerrainMaterialRecipe
 {
+    private const int FadeSalt = 43;
+
     [Header("Water")]
     [Tooltip("The middle tone, and the material's base colour.")]
     [SerializeField] private Color32 water = new(22, 58, 110, 255);
@@ -40,10 +44,14 @@ public sealed class OceanWavesRecipe : TerrainMaterialRecipe
     [SerializeField] private Wave[] bendWaves = { new(3, 0, 1f), new(5, 0, 0.7f), new(9, 0, 0.4f) };
     [Tooltip("How far up or down the bend pushes a crest at most, in pixels.")]
     [SerializeField, Range(0f, 16f)] private float bend = 3f;
+    [Tooltip("How far towards the shore a crest's middle runs ahead of its ends, in pixels: the crest is pushed down by this times how far its family's mask rises above the crest level, so each crest arches like a wave rolling in; 0 for none.")]
+    [SerializeField, Range(0f, 16f)] private float arch;
     [Tooltip("Waves of each family's mask: where a family's mask is highest and above the crest level, its crests pass. X counts set the length of a crest, Y counts how fast it grows and shrinks as it travels. Amplitudes only count relative to each other. Set for a texture of 16 cells.")]
     [SerializeField] private Wave[] maskWaves = { new(7, 2, 1f), new(11, 3, 0.8f), new(-9, 5, 0.6f), new(13, -2, 0.4f) };
     [Tooltip("A pixel carries crests where its strongest family's mask, normalised into -1 to 1, is above this: higher gives shorter, sparser crests.")]
     [SerializeField, Range(-1f, 1f)] private float crestLevel = 0.15f;
+    [Tooltip("How far above the crest level the mask must rise before a pixel surely carries crests: below that a pixel carries them at a chance that grows with the mask, so a crest's ends break up into scattered pixels instead of stopping square; 0 for square ends.")]
+    [SerializeField, Range(0f, 1f)] private float fade;
     [Tooltip("The colour a crest lights up with, the material's glint colour.")]
     [SerializeField] private Color32 crest = new(88, 142, 196, 255);
     [Header("Sparkles")]
@@ -95,11 +103,17 @@ public sealed class OceanWavesRecipe : TerrainMaterialRecipe
                     }
                 }
 
+                if (family >= 0 && fade > 0f && strongest - crestLevel < fade && TerrainArt.Hash01(x, y, FadeSalt) >= (strongest - crestLevel) / fade)
+                {
+                    family = -1;
+                }
+
                 double sparkleRoll = random.NextDouble();
                 double sparklePhase = random.NextDouble();
                 if (family >= 0)
                 {
                     double push = bendTotal > 0.0 ? bend * bends[family][x] / bendTotal : 0.0;
+                    push += crestLevel < 1f ? arch * (strongest - crestLevel) / (1.0 - crestLevel) : 0.0;
                     glints[i] = TerrainArt.GlintByte((y + push) / spacing + (double)family / families);
                 }
                 else if (sparkleRoll < sparkleChance)

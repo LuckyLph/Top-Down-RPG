@@ -58,36 +58,38 @@ MonoBehaviour:
     amplitude: 0.4
   darkerShare: 0.3
   lighterShare: 0.2
-  crestsAcross: 16
-  families: 2
+  crestsAcross: 4
+  families: 1
   bendWaves:
-  - x: 3
+  - x: 1
     y: 0
     amplitude: 1
-  - x: 7
+  - x: 2
     y: 0
-    amplitude: 0.6
-  - x: 19
-    y: 0
-    amplitude: 0.35
-  - x: 29
-    y: 0
-    amplitude: 0.25
-  bend: 7
-  maskWaves:
+    amplitude: 0.7
   - x: 3
-    y: 1
-    amplitude: 1
+    y: 0
+    amplitude: 0.5
   - x: 5
-    y: 2
+    y: 0
+    amplitude: 0.3
+  bend: 20
+  arch: 8
+  maskWaves:
+  - x: 2
+    y: 5
+    amplitude: 1
+  - x: 3
+    y: 7
     amplitude: 0.8
-  - x: -4
-    y: 3
+  - x: -2
+    y: 6
     amplitude: 0.6
-  - x: 7
-    y: -2
+  - x: 4
+    y: -5
     amplitude: 0.4
-  crestLevel: 0.05
+  crestLevel: 0.1
+  fade: 0
   crest:
     serializedVersion: 2
     rgba: 4291071576

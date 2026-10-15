@@ -937,8 +937,8 @@ public class TerrainBlendRendererTests
 
     /// <summary>
     /// Raised ground draws a cliff face along its bottom edge, inside its lowest cells, in the bank colour of the ground
-    /// on top; casts a shadow on the ground below the face; slopes down a ramp in the ground's own colour worn towards
-    /// the bank colour; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
+    /// on top; casts a shadow on the ground below the face; slopes down a ramp in the ground's own colour, darkening
+    /// towards its foot; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
     /// tilemap the same pixels show plain ground. Green ground with a red bank colour fills an 8 x 6 block, raised ground
     /// covers columns 1 to 6 of rows 2 to 4, and columns 3 and 4 of row 2 are a ramp; no edge draws an outline, rim or
     /// shadow, and the cliff has no fringe or pebbles. Renders from a later editor update, until anything is drawn.
@@ -998,7 +998,8 @@ public class TerrainBlendRendererTests
         Assert.That(beside, Is.EqualTo(open), "The ground beside the plateau shows no cliff.");
         Assert.That(shadowed.g, Is.LessThan(open.g), "The cliff casts a shadow below it.");
         Assert.That(slope.g, Is.GreaterThan(slope.r), "The ramp shows the ground.");
-        Assert.That(slope.r, Is.GreaterThan(open.r), "The ramp's ground is worn towards the bank colour.");
+        Assert.That(slope.g, Is.LessThan(open.g), "The ramp's ground darkens towards its foot.");
+        Assert.That(slope.r, Is.LessThanOrEqualTo(open.r), "The ramp's ground is not drawn towards the bank colour.");
 
         renderer.Configure(style, (Tilemap)null, layer);
         Color32 plain = default;

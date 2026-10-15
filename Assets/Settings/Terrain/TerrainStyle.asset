@@ -955,7 +955,6 @@ MonoBehaviour:
   cliffOutlineShade: 0.55
   cliffRimLight: 0.2
   rampShade: 0.18
-  rampWear: 0.3
   cliffShadowAlpha: 0.4
   cliffShadowWidth: 4
   layerOrder:

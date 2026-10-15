@@ -111,25 +111,15 @@ float TBCliffShadow(TBInputs ins, float4 cliff, float4 shadow, float2 pixel)
     return alpha;
 }
 
-// The ramp's slope at a pixel of its face, row rows below its top: the ground there worn towards the bank colour by
-// the ramp's wear (shadow.w), darkening by the ramp shade (shadow.z) towards the foot, cut into steps every band
-// (face.x) rows, each step's edge darkened twice by the band shade (face.y) and the row under it, like the top row,
-// lightened by edge.z as the plateau's rim is, so it reads as a slope cut into the cliff; and where the ramp meets a cliff
-// beside it, a cheek two pixels wide, the cliff's foot colour (foot) outside and its bank colour darkened to the band
-// shade inside.
-float3 TBRampFace(TBInputs ins, float4 shadow, float4 face, float4 edge, float3 colour, float3 bank, float3 foot, float row, float height, float2 pixel)
+// The ramp's slope at a pixel of its face, row rows below its top: the ground there darkening by the ramp shade
+// (shadow.z) towards the foot, and a cheek of the cliff's foot colour along a side where the ramp meets a cliff.
+float3 TBRampFace(TBInputs ins, float4 shadow, float3 colour, float3 foot, float row, float height, float2 pixel)
 {
     int2 cell = (int2)floor((pixel + 0.5) / ART_PIXELS_PER_UNIT);
     float x = pixel.x - (float)cell.x * ART_PIXELS_PER_UNIT;
-    float fromCliff = 1e4;
-    fromCliff = TBRaisedCell(ins, cell + int2(-1, 0)) == TB_RAISED ? x : fromCliff;
-    fromCliff = TBRaisedCell(ins, cell + int2(1, 0)) == TB_RAISED ? min(fromCliff, ART_PIXELS_PER_UNIT - 1.0 - x) : fromCliff;
-    float3 ground = lerp(colour, bank, shadow.w);
-    float3 slope = ground * (1.0 - shadow.z * row / height);
-    float step = fmod(row, max(face.x, 1.0) + 1.0);
-    slope = row <= 1.0 || step == 1.0 ? slope * (1.0 + edge.z) : slope;
-    slope = row > 1.0 && step < 0.5 ? slope * face.y * face.y : slope;
-    return fromCliff < 1.0 ? foot : fromCliff < 2.0 ? bank * face.y : slope;
+    bool cheek = (x < 1.0 && TBRaisedCell(ins, cell + int2(-1, 0)) == TB_RAISED)
+        || (x >= ART_PIXELS_PER_UNIT - 1.0 && TBRaisedCell(ins, cell + int2(1, 0)) == TB_RAISED);
+    return cheek ? foot : colour * (1.0 - shadow.z * row / height);
 }
 
 // The cliff face at a pixel row rows below its top (1 to the cliff's height): the ground on top hanging over it by up
@@ -205,7 +195,7 @@ float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uin
     [branch]
     if (rows <= height && ramp)
     {
-        result = TBRampFace(ins, shadow, face, edge, colour, bank, bank * edge.x, height + 1.0 - rows, height, pixel);
+        result = TBRampFace(ins, shadow, colour, bank * edge.x, height + 1.0 - rows, height, pixel);
     }
     else if (d > -1.0)
     {

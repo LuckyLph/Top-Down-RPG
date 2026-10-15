@@ -112,7 +112,7 @@ public static class TerrainBlendLut
             texels[shared + SharedCliffColumn] = new Color(style.CliffHeight, style.CliffFringe, style.CliffOuterRadius, style.CliffInnerRadius);
             texels[shared + SharedCliffFaceColumn] = new Color(style.CliffBandRows, style.CliffBandShade, style.CliffDepthShade, style.CliffPebbleChance);
             texels[shared + SharedCliffEdgeColumn] = new Color(style.CliffFootShade, style.CliffOutlineShade, style.CliffRimLight, style.CliffPebbleLight);
-            texels[shared + SharedCliffShadowColumn] = new Color(style.CliffShadowAlpha, style.CliffShadowWidth, style.RampShade, style.RampWear);
+            texels[shared + SharedCliffShadowColumn] = new Color(style.CliffShadowAlpha, style.CliffShadowWidth, style.RampShade, 0f);
             texels[shared + SharedCliffRimColumn] = new Color(style.CliffRimWidth, 0f, 0f, 0f);
         }
 

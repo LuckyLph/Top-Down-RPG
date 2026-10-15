@@ -182,8 +182,6 @@ public class TerrainStyle : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float cliffRimLight = 0.12f;
     [Tooltip("How much darker a ramp grows from its top to its foot.")]
     [SerializeField, Range(0f, 1f)] private float rampShade = 0.18f;
-    [Tooltip("How far a ramp's ground is worn towards the bank colour, so the slope shows as a cut into the cliff.")]
-    [SerializeField, Range(0f, 1f)] private float rampWear = 0.3f;
     [Tooltip("How dark the shadow the cliff casts on the ground below it is at the cliff's foot.")]
     [SerializeField, Range(0f, 1f)] private float cliffShadowAlpha = 0.4f;
     [Tooltip("Height in pixels of the shadow the cliff casts below it; the soft look draws none.")]
@@ -212,7 +210,6 @@ public class TerrainStyle : ScriptableObject
     public float CliffOutlineShade => cliffOutlineShade;
     public float CliffRimLight => cliffRimLight;
     public float RampShade => rampShade;
-    public float RampWear => rampWear;
     public float CliffShadowAlpha => cliffShadowAlpha;
     public float CliffShadowWidth => cliffShadowWidth;
 

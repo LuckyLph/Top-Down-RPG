@@ -340,7 +340,7 @@ public class TerrainBlendLutTests
     /// <summary>
     /// For layers drawn over raised ground, row 0 holds the style's cliff settings at its cliff columns: the cliff's
     /// height, fringe and corner radii; its bands, band shade, depth shade and pebble chance; its foot shade, outline
-    /// shade, rim light and pebble light; its shadow's alpha and height, the ramp's shade and wear; the ledge's width.
+    /// shade, rim light and pebble light; its shadow's alpha and height, the ramp's shade; the ledge's width.
     /// Without raised ground they stay empty, which is what tells the shader to draw no cliffs.
     /// </summary>
     [Test]
@@ -351,7 +351,7 @@ public class TerrainBlendLutTests
         SerializedObject settings = new(style);
         settings.FindProperty("cliffHeight").floatValue = 12f;
         settings.FindProperty("cliffRimWidth").floatValue = 4f;
-        settings.FindProperty("rampWear").floatValue = 0.5f;
+        settings.FindProperty("rampShade").floatValue = 0.5f;
         settings.ApplyModifiedPropertiesWithoutUndo();
 
         Color[] raised = TerrainBlendLut.BuildTexels(style, new[] { grass }, true);
@@ -361,7 +361,7 @@ public class TerrainBlendLutTests
         Assert.That(raised[row + TerrainBlendLut.SharedCliffColumn], Is.EqualTo(new Color(12f, style.CliffFringe, style.CliffOuterRadius, style.CliffInnerRadius)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffFaceColumn], Is.EqualTo(new Color(style.CliffBandRows, style.CliffBandShade, style.CliffDepthShade, style.CliffPebbleChance)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffEdgeColumn], Is.EqualTo(new Color(style.CliffFootShade, style.CliffOutlineShade, style.CliffRimLight, style.CliffPebbleLight)));
-        Assert.That(raised[row + TerrainBlendLut.SharedCliffShadowColumn], Is.EqualTo(new Color(style.CliffShadowAlpha, style.CliffShadowWidth, style.RampShade, 0.5f)));
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffShadowColumn], Is.EqualTo(new Color(style.CliffShadowAlpha, style.CliffShadowWidth, 0.5f, 0f)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffRimColumn], Is.EqualTo(new Color(4f, 0f, 0f, 0f)));
         for (int column = TerrainBlendLut.SharedCliffColumn; column <= TerrainBlendLut.SharedCliffRimColumn; column++)
         {

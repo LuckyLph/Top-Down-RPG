@@ -157,8 +157,8 @@ public sealed class CoastGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> ocean;
         private readonly HashSet<Vector3Int> dirt;
         private readonly List<Vector2> road = new();
-        private readonly Dictionary<Vector3Int, int> coastDistance = new();
-        private readonly Dictionary<Vector3Int, int> seaDistance = new();
+        private Dictionary<Vector3Int, int> coastDistance = new();
+        private Dictionary<Vector3Int, int> seaDistance = new();
         private readonly float halfWidth;
         private readonly float halfHeight;
 
@@ -200,7 +200,7 @@ public sealed class CoastGenerator : AreaGenerator
                 }
             }
 
-            HashSet<Vector3Int> reachable = Reachable();
+            HashSet<Vector3Int> reachable = builder.ReachableFromSpawn(ocean.Contains);
             PlaceMobs(reachable);
             CheckBeach(reachable);
             builder.StartDetailStream();
@@ -331,43 +331,8 @@ public sealed class CoastGenerator : AreaGenerator
         /// </summary>
         private void MeasureDistances()
         {
-            Measure(coastDistance, cell => sand.Contains(cell) || ocean.Contains(cell));
-            Measure(seaDistance, ocean.Contains);
-        }
-
-        /// <summary>
-        /// Fills <paramref name="distances"/> with each ground cell's steps (8 neighbours) from the nearest ground cell
-        /// that passes <paramref name="source"/>.
-        /// </summary>
-        private void Measure(Dictionary<Vector3Int, int> distances, Predicate<Vector3Int> source)
-        {
-            Queue<Vector3Int> queue = new();
-            foreach (Vector3Int cell in builder.OrderedGround)
-            {
-                if (source(cell))
-                {
-                    distances[cell] = 0;
-                    queue.Enqueue(cell);
-                }
-            }
-
-            while (queue.Count > 0)
-            {
-                Vector3Int cell = queue.Dequeue();
-                int next = distances[cell] + 1;
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
-                        if (builder.Ground.Contains(neighbour) && !distances.ContainsKey(neighbour))
-                        {
-                            distances[neighbour] = next;
-                            queue.Enqueue(neighbour);
-                        }
-                    }
-                }
-            }
+            coastDistance = builder.StepsFrom(cell => sand.Contains(cell) || ocean.Contains(cell));
+            seaDistance = builder.StepsFrom(ocean.Contains);
         }
 
         /// <summary>
@@ -449,7 +414,7 @@ public sealed class CoastGenerator : AreaGenerator
             }
 
             Vector2 end = new(target.x + 0.5f, target.y + 0.5f);
-            Vector2 start = TrailStart(end.x);
+            Vector2 start = builder.TrailStart(road, end.x, settings.trailWidth);
 
             int landward = target.y;
             foreach (Vector3Int cell in sand)
@@ -476,40 +441,6 @@ public sealed class CoastGenerator : AreaGenerator
                     builder.Gravel.Add(cell);
                 }
             }
-        }
-
-        /// <summary>
-        /// The road sample the trail leaves from: the one nearest <paramref name="x"/> where the road's northern edge
-        /// runs level across the trail's columns and a cell beyond each side, so the trail meets it at no step; the
-        /// nearest sample when the road is level nowhere.
-        /// </summary>
-        private Vector2 TrailStart(float x)
-        {
-            Dictionary<int, int> northEdge = new();
-            foreach (Vector3Int cell in builder.Stone)
-            {
-                northEdge[cell.x] = northEdge.TryGetValue(cell.x, out int y) ? Mathf.Max(y, cell.y) : cell.y;
-            }
-
-            List<Vector2> byDistance = new(road);
-            byDistance.Sort((a, b) => Mathf.Abs(a.x - x).CompareTo(Mathf.Abs(b.x - x)));
-            int reach = settings.trailWidth / 2 + 2;
-            foreach (Vector2 sample in byDistance)
-            {
-                int column = Mathf.FloorToInt(sample.x);
-                bool level = northEdge.TryGetValue(column, out int edge);
-                for (int dx = -reach; dx <= reach && level; dx++)
-                {
-                    level = northEdge.TryGetValue(column + dx, out int other) && other == edge;
-                }
-
-                if (level)
-                {
-                    return sample;
-                }
-            }
-
-            return byDistance[0];
         }
 
         /// <summary>
@@ -568,14 +499,6 @@ public sealed class CoastGenerator : AreaGenerator
 
             int distance = CoastDistance(cell);
             return distance > 0 && distance <= settings.shoreZoneDepth ? Zone.Shore : Zone.Interior;
-        }
-
-        /// <summary>
-        /// The cells 4-connected to the spawn around the blocking footprints and the ocean, which cannot be walked.
-        /// </summary>
-        private HashSet<Vector3Int> Reachable()
-        {
-            return AreaLayoutBuilder.FloodFill(builder.Layout.SpawnCell, cell => builder.Ground.Contains(cell) && !ocean.Contains(cell) && !builder.Occupied.Contains(cell));
         }
 
         /// <summary>
@@ -639,35 +562,9 @@ public sealed class CoastGenerator : AreaGenerator
             }
 
             float clear = settings.campsiteRadius + CampsiteCoastMargin;
-            HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(PathCells(), Mathf.CeilToInt(clear));
+            HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, dirt, settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => CoastDistance(cell) > clear && !nearPaths.Contains(cell));
-        }
-
-        /// <summary>
-        /// The road's and the trail's cells, in ground order.
-        /// </summary>
-        private List<Vector3Int> PathCells()
-        {
-            List<Vector3Int> cells = new();
-            foreach (Vector3Int cell in builder.OrderedGround)
-            {
-                if (builder.IsPath(cell))
-                {
-                    cells.Add(cell);
-                }
-            }
-
-            return cells;
-        }
-
-        /// <summary>
-        /// The steps <paramref name="distances"/> holds for <paramref name="cell"/>, and int.MaxValue for a cell it does
-        /// not hold.
-        /// </summary>
-        private static int Steps(Dictionary<Vector3Int, int> distances, Vector3Int cell)
-        {
-            return distances.TryGetValue(cell, out int distance) ? distance : int.MaxValue;
         }
 
         /// <summary>
@@ -676,7 +573,7 @@ public sealed class CoastGenerator : AreaGenerator
         /// </summary>
         private int CoastDistance(Vector3Int cell)
         {
-            return Steps(coastDistance, cell);
+            return AreaLayoutBuilder.StepsAt(coastDistance, cell);
         }
 
         /// <summary>
@@ -685,7 +582,7 @@ public sealed class CoastGenerator : AreaGenerator
         /// </summary>
         private int SeaDistance(Vector3Int cell)
         {
-            return Steps(seaDistance, cell);
+            return AreaLayoutBuilder.StepsAt(seaDistance, cell);
         }
     }
 }

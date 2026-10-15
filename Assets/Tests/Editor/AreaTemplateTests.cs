@@ -14,7 +14,8 @@ using UnityEngine.Tilemaps;
 /// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
 /// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
 /// trims it to the generator's layers, after which its renderer builds and its navigation grid blocks exactly the
-/// footprints, the water, except under a dock, and the ocean. The template is opened
+/// footprints, the water, except under a dock, the ocean and lava; a generator that lists lava, which the template
+/// leaves out, gets its layer from the writer. The template is opened
 /// beside the open scenes and closed without saving.
 /// </summary>
 public class AreaTemplateTests
@@ -31,7 +32,8 @@ public class AreaTemplateTests
         "Assets/Settings/Generation/Generator_VillageForest.asset",
         "Assets/Settings/Generation/Generator_Lakeside.asset",
         "Assets/Settings/Generation/Generator_Snowfield.asset",
-        "Assets/Settings/Generation/Generator_Coast.asset"
+        "Assets/Settings/Generation/Generator_Coast.asset",
+        "Assets/Settings/Generation/Generator_LavaFields.asset"
     };
 
     private Scene template;
@@ -141,7 +143,8 @@ public class AreaTemplateTests
     /// Each project generator's layout can be written into the template, which the generator trims to its own layers:
     /// the layers it does not list, all empty, are removed, and the renderer draws exactly the generator's, in its
     /// order. The renderer then builds, and the navigation grid blocks exactly the footprint cells, the water, except
-    /// under a dock, and the ocean, on the ground. A generator whose ground is not grass (the Snowfield's snow) has the
+    /// under a dock, the ocean and lava, on the ground (the Lava Fields' lava layer, which the template leaves out, created
+    /// by the writer). A generator whose ground is not grass (the Snowfield's snow, the Lava Fields' dirt) has the
     /// area's terrain pointed at its ground layer first, as a new area of that ground is, or the template's empty grass
     /// layer, which the area's terrain lists, would be kept.
     /// </summary>
@@ -150,6 +153,7 @@ public class AreaTemplateTests
     [TestCase("Assets/Settings/Generation/Generator_Lakeside.asset")]
     [TestCase("Assets/Settings/Generation/Generator_Snowfield.asset")]
     [TestCase("Assets/Settings/Generation/Generator_Coast.asset")]
+    [TestCase("Assets/Settings/Generation/Generator_LavaFields.asset")]
     public void TheTemplate_TakesAGeneratedLayout_TrimmedToTheGeneratorsLayers(string generatorPath)
     {
         Grid grid = TemplateGrid();
@@ -187,10 +191,16 @@ public class AreaTemplateTests
         TerrainMaterial water = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Water.asset");
         TerrainMaterial planks = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Planks.asset");
         TerrainMaterial ocean = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Ocean.asset");
+        TerrainMaterial lava = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Lava.asset");
         HashSet<Vector3Int> blocked = layout.IndexOf(water) >= 0 ? new HashSet<Vector3Int>(layout.TerrainCells(layout.IndexOf(water))) : new HashSet<Vector3Int>();
         if (layout.IndexOf(ocean) >= 0)
         {
             blocked.UnionWith(layout.TerrainCells(layout.IndexOf(ocean)));
+        }
+
+        if (layout.IndexOf(lava) >= 0)
+        {
+            blocked.UnionWith(layout.TerrainCells(layout.IndexOf(lava)));
         }
 
         if (layout.IndexOf(planks) >= 0)

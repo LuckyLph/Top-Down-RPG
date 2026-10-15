@@ -166,7 +166,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> water;
         private readonly HashSet<Vector3Int> dirt;
         private readonly List<Vector2> road = new();
-        private readonly Dictionary<Vector3Int, int> iceDistance = new();
+        private Dictionary<Vector3Int, int> iceDistance = new();
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
@@ -196,7 +196,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
             builder.LayGround(new Vector2(halfWidth, halfHeight), settings.squareness, settings.edgeWobble);
             LayRoad();
             LayLake();
-            MeasureIceDistance();
+            iceDistance = builder.StepsFrom(ice.Contains);
             LayTrail();
             PlaceSpawn();
             builder.ReservePathClearance(settings.pathClearance);
@@ -281,40 +281,6 @@ public sealed class SnowfieldGenerator : AreaGenerator
             if (ice.Count < settings.minLakeCells)
             {
                 builder.Layout.Warnings.Add($"The frozen lake kept {ice.Count} cells, fewer than {settings.minLakeCells}: make the area larger or the lake smaller.");
-            }
-        }
-
-        /// <summary>
-        /// Records for every snow cell how many steps (8 neighbours) it lies from the nearest ice cell.
-        /// </summary>
-        private void MeasureIceDistance()
-        {
-            Queue<Vector3Int> queue = new();
-            foreach (Vector3Int cell in builder.OrderedGround)
-            {
-                if (ice.Contains(cell))
-                {
-                    iceDistance[cell] = 0;
-                    queue.Enqueue(cell);
-                }
-            }
-
-            while (queue.Count > 0)
-            {
-                Vector3Int cell = queue.Dequeue();
-                int next = iceDistance[cell] + 1;
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
-                        if (builder.Ground.Contains(neighbour) && !iceDistance.ContainsKey(neighbour))
-                        {
-                            iceDistance[neighbour] = next;
-                            queue.Enqueue(neighbour);
-                        }
-                    }
-                }
             }
         }
 
@@ -527,26 +493,9 @@ public sealed class SnowfieldGenerator : AreaGenerator
             }
 
             float clear = settings.campsiteRadius + CampsiteIceMargin;
-            HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(PathCells(), Mathf.CeilToInt(clear));
+            HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, dirt, settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => IceDistance(cell) > clear && !nearPaths.Contains(cell));
-        }
-
-        /// <summary>
-        /// The road's and the trail's cells, in ground order.
-        /// </summary>
-        private List<Vector3Int> PathCells()
-        {
-            List<Vector3Int> cells = new();
-            foreach (Vector3Int cell in builder.OrderedGround)
-            {
-                if (builder.IsPath(cell))
-                {
-                    cells.Add(cell);
-                }
-            }
-
-            return cells;
         }
 
         /// <summary>
@@ -555,7 +504,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
         /// </summary>
         private int IceDistance(Vector3Int cell)
         {
-            return iceDistance.TryGetValue(cell, out int distance) ? distance : int.MaxValue;
+            return AreaLayoutBuilder.StepsAt(iceDistance, cell);
         }
     }
 }

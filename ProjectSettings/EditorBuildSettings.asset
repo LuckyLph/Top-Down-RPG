@@ -29,5 +29,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Areas/Area_Coast.unity
     guid: ce17e3a8642ebd741bb0d3785cac33bf
+  - enabled: 1
+    path: Assets/Scenes/Areas/Area_LavaFields.unity
+    guid: 707a08f3fadccad4880e6e86cd5cf069
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

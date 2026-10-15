@@ -210,6 +210,42 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// The sample of <paramref name="road"/> a trail of <paramref name="trailWidth"/> leaves from towards
+    /// <paramref name="x"/>: the one nearest <paramref name="x"/> where the road's northern edge (its stone) runs level
+    /// across the trail's columns and a cell beyond each side, so the trail meets it at no step (a step there would leave
+    /// the road's edge running on under the trail's rounded corner, Docs/TerrainTypes.md, Phase 3's Corners note); the
+    /// nearest sample when the road is level nowhere.
+    /// </summary>
+    public Vector2 TrailStart(IReadOnlyList<Vector2> road, float x, int trailWidth)
+    {
+        Dictionary<int, int> northEdge = new();
+        foreach (Vector3Int cell in Stone)
+        {
+            northEdge[cell.x] = northEdge.TryGetValue(cell.x, out int y) ? Mathf.Max(y, cell.y) : cell.y;
+        }
+
+        List<Vector2> byDistance = new(road);
+        byDistance.Sort((a, b) => Mathf.Abs(a.x - x).CompareTo(Mathf.Abs(b.x - x)));
+        int reach = trailWidth / 2 + 2;
+        foreach (Vector2 sample in byDistance)
+        {
+            int column = Mathf.FloorToInt(sample.x);
+            bool level = northEdge.TryGetValue(column, out int edge);
+            for (int dx = -reach; dx <= reach && level; dx++)
+            {
+                level = northEdge.TryGetValue(column + dx, out int other) && other == edge;
+            }
+
+            if (level)
+            {
+                return sample;
+            }
+        }
+
+        return byDistance[0];
+    }
+
+    /// <summary>
     /// Puts the party spawn on the first of <paramref name="preferred"/> whose cell has ground all around it for
     /// <paramref name="clearRadius"/> cells; falls back to the ground cell furthest from the edge, with a warning, when
     /// none has.
@@ -379,6 +415,79 @@ internal sealed class AreaLayoutBuilder
     public HashSet<Vector3Int> ReachableFromSpawn()
     {
         return FloodFill(Layout.SpawnCell, cell => Ground.Contains(cell) && !Occupied.Contains(cell));
+    }
+
+    /// <summary>
+    /// The cells 4-connected to the spawn around the blocking footprints and the ground cells that pass
+    /// <paramref name="blocked"/> (a layer that cannot be walked, such as the ocean or lava).
+    /// </summary>
+    public HashSet<Vector3Int> ReachableFromSpawn(Predicate<Vector3Int> blocked)
+    {
+        return FloodFill(Layout.SpawnCell, cell => Ground.Contains(cell) && !blocked(cell) && !Occupied.Contains(cell));
+    }
+
+    /// <summary>
+    /// Each ground cell's steps (8 neighbours, over the ground) from the nearest ground cell that passes
+    /// <paramref name="source"/>: 0 on such a cell; a cell no step reaches is left out.
+    /// </summary>
+    public Dictionary<Vector3Int, int> StepsFrom(Predicate<Vector3Int> source)
+    {
+        Dictionary<Vector3Int, int> distances = new();
+        Queue<Vector3Int> queue = new();
+        foreach (Vector3Int cell in orderedGround)
+        {
+            if (source(cell))
+            {
+                distances[cell] = 0;
+                queue.Enqueue(cell);
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            Vector3Int cell = queue.Dequeue();
+            int next = distances[cell] + 1;
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
+                    if (Ground.Contains(neighbour) && !distances.ContainsKey(neighbour))
+                    {
+                        distances[neighbour] = next;
+                        queue.Enqueue(neighbour);
+                    }
+                }
+            }
+        }
+
+        return distances;
+    }
+
+    /// <summary>
+    /// The steps <paramref name="steps"/> (from <see cref="StepsFrom"/>) holds for <paramref name="cell"/>, and
+    /// int.MaxValue for a cell it does not hold.
+    /// </summary>
+    public static int StepsAt(Dictionary<Vector3Int, int> steps, Vector3Int cell)
+    {
+        return steps.TryGetValue(cell, out int distance) ? distance : int.MaxValue;
+    }
+
+    /// <summary>
+    /// The path cells (<see cref="IsPath"/>), in ground order.
+    /// </summary>
+    public List<Vector3Int> PathCells()
+    {
+        List<Vector3Int> cells = new();
+        foreach (Vector3Int cell in orderedGround)
+        {
+            if (IsPath(cell))
+            {
+                cells.Add(cell);
+            }
+        }
+
+        return cells;
     }
 
     /// <summary>

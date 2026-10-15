@@ -20,7 +20,10 @@ using UnityEngine.Tilemaps;
 /// ice and every mob and the ice within the spawn's reach; the Coast generator lays a beach and the ocean out to the
 /// map's northern edge, the ocean meeting only the beach, a trail that ends on the beach short of the sea and a
 /// campsite away from the coast, with props off the coast and the beach and every mob within the spawn's
-/// reach; the terrain each generator lays from its detail stream leaves the rest of its layout
+/// reach; the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off
+/// the spawn's ground, the road crossing the river on earth, an unbroken trail that stops short of the lava and a
+/// campsite away from it, with props off and beside the lava and every mob and the trail within the spawn's reach
+/// around it; the terrain each generator lays from its detail stream leaves the rest of its layout
 /// where it was, and the Lakeside's ponds leave its dry grass where it was and its dock everything else; the same
 /// seed gives the same layout; the project's style lists every ground material in the shared draw order, the
 /// project's generators list only the layers they lay (plain ground tiles and the project's materials) as a
@@ -30,7 +33,7 @@ using UnityEngine.Tilemaps;
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
 /// a navigation grid that blocks exactly the props' cells, wades the Lakeside's ponds at the shallows' cost and walks
 /// its dock over the lake at grass's cost, the water beside it blocked, walks the Snowfield's snow at its cost and its
-/// ice like grass with its hole blocked, blocks the Coast's ocean, an area
+/// ice like grass with its hole blocked, blocks the Coast's ocean and the Lava Fields' lava, an area
 /// of only some layers that still draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
 /// </summary>
 public class AreaGenerationTests
@@ -40,6 +43,7 @@ public class AreaGenerationTests
     private const string LakesideGeneratorPath = "Assets/Settings/Generation/Generator_Lakeside.asset";
     private const string SnowfieldGeneratorPath = "Assets/Settings/Generation/Generator_Snowfield.asset";
     private const string CoastGeneratorPath = "Assets/Settings/Generation/Generator_Coast.asset";
+    private const string LavaFieldsGeneratorPath = "Assets/Settings/Generation/Generator_LavaFields.asset";
     private const string TerrainStylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string PropsRootName = "Props";
@@ -61,6 +65,7 @@ public class AreaGenerationTests
     private LakesideGenerator lakeside;
     private SnowfieldGenerator snowfield;
     private CoastGenerator coast;
+    private LavaFieldsGenerator lavaFields;
     private int undoGroup;
 
     /// <summary>
@@ -80,6 +85,8 @@ public class AreaGenerationTests
         Assert.That(snowfield, Is.Not.Null, $"{SnowfieldGeneratorPath} should exist.");
         coast = AssetDatabase.LoadAssetAtPath<CoastGenerator>(CoastGeneratorPath);
         Assert.That(coast, Is.Not.Null, $"{CoastGeneratorPath} should exist.");
+        lavaFields = AssetDatabase.LoadAssetAtPath<LavaFieldsGenerator>(LavaFieldsGeneratorPath);
+        Assert.That(lavaFields, Is.Not.Null, $"{LavaFieldsGeneratorPath} should exist.");
         Undo.IncrementCurrentGroup();
         undoGroup = Undo.GetCurrentGroup();
     }
@@ -1530,6 +1537,277 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// For every Lava Fields seed, with no warnings: every layer has cells and lies on the dirt; the lava keeps a cell of
+    /// earth from every path (no path cell within a step of it, 8 neighbours) and stays out of the spawn's clear disc and
+    /// the cell beyond it, in pieces of four cells or more, with no island of earth it encloses; it lies both north and
+    /// south of the road, which crosses the river on earth; and no third look shows under a rounded corner around the
+    /// lava or the trail away from the map's edge (TerrainTypes.md, Phase 3's Corners note).
+    /// </summary>
+    [Test]
+    public void LavaFieldsLayouts_LayARiverAndPools_ClearOfThePathsAndTheSpawn()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = lavaFields.Generate(seed);
+            Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: {string.Join("; ", layout.Warnings)}");
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
+            {
+                Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
+                Assert.That(layout.TerrainCells(layer).IsSubsetOf(dirt), Is.True, $"seed {seed}: layer {layer} lies on the dirt");
+            }
+
+            HashSet<Vector3Int> lava = Cells(layout, "Lava");
+            HashSet<Vector3Int> paths = PathCells(layout);
+            float roadMiddle = 0f;
+            HashSet<Vector3Int> stone = Cells(layout, "Stone");
+            foreach (Vector3Int cell in stone)
+            {
+                roadMiddle += cell.y;
+            }
+
+            roadMiddle /= stone.Count;
+            bool north = false;
+            bool south = false;
+            foreach (Vector3Int cell in lava)
+            {
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Assert.That(paths.Contains(near), Is.False, $"seed {seed}: lava at {cell} beside the path at {near}");
+                }
+
+                Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(lavaFields.SpawnClearRadius + 1f), $"seed {seed}: lava at {cell} near the spawn");
+                north |= cell.y > roadMiddle;
+                south |= cell.y < roadMiddle;
+            }
+
+            Assert.That(north && south, Is.True, $"seed {seed}: the lava lies on both sides of the road");
+            HashSet<Vector3Int> seen = new();
+            foreach (Vector3Int cell in lava)
+            {
+                if (seen.Contains(cell))
+                {
+                    continue;
+                }
+
+                HashSet<Vector3Int> piece = Reachable(cell, lava.Contains);
+                seen.UnionWith(piece);
+                Assert.That(piece.Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a lava piece at {cell}");
+            }
+
+            HashSet<Vector3Int> land = Reachable(layout.SpawnCell, cell => dirt.Contains(cell) && !lava.Contains(cell));
+            foreach (Vector3Int cell in dirt)
+            {
+                if (!lava.Contains(cell) && !land.Contains(cell))
+                {
+                    HashSet<Vector3Int> island = Reachable(cell, other => dirt.Contains(other) && !lava.Contains(other));
+                    Assert.That(island.Count, Is.GreaterThanOrEqualTo(12), $"seed {seed}: an island of earth at {cell}");
+                }
+            }
+
+            Assert.That(InlandCornerProblems(layout, "Lava", "Gravel"), Is.Empty, $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// For every Lava Fields seed the trail is one 4-connected piece that leaves the road and ends a cell of earth from
+    /// the lava (a trail cell two steps from it, none closer); the campsite has one campfire, further from the lava than
+    /// its radius plus a cell, and no walk-through prop but its seats within its radius less a cell and a half of it.
+    /// </summary>
+    [Test]
+    public void LavaFieldsLayouts_RunAnUnbrokenTrailToTheLava_AndKeepTheCampsiteOffIt()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = lavaFields.Generate(seed);
+            HashSet<Vector3Int> lava = Cells(layout, "Lava");
+            HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
+            HashSet<Vector3Int> stone = Cells(layout, "Stone");
+            Vector3Int any = default;
+            bool leavesTheRoad = false;
+            bool reachesTheLava = false;
+            foreach (Vector3Int cell in gravel)
+            {
+                any = cell;
+                foreach (Vector3Int side in Sides)
+                {
+                    leavesTheRoad |= stone.Contains(cell + side);
+                }
+
+                foreach (Vector3Int near in CellsWithin(cell, 2))
+                {
+                    reachesTheLava |= lava.Contains(near);
+                }
+            }
+
+            Assert.That(leavesTheRoad, Is.True, $"seed {seed}: the trail leaves the road");
+            Assert.That(reachesTheLava, Is.True, $"seed {seed}: the trail ends near the lava");
+            Assert.That(Reachable(any, gravel.Contains).Count, Is.EqualTo(gravel.Count), $"seed {seed}: the trail is one piece");
+            int campfires = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (prop.Prefab != lavaFields.CampfirePrefab)
+                {
+                    continue;
+                }
+
+                campfires++;
+                Assert.That(NearestDistance(prop.Cell, lava), Is.GreaterThan(lavaFields.CampsiteRadius + 1f), $"seed {seed}: the campfire near the lava");
+                foreach (AreaLayout.Prop other in layout.Props)
+                {
+                    if (other.Prefab != lavaFields.CampfirePrefab && !ListContains(lavaFields.CampsiteSeats, other.Prefab) && !PropGridSnapping.TryGetFootprint(other.Prefab, out _))
+                    {
+                        Assert.That(Vector3Int.Distance(other.Cell, prop.Cell), Is.GreaterThan(lavaFields.CampsiteRadius - 1.5f), $"seed {seed}: {other.Prefab.name} at {other.Cell} on the campsite");
+                    }
+                }
+            }
+
+            Assert.That(campfires, Is.EqualTo(1), $"seed {seed}: campfires");
+        }
+    }
+
+    /// <summary>
+    /// For every Lava Fields seed blocking footprints cover dirt neither on the lava nor beside it, apart; walk-through
+    /// props stand on dirt off the lava and outside every footprint; the spawn is on the road with no footprint within
+    /// its clear radius; every mob stands two steps or more from the lava, far enough from the spawn and from each
+    /// other; and the spawn can walk to every mob and every trail cell around the footprints and the lava, so the road
+    /// crosses the river.
+    /// </summary>
+    [Test]
+    public void LavaFieldsLayouts_KeepPropsOffTheLava_AndLetTheSpawnReachTheTrailAndEveryMob()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = lavaFields.Generate(seed);
+            HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+            HashSet<Vector3Int> lava = Cells(layout, "Lava");
+            HashSet<Vector3Int> nearLava = new();
+            foreach (Vector3Int cell in lava)
+            {
+                nearLava.UnionWith(CellsWithin(cell, 1));
+            }
+
+            HashSet<Vector3Int> footprints = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    Assert.That(dirt.Contains(prop.Cell) && !lava.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                    continue;
+                }
+
+                foreach (Vector3Int cell in CoveredCells(prop, footprint))
+                {
+                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: footprints overlap at {cell}");
+                    Assert.That(dirt.Contains(cell) && !nearLava.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {cell} on or beside the lava");
+                }
+            }
+
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
+                {
+                    Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                }
+            }
+
+            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            foreach (Vector3Int cell in footprints)
+            {
+                Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(lavaFields.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
+            }
+
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => dirt.Contains(cell) && !footprints.Contains(cell) && !lava.Contains(cell));
+            Assert.That(layout.Mobs.Count, Is.EqualTo(lavaFields.MobCount), $"seed {seed}: mobs");
+            for (int i = 0; i < layout.Mobs.Count; i++)
+            {
+                AreaLayout.Mob mob = layout.Mobs[i];
+                Assert.That(nearLava.Contains(mob.Cell), Is.False, $"seed {seed}: a mob at {mob.Cell} on or beside the lava");
+                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} unreachable");
+                Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(lavaFields.MobDistanceFromSpawn), $"seed {seed}");
+                for (int j = i + 1; j < layout.Mobs.Count; j++)
+                {
+                    Assert.That(Vector3Int.Distance(mob.Cell, layout.Mobs[j].Cell), Is.GreaterThanOrEqualTo(lavaFields.MobSpacing), $"seed {seed}");
+                }
+            }
+
+            foreach (Vector3Int cell in Cells(layout, "Gravel"))
+            {
+                Assert.That(reachable.Contains(cell), Is.True, $"seed {seed}: the trail at {cell} unreachable");
+            }
+
+            foreach (Vector3Int cell in Cells(layout, "Stone"))
+            {
+                Assert.That(reachable.Contains(cell) || footprints.Contains(cell), Is.True, $"seed {seed}: the road at {cell} unreachable");
+            }
+        }
+    }
+
+    /// <summary>
+    /// On the layers the writer sets up for the Lava Fields, lava reaches navigation through its tilemap's terrain source
+    /// at its draw order's priority, the last, and the default movement profile's rule: every lava cell is blocked,
+    /// stepping onto open earth costs grass's 10, and every mob and every trail cell is joined to the spawn.
+    /// </summary>
+    [Test]
+    public void TheWriter_BlocksTheLavaFieldsLava()
+    {
+        Grid grid = CreateAreaWithDualGridGrass(lavaFields);
+        Track(new GameObject(PropsRootName));
+        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
+        AreaLayout layout = lavaFields.Generate(1);
+        Assert.That(AreaLayoutWriter.Write(grid, lavaFields, layout), Is.True);
+        NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
+        navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
+        TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
+        navigation.BuildGrid();
+
+        NavigationTerrainSource2D source = grid.transform.Find(Layer(lavaFields, "Lava").TilemapName).GetComponent<NavigationTerrainSource2D>();
+        Assert.That(source.TerrainType, Is.SameAs(ProjectTerrainType("Lava")));
+        Assert.That(source.Priority, Is.EqualTo(layout.TerrainLayerCount - 1));
+        HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
+        HashSet<Vector3Int> lava = Cells(layout, "Lava");
+        HashSet<Vector3Int> paths = PathCells(layout);
+        HashSet<Vector3Int> blocked = new(lava);
+        blocked.UnionWith(Footprints(layout));
+        foreach (Vector3Int cell in lava)
+        {
+            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"lava at {cell}");
+        }
+
+        int steps = 0;
+        foreach (Vector3Int cell in dirt)
+        {
+            bool open = !paths.Contains(cell) && !lava.Contains(cell) && !paths.Contains(cell + Vector3Int.down);
+            foreach (Vector3Int near in CellsWithin(cell, 1))
+            {
+                open &= !blocked.Contains(near) && dirt.Contains(near);
+            }
+
+            foreach (Vector3Int near in CellsWithin(cell + Vector3Int.down, 1))
+            {
+                open &= !blocked.Contains(near) && dirt.Contains(near);
+            }
+
+            if (open && steps < 200)
+            {
+                Assert.That(navigation.MovementCost(cell + Vector3Int.down, cell, profile), Is.EqualTo(10), $"stepping onto the earth at {cell}");
+                steps++;
+            }
+        }
+
+        Assert.That(steps, Is.GreaterThan(50));
+        foreach (AreaLayout.Mob mob in layout.Mobs)
+        {
+            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), Is.True, $"mob at {mob.Cell}");
+        }
+
+        foreach (Vector3Int cell in Cells(layout, "Gravel"))
+        {
+            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the trail at {cell}");
+        }
+    }
+
+    /// <summary>
     /// The corners of <paramref name="layout"/> around the cells of <paramref name="materials"/> where a third look shows
     /// under a rounded corner: at each cell corner with such a cell among its four cells, a layer filling one of the four
     /// (with the layers above it, as the renderer counts them) is rounded off there, and the next layer down fills that
@@ -1718,6 +1996,7 @@ public class AreaGenerationTests
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
     [TestCase(CoastGeneratorPath)]
+    [TestCase(LavaFieldsGeneratorPath)]
     public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1750,20 +2029,22 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// For each generator, writing a layout into a scene whose ground layer (grass, or the Snowfield's snow) is still a
+    /// For each generator, writing a layout into a scene whose ground layer (grass, the Snowfield's snow or the Lava
+    /// Fields' dirt) is still a
     /// dual-grid layer sets every layer
     /// up as a plain data tilemap at its place under the grid (no module, render tilemap or Tilemap Renderer left),
     /// holding the layer's tile in exactly the layout's cells, with a navigation source of its terrain type whose
     /// priority is its index; the grid's terrain renderer draws the layers in that order with their materials and the
     /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
     /// points are replaced and the start spawn point moves; the navigation grid then blocks exactly the footprint
-    /// cells, the water and the ocean, and every mob can walk to the spawn.
+    /// cells, the water, the ocean and lava, and every mob can walk to the spawn.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
     [TestCase(CoastGeneratorPath)]
+    [TestCase(LavaFieldsGeneratorPath)]
     public void TheWriter_SetsUpPlainLayersDrawnByTheRenderer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -1846,6 +2127,7 @@ public class AreaGenerationTests
         HashSet<Vector3Int> footprints = Footprints(layout);
         HashSet<Vector3Int> water = new(CellsOrNone(layout, "Water"));
         water.UnionWith(CellsOrNone(layout, "Ocean"));
+        water.UnionWith(CellsOrNone(layout, "Lava"));
         water.ExceptWith(CellsOrNone(layout, "Planks"));
         foreach (Vector3Int cell in layout.TerrainCells(0))
         {
@@ -2210,6 +2492,7 @@ public class AreaGenerationTests
     [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Meadow", "TallGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
     [TestCase(SnowfieldGeneratorPath, "Snow", "Dirt", "Ice", "Gravel", "Stone", "Water")]
     [TestCase(CoastGeneratorPath, "Grass", "Dirt", "Sand", "Gravel", "Stone", "Ocean")]
+    [TestCase(LavaFieldsGeneratorPath, "Dirt", "Gravel", "Stone", "Lava")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -2431,6 +2714,7 @@ public class AreaGenerationTests
     [TestCase(LakesideGeneratorPath)]
     [TestCase(SnowfieldGeneratorPath)]
     [TestCase(CoastGeneratorPath)]
+    [TestCase(LavaFieldsGeneratorPath)]
     public void TheDetailStream_LeavesTheRestOfTheLayoutWhereItWas(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
@@ -2457,6 +2741,11 @@ public class AreaGenerationTests
         else if (target is CoastGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+        }
+        else if (target is LavaFieldsGenerator)
+        {
+            settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+            added = new string[0];
         }
         else
         {
@@ -2515,6 +2804,13 @@ public class AreaGenerationTests
                 else if (target is CoastGenerator coastal && prop.Prefab == coastal.CampfirePrefab)
                 {
                     foreach (Vector3Int cell in CellsWithin(prop.Cell, Mathf.CeilToInt(coastal.CampsiteRadius) + 3))
+                    {
+                        campsite.Add(cell);
+                    }
+                }
+                else if (target is LavaFieldsGenerator scorched && prop.Prefab == scorched.CampfirePrefab)
+                {
+                    foreach (Vector3Int cell in CellsWithin(prop.Cell, Mathf.CeilToInt(scorched.CampsiteRadius) + 3))
                     {
                         campsite.Add(cell);
                     }

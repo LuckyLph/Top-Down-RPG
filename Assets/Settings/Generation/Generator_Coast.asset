@@ -39,11 +39,6 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 057e8e3d182b80448b94de65bf9a2108, type: 2}
     terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
     material: {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
-  shallows:
-    tilemapName: ShallowsTilemap
-    tile: {fileID: 11400000, guid: 8bbef410cb323b1439e5b021cd1444e3, type: 2}
-    terrainType: {fileID: 11400000, guid: a6f395241d35f9a48a946ebfa8fd82ba, type: 2}
-    material: {fileID: 11400000, guid: 564b4a55de051dc418fc12f8853293ee, type: 2}
   ocean:
     tilemapName: OceanTilemap
     tile: {fileID: 11400000, guid: f28252cb88ef66a438097b13e4da132a, type: 2}
@@ -54,7 +49,6 @@ MonoBehaviour:
   edgeWobble: 0.05
   oceanDepth: 9
   oceanWobble: 2
-  shallowsWidth: {x: 2, y: 4}
   beachWidth: {x: 4, y: 7}
   coastWavelength: {x: 12, y: 36}
   roadMargin: 5

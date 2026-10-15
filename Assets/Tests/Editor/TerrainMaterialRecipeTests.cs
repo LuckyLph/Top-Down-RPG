@@ -40,7 +40,7 @@ public class TerrainMaterialRecipeTests
     private static readonly Type[] RecipeTypes =
     {
         typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe), typeof(WaterCausticsRecipe),
-        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe), typeof(PlankBoardsRecipe)
+        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe), typeof(PlankBoardsRecipe), typeof(OceanWavesRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -543,7 +543,7 @@ public class TerrainMaterialRecipeTests
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
-                if (recipeType != typeof(WaterCausticsRecipe) && recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe))
+                if (recipeType != typeof(WaterCausticsRecipe) && recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe) && recipeType != typeof(OceanWavesRecipe))
                 {
                     Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
@@ -1874,6 +1874,69 @@ public class TerrainMaterialRecipeTests
         {
             Assert.That(SameColour(pixel, mortar), Is.False, "No mortar between two pixels.");
         }
+    }
+
+    /// <summary>
+    /// The ocean's crests travel down the texture: its albedo holds only its three tones, the textures bring the crest
+    /// colour as their glint colour, and a fair share of the pixels carry glint phases, which, between a pixel and the
+    /// one above it on the same crest family, grow by one period over the crest spacing, so the band of pixels lit at a
+    /// time moves down by the spacing each glint period, the same way in every column. Sparkles are few.
+    /// </summary>
+    [Test]
+    public void OceanWaves_CrestsTravelDownTheTexture()
+    {
+        OceanWavesRecipe recipe = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 water = settings.FindProperty("water").colorValue;
+        Color32 darker = settings.FindProperty("darker").colorValue;
+        Color32 lighter = settings.FindProperty("lighter").colorValue;
+        Color32 crest = settings.FindProperty("crest").colorValue;
+        int crestsAcross = settings.FindProperty("crestsAcross").intValue;
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        double step = (double)crestsAcross / size;
+        Assert.That(textures.GlintColour.HasValue && SameColour(textures.GlintColour.Value, crest), Is.True);
+        int crestPixels = 0;
+        int sparkles = 0;
+        int pairs = 0;
+        int travelling = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                Color32 colour = textures.Albedo[i];
+                Assert.That(SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is none of the tones");
+                int code = textures.Height[i].b;
+                if (code >= 128)
+                {
+                    sparkles++;
+                    continue;
+                }
+
+                if (code == 0)
+                {
+                    continue;
+                }
+
+                crestPixels++;
+                int above = textures.Height[TerrainArt.Wrap(y + 1, size) * size + x].b;
+                if (above == 0 || above >= 128)
+                {
+                    continue;
+                }
+
+                pairs++;
+                double grown = TerrainArt.Wrap((above - code) / 127.0, 1);
+                travelling += Math.Abs(grown - step) <= 1.5 / 127.0 ? 1 : 0;
+            }
+        }
+
+        Assert.That(crestPixels, Is.InRange(size * size / 5, size * size * 4 / 5), "crests cover a fair share of the water");
+        Assert.That(travelling, Is.GreaterThan(pairs * 9 / 10), "a crest's phase grows by the spacing up the texture");
+        Assert.That(sparkles, Is.LessThan(size * size / 100));
     }
 
     /// <summary>

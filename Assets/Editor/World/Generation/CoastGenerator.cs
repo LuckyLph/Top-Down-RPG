@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Lays out a coast: grass ringed by trees, with a sandy beach along its northern edge giving onto the sea, a band of
-/// shallows along the beach, then the ocean out to the map's edge. A stone road crosses the south from west to east, a
+/// Lays out a coast: grass ringed by trees, with a sandy beach along its northern edge giving onto the ocean, which
+/// runs out to the map's edge. A stone road crosses the south from west to east, a
 /// gravel trail runs from it to the beach, and a campsite (a campfire and seats on a patch of trodden dirt) stands on
 /// the open grass. The party spawns on the road. Blocking props stay off the beach, the sea, the paths, a clearance
 /// beside them and the ground around the spawn; the beach, the trail and every mob can be walked to from the spawn, and
@@ -49,9 +49,7 @@ public sealed class CoastGenerator : AreaGenerator
     [SerializeField] private TerrainLayer sand = new();
     [SerializeField] private TerrainLayer gravel = new();
     [SerializeField] private TerrainLayer stone = new();
-    [Tooltip("The band of shallow water along the beach, waded at the shallows' cost.")]
-    [SerializeField] private TerrainLayer shallows = new();
-    [Tooltip("The sea beyond the shallows, out to the map's edge, drawn over everything under it so it decides its cells: the ocean cannot be walked.")]
+    [Tooltip("The sea beyond the beach, out to the map's edge, drawn over everything under it so it decides its cells: the ocean cannot be walked.")]
     [SerializeField] private TerrainLayer ocean = new();
 
     [Header("Shape")]
@@ -65,13 +63,11 @@ public sealed class CoastGenerator : AreaGenerator
     [Header("Coast")]
     [Tooltip("Rows of ocean below the area's nominal northern edge, on average; the outline's wobble adds to them or takes from them.")]
     [SerializeField, Min(2f)] private float oceanDepth = 9f;
-    [Tooltip("How far the shallows' outer edge swings north and south of the ocean depth, in rows.")]
+    [Tooltip("How far the ocean's edge swings north and south of the ocean depth, in rows.")]
     [SerializeField, Min(0f)] private float oceanWobble = 2f;
-    [Tooltip("Smallest and largest width in rows of the band of shallows; at least one row, so the ocean never meets the sand.")]
-    [SerializeField] private Vector2 shallowsWidth = new(2f, 4f);
     [Tooltip("Smallest and largest width in rows of the beach; at least two rows.")]
     [SerializeField] private Vector2 beachWidth = new(4f, 7f);
-    [Tooltip("Shortest and longest wave, in cells, of the smooth noise that swings the bands' edges along the coast.")]
+    [Tooltip("Shortest and longest wave, in cells, of the smooth noise that swings the ocean's and the beach's edges along the coast.")]
     [SerializeField] private Vector2 coastWavelength = new(12f, 36f);
     [Tooltip("Smallest distance in cells from the beach or the sea to the road; a road any closer gives a warning.")]
     [SerializeField, Min(1)] private int roadMargin = 5;
@@ -122,7 +118,6 @@ public sealed class CoastGenerator : AreaGenerator
     [SerializeField, Min(0f)] private float mobSpacing = 10f;
 
     public int BorderDepth => borderDepth;
-    public Vector2 ShallowsWidth => shallowsWidth;
     public Vector2 BeachWidth => beachWidth;
     public int RoadMargin => roadMargin;
     public int PathClearance => pathClearance;
@@ -136,11 +131,11 @@ public sealed class CoastGenerator : AreaGenerator
     public float MobSpacing => mobSpacing;
 
     /// <summary>
-    /// Grass, dirt, sand, gravel, stone, shallows, then the ocean, in the style's layer order: each layer is drawn over
-    /// the ones before it and decides its cells, so the beach lies on the grass, the trail runs onto the beach, the
-    /// shallows lie over the sand and the ocean over the shallows.
+    /// Grass, dirt, sand, gravel, stone, then the ocean, in the style's layer order: each layer is drawn over the ones
+    /// before it and decides its cells, so the beach lies on the grass, the trail runs onto the beach and the ocean lies
+    /// over the sand.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, sand, gravel, stone, shallows, ocean };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, sand, gravel, stone, ocean };
 
     /// <summary>
     /// Lays out a coast from <paramref name="layoutSeed"/>.
@@ -152,14 +147,13 @@ public sealed class CoastGenerator : AreaGenerator
 
     /// <summary>
     /// The state of one generation: the shared builder with the cells laid so far, the road's samples and how many
-    /// steps each ground cell lies from the coast (the beach and the sea) and from the sea alone.
+    /// steps each ground cell lies from the coast (the beach and the ocean) and from the ocean alone.
     /// </summary>
     private sealed class Run
     {
         private readonly CoastGenerator settings;
         private readonly AreaLayoutBuilder builder;
         private readonly HashSet<Vector3Int> sand;
-        private readonly HashSet<Vector3Int> shallows;
         private readonly HashSet<Vector3Int> ocean;
         private readonly HashSet<Vector3Int> dirt;
         private readonly List<Vector2> road = new();
@@ -176,7 +170,6 @@ public sealed class CoastGenerator : AreaGenerator
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
             sand = builder.Layout.TerrainCells(generator.sand);
-            shallows = builder.Layout.TerrainCells(generator.shallows);
             ocean = builder.Layout.TerrainCells(generator.ocean);
             dirt = builder.Layout.TerrainCells(generator.dirt);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
@@ -216,37 +209,28 @@ public sealed class CoastGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Lays the coast's bands across the north of the area, each edge a smooth line swinging north and south along
-        /// the coast: the ocean from the map's edge down to the ocean depth below the area's nominal northern edge, then
-        /// the shallows and then the beach, each between its two widths. Where the lines step past each other between
-        /// two columns, the shallows take any cell beside the ocean and the beach any grass cell beside the sea (8
-        /// neighbours), so the ocean meets only the shallows and the shallows only the beach, and no third look shows
-        /// under a rounded corner; a piece of ocean cut off from the rest (4 neighbours), where the outline steps at a
-        /// corner of the map, is shallows. The grass goes on under all three.
+        /// Lays the coast across the north of the area, each edge a smooth line swinging north and south along the
+        /// coast: the ocean from the map's edge down to the ocean depth below the area's nominal northern edge, then the
+        /// beach, between its two widths. Where the lines step past each other between two columns, the beach takes any
+        /// grass cell beside the ocean (8 neighbours), so the ocean meets only the beach and no third look shows under a
+        /// rounded corner; a piece of ocean cut off from the rest (4 neighbours), where the outline steps at a corner of
+        /// the map, is beach. The grass goes on under both.
         /// </summary>
         private void LayCoast()
         {
             Func<float, float> oceanSwing = CoastNoise();
-            Func<float, float> shallowsSwing = CoastNoise();
             Func<float, float> beachSwing = CoastNoise();
-            float shallowsLow = Mathf.Max(1f, settings.shallowsWidth.x);
-            float shallowsHigh = Mathf.Max(shallowsLow, settings.shallowsWidth.y);
             float beachLow = Mathf.Max(2f, settings.beachWidth.x);
             float beachHigh = Mathf.Max(beachLow, settings.beachWidth.y);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
                 float x = cell.x + 0.5f;
                 float oceanEdge = halfHeight - settings.oceanDepth + settings.oceanWobble * oceanSwing(x);
-                float shallowsEdge = oceanEdge - Mathf.Lerp(shallowsLow, shallowsHigh, 0.5f + 0.5f * shallowsSwing(x));
-                float beachEdge = shallowsEdge - Mathf.Lerp(beachLow, beachHigh, 0.5f + 0.5f * beachSwing(x));
+                float beachEdge = oceanEdge - Mathf.Lerp(beachLow, beachHigh, 0.5f + 0.5f * beachSwing(x));
                 float y = cell.y + 0.5f;
                 if (y >= oceanEdge)
                 {
                     ocean.Add(cell);
-                }
-                else if (y >= shallowsEdge)
-                {
-                    shallows.Add(cell);
                 }
                 else if (y >= beachEdge)
                 {
@@ -274,25 +258,14 @@ public sealed class CoastGenerator : AreaGenerator
                 if (ocean.Contains(cell) && !largest.Contains(cell))
                 {
                     ocean.Remove(cell);
-                    shallows.Add(cell);
+                    sand.Add(cell);
                 }
             }
 
-            List<Vector3Int> wading = new();
             List<Vector3Int> beach = new();
             foreach (Vector3Int cell in builder.OrderedGround)
             {
-                if (!ocean.Contains(cell) && !shallows.Contains(cell) && Touches(cell, ocean.Contains))
-                {
-                    wading.Add(cell);
-                }
-            }
-
-            shallows.UnionWith(wading);
-            sand.ExceptWith(wading);
-            foreach (Vector3Int cell in builder.OrderedGround)
-            {
-                if (!ocean.Contains(cell) && !shallows.Contains(cell) && !sand.Contains(cell) && Touches(cell, c => ocean.Contains(c) || shallows.Contains(c)))
+                if (!ocean.Contains(cell) && !sand.Contains(cell) && Touches(cell, ocean.Contains))
                 {
                     beach.Add(cell);
                 }
@@ -354,12 +327,12 @@ public sealed class CoastGenerator : AreaGenerator
 
         /// <summary>
         /// Records for every ground cell how many steps (8 neighbours) it lies from the nearest cell of the coast (the
-        /// beach, the shallows or the ocean) and from the nearest cell of the sea (the shallows or the ocean).
+        /// beach or the ocean) and from the nearest cell of the ocean.
         /// </summary>
         private void MeasureDistances()
         {
-            Measure(coastDistance, cell => sand.Contains(cell) || shallows.Contains(cell) || ocean.Contains(cell));
-            Measure(seaDistance, cell => shallows.Contains(cell) || ocean.Contains(cell));
+            Measure(coastDistance, cell => sand.Contains(cell) || ocean.Contains(cell));
+            Measure(seaDistance, ocean.Contains);
         }
 
         /// <summary>
@@ -445,8 +418,8 @@ public sealed class CoastGenerator : AreaGenerator
         /// meets the road and the beach it steps nowhere: a step there would leave the road's or the beach's edge
         /// running on under the trail's rounded corner (Docs/TerrainTypes.md, Phase 3's Corners note). It is painted
         /// over the grass and the beach, keeping every trail cell that gap from the sea, so the trail ends on the sand
-        /// with a row of beach between it and the water, since gravel beside the shallows would run on under them and
-        /// show under their corners too. Warns when no beach cell is that far from the sea.
+        /// with a row of beach between it and the water, since gravel beside the ocean would run on under it and show
+        /// under its corners too. Warns when no beach cell is that far from the sea.
         /// </summary>
         private void LayTrail()
         {
@@ -598,8 +571,7 @@ public sealed class CoastGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// The cells 4-connected to the spawn around the blocking footprints and the ocean, which cannot be walked; the
-        /// shallows can be waded.
+        /// The cells 4-connected to the spawn around the blocking footprints and the ocean, which cannot be walked.
         /// </summary>
         private HashSet<Vector3Int> Reachable()
         {
@@ -607,8 +579,7 @@ public sealed class CoastGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Spreads the mobs over the land (off the shallows and the ocean) inside the border band that the spawn can
-        /// walk to, away from props, at least the configured distance from the spawn and from each other. Warns when
+        /// Spreads the mobs over the land (off the ocean) inside the border band that the spawn can walk to, away from props, at least the configured distance from the spawn and from each other. Warns when
         /// fewer fit than asked for.
         /// </summary>
         private void PlaceMobs(HashSet<Vector3Int> reachable)
@@ -626,7 +597,7 @@ public sealed class CoastGenerator : AreaGenerator
             }
 
             List<Vector3Int> candidates = builder.MobCells(reachable, settings.borderDepth, settings.mobDistanceFromSpawn);
-            candidates.RemoveAll(cell => SeaDistance(cell) == 0);
+            candidates.RemoveAll(ocean.Contains);
             int placed = builder.PlaceMobs(settings.mobPrefab, wanted, candidates, settings.mobSpacing, new List<Vector3Int>());
             if (placed < wanted)
             {
@@ -709,8 +680,8 @@ public sealed class CoastGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// How many steps (8 neighbours) <paramref name="cell"/> lies from the shallows or the ocean: 0 on them, and
-        /// int.MaxValue off the ground.
+        /// How many steps (8 neighbours) <paramref name="cell"/> lies from the ocean: 0 on it, and int.MaxValue off the
+        /// ground.
         /// </summary>
         private int SeaDistance(Vector3Int cell)
         {

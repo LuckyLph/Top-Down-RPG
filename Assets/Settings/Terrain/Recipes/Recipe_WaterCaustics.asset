@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab0a1c1470f60c146aee1e36c5bd0155, type: 3}
   m_Name: Recipe_WaterCaustics
   m_EditorClassIdentifier: TopDownRPG.Editor::WaterCausticsRecipe
-  material: {fileID: 11400000, guid: bfa1843d3bc7ec14ab43689476b49d45, type: 2}
-  seed: 20261029
-  repeatCells: 16
+  material: {fileID: 0}
+  seed: 20261018
+  repeatCells: 8
   heightWaves:
   - x: 2
     y: 0
@@ -54,70 +54,70 @@ MonoBehaviour:
     amplitude: 0.5
   water:
     serializedVersion: 2
-    rgba: 4287516700
+    rgba: 4288702504
   deep:
     serializedVersion: 2
-    rgba: 4287516700
+    rgba: 4288702504
   depthWaves:
-  - x: 8
-    y: 4
+  - x: 4
+    y: 2
     amplitude: 1
-  - x: 5
-    y: -8
+  - x: 2
+    y: -4
     amplitude: 0.9
-  - x: 12
-    y: 7
+  - x: 6
+    y: 4
     amplitude: 0.6
-  - x: -7
-    y: 11
+  - x: -4
+    y: 6
     amplitude: 0.5
-  deepShare: 0.4
+  deepShare: 0.434
   cellsAlongXPerCell: 1
   cellsAlongYPerCell: 2.5
-  flatten: 4
+  flatten: 3
   jitter: 0.797
   breathe: 1
   warpWaves:
-  - x: 17
-    y: 5
+  - x: 8
+    y: 3
     amplitude: 0.8
   verticalWarpWaves:
-  - x: 21
-    y: 3
+  - x: 10
+    y: 2
     amplitude: 2
-  - x: 11
-    y: 8
+  - x: 6
+    y: 4
     amplitude: 0.8
   lineWidth: 0.667
   widthWaves:
-  - x: 16
-    y: 27
+  - x: 8
+    y: 14
     amplitude: 1
-  - x: 35
-    y: -12
+  - x: 18
+    y: -6
     amplitude: 0.7
-  - x: -23
-    y: 19
+  - x: -12
+    y: 10
     amplitude: 0.5
   widthVariation: 0.464
   dropChance: 0.45
   deepDropChance: 0.7
-  uprightDropChance: 1
+  uprightDropChance: 0.9
   junctionReach: 0
   junctionGap: 3
   minPiece: 5
   net:
     serializedVersion: 2
-    rgba: 4290807362
+    rgba: 4291335244
   haloWidth: 2
   halo:
     serializedVersion: 2
-    rgba: 4288174626
+    rgba: 4289755188
   knotReach: 1
   knotShare: 0.2
   knot:
     serializedVersion: 2
-    rgba: 4293444736
+    rgba: 4293711510
   sparkleShare: 0.12
   sparkleLength: 5
   sparkleStep: 0.0938

@@ -14,10 +14,13 @@ using Object = UnityEngine.Object;
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its
 /// chip's centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone
 /// pixel's alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth
-/// with one value per chip or stone, and glint and sparkle phases only in the water recipes and sway weights only in
+/// with one value per chip or stone, and glint and sparkle phases only in the water and lava recipes and sway weights
+/// only in
 /// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column, draw
 /// flowers only when asked, in boxes and in drifts of one colour, and keep that contract with the project materials'
-/// sway; the ocean's crests travel down the texture; and pond water's strokes glint from their middle out while its
+/// sway; the ocean's crests travel down the texture; lava's bubbles swell from their middle with a dark rim, each of
+/// its hot patches is one orange of its own within the patches' shift, and the value noise it is drawn from runs on
+/// across the texture's edges; and pond water's strokes glint from their middle out while its
 /// sparkles sit on plain water, and it shows a bed with pebbles only when asked (shallows), without strokes writes
 /// only sparkle phases, and with shines draws spots clear of its strokes and with a slant its strokes diagonally
 /// (ice); tufts point up; sand's
@@ -39,7 +42,7 @@ public class TerrainMaterialRecipeTests
     private static readonly Type[] RecipeTypes =
     {
         typeof(GrassTuftsRecipe), typeof(GravelChipsRecipe), typeof(StoneCobblesRecipe), typeof(SandRipplesRecipe), typeof(MudPuddlesRecipe),
-        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe), typeof(PlankBoardsRecipe), typeof(OceanWavesRecipe)
+        typeof(WaterHighlightsRecipe), typeof(WeedsRecipe), typeof(PlankBoardsRecipe), typeof(OceanWavesRecipe), typeof(LavaBubblesRecipe)
     };
 
     private readonly List<Object> created = new();
@@ -542,7 +545,7 @@ public class TerrainMaterialRecipeTests
                     Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
-                if (recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe) && recipeType != typeof(OceanWavesRecipe))
+                if (recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe) && recipeType != typeof(OceanWavesRecipe) && recipeType != typeof(LavaBubblesRecipe))
                 {
                     Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
                 }
@@ -1728,6 +1731,227 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
+    /// Lava's bubbles swell from their middle: each bubble (a group of pixels with phases, apart from every other) has
+    /// its latest phase at its middle and phases that fall behind with the distance from it, by the swell delay per
+    /// pixel, so it swells from a point; a large bubble has a rim of sparkle phases, on the same timing, along its
+    /// outside only; the textures bring the bubble and rim colours as the glint and sparkle colours, and bubbles leave
+    /// the albedo as it is.
+    /// </summary>
+    [Test]
+    public void LavaBubbles_SwellFromTheirMiddle_WithADarkRim()
+    {
+        LavaBubblesRecipe recipe = (LavaBubblesRecipe)CreateRecipe(typeof(LavaBubblesRecipe));
+        SerializedObject settings = new(recipe);
+        double delay = settings.FindProperty("swellDelay").floatValue;
+        Color32 bubbleColour = settings.FindProperty("bubble").colorValue;
+        Color32 rimColour = settings.FindProperty("bubbleRim").colorValue;
+        TerrainTextures textures = recipe.Generate(Seed);
+        settings.FindProperty("bubblesPerCell").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTextures still = recipe.Generate(Seed);
+
+        Assert.That(SameColour(textures.GlintColour.Value, bubbleColour), Is.True);
+        Assert.That(SameColour(textures.SparkleColour.Value, rimColour), Is.True);
+        Assert.That(Differences(textures.Albedo, still.Albedo), Is.Zero, "bubbles leave the albedo as it is");
+        int size = textures.Size;
+        int[] bubble = new int[size * size];
+        for (int i = 0; i < bubble.Length; i++)
+        {
+            bubble[i] = -1;
+        }
+
+        int bubbles = 0;
+        int rimmed = 0;
+        for (int start = 0; start < bubble.Length; start++)
+        {
+            if (textures.Height[start].b == 0 || bubble[start] >= 0)
+            {
+                continue;
+            }
+
+            List<int> pixels = Group(textures.Height, size, start, bubble, bubbles);
+            double sx = 0.0;
+            double sy = 0.0;
+            int ox = pixels[0] % size;
+            int oy = pixels[0] / size;
+            foreach (int i in pixels)
+            {
+                sx += TerrainArt.WrapDelta(i % size - ox, size);
+                sy += TerrainArt.WrapDelta(i / size - oy, size);
+            }
+
+            double cx = ox + sx / pixels.Count;
+            double cy = oy + sy / pixels.Count;
+            int middle = pixels[0];
+            foreach (int i in pixels)
+            {
+                if (Distance(i, cx, cy, size) < Distance(middle, cx, cy, size))
+                {
+                    middle = i;
+                }
+            }
+
+            double middlePhase = Phase(textures.Height[middle].b);
+            bool hasRim = false;
+            foreach (int i in pixels)
+            {
+                int code = textures.Height[i].b;
+                double behind = TerrainArt.Wrap(middlePhase - Phase(code), 1);
+                double expected = delay * (Distance(i, cx, cy, size) - Distance(middle, cx, cy, size));
+                Assert.That(behind, Is.EqualTo(expected).Within(delay * 1.5 + 2.0 / 127.0), $"bubble {bubbles} pixel ({i % size}, {i / size}) falls behind with its distance");
+                if (code < 128)
+                {
+                    continue;
+                }
+
+                hasRim = true;
+                bool outside = false;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        outside |= textures.Height[TerrainArt.Wrap(i / size + dy, size) * size + TerrainArt.Wrap(i % size + dx, size)].b == 0;
+                    }
+                }
+
+                Assert.That(outside, Is.True, $"bubble {bubbles}: rim pixel ({i % size}, {i / size}) lies on the outside");
+            }
+
+            if (pixels.Count > 16)
+            {
+                Assert.That(hasRim, Is.True, $"bubble {bubbles} of {pixels.Count} px has a rim");
+            }
+
+            rimmed += hasRim ? 1 : 0;
+            bubbles++;
+        }
+
+        Assert.That(bubbles, Is.GreaterThan(2));
+        Assert.That(rimmed, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// Each of lava's hot patches is one orange of its own: off the reds and the specks, every group of touching pixels
+    /// holds at most two colours, its orange and its core, each within the patch shift of the recipe's orange or core in
+    /// hue and still orange; the patches do not all share one orange, and they cover about their share of the surface.
+    /// </summary>
+    [Test]
+    public void LavaPatches_AreEachOneOrangeOfTheirOwn()
+    {
+        LavaBubblesRecipe recipe = (LavaBubblesRecipe)CreateRecipe(typeof(LavaBubblesRecipe));
+        SerializedObject settings = new(recipe);
+        Color32 red = settings.FindProperty("red").colorValue;
+        Color32 darkerRed = settings.FindProperty("darkerRed").colorValue;
+        Color32 speck = settings.FindProperty("speck").colorValue;
+        Color.RGBToHSV(settings.FindProperty("orange").colorValue, out float orangeHue, out _, out _);
+        Color.RGBToHSV(settings.FindProperty("core").colorValue, out float coreHue, out _, out _);
+        float hueRange = settings.FindProperty("hueRange").floatValue;
+        float hotShare = settings.FindProperty("hotShare").floatValue;
+
+        TerrainTextures textures = recipe.Generate(Seed);
+
+        int size = textures.Size;
+        Color32[] albedo = textures.Albedo;
+        int[] patch = new int[size * size];
+        for (int i = 0; i < patch.Length; i++)
+        {
+            patch[i] = SameColour(albedo[i], red) || SameColour(albedo[i], darkerRed) || SameColour(albedo[i], speck) ? -2 : -1;
+        }
+
+        int patches = 0;
+        int hot = 0;
+        HashSet<int> oranges = new();
+        for (int start = 0; start < patch.Length; start++)
+        {
+            if (patch[start] != -1)
+            {
+                continue;
+            }
+
+            HashSet<int> colours = new();
+            Stack<int> open = new();
+            patch[start] = patches;
+            open.Push(start);
+            while (open.Count > 0)
+            {
+                int i = open.Pop();
+                hot++;
+                colours.Add(albedo[i].r << 16 | albedo[i].g << 8 | albedo[i].b);
+                foreach (int n in Neighbours(i, size))
+                {
+                    if (patch[n] == -1)
+                    {
+                        patch[n] = patches;
+                        open.Push(n);
+                    }
+                }
+            }
+
+            Assert.That(colours.Count, Is.LessThanOrEqualTo(2), $"patch {patches} holds its orange and its core");
+            foreach (int colour in colours)
+            {
+                Color.RGBToHSV(new Color32((byte)(colour >> 16), (byte)(colour >> 8), (byte)colour, 255), out float hue, out _, out _);
+                float off = Mathf.Min(Mathf.Abs(Mathf.DeltaAngle(hue * 360f, orangeHue * 360f)), Mathf.Abs(Mathf.DeltaAngle(hue * 360f, coreHue * 360f)));
+                Assert.That(off, Is.LessThanOrEqualTo(hueRange + 1.5f), $"patch {patches} stays within the shift");
+                Assert.That(hue * 360f, Is.InRange(0f, 45f), $"patch {patches} is orange");
+                oranges.Add(colour);
+            }
+
+            patches++;
+        }
+
+        Assert.That(patches, Is.GreaterThan(10));
+        Assert.That(oranges.Count, Is.GreaterThan(patches), "patches differ in tone");
+        Assert.That((double)hot / (size * size), Is.EqualTo(hotShare).Within(0.03));
+    }
+
+    /// <summary>
+    /// The value noise lava is drawn from repeats with the texture without a seam: from the last column to the first
+    /// and the top row to the bottom it changes no more than between neighbours inside, and it is not flat.
+    /// </summary>
+    [Test]
+    public void PeriodicValueNoise_RunsOnAcrossTheTexturesEdges()
+    {
+        const int size = 128;
+        double[] noise = TerrainArt.PeriodicValueNoise(new System.Random(Seed), 13, size);
+        double inside = 0.0;
+        double across = 0.0;
+        double lowest = 1.0;
+        double highest = 0.0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                double value = noise[y * size + x];
+                lowest = Math.Min(lowest, value);
+                highest = Math.Max(highest, value);
+                double right = Math.Abs(noise[y * size + TerrainArt.Wrap(x + 1, size)] - value);
+                double up = Math.Abs(noise[TerrainArt.Wrap(y + 1, size) * size + x] - value);
+                if (x == size - 1)
+                {
+                    across = Math.Max(across, right);
+                }
+                else
+                {
+                    inside = Math.Max(inside, right);
+                }
+
+                if (y == size - 1)
+                {
+                    across = Math.Max(across, up);
+                }
+                else
+                {
+                    inside = Math.Max(inside, up);
+                }
+            }
+        }
+
+        Assert.That(across, Is.LessThanOrEqualTo(inside));
+        Assert.That(highest - lowest, Is.GreaterThan(0.3));
+    }
+
+    /// <summary>
     /// Every recipe asset of the project that fills a material (only read) still generates, for its seed, exactly the
     /// albedo, cell field and height its material uses, so settings added to a recipe kind (mud's cracks, stone's seed
     /// offset) leave the materials made before them as they were.
@@ -1757,7 +1981,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(16));
+        Assert.That(checkedRecipes, Is.EqualTo(17));
     }
 
     /// <summary>
@@ -1852,6 +2076,61 @@ public class TerrainMaterialRecipeTests
     private TerrainMaterialRecipe CreateRecipe(Type recipeType)
     {
         return Track((TerrainMaterialRecipe)ScriptableObject.CreateInstance(recipeType));
+    }
+
+    /// <summary>
+    /// The pixels touching <paramref name="start"/> (four neighbours, wrapping) whose height holds a glint or sparkle
+    /// phase, <paramref name="start"/> first, each marked <paramref name="index"/> in <paramref name="group"/>.
+    /// </summary>
+    private static List<int> Group(Color32[] height, int size, int start, int[] group, int index)
+    {
+        List<int> pixels = new() { start };
+        group[start] = index;
+        for (int k = 0; k < pixels.Count; k++)
+        {
+            foreach (int n in Neighbours(pixels[k], size))
+            {
+                if (height[n].b != 0 && group[n] < 0)
+                {
+                    group[n] = index;
+                    pixels.Add(n);
+                }
+            }
+        }
+
+        return pixels;
+    }
+
+    /// <summary>
+    /// The four neighbours of pixel <paramref name="i"/>, wrapping at the texture's edges.
+    /// </summary>
+    private static IEnumerable<int> Neighbours(int i, int size)
+    {
+        int x = i % size;
+        int y = i / size;
+        yield return y * size + TerrainArt.Wrap(x + 1, size);
+        yield return y * size + TerrainArt.Wrap(x - 1, size);
+        yield return TerrainArt.Wrap(y + 1, size) * size + x;
+        yield return TerrainArt.Wrap(y - 1, size) * size + x;
+    }
+
+    /// <summary>
+    /// The distance from pixel <paramref name="i"/>'s centre to (<paramref name="cx"/>, <paramref name="cy"/>),
+    /// wrapping.
+    /// </summary>
+    private static double Distance(int i, double cx, double cy, int size)
+    {
+        double dx = TerrainArt.WrapDelta(i % size - cx, size);
+        double dy = TerrainArt.WrapDelta(i / size - cy, size);
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
+    /// The phase a height texture's blue channel holds, as a share of its period, for a glint or a sparkle code.
+    /// </summary>
+    private static double Phase(int code)
+    {
+        return code >= 128 ? (code - 128) / 128.0 : (code - 1) / 127.0;
     }
 
     /// <summary>

@@ -53,6 +53,76 @@ public static class TerrainArt
     }
 
     /// <summary>
+    /// Smooth noise that repeats every <paramref name="size"/> pixels and has no direction: a lattice of
+    /// <paramref name="across"/> by <paramref name="across"/> values in [0, 1] drawn from <paramref name="random"/> row
+    /// by row, wrapping at the texture's edges, read between its points with a cubic B-spline (so no lattice line shows
+    /// as a crease). Indexed y * size + x.
+    /// </summary>
+    public static double[] PeriodicValueNoise(System.Random random, int across, int size)
+    {
+        across = Math.Max(1, across);
+        double[] lattice = new double[across * across];
+        for (int i = 0; i < lattice.Length; i++)
+        {
+            lattice[i] = random.NextDouble();
+        }
+
+        double[] grid = new double[size * size];
+        double[] wx = new double[4];
+        double[] wy = new double[4];
+        for (int y = 0; y < size; y++)
+        {
+            double fy = (y + 0.5) * across / size;
+            int y0 = (int)Math.Floor(fy);
+            BSplineWeights(fy - y0, wy);
+            for (int x = 0; x < size; x++)
+            {
+                double fx = (x + 0.5) * across / size;
+                int x0 = (int)Math.Floor(fx);
+                BSplineWeights(fx - x0, wx);
+                double sum = 0.0;
+                for (int j = 0; j < 4; j++)
+                {
+                    int row = Wrap(y0 - 1 + j, across) * across;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        sum += wy[j] * wx[i] * lattice[row + Wrap(x0 - 1 + i, across)];
+                    }
+                }
+
+                grid[y * size + x] = sum;
+            }
+        }
+
+        return grid;
+    }
+
+    /// <summary>
+    /// The uniform cubic B-spline's weights of the four lattice points around a point <paramref name="t"/> of the way
+    /// from the second to the third, written into <paramref name="weights"/>.
+    /// </summary>
+    private static void BSplineWeights(double t, double[] weights)
+    {
+        double u = 1.0 - t;
+        weights[0] = u * u * u / 6.0;
+        weights[1] = (3.0 * t * t * t - 6.0 * t * t + 4.0) / 6.0;
+        weights[2] = (-3.0 * t * t * t + 3.0 * t * t + 3.0 * t + 1.0) / 6.0;
+        weights[3] = t * t * t / 6.0;
+    }
+
+    /// <summary>
+    /// The value of <paramref name="field"/> below which <paramref name="share"/> of its values lie: the lowest value
+    /// for a share of 0 or less, the highest for 1 or more.
+    /// </summary>
+    public static double Level(double[] field, double share)
+    {
+        double[] sorted = (double[])field.Clone();
+        Array.Sort(sorted);
+        int index = Math.Max(0, Math.Min(sorted.Length - 1, Round(share * sorted.Length) - 1));
+        return share <= 0.0 ? double.MinValue : share >= 1.0 ? double.MaxValue : sorted[index];
+    }
+
+    /// <summary>
     /// The sum of the absolute amplitudes of <paramref name="waves"/>, the most their noise can reach either way.
     /// </summary>
     public static double TotalAmplitude(IReadOnlyList<TerrainMaterialRecipe.Wave> waves)

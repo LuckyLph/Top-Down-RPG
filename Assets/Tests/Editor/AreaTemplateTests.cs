@@ -8,8 +8,9 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for the area scene template (Assets/Settings/Scenes/AreaTemplate.unity, which AreaTemplate.scenetemplate
-/// instantiates): its grid holds a ground layer for every material of the project style's layer order, empty, first
-/// among its children and drawn in that order by a terrain renderer with the project's style and materials, their
+/// instantiates): its grid holds a ground layer for every material of the project style's layer order but those it
+/// leaves out (lava, since a renderer draws at most 16 layers), empty, first among its children and drawn in that order
+/// by a terrain renderer with the project's style and materials, their
 /// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
 /// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
 /// trims it to the generator's layers, after which its renderer builds and its navigation grid blocks exactly the
@@ -21,6 +22,8 @@ public class AreaTemplateTests
     private const string TemplatePath = "Assets/Settings/Scenes/AreaTemplate.unity";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string CollisionTilemapName = "CollisionTilemap";
+
+    private static readonly string[] LeftOut = { "Lava" };
 
     private static readonly string[] GeneratorPaths =
     {
@@ -59,10 +62,11 @@ public class AreaTemplateTests
     }
 
     /// <summary>
-    /// The template's grid holds a ground layer for every material of the project style's layer order, empty, first
-    /// among its children in that order, each named after its material with that material's terrain type on its
-    /// navigation source, so a new area can be painted with anything; its terrain renderer draws them in that order
-    /// with the style, priorities in step, and every generator's layers are among them. The navigation grid blocks the
+    /// The template's grid holds a ground layer for every material of the project style's layer order but lava, which
+    /// it leaves out since a renderer draws at most 16 layers (a generator that lists lava adds its layer when it writes),
+    /// empty, first among its children in that order, each named after its material with that material's terrain type
+    /// on its navigation source, so a new area can be painted with almost anything; its terrain renderer draws them in
+    /// that order with the style, priorities in step, and every generator's layers but the left-out ones are among them. The navigation grid blocks the
     /// empty collision tilemap, the area's terrain fills the grass layer with its tile, and the scene has empty Props
     /// and MobSpawns roots and a start spawn point.
     /// </summary>
@@ -75,10 +79,25 @@ public class AreaTemplateTests
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Assert.That(renderer, Is.Not.Null);
         Assert.That(renderer.Style, Is.SameAs(style));
-        Assert.That(renderer.Layers.Count, Is.EqualTo(style.LayerOrder.Count));
-        for (int i = 0; i < style.LayerOrder.Count; i++)
+        List<TerrainMaterial> held = new();
+        foreach (TerrainMaterial material in style.LayerOrder)
         {
-            TerrainMaterial material = style.LayerOrder[i];
+            if (System.Array.IndexOf(LeftOut, material.name) < 0)
+            {
+                held.Add(material);
+            }
+            else
+            {
+                Assert.That(grid.transform.Find($"{material.name}Tilemap"), Is.Null, $"{material.name} is left out");
+            }
+        }
+
+        Assert.That(held.Count, Is.EqualTo(style.LayerOrder.Count - LeftOut.Length), "every left-out material is in the order");
+        Assert.That(held.Count, Is.LessThanOrEqualTo(TerrainControlMap.MaxLayers));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(held.Count));
+        for (int i = 0; i < held.Count; i++)
+        {
+            TerrainMaterial material = held[i];
             Transform child = grid.transform.Find($"{material.name}Tilemap");
             Assert.That(child, Is.Not.Null, material.name);
             Assert.That(child.GetSiblingIndex(), Is.EqualTo(i), $"{child.name} at its place");
@@ -97,6 +116,11 @@ public class AreaTemplateTests
             Assert.That(generator.TerrainStyle, Is.SameAs(style), generatorPath);
             foreach (AreaGenerator.TerrainLayer layer in generator.TerrainLayers)
             {
+                if (System.Array.IndexOf(LeftOut, layer.Material.name) >= 0)
+                {
+                    continue;
+                }
+
                 Assert.That(renderer.LayerIndexOf(grid.transform.Find(layer.TilemapName).GetComponent<Tilemap>()), Is.GreaterThanOrEqualTo(0), $"{generatorPath}: {layer.TilemapName}");
             }
         }

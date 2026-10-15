@@ -2238,13 +2238,13 @@ public class AreaGenerationTests
     /// <summary>
     /// The project's terrain style lists every ground material of Assets/Settings/Terrain/Materials once, in the shared
     /// draw order of Docs/TerrainTypes.md: grass, dry grass, meadow, tall grass, snow, dirt, sand, mud, ice, gravel, plaza,
-    /// stone, shallows, water, ocean, planks.
+    /// stone, shallows, water, ocean, lava, planks.
     /// </summary>
     [Test]
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "DryGrass", "Meadow", "TallGrass", "Snow", "Dirt", "Sand", "Mud", "Ice", "Gravel", "Plaza", "Stone", "Shallows", "Water", "Ocean", "Planks" };
+        string[] order = { "Grass", "DryGrass", "Meadow", "TallGrass", "Snow", "Dirt", "Sand", "Mud", "Ice", "Gravel", "Plaza", "Stone", "Shallows", "Water", "Ocean", "Lava", "Planks" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)
@@ -2261,8 +2261,8 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The default movement profile lets sand, dirt, dry grass, the meadow, tall grass, ice, the plaza and the planks be
-    /// walked like grass, snow at one and a half times grass's cost, mud and the shallows at twice it, and water and the
-    /// ocean not at all, so the cheapest step stays grass's.
+    /// walked like grass, snow at one and a half times grass's cost, mud and the shallows at twice it, and water, the
+    /// ocean and lava not at all, so the cheapest step stays grass's.
     /// </summary>
     [Test]
     public void TheDefaultProfile_WalksSandLikeGrass_MudAtAHigherCost_AndNotWater()
@@ -2295,6 +2295,9 @@ public class AreaGenerationTests
         Assert.That(ProjectTerrainType("Ocean"), Is.Not.Null);
         profile.TryGetTraversal(ProjectTerrainType("Ocean"), out bool oceanWalkable, out _);
         Assert.That(oceanWalkable, Is.False, "The ocean cannot be walked.");
+        Assert.That(ProjectTerrainType("Lava"), Is.Not.Null);
+        profile.TryGetTraversal(ProjectTerrainType("Lava"), out bool lavaWalkable, out _);
+        Assert.That(lavaWalkable, Is.False, "Lava cannot be walked.");
     }
 
     /// <summary>

@@ -432,7 +432,7 @@ Checked with `TerrainBlendProbe`, with the editor unfocused:
 
 - More materials (dirt, snow), and sand, mud and water in the Clearing's and the Village Forest's generators (the Lakeside generator lays a lake, a beach, a marsh and mud patches; see [SceneGeneration.md](SceneGeneration.md)).
 - An ocean material, with its own terrain type and edges: the `Ocean`, Phase 8 of [TerrainTypes.md](TerrainTypes.md), first from the caustic net and then from a recipe of travelling waves (`Recipe_Ocean`).
-- Water that flows or moves its shore; a collider for water if something starts pushing bodies around.
+- Water that flows or moves its shore (a texture flowing inside a fixed shape, asked for lava in Phase 9 of [TerrainTypes.md](TerrainTypes.md), is in its Open questions); a collider for water if something starts pushing bodies around.
 - Renderer feature passes on the `Terrain` sorting layer if a material needs one.
 - Y-sorting through the 2D renderer's custom sort axis and Sorting Groups, which would replace `YPositionSorter` and fix "units sort by their sprite's centre" (see Architecture.md's known gaps).
 

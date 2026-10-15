@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
+  m_Name: Lava
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  albedo: {fileID: 2800000, guid: cc2ee1f5eb0cc7d468e2117540edbce7, type: 3}
+  cellField: {fileID: 0}
+  height: {fileID: 2800000, guid: 28bee2ceceb429e4fb46ff1233d4a4f0, type: 3}
+  repeatCells: 16
+  outerRadius: 14
+  innerRadius: 11
+  cellMode: 0
+  baseColour: {r: 0.76862746, g: 0.15686275, b: 0.08627451, a: 1}
+  keepMargin: 1
+  cutGap: 0.5
+  cutBevel: 18
+  heightScale: 1.5
+  framesPerSecond: 8
+  glintColour: {r: 0.98039216, g: 0.627451, b: 0.23529412, a: 1}
+  glintPeriod: 4
+  glintDuty: 0.2
+  sparkleColour: {r: 0.50980395, g: 0.101960786, b: 0.07058824, a: 1}
+  sparklePeriod: 4
+  sparkleDuty: 0.2
+  rimSwell: 1
+  swellPeriod: 3
+  swash: 0
+  waveSpacing: 0
+  wavePeriod: 3.2
+  waveWidth: 10
+  waveAngle: 8.5
+  waveWholeWithin: 40
+  waveStretch: 0.2
+  waveColour: {r: 0.17, g: 0.37, b: 0.59, a: 1}
+  waveCrestColour: {r: 0.55, g: 0.72, b: 0.85, a: 1}
+  waveTroughColour: {r: 0.05, g: 0.16, b: 0.31, a: 1}
+  washFoamColour: {r: 0.94, g: 0.96, b: 0.97, a: 1}
+  washFoamShadeColour: {r: 0.84, g: 0.89, b: 0.93, a: 1}
+  washFilmColour: {r: 0.59, g: 0.75, b: 0.87, a: 1}
+  washFilmBackColour: {r: 0.44, g: 0.65, b: 0.8, a: 1}
+  washWet: 0.15
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  wholeClumps: 0
+  sinkDepth: 1.5
+  bankShadow: 0.35
+  bankColour: {r: 0.27450982, g: 0.13333334, b: 0.10980392, a: 1}
+  bridge: 0
+  turnToRuns: 0
+  edge:
+    rimWidth: 4.5
+    rim:
+      serializedVersion: 2
+      key0: {r: 1, g: 0.8392157, b: 0.43137255, a: 1}
+      key1: {r: 0.9411765, g: 0.5176471, b: 0.15686275, a: 0.6}
+      key2: {r: 0.8627451, g: 0.27450982, b: 0.101960786, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 29127
+      ctime1: 43690
+      ctime2: 65535
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 43690
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 1
+      m_ColorSpace: -1
+      m_NumColorKeys: 3
+      m_NumAlphaKeys: 2
+    drawOutline: 1
+    outlineColour: {r: 0.1882353, g: 0.078431375, b: 0.07058824, a: 1}
+    shadowColour: {r: 0.5882353, g: 0.20392157, b: 0.09411765, a: 1}
+    shadowAlpha: 0.4
+    shadowWidth: 4
+    tuftHeight: 0
+    softBandWidth: 0
+    softBandColour: {r: 0.43137255, g: 0.6745098, b: 0.8, a: 1}
+    softWholeStones: 0
+    seamless: 0

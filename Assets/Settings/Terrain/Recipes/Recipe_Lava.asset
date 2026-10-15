@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 554b2ad2326f8f14091305187acd3fdb, type: 3}
+  m_Name: Recipe_Lava
+  m_EditorClassIdentifier: TopDownRPG.Editor::LavaBubblesRecipe
+  material: {fileID: 11400000, guid: b1da909a32a77f54ebcf980ddc6e84f4, type: 2}
+  seed: 20261030
+  repeatCells: 16
+  heightWaves:
+  - x: 1
+    y: 0
+    amplitude: 1
+  - x: 0
+    y: 1
+    amplitude: 0.9
+  - x: 1
+    y: 1
+    amplitude: 0.7
+  - x: 2
+    y: -1
+    amplitude: 0.5
+  - x: -1
+    y: 2
+    amplitude: 0.45
+  - x: 3
+    y: 1
+    amplitude: 0.25
+  red:
+    serializedVersion: 2
+    rgba: 4279642308
+  darkerRed:
+    serializedVersion: 2
+    rgba: 4279509688
+  darkerShare: 0.45
+  tintPerCell: 1.33
+  orange:
+    serializedVersion: 2
+    rgba: 4280048866
+  core:
+    serializedVersion: 2
+    rgba: 4280844530
+  patchesPerCell: 3.2
+  detailPerCell: 8
+  detail: 0.35
+  hotShare: 0.16
+  coreShare: 0.07
+  hueRange: 12
+  valueRange: 0.08
+  speck:
+    serializedVersion: 2
+    rgba: 4279376516
+  specksPerCell: 6.4
+  speckShare: 0.12
+  bubblesPerCell: 0.35
+  smallestBubble: 2.2
+  largestBubble: 4.2
+  swellDelay: 0.025
+  bubble:
+    serializedVersion: 2
+    rgba: 4282163450
+  bubbleRim:
+    serializedVersion: 2
+    rgba: 4279376514

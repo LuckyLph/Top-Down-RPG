@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 /// <summary>
@@ -69,8 +68,8 @@ public sealed class OceanWavesRecipe : TerrainMaterialRecipe
     protected override TerrainTextures Generate(System.Random random, int size)
     {
         double[] tone = TerrainArt.PeriodicNoise(random, toneWaves, size);
-        double darkLevel = Level(tone, darkerShare);
-        double lightLevel = Level(tone, 1.0 - lighterShare);
+        double darkLevel = TerrainArt.Level(tone, darkerShare);
+        double lightLevel = TerrainArt.Level(tone, 1.0 - lighterShare);
         double bendTotal = TerrainArt.TotalAmplitude(bendWaves);
         double maskTotal = TerrainArt.TotalAmplitude(maskWaves);
         double[][] bends = new double[families][];
@@ -124,16 +123,5 @@ public sealed class OceanWavesRecipe : TerrainMaterialRecipe
         }
 
         return new TerrainTextures(size, water, CellMode, albedo, null, TerrainArt.HeightPixels(height, null, null, glints), crest, sparkle);
-    }
-
-    /// <summary>
-    /// The value of <paramref name="field"/> below which <paramref name="share"/> of its pixels lie.
-    /// </summary>
-    private static double Level(double[] field, double share)
-    {
-        double[] sorted = (double[])field.Clone();
-        Array.Sort(sorted);
-        int index = Math.Max(0, Math.Min(sorted.Length - 1, TerrainArt.Round(share * sorted.Length) - 1));
-        return share <= 0.0 ? double.MinValue : share >= 1.0 ? double.MaxValue : sorted[index];
     }
 }

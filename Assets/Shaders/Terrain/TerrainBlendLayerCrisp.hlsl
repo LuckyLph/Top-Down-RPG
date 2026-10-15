@@ -3,7 +3,8 @@
 
 #include "Assets/Shaders/Terrain/TerrainBlendInterior.hlsl"
 
-// Layer m's colour at a pixel, premultiplied: from the outside in, the translucent shadow, the antialiased edge pixel
+// Layer m's colour at a pixel, premultiplied: from the outside in, the wash of a layer with swash over the translucent
+// shadow, the antialiased edge pixel
 // (the outline, or the rim's outer colour where the pair draws none, or a sunken layer's bank: TBEdgeColour), then the
 // interior under the rim (TBInside, with a sunken layer's bank), with the outline fading into it over the first pixel.
 // The interior is worked out once for the edge pixel and the inside (TBLayerInterior).
@@ -27,14 +28,16 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     {
         result = float4(tuft > 1.5 ? edge : e.fill, 1.0);
     }
-    else if (d >= 0.5 + e.shadowWidth)
-    {
-        result = float4(0.0, 0.0, 0.0, 0.0);
-    }
     else if (d >= 0.5)
     {
-        float shadowAlpha = e.shadowAlpha * (1.0 - (d - 0.5) / max(e.shadowWidth, 0.001));
-        result = float4(e.shadow * shadowAlpha, shadowAlpha);
+        [branch]
+        if (d < 0.5 + e.shadowWidth)
+        {
+            float shadowAlpha = e.shadowAlpha * (1.0 - (d - 0.5) / max(e.shadowWidth, 0.001));
+            result = float4(e.shadow * shadowAlpha, shadowAlpha);
+        }
+        float4 wash = TBWash(ins, m, w, d - 0.5, worldPixel);
+        result = wash + result * (1.0 - wash.a);
     }
     else if (d > -0.5)
     {

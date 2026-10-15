@@ -216,8 +216,8 @@ public class TerrainBlendLutTests
 
     /// <summary>
     /// An animated material's layer row holds its frames per second, glint period and duty and rim swell, its glint
-    /// colour and swell period, its sparkle colour and period, and its sparkle duty; a still material's holds nothing
-    /// there, so the shader neither glints, sparkles nor swells it.
+    /// colour and swell period, its sparkle colour and period, and its sparkle duty and swash; a still material's holds
+    /// nothing there, so the shader neither glints, sparkles, swells nor washes it.
     /// </summary>
     [Test]
     public void AnAnimatedMaterial_ReachesItsLayerRow_AndAStillOneLeavesItEmpty()
@@ -234,6 +234,7 @@ public class TerrainBlendLutTests
         settings.FindProperty("sparkleColour").colorValue = new Color(0.9f, 1f, 0.95f);
         settings.FindProperty("sparklePeriod").floatValue = 4f;
         settings.FindProperty("sparkleDuty").floatValue = 0.25f;
+        settings.FindProperty("swash").floatValue = 5f;
         settings.ApplyModifiedPropertiesWithoutUndo();
 
         Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, water });
@@ -245,8 +246,69 @@ public class TerrainBlendLutTests
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerAnimationColumn), Is.EqualTo(new Color(8f, 3.2f, 0.18f, 1.5f)));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerGlintColumn), Is.EqualTo(new Color(0.8f, 0.9f, 1f, 4.5f)));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSparkleColumn), Is.EqualTo(new Color(0.9f, 1f, 0.95f, 4f)));
-        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSparkleTimingColumn), Is.EqualTo(new Color(0.25f, 0f, 0f, 0f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerSparkleTimingColumn), Is.EqualTo(new Color(0.25f, 5f, 0f, 0f)));
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerSparkleColumn), Is.EqualTo(Color.clear));
+    }
+
+    /// <summary>
+    /// An animated material with waves holds them in its layer row: (spacing, period, width, tangent of the angle), its
+    /// wave colour with the distance within which waves run whole, its crest colour with its stretch, its trough colour,
+    /// and its swash's foam colour with how wet it leaves the shore, then the foam's shade, the film's and the film's
+    /// back colours. A material without waves, or with waves but no frames per second, holds nothing there, so the
+    /// shader draws it no waves.
+    /// </summary>
+    [Test]
+    public void AMaterialWithWaves_ReachesItsLayerRow_AndOneWithoutLeavesItEmpty()
+    {
+        TerrainMaterial water = Material("Water", 0f);
+        TerrainMaterial ocean = Material("Ocean", 0f);
+        TerrainMaterial still = Material("Still", 0f);
+        SerializedObject animated = new(water);
+        animated.FindProperty("framesPerSecond").floatValue = 8f;
+        animated.ApplyModifiedPropertiesWithoutUndo();
+        foreach (TerrainMaterial material in new[] { ocean, still })
+        {
+            SerializedObject settings = new(material);
+            settings.FindProperty("framesPerSecond").floatValue = material == ocean ? 8f : 0f;
+            settings.FindProperty("waveSpacing").floatValue = 48f;
+            settings.FindProperty("wavePeriod").floatValue = 3.2f;
+            settings.FindProperty("waveWidth").floatValue = 10f;
+            settings.FindProperty("waveAngle").floatValue = 45f;
+            settings.FindProperty("waveWholeWithin").floatValue = 40f;
+            settings.FindProperty("waveStretch").floatValue = 0.05f;
+            settings.FindProperty("waveColour").colorValue = new Color(0.1f, 0.2f, 0.3f);
+            settings.FindProperty("waveCrestColour").colorValue = new Color(0.4f, 0.5f, 0.6f);
+            settings.FindProperty("waveTroughColour").colorValue = new Color(0.7f, 0.8f, 0.9f);
+            settings.FindProperty("washFoamColour").colorValue = new Color(1f, 0.9f, 0.8f);
+            settings.FindProperty("washFoamShadeColour").colorValue = new Color(0.7f, 0.6f, 0.5f);
+            settings.FindProperty("washFilmColour").colorValue = new Color(0.4f, 0.3f, 0.2f);
+            settings.FindProperty("washFilmBackColour").colorValue = new Color(0.1f, 0f, 0.1f);
+            settings.FindProperty("washWet").floatValue = 0.15f;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { water, ocean, still });
+
+        Assert.That(water.HasWaves, Is.False);
+        Assert.That(ocean.HasWaves, Is.True);
+        Assert.That(still.HasWaves, Is.False);
+        Color waves = LayerTexel(texels, 1, TerrainBlendLut.LayerWavesColumn);
+        Assert.That(new Vector3(waves.r, waves.g, waves.b), Is.EqualTo(new Vector3(48f, 3.2f, 10f)));
+        Assert.That(waves.a, Is.EqualTo(1f).Within(1e-5f));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWaveColourColumn), Is.EqualTo(new Color(0.1f, 0.2f, 0.3f, 40f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWaveCrestColumn), Is.EqualTo(new Color(0.4f, 0.5f, 0.6f, 0.05f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWaveTroughColumn), Is.EqualTo(new Color(0.7f, 0.8f, 0.9f, 1f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWashFoamColumn), Is.EqualTo(new Color(1f, 0.9f, 0.8f, 0.15f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWashFoamShadeColumn), Is.EqualTo(new Color(0.7f, 0.6f, 0.5f, 1f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWashFilmColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f, 1f)));
+        Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerWashFilmBackColumn), Is.EqualTo(new Color(0.1f, 0f, 0.1f, 1f)));
+        foreach (int layer in new[] { 0, 2 })
+        {
+            for (int column = TerrainBlendLut.LayerWavesColumn; column <= TerrainBlendLut.LayerWashFilmBackColumn; column++)
+            {
+                Assert.That(LayerTexel(texels, layer, column), Is.EqualTo(Color.clear), $"layer {layer}, column {column}");
+            }
+        }
     }
 
     /// <summary>

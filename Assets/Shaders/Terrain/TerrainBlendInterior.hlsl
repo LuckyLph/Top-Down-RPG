@@ -7,6 +7,7 @@
 #include "Assets/Shaders/Terrain/TerrainBlendAnimation.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendSway.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendBanks.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendWaves.hlsl"
 
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
@@ -130,7 +131,8 @@ float3 TBSeamlessEdge(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1]
 
 // Layer m's colour at a depth inside its edge, before the edge pixel: within the bank (its height there, from
 // TBLayerInterior), the bank colour of the layer it meets (TBBankFace), its lowest pixel darker at the waterline; below
-// it the interior (from TBLayerInterior) under the rim, which starts at the waterline, darkened by the bank's shadow over
+// it the interior (from TBLayerInterior) under the rim, which starts at the waterline, with the layer's waves over
+// both (TBWaves), darkened by the bank's shadow over
 // as many pixels as the bank is high. A level layer has no bank, so this is the interior under the rim. band is how
 // much of the rim soft bands make up (0 in crisp and on the bank).
 float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 worldPixel, float3 interior, float bank, out float band)
@@ -148,7 +150,7 @@ float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], floa
         float below = depth - bank;
         colour = interior;
         float4 rim = TBRamp(ins, e, m, w, max(below - TBSwell(ins, m, worldPixel), 0.0), band);
-        colour = colour * (1.0 - rim.a) + rim.rgb;
+        colour = TBWaves(ins, m, colour * (1.0 - rim.a) + rim.rgb, worldPixel);
         if (below < bank)
         {
             colour *= 1.0 - TBLut(ins, TB_LAYER_BANK_COLUMN, TBLayerRow(m)).y;

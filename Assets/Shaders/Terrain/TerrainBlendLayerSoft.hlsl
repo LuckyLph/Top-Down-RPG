@@ -9,7 +9,8 @@
 // keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
 // opaque, or a sunken layer's bank (TBEdgeColour); then the interior under the band or the rim (TBInside, with a
-// sunken layer's bank). No shadow is drawn. Bands are shaded by the cell field's grit like the base colour. A layer that
+// sunken layer's bank). No shadow is drawn; past its edge, a layer with swash draws its wash where it covers at least
+// half of a pixel, opaque. Bands are shaded by the cell field's grit like the base colour. A layer that
 // turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does. The
 // interior is worked out once for the edge pixel and the inside (TBLayerInterior).
 float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
@@ -73,6 +74,14 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
             float band;
             float3 colour = TBInside(ins, m, e, w, -d, worldPixel, interior, bank, band);
             result = float4(colour + grit * band, 1.0);
+        }
+        else
+        {
+            float4 wash = TBWash(ins, m, w, d - 0.5, worldPixel);
+            if (wash.a >= 0.5)
+            {
+                result = float4(wash.rgb / wash.a, 1.0);
+            }
         }
     }
     return result;

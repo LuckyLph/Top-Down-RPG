@@ -77,6 +77,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int HeightArrayId = Shader.PropertyToID("_HeightArray");
     private static readonly int ControlRectId = Shader.PropertyToID("_ControlRect");
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
+    private static readonly int CoastMapId = Shader.PropertyToID("_TerrainCoast");
     private const string SoftKeywordName = "_TERRAIN_SOFT";
     private static readonly MeshRenderer[] NoChunks = new MeshRenderer[0];
 
@@ -97,6 +98,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Grid grid;
     private Tilemap[] layerTilemaps = new Tilemap[0];
     private TerrainControlMap controlMap;
+    private TerrainCoastMap coastMap;
+    private int waveLayer = -1;
+    private int bridgeBits;
     private Texture2DArray albedoArray;
     private Texture2DArray fieldArray;
     private Texture2DArray heightArray;
@@ -343,6 +347,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         if (controlMap != null && controlMap.Apply())
         {
             UpdateControlRect();
+            if (waveLayer >= 0)
+            {
+                coastMap.Build(controlMap, waveLayer, bridgeBits);
+            }
         }
     }
 
@@ -486,6 +494,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         controlMap = new TerrainControlMap(layerTilemaps, $"{name} Terrain Control Map");
         controlMap.Apply();
         previewGrewBounds = false;
+        waveLayer = Array.FindIndex(materials, m => m.HasWaves);
+        bridgeBits = (int)TerrainBlendLut.BridgeBits(materials);
+        coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
+        coastMap.Build(controlMap, waveLayer, bridgeBits);
         albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
         fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
         heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
@@ -497,6 +509,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         material.SetTexture(AlbedoArrayId, albedoArray);
         material.SetTexture(FieldArrayId, fieldArray);
         material.SetTexture(HeightArrayId, heightArray);
+        material.SetTexture(CoastMapId, coastMap.Texture);
         ApplyMode();
         UpdateControlRect();
         UpdateInfo();
@@ -698,6 +711,9 @@ public class TerrainBlendRenderer : MonoBehaviour
         chunkSet = null;
         controlMap?.Dispose();
         controlMap = null;
+        coastMap?.Dispose();
+        coastMap = null;
+        waveLayer = -1;
         DestroyRuntime(material);
         DestroyRuntime(albedoArray);
         DestroyRuntime(fieldArray);

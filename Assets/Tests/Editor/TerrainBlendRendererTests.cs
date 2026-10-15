@@ -561,6 +561,100 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A layer with waves rolls them in toward its coast: green ground fills a 12 x 14 block and a blue sea its bottom six
+    /// rows, its waves 32 px apart on a 2 s period, whole everywhere, in red with a yellow crest. Down a column in the
+    /// middle of the sea, the waves' bands lie a spacing apart, and a quarter of a second later each that stays in view
+    /// has moved 3 to 5 px toward the coast. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerWithWaves_RollsThemInTowardItsCoast()
+    {
+        TerrainBlendRenderer renderer = WavesRenderer(14, 6, 0f, out Color32 blue);
+        Rect world = new(0f, 0f, 12f, 14f);
+        yield return RenderUntilDrawn(renderer, world, new Vector2Int(192, 300));
+
+        List<int> before = BandFronts(renderer, world, 0f, blue);
+        List<int> after = BandFronts(renderer, world, 0.25f, blue);
+
+        Assert.That(before.Count, Is.GreaterThanOrEqualTo(2), "waves cross the column");
+        for (int i = 0; i < before.Count; i++)
+        {
+            int front = before[i];
+            if (front + 5 <= 168)
+            {
+                Assert.That(after.Exists(moved => moved >= front + 3 && moved <= front + 5), Is.True, $"the band at {front} moves 4 px toward the coast");
+                Assert.That(after.Contains(front), Is.False, $"the band at {front} moves");
+            }
+
+            if (i > 0)
+            {
+                Assert.That(front - before[i - 1], Is.InRange(30, 34), $"the band at {front} lies a spacing from the last");
+            }
+        }
+
+        renderer.SetFixedTime(null);
+    }
+
+    /// <summary>
+    /// A layer with waves and swash washes up over the layer it meets as each wave arrives, never further than its
+    /// swash, and without swash draws nothing past its edge. Green ground fills an 8 x 4 block and a blue sea its bottom
+    /// two rows, with no rim, outline or shadow; its waves arrive every second and its swash, 6 px, draws every colour
+    /// white. Over the eight frames of a period, pixels of the band just above the sea's top edge show white, none more
+    /// than the swash past it. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerWithWaves_WashesUpWhatItMeets_NeverPastItsSwash()
+    {
+        TerrainBlendRenderer renderer = WavesRenderer(4, 2, 6f, out _);
+        Rect world = new(0f, 0f, 8f, 4f);
+        yield return RenderUntilDrawn(renderer, world, new Vector2Int(128, 110));
+
+        Color32 inland = Pixel(renderer, world, 0f, new Vector2Int(128, 110));
+        int washed = 0;
+        for (int step = 0; step < 8; step++)
+        {
+            renderer.SetFixedTime(step * 0.125f);
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            for (int x = 32; x < 224; x++)
+            {
+                for (int y = 66; y < 80; y++)
+                {
+                    Color32 pixel = pixels.GetPixel(x, y);
+                    bool white = pixel.r > 200 && pixel.g > 200 && pixel.b > 200;
+                    washed += white ? 1 : 0;
+                    Assert.That(white && y > 64 + 6 + 2, Is.False, $"t {step * 0.125f}: ({x}, {y}) is washed past the swash");
+                }
+            }
+
+            Object.DestroyImmediate(pixels);
+        }
+
+        Assert.That(washed, Is.GreaterThan(200), "The wash reaches past the edge.");
+        TerrainMaterial sea = renderer.Layers[1].Material;
+        SerializedObject settings = new(sea);
+        settings.FindProperty("swash").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        renderer.Rebuild();
+        yield return null;
+        for (int step = 0; step < 8; step++)
+        {
+            renderer.SetFixedTime(step * 0.125f);
+            Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+            for (int x = 32; x < 224; x++)
+            {
+                for (int y = 67; y < 80; y++)
+                {
+                    Assert.That((Color32)pixels.GetPixel(x, y), Is.EqualTo(inland), $"t {step * 0.125f}: ({x}, {y}) without swash");
+                }
+            }
+
+            Object.DestroyImmediate(pixels);
+        }
+
+        renderer.SetFixedTime(null);
+    }
+
+    /// <summary>
     /// A sunken layer (deep water) shows its bank along a top edge over a lower layer it meets with an ordinary pair,
     /// in that layer's bank colour, and none along a top edge over one it meets seamlessly (shallows, the same water's
     /// surface), where its own interior runs up to the edge. A blue sunken layer fills the bottom two rows, a green
@@ -867,6 +961,122 @@ public class TerrainBlendRendererTests
     private static bool SameStripe(Color32 a, Color32 b)
     {
         return a.r > a.b == b.r > b.b;
+    }
+
+    /// <summary>
+    /// A renderer over green ground filling 12 x <paramref name="rows"/> cells (8 wide when only 4 rows) and a blue sea
+    /// filling its bottom <paramref name="seaRows"/> rows with waves: 32 px apart on a 2 s period at 8 frames per second
+    /// for the ground's 14 rows, or 16 px apart on a 1 s period for the 4 rows, 6 px wide, square to the coast, whole
+    /// everywhere, red with a yellow crest and a black trough, and <paramref name="swash"/> pixels of swash, every colour
+    /// of which is white. Neither layer draws a rim, outline or shadow.
+    /// </summary>
+    private TerrainBlendRenderer WavesRenderer(int rows, int seaRows, float swash, out Color32 blue)
+    {
+        Color32 green = new(40, 160, 40, 255);
+        blue = new Color32(30, 60, 200, 255);
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial ground = SolidMaterial("Ground", green, bare);
+        TerrainMaterial sea = SolidMaterial("Sea", blue, bare);
+        bool tall = rows > 4;
+        SerializedObject settings = new(sea);
+        settings.FindProperty("framesPerSecond").floatValue = 8f;
+        settings.FindProperty("glintDuty").floatValue = 0f;
+        settings.FindProperty("sparkleDuty").floatValue = 0f;
+        settings.FindProperty("swash").floatValue = swash;
+        settings.FindProperty("waveSpacing").floatValue = tall ? 32f : 16f;
+        settings.FindProperty("wavePeriod").floatValue = tall ? 2f : 1f;
+        settings.FindProperty("waveWidth").floatValue = 6f;
+        settings.FindProperty("waveAngle").floatValue = 0f;
+        settings.FindProperty("waveWholeWithin").floatValue = 1000f;
+        settings.FindProperty("waveColour").colorValue = new Color(1f, 0.1f, 0.1f);
+        settings.FindProperty("waveCrestColour").colorValue = new Color(1f, 1f, 0f);
+        settings.FindProperty("waveTroughColour").colorValue = Color.black;
+        foreach (string colour in new[] { "washFoamColour", "washFoamShadeColour", "washFilmColour", "washFilmBackColour" })
+        {
+            settings.FindProperty(colour).colorValue = Color.white;
+        }
+
+        settings.FindProperty("washWet").floatValue = 0f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        GameObject gridObject = Track(new GameObject("WavesGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap land = new GameObject("Land", typeof(Tilemap)).GetComponent<Tilemap>();
+        Tilemap water = new GameObject("Water", typeof(Tilemap)).GetComponent<Tilemap>();
+        land.transform.SetParent(gridObject.transform);
+        water.transform.SetParent(gridObject.transform);
+        int columns = tall ? 12 : 8;
+        for (int x = 0; x < columns; x++)
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                land.SetTile(new Vector3Int(x, y, 0), tile);
+                if (y < seaRows)
+                {
+                    water.SetTile(new Vector3Int(x, y, 0), tile);
+                }
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(land, ground), new TerrainBlendRenderer.Layer(water, sea));
+        gridObject.SetActive(true);
+        return renderer;
+    }
+
+    /// <summary>
+    /// Renders <paramref name="world"/> at time 0 on later editor updates until the pixel at <paramref name="probe"/>
+    /// is drawn, at most 30 updates, and asserts it was.
+    /// </summary>
+    private static IEnumerator RenderUntilDrawn(TerrainBlendRenderer renderer, Rect world, Vector2Int probe)
+    {
+        Color32 pixel = default;
+        for (int frame = 0; frame < 30 && !IsDrawn(pixel); frame++)
+        {
+            yield return null;
+            pixel = Pixel(renderer, world, 0f, probe);
+        }
+
+        Assert.That(IsDrawn(pixel), Is.True, "The layers are drawn.");
+    }
+
+    /// <summary>
+    /// The pixel at <paramref name="at"/> of <paramref name="world"/> rendered at <paramref name="time"/>.
+    /// </summary>
+    private static Color32 Pixel(TerrainBlendRenderer renderer, Rect world, float time, Vector2Int at)
+    {
+        renderer.SetFixedTime(time);
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        Color32 pixel = pixels.GetPixel(at.x, at.y);
+        Object.DestroyImmediate(pixels);
+        return pixel;
+    }
+
+    /// <summary>
+    /// The rows, bottom up, of the shoreward fronts of the waves' bands down the middle column of the sea, from 96 px
+    /// to 168 px up (well inside the sea and clear of the coast's last pixels and of the map's edge), rendered at
+    /// <paramref name="time"/>: the top row of each run of rows not showing the sea's own colour.
+    /// </summary>
+    private static List<int> BandFronts(TerrainBlendRenderer renderer, Rect world, float time, Color32 sea)
+    {
+        renderer.SetFixedTime(time);
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        List<int> fronts = new();
+        bool inBand = false;
+        for (int y = 96; y <= 168; y++)
+        {
+            Color32 pixel = pixels.GetPixel(192, y);
+            bool wave = pixel.r != sea.r || pixel.g != sea.g || pixel.b != sea.b;
+            if (inBand && !wave)
+            {
+                fronts.Add(y - 1);
+            }
+
+            inBand = wave;
+        }
+
+        Object.DestroyImmediate(pixels);
+        return fronts;
     }
 
     /// <summary>

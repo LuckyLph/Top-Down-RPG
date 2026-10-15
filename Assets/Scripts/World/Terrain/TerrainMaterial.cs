@@ -26,6 +26,8 @@ public class TerrainMaterial : ScriptableObject
     public const float MinPeriod = 0.1f;
     public const float MaxSinkDepth = 6f;
     public const float MaxSwayAmplitude = 3f;
+    public const float MaxSwash = 12f;
+    public const float MaxWaveSpacing = 128f;
 
     /// <summary>
     /// What a material's cell field holds and how its chips or stones meet an edge: none, chips drawn whole or left
@@ -85,6 +87,37 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float rimSwell;
     [Tooltip("Seconds of one swell, in and out. Its phase drifts along the edge, so the swell rolls along a shore.")]
     [SerializeField, Range(MinPeriod, 30f)] private float swellPeriod = 4f;
+    [Tooltip("How many pixels past its edge this material washes out over the ground it meets at the top of each swell, as a wave runs up a beach and back: its rim drawn outwards, the rim's first colour (the foam) at the wave's front, on the swell's timing; none over nothing or along a seamless pair. 0 for none.")]
+    [SerializeField, Range(0f, MaxSwash)] private float swash;
+    [Header("Waves")]
+    [Tooltip("Pixels between two waves rolling in toward the shore over this material, which needs frames per second above 0; 0 for none. The waves follow the distance to the coast (TerrainCoastMap), so they bend to meet it, and time the swash: each wave washes up the shore as it arrives.")]
+    [SerializeField, Range(0f, MaxWaveSpacing)] private float waveSpacing;
+    [Tooltip("Seconds between two waves arriving at the same spot.")]
+    [SerializeField, Range(MinPeriod, 30f)] private float wavePeriod = 3.2f;
+    [Tooltip("Pixels from a wave's crest back out to sea over which its band of lighter water fades out.")]
+    [SerializeField, Range(1f, 32f)] private float waveWidth = 10f;
+    [Tooltip("Degrees the waves' fronts turn away from the coast's line, so they reach a straight shore at one end first and run along it.")]
+    [SerializeField, Range(-45f, 45f)] private float waveAngle = 8.5f;
+    [Tooltip("Pixels from the coast within which every wave runs whole; further out they break into stretches that grow and fade.")]
+    [SerializeField, Range(0f, 256f)] private float waveWholeWithin = 40f;
+    [Tooltip("How much of each wave shows out at sea, where waves break into stretches that grow and fade: higher gives longer stretches, lower shorter and fewer.")]
+    [SerializeField, Range(-1f, 1f)] private float waveStretch = 0.2f;
+    [Tooltip("Colour of a wave's band of lighter water, at its crest; it fades into the material behind it.")]
+    [SerializeField] private Color waveColour = new(0.17f, 0.37f, 0.59f, 1f);
+    [Tooltip("Colour of a wave's crest, a broken line one pixel thick along its shoreward face.")]
+    [SerializeField] private Color waveCrestColour = new(0.55f, 0.72f, 0.85f, 1f);
+    [Tooltip("Colour of the trough just ahead of a wave, drawn at half strength one pixel thick.")]
+    [SerializeField] private Color waveTroughColour = new(0.05f, 0.16f, 0.31f, 1f);
+    [Tooltip("Colour of the swash's foam at its front, as a wave runs up the shore.")]
+    [SerializeField] private Color washFoamColour = new(0.94f, 0.96f, 0.97f, 1f);
+    [Tooltip("Colour of the foam's back pixel, behind its front.")]
+    [SerializeField] private Color washFoamShadeColour = new(0.84f, 0.89f, 0.93f, 1f);
+    [Tooltip("Colour of the film of water behind the foam, near the front.")]
+    [SerializeField] private Color washFilmColour = new(0.59f, 0.75f, 0.87f, 1f);
+    [Tooltip("Colour of the film of water further behind the foam, toward the sea.")]
+    [SerializeField] private Color washFilmBackColour = new(0.44f, 0.65f, 0.8f, 1f);
+    [Tooltip("How much darker the shore is just after the swash pulls back off it, drying over a second.")]
+    [SerializeField, Range(0f, 1f)] private float washWet = 0.15f;
     [Header("Sway")]
     [Tooltip("How many pixels the tips of this material's weeds lean at the top of a gust; 0 for none. A pixel leans by this times its weight in the height texture's blue channel (written by a swaying recipe, the weeds recipe that draws the grass's clumps), which then holds no glints or sparkles. Needs frames per second above 0.")]
     [SerializeField, Range(0f, MaxSwayAmplitude)] private float swayAmplitude;
@@ -133,6 +166,22 @@ public class TerrainMaterial : ScriptableObject
     public float SparkleDuty => Mathf.Clamp01(sparkleDuty);
     public float RimSwell => Mathf.Max(rimSwell, 0f);
     public float SwellPeriod => Mathf.Max(swellPeriod, MinPeriod);
+    public float Swash => Mathf.Clamp(swash, 0f, MaxSwash);
+    public bool HasWaves => IsAnimated && waveSpacing > 0f;
+    public float WaveSpacing => Mathf.Clamp(waveSpacing, 0f, MaxWaveSpacing);
+    public float WavePeriod => Mathf.Max(wavePeriod, MinPeriod);
+    public float WaveWidth => Mathf.Max(waveWidth, 1f);
+    public float WaveAngle => Mathf.Clamp(waveAngle, -45f, 45f);
+    public float WaveWholeWithin => Mathf.Max(waveWholeWithin, 0f);
+    public float WaveStretch => Mathf.Clamp(waveStretch, -1f, 1f);
+    public Color WaveColour => waveColour;
+    public Color WaveCrestColour => waveCrestColour;
+    public Color WaveTroughColour => waveTroughColour;
+    public Color WashFoamColour => washFoamColour;
+    public Color WashFoamShadeColour => washFoamShadeColour;
+    public Color WashFilmColour => washFilmColour;
+    public Color WashFilmBackColour => washFilmBackColour;
+    public float WashWet => Mathf.Clamp01(washWet);
     public bool Sways => IsAnimated && swayAmplitude > 0f;
     public float SwayAmplitude => Mathf.Clamp(swayAmplitude, 0f, MaxSwayAmplitude);
     public float SwayPeriod => Mathf.Max(swayPeriod, MinPeriod);

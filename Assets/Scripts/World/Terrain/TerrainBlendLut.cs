@@ -15,11 +15,16 @@ using UnityEngine;
 /// height texture, 1 when the material turns to its runs), for an animated material at
 /// <see cref="LayerAnimationColumn"/> (frames per second, glint period, glint duty, rim swell), at
 /// <see cref="LayerGlintColumn"/> (glint colour, swell period), at <see cref="LayerSparkleColumn"/> (sparkle colour,
-/// sparkle period) and at <see cref="LayerSparkleTimingColumn"/> (sparkle duty), zero otherwise, at
+/// sparkle period) and at <see cref="LayerSparkleTimingColumn"/> (sparkle duty, swash), zero otherwise, at
 /// <see cref="LayerBankColumn"/> (sink depth, bank shadow), zero for a material level with the ground, at
 /// <see cref="LayerBankColourColumn"/> its bank colour, the face a sunken layer shows where it cuts into this one, and
 /// for a swaying material at <see cref="LayerSwayColumn"/> (sway amplitude, sway period, gust length in cells, 1 when its
-/// clumps lean whole), zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
+/// clumps lean whole), zero otherwise, and for a material with waves at <see cref="LayerWavesColumn"/> (spacing, period,
+/// width, tangent of the angle), at <see cref="LayerWaveColourColumn"/> (wave colour, whole within), at
+/// <see cref="LayerWaveCrestColumn"/> (crest colour, stretch), at <see cref="LayerWaveTroughColumn"/> the trough's colour, at
+/// <see cref="LayerWashFoamColumn"/> (foam colour, wet), then the foam's shade, the film's and the film's back colours
+/// at <see cref="LayerWashFoamShadeColumn"/>, <see cref="LayerWashFilmColumn"/> and <see cref="LayerWashFilmBackColumn"/>,
+/// zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
 /// = -1), at <see cref="PairRow"/>: at <see cref="PairShadowColumn"/> (shadow colour, shadow alpha), at
 /// <see cref="PairOutlineColumn"/> (outline colour, 1 when drawn), at <see cref="PairWidthsColumn"/> (shadow width, rim
 /// width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), at
@@ -43,6 +48,14 @@ public static class TerrainBlendLut
     public const int LayerBankColumn = 8;
     public const int LayerBankColourColumn = 9;
     public const int LayerSwayColumn = 10;
+    public const int LayerWavesColumn = 11;
+    public const int LayerWaveColourColumn = 12;
+    public const int LayerWaveCrestColumn = 13;
+    public const int LayerWaveTroughColumn = 14;
+    public const int LayerWashFoamColumn = 15;
+    public const int LayerWashFoamShadeColumn = 16;
+    public const int LayerWashFilmColumn = 17;
+    public const int LayerWashFilmBackColumn = 18;
     public const int PairShadowColumn = 0;
     public const int PairOutlineColumn = 1;
     public const int PairWidthsColumn = 2;
@@ -103,7 +116,22 @@ public static class TerrainBlendLut
                 texels[row + LayerGlintColumn] = new Color(glint.r, glint.g, glint.b, material.SwellPeriod);
                 Color sparkle = material.SparkleColour;
                 texels[row + LayerSparkleColumn] = new Color(sparkle.r, sparkle.g, sparkle.b, material.SparklePeriod);
-                texels[row + LayerSparkleTimingColumn] = new Color(material.SparkleDuty, 0f, 0f, 0f);
+                texels[row + LayerSparkleTimingColumn] = new Color(material.SparkleDuty, material.Swash, 0f, 0f);
+            }
+
+            if (material.HasWaves)
+            {
+                Color wave = material.WaveColour;
+                Color foam = material.WashFoamColour;
+                texels[row + LayerWavesColumn] = new Color(material.WaveSpacing, material.WavePeriod, material.WaveWidth, Mathf.Tan(material.WaveAngle * Mathf.Deg2Rad));
+                texels[row + LayerWaveColourColumn] = new Color(wave.r, wave.g, wave.b, material.WaveWholeWithin);
+                Color crest = material.WaveCrestColour;
+                texels[row + LayerWaveCrestColumn] = new Color(crest.r, crest.g, crest.b, material.WaveStretch);
+                texels[row + LayerWaveTroughColumn] = material.WaveTroughColour;
+                texels[row + LayerWashFoamColumn] = new Color(foam.r, foam.g, foam.b, material.WashWet);
+                texels[row + LayerWashFoamShadeColumn] = material.WashFoamShadeColour;
+                texels[row + LayerWashFilmColumn] = material.WashFilmColour;
+                texels[row + LayerWashFilmBackColumn] = material.WashFilmBackColour;
             }
 
             texels[row + LayerBankColourColumn] = material.BankColour;

@@ -941,6 +941,23 @@ MonoBehaviour:
       softBandColour: {r: 0.10980392, g: 0.3137255, b: 0.5568628, a: 1}
       softWholeStones: 0
       seamless: 0
+  cliffHeight: 14
+  cliffRimWidth: 3
+  cliffFringe: 3
+  cliffOuterRadius: 14
+  cliffInnerRadius: 11
+  cliffBandRows: 3
+  cliffBandShade: 0.82
+  cliffDepthShade: 0.3
+  cliffPebbleChance: 0.012
+  cliffPebbleLight: 1.25
+  cliffFootShade: 0.6
+  cliffOutlineShade: 0.55
+  cliffRimLight: 0.2
+  rampShade: 0.18
+  rampWear: 0.3
+  cliffShadowAlpha: 0.4
+  cliffShadowWidth: 4
   layerOrder:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   - {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}

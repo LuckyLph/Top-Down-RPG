@@ -22,7 +22,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// over a seamless one; a bridge leaves the layers under it their own edges beside it and hides the edge of a layer
 /// painted under it where both end together, and a layer that turns to its runs turns its textures where it runs
 /// across; an animated layer whose height holds only sparkle phases lights only its sparkles; an animated layer gives
-/// the renderer its rate, which the Scene view follows; a fixed time for animated
+/// the renderer its rate, which the Scene view follows; raised ground draws its cliff face, its shadow and its ramp,
+/// and the elevation map follows the raised tilemap (TerrainTypes.md's Phase 10); a fixed time for animated
 /// materials reaches the runtime material and clears without a rebuild, and the layer count the shader reads is the
 /// built one until a rebuild; a
 /// brush's preview shows only in the shown cells, replaces the last one, needs the renderer drawing the tilemap, follows the built layers until a rebuild, clears back to the real
@@ -932,6 +933,122 @@ public class TerrainBlendRendererTests
         Assert.That(SameStripe(acrossLow, acrossHigh), Is.False, "A turned run changes stripe going up.");
         Assert.That(SameStripe(upLeft, upHigher), Is.True, "Up an unturned run the stripes run along y.");
         Assert.That(SameStripe(upLeft, upRight), Is.False, "An unturned run changes stripe going across.");
+    }
+
+    /// <summary>
+    /// Raised ground draws a cliff face along its bottom edge, inside its lowest cells, in the bank colour of the ground
+    /// on top; casts a shadow on the ground below the face; slopes down a ramp in the ground's own colour worn towards
+    /// the bank colour; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
+    /// tilemap the same pixels show plain ground. Green ground with a red bank colour fills an 8 x 6 block, raised ground
+    /// covers columns 1 to 6 of rows 2 to 4, and columns 3 and 4 of row 2 are a ramp; no edge draws an outline, rim or
+    /// shadow, and the cliff has no fringe or pebbles. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator RaisedGround_DrawsItsCliffFace_ItsShadow_AndItsRamp()
+    {
+        Color32 green = new(40, 160, 40, 255);
+        Color32 red = new(220, 30, 30, 255);
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial ground = SolidMaterial("Ground", green, bare);
+        SerializedObject groundSettings = new(ground);
+        groundSettings.FindProperty("bankColour").colorValue = red;
+        groundSettings.ApplyModifiedPropertiesWithoutUndo();
+        SerializedObject cliff = new(style);
+        cliff.FindProperty("cliffFringe").floatValue = 0f;
+        cliff.FindProperty("cliffPebbleChance").floatValue = 0f;
+        cliff.ApplyModifiedPropertiesWithoutUndo();
+        GameObject gridObject = Track(new GameObject("RaisedGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap groundMap = new GameObject("Ground", typeof(Tilemap)).GetComponent<Tilemap>();
+        groundMap.transform.SetParent(gridObject.transform);
+        Tilemap raisedMap = new GameObject("Raised", typeof(Tilemap)).GetComponent<Tilemap>();
+        raisedMap.transform.SetParent(gridObject.transform);
+        RaisedGroundTile raised = Track(RaisedGroundTile.Create(false));
+        RaisedGroundTile ramp = Track(RaisedGroundTile.Create(true));
+        for (int y = 0; y < 6; y++)
+        {
+            for (int x = 0; x < 8; x++)
+            {
+                Vector3Int cell = new(x, y, 0);
+                groundMap.SetTile(cell, tile);
+                if (x >= 1 && x <= 6 && y >= 2 && y <= 4)
+                {
+                    raisedMap.SetTile(cell, (x == 3 || x == 4) && y == 2 ? ramp : raised);
+                }
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        TerrainBlendRenderer.Layer layer = new(groundMap, ground);
+        renderer.Configure(style, raisedMap, layer);
+        gridObject.SetActive(true);
+        Rect world = new(0f, 0f, 8f, 6f);
+        yield return RenderUntilDrawn(renderer, world, new Vector2Int(48, 70));
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        Color32 face = pixels.GetPixel(48, 70);
+        Color32 top = pixels.GetPixel(48, 120);
+        Color32 slope = pixels.GetPixel(112, 70);
+        Color32 shadowed = pixels.GetPixel(48, 62);
+        Color32 open = pixels.GetPixel(48, 30);
+        Color32 beside = pixels.GetPixel(240, 70);
+        Object.DestroyImmediate(pixels);
+
+        Assert.That(face.r, Is.GreaterThan(face.g), "The cliff face shows the bank colour.");
+        Assert.That(top, Is.EqualTo(open), "The plateau's top shows the ground.");
+        Assert.That(beside, Is.EqualTo(open), "The ground beside the plateau shows no cliff.");
+        Assert.That(shadowed.g, Is.LessThan(open.g), "The cliff casts a shadow below it.");
+        Assert.That(slope.g, Is.GreaterThan(slope.r), "The ramp shows the ground.");
+        Assert.That(slope.r, Is.GreaterThan(open.r), "The ramp's ground is worn towards the bank colour.");
+
+        renderer.Configure(style, (Tilemap)null, layer);
+        Color32 plain = default;
+        for (int frame = 0; frame < 30 && !IsDrawn(plain); frame++)
+        {
+            yield return null;
+            plain = RenderedPixel(renderer, world, 48, 70);
+        }
+
+        Assert.That(plain, Is.EqualTo(RenderedPixel(renderer, world, 48, 30)), "Without a raised tilemap the ground is level.");
+    }
+
+    /// <summary>
+    /// The renderer's elevation map holds what each cell of its raised tilemap is (raised ground, a ramp, or level
+    /// ground) and follows tiles painted or erased there once the changes are uploaded, its lookup texture holds the
+    /// style's cliff height and its runtime material has the raised ground keyword; without a raised tilemap it has
+    /// neither, so the shader draws no cliffs.
+    /// </summary>
+    [Test]
+    public void TheElevationMap_FollowsTheRaisedTilemap()
+    {
+        GameObject raisedObject = new("Raised", typeof(Tilemap));
+        raisedObject.transform.SetParent(root.transform);
+        Tilemap raisedMap = raisedObject.GetComponent<Tilemap>();
+        RaisedGroundTile raised = Track(RaisedGroundTile.Create(false));
+        RaisedGroundTile ramp = Track(RaisedGroundTile.Create(true));
+        raisedMap.SetTile(new Vector3Int(3, 3, 0), raised);
+        raisedMap.SetTile(new Vector3Int(4, 3, 0), ramp);
+        TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, raisedMap, new TerrainBlendRenderer.Layer(layers[0], materials[0]));
+        root.SetActive(true);
+
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(3, 3, 0)), Is.EqualTo(RaisedGround.Raised));
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(4, 3, 0)), Is.EqualTo(RaisedGround.Ramp));
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(5, 3, 0)), Is.EqualTo(RaisedGround.Level));
+        Assert.That(renderer.Lut.GetPixel(TerrainBlendLut.SharedCliffColumn, TerrainBlendLut.SharedRow).r, Is.EqualTo(style.CliffHeight));
+        LocalKeyword raisedKeyword = new(renderer.RuntimeMaterial.shader, "_TERRAIN_RAISED");
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(raisedKeyword), Is.True, "The material draws raised ground.");
+
+        raisedMap.SetTile(new Vector3Int(5, 3, 0), raised);
+        raisedMap.SetTile(new Vector3Int(3, 3, 0), null);
+        Assert.That(renderer.IsFlushScheduled, Is.True);
+        renderer.FlushPendingChanges();
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(5, 3, 0)), Is.EqualTo(RaisedGround.Raised));
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(3, 3, 0)), Is.EqualTo(RaisedGround.Level));
+
+        renderer.Configure(style, (Tilemap)null, new TerrainBlendRenderer.Layer(layers[0], materials[0]));
+        Assert.That(renderer.Lut.GetPixel(TerrainBlendLut.SharedCliffColumn, TerrainBlendLut.SharedRow), Is.EqualTo(Color.clear));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(new LocalKeyword(renderer.RuntimeMaterial.shader, "_TERRAIN_RAISED")), Is.False, "Without raised ground the material has no raised keyword.");
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(5, 3, 0)), Is.EqualTo(RaisedGround.Level));
     }
 
     /// <summary>

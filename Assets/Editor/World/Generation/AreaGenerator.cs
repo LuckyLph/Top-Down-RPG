@@ -77,13 +77,23 @@ public abstract class AreaGenerator : ScriptableObject
         public float Spacing => spacing;
     }
 
+    public const string RaisedTilemapName = "RaisedTilemap";
+
     [Tooltip("Seed the scene generator uses. The same seed always gives the same layout.")]
     [SerializeField] private int seed = 1;
     [Tooltip("The style the area's Terrain Blend Renderer draws the terrain layers with.")]
     [SerializeField] private TerrainStyle terrainStyle;
 
+    [Header("Raised ground")]
+    [Tooltip("The tile of raised ground the writer puts on the area's raised tilemap; none for a generator that lays no raised ground.")]
+    [SerializeField] private RaisedGroundTile raisedTile;
+    [Tooltip("The tile of a ramp the writer puts on the area's raised tilemap.")]
+    [SerializeField] private RaisedGroundTile rampTile;
+
     public int Seed => seed;
     public TerrainStyle TerrainStyle => terrainStyle;
+    public RaisedGroundTile RaisedTile => raisedTile;
+    public RaisedGroundTile RampTile => rampTile;
 
     /// <summary>
     /// The terrain layers this generator paints, bottom first: only the ones its areas use, at most

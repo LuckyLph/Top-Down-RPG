@@ -37,6 +37,11 @@ public static class TerrainBlendLut
 {
     public const int SharedRow = 0;
     public const int SharedColumn = 0;
+    public const int SharedCliffColumn = 1;
+    public const int SharedCliffFaceColumn = 2;
+    public const int SharedCliffEdgeColumn = 3;
+    public const int SharedCliffShadowColumn = 4;
+    public const int SharedCliffRimColumn = 5;
     public const int LayerShapeColumn = 0;
     public const int LayerChipsColumn = 1;
     public const int LayerBaseColumn = 2;
@@ -96,11 +101,21 @@ public static class TerrainBlendLut
     /// <paramref name="style"/>'s shared settings and pair overrides, row by row from the bottom, <see cref="Width"/>
     /// per row.
     /// </summary>
-    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials)
+    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, bool raised = false)
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
         texels[SharedRow * Width + SharedColumn] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, BridgeBits(layerMaterials));
+        if (raised)
+        {
+            int shared = SharedRow * Width;
+            texels[shared + SharedCliffColumn] = new Color(style.CliffHeight, style.CliffFringe, style.CliffOuterRadius, style.CliffInnerRadius);
+            texels[shared + SharedCliffFaceColumn] = new Color(style.CliffBandRows, style.CliffBandShade, style.CliffDepthShade, style.CliffPebbleChance);
+            texels[shared + SharedCliffEdgeColumn] = new Color(style.CliffFootShade, style.CliffOutlineShade, style.CliffRimLight, style.CliffPebbleLight);
+            texels[shared + SharedCliffShadowColumn] = new Color(style.CliffShadowAlpha, style.CliffShadowWidth, style.RampShade, style.RampWear);
+            texels[shared + SharedCliffRimColumn] = new Color(style.CliffRimWidth, 0f, 0f, 0f);
+        }
+
         for (int layer = 0; layer < layers; layer++)
         {
             TerrainMaterial material = layerMaterials[layer];
@@ -169,7 +184,7 @@ public static class TerrainBlendLut
     /// Creates the lookup texture for <paramref name="style"/> and <paramref name="layerMaterials"/>, flagged so it is
     /// never saved. The caller destroys it.
     /// </summary>
-    public static Texture2D Create(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, string textureName)
+    public static Texture2D Create(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, string textureName, bool raised = false)
     {
         Texture2D texture = new(Width, Height(layerMaterials.Count), TextureFormat.RGBAFloat, false, true)
         {
@@ -178,7 +193,7 @@ public static class TerrainBlendLut
             wrapMode = TextureWrapMode.Clamp,
             hideFlags = HideFlags.DontSave
         };
-        texture.SetPixels(BuildTexels(style, layerMaterials));
+        texture.SetPixels(BuildTexels(style, layerMaterials, raised));
         texture.Apply(false, false);
         return texture;
     }

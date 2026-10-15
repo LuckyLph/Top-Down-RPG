@@ -24,12 +24,25 @@ public static class GroundLayerMigration
 {
     /// <summary>
     /// Converts the ground layers of <paramref name="grid"/> to <paramref name="generator"/>'s terrain layers and
-    /// terrain style. Returns a line per change (empty when nothing changed), or null when the generator's layers
-    /// cannot be set up, after logging why.
+    /// terrain style, and for a generator with raised ground sets up the raised tilemap, keeping its cells
+    /// (<see cref="AreaGroundSetup.SetUpRaised"/>). Returns a line per change (empty when nothing changed), or null when
+    /// the generator's layers cannot be set up, after logging why.
     /// </summary>
     public static List<string> Migrate(Grid grid, AreaGenerator generator)
     {
-        return Migrate(grid, generator.TerrainStyle, generator.TerrainLayers, generator.name);
+        List<string> changes = Migrate(grid, generator.TerrainStyle, generator.TerrainLayers, generator.name);
+        if (changes != null && generator.RaisedTile != null)
+        {
+            int before = changes.Count;
+            AreaGroundSetup.SetUpRaised(grid, changes);
+            if (changes.Count > before)
+            {
+                Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+                EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+            }
+        }
+
+        return changes;
     }
 
     /// <summary>

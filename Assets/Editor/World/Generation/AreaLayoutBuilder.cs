@@ -23,6 +23,9 @@ internal sealed class AreaLayoutBuilder
     private const int DetailStreamSalt = 1013904223;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
+    private static readonly float[] PlateauScales = { 1f, 0.8f, 0.65f, 0.5f };
+    private const int PlateauAttempts = 8;
+    private const int RampApproachRows = 4;
 
     /// <summary>
     /// A campsite's settings for <see cref="LayCampsite"/>: the campfire in its middle, the seats around it, how many
@@ -48,6 +51,25 @@ internal sealed class AreaLayoutBuilder
         public int SeatCount { get; }
         public float SeatSpacing { get; }
         public float Radius { get; }
+    }
+
+    /// <summary>
+    /// A plateau's settings for <see cref="LayPlateau"/>: its half size in cells before its outline wobbles, and how
+    /// many cells wide its ramp is.
+    /// </summary>
+    public sealed class Plateau
+    {
+        /// <summary>
+        /// A plateau of <paramref name="halfSize"/> with a ramp <paramref name="rampWidth"/> cells wide.
+        /// </summary>
+        public Plateau(Vector2 halfSize, int rampWidth)
+        {
+            HalfSize = halfSize;
+            RampWidth = rampWidth;
+        }
+
+        public Vector2 HalfSize { get; }
+        public int RampWidth { get; }
     }
 
     private readonly int seed;
@@ -855,6 +877,120 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// Lays a plateau of raised ground into <paramref name="raised"/>, with its ramp in <paramref name="ramps"/>:
+    /// centred on a random ground cell whose cells within the plateau's half size all pass <paramref name="allowed"/> (or,
+    /// where none has room, within four fifths of it, then about two thirds), a
+    /// mesa of straight edges, a block of up to the half size with one or two smaller blocks set on its sides, of the
+    /// ground cells that pass it, its largest 4-connected piece, with every cell that is not three cells thick across
+    /// and down taken off until none is left, so the cliff all round it (<see cref="RaisedGround.IsCliff"/>) leaves a
+    /// top to walk on. The ramp, the ramp width wide, lies in the plateau's bottom cells (raised, the cell below not), in
+    /// the middle of the run of them nearest the plateau's middle that is at least two cells longer, so a cliff stands
+    /// on either side, with the two rows below it ground that passes <paramref name="walkable"/> to walk up from; a
+    /// plateau without such a run is
+    /// laid again round another centre, up to a few times. Removes every prop on the cliff's face
+    /// (the bottom cells), the ramp, the row above it and the four rows below it a column wider on each side, so nothing
+    /// stands in front of the ramp, and every blocking prop whose footprint lies both on and off the plateau. Draws from the current stream. Warns and lays nothing when no plateau with a ramp fits.
+    /// </summary>
+    public bool LayPlateau(Plateau plateau, HashSet<Vector3Int> raised, HashSet<Vector3Int> ramps, Predicate<Vector3Int> allowed, Predicate<Vector3Int> walkable)
+    {
+        HashSet<Vector3Int> open = new();
+        foreach (Vector3Int cell in orderedGround)
+        {
+            if (allowed(cell))
+            {
+                open.Add(cell);
+            }
+        }
+
+        allowed = open.Contains;
+        Vector2 half = plateau.HalfSize;
+        List<Vector3Int> centres = new();
+        foreach (float scale in PlateauScales)
+        {
+            int spanX = Mathf.CeilToInt(plateau.HalfSize.x * scale);
+            int spanY = Mathf.CeilToInt(plateau.HalfSize.y * scale);
+            foreach (Vector3Int cell in orderedGround)
+            {
+                if (AllWithinBox(cell, spanX, spanY, allowed))
+                {
+                    centres.Add(cell);
+                }
+            }
+
+            if (centres.Count > 0)
+            {
+                half = plateau.HalfSize * scale;
+                break;
+            }
+        }
+
+        if (centres.Count == 0)
+        {
+            Layout.Warnings.Add("No open ground has room for the plateau.");
+            return false;
+        }
+
+        HashSet<Vector3Int> cells = new();
+        List<Vector3Int> ramp = new();
+        for (int attempt = 0; attempt < PlateauAttempts && ramp.Count == 0 && centres.Count > 0; attempt++)
+        {
+            int pick = Next(centres.Count);
+            Vector3Int centre = centres[pick];
+            centres.RemoveAt(pick);
+            Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
+            cells = new HashSet<Vector3Int>();
+            Vector2 main = new(half.x * Range(0.8f, 1f), half.y * Range(0.8f, 1f));
+            AddBlock(cells, middle, main, allowed);
+            int extra = 1 + Next(2);
+            for (int i = 0; i < extra; i++)
+            {
+                Vector2 size = new(main.x * Range(0.4f, 0.7f), main.y * Range(0.4f, 0.7f));
+                Vector2 offset = Next(2) == 0
+                    ? new Vector2(Range(-1f, 1f) * main.x, (Next(2) == 0 ? -1f : 1f) * main.y)
+                    : new Vector2((Next(2) == 0 ? -1f : 1f) * main.x, Range(-1f, 1f) * main.y);
+                AddBlock(cells, middle + offset, size, allowed);
+            }
+
+            ThinOut(cells);
+            cells = LargestPiece(cells);
+            ramp = cells.Count >= 4 ? RampCells(cells, plateau.RampWidth, middle.x, walkable) : new List<Vector3Int>();
+        }
+
+        if (ramp.Count == 0)
+        {
+            Layout.Warnings.Add("The plateau found no straight stretch of cliff with room for its ramp.");
+            return false;
+        }
+
+        HashSet<Vector3Int> clear = new(ramp);
+        foreach (Vector3Int cell in cells)
+        {
+            if (!cells.Contains(cell + Vector3Int.down))
+            {
+                clear.Add(cell);
+            }
+        }
+
+        foreach (Vector3Int cell in ramp)
+        {
+            clear.Add(cell + Vector3Int.up);
+            for (int below = 1; below <= RampApproachRows; below++)
+            {
+                for (int side = -1; side <= 1; side++)
+                {
+                    clear.Add(cell + new Vector3Int(side, -below, 0));
+                }
+            }
+        }
+
+        RemoveProps(clear.Contains, false);
+        RemoveStraddling(cells);
+        raised.UnionWith(cells);
+        ramps.UnionWith(ramp);
+        return true;
+    }
+
+    /// <summary>
     /// A uniformly distributed value between <paramref name="min"/> and <paramref name="max"/>.
     /// </summary>
     public float Range(float min, float max)
@@ -1009,6 +1145,214 @@ internal sealed class AreaLayoutBuilder
     /// <summary>
     /// Whether every mob spawn lies more than <paramref name="distance"/> from <paramref name="cell"/>.
     /// </summary>
+    /// <summary>
+    /// Whether every cell within <paramref name="spanX"/> columns and <paramref name="spanY"/> rows of
+    /// <paramref name="cell"/> passes <paramref name="test"/>.
+    /// </summary>
+    private static bool AllWithinBox(Vector3Int cell, int spanX, int spanY, Predicate<Vector3Int> test)
+    {
+        for (int dy = -spanY; dy <= spanY; dy++)
+        {
+            for (int dx = -spanX; dx <= spanX; dx++)
+            {
+                if (!test(cell + new Vector3Int(dx, dy, 0)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Adds to <paramref name="cells"/> the ground cells that pass <paramref name="allowed"/> whose centres lie within
+    /// <paramref name="halfSize"/> of <paramref name="middle"/>.
+    /// </summary>
+    private void AddBlock(HashSet<Vector3Int> cells, Vector2 middle, Vector2 halfSize, Predicate<Vector3Int> allowed)
+    {
+        for (int y = Mathf.FloorToInt(middle.y - halfSize.y); y <= Mathf.CeilToInt(middle.y + halfSize.y); y++)
+        {
+            for (int x = Mathf.FloorToInt(middle.x - halfSize.x); x <= Mathf.CeilToInt(middle.x + halfSize.x); x++)
+            {
+                Vector3Int cell = new(x, y, 0);
+                if (Mathf.Abs(x + 0.5f - middle.x) <= halfSize.x && Mathf.Abs(y + 0.5f - middle.y) <= halfSize.y
+                    && Ground.Contains(cell) && allowed(cell))
+                {
+                    cells.Add(cell);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Takes off every cell of <paramref name="cells"/> that does not lie in a run of three of them across and in one
+    /// of three of them down, again until none is left.
+    /// </summary>
+    private void ThinOut(HashSet<Vector3Int> cells)
+    {
+        List<Vector3Int> ordered = InGroundOrder(cells);
+        bool changed = true;
+        while (changed)
+        {
+            changed = false;
+            foreach (Vector3Int cell in ordered)
+            {
+                if (cells.Contains(cell) && (!InRunOfThree(cells, cell, Vector3Int.right) || !InRunOfThree(cells, cell, Vector3Int.up)))
+                {
+                    cells.Remove(cell);
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// <paramref name="cells"/> in the order the ground was laid: rows from the bottom, cells from the left.
+    /// </summary>
+    private static List<Vector3Int> InGroundOrder(HashSet<Vector3Int> cells)
+    {
+        List<Vector3Int> ordered = new(cells);
+        ordered.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
+        return ordered;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies in a run of three cells of <paramref name="cells"/> along
+    /// <paramref name="step"/>.
+    /// </summary>
+    private static bool InRunOfThree(HashSet<Vector3Int> cells, Vector3Int cell, Vector3Int step)
+    {
+        bool before = cells.Contains(cell - step);
+        bool after = cells.Contains(cell + step);
+        return (before && after) || (before && cells.Contains(cell - step * 2)) || (after && cells.Contains(cell + step * 2));
+    }
+
+    /// <summary>
+    /// The largest 4-connected piece of <paramref name="cells"/>, the first found in ground order among equals.
+    /// </summary>
+    private HashSet<Vector3Int> LargestPiece(HashSet<Vector3Int> cells)
+    {
+        HashSet<Vector3Int> largest = new();
+        HashSet<Vector3Int> seen = new();
+        foreach (Vector3Int cell in InGroundOrder(cells))
+        {
+            if (!seen.Contains(cell))
+            {
+                HashSet<Vector3Int> piece = FloodFill(cell, cells.Contains);
+                seen.UnionWith(piece);
+                if (piece.Count > largest.Count)
+                {
+                    largest = piece;
+                }
+            }
+        }
+
+        return largest;
+    }
+
+    /// <summary>
+    /// The ramp of a plateau of <paramref name="cells"/>, <paramref name="width"/> cells wide: in the middle of the run of
+    /// bottom cells (the cell below not raised) at least two cells longer than the ramp nearest <paramref name="middle"/>
+    /// across (the lowest among equals), with the two rows below it ground off the plateau that passes
+    /// <paramref name="walkable"/>; empty when no run has room.
+    /// </summary>
+    private List<Vector3Int> RampCells(HashSet<Vector3Int> cells, int width, float middle, Predicate<Vector3Int> walkable)
+    {
+        List<Vector3Int> best = new();
+        float bestDistance = float.MaxValue;
+        foreach (Vector3Int start in InGroundOrder(cells))
+        {
+            if (!IsBottom(cells, start) || IsBottom(cells, start + Vector3Int.left))
+            {
+                continue;
+            }
+
+            int length = 0;
+            while (IsBottom(cells, start + new Vector3Int(length, 0, 0)))
+            {
+                length++;
+            }
+
+            if (length < width + 2)
+            {
+                continue;
+            }
+
+            int first = start.x + (length - width) / 2;
+            List<Vector3Int> ramp = new();
+            bool open = true;
+            for (int x = first; x < first + width; x++)
+            {
+                Vector3Int cell = new(x, start.y, 0);
+                ramp.Add(cell);
+                for (int below = 1; below <= 2; below++)
+                {
+                    Vector3Int approach = cell + new Vector3Int(0, -below, 0);
+                    open &= Ground.Contains(approach) && !cells.Contains(approach) && walkable(approach);
+                }
+            }
+
+            float distance = Mathf.Abs(first + width * 0.5f - middle);
+            if (open && distance < bestDistance)
+            {
+                best = ramp;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> is one of <paramref name="cells"/> with the cell below it not.
+    /// </summary>
+    private static bool IsBottom(HashSet<Vector3Int> cells, Vector3Int cell)
+    {
+        return cells.Contains(cell) && !cells.Contains(cell + Vector3Int.down);
+    }
+
+    /// <summary>
+    /// Removes every blocking prop whose footprint covers cells both in and out of <paramref name="cells"/>, freeing
+    /// its cells.
+    /// </summary>
+    private void RemoveStraddling(HashSet<Vector3Int> cells)
+    {
+        for (int i = Layout.Props.Count - 1; i >= 0; i--)
+        {
+            AreaLayout.Prop prop = Layout.Props[i];
+            if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+            {
+                continue;
+            }
+
+            Vector2Int size = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            int inside = 0;
+            for (int dy = 0; dy < size.y; dy++)
+            {
+                for (int dx = 0; dx < size.x; dx++)
+                {
+                    inside += cells.Contains(prop.Cell + new Vector3Int(dx, dy, 0)) ? 1 : 0;
+                }
+            }
+
+            if (inside == 0 || inside == size.x * size.y)
+            {
+                continue;
+            }
+
+            for (int dy = 0; dy < size.y; dy++)
+            {
+                for (int dx = 0; dx < size.x; dx++)
+                {
+                    Occupied.Remove(prop.Cell + new Vector3Int(dx, dy, 0));
+                }
+            }
+
+            Layout.Props.RemoveAt(i);
+        }
+    }
+
     private bool IsAwayFromMobs(Vector3Int cell, float distance)
     {
         foreach (AreaLayout.Mob mob in Layout.Mobs)

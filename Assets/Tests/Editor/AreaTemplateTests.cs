@@ -14,8 +14,8 @@ using UnityEngine.Tilemaps;
 /// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
 /// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
 /// trims it to the generator's layers, after which its renderer builds and its navigation grid blocks exactly the
-/// footprints, the water, except under a dock, the ocean and lava; a generator that lists lava, which the template
-/// leaves out, gets its layer from the writer. The template is opened
+/// footprints, the water, except under a dock, the ocean, lava and the cliff of raised ground; a generator that lists
+/// lava, which the template leaves out, gets its layer from the writer, and one with raised ground its raised tilemap. The template is opened
 /// beside the open scenes and closed without saving.
 /// </summary>
 public class AreaTemplateTests
@@ -219,6 +219,14 @@ public class AreaTemplateTests
                         blocked.Add(prop.Cell + new Vector3Int(dx, dy, 0));
                     }
                 }
+            }
+        }
+
+        foreach (Vector3Int cell in layout.Raised)
+        {
+            if (RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell))
+            {
+                blocked.Add(cell);
             }
         }
 

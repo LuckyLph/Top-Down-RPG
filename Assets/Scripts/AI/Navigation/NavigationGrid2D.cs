@@ -5,8 +5,8 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps and the cells under
-/// colliders on its obstacle layers (blocking props). Each movement profile
+/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps, the cliff of its raised
+/// tilemap (<see cref="RaisedGround.IsCliff"/>) and the cells under colliders on its obstacle layers (blocking props). Each movement profile
 /// gets a cost field: flat arrays over <see cref="WalkableBounds"/> holding every cell's traversal cost and connected
 /// region, baked on first use and rebaked when the profile is edited or the grid changes. While enabled it follows
 /// tile changes on its source and blocking tilemaps, updating just those cells and bumping <see cref="Version"/>.
@@ -56,6 +56,8 @@ public class NavigationGrid2D : MonoBehaviour
     [SerializeField] private bool discoverSourcesInChildren = true;
     [Tooltip("Tilemaps whose cells are blocked for every terrain layer, such as the collision tilemap.")]
     [SerializeField] private List<Tilemap> blockingTilemaps = new();
+    [Tooltip("Optional: the area's raised ground. Its cliff (raised cells that are no ramp with level ground beside them) is blocked for every terrain layer, so units move between raised and level ground only over a ramp.")]
+    [SerializeField] private Tilemap raisedTilemap;
     [Tooltip("Layers whose colliders block every cell they overlap, such as the footprints of blocking props. Read " +
         "when the grid builds; colliders on tilemaps and triggers are ignored.")]
     [SerializeField] private LayerMask obstacleLayers;
@@ -103,6 +105,7 @@ public class NavigationGrid2D : MonoBehaviour
     }
     public IReadOnlyList<NavigationTerrainSource2D> TerrainSources => terrainSources;
     public IReadOnlyList<Tilemap> BlockingTilemaps => blockingTilemaps;
+    public Tilemap RaisedTilemap => raisedTilemap;
     public LayerMask ObstacleLayers => obstacleLayers;
 
     internal int CellCount => cells.Length;
@@ -174,6 +177,15 @@ public class NavigationGrid2D : MonoBehaviour
                 blockingTilemaps.Add(tilemaps[i]);
             }
         }
+    }
+
+    /// <summary>
+    /// Sets the raised tilemap whose cliff is blocked (null for none), for grids set up in code. Takes effect on the next
+    /// <see cref="BuildGrid"/>.
+    /// </summary>
+    public void ConfigureRaisedTilemap(Tilemap tilemap)
+    {
+        raisedTilemap = tilemap;
     }
 
     /// <summary>
@@ -288,6 +300,11 @@ public class NavigationGrid2D : MonoBehaviour
             }
 
             watchedTilemaps.Add(blockingTilemap);
+        }
+
+        if (raisedTilemap != null)
+        {
+            watchedTilemaps.Add(raisedTilemap);
         }
 
         CollectObstacleCells();
@@ -709,12 +726,22 @@ public class NavigationGrid2D : MonoBehaviour
             return;
         }
 
+        bool raised = tilemap == raisedTilemap;
         for (int i = 0; i < positions.Length; i++)
         {
             if (!RefreshCell(positions[i]))
             {
                 BuildGrid();
                 return;
+            }
+
+            for (int n = 0; raised && n < RaisedGround.NeighbourOffsets.Count; n++)
+            {
+                if (!RefreshCell(positions[i] + RaisedGround.NeighbourOffsets[n]))
+                {
+                    BuildGrid();
+                    return;
+                }
             }
         }
 
@@ -772,11 +799,12 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Whether <paramref name="cell"/> lies under an obstacle collider or any watched blocking tilemap has a tile there.
+    /// Whether <paramref name="cell"/> lies under an obstacle collider, any watched blocking tilemap has a tile there, or
+    /// it is cliff on the raised tilemap.
     /// </summary>
     private bool IsBlocked(Vector3Int cell)
     {
-        if (obstacleCells.Contains(cell))
+        if (obstacleCells.Contains(cell) || (raisedTilemap != null && watchedTilemaps.Contains(raisedTilemap) && RaisedGround.IsCliff(raisedTilemap, cell)))
         {
             return true;
         }
@@ -857,14 +885,25 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes every cell with a tile on a watched blocking tilemap, or under an obstacle collider, from the cells
-    /// collected for the build.
+    /// Removes every cell with a tile on a watched blocking tilemap, under an obstacle collider or on the raised
+    /// tilemap's cliff from the cells collected for the build.
     /// </summary>
     private void RemoveBlockedCells()
     {
         foreach (Vector3Int cell in obstacleCells)
         {
             cellsByPosition.Remove(cell);
+        }
+
+        if (raisedTilemap != null)
+        {
+            foreach (Vector3Int cell in raisedTilemap.cellBounds.allPositionsWithin)
+            {
+                if (RaisedGround.IsCliff(raisedTilemap, cell))
+                {
+                    cellsByPosition.Remove(cell);
+                }
+            }
         }
 
         for (int i = 0; i < blockingTilemaps.Count; i++)

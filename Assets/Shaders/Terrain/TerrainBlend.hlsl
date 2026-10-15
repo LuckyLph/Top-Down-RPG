@@ -13,11 +13,13 @@
 #include "Assets/Shaders/Terrain/TerrainBlendBanks.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendInterior.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendLayer.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendRaised.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendDebug.hlsl"
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
 // composites the layers bottom up, each drawn over the layer below it with that pair's edge (without its shadow or
-// tufts where a bridge ends on its edge, TBNearBridgeEdge), in the crisp look or,
+// tufts where a bridge ends on its edge, TBNearBridgeEdge), then, with the keyword _TERRAIN_RAISED, raised ground's
+// cliffs over them (TBRaisedOver), in the crisp look or,
 // with the keyword _TERRAIN_SOFT, the soft one. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
 // visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
 // draws animated materials at the time Info.w instead of the frame's.
@@ -100,7 +102,8 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         Color = TBDebugColour(top);
         return;
     }
-    Color = TBToOutput(acc.a > 0.0 ? acc.rgb / acc.a : float3(0.0, 0.0, 0.0));
+    float3 colour = acc.a > 0.0 ? acc.rgb / acc.a : float3(0.0, 0.0, 0.0);
+    Color = TBToOutput(TBRaisedOver(ins, colour, top, pixel, worldPixel));
     Alpha = acc.a;
 }
 

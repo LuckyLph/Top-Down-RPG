@@ -153,6 +153,41 @@ public class TerrainStyle : ScriptableObject
     [SerializeField, Range(0f, 4f)] private float pairBlend = 1.5f;
     [Tooltip("Edges drawn in place of the upper material's default edge, each for one upper material over one lower material or over nothing.")]
     [SerializeField] private PairOverride[] pairOverrides = new PairOverride[0];
+    [Header("Raised ground")]
+    [Tooltip("Height in pixels of the cliff face along the bottom of raised ground, drawn inside its cells, so the bottom of the plateau's lowest cells is the face and cannot be walked.")]
+    [SerializeField, Range(4f, 24f)] private float cliffHeight = 14f;
+    [Tooltip("Width in pixels of the ledge of earth along raised ground's sides and back, inside its outline, so its edge shows; under half a cell, as a pixel's distance to the edge reaches no further.")]
+    [SerializeField, Range(0f, 15f)] private float cliffRimWidth = 3f;
+    [Tooltip("Up to how many pixels the ground on top of raised ground hangs over its cliff face, varying from column to column.")]
+    [SerializeField, Range(0f, 6f)] private float cliffFringe = 3f;
+    [Tooltip("Radius in pixels of raised ground's outer corners.")]
+    [SerializeField, Range(0f, 15f)] private float cliffOuterRadius = 14f;
+    [Tooltip("Radius in pixels of raised ground's inner corners.")]
+    [SerializeField, Range(0f, 15f)] private float cliffInnerRadius = 11f;
+    [Tooltip("Rows of each band of earth across the cliff face.")]
+    [SerializeField, Range(1f, 8f)] private float cliffBandRows = 3f;
+    [Tooltip("How light every other band of the face is, as a factor of the bank colour.")]
+    [SerializeField, Range(0f, 1f)] private float cliffBandShade = 0.86f;
+    [Tooltip("How much darker the face grows from its top to its foot.")]
+    [SerializeField, Range(0f, 1f)] private float cliffDepthShade = 0.15f;
+    [Tooltip("The share of the face's pixels that are lighter pebbles.")]
+    [SerializeField, Range(0f, 0.2f)] private float cliffPebbleChance = 0.012f;
+    [Tooltip("How light the pebbles are, as a factor of the bank colour.")]
+    [SerializeField, Range(1f, 2f)] private float cliffPebbleLight = 1.25f;
+    [Tooltip("The face's foot row, as a factor of the bank colour.")]
+    [SerializeField, Range(0f, 1f)] private float cliffFootShade = 0.6f;
+    [Tooltip("The outline around raised ground, as a factor of the bank colour.")]
+    [SerializeField, Range(0f, 1f)] private float cliffOutlineShade = 0.55f;
+    [Tooltip("How much lighter the ground on top is along raised ground's edge, inside its outline.")]
+    [SerializeField, Range(0f, 1f)] private float cliffRimLight = 0.12f;
+    [Tooltip("How much darker a ramp grows from its top to its foot.")]
+    [SerializeField, Range(0f, 1f)] private float rampShade = 0.18f;
+    [Tooltip("How far a ramp's ground is worn towards the bank colour, so the slope shows as a cut into the cliff.")]
+    [SerializeField, Range(0f, 1f)] private float rampWear = 0.3f;
+    [Tooltip("How dark the shadow the cliff casts on the ground below it is at the cliff's foot.")]
+    [SerializeField, Range(0f, 1f)] private float cliffShadowAlpha = 0.4f;
+    [Tooltip("Height in pixels of the shadow the cliff casts below it; the soft look draws none.")]
+    [SerializeField, Range(0f, 8f)] private float cliffShadowWidth = 4f;
     [Header("Layers")]
     [Tooltip("Every ground material, bottom first: the order areas draw their layers in. Each area lists a subsequence of it (Docs/TerrainTypes.md).")]
     [SerializeField] private TerrainMaterial[] layerOrder = new TerrainMaterial[0];
@@ -163,6 +198,23 @@ public class TerrainStyle : ScriptableObject
     public float PairBlend => pairBlend;
     public IReadOnlyList<PairOverride> PairOverrides => pairOverrides;
     public IReadOnlyList<TerrainMaterial> LayerOrder => layerOrder;
+    public float CliffHeight => cliffHeight;
+    public float CliffRimWidth => cliffRimWidth;
+    public float CliffFringe => cliffFringe;
+    public float CliffOuterRadius => cliffOuterRadius;
+    public float CliffInnerRadius => cliffInnerRadius;
+    public float CliffBandRows => cliffBandRows;
+    public float CliffBandShade => cliffBandShade;
+    public float CliffDepthShade => cliffDepthShade;
+    public float CliffPebbleChance => cliffPebbleChance;
+    public float CliffPebbleLight => cliffPebbleLight;
+    public float CliffFootShade => cliffFootShade;
+    public float CliffOutlineShade => cliffOutlineShade;
+    public float CliffRimLight => cliffRimLight;
+    public float RampShade => rampShade;
+    public float RampWear => rampWear;
+    public float CliffShadowAlpha => cliffShadowAlpha;
+    public float CliffShadowWidth => cliffShadowWidth;
 
 #if UNITY_EDITOR
     internal event Action Validated;

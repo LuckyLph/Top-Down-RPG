@@ -21,7 +21,8 @@ using UnityEngine.TestTools;
 /// with the edges and overrides TerrainTypes.md's Phase 3 decided, and its shallows glint, sink less than the water and
 /// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits and materials that turn to their runs mark
 /// their layer's row, and the project's planks are a level bridge drawn last with a shadow of their own on the water
-/// (Phase 5); the shader's layout defines and the constants agree. The project's style and materials are only read.
+/// (Phase 5); raised ground's cliff settings reach row 0 only for layers drawn over raised ground (Phase 10); the shader's
+/// layout defines and the constants agree. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -334,6 +335,43 @@ public class TerrainBlendLutTests
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerBankColumn), Is.EqualTo(Color.clear));
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerBankColumn), Is.EqualTo(new Color(4.5f, 0.35f, 0f, 0f)));
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerBankColourColumn), Is.EqualTo(new Color(0.4f, 0.3f, 0.2f)));
+    }
+
+    /// <summary>
+    /// For layers drawn over raised ground, row 0 holds the style's cliff settings at its cliff columns: the cliff's
+    /// height, fringe and corner radii; its bands, band shade, depth shade and pebble chance; its foot shade, outline
+    /// shade, rim light and pebble light; its shadow's alpha and height, the ramp's shade and wear; the ledge's width.
+    /// Without raised ground they stay empty, which is what tells the shader to draw no cliffs.
+    /// </summary>
+    [Test]
+    public void RaisedGround_ReachesTheSharedRow_AndLayersWithoutItLeaveItEmpty()
+    {
+        TerrainMaterial grass = Material("Grass", 0.1f);
+        TerrainStyle style = Style();
+        SerializedObject settings = new(style);
+        settings.FindProperty("cliffHeight").floatValue = 12f;
+        settings.FindProperty("cliffRimWidth").floatValue = 4f;
+        settings.FindProperty("rampWear").floatValue = 0.5f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        Color[] raised = TerrainBlendLut.BuildTexels(style, new[] { grass }, true);
+        Color[] level = TerrainBlendLut.BuildTexels(style, new[] { grass });
+
+        int row = TerrainBlendLut.SharedRow * TerrainBlendLut.Width;
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffColumn], Is.EqualTo(new Color(12f, style.CliffFringe, style.CliffOuterRadius, style.CliffInnerRadius)));
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffFaceColumn], Is.EqualTo(new Color(style.CliffBandRows, style.CliffBandShade, style.CliffDepthShade, style.CliffPebbleChance)));
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffEdgeColumn], Is.EqualTo(new Color(style.CliffFootShade, style.CliffOutlineShade, style.CliffRimLight, style.CliffPebbleLight)));
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffShadowColumn], Is.EqualTo(new Color(style.CliffShadowAlpha, style.CliffShadowWidth, style.RampShade, 0.5f)));
+        Assert.That(raised[row + TerrainBlendLut.SharedCliffRimColumn], Is.EqualTo(new Color(4f, 0f, 0f, 0f)));
+        for (int column = TerrainBlendLut.SharedCliffColumn; column <= TerrainBlendLut.SharedCliffRimColumn; column++)
+        {
+            Assert.That(level[row + column], Is.EqualTo(Color.clear), $"column {column}");
+        }
+
+        for (int i = TerrainBlendLut.Width; i < raised.Length; i++)
+        {
+            Assert.That(raised[i], Is.EqualTo(level[i]), $"texel {i}");
+        }
     }
 
     /// <summary>

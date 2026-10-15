@@ -80,6 +80,16 @@ public sealed class AreaLayout
     public Vector3Int SpawnCell { get; set; }
 
     /// <summary>
+    /// The cells of raised ground, ramps included, which the writer puts on the area's raised tilemap.
+    /// </summary>
+    public HashSet<Vector3Int> Raised { get; } = new();
+
+    /// <summary>
+    /// The cells of <see cref="Raised"/> that are ramps.
+    /// </summary>
+    public HashSet<Vector3Int> Ramps { get; } = new();
+
+    /// <summary>
     /// The filled cells of terrain layer <paramref name="layer"/>, indexed like <see cref="TerrainLayers"/>.
     /// </summary>
     public HashSet<Vector3Int> TerrainCells(int layer)

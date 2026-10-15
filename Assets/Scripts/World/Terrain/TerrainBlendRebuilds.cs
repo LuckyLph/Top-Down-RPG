@@ -19,6 +19,7 @@ internal sealed class TerrainBlendRebuilds
     private readonly List<TerrainMaterial> builtMaterials = new();
     private TerrainStyle subscribedStyle;
     private TerrainStyle builtStyle;
+    private Tilemap builtRaisedTilemap;
     private int builtChunkSize;
     private string builtSortingLayerName;
     private int builtSortingOrder;
@@ -36,9 +37,10 @@ internal sealed class TerrainBlendRebuilds
     /// <summary>
     /// Remembers what a build read, for <see cref="Changed"/>.
     /// </summary>
-    public void Remember(TerrainStyle style, IReadOnlyList<TerrainBlendRenderer.Layer> layers, int chunkSize, string sortingLayerName, int sortingOrder)
+    public void Remember(TerrainStyle style, IReadOnlyList<TerrainBlendRenderer.Layer> layers, Tilemap raisedTilemap, int chunkSize, string sortingLayerName, int sortingOrder)
     {
         builtStyle = style;
+        builtRaisedTilemap = raisedTilemap;
         builtTilemaps.Clear();
         builtMaterials.Clear();
         if (layers != null)
@@ -58,10 +60,10 @@ internal sealed class TerrainBlendRebuilds
     /// <summary>
     /// Whether anything the last build read differs from these.
     /// </summary>
-    public bool Changed(TerrainStyle style, IReadOnlyList<TerrainBlendRenderer.Layer> layers, int chunkSize, string sortingLayerName, int sortingOrder)
+    public bool Changed(TerrainStyle style, IReadOnlyList<TerrainBlendRenderer.Layer> layers, Tilemap raisedTilemap, int chunkSize, string sortingLayerName, int sortingOrder)
     {
         int count = layers?.Count ?? 0;
-        if (!ReferenceEquals(style, builtStyle) || count != builtTilemaps.Count || chunkSize != builtChunkSize
+        if (!ReferenceEquals(style, builtStyle) || raisedTilemap != builtRaisedTilemap || count != builtTilemaps.Count || chunkSize != builtChunkSize
             || sortingLayerName != builtSortingLayerName || sortingOrder != builtSortingOrder)
         {
             return true;

@@ -475,6 +475,45 @@ internal static class AreaGroundSetup
     }
 
     /// <summary>
+    /// Sets up <paramref name="grid"/>'s raised tilemap, the child named <see cref="AreaGenerator.RaisedTilemapName"/>,
+    /// for a generator with raised ground: created empty when missing, a plain tilemap after the ground layers, and set
+    /// on the grid's terrain renderer, which draws it, and on its navigation grid, which blocks its cliff
+    /// (<see cref="RaisedGround.IsCliff"/>); each step recorded for undo and listed in <paramref name="changes"/>, and
+    /// nothing recorded when already so. Returns the tilemap.
+    /// </summary>
+    public static Tilemap SetUpRaised(Grid grid, List<string> changes)
+    {
+        Transform child = grid.transform.Find(AreaGenerator.RaisedTilemapName);
+        Tilemap raised = child != null ? child.GetComponent<Tilemap>() : null;
+        if (raised == null)
+        {
+            GameObject created = new(AreaGenerator.RaisedTilemapName, typeof(Tilemap));
+            Undo.RegisterCreatedObjectUndo(created, "Create raised tilemap");
+            Undo.SetTransformParent(created.transform, grid.transform, "Create raised tilemap");
+            raised = created.GetComponent<Tilemap>();
+            changes.Add($"Created {AreaGenerator.RaisedTilemapName}.");
+        }
+
+        if (grid.TryGetComponent(out TerrainBlendRenderer renderer) && renderer.RaisedTilemap != raised)
+        {
+            SerializedObject serialized = new(renderer);
+            serialized.FindProperty("raisedTilemap").objectReferenceValue = raised;
+            serialized.ApplyModifiedProperties();
+            changes.Add($"The terrain renderer draws {raised.name}.");
+        }
+
+        if (grid.TryGetComponent(out NavigationGrid2D navigation) && navigation.RaisedTilemap != raised)
+        {
+            SerializedObject serialized = new(navigation);
+            serialized.FindProperty("raisedTilemap").objectReferenceValue = raised;
+            serialized.ApplyModifiedProperties();
+            changes.Add($"The navigation grid blocks the cliff of {raised.name}.");
+        }
+
+        return raised;
+    }
+
+    /// <summary>
     /// Sets the fill tile of every layer of the scene's <see cref="AreaTerrain"/>s whose tilemap is one of
     /// <paramref name="tilemaps"/> to the matching tile of <paramref name="tiles"/>.
     /// </summary>

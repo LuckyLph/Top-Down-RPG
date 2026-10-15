@@ -70,6 +70,42 @@ float TBSoftDistance(TBCorner corner, uint l, float4 heights, out float2 slope)
     return 0.5 - (ART_PIXELS_PER_UNIT * (w - 0.5) + h);
 }
 
+// The signed distance in pixels, positive outside, from a pixel of a corner patch (uv from its corner) to the raised
+// ground filled in the patch's cells (mask): the cells' bilinear weight, less the bump on diagonal pairs, as
+// TBSoftDistance takes it without heights, so the cliff's edges step as the soft ground's do.
+float TBRaisedDistance(uint mask, float2 uv, float4 cliff)
+{
+    if (mask == 0u)
+    {
+        return TB_FAR;
+    }
+    if (mask == 15u)
+    {
+        return -TB_FAR;
+    }
+    float2 st = uv / ART_PIXELS_PER_UNIT + 0.5;
+    float s = st.x;
+    float t = st.y;
+    float4 b = float4((1.0 - s) * (1.0 - t), s * (1.0 - t), (1.0 - s) * t, s * t);
+    float w = 0.0;
+    [unroll]
+    for (uint k = 0u; k < 4u; k++)
+    {
+        w += (mask & (1u << k)) != 0u ? b[k] : 0.0;
+    }
+    if (mask == 6u || mask == 9u)
+    {
+        w -= TB_DIAGONAL_GAP * s * (1.0 - s) * t * (1.0 - t);
+    }
+    return 0.5 - ART_PIXELS_PER_UNIT * (w - 0.5);
+}
+
+// How much of the shadow a cliff casts below it this look draws: none, as the soft look draws no shadows.
+float TBCliffShadowScale()
+{
+    return 0.0;
+}
+
 // What a layer's signed distance at a corner patch needs besides its own cells: the four cells' heights
 // (TBCellHeights).
 float4 TBDistanceTerms(TBInputs ins, TBCorner corner, float2 worldPixel)

@@ -78,13 +78,17 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int ControlRectId = Shader.PropertyToID("_ControlRect");
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
     private static readonly int CoastMapId = Shader.PropertyToID("_TerrainCoast");
+    private static readonly int RaisedMapId = Shader.PropertyToID("_TerrainRaised");
     private const string SoftKeywordName = "_TERRAIN_SOFT";
+    private const string RaisedKeywordName = "_TERRAIN_RAISED";
     private static readonly MeshRenderer[] NoChunks = new MeshRenderer[0];
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
     [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 16.")]
     [SerializeField] private Layer[] layers = new Layer[0];
+    [Tooltip("Optional: the tilemap whose cells are raised ground, drawn with a cliff face along their bottom edge, or a ramp where its tile is a ramp (Raised Ground Tile). Read, never written.")]
+    [SerializeField] private Tilemap raisedTilemap;
     [Tooltip("Cells per side of each chunk quad; each chunk is culled on its own.")]
     [SerializeField, Min(1)] private int chunkSize = 16;
     [Tooltip("Sorting layer of the chunk quads. The walls' render tilemap (order 10) and the units and props draw over them.")]
@@ -99,6 +103,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Tilemap[] layerTilemaps = new Tilemap[0];
     private TerrainControlMap controlMap;
     private TerrainCoastMap coastMap;
+    private TerrainElevationMap elevationMap;
+    private Tilemap builtRaisedTilemap;
+    [NonSerialized] private bool elevationChanged;
     private int waveLayer = -1;
     private int bridgeBits;
     private Texture2DArray albedoArray;
@@ -120,6 +127,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     public TerrainStyle Style => style;
     public IReadOnlyList<Layer> Layers => layers;
+    public Tilemap RaisedTilemap => raisedTilemap;
 
     /// <summary>
     /// The navigation priority of the layer at <paramref name="layerIndex"/>, bottom first: its index, so the layer
@@ -213,6 +221,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal Texture2DArray FieldArray => fieldArray;
     internal Texture2DArray HeightArray => heightArray;
     internal Texture2D Lut => lut;
+    internal TerrainElevationMap ElevationMap => elevationMap;
     internal IReadOnlyList<MeshRenderer> Chunks => chunkSet != null ? chunkSet.Renderers : NoChunks;
     internal bool IsFlushScheduled => flushScheduled;
 
@@ -238,6 +247,16 @@ public class TerrainBlendRenderer : MonoBehaviour
         style = terrainStyle;
         layers = groundLayers;
         Rebuild();
+    }
+
+    /// <summary>
+    /// Sets the style, the raised ground tilemap (null for none) and the layers in code (tests, editor tools) and
+    /// rebuilds when enabled.
+    /// </summary>
+    public void Configure(TerrainStyle terrainStyle, Tilemap raised, params Layer[] groundLayers)
+    {
+        raisedTilemap = raised;
+        Configure(terrainStyle, groundLayers);
     }
 
     /// <summary>
@@ -351,6 +370,15 @@ public class TerrainBlendRenderer : MonoBehaviour
             {
                 coastMap.Build(controlMap, waveLayer, bridgeBits);
             }
+
+            elevationChanged |= builtRaisedTilemap != null;
+        }
+
+        if (elevationChanged && elevationMap != null)
+        {
+            elevationChanged = false;
+            elevationMap.Build(controlMap, builtRaisedTilemap);
+            material.SetTexture(RaisedMapId, elevationMap.Texture);
         }
     }
 
@@ -398,7 +426,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private void OnValidate()
     {
         ApplyMode();
-        if (enabledOnce && Rebuilds.Changed(style, layers, chunkSize, sortingLayerName, sortingOrder))
+        if (enabledOnce && Rebuilds.Changed(style, layers, raisedTilemap, chunkSize, sortingLayerName, sortingOrder))
         {
             Rebuilds.Schedule();
         }
@@ -417,6 +445,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         BoundsInt before = controlMap.Bounds;
         controlMap.Rebuild();
+        elevationChanged |= builtRaisedTilemap != null;
         FollowControlMapChange(before);
     }
 
@@ -468,7 +497,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        Rebuilds.Remember(style, layers, chunkSize, sortingLayerName, sortingOrder);
+        Rebuilds.Remember(style, layers, raisedTilemap, chunkSize, sortingLayerName, sortingOrder);
         Rebuilds.Follow(style, layers);
 #endif
         if (!TerrainBlendChecks.IsUsable(this, grid, sortingLayerName))
@@ -501,7 +530,11 @@ public class TerrainBlendRenderer : MonoBehaviour
         albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
         fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
         heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
-        lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut");
+        builtRaisedTilemap = raisedTilemap;
+        elevationMap = new TerrainElevationMap($"{name} Terrain Elevation Map");
+        elevationMap.Build(controlMap, builtRaisedTilemap);
+        elevationChanged = false;
+        lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaisedTilemap != null);
 
         material = new Material(style.Shader) { name = $"{name} Terrain (runtime)", hideFlags = HideFlags.DontSave };
         material.SetTexture(ControlMapId, controlMap.Texture);
@@ -510,6 +543,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         material.SetTexture(FieldArrayId, fieldArray);
         material.SetTexture(HeightArrayId, heightArray);
         material.SetTexture(CoastMapId, coastMap.Texture);
+        material.SetTexture(RaisedMapId, elevationMap.Texture);
         ApplyMode();
         UpdateControlRect();
         UpdateInfo();
@@ -518,8 +552,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Switches the soft look's keyword on the runtime material to match the mode; warns instead when the style's
-    /// shader has no such keyword and the mode is soft. The keyword is looked up each time, which allocates nothing,
+    /// Switches the soft look's keyword on the runtime material to match the mode, and the raised ground keyword to
+    /// whether it was built with a raised tilemap; warns instead when the style's shader has no such keyword and it
+    /// would be set. The keyword is looked up each time, which allocates nothing,
     /// since one kept from an earlier import of the shader no longer switches anything once the shader is reimported.
     /// </summary>
     private void ApplyMode()
@@ -537,6 +572,16 @@ public class TerrainBlendRenderer : MonoBehaviour
         else if (mode == BlendMode.Soft)
         {
             Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {SoftKeywordName} keyword, so the soft look draws as crisp.", this);
+        }
+
+        LocalKeyword raisedKeyword = new(material.shader, RaisedKeywordName);
+        if (raisedKeyword.isValid)
+        {
+            material.SetKeyword(raisedKeyword, builtRaisedTilemap != null);
+        }
+        else if (builtRaisedTilemap != null)
+        {
+            Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {RaisedKeywordName} keyword, so raised ground is drawn level.", this);
         }
     }
 
@@ -624,6 +669,13 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
+        if (builtRaisedTilemap != null && tilemap == builtRaisedTilemap)
+        {
+            elevationChanged = true;
+            ScheduleFlush();
+            return;
+        }
+
         int layer = BuiltLayerIndexOf(tilemap);
         if (layer < 0)
         {
@@ -662,7 +714,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             UpdateChunks();
         }
 
-        if (controlMap.HasPendingChanges)
+        if (controlMap.HasPendingChanges || elevationChanged)
         {
             ScheduleFlush();
         }
@@ -713,6 +765,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         controlMap = null;
         coastMap?.Dispose();
         coastMap = null;
+        elevationMap?.Dispose();
+        elevationMap = null;
+        builtRaisedTilemap = null;
+        elevationChanged = false;
         waveLayer = -1;
         DestroyRuntime(material);
         DestroyRuntime(albedoArray);

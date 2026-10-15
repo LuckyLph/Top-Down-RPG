@@ -51,6 +51,20 @@ float2 TBEdgeDirection(TBInputs ins, TBCorner corner, uint m, float2 worldPixel)
     return TBGradient(ins, corner, m, worldPixel, 0.0);
 }
 
+// The signed distance in pixels, positive outside, from a pixel of a corner patch (uv from its corner) to the raised
+// ground filled in the patch's cells (mask, in CornerCellDirection's order): the rounded shape with the cliff's outer
+// and inner radii (cliff.zw), without edge noise, so a cliff runs straight along a straight edge.
+float TBRaisedDistance(uint mask, float2 uv, float4 cliff)
+{
+    return CornerShapeDistance(mask, uv, cliff.z, cliff.w, TB_FAR);
+}
+
+// How much of the shadow a cliff casts below it this look draws: all of it.
+float TBCliffShadowScale()
+{
+    return 1.0;
+}
+
 // Adds one pair's look-specific part to an edge's settings (TBGetEdge), by its weight: how much of the edge pixel is
 // outline (outline.a, 1 when drawn) and the rim's outer colour (fill).
 void TBAddPairEdge(TBInputs ins, int row, float weight, float4 outline, float4 fill, inout TBEdge e)

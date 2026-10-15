@@ -8,14 +8,16 @@ using UnityEngine.Rendering;
 /// <summary>
 /// Tests that the terrain blending shader graph (and the HLSL it calls) imports and compiles for D3D without errors or
 /// warnings, in every pass, for vertex and fragment, in the crisp look and with the soft look's keyword, each with and
-/// without the 2D light keyword the area's light sets, since compile warnings reach the console whenever a variant
-/// compiles; and that the soft keyword is a local one the drawing passes declare.
+/// without the 2D light keyword the area's light sets and raised ground's keyword, since compile warnings reach the
+/// console whenever a variant compiles; and that the soft and raised ground keywords are local ones the drawing passes
+/// declare.
 /// </summary>
 public class TerrainBlendShaderTests
 {
     private const string ShaderPath = "Assets/Shaders/Terrain/TerrainBlend.shadergraph";
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string SoftKeyword = "_TERRAIN_SOFT";
+    private const string RaisedKeyword = "_TERRAIN_RAISED";
 
     /// <summary>
     /// The graph imports as a shader without errors or messages.
@@ -30,13 +32,15 @@ public class TerrainBlendShaderTests
     }
 
     /// <summary>
-    /// The soft look's keyword is a local keyword of the shader, declared by the pass that draws the ground lit.
+    /// The soft look's keyword and raised ground's are local keywords of the shader, declared by the pass that draws
+    /// the ground lit.
     /// </summary>
-    [Test]
-    public void TheSoftKeyword_IsLocalToTheShader_AndDeclaredByTheLitPass()
+    [TestCase(SoftKeyword)]
+    [TestCase(RaisedKeyword)]
+    public void TheKeyword_IsLocalToTheShader_AndDeclaredByTheLitPass(string name)
     {
         Shader shader = LoadShader();
-        LocalKeyword keyword = new(shader, SoftKeyword);
+        LocalKeyword keyword = new(shader, name);
         ShaderData.Subshader subshader = ShaderUtil.GetShaderData(shader).GetSubshader(0);
         bool declared = false;
         for (int i = 0; i < subshader.PassCount; i++)
@@ -44,7 +48,7 @@ public class TerrainBlendShaderTests
             PassIdentifier id = new(0, (uint)i);
             foreach (LocalKeyword passKeyword in ShaderUtil.GetPassKeywords(shader, in id))
             {
-                declared |= subshader.GetPass(i).Name == "Sprite Lit" && passKeyword.name == SoftKeyword;
+                declared |= subshader.GetPass(i).Name == "Sprite Lit" && passKeyword.name == name;
             }
         }
 
@@ -54,7 +58,7 @@ public class TerrainBlendShaderTests
 
     /// <summary>
     /// Every pass compiles for D3D, vertex and fragment, without errors or warnings, with no keywords and, where the
-    /// pass has them, with the soft keyword, the shape light keyword and both.
+    /// pass has them, with every combination of the soft keyword, raised ground's and the shape light keyword.
     /// </summary>
     [Test]
     public void EveryPass_CompilesForD3DWithoutErrorsOrWarnings()
@@ -69,7 +73,7 @@ public class TerrainBlendShaderTests
             List<string[]> variants = new() { new string[0] };
             foreach (LocalKeyword keyword in ShaderUtil.GetPassKeywords(shader, in id))
             {
-                if (keyword.name == LightKeyword || keyword.name == SoftKeyword)
+                if (keyword.name == LightKeyword || keyword.name == SoftKeyword || keyword.name == RaisedKeyword)
                 {
                     int count = variants.Count;
                     for (int v = 0; v < count; v++)

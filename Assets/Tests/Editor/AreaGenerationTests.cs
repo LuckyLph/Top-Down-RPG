@@ -18,9 +18,9 @@ using UnityEngine.Tilemaps;
 /// mob within the spawn's reach; the Snowfield generator lays a frozen lake with a hole of open water that meets only
 /// ice, a trail that stops short of the ice, and a campsite on dirt away from the ice and the paths, with props off the
 /// ice and every mob and the ice within the spawn's reach; the Coast generator lays a beach and the ocean out to the
-/// map's northern edge, the ocean meeting only the beach, a trail that ends on the beach short of the sea and a
-/// campsite away from the coast, with props off the coast and the beach and every mob within the spawn's
-/// reach; the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off
+/// map's northern edge, the ocean meeting only the beach, a trail that ends on the beach short of the sea, a
+/// campsite away from the coast and a plateau of raised grass that only its ramp leads up, with props off the coast,
+/// the cliff's face and the ramp's approach and the beach and every mob within the spawn's reach; the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off
 /// the spawn's ground, the road crossing the river on earth, an unbroken trail that stops short of the lava and a
 /// campsite away from it, with props off and beside the lava and every mob and the trail within the spawn's reach
 /// around it; the terrain each generator lays from its detail stream leaves the rest of its layout
@@ -33,7 +33,8 @@ using UnityEngine.Tilemaps;
 /// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
 /// a navigation grid that blocks exactly the props' cells, wades the Lakeside's ponds at the shallows' cost and walks
 /// its dock over the lake at grass's cost, the water beside it blocked, walks the Snowfield's snow at its cost and its
-/// ice like grass with its hole blocked, blocks the Coast's ocean and the Lava Fields' lava, an area
+/// ice like grass with its hole blocked, blocks the Coast's ocean and its plateau's cliff but not its ramp and the Lava
+/// Fields' lava, an area
 /// of only some layers that still draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
 /// </summary>
 public class AreaGenerationTests
@@ -1396,7 +1397,8 @@ public class AreaGenerationTests
     /// For every Coast seed blocking footprints cover grass off the coast, apart; walk-through props stand on grass off
     /// the coast and outside every footprint; the spawn is on the road with no footprint within its clear radius; every
     /// mob stands on land off the ocean, far enough from the spawn and from each other; and the spawn
-    /// can walk to every mob, every beach cell and every trail cell, around the footprints and the ocean.
+    /// can walk to every mob, every beach cell and every trail cell, around the footprints, the ocean and the plateau's
+    /// cliff.
     /// </summary>
     [Test]
     public void CoastLayouts_KeepPropsOffTheCoast_AndLetTheSpawnReachTheBeachAndEveryMob()
@@ -1439,7 +1441,7 @@ public class AreaGenerationTests
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(coast.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
             }
 
-            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell) && !ocean.Contains(cell));
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell) && !ocean.Contains(cell) && !RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell));
             Assert.That(layout.Mobs.Count, Is.EqualTo(coast.MobCount), $"seed {seed}: mobs");
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
@@ -1463,11 +1465,128 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// For every Coast seed the plateau of raised grass (TerrainTypes.md's Phase 10) lies on the grass, off the coast
+    /// and the paths by more than the plateau margin and outside the spawn's disc and the margin beyond it, in one
+    /// 4-connected piece every cell of which lies in a run of three of them across and in one down; its ramp, the ramp width wide, lies in its bottom row with cliff on either side and two rows of walkable
+    /// ground below it; no prop stands on the cliff's face (the bottom cells), the ramp, the row above it or the four rows
+    /// in front of it a column wider, and no footprint lies both on and off the plateau; no mob stands on the cliff
+    /// (RaisedGround.IsCliff); and around the cliff, the footprints and the ocean the spawn reaches the ramp and the
+    /// row above it, but no cell of the plateau that is not cliff from anywhere but the ramp.
+    /// </summary>
+    [Test]
+    public void CoastLayouts_LayAPlateau_ThatOnlyItsRampLeadsUp()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = coast.Generate(seed);
+            HashSet<Vector3Int> raised = layout.Raised;
+            HashSet<Vector3Int> ramps = layout.Ramps;
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
+            HashSet<Vector3Int> coastCells = new(Cells(layout, "Sand"));
+            coastCells.UnionWith(ocean);
+            HashSet<Vector3Int> paths = PathCells(layout);
+            Assert.That(raised, Is.Not.Empty, $"seed {seed}: a plateau");
+            Assert.That(ramps.Count, Is.EqualTo(coast.RampWidth), $"seed {seed}: the ramp");
+            Assert.That(raised.IsSupersetOf(ramps), Is.True, $"seed {seed}: the ramp is raised ground");
+            Assert.That(Reachable(new List<Vector3Int>(raised)[0], raised.Contains).Count, Is.EqualTo(raised.Count), $"seed {seed}: one piece");
+            foreach (Vector3Int cell in raised)
+            {
+                Assert.That(grass.Contains(cell) && !coastCells.Contains(cell), Is.True, $"seed {seed}: {cell} on the grass off the coast");
+                Assert.That(NearestDistance(cell, coastCells), Is.GreaterThan(coast.PlateauMargin), $"seed {seed}: {cell} near the coast");
+                Assert.That(NearestDistance(cell, paths), Is.GreaterThan(coast.PlateauMargin), $"seed {seed}: {cell} near a path");
+                Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(coast.SpawnClearRadius + coast.PlateauMargin), $"seed {seed}: {cell} near the spawn");
+                Assert.That(InRun(raised, cell, Vector3Int.right) && InRun(raised, cell, Vector3Int.up), Is.True, $"seed {seed}: {cell} three cells thick");
+            }
+
+            int left = int.MaxValue;
+            int right = int.MinValue;
+            HashSet<Vector3Int> clear = new();
+            foreach (Vector3Int ramp in ramps)
+            {
+                Assert.That(raised.Contains(ramp + Vector3Int.down), Is.False, $"seed {seed}: the ramp at {ramp} on the bottom row");
+                Assert.That(ramp.y, Is.EqualTo(new List<Vector3Int>(ramps)[0].y), $"seed {seed}: the ramp in one row");
+                left = Mathf.Min(left, ramp.x);
+                right = Mathf.Max(right, ramp.x);
+                clear.Add(ramp + Vector3Int.up);
+                for (int below = 1; below <= 4; below++)
+                {
+                    for (int side = -1; side <= 1; side++)
+                    {
+                        clear.Add(ramp + new Vector3Int(side, -below, 0));
+                    }
+                }
+
+                for (int below = 1; below <= 2; below++)
+                {
+                    Vector3Int approach = ramp + new Vector3Int(0, -below, 0);
+                    Assert.That(grass.Contains(approach) && !ocean.Contains(approach) && !raised.Contains(approach), Is.True, $"seed {seed}: the ground in front of the ramp at {approach}");
+                }
+            }
+
+            Assert.That(right - left + 1, Is.EqualTo(coast.RampWidth), $"seed {seed}: the ramp is one run");
+            int row = new List<Vector3Int>(ramps)[0].y;
+            foreach (Vector3Int beside in new[] { new Vector3Int(left - 1, row, 0), new Vector3Int(right + 1, row, 0) })
+            {
+                Assert.That(RaisedGround.IsCliff(raised, ramps, beside), Is.True, $"seed {seed}: cliff beside the ramp at {beside}");
+            }
+
+            foreach (Vector3Int cell in raised)
+            {
+                if (!raised.Contains(cell + Vector3Int.down))
+                {
+                    clear.Add(cell);
+                }
+            }
+
+            HashSet<Vector3Int> footprints = new();
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    Assert.That(clear.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on the face or by the ramp");
+                    continue;
+                }
+
+                List<Vector3Int> covered = CoveredCells(prop, footprint);
+                int on = 0;
+                foreach (Vector3Int cell in covered)
+                {
+                    footprints.Add(cell);
+                    on += raised.Contains(cell) ? 1 : 0;
+                    Assert.That(clear.Contains(cell), Is.False, $"seed {seed}: {prop.Prefab.name} at {cell} on the face or by the ramp");
+                }
+
+                Assert.That(on == 0 || on == covered.Count, Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} across the plateau's edge");
+            }
+
+            foreach (AreaLayout.Mob mob in layout.Mobs)
+            {
+                Assert.That(RaisedGround.IsCliff(raised, ramps, mob.Cell), Is.False, $"seed {seed}: a mob on the cliff at {mob.Cell}");
+            }
+
+            System.Predicate<Vector3Int> open = cell => grass.Contains(cell) && !footprints.Contains(cell) && !ocean.Contains(cell) && !RaisedGround.IsCliff(raised, ramps, cell);
+            HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, open);
+            foreach (Vector3Int ramp in ramps)
+            {
+                Assert.That(reachable.Contains(ramp) && reachable.Contains(ramp + Vector3Int.up), Is.True, $"seed {seed}: the ramp at {ramp} and the top above it reached");
+            }
+
+            HashSet<Vector3Int> withoutRamp = Reachable(layout.SpawnCell, cell => open(cell) && !ramps.Contains(cell));
+            foreach (Vector3Int cell in raised)
+            {
+                Assert.That(withoutRamp.Contains(cell), Is.False, $"seed {seed}: the plateau at {cell} reached without the ramp");
+            }
+        }
+    }
+
+    /// <summary>
     /// On the layers the writer sets up for the Coast, the beach and the ocean reach navigation through their tilemaps'
     /// terrain sources at their draw order's priorities, and the default movement profile's rules: stepping onto a
     /// beach cell with no blocked cell beside it costs grass's 10, every cell of the ocean is blocked, so no unit walks
     /// onto the sea or off the map's northern edge (the top cell of every column of the middle three quarters is
-    /// blocked), and every beach cell is joined to the spawn.
+    /// blocked), and every beach cell is joined to the spawn; the plateau's cliff is blocked, its ramp is not, and the
+    /// top above the ramp is joined to the spawn.
     /// </summary>
     [Test]
     public void TheWriter_WalksTheCoastsBeach_AndBlocksItsOcean()
@@ -1533,6 +1652,23 @@ public class AreaGenerationTests
         foreach (Vector3Int cell in sand)
         {
             Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the beach at {cell} reachable");
+        }
+
+        int cliffs = 0;
+        foreach (Vector3Int cell in layout.Raised)
+        {
+            if (RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell))
+            {
+                Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"the cliff at {cell}");
+                cliffs++;
+            }
+        }
+
+        Assert.That(cliffs, Is.GreaterThan(10));
+        foreach (Vector3Int ramp in layout.Ramps)
+        {
+            Assert.That(navigation.IsCellWalkable(ramp, profile), Is.True, $"the ramp at {ramp}");
+            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, ramp + Vector3Int.up, profile), Is.True, $"the top above the ramp at {ramp} reachable");
         }
     }
 
@@ -2025,6 +2161,8 @@ public class AreaGenerationTests
         }
 
         Assert.That(again.SpawnCell, Is.EqualTo(first.SpawnCell));
+        Assert.That(again.Raised.SetEquals(first.Raised), Is.True, "raised ground");
+        Assert.That(again.Ramps.SetEquals(first.Ramps), Is.True, "ramps");
         Assert.That(other.TerrainCells(0).SetEquals(first.TerrainCells(0)) && Cells(other, "Stone").SetEquals(Cells(first, "Stone")), Is.False);
     }
 
@@ -2036,8 +2174,10 @@ public class AreaGenerationTests
     /// holding the layer's tile in exactly the layout's cells, with a navigation source of its terrain type whose
     /// priority is its index; the grid's terrain renderer draws the layers in that order with their materials and the
     /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
-    /// points are replaced and the start spawn point moves; the navigation grid then blocks exactly the footprint
-    /// cells, the water, the ocean and lava, and every mob can walk to the spawn.
+    /// points are replaced and the start spawn point moves; a generator with raised ground gets its raised tilemap,
+    /// ramps included, drawn by the renderer and read by the navigation grid; the navigation grid then blocks exactly
+    /// the footprint cells, the water, the ocean, lava and the cliff of raised ground, and every mob can walk to the
+    /// spawn.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -2129,9 +2269,29 @@ public class AreaGenerationTests
         water.UnionWith(CellsOrNone(layout, "Ocean"));
         water.UnionWith(CellsOrNone(layout, "Lava"));
         water.ExceptWith(CellsOrNone(layout, "Planks"));
+        Transform raisedChild = grid.transform.Find(AreaGenerator.RaisedTilemapName);
+        if (target.RaisedTile == null)
+        {
+            Assert.That(layout.Raised, Is.Empty, "No raised ground without a raised tile.");
+            Assert.That(raisedChild, Is.Null, "No raised tilemap without raised ground.");
+        }
+        else
+        {
+            Tilemap raisedMap = raisedChild.GetComponent<Tilemap>();
+            Assert.That(FilledCells(raisedMap).SetEquals(layout.Raised), Is.True, "The raised tilemap holds the raised ground.");
+            foreach (Vector3Int cell in layout.Raised)
+            {
+                Assert.That(raisedMap.GetTile(cell), Is.SameAs(layout.Ramps.Contains(cell) ? target.RampTile : target.RaisedTile), $"raised ground at {cell}");
+            }
+
+            Assert.That(renderer.RaisedTilemap, Is.SameAs(raisedMap), "The renderer draws the raised ground.");
+            Assert.That(navigation.RaisedTilemap, Is.SameAs(raisedMap), "The navigation grid blocks its cliff.");
+        }
+
         foreach (Vector3Int cell in layout.TerrainCells(0))
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!footprints.Contains(cell) && !water.Contains(cell)), $"cell {cell}");
+            bool cliff = RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell);
+            Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!footprints.Contains(cell) && !water.Contains(cell) && !cliff), $"cell {cell}");
         }
 
         foreach (AreaLayout.Mob mob in layout.Mobs)
@@ -2741,6 +2901,7 @@ public class AreaGenerationTests
         else if (target is CoastGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+            settings.FindProperty("plateauSize").vector2Value = Vector2.zero;
         }
         else if (target is LavaFieldsGenerator)
         {
@@ -2821,6 +2982,20 @@ public class AreaGenerationTests
             if (tallGrassIndex >= 0)
             {
                 campsite.UnionWith(full.TerrainCells(tallGrassIndex));
+            }
+
+            Assert.That(plain.Raised, Is.Empty, $"seed {seed}: the plateau is off");
+            foreach (Vector3Int cell in full.Raised)
+            {
+                campsite.UnionWith(CellsWithin(cell, 2));
+            }
+
+            foreach (Vector3Int ramp in full.Ramps)
+            {
+                for (int below = 1; below <= 4; below++)
+                {
+                    campsite.UnionWith(CellsWithin(ramp + new Vector3Int(0, -below, 0), 2));
+                }
             }
 
             if (shallowsIndex >= 0)
@@ -3228,6 +3403,16 @@ public class AreaGenerationTests
         }
 
         return nearest;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies in a run of three of <paramref name="cells"/> along <paramref name="step"/>.
+    /// </summary>
+    private static bool InRun(HashSet<Vector3Int> cells, Vector3Int cell, Vector3Int step)
+    {
+        bool before = cells.Contains(cell - step);
+        bool after = cells.Contains(cell + step);
+        return (before && after) || (before && cells.Contains(cell - step * 2)) || (after && cells.Contains(cell + step * 2));
     }
 
     /// <summary>

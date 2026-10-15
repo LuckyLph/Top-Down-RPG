@@ -53,6 +53,7 @@ public static class AreaLayoutWriter
         }
 
         AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
+        WriteRaised(grid, generator, layout, changes);
         WriteProps(grid, scene, layout.Props);
         WriteMobSpawns(grid, scene, layout.Mobs);
         MoveStartSpawn(grid, scene, layout.SpawnCell);
@@ -120,6 +121,31 @@ public static class AreaLayoutWriter
         Array.Fill(tiles, tile);
         tilemap.ClearAllTiles();
         tilemap.SetTiles(ordered.ToArray(), tiles);
+    }
+
+    /// <summary>
+    /// Writes the layout's raised ground onto the grid's raised tilemap, set up by
+    /// <see cref="AreaGroundSetup.SetUpRaised"/>, the generator's ramp tile in its ramps and its raised tile elsewhere. Does nothing for a generator without a raised tile.
+    /// </summary>
+    private static void WriteRaised(Grid grid, AreaGenerator generator, AreaLayout layout, List<string> changes)
+    {
+        if (generator.RaisedTile == null)
+        {
+            return;
+        }
+
+        Tilemap raised = AreaGroundSetup.SetUpRaised(grid, changes);
+        Undo.RegisterCompleteObjectUndo(raised, $"Paint {raised.name}");
+        List<Vector3Int> ordered = new(layout.Raised);
+        ordered.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
+        TileBase[] tiles = new TileBase[ordered.Count];
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            tiles[i] = layout.Ramps.Contains(ordered[i]) && generator.RampTile != null ? generator.RampTile : generator.RaisedTile;
+        }
+
+        raised.ClearAllTiles();
+        raised.SetTiles(ordered.ToArray(), tiles);
     }
 
     /// <summary>

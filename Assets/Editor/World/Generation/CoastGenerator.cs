@@ -109,6 +109,14 @@ public sealed class CoastGenerator : AreaGenerator
     [Tooltip("Radius in cells of the campsite's patch of dirt, before its outline wobbles.")]
     [SerializeField, Min(1f)] private float campsiteRadius = 3f;
 
+    [Header("Plateau")]
+    [Tooltip("Half the width and height in cells of a plateau of raised grass with a ramp, before its outline wobbles; zero for none.")]
+    [SerializeField] private Vector2 plateauSize = new(6f, 4f);
+    [Tooltip("Width in cells of the plateau's ramp.")]
+    [SerializeField, Min(1)] private int rampWidth = 2;
+    [Tooltip("Cells of grass the plateau keeps from the coast, the paths, the campsite and the spawn's disc; it keeps a cell from every mob.")]
+    [SerializeField, Min(1)] private int plateauMargin = 3;
+
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
     [SerializeField, Min(0)] private int mobCount = 4;
@@ -125,6 +133,9 @@ public sealed class CoastGenerator : AreaGenerator
     public GameObject CampfirePrefab => campfirePrefab;
     public IReadOnlyList<GameObject> CampsiteSeats => campsiteSeats;
     public float CampsiteRadius => campsiteRadius;
+    public Vector2 PlateauSize => plateauSize;
+    public int RampWidth => rampWidth;
+    public int PlateauMargin => plateauMargin;
     public MobController MobPrefab => mobPrefab;
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
@@ -205,6 +216,7 @@ public sealed class CoastGenerator : AreaGenerator
             CheckBeach(reachable);
             builder.StartDetailStream();
             LayCampsite();
+            LayPlateau();
             return builder.Layout;
         }
 
@@ -565,6 +577,61 @@ public sealed class CoastGenerator : AreaGenerator
             HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, dirt, settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => CoastDistance(cell) > clear && !nearPaths.Contains(cell));
+        }
+
+        /// <summary>
+        /// Lays a plateau of raised grass with a ramp on the detail stream after the campsite
+        /// (<see cref="AreaLayoutBuilder.LayPlateau"/>), inside the border band and the plateau margin from the coast,
+        /// the paths, the campsite's dirt and the spawn's disc, and a cell from every mob, so no mob stands on its cliff,
+        /// then warns when its cliff
+        /// (<see cref="RaisedGround.IsCliff"/>) cuts the spawn off from the ramp, the top above it, the beach, the trail
+        /// or a mob.
+        /// </summary>
+        private void LayPlateau()
+        {
+            if (settings.plateauSize.x <= 0f || settings.plateauSize.y <= 0f)
+            {
+                return;
+            }
+
+            int margin = settings.plateauMargin;
+            HashSet<Vector3Int> near = AreaLayoutBuilder.CellsNear(builder.PathCells(), margin);
+            near.UnionWith(AreaLayoutBuilder.CellsNear(dirt, margin));
+            List<Vector3Int> mobs = new();
+            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
+            {
+                mobs.Add(mob.Cell);
+            }
+
+            near.UnionWith(AreaLayoutBuilder.CellsNear(mobs, 1));
+            float spawnClear = settings.spawnClearRadius + margin;
+            AreaLayoutBuilder.Plateau plateau = new(settings.plateauSize, settings.rampWidth);
+            HashSet<Vector3Int> raised = builder.Layout.Raised;
+            HashSet<Vector3Int> ramps = builder.Layout.Ramps;
+            if (!builder.LayPlateau(plateau, raised, ramps, cell => builder.Ground.Contains(cell)
+                && builder.EdgeDistance(cell) > settings.borderDepth + 1 && CoastDistance(cell) > margin && !near.Contains(cell)
+                && Vector3Int.Distance(cell, builder.Layout.SpawnCell) > spawnClear, cell => !ocean.Contains(cell)))
+            {
+                return;
+            }
+
+            HashSet<Vector3Int> reachable = builder.ReachableFromSpawn(cell => ocean.Contains(cell) || RaisedGround.IsCliff(raised, ramps, cell));
+            int cut = 0;
+            foreach (Vector3Int cell in builder.OrderedGround)
+            {
+                bool wanted = ramps.Contains(cell) || ramps.Contains(cell + Vector3Int.down) || sand.Contains(cell) || builder.Gravel.Contains(cell);
+                cut += wanted && !reachable.Contains(cell) ? 1 : 0;
+            }
+
+            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
+            {
+                cut += reachable.Contains(mob.Cell) ? 0 : 1;
+            }
+
+            if (cut > 0)
+            {
+                builder.Layout.Warnings.Add($"{cut} ramp, beach, trail or mob cells cannot be walked to from the spawn around the plateau's cliff.");
+            }
         }
 
         /// <summary>

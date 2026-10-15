@@ -15,7 +15,7 @@ using UnityEngine.Tilemaps;
 /// in order and the navigation priorities from that order, creates a layer the area lacks empty at its place, keeps a
 /// painted layer it does not list (or an empty one the area terrain edits) at its place in the style's layer order and
 /// removes an empty one, sets the area terrain's fill tiles, leaves the walls alone, is undone in one step, and changes
-/// nothing when run again.
+/// nothing when run again; for a generator with raised ground it sets up the raised tilemap, keeping its cells.
 /// </summary>
 public class GroundLayerMigrationTests
 {
@@ -417,6 +417,28 @@ public class GroundLayerMigrationTests
         AssertHolds(Layer(0), GrassCells, layers[0].Tile);
         Undo.PerformUndo();
         Assert.That(Layer(0).GetComponent<DualGridTilemapModule>(), Is.Not.Null, "The undo after the second run undoes the first one.");
+    }
+
+    /// <summary>
+    /// For a generator with raised ground (the project's Coast), the conversion keeps the area's raised tilemap and its
+    /// cells, has the terrain renderer draw it and the navigation grid block its cliff, and changes nothing when run
+    /// again.
+    /// </summary>
+    [Test]
+    public void Migrate_ForAGeneratorWithRaisedGround_SetsUpTheRaisedTilemap_KeepingItsCells()
+    {
+        AreaGenerator coast = AssetDatabase.LoadAssetAtPath<AreaGenerator>("Assets/Settings/Generation/Generator_Coast.asset");
+        NavigationGrid2D navigation = grid.gameObject.AddComponent<NavigationGrid2D>();
+        Tilemap raised = AddTilemap(AreaGenerator.RaisedTilemapName);
+        Vector3Int cell = new(1, 1, 0);
+        raised.SetTile(cell, coast.RaisedTile);
+
+        Assert.That(GroundLayerMigration.Migrate(grid, coast), Is.Not.Null);
+
+        Assert.That(grid.GetComponent<TerrainBlendRenderer>().RaisedTilemap, Is.SameAs(raised));
+        Assert.That(navigation.RaisedTilemap, Is.SameAs(raised));
+        Assert.That(raised.GetTile(cell), Is.SameAs(coast.RaisedTile));
+        Assert.That(GroundLayerMigration.Migrate(grid, coast), Is.Empty);
     }
 
     /// <summary>

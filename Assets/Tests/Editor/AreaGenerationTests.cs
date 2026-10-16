@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
@@ -5,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// Tests for scene generation. The project's generators place no props for now (their borrowed art was removed), and
@@ -194,8 +196,8 @@ public class AreaGenerationTests
 
             Assert.That(stone, Is.Not.Empty, $"seed {seed}: the road");
             Assert.That(gravel.Count > 0, Is.EqualTo(generator.GravelPathCount > 0), $"seed {seed}: the gravel paths");
-            Assert.That(grass.IsSupersetOf(stone) && grass.IsSupersetOf(gravel), Is.True, $"seed {seed}: paths only on grass");
-            Assert.That(stone.Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            Expect(grass.IsSupersetOf(stone) && grass.IsSupersetOf(gravel), $"seed {seed}: paths only on grass");
+            Expect(stone.Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the road");
 
             int radius = generator.SpawnClearRadius;
             for (int dy = -radius; dy <= radius; dy++)
@@ -203,10 +205,10 @@ public class AreaGenerationTests
                 for (int dx = -radius; dx <= radius; dx++)
                 {
                     Vector3Int cell = layout.SpawnCell + new Vector3Int(dx, dy, 0);
-                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: grass at {cell} around the spawn");
+                    Expect(grass.Contains(cell), $"seed {seed}: grass at {cell} around the spawn");
                     if (dx * dx + dy * dy <= radius * radius)
                     {
-                        Assert.That(footprints.Contains(cell), Is.False, $"seed {seed}: a prop at {cell} near the spawn");
+                        Expect(!footprints.Contains(cell), $"seed {seed}: a prop at {cell} near the spawn");
                     }
                 }
             }
@@ -219,7 +221,7 @@ public class AreaGenerationTests
                     for (int dx = -clearance; dx <= clearance; dx++)
                     {
                         Vector3Int near = cell + new Vector3Int(dx, dy, 0);
-                        Assert.That(stone.Contains(near) || gravel.Contains(near), Is.False, $"seed {seed}: a prop at {cell} beside a path");
+                        Expect(!(stone.Contains(near) || gravel.Contains(near)), $"seed {seed}: a prop at {cell} beside a path");
                     }
                 }
             }
@@ -249,8 +251,8 @@ public class AreaGenerationTests
                 blocking++;
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass at {cell}");
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: two footprints on {cell}");
+                    Expect(grass.Contains(cell), $"seed {seed}: {prop.Prefab.name} on grass at {cell}");
+                    Expect(footprints.Add(cell), $"seed {seed}: two footprints on {cell}");
                 }
             }
 
@@ -262,9 +264,9 @@ public class AreaGenerationTests
                     continue;
                 }
 
-                Assert.That(grass.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass");
-                Assert.That(Cells(layout, "Gravel").Contains(prop.Cell) || Cells(layout, "Stone").Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} on a path");
-                Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                Expect(grass.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} on grass");
+                Expect(!(Cells(layout, "Gravel").Contains(prop.Cell) || Cells(layout, "Stone").Contains(prop.Cell)), $"seed {seed}: {prop.Prefab.name} on a path");
+                Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 Assert.That(prop.Offset.x, Is.InRange(0f, 1f));
                 Assert.That(prop.Offset.y, Is.InRange(0f, 1f));
             }
@@ -291,7 +293,7 @@ public class AreaGenerationTests
             {
                 AreaLayout.Mob mob = layout.Mobs[i];
                 Assert.That(mob.Prefab, Is.SameAs(generator.MobPrefab));
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(generator.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = 0; j < i; j++)
                 {
@@ -321,9 +323,9 @@ public class AreaGenerationTests
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
-            Assert.That(grass.IsSupersetOf(paths), Is.True, $"seed {seed}: paths only on grass");
-            Assert.That(paths.Overlaps(footprints), Is.False, $"seed {seed}: a footprint on a path");
-            Assert.That(Reachable(layout.SpawnCell, paths.Contains).SetEquals(paths), Is.True, $"seed {seed}: one path network through the spawn");
+            Expect(grass.IsSupersetOf(paths), $"seed {seed}: paths only on grass");
+            Expect(!paths.Overlaps(footprints), $"seed {seed}: a footprint on a path");
+            Expect(Reachable(layout.SpawnCell, paths.Contains).SetEquals(paths), $"seed {seed}: one path network through the spawn");
 
             Dictionary<VillageForestGenerator.Region, int> cells = new();
             Dictionary<VillageForestGenerator.Region, int> covered = new();
@@ -356,7 +358,7 @@ public class AreaGenerationTests
                 forestGravel += region == VillageForestGenerator.Region.Forest && Cells(layout, "Gravel").Contains(entry.Key) ? 1 : 0;
             }
 
-            Assert.That(grass.SetEquals(generation.Regions.Keys), Is.True, $"seed {seed}: every grass cell has a region");
+            Expect(grass.SetEquals(generation.Regions.Keys), $"seed {seed}: every grass cell has a region");
             foreach (VillageForestGenerator.Region region in Regions)
             {
                 Assert.That(cells[region], Is.GreaterThanOrEqualTo(MinRegionCells), $"seed {seed}: {region} cells");
@@ -401,7 +403,7 @@ public class AreaGenerationTests
                 if (prop.Prefab == villageForest.FountainPrefab)
                 {
                     fountains++;
-                    Assert.That(Cells(layout, "Plaza").Contains(prop.Cell + new Vector3Int(-clearance - 1, 0, 0)), Is.True, $"seed {seed}: the fountain's square");
+                    Expect(Cells(layout, "Plaza").Contains(prop.Cell + new Vector3Int(-clearance - 1, 0, 0)), $"seed {seed}: the fountain's square");
                 }
 
                 lamps += prop.Prefab == villageForest.LampPostPrefab ? 1 : 0;
@@ -413,15 +415,15 @@ public class AreaGenerationTests
 
                 buildings++;
                 Vector3Int doorstep = prop.Cell + new Vector3Int(villageForest.DoorColumn, -1, 0);
-                Assert.That(stone.Contains(doorstep), Is.True, $"seed {seed}: the path to the door at {doorstep}");
-                Assert.That(reachable.Contains(doorstep), Is.True, $"seed {seed}: the door at {doorstep} reachable from the spawn");
+                Expect(stone.Contains(doorstep), $"seed {seed}: the path to the door at {doorstep}");
+                Expect(reachable.Contains(doorstep), $"seed {seed}: the door at {doorstep} reachable from the spawn");
                 PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint);
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
                     Assert.That(generation.Regions[cell], Is.EqualTo(VillageForestGenerator.Region.Village), $"seed {seed}: building at {cell}");
                     foreach (Vector3Int near in CellsWithin(cell, clearance))
                     {
-                        Assert.That(!paths.Contains(near) || near == doorstep, Is.True, $"seed {seed}: the building at {prop.Cell} beside the path at {near}");
+                        Expect(!paths.Contains(near) || near == doorstep, $"seed {seed}: the building at {prop.Cell} beside the path at {near}");
                     }
                 }
             }
@@ -459,8 +461,8 @@ public class AreaGenerationTests
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass at {cell}");
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: two footprints on {cell}");
+                    Expect(grass.Contains(cell), $"seed {seed}: {prop.Prefab.name} on grass at {cell}");
+                    Expect(footprints.Add(cell), $"seed {seed}: two footprints on {cell}");
                     if (prop.Prefab == villageForest.BuildingPrefab)
                     {
                         continue;
@@ -468,21 +470,21 @@ public class AreaGenerationTests
 
                     foreach (Vector3Int near in CellsWithin(cell, clearance))
                     {
-                        Assert.That(paths.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {cell} beside a path");
+                        Expect(!paths.Contains(near), $"seed {seed}: {prop.Prefab.name} at {cell} beside a path");
                     }
                 }
             }
 
-            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the street");
+            Expect(Cells(layout, "Stone").Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the street");
             for (int dy = -radius; dy <= radius; dy++)
             {
                 for (int dx = -radius; dx <= radius; dx++)
                 {
                     Vector3Int cell = layout.SpawnCell + new Vector3Int(dx, dy, 0);
-                    Assert.That(grass.Contains(cell), Is.True, $"seed {seed}: grass at {cell} around the spawn");
+                    Expect(grass.Contains(cell), $"seed {seed}: grass at {cell} around the spawn");
                     if (dx * dx + dy * dy <= radius * radius)
                     {
-                        Assert.That(footprints.Contains(cell), Is.False, $"seed {seed}: a prop at {cell} near the spawn");
+                        Expect(!footprints.Contains(cell), $"seed {seed}: a prop at {cell} near the spawn");
                     }
                 }
             }
@@ -494,9 +496,9 @@ public class AreaGenerationTests
                     continue;
                 }
 
-                Assert.That(grass.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} on grass");
-                Assert.That(paths.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} on a path");
-                Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                Expect(grass.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} on grass");
+                Expect(!paths.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} on a path");
+                Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 Assert.That(prop.Offset.x, Is.InRange(0f, 1f));
                 Assert.That(prop.Offset.y, Is.InRange(0f, 1f));
             }
@@ -528,7 +530,7 @@ public class AreaGenerationTests
                 AreaLayout.Mob mob = layout.Mobs[i];
                 counts[generation.Regions[mob.Cell]]++;
                 Assert.That(mob.Prefab, Is.SameAs(villageForest.MobPrefab));
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(villageForest.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = 0; j < i; j++)
                 {
@@ -567,29 +569,29 @@ public class AreaGenerationTests
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
             Assert.That(layout.TerrainLayerCount, Is.EqualTo(11));
-            Assert.That(water.Overlaps(Cells(layout, "Shallows")), Is.False, $"seed {seed}: the ponds lie off the lake");
+            Expect(!water.Overlaps(Cells(layout, "Shallows")), $"seed {seed}: the ponds lie off the lake");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
-                Assert.That(grass.IsSupersetOf(layout.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer} on grass");
+                Expect(grass.IsSupersetOf(layout.TerrainCells(layer)), $"seed {seed}: layer {layer} on grass");
             }
 
-            Assert.That(water.Overlaps(paths) || water.Overlaps(sand) || water.Overlaps(mud), Is.False, $"seed {seed}: the lake covers nothing else");
+            Expect(!(water.Overlaps(paths) || water.Overlaps(sand) || water.Overlaps(mud)), $"seed {seed}: the lake covers nothing else");
             HashSet<Vector3Int> dryGrass = Cells(layout, "DryGrass");
-            Assert.That(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(paths), Is.False, $"seed {seed}: dry grass only on open grass");
+            Expect(!(dryGrass.Overlaps(water) || dryGrass.Overlaps(sand) || dryGrass.Overlaps(mud) || dryGrass.Overlaps(paths)), $"seed {seed}: dry grass only on open grass");
             foreach (Vector3Int cell in dryGrass)
             {
                 Assert.That(Reachable(cell, dryGrass.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of dry grass at {cell}");
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(paths.Contains(near) || mud.Contains(near) || !grass.Contains(near), Is.False, $"seed {seed}: dry grass at {cell} beside mud, a path or the map's edge");
+                    Expect(!(paths.Contains(near) || mud.Contains(near) || !grass.Contains(near)), $"seed {seed}: dry grass at {cell} beside mud, a path or the map's edge");
                 }
             }
             foreach (Vector3Int cell in stone)
             {
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.RoadMargin))
                 {
-                    Assert.That(water.Contains(near), Is.False, $"seed {seed}: water at {near} near the road");
+                    Expect(!water.Contains(near), $"seed {seed}: water at {near} near the road");
                 }
             }
 
@@ -616,8 +618,8 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(trailReachesBeach, Is.True, $"seed {seed}: the trail reaches the beach");
-            Assert.That(stone.Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            Expect(trailReachesBeach, $"seed {seed}: the trail reaches the beach");
+            Expect(stone.Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the road");
             HashSet<Vector3Int> footprints = Footprints(layout);
             int radius = lakeside.SpawnClearRadius;
             foreach (Vector3Int cell in CellsWithin(layout.SpawnCell, radius))
@@ -625,7 +627,7 @@ public class AreaGenerationTests
                 Vector3Int offset = cell - layout.SpawnCell;
                 if (offset.x * offset.x + offset.y * offset.y <= radius * radius)
                 {
-                    Assert.That(footprints.Contains(cell) || water.Contains(cell), Is.False, $"seed {seed}: {cell} near the spawn is open");
+                    Expect(!(footprints.Contains(cell) || water.Contains(cell)), $"seed {seed}: {cell} near the spawn is open");
                 }
             }
         }
@@ -670,7 +672,7 @@ public class AreaGenerationTests
 
             AreaLayout plain = withoutPonds.Generate(seed);
             Assert.That(Cells(plain, "Shallows"), Is.Empty, $"seed {seed}");
-            Assert.That(Cells(layout, "Water").SetEquals(Cells(plain, "Water")), Is.True, $"seed {seed}: the lake is as it was");
+            Expect(Cells(layout, "Water").SetEquals(Cells(plain, "Water")), $"seed {seed}: the lake is as it was");
 
             List<HashSet<Vector3Int>> ponds = new();
             HashSet<Vector3Int> seen = new();
@@ -688,14 +690,14 @@ public class AreaGenerationTests
                 Assert.That(offset.x * offset.x + offset.y * offset.y, Is.GreaterThan(lakeside.SpawnClearRadius * lakeside.SpawnClearRadius), $"seed {seed}: a pond at {cell} near the spawn");
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(grass.Contains(near) && !other.Contains(near), Is.True, $"seed {seed}: a pond at {cell} beside {near}, not plain grass");
-                    Assert.That(props.Contains(near), Is.False, $"seed {seed}: a prop or mob on or beside the pond at {cell}");
+                    Expect(grass.Contains(near) && !other.Contains(near), $"seed {seed}: a pond at {cell} beside {near}, not plain grass");
+                    Expect(!props.Contains(near), $"seed {seed}: a prop or mob on or beside the pond at {cell}");
                 }
 
                 HashSet<Vector3Int> own = Reachable(cell, shallows.Contains);
                 foreach (Vector3Int near in CellsWithin(cell, 2))
                 {
-                    Assert.That(shallows.Contains(near) && !own.Contains(near), Is.False, $"seed {seed}: two ponds near {cell}");
+                    Expect(!(shallows.Contains(near) && !own.Contains(near)), $"seed {seed}: two ponds near {cell}");
                 }
             }
 
@@ -740,7 +742,7 @@ public class AreaGenerationTests
                 for (int x = bounds.xMin; x < bounds.xMax; x++)
                 {
                     Vector3Int cell = new(x, y, 0);
-                    Assert.That(sand.Contains(cell) || gravel.Contains(cell) || water.Contains(cell), Is.True, $"seed {seed}: the dock at {cell} lies on the beach, the trail or the lake");
+                    Expect(sand.Contains(cell) || gravel.Contains(cell) || water.Contains(cell), $"seed {seed}: the dock at {cell} lies on the beach, the trail or the lake");
                     inWater &= water.Contains(cell);
                     coversTrail |= y == bounds.yMin && gravel.Contains(cell);
                 }
@@ -751,12 +753,12 @@ public class AreaGenerationTests
                     for (int x = bounds.xMin - 1; x <= bounds.xMax; x++)
                     {
                         Vector3Int cell = new(x, y, 0);
-                        Assert.That(dock.Contains(cell) || sand.Contains(cell) || water.Contains(cell) || gravel.Contains(cell), Is.True, $"seed {seed}: beside the dock's foot at {cell}");
+                        Expect(dock.Contains(cell) || sand.Contains(cell) || water.Contains(cell) || gravel.Contains(cell), $"seed {seed}: beside the dock's foot at {cell}");
                     }
                 }
             }
 
-            Assert.That(coversTrail, Is.True, $"seed {seed}: the dock starts on the trail's end");
+            Expect(coversTrail, $"seed {seed}: the dock starts on the trail's end");
             Assert.That(rowsInWater, Is.InRange(lakeside.DockReach.x, lakeside.DockReach.y), $"seed {seed}: rows over the water up to the far end");
             int shore = bounds.yMax - rowsInWater;
             int clearance = lakeside.DockClearance;
@@ -765,7 +767,7 @@ public class AreaGenerationTests
                 for (int x = bounds.xMin - clearance; x < bounds.xMax + clearance; x++)
                 {
                     Vector3Int cell = new(x, y, 0);
-                    Assert.That(water.Contains(cell) || sand.Contains(cell), Is.True, $"seed {seed}: {cell} near the dock's lake end is water or beach");
+                    Expect(water.Contains(cell) || sand.Contains(cell), $"seed {seed}: {cell} near the dock's lake end is water or beach");
                 }
             }
 
@@ -779,7 +781,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(props.Contains(near), Is.False, $"seed {seed}: a prop on or beside the dock at {near}");
+                    Expect(!props.Contains(near), $"seed {seed}: a prop on or beside the dock at {near}");
                 }
             }
 
@@ -820,7 +822,7 @@ public class AreaGenerationTests
             {
                 if (layer != planksIndex)
                 {
-                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                    Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
             }
 
@@ -833,15 +835,15 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
                 if (!HasProp(full, prop))
                 {
-                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Assert.That(near.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the dock");
+                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Expect(near.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the dock");
                 }
             }
         }
@@ -996,8 +998,8 @@ public class AreaGenerationTests
         int sides = 0;
         foreach (Vector3Int cell in dock)
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.True, $"the dock at {cell}");
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the dock at {cell} reachable");
+            Expect(navigation.IsCellWalkable(cell, profile), $"the dock at {cell}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"the dock at {cell} reachable");
             if (!water.Contains(cell))
             {
                 continue;
@@ -1022,7 +1024,7 @@ public class AreaGenerationTests
         {
             if (!dock.Contains(cell))
             {
-                Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"water at {cell}");
+                Expect(!navigation.IsCellWalkable(cell, profile), $"water at {cell}");
             }
         }
     }
@@ -1045,7 +1047,7 @@ public class AreaGenerationTests
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
-                Assert.That(layout.TerrainCells(layer).IsSubsetOf(snow), Is.True, $"seed {seed}: layer {layer} lies on the snow");
+                Expect(layout.TerrainCells(layer).IsSubsetOf(snow), $"seed {seed}: layer {layer} lies on the snow");
             }
 
             HashSet<Vector3Int> ice = Cells(layout, "Ice");
@@ -1058,7 +1060,7 @@ public class AreaGenerationTests
                 anyIce = cell;
                 foreach (Vector3Int near in CellsWithin(cell, snowfield.RoadMargin))
                 {
-                    Assert.That(stone.Contains(near), Is.False, $"seed {seed}: ice at {cell} within the road margin");
+                    Expect(!stone.Contains(near), $"seed {seed}: ice at {cell} within the road margin");
                 }
             }
 
@@ -1069,7 +1071,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, snowfield.HoleMargin))
                 {
-                    Assert.That(ice.Contains(near), Is.True, $"seed {seed}: a hole at {cell} without ice at {near}");
+                    Expect(ice.Contains(near), $"seed {seed}: a hole at {cell} without ice at {near}");
                 }
 
                 if (seen.Add(cell))
@@ -1087,7 +1089,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(ice.Contains(near), Is.False, $"seed {seed}: the trail at {cell} touches the ice");
+                    Expect(!ice.Contains(near), $"seed {seed}: the trail at {cell} touches the ice");
                 }
 
                 foreach (Vector3Int side in Sides)
@@ -1096,7 +1098,7 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(leavesTheRoad, Is.True, $"seed {seed}: the trail leaves the road");
+            Expect(leavesTheRoad, $"seed {seed}: the trail leaves the road");
             Assert.That(CornerProblems(layout, "Ice", "Water"), Is.Empty, $"seed {seed}");
         }
     }
@@ -1119,7 +1121,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(ice.Contains(near) || paths.Contains(near), Is.False, $"seed {seed}: dirt at {cell} beside the ice or a path");
+                    Expect(!(ice.Contains(near) || paths.Contains(near)), $"seed {seed}: dirt at {cell} beside the ice or a path");
                 }
             }
 
@@ -1129,7 +1131,7 @@ public class AreaGenerationTests
                 if (prop.Prefab == snowfield.CampfirePrefab)
                 {
                     campfires++;
-                    Assert.That(dirt.Contains(prop.Cell), Is.True, $"seed {seed}: the campfire stands on the dirt");
+                    Expect(dirt.Contains(prop.Cell), $"seed {seed}: the campfire stands on the dirt");
                 }
                 else if (ListContains(snowfield.CampsiteSeats, prop.Prefab) && dirt.Contains(prop.Cell))
                 {
@@ -1139,7 +1141,7 @@ public class AreaGenerationTests
                 {
                     foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
                     {
-                        Assert.That(dirt.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on or beside the dirt");
+                        Expect(!dirt.Contains(near), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on or beside the dirt");
                     }
                 }
             }
@@ -1169,17 +1171,17 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
                 {
-                    Assert.That(snow.Contains(prop.Cell) && !ice.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                    Expect(snow.Contains(prop.Cell) && !ice.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
                     continue;
                 }
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: footprints overlap at {cell}");
-                    Assert.That(snow.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {cell} off the snow");
+                    Expect(footprints.Add(cell), $"seed {seed}: footprints overlap at {cell}");
+                    Expect(snow.Contains(cell), $"seed {seed}: {prop.Prefab.name} at {cell} off the snow");
                     foreach (Vector3Int near in CellsWithin(cell, 1))
                     {
-                        Assert.That(ice.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {cell} on or beside the ice");
+                        Expect(!ice.Contains(near), $"seed {seed}: {prop.Prefab.name} at {cell} on or beside the ice");
                     }
                 }
             }
@@ -1188,11 +1190,11 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
                 {
-                    Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                    Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 }
             }
 
-            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            Expect(Cells(layout, "Stone").Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the road");
             foreach (Vector3Int cell in footprints)
             {
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(snowfield.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
@@ -1203,8 +1205,8 @@ public class AreaGenerationTests
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
                 AreaLayout.Mob mob = layout.Mobs[i];
-                Assert.That(ice.Contains(mob.Cell), Is.False, $"seed {seed}: a mob on the ice");
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} unreachable");
+                Expect(!ice.Contains(mob.Cell), $"seed {seed}: a mob on the ice");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} unreachable");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(snowfield.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = i + 1; j < layout.Mobs.Count; j++)
                 {
@@ -1214,7 +1216,7 @@ public class AreaGenerationTests
 
             foreach (Vector3Int cell in ice)
             {
-                Assert.That(water.Contains(cell) || reachable.Contains(cell), Is.True, $"seed {seed}: ice at {cell} unreachable");
+                Expect(water.Contains(cell) || reachable.Contains(cell), $"seed {seed}: ice at {cell} unreachable");
             }
         }
     }
@@ -1286,14 +1288,14 @@ public class AreaGenerationTests
         Assert.That(iceSteps, Is.GreaterThan(20));
         foreach (Vector3Int cell in water)
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"the hole at {cell}");
+            Expect(!navigation.IsCellWalkable(cell, profile), $"the hole at {cell}");
         }
 
         foreach (Vector3Int cell in ice)
         {
             if (!water.Contains(cell))
             {
-                Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"ice at {cell} reachable");
+                Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"ice at {cell} reachable");
             }
         }
     }
@@ -1317,7 +1319,7 @@ public class AreaGenerationTests
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
-                Assert.That(layout.TerrainCells(layer).IsSubsetOf(grass), Is.True, $"seed {seed}: layer {layer} lies on the grass");
+                Expect(layout.TerrainCells(layer).IsSubsetOf(grass), $"seed {seed}: layer {layer} lies on the grass");
             }
 
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
@@ -1328,7 +1330,7 @@ public class AreaGenerationTests
                 anyOcean = cell;
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(!grass.Contains(near) || ocean.Contains(near) || sand.Contains(near), Is.True, $"seed {seed}: the ocean at {cell} meets {near}");
+                    Expect(!grass.Contains(near) || ocean.Contains(near) || sand.Contains(near), $"seed {seed}: the ocean at {cell} meets {near}");
                 }
             }
 
@@ -1362,7 +1364,7 @@ public class AreaGenerationTests
                 for (; y >= bounds.yMin; y--)
                 {
                     Vector3Int cell = new(x, y, 0);
-                    Assert.That(ocean.Contains(cell) || sand.Contains(cell), Is.False, $"seed {seed}: coast at {cell} south of the beach");
+                    Expect(!(ocean.Contains(cell) || sand.Contains(cell)), $"seed {seed}: coast at {cell} south of the beach");
                 }
             }
 
@@ -1394,7 +1396,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(sea.Contains(near), Is.False, $"seed {seed}: {cell} beside the sea");
+                    Expect(!sea.Contains(near), $"seed {seed}: {cell} beside the sea");
                 }
             }
 
@@ -1402,7 +1404,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, coast.RoadMargin))
                 {
-                    Assert.That(sea.Contains(near) || sand.Contains(near), Is.False, $"seed {seed}: the road at {cell} within the road margin of the coast");
+                    Expect(!(sea.Contains(near) || sand.Contains(near)), $"seed {seed}: the road at {cell} within the road margin of the coast");
                 }
             }
 
@@ -1415,13 +1417,13 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(leavesTheRoad, Is.True, $"seed {seed}: the trail leaves the road");
-            Assert.That(gravel.Overlaps(sand), Is.True, $"seed {seed}: the trail reaches the beach");
+            Expect(leavesTheRoad, $"seed {seed}: the trail leaves the road");
+            Expect(gravel.Overlaps(sand), $"seed {seed}: the trail reaches the beach");
             foreach (Vector3Int cell in dirt)
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(sand.Contains(near) || paths.Contains(near), Is.False, $"seed {seed}: dirt at {cell} beside the beach or a path");
+                    Expect(!(sand.Contains(near) || paths.Contains(near)), $"seed {seed}: dirt at {cell} beside the beach or a path");
                 }
             }
 
@@ -1431,7 +1433,7 @@ public class AreaGenerationTests
                 if (prop.Prefab == coast.CampfirePrefab)
                 {
                     campfires++;
-                    Assert.That(dirt.Contains(prop.Cell), Is.True, $"seed {seed}: the campfire stands on the dirt");
+                    Expect(dirt.Contains(prop.Cell), $"seed {seed}: the campfire stands on the dirt");
                 }
                 else if (ListContains(coast.CampsiteSeats, prop.Prefab) && dirt.Contains(prop.Cell))
                 {
@@ -1441,7 +1443,7 @@ public class AreaGenerationTests
                 {
                     foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
                     {
-                        Assert.That(dirt.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on or beside the dirt");
+                        Expect(!dirt.Contains(near), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on or beside the dirt");
                     }
                 }
             }
@@ -1474,14 +1476,14 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
                 {
-                    Assert.That(grass.Contains(prop.Cell) && !coastCells.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                    Expect(grass.Contains(prop.Cell) && !coastCells.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
                     continue;
                 }
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: footprints overlap at {cell}");
-                    Assert.That(grass.Contains(cell) && !coastCells.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {cell} off the grass or on the coast");
+                    Expect(footprints.Add(cell), $"seed {seed}: footprints overlap at {cell}");
+                    Expect(grass.Contains(cell) && !coastCells.Contains(cell), $"seed {seed}: {prop.Prefab.name} at {cell} off the grass or on the coast");
                 }
             }
 
@@ -1489,11 +1491,11 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
                 {
-                    Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                    Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 }
             }
 
-            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            Expect(Cells(layout, "Stone").Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the road");
             foreach (Vector3Int cell in footprints)
             {
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(coast.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
@@ -1504,8 +1506,8 @@ public class AreaGenerationTests
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
                 AreaLayout.Mob mob = layout.Mobs[i];
-                Assert.That(ocean.Contains(mob.Cell), Is.False, $"seed {seed}: a mob in the sea");
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} unreachable");
+                Expect(!ocean.Contains(mob.Cell), $"seed {seed}: a mob in the sea");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} unreachable");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(coast.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = i + 1; j < layout.Mobs.Count; j++)
                 {
@@ -1517,7 +1519,7 @@ public class AreaGenerationTests
             walked.UnionWith(Cells(layout, "Gravel"));
             foreach (Vector3Int cell in walked)
             {
-                Assert.That(reachable.Contains(cell), Is.True, $"seed {seed}: {cell} on the beach or the trail unreachable");
+                Expect(reachable.Contains(cell), $"seed {seed}: {cell} on the beach or the trail unreachable");
             }
         }
     }
@@ -1546,15 +1548,15 @@ public class AreaGenerationTests
             HashSet<Vector3Int> paths = PathCells(layout);
             Assert.That(raised, Is.Not.Empty, $"seed {seed}: a plateau");
             Assert.That(ramps.Count, Is.EqualTo(coast.RampWidth), $"seed {seed}: the ramp");
-            Assert.That(raised.IsSupersetOf(ramps), Is.True, $"seed {seed}: the ramp is raised ground");
+            Expect(raised.IsSupersetOf(ramps), $"seed {seed}: the ramp is raised ground");
             Assert.That(Reachable(new List<Vector3Int>(raised)[0], raised.Contains).Count, Is.EqualTo(raised.Count), $"seed {seed}: one piece");
             foreach (Vector3Int cell in raised)
             {
-                Assert.That(grass.Contains(cell) && !coastCells.Contains(cell), Is.True, $"seed {seed}: {cell} on the grass off the coast");
+                Expect(grass.Contains(cell) && !coastCells.Contains(cell), $"seed {seed}: {cell} on the grass off the coast");
                 Assert.That(NearestDistance(cell, coastCells), Is.GreaterThan(coast.PlateauMargin), $"seed {seed}: {cell} near the coast");
                 Assert.That(NearestDistance(cell, paths), Is.GreaterThan(coast.PlateauMargin), $"seed {seed}: {cell} near a path");
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(coast.SpawnClearRadius + coast.PlateauMargin), $"seed {seed}: {cell} near the spawn");
-                Assert.That(InRun(raised, cell, Vector3Int.right) && InRun(raised, cell, Vector3Int.up), Is.True, $"seed {seed}: {cell} three cells thick");
+                Expect(InRun(raised, cell, Vector3Int.right) && InRun(raised, cell, Vector3Int.up), $"seed {seed}: {cell} three cells thick");
             }
 
             int left = int.MaxValue;
@@ -1562,7 +1564,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> clear = new();
             foreach (Vector3Int ramp in ramps)
             {
-                Assert.That(raised.Contains(ramp + Vector3Int.down), Is.False, $"seed {seed}: the ramp at {ramp} on the bottom row");
+                Expect(!(raised.Contains(ramp + Vector3Int.down)), $"seed {seed}: the ramp at {ramp} on the bottom row");
                 Assert.That(ramp.y, Is.EqualTo(new List<Vector3Int>(ramps)[0].y), $"seed {seed}: the ramp in one row");
                 left = Mathf.Min(left, ramp.x);
                 right = Mathf.Max(right, ramp.x);
@@ -1578,7 +1580,7 @@ public class AreaGenerationTests
                 for (int below = 1; below <= 2; below++)
                 {
                     Vector3Int approach = ramp + new Vector3Int(0, -below, 0);
-                    Assert.That(grass.Contains(approach) && !ocean.Contains(approach) && !raised.Contains(approach), Is.True, $"seed {seed}: the ground in front of the ramp at {approach}");
+                    Expect(grass.Contains(approach) && !ocean.Contains(approach) && !raised.Contains(approach), $"seed {seed}: the ground in front of the ramp at {approach}");
                 }
             }
 
@@ -1586,7 +1588,7 @@ public class AreaGenerationTests
             int row = new List<Vector3Int>(ramps)[0].y;
             foreach (Vector3Int beside in new[] { new Vector3Int(left - 1, row, 0), new Vector3Int(right + 1, row, 0) })
             {
-                Assert.That(RaisedGround.IsCliff(raised, ramps, beside), Is.True, $"seed {seed}: cliff beside the ramp at {beside}");
+                Expect(RaisedGround.IsCliff(raised, ramps, beside), $"seed {seed}: cliff beside the ramp at {beside}");
             }
 
             foreach (Vector3Int cell in raised)
@@ -1602,7 +1604,7 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
                 {
-                    Assert.That(clear.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on the face or by the ramp");
+                    Expect(!clear.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} on the face or by the ramp");
                     continue;
                 }
 
@@ -1612,28 +1614,28 @@ public class AreaGenerationTests
                 {
                     footprints.Add(cell);
                     on += raised.Contains(cell) ? 1 : 0;
-                    Assert.That(clear.Contains(cell), Is.False, $"seed {seed}: {prop.Prefab.name} at {cell} on the face or by the ramp");
+                    Expect(!clear.Contains(cell), $"seed {seed}: {prop.Prefab.name} at {cell} on the face or by the ramp");
                 }
 
-                Assert.That(on == 0 || on == covered.Count, Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} across the plateau's edge");
+                Expect(on == 0 || on == covered.Count, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} across the plateau's edge");
             }
 
             foreach (AreaLayout.Mob mob in layout.Mobs)
             {
-                Assert.That(RaisedGround.IsCliff(raised, ramps, mob.Cell), Is.False, $"seed {seed}: a mob on the cliff at {mob.Cell}");
+                Expect(!RaisedGround.IsCliff(raised, ramps, mob.Cell), $"seed {seed}: a mob on the cliff at {mob.Cell}");
             }
 
             System.Predicate<Vector3Int> open = cell => grass.Contains(cell) && !footprints.Contains(cell) && !ocean.Contains(cell) && !RaisedGround.IsCliff(raised, ramps, cell);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, open);
             foreach (Vector3Int ramp in ramps)
             {
-                Assert.That(reachable.Contains(ramp) && reachable.Contains(ramp + Vector3Int.up), Is.True, $"seed {seed}: the ramp at {ramp} and the top above it reached");
+                Expect(reachable.Contains(ramp) && reachable.Contains(ramp + Vector3Int.up), $"seed {seed}: the ramp at {ramp} and the top above it reached");
             }
 
             HashSet<Vector3Int> withoutRamp = Reachable(layout.SpawnCell, cell => open(cell) && !ramps.Contains(cell));
             foreach (Vector3Int cell in raised)
             {
-                Assert.That(withoutRamp.Contains(cell), Is.False, $"seed {seed}: the plateau at {cell} reached without the ramp");
+                Expect(!withoutRamp.Contains(cell), $"seed {seed}: the plateau at {cell} reached without the ramp");
             }
         }
     }
@@ -1674,7 +1676,7 @@ public class AreaGenerationTests
         blocked.UnionWith(Footprints(layout));
         foreach (Vector3Int cell in ocean)
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"the ocean at {cell}");
+            Expect(!navigation.IsCellWalkable(cell, profile), $"the ocean at {cell}");
         }
 
         int steps = 0;
@@ -1704,12 +1706,12 @@ public class AreaGenerationTests
                 y--;
             }
 
-            Assert.That(navigation.IsCellWalkable(new Vector3Int(x, y, 0), profile), Is.False, $"the map's northern edge at column {x}");
+            Expect(!navigation.IsCellWalkable(new Vector3Int(x, y, 0), profile), $"the map's northern edge at column {x}");
         }
 
         foreach (Vector3Int cell in sand)
         {
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the beach at {cell} reachable");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"the beach at {cell} reachable");
         }
 
         int cliffs = 0;
@@ -1717,7 +1719,7 @@ public class AreaGenerationTests
         {
             if (RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell))
             {
-                Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"the cliff at {cell}");
+                Expect(!navigation.IsCellWalkable(cell, profile), $"the cliff at {cell}");
                 cliffs++;
             }
         }
@@ -1725,8 +1727,8 @@ public class AreaGenerationTests
         Assert.That(cliffs, Is.GreaterThan(10));
         foreach (Vector3Int ramp in layout.Ramps)
         {
-            Assert.That(navigation.IsCellWalkable(ramp, profile), Is.True, $"the ramp at {ramp}");
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, ramp + Vector3Int.up, profile), Is.True, $"the top above the ramp at {ramp} reachable");
+            Expect(navigation.IsCellWalkable(ramp, profile), $"the ramp at {ramp}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, ramp + Vector3Int.up, profile), $"the top above the ramp at {ramp} reachable");
         }
     }
 
@@ -1748,7 +1750,7 @@ public class AreaGenerationTests
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
                 Assert.That(layout.TerrainCells(layer), Is.Not.Empty, $"seed {seed}: layer {layer}");
-                Assert.That(layout.TerrainCells(layer).IsSubsetOf(dirt), Is.True, $"seed {seed}: layer {layer} lies on the dirt");
+                Expect(layout.TerrainCells(layer).IsSubsetOf(dirt), $"seed {seed}: layer {layer} lies on the dirt");
             }
 
             HashSet<Vector3Int> lava = Cells(layout, "Lava");
@@ -1767,7 +1769,7 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
                 {
-                    Assert.That(paths.Contains(near), Is.False, $"seed {seed}: lava at {cell} beside the path at {near}");
+                    Expect(!paths.Contains(near), $"seed {seed}: lava at {cell} beside the path at {near}");
                 }
 
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(lavaFields.SpawnClearRadius + 1f), $"seed {seed}: lava at {cell} near the spawn");
@@ -1775,7 +1777,7 @@ public class AreaGenerationTests
                 south |= cell.y < roadMiddle;
             }
 
-            Assert.That(north && south, Is.True, $"seed {seed}: the lava lies on both sides of the road");
+            Expect(north && south, $"seed {seed}: the lava lies on both sides of the road");
             HashSet<Vector3Int> seen = new();
             foreach (Vector3Int cell in lava)
             {
@@ -1834,8 +1836,8 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(leavesTheRoad, Is.True, $"seed {seed}: the trail leaves the road");
-            Assert.That(reachesTheLava, Is.True, $"seed {seed}: the trail ends near the lava");
+            Expect(leavesTheRoad, $"seed {seed}: the trail leaves the road");
+            Expect(reachesTheLava, $"seed {seed}: the trail ends near the lava");
             Assert.That(Reachable(any, gravel.Contains).Count, Is.EqualTo(gravel.Count), $"seed {seed}: the trail is one piece");
             int campfires = 0;
             foreach (AreaLayout.Prop prop in layout.Props)
@@ -1886,14 +1888,14 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
                 {
-                    Assert.That(dirt.Contains(prop.Cell) && !lava.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                    Expect(dirt.Contains(prop.Cell) && !lava.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
                     continue;
                 }
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: footprints overlap at {cell}");
-                    Assert.That(dirt.Contains(cell) && !nearLava.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {cell} on or beside the lava");
+                    Expect(footprints.Add(cell), $"seed {seed}: footprints overlap at {cell}");
+                    Expect(dirt.Contains(cell) && !nearLava.Contains(cell), $"seed {seed}: {prop.Prefab.name} at {cell} on or beside the lava");
                 }
             }
 
@@ -1901,11 +1903,11 @@ public class AreaGenerationTests
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
                 {
-                    Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                    Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 }
             }
 
-            Assert.That(Cells(layout, "Stone").Contains(layout.SpawnCell), Is.True, $"seed {seed}: the spawn is on the road");
+            Expect(Cells(layout, "Stone").Contains(layout.SpawnCell), $"seed {seed}: the spawn is on the road");
             foreach (Vector3Int cell in footprints)
             {
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(lavaFields.SpawnClearRadius), $"seed {seed}: a footprint at {cell} near the spawn");
@@ -1916,8 +1918,8 @@ public class AreaGenerationTests
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
                 AreaLayout.Mob mob = layout.Mobs[i];
-                Assert.That(nearLava.Contains(mob.Cell), Is.False, $"seed {seed}: a mob at {mob.Cell} on or beside the lava");
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} unreachable");
+                Expect(!nearLava.Contains(mob.Cell), $"seed {seed}: a mob at {mob.Cell} on or beside the lava");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} unreachable");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(lavaFields.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = i + 1; j < layout.Mobs.Count; j++)
                 {
@@ -1927,12 +1929,12 @@ public class AreaGenerationTests
 
             foreach (Vector3Int cell in Cells(layout, "Gravel"))
             {
-                Assert.That(reachable.Contains(cell), Is.True, $"seed {seed}: the trail at {cell} unreachable");
+                Expect(reachable.Contains(cell), $"seed {seed}: the trail at {cell} unreachable");
             }
 
             foreach (Vector3Int cell in Cells(layout, "Stone"))
             {
-                Assert.That(reachable.Contains(cell) || footprints.Contains(cell), Is.True, $"seed {seed}: the road at {cell} unreachable");
+                Expect(reachable.Contains(cell) || footprints.Contains(cell), $"seed {seed}: the road at {cell} unreachable");
             }
         }
     }
@@ -1965,7 +1967,7 @@ public class AreaGenerationTests
         blocked.UnionWith(Footprints(layout));
         foreach (Vector3Int cell in lava)
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.False, $"lava at {cell}");
+            Expect(!navigation.IsCellWalkable(cell, profile), $"lava at {cell}");
         }
 
         int steps = 0;
@@ -1992,12 +1994,12 @@ public class AreaGenerationTests
         Assert.That(steps, Is.GreaterThan(50));
         foreach (AreaLayout.Mob mob in layout.Mobs)
         {
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), Is.True, $"mob at {mob.Cell}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), $"mob at {mob.Cell}");
         }
 
         foreach (Vector3Int cell in Cells(layout, "Gravel"))
         {
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"the trail at {cell}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"the trail at {cell}");
         }
     }
 
@@ -2123,11 +2125,11 @@ public class AreaGenerationTests
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Assert.That(grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !mud.Contains(cell), Is.True, $"seed {seed}: {prop.Prefab.name} on open grass at {cell}");
-                    Assert.That(footprints.Add(cell), Is.True, $"seed {seed}: two footprints on {cell}");
+                    Expect(grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !mud.Contains(cell), $"seed {seed}: {prop.Prefab.name} on open grass at {cell}");
+                    Expect(footprints.Add(cell), $"seed {seed}: two footprints on {cell}");
                     foreach (Vector3Int near in CellsWithin(cell, lakeside.PathClearance))
                     {
-                        Assert.That(paths.Contains(near), Is.False, $"seed {seed}: a prop at {cell} beside a path");
+                        Expect(!paths.Contains(near), $"seed {seed}: a prop at {cell} beside a path");
                     }
                 }
             }
@@ -2140,11 +2142,11 @@ public class AreaGenerationTests
                     continue;
                 }
 
-                Assert.That(grass.Contains(prop.Cell) && !sand.Contains(prop.Cell) && !mud.Contains(prop.Cell) && !paths.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
-                Assert.That(footprints.Contains(prop.Cell), Is.False, $"seed {seed}: {prop.Prefab.name} under a footprint");
+                Expect(grass.Contains(prop.Cell) && !sand.Contains(prop.Cell) && !mud.Contains(prop.Cell) && !paths.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell}");
+                Expect(!footprints.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} under a footprint");
                 foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
                 {
-                    Assert.That(water.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} beside the water");
+                    Expect(!water.Contains(near), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} beside the water");
                 }
             }
         }
@@ -2165,13 +2167,13 @@ public class AreaGenerationTests
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !water.Contains(cell) && !footprints.Contains(cell));
 
-            Assert.That(reachable.IsSupersetOf(Cells(layout, "Sand")), Is.True, $"seed {seed}: the whole beach can be walked to");
+            Expect(reachable.IsSupersetOf(Cells(layout, "Sand")), $"seed {seed}: the whole beach can be walked to");
             Assert.That(layout.Mobs.Count, Is.EqualTo(lakeside.MobCount), $"seed {seed}");
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
                 AreaLayout.Mob mob = layout.Mobs[i];
                 Assert.That(mob.Prefab, Is.SameAs(lakeside.MobPrefab));
-                Assert.That(reachable.Contains(mob.Cell), Is.True, $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
+                Expect(reachable.Contains(mob.Cell), $"seed {seed}: mob at {mob.Cell} reachable from the spawn");
                 Assert.That(Vector3Int.Distance(mob.Cell, layout.SpawnCell), Is.GreaterThanOrEqualTo(lakeside.MobDistanceFromSpawn), $"seed {seed}");
                 for (int j = 0; j < i; j++)
                 {
@@ -2200,7 +2202,7 @@ public class AreaGenerationTests
 
         for (int layer = 0; layer < first.TerrainLayerCount; layer++)
         {
-            Assert.That(first.TerrainCells(layer).SetEquals(again.TerrainCells(layer)), Is.True, $"layer {layer}");
+            Expect(first.TerrainCells(layer).SetEquals(again.TerrainCells(layer)), $"layer {layer}");
         }
 
         Assert.That(again.Props.Count, Is.EqualTo(first.Props.Count));
@@ -2219,8 +2221,8 @@ public class AreaGenerationTests
         }
 
         Assert.That(again.SpawnCell, Is.EqualTo(first.SpawnCell));
-        Assert.That(again.Raised.SetEquals(first.Raised), Is.True, "raised ground");
-        Assert.That(again.Ramps.SetEquals(first.Ramps), Is.True, "ramps");
+        Expect(again.Raised.SetEquals(first.Raised), $"raised ground");
+        Expect(again.Ramps.SetEquals(first.Ramps), $"ramps");
         Assert.That(other.TerrainCells(0).SetEquals(first.TerrainCells(0)) && Cells(other, "Stone").SetEquals(Cells(first, "Stone")), Is.False);
     }
 
@@ -2273,7 +2275,7 @@ public class AreaGenerationTests
             Assert.That(child.GetComponent<TilemapRenderer>(), Is.Null, $"{layers[i].TilemapName} has no Tilemap Renderer");
             Assert.That(child.childCount, Is.Zero, $"{layers[i].TilemapName} has no render tilemap");
             Tilemap tilemap = child.GetComponent<Tilemap>();
-            Assert.That(FilledCells(tilemap).SetEquals(layout.TerrainCells(i)), Is.True, $"{layers[i].TilemapName} cells");
+            Expect(FilledCells(tilemap).SetEquals(layout.TerrainCells(i)), $"{layers[i].TilemapName} cells");
             foreach (Vector3Int cell in layout.TerrainCells(i))
             {
                 Assert.That(tilemap.GetTile(cell), Is.SameAs(layers[i].Tile), $"{layers[i].TilemapName} {cell}");
@@ -2293,8 +2295,8 @@ public class AreaGenerationTests
         SerializedObject terrainData = new(terrain);
         Assert.That(terrainData.FindProperty("layers").GetArrayElementAtIndex(0).FindPropertyRelative("fillTile").objectReferenceValue, Is.SameAs(layers[0].Tile), "The area's terrain fills the ground layer with its tile.");
 
-        Assert.That(stale == null, Is.True, "Old props are removed.");
-        Assert.That(oldMob == null, Is.True, "Old mob spawn points are removed.");
+        Expect(stale == null, $"Old props are removed.");
+        Expect(oldMob == null, $"Old mob spawn points are removed.");
         Assert.That(props.childCount, Is.EqualTo(layout.Props.Count));
         for (int i = 0; i < layout.Props.Count; i++)
         {
@@ -2336,7 +2338,7 @@ public class AreaGenerationTests
         else
         {
             Tilemap raisedMap = raisedChild.GetComponent<Tilemap>();
-            Assert.That(FilledCells(raisedMap).SetEquals(layout.Raised), Is.True, "The raised tilemap holds the raised ground.");
+            Expect(FilledCells(raisedMap).SetEquals(layout.Raised), $"The raised tilemap holds the raised ground.");
             foreach (Vector3Int cell in layout.Raised)
             {
                 Assert.That(raisedMap.GetTile(cell), Is.SameAs(layout.Ramps.Contains(cell) ? target.RampTile : target.RaisedTile), $"raised ground at {cell}");
@@ -2354,7 +2356,7 @@ public class AreaGenerationTests
 
         foreach (AreaLayout.Mob mob in layout.Mobs)
         {
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), Is.True, $"mob at {mob.Cell}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, mob.Cell, profile), $"mob at {mob.Cell}");
         }
     }
 
@@ -2383,9 +2385,9 @@ public class AreaGenerationTests
 
         navigation.BuildGrid();
 
-        Assert.That(Cells(layout, "Stone").Contains(road), Is.True, "The spawn is on the road.");
-        Assert.That(navigation.IsCellWalkable(road, profile), Is.False, "Water over the road blocks it.");
-        Assert.That(navigation.IsCellWalkable(beside, profile), Is.True, "Mud can be walked.");
+        Expect(Cells(layout, "Stone").Contains(road), $"The spawn is on the road.");
+        Expect(!navigation.IsCellWalkable(road, profile), $"Water over the road blocks it.");
+        Expect(navigation.IsCellWalkable(beside, profile), $"Mud can be walked.");
     }
 
     /// <summary>
@@ -2425,8 +2427,8 @@ public class AreaGenerationTests
 
         foreach (Vector3Int cell in shallows)
         {
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.True, $"shallows at {cell}");
-            Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"shallows at {cell} reachable");
+            Expect(navigation.IsCellWalkable(cell, profile), $"shallows at {cell}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"shallows at {cell} reachable");
             foreach (Vector3Int side in Sides)
             {
                 Assert.That(navigation.MovementCost(cell + side, cell, profile), Is.EqualTo(cost), $"stepping into {cell}");
@@ -2472,8 +2474,8 @@ public class AreaGenerationTests
                     continue;
                 }
 
-                Assert.That(navigation.IsCellWalkable(cell, profile), Is.True, $"{name} at {cell}");
-                Assert.That(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), Is.True, $"{name} at {cell} reachable");
+                Expect(navigation.IsCellWalkable(cell, profile), $"{name} at {cell}");
+                Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"{name} at {cell} reachable");
                 bool clear = true;
                 foreach (Vector3Int near in CellsWithin(cell, 2))
                 {
@@ -2606,8 +2608,8 @@ public class AreaGenerationTests
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
         navigation.BuildGrid();
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
-        Assert.That(navigation.IsCellWalkable(water, profile), Is.False, "Water still blocks.");
-        Assert.That(navigation.IsCellWalkable(mud, profile), Is.True, "Mud can be walked.");
+        Expect(!navigation.IsCellWalkable(water, profile), $"Water still blocks.");
+        Expect(navigation.IsCellWalkable(mud, profile), $"Mud can be walked.");
         Assert.That(navigation.MovementCost(mud + Vector3Int.left, mud, profile), Is.GreaterThan(navigation.MovementCost(new Vector3Int(3, 2, 0), new Vector3Int(4, 2, 0), profile)), "Mud still costs more than grass.");
     }
 
@@ -2691,8 +2693,8 @@ public class AreaGenerationTests
 
         Assert.That(renderer.Layers[4].Tilemap, Is.SameAs(sand));
         Assert.That(renderer.Layers[8].Tilemap, Is.SameAs(water));
-        Assert.That(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), Is.True, "The painted layers keep their cells.");
-        Assert.That(dryGrass == null, Is.True, "The empty dry grass layer is removed.");
+        Expect(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), $"The painted layers keep their cells.");
+        Expect(dryGrass == null, $"The empty dry grass layer is removed.");
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
         renderer.RunScheduledRebuild();
         Assert.That(renderer.ControlMap, Is.Not.Null);
@@ -2772,7 +2774,7 @@ public class AreaGenerationTests
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         profile.TryGetTraversal(ProjectTerrainType("Grass"), out bool grassWalkable, out int grassCost);
         profile.TryGetTraversal(ProjectTerrainType("Shallows"), out bool shallowsWalkable, out int shallowsCost);
-        Assert.That(shallowsWalkable, Is.True, "The shallows can be waded.");
+        Expect(shallowsWalkable, $"The shallows can be waded.");
         Assert.That(shallowsCost, Is.EqualTo(2 * grassCost), "Wading costs twice as much as walking.");
         Assert.That(profile.GetMinimumTraversalCost(), Is.EqualTo(grassCost));
         profile.TryGetTraversal(ProjectTerrainType("Mud"), out bool mudWalkable, out int mudCost);
@@ -2790,16 +2792,16 @@ public class AreaGenerationTests
         }
 
         profile.TryGetTraversal(ProjectTerrainType("Snow"), out bool snowWalkable, out int snowCost);
-        Assert.That(snowWalkable, Is.True, "Snow can be walked.");
+        Expect(snowWalkable, $"Snow can be walked.");
         Assert.That(snowCost, Is.EqualTo(3 * grassCost / 2), "Snow costs half as much again as grass.");
         Assert.That(mudCost, Is.GreaterThan(grassCost), "Paths go around mud when they can.");
-        Assert.That(waterWalkable, Is.False, "Water cannot be walked.");
+        Expect(!waterWalkable, $"Water cannot be walked.");
         Assert.That(ProjectTerrainType("Ocean"), Is.Not.Null);
         profile.TryGetTraversal(ProjectTerrainType("Ocean"), out bool oceanWalkable, out _);
-        Assert.That(oceanWalkable, Is.False, "The ocean cannot be walked.");
+        Expect(!oceanWalkable, $"The ocean cannot be walked.");
         Assert.That(ProjectTerrainType("Lava"), Is.Not.Null);
         profile.TryGetTraversal(ProjectTerrainType("Lava"), out bool lavaWalkable, out _);
-        Assert.That(lavaWalkable, Is.False, "Lava cannot be walked.");
+        Expect(!lavaWalkable, $"Lava cannot be walked.");
     }
 
     /// <summary>
@@ -2816,14 +2818,14 @@ public class AreaGenerationTests
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             Assert.That(dirt.Count, Is.GreaterThan(10), $"seed {seed}: the campsite's dirt");
-            Assert.That(grass.IsSupersetOf(dirt), Is.True, $"seed {seed}: dirt on grass");
-            Assert.That(dirt.Overlaps(PathCells(layout)), Is.False, $"seed {seed}: dirt off the paths");
+            Expect(grass.IsSupersetOf(dirt), $"seed {seed}: dirt on grass");
+            Expect(!dirt.Overlaps(PathCells(layout)), $"seed {seed}: dirt off the paths");
             foreach (Vector3Int cell in dirt)
             {
                 Assert.That(Vector3Int.Distance(cell, layout.SpawnCell), Is.GreaterThan(generator.SpawnClearRadius), $"seed {seed}: dirt at {cell} near the spawn");
                 foreach (Vector3Int near in CellsWithin(cell, generator.BorderDepth))
                 {
-                    Assert.That(grass.Contains(near), Is.True, $"seed {seed}: dirt at {cell} in the edge band");
+                    Expect(grass.Contains(near), $"seed {seed}: dirt at {cell} in the edge band");
                 }
             }
 
@@ -2835,7 +2837,7 @@ public class AreaGenerationTests
                 if (prop.Prefab == generator.CampfirePrefab)
                 {
                     fires++;
-                    Assert.That(dirt.IsSupersetOf(CoveredCells(prop, footprint)), Is.True, $"seed {seed}: the campfire on the dirt");
+                    Expect(dirt.IsSupersetOf(CoveredCells(prop, footprint)), $"seed {seed}: the campfire on the dirt");
                 }
                 else if (dirt.Contains(prop.Cell) && ListContains(generator.CampsiteSeats, prop.Prefab))
                 {
@@ -2845,7 +2847,7 @@ public class AreaGenerationTests
                 {
                     foreach (Vector3Int near in CellsWithin(prop.Cell, 1))
                     {
-                        Assert.That(dirt.Contains(near), Is.False, $"seed {seed}: {prop.Prefab.name} on or beside the campsite");
+                        Expect(!dirt.Contains(near), $"seed {seed}: {prop.Prefab.name} on or beside the campsite");
                     }
                 }
             }
@@ -2888,7 +2890,7 @@ public class AreaGenerationTests
             }
 
             Assert.That(plaza.Count, Is.GreaterThan(20), $"seed {seed}: the square");
-            Assert.That(grass.IsSupersetOf(plaza), Is.True, $"seed {seed}: the square on grass");
+            Expect(grass.IsSupersetOf(plaza), $"seed {seed}: the square on grass");
             foreach (Vector3Int cell in plaza)
             {
                 Assert.That(Vector2.Distance(CellCentre(cell), fountain), Is.LessThanOrEqualTo(villageForest.SquareRadius + 1f), $"seed {seed}: plaza at {cell} around the fountain");
@@ -2903,12 +2905,12 @@ public class AreaGenerationTests
                 }
             }
 
-            Assert.That(opensOntoStreet, Is.True, $"seed {seed}: the square opens onto the street");
+            Expect(opensOntoStreet, $"seed {seed}: the square opens onto the street");
 
             Assert.That(dirt, Is.Not.Empty, $"seed {seed}: dirt along the trails");
-            Assert.That(grass.IsSupersetOf(dirt), Is.True, $"seed {seed}: dirt on grass");
-            Assert.That(dirt.Overlaps(PathCells(layout)), Is.False, $"seed {seed}: dirt off the paths");
-            Assert.That(dirt.Overlaps(builtOn), Is.False, $"seed {seed}: dirt under a building or a fence");
+            Expect(grass.IsSupersetOf(dirt), $"seed {seed}: dirt on grass");
+            Expect(!dirt.Overlaps(PathCells(layout)), $"seed {seed}: dirt off the paths");
+            Expect(!dirt.Overlaps(builtOn), $"seed {seed}: dirt under a building or a fence");
             float width = villageForest.DirtWidth + villageForest.DirtWobble;
             float reach = villageForest.DirtReach + width + 1f;
             foreach (Vector3Int cell in dirt)
@@ -2993,7 +2995,7 @@ public class AreaGenerationTests
             {
                 if (!addedIndices.Contains(layer) && layer != shallowsIndex)
                 {
-                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                    Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
             }
 
@@ -3076,14 +3078,14 @@ public class AreaGenerationTests
                     continue;
                 }
 
-                Assert.That(campsite.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} moved off the campsite");
+                Expect(campsite.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} moved off the campsite");
             }
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
                 if (!HasProp(plain, prop))
                 {
-                    Assert.That(campsite.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added off the campsite");
+                    Expect(campsite.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added off the campsite");
                 }
             }
 
@@ -3135,12 +3137,12 @@ public class AreaGenerationTests
                     Assert.That(Reachable(cell, cells.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of {name} at {cell}");
                     foreach (Vector3Int near in CellsWithin(cell, 2))
                     {
-                        Assert.That(grass.Contains(near), Is.True, $"seed {seed}: {name} at {cell} within two cells of the map's edge");
+                        Expect(grass.Contains(near), $"seed {seed}: {name} at {cell} within two cells of the map's edge");
                     }
 
                     foreach (Vector3Int near in CellsWithin(cell, 1))
                     {
-                        Assert.That(paths.Contains(near) || dirt.Contains(near) || other.Contains(near), Is.False, $"seed {seed}: {name} at {cell} beside {near}");
+                        Expect(!(paths.Contains(near) || dirt.Contains(near) || other.Contains(near)), $"seed {seed}: {name} at {cell} beside {near}");
                     }
                 }
             }
@@ -3152,8 +3154,8 @@ public class AreaGenerationTests
 
             foreach (Vector3Int cell in tall)
             {
-                Assert.That(builtOn.Contains(cell), Is.False, $"seed {seed}: tall grass under a building or fence at {cell}");
-                Assert.That(plants.Contains(cell), Is.False, $"seed {seed}: a plant on the tall grass at {cell}");
+                Expect(!builtOn.Contains(cell), $"seed {seed}: tall grass under a building or fence at {cell}");
+                Expect(!plants.Contains(cell), $"seed {seed}: a plant on the tall grass at {cell}");
                 bool forest = generation.Regions[cell] == VillageForestGenerator.Region.Forest;
                 bool edge = false;
                 foreach (Vector3Int near in CellsWithin(cell, reach))
@@ -3161,7 +3163,7 @@ public class AreaGenerationTests
                     edge |= generation.Regions.TryGetValue(near, out VillageForestGenerator.Region region) && (region == VillageForestGenerator.Region.Forest) != forest;
                 }
 
-                Assert.That(edge, Is.True, $"seed {seed}: tall grass at {cell} away from the forest's edge");
+                Expect(edge, $"seed {seed}: tall grass at {cell} away from the forest's edge");
             }
 
             Assert.That(CornerProblems(layout, "Meadow", "TallGrass"), Is.Empty, $"seed {seed}");
@@ -3194,7 +3196,7 @@ public class AreaGenerationTests
             {
                 if (layer != meadowIndex && layer != tallIndex)
                 {
-                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                    Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
             }
 
@@ -3207,15 +3209,15 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
                 if (!HasProp(full, prop))
                 {
-                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Assert.That(tall.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
                 }
             }
         }
@@ -3263,12 +3265,12 @@ public class AreaGenerationTests
                     Assert.That(Reachable(cell, cells.Contains).Count, Is.GreaterThanOrEqualTo(4), $"seed {seed}: a scrap of {name} at {cell}");
                     foreach (Vector3Int near in CellsWithin(cell, 2))
                     {
-                        Assert.That(grass.Contains(near), Is.True, $"seed {seed}: {name} at {cell} within two cells of the map's edge");
+                        Expect(grass.Contains(near), $"seed {seed}: {name} at {cell} within two cells of the map's edge");
                     }
 
                     foreach (Vector3Int near in CellsWithin(cell, 1))
                     {
-                        Assert.That(others.Contains(near) || other.Contains(near), Is.False, $"seed {seed}: {name} at {cell} beside {near}");
+                        Expect(!(others.Contains(near) || other.Contains(near)), $"seed {seed}: {name} at {cell} beside {near}");
                     }
                 }
             }
@@ -3277,13 +3279,13 @@ public class AreaGenerationTests
             {
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.BorderDepth))
                 {
-                    Assert.That(grass.Contains(near), Is.True, $"seed {seed}: meadow at {cell} in the band of trees");
+                    Expect(grass.Contains(near), $"seed {seed}: meadow at {cell} in the band of trees");
                 }
             }
 
             foreach (Vector3Int cell in tall)
             {
-                Assert.That(plants.Contains(cell), Is.False, $"seed {seed}: a plant on the tall grass at {cell}");
+                Expect(!plants.Contains(cell), $"seed {seed}: a plant on the tall grass at {cell}");
                 bool nearTreesOrMud = false;
                 foreach (Vector3Int near in CellsWithin(cell, lakeside.BorderDepth + reach))
                 {
@@ -3295,7 +3297,7 @@ public class AreaGenerationTests
                     nearTreesOrMud |= mud.Contains(near);
                 }
 
-                Assert.That(nearTreesOrMud, Is.True, $"seed {seed}: tall grass at {cell} away from the trees and the marsh");
+                Expect(nearTreesOrMud, $"seed {seed}: tall grass at {cell} away from the trees and the marsh");
             }
 
             Assert.That(CornerProblems(layout, "Meadow", "TallGrass"), Is.Empty, $"seed {seed}");
@@ -3328,7 +3330,7 @@ public class AreaGenerationTests
             {
                 if (layer != meadowIndex && layer != tallIndex)
                 {
-                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                    Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
             }
 
@@ -3341,15 +3343,15 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
                 if (!HasProp(full, prop))
                 {
-                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Assert.That(tall.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
                 }
             }
         }
@@ -3391,7 +3393,7 @@ public class AreaGenerationTests
             {
                 if (layer != shallowsIndex)
                 {
-                    Assert.That(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), Is.True, $"seed {seed}: layer {layer}");
+                    Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
             }
 
@@ -3404,15 +3406,15 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Assert.That(HasProp(plain, prop), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
                 if (!HasProp(full, prop))
                 {
-                    Assert.That(PropGridSnapping.TryGetFootprint(prop.Prefab, out _), Is.False, $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Assert.That(wet.Contains(prop.Cell), Is.True, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the ponds");
+                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                    Expect(wet.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the ponds");
                 }
             }
         }
@@ -3525,9 +3527,10 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// <paramref name="target"/>'s layout for <paramref name="seed"/>, laid once per fixture: the tests only read
-    /// layouts, and a generator gives the same one for a seed every time (which
-    /// <see cref="TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne"/> checks without it).
+    /// <paramref name="target"/>'s layout for <paramref name="seed"/>, laid once per fixture (the Village Forest's
+    /// shared with <see cref="VillageForestLayout"/>): the tests only read layouts, and a generator gives the same one
+    /// for a seed every time (which <see cref="TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne"/> checks
+    /// without it).
     /// </summary>
     private AreaLayout Layout(AreaGenerator target, int seed)
     {
@@ -3539,7 +3542,7 @@ public class AreaGenerationTests
 
         if (!bySeed.TryGetValue(seed, out AreaLayout layout))
         {
-            layout = target.Generate(seed);
+            layout = target == villageForest ? VillageForestLayout(seed).Layout : target.Generate(seed);
             bySeed[seed] = layout;
         }
 
@@ -3801,6 +3804,19 @@ public class AreaGenerationTests
         for (int i = 0; i < prefabs.Count; i++)
         {
             list.GetArrayElementAtIndex(i).objectReferenceValue = prefabs[i];
+        }
+    }
+
+    /// <summary>
+    /// Fails the test with <paramref name="message"/> unless <paramref name="condition"/> holds. The checks here run
+    /// for every cell of twenty layouts, and <c>Assert.That</c> costs a few microseconds a call, its message formatted
+    /// and a constraint result built even when it passes; this costs next to nothing until it fails.
+    /// </summary>
+    private static void Expect(bool condition, FormattableString message)
+    {
+        if (!condition)
+        {
+            Assert.Fail(message.ToString());
         }
     }
 

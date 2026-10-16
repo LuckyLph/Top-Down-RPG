@@ -238,18 +238,18 @@ public class TerrainMaterialRecipeTests
                 int i = y * size + x;
                 Color32 texel = field[i];
                 bool showsDirt = SameColour(textures.Albedo[i], ShadedBase(textures.BaseColour, texel.b));
-                Assert.That(texel.a == 0, Is.EqualTo(showsDirt), $"({x}, {y}): alpha {texel.a}");
+                Expect((texel.a == 0) == showsDirt, $"({x}, {y}): alpha {texel.a}");
                 if (texel.a == 0)
                 {
-                    Assert.That(texel.r == 128 && texel.g == 128, Is.True, $"({x}, {y}) has no chip but an offset.");
+                    Expect(texel.r == 128 && texel.g == 128, $"({x}, {y}) has no chip but an offset.");
                     bare++;
                     continue;
                 }
 
                 int centre = CentreOf(texel, x, y, size);
                 Color32 centreTexel = field[centre];
-                Assert.That(centreTexel.a > 0 && centreTexel.r == 128 && centreTexel.g == 128, Is.True, $"({x}, {y}) points at a pixel that is not its chip's centre.");
-                Assert.That(texel.a, Is.EqualTo(centreTexel.a), $"({x}, {y}): a chip's reach is the same over the whole chip.");
+                Expect(centreTexel.a > 0 && centreTexel.r == 128 && centreTexel.g == 128, $"({x}, {y}) points at a pixel that is not its chip's centre.");
+                Expect(texel.a == centreTexel.a, $"({x}, {y}): a chip's reach is the same over the whole chip.");
                 farthest[centre] = Math.Max(farthest[centre], Math.Sqrt((texel.r - 128) * (texel.r - 128) + (texel.g - 128) * (texel.g - 128)));
                 chipPixels++;
             }
@@ -291,10 +291,10 @@ public class TerrainMaterialRecipeTests
             for (int x = 0; x < size; x++)
             {
                 int i = y * size + x;
-                Assert.That(field[i].a, Is.GreaterThan(0), $"({x}, {y}) belongs to no stone.");
+                Expect(field[i].a > 0, $"({x}, {y}) belongs to no stone.");
                 stone[i] = CentreOf(field[i], x, y, size);
                 Color32 centreTexel = field[stone[i]];
-                Assert.That(centreTexel.r == 128 && centreTexel.g == 128, Is.True, $"({x}, {y}) points at a pixel that is not its stone's centre.");
+                Expect(centreTexel.r == 128 && centreTexel.g == 128, $"({x}, {y}) points at a pixel that is not its stone's centre.");
             }
         }
 
@@ -311,18 +311,18 @@ public class TerrainMaterialRecipeTests
                 stones += stone[i] == i ? 1 : 0;
                 mortar += field[i].a < 8 ? 1 : 0;
                 deepest[stone[i]] = Math.Max(deepest[stone[i]], border);
-                Assert.That(border, Is.LessThanOrEqualTo(nearestOther + 1.0 / 32.0 + 1e-9), $"({x}, {y})");
-                Assert.That(border, Is.GreaterThanOrEqualTo(nearestOther - Math.Sqrt(2.0) - 1.0 / 32.0 - 1e-9), $"({x}, {y})");
+                Expect(border <= (nearestOther + 1.0 / 32.0 + 1e-9), $"({x}, {y})");
+                Expect(border >= (nearestOther - Math.Sqrt(2.0) - 1.0 / 32.0 - 1e-9), $"({x}, {y})");
                 foreach (int neighbour in new[] { y * size + TerrainArt.Wrap(x + 1, size), TerrainArt.Wrap(y + 1, size) * size + x })
                 {
                     double other = field[neighbour].a / 16.0;
                     if (stone[neighbour] != stone[i])
                     {
-                        Assert.That(border + other, Is.LessThanOrEqualTo(1.0 + 1.0 / 8.0 + 1e-9), $"({x}, {y}) beside another stone");
+                        Expect((border + other) <= (1.0 + 1.0 / 8.0 + 1e-9), $"({x}, {y}) beside another stone");
                     }
                     else
                     {
-                        Assert.That(Math.Abs(border - other), Is.LessThanOrEqualTo(1.0 + 1.0 / 16.0 + 1e-9), $"({x}, {y}) beside its own stone");
+                        Expect((Math.Abs(border - other)) <= (1.0 + 1.0 / 16.0 + 1e-9), $"({x}, {y}) beside its own stone");
                     }
                 }
             }
@@ -367,7 +367,7 @@ public class TerrainMaterialRecipeTests
             {
                 if (field[(row * pitch + pitch / 2) * size + x].a < 8)
                 {
-                    Assert.That(x % TerrainStyle.PixelsPerCell, Is.Zero, $"row {row}: a joint at {x} off the cell borders");
+                    Expect((x % TerrainStyle.PixelsPerCell) == 0, $"row {row}: a joint at {x} off the cell borders");
                     joints[row].Add(x);
                 }
             }
@@ -384,10 +384,10 @@ public class TerrainMaterialRecipeTests
             {
                 int i = y * size + x;
                 Color32 texel = field[i];
-                Assert.That(texel.r, Is.EqualTo(128), $"({x}, {y}) points along its board.");
-                Assert.That(texel.g - 128, Is.EqualTo(rowStart + pitch / 2 - y), $"({x}, {y}) points at its board's middle row.");
+                Expect(texel.r == 128, $"({x}, {y}) points along its board.");
+                Expect((texel.g - 128) == (rowStart + pitch / 2 - y), $"({x}, {y}) points at its board's middle row.");
                 Color32 centre = field[CentreOf(texel, x, y, size)];
-                Assert.That(centre.r == 128 && centre.g == 128, Is.True, $"({x}, {y})");
+                Expect(centre.r == 128 && centre.g == 128, $"({x}, {y})");
                 int along = int.MaxValue;
                 foreach (int joint in joints[row])
                 {
@@ -395,11 +395,11 @@ public class TerrainMaterialRecipeTests
                 }
 
                 int border = Math.Min(Math.Min(y - rowStart, rowStart + pitch - y), along);
-                Assert.That(texel.a, Is.EqualTo(Mathf.Clamp(border * 16, 1, 255)), $"({x}, {y})");
+                Expect(texel.a == (Mathf.Clamp(border * 16, 1, 255)), $"({x}, {y})");
                 if (texel.a < 8)
                 {
                     gaps++;
-                    Assert.That(SameColour(textures.Albedo[i], ShadedBase(textures.BaseColour, texel.b)), Is.True, $"({x}, {y}) is a gap");
+                    Expect(SameColour(textures.Albedo[i], ShadedBase(textures.BaseColour, texel.b)), $"({x}, {y}) is a gap");
                 }
             }
         }
@@ -530,24 +530,24 @@ public class TerrainMaterialRecipeTests
                 int i = y * size + x;
                 lowest = Math.Min(lowest, height[i].r);
                 highest = Math.Max(highest, height[i].r);
-                Assert.That(Math.Abs(height[i].r - height[y * size + TerrainArt.Wrap(x + 1, size)].r) / 255.0, Is.LessThanOrEqualTo(0.1 + 1.0 / 255.0), $"({x}, {y})");
-                Assert.That(Math.Abs(height[i].r - height[TerrainArt.Wrap(y + 1, size) * size + x].r) / 255.0, Is.LessThanOrEqualTo(0.1 + 1.0 / 255.0), $"({x}, {y})");
+                Expect((Math.Abs(height[i].r - height[y * size + TerrainArt.Wrap(x + 1, size)].r) / 255.0) <= (0.1 + 1.0 / 255.0), $"({x}, {y})");
+                Expect((Math.Abs(height[i].r - height[TerrainArt.Wrap(y + 1, size) * size + x].r) / 255.0) <= (0.1 + 1.0 / 255.0), $"({x}, {y})");
                 if (recipeType == typeof(WeedsRecipe))
                 {
-                    Assert.That(height[i].g, Is.LessThan(32), $"({x}, {y}) a weed's row from under its foot, plus one, or 0");
+                    Expect(height[i].g < 32, $"({x}, {y}) a weed's row from under its foot, plus one, or 0");
                 }
                 else if (field == null || field[i].a == 0)
                 {
-                    Assert.That(height[i].g, Is.EqualTo(128), $"({x}, {y})");
+                    Expect(height[i].g == 128, $"({x}, {y})");
                 }
                 else
                 {
-                    Assert.That(height[i].g, Is.EqualTo(height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
+                    Expect(height[i].g == (height[CentreOf(field[i], x, y, size)].g), $"({x}, {y})");
                 }
 
                 if (recipeType != typeof(WaterHighlightsRecipe) && recipeType != typeof(WeedsRecipe) && recipeType != typeof(OceanWavesRecipe) && recipeType != typeof(LavaBubblesRecipe))
                 {
-                    Assert.That(height[i].b, Is.Zero, $"({x}, {y})");
+                    Expect(height[i].b == 0, $"({x}, {y})");
                 }
             }
         }
@@ -585,7 +585,7 @@ public class TerrainMaterialRecipeTests
                 if (SameColour(textures.Albedo[y * size + x], new Color32(255, 255, 255, 255)))
                 {
                     tips++;
-                    Assert.That(SameColour(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x], new Color32(0, 0, 0, 255)), Is.True, $"no blade under the tip at ({x}, {y})");
+                    Expect(SameColour(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x], new Color32(0, 0, 0, 255)), $"no blade under the tip at ({x}, {y})");
                 }
             }
         }
@@ -631,8 +631,8 @@ public class TerrainMaterialRecipeTests
                 Color32 colour = textures.Albedo[i];
                 int code = textures.Height[i].b;
                 bool stroke = SameColour(colour, resting);
-                Assert.That(stroke || SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is neither a tone nor a stroke");
-                Assert.That(code > 0 && code < 128, Is.EqualTo(stroke), $"({x}, {y}) glints off a stroke, or a stroke does not");
+                Expect(stroke || SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), $"({x}, {y}) is neither a tone nor a stroke");
+                Expect((code > 0 && code < 128) == stroke, $"({x}, {y}) glints off a stroke, or a stroke does not");
                 if (!stroke)
                 {
                     plain++;
@@ -654,14 +654,14 @@ public class TerrainMaterialRecipeTests
                     length++;
                 }
 
-                Assert.That(length, Is.InRange(2, maxLength), $"the stroke at ({x}, {y})");
+                Expect(length >= 2 && length <= maxLength, $"the stroke at ({x}, {y})");
                 int first = textures.Height[i].b;
                 int last = textures.Height[y * size + TerrainArt.Wrap(x + length - 1, size)].b;
-                Assert.That(last, Is.EqualTo(first), $"the stroke at ({x}, {y}) glints at its ends together");
+                Expect(last == first, $"the stroke at ({x}, {y}) glints at its ends together");
                 if (length % 2 == 1 && length >= 3)
                 {
                     int middle = textures.Height[y * size + TerrainArt.Wrap(x + length / 2, size)].b;
-                    Assert.That(((middle - first) % 127 + 127) % 127, Is.InRange(spread - 1, spread + 1), $"the stroke at ({x}, {y}) glints from its middle out");
+                    Expect((((middle - first) % 127 + 127) % 127) >= (spread - 1) && (((middle - first) % 127 + 127) % 127) <= (spread + 1), $"the stroke at ({x}, {y}) glints from its middle out");
                 }
             }
         }
@@ -698,13 +698,13 @@ public class TerrainMaterialRecipeTests
         int strokes = 0;
         for (int i = 0; i < deep.Albedo.Length; i++)
         {
-            Assert.That(SameColour(deep.Albedo[i], bed) || SameColour(deep.Albedo[i], pebble), Is.False, $"pixel {i}: deep water shows a bed");
+            Expect(!(SameColour(deep.Albedo[i], bed) || SameColour(deep.Albedo[i], pebble)), $"pixel {i}: deep water shows a bed");
             Color32 colour = shallow.Albedo[i];
             int code = shallow.Height[i].b;
             if (SameColour(colour, resting))
             {
                 strokes++;
-                Assert.That(code > 0 && code < 128, Is.True, $"pixel {i}: a stroke over the bed glints");
+                Expect(code > 0 && code < 128, $"pixel {i}: a stroke over the bed glints");
                 continue;
             }
 
@@ -713,7 +713,7 @@ public class TerrainMaterialRecipeTests
             if (SameColour(colour, pebble))
             {
                 pebbles++;
-                Assert.That(code, Is.Zero, $"pixel {i}: a pebble on a stroke or a sparkle");
+                Expect(code == 0, $"pixel {i}: a pebble on a stroke or a sparkle");
             }
         }
 
@@ -744,11 +744,11 @@ public class TerrainMaterialRecipeTests
         for (int i = 0; i < sparkling.Albedo.Length; i++)
         {
             int code = sparkling.Height[i].b;
-            Assert.That(code > 0 && code < 128, Is.False, $"pixel {i} holds a glint phase");
-            Assert.That(SameColour(sparkling.Albedo[i], resting), Is.False, $"pixel {i} is a stroke");
+            Expect(!(code > 0 && code < 128), $"pixel {i} holds a glint phase");
+            Expect(!SameColour(sparkling.Albedo[i], resting), $"pixel {i} is a stroke");
             if (withStrokes.Height[i].b >= 128)
             {
-                Assert.That(code, Is.EqualTo(withStrokes.Height[i].b), $"pixel {i}: a sparkle moved");
+                Expect(code == withStrokes.Height[i].b, $"pixel {i}: a sparkle moved");
             }
 
             sparkles += code >= 128 ? 1 : 0;
@@ -796,16 +796,16 @@ public class TerrainMaterialRecipeTests
                     continue;
                 }
 
-                Assert.That(shiny.Height[y * size + x].b, Is.Zero, $"({x}, {y}) glints or sparkles");
+                Expect(shiny.Height[y * size + x].b == 0, $"({x}, {y}) glints or sparkles");
                 for (int dy = -1; dy <= 1; dy++)
                 {
                     for (int dx = -1; dx <= 1; dx++)
                     {
                         Color32 near = shiny.Albedo[TerrainArt.Wrap(y + dy, size) * size + TerrainArt.Wrap(x + dx, size)];
-                        Assert.That(SameColour(near, resting), Is.False, $"({x}, {y}) touches a stroke");
+                        Expect(!SameColour(near, resting), $"({x}, {y}) touches a stroke");
                         if (core && Math.Abs(dx) + Math.Abs(dy) == 1)
                         {
-                            Assert.That(SameColour(near, black) || SameColour(near, white), Is.True, $"({x}, {y}) is a core inside its shine");
+                            Expect(SameColour(near, black) || SameColour(near, white), $"({x}, {y}) is a core inside its shine");
                         }
                     }
                 }
@@ -874,8 +874,8 @@ public class TerrainMaterialRecipeTests
                 bool right = SameColour(slanted.Albedo[y * size + TerrainArt.Wrap(x + 1, size)], resting);
                 bool upRight = SameColour(slanted.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x + 1, size)], resting);
                 bool downLeft = SameColour(slanted.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x - 1, size)], resting);
-                Assert.That(left || right, Is.False, $"({x}, {y}) has a stroke pixel beside it on its row");
-                Assert.That(upRight || downLeft, Is.True, $"({x}, {y}) is not on a diagonal");
+                Expect(!(left || right), $"({x}, {y}) has a stroke pixel beside it on its row");
+                Expect(upRight || downLeft, $"({x}, {y}) is not on a diagonal");
             }
         }
 
@@ -915,7 +915,7 @@ public class TerrainMaterialRecipeTests
                 if (SameColour(colour, new Color32(255, 255, 255, 255)))
                 {
                     crests++;
-                    Assert.That(SameColour(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x], new Color32(0, 0, 0, 255)), Is.True, $"no trough under the crest at ({x}, {y})");
+                    Expect(SameColour(textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + x], new Color32(0, 0, 0, 255)), $"no trough under the crest at ({x}, {y})");
                 }
             }
         }
@@ -969,7 +969,7 @@ public class TerrainMaterialRecipeTests
             {
                 Color32 colour = snow.Albedo[y * size + x];
                 int code = snow.Height[y * size + x].b;
-                Assert.That(code > 0 && code < 128, Is.False, $"({x}, {y}) holds a glint phase");
+                Expect(!(code > 0 && code < 128), $"({x}, {y}) holds a glint phase");
                 sparkles += code >= 128 ? 1 : 0;
                 if (SameColour(colour, lit))
                 {
@@ -977,7 +977,7 @@ public class TerrainMaterialRecipeTests
                 }
                 else if (SameColour(colour, shade))
                 {
-                    Assert.That(code, Is.Zero, $"({x}, {y}): a sparkle on a clump's shade");
+                    Expect(code == 0, $"({x}, {y}): a sparkle on a clump's shade");
                     shadeCount++;
                 }
             }
@@ -1045,7 +1045,7 @@ public class TerrainMaterialRecipeTests
             if (lits > 0 && shades > 0)
             {
                 Vector2 towardsLight = litInClump / lits - shadeInClump / shades;
-                Assert.That(towardsLight.x * (float)TerrainArt.LightX + towardsLight.y * (float)TerrainArt.LightY, Is.GreaterThan(0f), $"the clump at {pixel} is lit away from the light");
+                Expect((towardsLight.x * (float)TerrainArt.LightX + towardsLight.y * (float)TerrainArt.LightY) > 0f, $"the clump at {pixel} is lit away from the light");
             }
         }
 
@@ -1085,12 +1085,12 @@ public class TerrainMaterialRecipeTests
                 if (SameColour(colour, new Color32(0, 0, 0, 255)))
                 {
                     shaded++;
-                    Assert.That(!puddleAbove || !puddleLeft, Is.True, $"({x}, {y})");
+                    Expect(!puddleAbove || !puddleLeft, $"({x}, {y})");
                 }
                 else if (SameColour(colour, new Color32(255, 255, 255, 255)))
                 {
                     lit++;
-                    Assert.That(puddleAbove && puddleLeft && (!puddleBelow || !puddleRight), Is.True, $"({x}, {y})");
+                    Expect(puddleAbove && puddleLeft && (!puddleBelow || !puddleRight), $"({x}, {y})");
                 }
             }
         }
@@ -1263,8 +1263,8 @@ public class TerrainMaterialRecipeTests
                     continue;
                 }
 
-                Assert.That(textures.Height[y * size + x].g, Is.GreaterThan(2), $"({x}, {y}) a flower stands above its box's base");
-                Assert.That(textures.Height[y * size + x].b, Is.EqualTo(255), $"({x}, {y}) a head leans whole");
+                Expect(textures.Height[y * size + x].g > 2, $"({x}, {y}) a flower stands above its box's base");
+                Expect(textures.Height[y * size + x].b == 255, $"({x}, {y}) a head leans whole");
                 hearts += heart ? 1 : 0;
                 redColumns[x] += isRed ? 1 : 0;
                 blueColumns[x] += isBlue ? 1 : 0;
@@ -1370,28 +1370,28 @@ public class TerrainMaterialRecipeTests
             {
                 int i = y * size + x;
                 int from = (y % ground.Size) * ground.Size + x % ground.Size;
-                Assert.That(textures.Height[i].r, Is.EqualTo(ground.Height[from].r), $"({x}, {y}) height");
-                Assert.That(SameColour(textures.CellField[i], ground.Albedo[from]), Is.True, $"({x}, {y}) the field is the ground");
+                Expect(textures.Height[i].r == ground.Height[from].r, $"({x}, {y}) height");
+                Expect(SameColour(textures.CellField[i], ground.Albedo[from]), $"({x}, {y}) the field is the ground");
                 byte row = textures.Height[i].g;
-                Assert.That(textures.CellField[i].a, row > 0 ? Is.InRange(2, 30) : Is.EqualTo(255), $"({x}, {y}) the field's alpha is a box's height");
+                Expect(row > 0 ? textures.CellField[i].a >= 2 && textures.CellField[i].a <= 30 : textures.CellField[i].a == 255, $"({x}, {y}) the field's alpha is a box's height");
                 if (row > 2)
                 {
-                    Assert.That(row - 2, Is.LessThanOrEqualTo(textures.CellField[i].a), $"({x}, {y}) no row of a box lies above its top");
+                    Expect(row - 2 <= textures.CellField[i].a, $"({x}, {y}) no row of a box lies above its top");
                 }
 
                 if (textures.Height[i].b > 0)
                 {
-                    Assert.That(row, Is.GreaterThan(2), $"({x}, {y}) a leaning pixel lies above its weed's foot");
+                    Expect(row > 2, $"({x}, {y}) a leaning pixel lies above its weed's foot");
                 }
 
                 if (row > 1)
                 {
-                    Assert.That(textures.Height[TerrainArt.Wrap(y - 1, size) * size + x].g, Is.EqualTo(row - 1), $"({x}, {y}) the row below is one less");
+                    Expect(textures.Height[TerrainArt.Wrap(y - 1, size) * size + x].g == row - 1, $"({x}, {y}) the row below is one less");
                 }
 
                 if (row == 0)
                 {
-                    Assert.That(SameColour(textures.Albedo[i], ground.Albedo[from]), Is.True, $"({x}, {y}) outside the boxes the albedo is the ground");
+                    Expect(SameColour(textures.Albedo[i], ground.Albedo[from]), $"({x}, {y}) outside the boxes the albedo is the ground");
                 }
 
                 bool inBox = textures.Height[i].b > 0;
@@ -1406,22 +1406,22 @@ public class TerrainMaterialRecipeTests
                 int right = x + 1;
                 if (right < size && textures.Height[y * size + right].b > 0)
                 {
-                    Assert.That(textures.Height[y * size + right].b, Is.EqualTo(textures.Height[i].b), $"({x}, {y}) a row of a box leans together");
-                    Assert.That(right / TerrainStyle.PixelsPerCell, Is.EqualTo(x / TerrainStyle.PixelsPerCell), $"({x}, {y}) a box keeps to one cell column");
+                    Expect(textures.Height[y * size + right].b == textures.Height[i].b, $"({x}, {y}) a row of a box leans together");
+                    Expect(right / TerrainStyle.PixelsPerCell == x / TerrainStyle.PixelsPerCell, $"({x}, {y}) a box keeps to one cell column");
                 }
 
                 int above = TerrainArt.Wrap(y + 1, size) * size + x;
                 if (textures.Height[above].b > 0)
                 {
-                    Assert.That(textures.Height[above].b, Is.GreaterThanOrEqualTo(textures.Height[i].b), $"({x}, {y}) the weight grows going up");
+                    Expect(textures.Height[above].b >= textures.Height[i].b, $"({x}, {y}) the weight grows going up");
                 }
 
                 if (differs && amplitude > 0f)
                 {
                     float weight = textures.Height[i].b / 255f;
                     int lean = Mathf.RoundToInt(Mathf.Round(amplitude) * weight * weight);
-                    Assert.That(x + lean, Is.LessThan(size), $"({x}, {y}) leans inside the texture");
-                    Assert.That(textures.Height[y * size + x + lean].b, Is.EqualTo(textures.Height[i].b), $"({x}, {y}) a leaning tip stays in its box");
+                    Expect(x + lean < size, $"({x}, {y}) leans inside the texture");
+                    Expect(textures.Height[y * size + x + lean].b == textures.Height[i].b, $"({x}, {y}) a leaning tip stays in its box");
                 }
             }
         }
@@ -1459,13 +1459,13 @@ public class TerrainMaterialRecipeTests
                 {
                     lit++;
                     Color32 below = textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
-                    Assert.That(SameColour(below, new Color32(0, 0, 0, 255)), Is.True, $"({x}, {y})");
+                    Expect(SameColour(below, new Color32(0, 0, 0, 255)), $"({x}, {y})");
                 }
                 else if (SameColour(colour, new Color32(0, 0, 0, 255)))
                 {
                     shaded++;
                     Color32 above = textures.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
-                    Assert.That(SameColour(above, new Color32(255, 255, 255, 255)), Is.True, $"({x}, {y})");
+                    Expect(SameColour(above, new Color32(255, 255, 255, 255)), $"({x}, {y})");
                 }
             }
         }
@@ -1555,7 +1555,7 @@ public class TerrainMaterialRecipeTests
                 {
                     cracks++;
                     Color32 below = textures.Albedo[TerrainArt.Wrap(y - 1, size) * size + TerrainArt.Wrap(x + 1, size)];
-                    Assert.That(SameColour(below, black) || SameColour(below, white), Is.True, $"({x}, {y}) has a lip");
+                    Expect(SameColour(below, black) || SameColour(below, white), $"({x}, {y}) has a lip");
                     bool joined = false;
                     for (int dy = -1; dy <= 1; dy++)
                     {
@@ -1565,13 +1565,13 @@ public class TerrainMaterialRecipeTests
                         }
                     }
 
-                    Assert.That(joined, Is.True, $"({x}, {y}) is part of a line");
+                    Expect(joined, $"({x}, {y}) is part of a line");
                 }
                 else if (SameColour(colour, white))
                 {
                     lips++;
                     Color32 above = textures.Albedo[TerrainArt.Wrap(y + 1, size) * size + TerrainArt.Wrap(x - 1, size)];
-                    Assert.That(SameColour(above, black), Is.True, $"({x}, {y}) lies below a crack");
+                    Expect(SameColour(above, black), $"({x}, {y}) lies below a crack");
                 }
             }
         }
@@ -1607,7 +1607,7 @@ public class TerrainMaterialRecipeTests
             for (int x = 0; x < size; x++)
             {
                 bool onGrid = x % 16 == 0 || y % 16 == 0;
-                Assert.That(SameColour(slabs.Albedo[y * size + x], mortar), Is.EqualTo(onGrid), $"({x}, {y})");
+                Expect((SameColour(slabs.Albedo[y * size + x], mortar)) == onGrid, $"({x}, {y})");
             }
         }
 
@@ -1616,7 +1616,7 @@ public class TerrainMaterialRecipeTests
         TerrainTextures unmoved = recipe.Generate(Seed);
         foreach (Color32 pixel in unmoved.Albedo)
         {
-            Assert.That(SameColour(pixel, mortar), Is.False, "No mortar between two pixels.");
+            Expect(!SameColour(pixel, mortar), $"No mortar between two pixels.");
         }
     }
 
@@ -1652,7 +1652,7 @@ public class TerrainMaterialRecipeTests
             {
                 int i = y * size + x;
                 Color32 colour = textures.Albedo[i];
-                Assert.That(SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), Is.True, $"({x}, {y}) is none of the tones");
+                Expect(SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), $"({x}, {y}) is none of the tones");
                 int code = textures.Height[i].b;
                 if (code >= 128)
                 {
@@ -1718,8 +1718,8 @@ public class TerrainMaterialRecipeTests
             bool crest = before.Height[i].b > 0 && before.Height[i].b < 128;
             bool archedCrest = withArch.Height[i].b > 0 && withArch.Height[i].b < 128;
             bool fadedCrest = withFade.Height[i].b > 0 && withFade.Height[i].b < 128;
-            Assert.That(archedCrest, Is.EqualTo(crest), $"pixel {i}");
-            Assert.That(!fadedCrest || crest, Is.True, $"pixel {i}");
+            Expect(archedCrest == crest, $"pixel {i}");
+            Expect(!fadedCrest || crest, $"pixel {i}");
             crests += crest ? 1 : 0;
             fadedCrests += fadedCrest ? 1 : 0;
             moved += crest && withArch.Height[i].b != before.Height[i].b ? 1 : 0;
@@ -1798,7 +1798,7 @@ public class TerrainMaterialRecipeTests
                 int code = textures.Height[i].b;
                 double behind = TerrainArt.Wrap(middlePhase - Phase(code), 1);
                 double expected = delay * (Distance(i, cx, cy, size) - Distance(middle, cx, cy, size));
-                Assert.That(behind, Is.EqualTo(expected).Within(delay * 1.5 + 2.0 / 127.0), $"bubble {bubbles} pixel ({i % size}, {i / size}) falls behind with its distance");
+                Expect(Math.Abs(behind - expected) <= delay * 1.5 + 2.0 / 127.0, $"bubble {bubbles} pixel ({i % size}, {i / size}) falls behind with its distance");
                 if (code < 128)
                 {
                     continue;
@@ -1814,12 +1814,12 @@ public class TerrainMaterialRecipeTests
                     }
                 }
 
-                Assert.That(outside, Is.True, $"bubble {bubbles}: rim pixel ({i % size}, {i / size}) lies on the outside");
+                Expect(outside, $"bubble {bubbles}: rim pixel ({i % size}, {i / size}) lies on the outside");
             }
 
             if (pixels.Count > 16)
             {
-                Assert.That(hasRim, Is.True, $"bubble {bubbles} of {pixels.Count} px has a rim");
+                Expect(hasRim, $"bubble {bubbles} of {pixels.Count} px has a rim");
             }
 
             rimmed += hasRim ? 1 : 0;
@@ -2003,7 +2003,7 @@ public class TerrainMaterialRecipeTests
         TerrainMaterialWriter.Apply(material, textures, albedo, field, height);
 
         Assert.That(material.Albedo == albedo, Is.True);
-        Assert.That(material.CellField == field, Is.True, "A material without chips or stones has no cell field.");
+        Expect(material.CellField == field, $"A material without chips or stones has no cell field.");
         Assert.That(material.Height == height, Is.True);
         Assert.That(material.RepeatCells, Is.EqualTo(4));
         Assert.That(material.Cells, Is.EqualTo(recipe.CellMode));
@@ -2011,12 +2011,12 @@ public class TerrainMaterialRecipeTests
         Assert.That(SameColour(baseColour, textures.BaseColour), Is.True);
         if (textures.GlintColour.HasValue)
         {
-            Assert.That(SameColour(material.GlintColour, textures.GlintColour.Value), Is.True, "The glint colour is written too.");
+            Expect(SameColour(material.GlintColour, textures.GlintColour.Value), $"The glint colour is written too.");
         }
 
         if (textures.SparkleColour.HasValue)
         {
-            Assert.That(SameColour(material.SparkleColour, textures.SparkleColour.Value), Is.True, "The sparkle colour is written too.");
+            Expect(SameColour(material.SparkleColour, textures.SparkleColour.Value), $"The sparkle colour is written too.");
         }
 
         if (textures.CellField == null || recipe.CellMode == TerrainMaterial.CellMode.None)
@@ -2032,7 +2032,7 @@ public class TerrainMaterialRecipeTests
             if (showsBase)
             {
                 checkedTexels++;
-                Assert.That(SameColour(textures.Albedo[i], ShadedBase(baseColour, texel.b)), Is.True, $"texel {i % textures.Size}, {i / textures.Size}");
+                Expect(SameColour(textures.Albedo[i], ShadedBase(baseColour, texel.b)), $"texel {i % textures.Size}, {i / textures.Size}");
             }
         }
 
@@ -2230,6 +2230,19 @@ public class TerrainMaterialRecipeTests
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// Fails the test with <paramref name="message"/> unless <paramref name="condition"/> holds. The checks here run
+    /// for every pixel of a texture, and <c>Assert.That</c> costs a few microseconds a call, its message formatted and a
+    /// constraint result built even when it passes; this costs next to nothing until it fails.
+    /// </summary>
+    private static void Expect(bool condition, FormattableString message)
+    {
+        if (!condition)
+        {
+            Assert.Fail(message.ToString());
+        }
     }
 
     /// <summary>

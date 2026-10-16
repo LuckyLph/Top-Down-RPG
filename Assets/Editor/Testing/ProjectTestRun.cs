@@ -25,7 +25,7 @@ public static class ProjectTestRun
     public const string SummaryPath = "Temp/TestRunSummary.txt";
     private const string RunningKey = "TopDownRPG.ProjectTestRun.Running";
     private const string FilterKey = "TopDownRPG.ProjectTestRun.Filter";
-    private const int SlowestShown = 8;
+    private const string SlowestKey = "TopDownRPG.ProjectTestRun.Slowest";
 
     static ProjectTestRun()
     {
@@ -36,10 +36,11 @@ public static class ProjectTestRun
     /// Starts a run of <paramref name="mode"/> ("EditMode" or "PlayMode") tests narrowed to the test classes in
     /// <paramref name="fixtures"/>, the categories in <paramref name="categories"/> and the full test names in
     /// <paramref name="tests"/>, each a list separated by semicolons (empty for no narrowing; the full suite when all
-    /// three are empty). Explicit tests run only when named or when their category is. Returns "started" or why the
-    /// run did not start; the summary appears at <see cref="SummaryPath"/> once it ends.
+    /// three are empty). Explicit tests run only when named or when their category is. The summary lists the
+    /// <paramref name="slowest"/> slowest test classes and tests. Returns "started" or why the run did not start; the
+    /// summary appears at <see cref="SummaryPath"/> once it ends.
     /// </summary>
-    public static string Start(string mode, string fixtures = "", string categories = "", string tests = "")
+    public static string Start(string mode, string fixtures = "", string categories = "", string tests = "", int slowest = 8)
     {
         if (!Enum.TryParse(mode, out TestMode testMode))
         {
@@ -88,6 +89,7 @@ public static class ProjectTestRun
         string description = $"{mode} fixtures [{fixtures}] categories [{categories}] tests [{tests}]";
         SessionState.SetBool(RunningKey, true);
         SessionState.SetString(FilterKey, description);
+        SessionState.SetInt(SlowestKey, slowest);
         ScriptableObject.CreateInstance<TestRunnerApi>().Execute(new ExecutionSettings(filter));
         return "started " + description;
     }
@@ -101,9 +103,10 @@ public static class ProjectTestRun
     }
 
     /// <summary>
-    /// The summary of a finished run: its outcome, counts and length, the slowest test classes and every failure.
+    /// The summary of a finished run: its outcome, counts and length, the slowest test classes and tests, and every
+    /// failure.
     /// </summary>
-    private static string Summarize(ITestResultAdaptor result, string description)
+    private static string Summarize(ITestResultAdaptor result, string description, int slowest)
     {
         List<ITestResultAdaptor> leaves = new();
         List<ITestResultAdaptor> fixtures = new();
@@ -116,9 +119,15 @@ public static class ProjectTestRun
         summary.AppendLine($"{(failed > 0 ? "FAILED" : "PASSED")} {description}");
         summary.AppendLine($"{leaves.Count} tests: {passed} passed, {failed} failed, {skipped} skipped, {inconclusive} inconclusive, in {result.Duration:0.0} s");
         summary.AppendLine("Slowest test classes:");
-        foreach (ITestResultAdaptor fixture in fixtures.OrderByDescending(fixture => fixture.Duration).Take(SlowestShown))
+        foreach (ITestResultAdaptor fixture in fixtures.OrderByDescending(fixture => fixture.Duration).Take(slowest))
         {
             summary.AppendLine($"  {fixture.Name} {fixture.Duration:0.0} s");
+        }
+
+        summary.AppendLine("Slowest tests:");
+        foreach (ITestResultAdaptor leaf in leaves.OrderByDescending(leaf => leaf.Duration).Take(slowest))
+        {
+            summary.AppendLine($"  {leaf.FullName} {leaf.Duration:0.00} s");
         }
 
         foreach (ITestResultAdaptor leaf in leaves.Where(leaf => leaf.TestStatus == TestStatus.Failed))
@@ -166,6 +175,7 @@ public static class ProjectTestRun
         File.Move(partial, SummaryPath);
         SessionState.EraseBool(RunningKey);
         SessionState.EraseString(FilterKey);
+        SessionState.EraseInt(SlowestKey);
     }
 
     /// <summary>
@@ -181,7 +191,7 @@ public static class ProjectTestRun
         {
             if (SessionState.GetBool(RunningKey, false))
             {
-                Finish(Summarize(result, SessionState.GetString(FilterKey, "")));
+                Finish(Summarize(result, SessionState.GetString(FilterKey, ""), SessionState.GetInt(SlowestKey, 8)));
             }
         }
 

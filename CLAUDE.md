@@ -23,7 +23,7 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/TerrainTypes.md` is the plan for the next ground materials (dirt, dry grass, meadow, tall grass, planks, plaza, shallows, ocean, lava, snow, ice, raised ground), 16 ground layers per area and per-area layer sets. Follow it when adding a terrain type, changing how many or which layers an area uses, and tick off its phase checklist as steps land.
 
-`Docs/ArtCredits.md` lists every piece of third-party art with its authors and licence. Add to it in the same commit that imports art, and import nothing whose licence is unknown or restrictive.
+Use only art generated in this project (recipes and editor tools); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 

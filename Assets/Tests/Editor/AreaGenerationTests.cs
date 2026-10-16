@@ -72,6 +72,8 @@ public class AreaGenerationTests
 
     private readonly List<Object> created = new();
     private readonly Dictionary<int, VillageForestGenerator.Generation> villageForestLayouts = new();
+    private readonly Dictionary<string, AreaGenerator> projectCopies = new();
+    private readonly Dictionary<AreaGenerator, Dictionary<int, AreaLayout>> layouts = new();
     private TestPropPrefabs testProps;
     private ClearingGenerator generator;
     private VillageForestGenerator villageForest;
@@ -82,36 +84,45 @@ public class AreaGenerationTests
     private int undoGroup;
 
     /// <summary>
-    /// Saves the test props once for the fixture.
+    /// Saves the test props and copies the project's generators with them once for the fixture
+    /// (<see cref="WithTestProps{T}"/>), leaving the project's assets as they are. The tests only read the copies, so
+    /// they share them, and the layouts they lay (<see cref="Layout"/>).
     /// </summary>
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
         testProps = TestPropPrefabs.Create();
+        generator = ProjectCopy<ClearingGenerator>(ClearingGeneratorPath);
+        villageForest = ProjectCopy<VillageForestGenerator>(VillageForestGeneratorPath);
+        lakeside = ProjectCopy<LakesideGenerator>(LakesideGeneratorPath);
+        snowfield = ProjectCopy<SnowfieldGenerator>(SnowfieldGeneratorPath);
+        coast = ProjectCopy<CoastGenerator>(CoastGeneratorPath);
+        lavaFields = ProjectCopy<LavaFieldsGenerator>(LavaFieldsGeneratorPath);
     }
 
     /// <summary>
-    /// Removes the test props.
+    /// Destroys the generators' copies and removes the test props.
     /// </summary>
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
+        foreach (AreaGenerator copy in projectCopies.Values)
+        {
+            Object.DestroyImmediate(copy);
+        }
+
+        projectCopies.Clear();
+        layouts.Clear();
+        villageForestLayouts.Clear();
         TestPropPrefabs.Delete();
     }
 
     /// <summary>
-    /// Copies the project's generators with the test props (<see cref="WithTestProps{T}"/>), leaving the project's
-    /// assets as they are, and starts the undo group the test's scene changes are reverted to.
+    /// Starts the undo group the test's scene changes are reverted to.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
-        generator = WithTestProps(AssetDatabase.LoadAssetAtPath<ClearingGenerator>(ClearingGeneratorPath));
-        villageForest = WithTestProps(AssetDatabase.LoadAssetAtPath<VillageForestGenerator>(VillageForestGeneratorPath));
-        lakeside = WithTestProps(AssetDatabase.LoadAssetAtPath<LakesideGenerator>(LakesideGeneratorPath));
-        snowfield = WithTestProps(AssetDatabase.LoadAssetAtPath<SnowfieldGenerator>(SnowfieldGeneratorPath));
-        coast = WithTestProps(AssetDatabase.LoadAssetAtPath<CoastGenerator>(CoastGeneratorPath));
-        lavaFields = WithTestProps(AssetDatabase.LoadAssetAtPath<LavaFieldsGenerator>(LavaFieldsGeneratorPath));
         Undo.IncrementCurrentGroup();
         undoGroup = Undo.GetCurrentGroup();
     }
@@ -158,7 +169,7 @@ public class AreaGenerationTests
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
         for (int seed = 1; seed <= 5; seed++)
         {
-            AreaLayout layout = target.Generate(seed);
+            AreaLayout layout = Layout(target, seed);
 
             Assert.That(layout.Props, Is.Empty, $"seed {seed}: props");
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: warnings");
@@ -175,7 +186,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = generator.Generate(seed);
+            AreaLayout layout = Layout(generator, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
             HashSet<Vector3Int> stone = Cells(layout, "Stone");
@@ -224,7 +235,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = generator.Generate(seed);
+            AreaLayout layout = Layout(generator, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> footprints = new();
             int blocking = 0;
@@ -269,7 +280,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = generator.Generate(seed);
+            AreaLayout layout = Layout(generator, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !footprints.Contains(cell));
@@ -546,7 +557,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
@@ -637,7 +648,7 @@ public class AreaGenerationTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> other = new(Cells(layout, "Water"));
@@ -711,7 +722,7 @@ public class AreaGenerationTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> dock = Cells(layout, "Planks");
             HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
@@ -793,7 +804,7 @@ public class AreaGenerationTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= 5; seed++)
         {
-            AreaLayout full = lakeside.Generate(seed);
+            AreaLayout full = Layout(lakeside, seed);
             AreaLayout plain = without.Generate(seed);
             int planksIndex = full.IndexOf(ProjectMaterial("Planks"));
             Assert.That(plain.TerrainCells(planksIndex), Is.Empty, $"seed {seed}: no dock");
@@ -966,7 +977,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = lakeside.Generate(1);
+        AreaLayout layout = Layout(lakeside, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -1028,7 +1039,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = snowfield.Generate(seed);
+            AreaLayout layout = Layout(snowfield, seed);
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: {string.Join("; ", layout.Warnings)}");
             HashSet<Vector3Int> snow = Cells(layout, "Snow");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
@@ -1100,7 +1111,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = snowfield.Generate(seed);
+            AreaLayout layout = Layout(snowfield, seed);
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             HashSet<Vector3Int> ice = Cells(layout, "Ice");
             HashSet<Vector3Int> paths = PathCells(layout);
@@ -1149,7 +1160,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = snowfield.Generate(seed);
+            AreaLayout layout = Layout(snowfield, seed);
             HashSet<Vector3Int> snow = Cells(layout, "Snow");
             HashSet<Vector3Int> ice = Cells(layout, "Ice");
             HashSet<Vector3Int> water = Cells(layout, "Water");
@@ -1220,7 +1231,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(snowfield);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = snowfield.Generate(1);
+        AreaLayout layout = Layout(snowfield, 1);
         Assert.That(AreaLayoutWriter.Write(grid, snowfield, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -1300,7 +1311,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = coast.Generate(seed);
+            AreaLayout layout = Layout(coast, seed);
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: {string.Join("; ", layout.Warnings)}");
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
@@ -1370,7 +1381,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = coast.Generate(seed);
+            AreaLayout layout = Layout(coast, seed);
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
             HashSet<Vector3Int> sea = Cells(layout, "Ocean");
             HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
@@ -1452,7 +1463,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = coast.Generate(seed);
+            AreaLayout layout = Layout(coast, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
             HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
@@ -1525,7 +1536,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = coast.Generate(seed);
+            AreaLayout layout = Layout(coast, seed);
             HashSet<Vector3Int> raised = layout.Raised;
             HashSet<Vector3Int> ramps = layout.Ramps;
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
@@ -1641,7 +1652,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(coast);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = coast.Generate(1);
+        AreaLayout layout = Layout(coast, 1);
         Assert.That(AreaLayoutWriter.Write(grid, coast, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -1731,7 +1742,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lavaFields.Generate(seed);
+            AreaLayout layout = Layout(lavaFields, seed);
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: {string.Join("; ", layout.Warnings)}");
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
@@ -1802,7 +1813,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lavaFields.Generate(seed);
+            AreaLayout layout = Layout(lavaFields, seed);
             HashSet<Vector3Int> lava = Cells(layout, "Lava");
             HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
             HashSet<Vector3Int> stone = Cells(layout, "Stone");
@@ -1861,7 +1872,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lavaFields.Generate(seed);
+            AreaLayout layout = Layout(lavaFields, seed);
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             HashSet<Vector3Int> lava = Cells(layout, "Lava");
             HashSet<Vector3Int> nearLava = new();
@@ -1937,7 +1948,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(lavaFields);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = lavaFields.Generate(1);
+        AreaLayout layout = Layout(lavaFields, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lavaFields, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -2096,7 +2107,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
@@ -2148,7 +2159,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> water = Cells(layout, "Water");
             HashSet<Vector3Int> footprints = Footprints(layout);
@@ -2182,7 +2193,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne(string generatorPath)
     {
-        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
         AreaLayout first = target.Generate(7);
         AreaLayout again = target.Generate(7);
         AreaLayout other = target.Generate(8);
@@ -2234,7 +2245,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheWriter_SetsUpPlainLayersDrawnByTheRenderer_ReplacesPropsAndMobSpawns_AndTheGridBlocksTheFootprints(string generatorPath)
     {
-        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
         Grid grid = CreateAreaWithDualGridGrass(target);
         AreaTerrain terrain = grid.gameObject.AddComponent<AreaTerrain>();
         terrain.Configure(new AreaTerrain.Layer(grid.transform.Find(target.TerrainLayers[0].TilemapName).GetComponent<Tilemap>(), null));
@@ -2244,7 +2255,7 @@ public class AreaGenerationTests
         GameObject oldMob = Track(new GameObject("OldMobSpawn"));
         oldMob.AddComponent<MobSpawnPoint>();
         SpawnPoint start = Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = target.Generate(3);
+        AreaLayout layout = Layout(target, 3);
 
         Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
 
@@ -2358,7 +2369,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = lakeside.Generate(3);
+        AreaLayout layout = Layout(lakeside, 3);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         AreaGenerator.TerrainLayer water = Layer(lakeside, "Water");
         AreaGenerator.TerrainLayer mud = Layer(lakeside, "Mud");
@@ -2389,7 +2400,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = lakeside.Generate(1);
+        AreaLayout layout = Layout(lakeside, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -2438,7 +2449,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(target);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout layout = target.Generate(1);
+        AreaLayout layout = Layout(target, 1);
         Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
@@ -2611,13 +2622,13 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        AreaLayout first = villageForest.Generate(3);
+        AreaLayout first = Layout(villageForest, 3);
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, first), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         renderer.RunScheduledRebuild();
         Assert.That(renderer.ControlMap, Is.Not.Null, "The renderer the writer added builds.");
-        AreaLayout second = villageForest.Generate(4);
+        AreaLayout second = Layout(villageForest, 4);
 
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, second), Is.True);
         renderer.FlushPendingChanges();
@@ -2654,7 +2665,7 @@ public class AreaGenerationTests
         Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
         Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
-        Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(3)), Is.True);
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, Layout(villageForest, 3)), Is.True);
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Undo.IncrementCurrentGroup();
         int added = Undo.GetCurrentGroup();
@@ -2665,7 +2676,7 @@ public class AreaGenerationTests
         Undo.CollapseUndoOperations(added);
         Assert.That(renderer.Layers.Count, Is.EqualTo(10));
 
-        Assert.That(AreaLayoutWriter.Write(grid, villageForest, villageForest.Generate(4)), Is.True);
+        Assert.That(AreaLayoutWriter.Write(grid, villageForest, Layout(villageForest, 4)), Is.True);
 
         string[] expected = { "Grass", "Meadow", "TallGrass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
         Assert.That(renderer.Layers.Count, Is.EqualTo(expected.Length));
@@ -2703,7 +2714,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath, "Dirt", "Gravel", "Stone", "Lava")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
-        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = target.TerrainLayers;
         TerrainStyle style = target.TerrainStyle;
 
@@ -2801,7 +2812,7 @@ public class AreaGenerationTests
     {
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = generator.Generate(seed);
+            AreaLayout layout = Layout(generator, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             Assert.That(dirt.Count, Is.GreaterThan(10), $"seed {seed}: the campsite's dirt");
@@ -2925,7 +2936,7 @@ public class AreaGenerationTests
     [TestCase(LavaFieldsGeneratorPath)]
     public void TheDetailStream_LeavesTheRestOfTheLayoutWhereItWas(string generatorPath)
     {
-        AreaGenerator target = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath));
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
         AreaGenerator without = Track(Object.Instantiate(target));
         SerializedObject settings = new(without);
         string[] added = { "Dirt" };
@@ -2968,7 +2979,7 @@ public class AreaGenerationTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= 5; seed++)
         {
-            AreaLayout full = target.Generate(seed);
+            AreaLayout full = Layout(target, seed);
             AreaLayout plain = without.Generate(seed);
             List<int> addedIndices = new();
             foreach (string name in added)
@@ -3223,7 +3234,7 @@ public class AreaGenerationTests
         int reach = lakeside.TallGrassReach;
         for (int seed = 1; seed <= SeedCount; seed++)
         {
-            AreaLayout layout = lakeside.Generate(seed);
+            AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> meadow = Cells(layout, "Meadow");
             HashSet<Vector3Int> tall = Cells(layout, "TallGrass");
@@ -3306,7 +3317,7 @@ public class AreaGenerationTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= 5; seed++)
         {
-            AreaLayout full = lakeside.Generate(seed);
+            AreaLayout full = Layout(lakeside, seed);
             AreaLayout plain = without.Generate(seed);
             int meadowIndex = full.IndexOf(ProjectMaterial("Meadow"));
             int tallIndex = full.IndexOf(ProjectMaterial("TallGrass"));
@@ -3500,6 +3511,42 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// The fixture's copy, with the test props, of the project's generator at <paramref name="path"/>, made once.
+    /// </summary>
+    private T ProjectCopy<T>(string path) where T : AreaGenerator
+    {
+        if (!projectCopies.TryGetValue(path, out AreaGenerator copy))
+        {
+            copy = WithTestProps(AssetDatabase.LoadAssetAtPath<AreaGenerator>(path));
+            projectCopies[path] = copy;
+        }
+
+        return (T)copy;
+    }
+
+    /// <summary>
+    /// <paramref name="target"/>'s layout for <paramref name="seed"/>, laid once per fixture: the tests only read
+    /// layouts, and a generator gives the same one for a seed every time (which
+    /// <see cref="TheSameSeed_GivesTheSameLayout_AndAnotherSeedAnotherOne"/> checks without it).
+    /// </summary>
+    private AreaLayout Layout(AreaGenerator target, int seed)
+    {
+        if (!layouts.TryGetValue(target, out Dictionary<int, AreaLayout> bySeed))
+        {
+            bySeed = new Dictionary<int, AreaLayout>();
+            layouts[target] = bySeed;
+        }
+
+        if (!bySeed.TryGetValue(seed, out AreaLayout layout))
+        {
+            layout = target.Generate(seed);
+            bySeed[seed] = layout;
+        }
+
+        return layout;
+    }
+
+    /// <summary>
     /// The Village Forest generation for <paramref name="seed"/>, generated once per fixture.
     /// </summary>
     private VillageForestGenerator.Generation VillageForestLayout(int seed)
@@ -3689,7 +3736,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// A copy of the project's generator <paramref name="asset"/>, destroyed after the test, with the test props in
+    /// A copy of the project's generator <paramref name="asset"/>, which the caller destroys, with the test props in
     /// place of the props it was built with: blocking, mixed or walk-through props in each scatter layer as
     /// <see cref="ScatterKinds"/> lists them, the test campfire and seats, and for the Village Forest the test
     /// building, fence, lamp post, fountain and town props.
@@ -3697,7 +3744,7 @@ public class AreaGenerationTests
     private T WithTestProps<T>(T asset) where T : AreaGenerator
     {
         Assert.That(asset, Is.Not.Null, "The project's generator should exist.");
-        T copy = Track(Object.Instantiate(asset));
+        T copy = Object.Instantiate(asset);
         SerializedObject settings = new(copy);
         SerializedProperty scatters = settings.FindProperty("scatters");
         string kinds = ScatterKinds[asset.name];

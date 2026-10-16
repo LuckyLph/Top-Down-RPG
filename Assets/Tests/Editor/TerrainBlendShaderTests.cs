@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 /// warnings, in every pass, for vertex and fragment, in the crisp look and with the soft look's keyword, each with and
 /// without the 2D light keyword the area's light sets and raised ground's keyword, since compile warnings reach the
 /// console whenever a variant compiles; and that the soft and raised ground keywords are local ones the drawing passes
-/// declare.
+/// declare. The compile test is explicit (category ShaderCompile): it runs only when asked for.
 /// </summary>
 public class TerrainBlendShaderTests
 {
@@ -18,6 +18,7 @@ public class TerrainBlendShaderTests
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string SoftKeyword = "_TERRAIN_SOFT";
     private const string RaisedKeyword = "_TERRAIN_RAISED";
+    private const string ShaderCompileCategory = "ShaderCompile";
 
     /// <summary>
     /// The graph imports as a shader without errors or messages.
@@ -58,9 +59,11 @@ public class TerrainBlendShaderTests
 
     /// <summary>
     /// Every pass compiles for D3D, vertex and fragment, without errors or warnings, with no keywords and, where the
-    /// pass has them, with every combination of the soft keyword, raised ground's and the shape light keyword.
+    /// pass has them, with every combination of the soft keyword, raised ground's and the shape light keyword. It
+    /// takes about a minute and a half, so it runs only when asked for, by name or by its category, after a change to
+    /// a shader and before merging one.
     /// </summary>
-    [Test]
+    [Test, Explicit("Compiles every variant of the terrain shader; run it after changing a shader."), Category(ShaderCompileCategory)]
     public void EveryPass_CompilesForD3DWithoutErrorsOrWarnings()
     {
         Shader shader = LoadShader();

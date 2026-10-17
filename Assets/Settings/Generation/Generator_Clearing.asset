@@ -21,6 +21,11 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
     terrainType: {fileID: 11400000, guid: 44d4160e60517d0aefb23d4bc3f45678, type: 2}
     material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  weeds:
+    tilemapName: WeedsTilemap
+    tile: {fileID: 11400000, guid: 2beb12642eb3e944ab14d6e032ddb9d7, type: 2}
+    terrainType: {fileID: 11400000, guid: 714f2ce0eda24cc42af517abdaa1fcaa, type: 2}
+    material: {fileID: 11400000, guid: bf6aaa7fb4e68f54fa17968b0f426bef, type: 2}
   dirt:
     tilemapName: DirtTilemap
     tile: {fileID: 11400000, guid: 7316d30cada0bdd41b534027dffd83c6, type: 2}
@@ -68,6 +73,11 @@ MonoBehaviour:
     count: 45
     spacing: 2.2
     zone: 1
+  weedPatches:
+    edgeCount: 4
+    openCount: 3
+    radius: {x: 2, y: 3.5}
+    reach: 3
   campfirePrefab: {fileID: 0}
   campsiteSeats: []
   seatCount: 3

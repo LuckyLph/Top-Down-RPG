@@ -180,6 +180,56 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// The Clearing, the Village Forest, the Lakeside and the Coast lay weed patches on their plain grass (TerrainTypes.md,
+    /// Phase 12): for every seed some, in pieces of four cells or more, every cell on the grass with grass all round it
+    /// for two cells, so inside the map's edge, and no cell of another layer (a path, another look) within a step.
+    /// </summary>
+    [TestCase(ClearingGeneratorPath)]
+    [TestCase(VillageForestGeneratorPath)]
+    [TestCase(LakesideGeneratorPath)]
+    [TestCase(CoastGeneratorPath)]
+    public void TheGenerators_LayWeedsOnThePlainGrass(string generatorPath)
+    {
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = Layout(target, seed);
+            HashSet<Vector3Int> grass = Cells(layout, "Grass");
+            HashSet<Vector3Int> weeds = Cells(layout, "Weeds");
+            HashSet<Vector3Int> others = new(CellComparer.Instance);
+            for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
+            {
+                if (layout.TerrainCells(layer) != grass && layout.TerrainCells(layer) != weeds)
+                {
+                    others.UnionWith(layout.TerrainCells(layer));
+                }
+            }
+
+            Assert.That(weeds, Is.Not.Empty, $"seed {seed}: weeds");
+            HashSet<Vector3Int> seen = new(CellComparer.Instance);
+            foreach (Vector3Int cell in weeds)
+            {
+                if (seen.Add(cell))
+                {
+                    HashSet<Vector3Int> piece = Reachable(cell, weeds.Contains);
+                    seen.UnionWith(piece);
+                    Expect(piece.Count >= 4, $"seed {seed}: a scrap of weeds at {cell}");
+                }
+
+                foreach (Vector3Int near in CellsWithin(cell, 2))
+                {
+                    Expect(grass.Contains(near), $"seed {seed}: weeds at {cell} within two cells of the map's edge");
+                }
+
+                foreach (Vector3Int near in CellsWithin(cell, 1))
+                {
+                    Expect(!others.Contains(near), $"seed {seed}: weeds at {cell} beside another look at {near}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// For every seed the road and the gravel paths lie on the grass, the spawn is on the road with grass all around
     /// it for the clear radius, and no blocking prop stands near the spawn or within the clearance of a path.
     /// </summary>
@@ -568,7 +618,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> paths = PathCells(layout);
 
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}");
-            Assert.That(layout.TerrainLayerCount, Is.EqualTo(11));
+            Assert.That(layout.TerrainLayerCount, Is.EqualTo(12));
             Expect(!water.Overlaps(Cells(layout, "Shallows")), $"seed {seed}: the ponds lie off the lake");
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
@@ -2655,7 +2705,7 @@ public class AreaGenerationTests
     /// <summary>
     /// In a Village Forest area whose renderer also draws, above its own layers and out of the shared order, a painted
     /// water layer, a painted sand layer and an empty dry grass layer (none of them the generator's), writing puts every
-    /// layer drawn in the style's layer order: grass, meadow, tall grass, dirt, sand, gravel, plaza, stone, water. The
+    /// layer drawn in the style's layer order: grass, weeds, meadow, tall grass, dirt, sand, gravel, plaza, stone, water. The
     /// painted layers it does not list keep their cells, their materials and their place in that order, the empty one is
     /// removed, each layer comes at its place among the grid's children with its index as navigation priority, and the
     /// renderer then builds. The test's own changes go through undo, so the revert in <see cref="TearDown"/> only passes through
@@ -2676,11 +2726,11 @@ public class AreaGenerationTests
         Tilemap dryGrass = AddDrawnLayer(grid, Layer(lakeside, "DryGrass"), false);
         TerrainBlendRendererEditor.SyncNavigationPriorities(renderer);
         Undo.CollapseUndoOperations(added);
-        Assert.That(renderer.Layers.Count, Is.EqualTo(10));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(11));
 
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, Layout(villageForest, 4)), Is.True);
 
-        string[] expected = { "Grass", "Meadow", "TallGrass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
+        string[] expected = { "Grass", "Weeds", "Meadow", "TallGrass", "Dirt", "Sand", "Gravel", "Plaza", "Stone", "Water" };
         Assert.That(renderer.Layers.Count, Is.EqualTo(expected.Length));
         for (int i = 0; i < expected.Length; i++)
         {
@@ -2691,8 +2741,8 @@ public class AreaGenerationTests
             Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), tilemap.name);
         }
 
-        Assert.That(renderer.Layers[4].Tilemap, Is.SameAs(sand));
-        Assert.That(renderer.Layers[8].Tilemap, Is.SameAs(water));
+        Assert.That(renderer.Layers[5].Tilemap, Is.SameAs(sand));
+        Assert.That(renderer.Layers[9].Tilemap, Is.SameAs(water));
         Expect(sand.HasTile(Vector3Int.zero) && water.HasTile(Vector3Int.zero), $"The painted layers keep their cells.");
         Expect(dryGrass == null, $"The empty dry grass layer is removed.");
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
@@ -2708,11 +2758,11 @@ public class AreaGenerationTests
     /// Village Forest the meadow, tall grass, dirt and the plaza, the Lakeside dry grass, the meadow and tall grass among
     /// its eleven.
     /// </summary>
-    [TestCase(ClearingGeneratorPath, "Grass", "Dirt", "Gravel", "Stone")]
-    [TestCase(VillageForestGeneratorPath, "Grass", "Meadow", "TallGrass", "Dirt", "Gravel", "Plaza", "Stone")]
-    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Meadow", "TallGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
+    [TestCase(ClearingGeneratorPath, "Grass", "Weeds", "Dirt", "Gravel", "Stone")]
+    [TestCase(VillageForestGeneratorPath, "Grass", "Weeds", "Meadow", "TallGrass", "Dirt", "Gravel", "Plaza", "Stone")]
+    [TestCase(LakesideGeneratorPath, "Grass", "DryGrass", "Weeds", "Meadow", "TallGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks")]
     [TestCase(SnowfieldGeneratorPath, "Snow", "Dirt", "Ice", "Gravel", "Stone", "Water")]
-    [TestCase(CoastGeneratorPath, "Grass", "Dirt", "Sand", "Gravel", "Stone", "Ocean")]
+    [TestCase(CoastGeneratorPath, "Grass", "Weeds", "Dirt", "Sand", "Gravel", "Stone", "Ocean")]
     [TestCase(LavaFieldsGeneratorPath, "Dirt", "Gravel", "Stone", "Lava")]
     public void TheGenerators_ListTheirOwnLayers_AsASubsequenceOfTheSharedOrder(string generatorPath, params string[] names)
     {
@@ -2748,7 +2798,7 @@ public class AreaGenerationTests
     public void TheStyle_ListsEveryGroundMaterial_InTheSharedOrder()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        string[] order = { "Grass", "DryGrass", "Meadow", "TallGrass", "Snow", "Dirt", "Sand", "Mud", "Ice", "Gravel", "Plaza", "Stone", "Shallows", "Water", "Ocean", "Lava", "Planks" };
+        string[] order = { "Grass", "DryGrass", "Weeds", "Meadow", "TallGrass", "Snow", "Dirt", "Sand", "Mud", "Ice", "Gravel", "Plaza", "Stone", "Shallows", "Water", "Ocean", "Lava", "Planks" };
 
         Assert.That(style.LayerOrder.Count, Is.EqualTo(order.Length));
         for (int i = 0; i < order.Length; i++)
@@ -2942,6 +2992,7 @@ public class AreaGenerationTests
         AreaGenerator without = Track(Object.Instantiate(target));
         SerializedObject settings = new(without);
         string[] added = { "Dirt" };
+        bool laysWeeds = TurnWeedsOff(settings);
         if (target is ClearingGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
@@ -2979,6 +3030,11 @@ public class AreaGenerationTests
         }
 
         settings.ApplyModifiedPropertiesWithoutUndo();
+        if (laysWeeds)
+        {
+            added = new List<string>(added) { "Weeds" }.ToArray();
+        }
+
         for (int seed = 1; seed <= 5; seed++)
         {
             AreaLayout full = Layout(target, seed);
@@ -3182,19 +3238,21 @@ public class AreaGenerationTests
         SerializedObject settings = new(without);
         settings.FindProperty("tallGrassCount").intValue = 0;
         settings.FindProperty("meadowCount").intValue = 0;
+        TurnWeedsOff(settings);
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= 5; seed++)
         {
             AreaLayout full = VillageForestLayout(seed).Layout;
             AreaLayout plain = without.Generate(seed);
             int meadowIndex = full.IndexOf(ProjectMaterial("Meadow"));
+            int weedsIndex = full.IndexOf(ProjectMaterial("Weeds"));
             int tallIndex = full.IndexOf(ProjectMaterial("TallGrass"));
             HashSet<Vector3Int> tall = full.TerrainCells(tallIndex);
             Assert.That(plain.TerrainCells(meadowIndex), Is.Empty, $"seed {seed}");
             Assert.That(plain.TerrainCells(tallIndex), Is.Empty, $"seed {seed}");
             for (int layer = 0; layer < full.TerrainLayerCount; layer++)
             {
-                if (layer != meadowIndex && layer != tallIndex)
+                if (layer != meadowIndex && layer != tallIndex && layer != weedsIndex)
                 {
                     Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
@@ -3316,19 +3374,21 @@ public class AreaGenerationTests
         SerializedObject settings = new(without);
         settings.FindProperty("tallGrassCount").intValue = 0;
         settings.FindProperty("meadowCount").intValue = 0;
+        TurnWeedsOff(settings);
         settings.ApplyModifiedPropertiesWithoutUndo();
         for (int seed = 1; seed <= 5; seed++)
         {
             AreaLayout full = Layout(lakeside, seed);
             AreaLayout plain = without.Generate(seed);
             int meadowIndex = full.IndexOf(ProjectMaterial("Meadow"));
+            int weedsIndex = full.IndexOf(ProjectMaterial("Weeds"));
             int tallIndex = full.IndexOf(ProjectMaterial("TallGrass"));
             HashSet<Vector3Int> tall = full.TerrainCells(tallIndex);
             Assert.That(plain.TerrainCells(meadowIndex), Is.Empty, $"seed {seed}");
             Assert.That(plain.TerrainCells(tallIndex), Is.Empty, $"seed {seed}");
             for (int layer = 0; layer < full.TerrainLayerCount; layer++)
             {
-                if (layer != meadowIndex && layer != tallIndex)
+                if (layer != meadowIndex && layer != tallIndex && layer != weedsIndex)
                 {
                     Expect(full.TerrainCells(layer).SetEquals(plain.TerrainCells(layer)), $"seed {seed}: layer {layer}");
                 }
@@ -3370,6 +3430,7 @@ public class AreaGenerationTests
         SerializedObject pondSettings = new(withPonds);
         pondSettings.FindProperty("tallGrassCount").intValue = 0;
         pondSettings.FindProperty("meadowCount").intValue = 0;
+        TurnWeedsOff(pondSettings);
         pondSettings.ApplyModifiedPropertiesWithoutUndo();
         AreaGenerator without = Track(Object.Instantiate(withPonds));
         SerializedObject settings = new(without);
@@ -3510,6 +3571,24 @@ public class AreaGenerationTests
         }
 
         return cells;
+    }
+
+    /// <summary>
+    /// Turns the weed patches of the generator <paramref name="settings"/> edits off, the last step of its detail
+    /// stream, so a comparison of its layouts with and without an earlier step is not moved by them. Returns whether
+    /// the generator lays weeds. The caller applies the change.
+    /// </summary>
+    private static bool TurnWeedsOff(SerializedObject settings)
+    {
+        SerializedProperty patches = settings.FindProperty("weedPatches");
+        if (patches == null)
+        {
+            return false;
+        }
+
+        patches.FindPropertyRelative("edgeCount").intValue = 0;
+        patches.FindPropertyRelative("openCount").intValue = 0;
+        return true;
     }
 
     /// <summary>

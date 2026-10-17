@@ -57,6 +57,29 @@ public abstract class AreaGenerator : ScriptableObject
     }
 
     /// <summary>
+    /// The weed patches a generator lays on its plain ground (<see cref="AreaLayoutBuilder.LayWeeds"/>): some along the
+    /// band of trees at the area's edge and whatever borders the generator adds (the Lakeside's marsh), the rest
+    /// anywhere on open ground, each a wobbly patch of a radius between the two values of its radius.
+    /// </summary>
+    [Serializable]
+    public class WeedPatches
+    {
+        [Tooltip("Patches centred within the reach of the band of trees along the area's edge, or of the generator's other borders.")]
+        [SerializeField, Min(0)] private int edgeCount = 6;
+        [Tooltip("Patches centred anywhere on open ground.")]
+        [SerializeField, Min(0)] private int openCount = 4;
+        [Tooltip("Smallest and largest radius in cells of a patch.")]
+        [SerializeField] private Vector2 radius = new(2f, 3.5f);
+        [Tooltip("How many cells past the band of trees, or a border, an edge patch may lie.")]
+        [SerializeField, Min(0)] private int reach = 3;
+
+        public int EdgeCount => edgeCount;
+        public int OpenCount => openCount;
+        public Vector2 Radius => radius;
+        public int Reach => reach;
+    }
+
+    /// <summary>
     /// Props a generator scatters over part of its area, picked at random from a list, at least a spacing apart. Each
     /// prefab is placed as a blocking or walk-through prop depending on whether it has a footprint collider. Each
     /// generator's own scatter type says which part of the area it fills.

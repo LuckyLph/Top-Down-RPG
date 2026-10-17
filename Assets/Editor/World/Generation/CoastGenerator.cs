@@ -43,6 +43,8 @@ public sealed class CoastGenerator : AreaGenerator
     [Header("Terrain")]
     [Tooltip("The ground every other layer lies on.")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Weeds: swaying clumps over the grass's own ground, laid in patches on it (Weeds_Palette).")]
+    [SerializeField] private TerrainLayer weeds = new();
     [Tooltip("Trodden earth around the campsite.")]
     [SerializeField] private TerrainLayer dirt = new();
     [Tooltip("The beach, drawn over the grass.")]
@@ -98,6 +100,10 @@ public sealed class CoastGenerator : AreaGenerator
     [Tooltip("Scatter layers, placed in this order: earlier layers take the room first.")]
     [SerializeField] private List<Scatter> scatters = new();
 
+    [Header("Weeds")]
+    [Tooltip("Weed patches laid last, from the detail stream, on the plain grass: along the band of trees and anywhere on open ground.")]
+    [SerializeField] private WeedPatches weedPatches = new();
+
     [Header("Campsite")]
     [Tooltip("Stands in the middle of the campsite; none for no campsite.")]
     [SerializeField] private GameObject campfirePrefab;
@@ -140,13 +146,14 @@ public sealed class CoastGenerator : AreaGenerator
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
+    public WeedPatches Weeds => weedPatches;
 
     /// <summary>
     /// Grass, dirt, sand, gravel, stone, then the ocean, in the style's layer order: each layer is drawn over the ones
     /// before it and decides its cells, so the beach lies on the grass, the trail runs onto the beach and the ocean lies
     /// over the sand.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, sand, gravel, stone, ocean };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, dirt, sand, gravel, stone, ocean };
 
     /// <summary>
     /// Lays out a coast from <paramref name="layoutSeed"/>.
@@ -217,6 +224,7 @@ public sealed class CoastGenerator : AreaGenerator
             builder.StartDetailStream();
             LayCampsite();
             LayPlateau();
+            LayWeeds();
             return builder.Layout;
         }
 
@@ -632,6 +640,15 @@ public sealed class CoastGenerator : AreaGenerator
             {
                 builder.Layout.Warnings.Add($"{cut} ramp, beach, trail or mob cells cannot be walked to from the spawn around the plateau's cliff.");
             }
+        }
+
+        /// <summary>
+        /// Lays the weed patches last, from the detail stream, on the plain grass (<see cref="AreaLayoutBuilder.LayWeeds"/>):
+        /// the edge patches within the patches' reach of the band of trees, the open ones anywhere.
+        /// </summary>
+        private void LayWeeds()
+        {
+            builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach);
         }
 
         /// <summary>

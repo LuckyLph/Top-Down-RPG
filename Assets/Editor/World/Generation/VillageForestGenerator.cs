@@ -66,6 +66,8 @@ public sealed class VillageForestGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Weeds: swaying clumps over the grass's own ground, laid in patches on it (Weeds_Palette).")]
+    [SerializeField] private TerrainLayer weeds = new();
     [Tooltip("Flower meadows on the clearing's open grass.")]
     [SerializeField] private TerrainLayer meadow = new();
     [Tooltip("Tall grass along the forest's edge, where it meets the clearing and the village.")]
@@ -127,6 +129,10 @@ public sealed class VillageForestGenerator : AreaGenerator
     [SerializeField] private Vector2 tallGrassRadius = new(2f, 3.5f);
     [Tooltip("How far in cells from the forest's edge, on either side of it, tall grass may grow.")]
     [SerializeField, Min(1)] private int tallGrassReach = 3;
+
+    [Header("Weeds")]
+    [Tooltip("Weed patches laid last, from the detail stream, on the plain grass: along the band of trees that rings the area and anywhere on open ground.")]
+    [SerializeField] private WeedPatches weedPatches = new();
 
     [Header("Spawn")]
     [Tooltip("Where along the street the party arrives, from 0 (the map edge) to 1 (the village's inner end).")]
@@ -201,13 +207,14 @@ public sealed class VillageForestGenerator : AreaGenerator
     public MobController MobPrefab => mobPrefab;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
+    public WeedPatches Weeds => weedPatches;
 
     /// <summary>
     /// Grass, meadow, tall grass, dirt, gravel, plaza, then stone, in the style's layer order: each layer is drawn over
     /// the ones before it and decides its cells, so the trails run over their dirt, the square covers the trails where
     /// they meet and the street runs over the square.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, meadow, tallGrass, dirt, gravel, plaza, stone };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, meadow, tallGrass, dirt, gravel, plaza, stone };
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.
@@ -332,6 +339,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             LayDirt();
             LayTallGrass();
             LayMeadows();
+            LayWeeds();
             return new Generation(builder.Layout, regions);
         }
 
@@ -1186,6 +1194,15 @@ public sealed class VillageForestGenerator : AreaGenerator
                 && builder.EdgeDistance(cell) > 2 && !builder.IsNearPath(cell) && !near.Contains(cell);
             builder.PaintPatches(meadows, settings.meadowCount, settings.meadowRadius, allowed, MeadowCentreClearance);
             builder.RemoveFragments(meadows, MinPatchPiece);
+        }
+
+        /// <summary>
+        /// Lays the weed patches last, from the detail stream, on the plain grass (<see cref="AreaLayoutBuilder.LayWeeds"/>):
+        /// the edge patches within the patches' reach of the band of trees, the open ones anywhere.
+        /// </summary>
+        private void LayWeeds()
+        {
+            builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach);
         }
 
         /// <summary>

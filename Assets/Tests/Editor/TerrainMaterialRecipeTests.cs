@@ -1309,16 +1309,15 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// The project's swaying recipes (grass, dry grass, the meadow and tall grass, only read) generate the same textures
+    /// The project's swaying recipes (weeds, dry grass and tall grass, only read) generate the same textures
     /// twice and keep the clump contract with their materials' sway: a sway margin of at least the material's sway
     /// amplitude, which is at most <see cref="TerrainMaterial.MaxSwayAmplitude"/>, every box inside one cell column, and
     /// every weed pixel still inside its box's row when it leans by its row's lean at the full amplitude, so a leaning tip
-    /// is never cut. All four sway in one wind (the grass's period and gust length); tall grass is taller than the grass
+    /// is never cut. All three sway in one wind (the weeds' period and gust length); tall grass is taller than the weeds
     /// and sways further.
     /// </summary>
-    [TestCase("Recipe_Grass")]
+    [TestCase("Recipe_Weeds")]
     [TestCase("Recipe_DryGrass")]
-    [TestCase("Recipe_Meadow")]
     [TestCase("Recipe_TallGrass")]
     public void TheProjectsSwayingRecipes_KeepTheClumpContract_WithTheirMaterialsSway(string recipeName)
     {
@@ -1337,7 +1336,7 @@ public class TerrainMaterialRecipeTests
         Assert.That(weighted, Is.GreaterThan(textures.Size * textures.Size / 50), "the boxes");
         Assert.That(blades, Is.GreaterThan(textures.Size * textures.Size / 200), "the blades");
 
-        WeedsRecipe grassRecipe = AssetDatabase.LoadAssetAtPath<WeedsRecipe>("Assets/Settings/Terrain/Recipes/Recipe_Grass.asset");
+        WeedsRecipe grassRecipe = AssetDatabase.LoadAssetAtPath<WeedsRecipe>("Assets/Settings/Terrain/Recipes/Recipe_Weeds.asset");
         TerrainMaterial grassMaterial = grassRecipe.Material;
         Assert.That(material.SwayPeriod, Is.EqualTo(grassMaterial.SwayPeriod), "One wind.");
         Assert.That(material.GustLength, Is.EqualTo(grassMaterial.GustLength), "One wind.");
@@ -1981,7 +1980,7 @@ public class TerrainMaterialRecipeTests
             checkedRecipes++;
         }
 
-        Assert.That(checkedRecipes, Is.EqualTo(17));
+        Assert.That(checkedRecipes, Is.EqualTo(18));
     }
 
     /// <summary>

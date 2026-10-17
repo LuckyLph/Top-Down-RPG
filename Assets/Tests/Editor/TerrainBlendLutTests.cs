@@ -407,22 +407,56 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// The project's grass, since the weeds merged into it, sways and lies level with the ground, and keeps its outlined
-    /// edge with tufts over nothing, the map's edge; no material named Weeds is left.
+    /// The project's grass is still (TerrainTypes.md, Phase 12): not animated, with no clumps and so no cell field,
+    /// level with the ground, keeping its outlined edge with tufts over nothing, the map's edge. The weeds, right over
+    /// the grass and the dry grass in the shared order, sway in the grass's old wind (2 px, 2.5 s, gusts 12 cells long)
+    /// with their clumps' weights in the height and the ground under them in a cell field, keep the grass's edge over
+    /// nothing, and are seamless over the grass, whose ground they share, and over dry grass with green tufts; the
+    /// meadow is seamless over them.
     /// </summary>
     [Test]
-    public void TheProjectsGrass_Sways_AndKeepsItsEdgeOverNothing()
+    public void TheProjectsGrass_IsStill_AndItsWeedsSwayOverIt()
     {
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
         TerrainMaterial grass = ProjectMaterial("Grass");
+        TerrainMaterial dryGrass = ProjectMaterial("DryGrass");
+        TerrainMaterial weeds = ProjectMaterial("Weeds");
+        TerrainMaterial meadow = ProjectMaterial("Meadow");
 
-        Assert.That(grass.Sways, Is.True);
+        Assert.That(grass.IsAnimated, Is.False);
+        Assert.That(grass.Sways, Is.False);
+        Assert.That(grass.CellField, Is.Null);
         Assert.That(grass.SinkDepth, Is.Zero);
-        Assert.That(grass.Height, Is.Not.Null, "The sway weights live in the height texture.");
         Assert.That(style.GetEdge(grass, null), Is.SameAs(grass.Edge));
         Assert.That(grass.Edge.DrawOutline, Is.True);
         Assert.That(grass.Edge.TuftHeight, Is.GreaterThan(0f));
-        Assert.That(AssetDatabase.LoadAssetAtPath<TerrainMaterial>("Assets/Settings/Terrain/Materials/Weeds.asset"), Is.Null);
+
+        Assert.That(style.LayerOrderIndexOf(weeds), Is.EqualTo(style.LayerOrderIndexOf(dryGrass) + 1));
+        Assert.That(weeds.Sways, Is.True);
+        Assert.That(weeds.SwayAmplitude, Is.EqualTo(2f));
+        Assert.That(weeds.SwayPeriod, Is.EqualTo(2.5f));
+        Assert.That(weeds.GustLength, Is.EqualTo(12f));
+        Assert.That(weeds.WholeClumps, Is.False, "The weeds sway per cell, as the grass did.");
+        Assert.That(weeds.Height, Is.Not.Null, "The sway weights live in the height texture.");
+        Assert.That(weeds.CellField, Is.Not.Null, "The ground under the clumps.");
+        Assert.That(weeds.BankColour, Is.EqualTo(grass.BankColour));
+        Assert.That(style.GetEdge(weeds, null), Is.SameAs(weeds.Edge));
+        Assert.That(weeds.Edge.DrawOutline, Is.EqualTo(grass.Edge.DrawOutline));
+        Assert.That(weeds.Edge.TuftHeight, Is.EqualTo(grass.Edge.TuftHeight));
+        TerrainStyle.EdgeSettings overGrass = style.GetEdge(weeds, grass);
+        Assert.That(overGrass.Seamless, Is.True);
+        Assert.That(overGrass.TuftHeight, Is.Zero, "The same ground: nothing to fray.");
+        TerrainStyle.EdgeSettings overDryGrass = style.GetEdge(weeds, dryGrass);
+        Assert.That(overDryGrass.Seamless, Is.True);
+        Assert.That(overDryGrass.TuftHeight, Is.GreaterThan(0f), "Green tufts fray into the straw.");
+        Assert.That(style.GetEdge(meadow, weeds).Seamless, Is.True);
+
+        Color[] texels = TerrainBlendLut.BuildTexels(style, new[] { grass, dryGrass, weeds, meadow });
+        Assert.That(PairTexel(texels, 4, 2, 0, TerrainBlendLut.PairFillColumn).a, Is.Zero, "weeds over grass is seamless");
+        Assert.That(PairTexel(texels, 4, 2, 1, TerrainBlendLut.PairFillColumn).a, Is.Zero, "weeds over dry grass is seamless");
+        Assert.That(PairTexel(texels, 4, 3, 2, TerrainBlendLut.PairFillColumn).a, Is.Zero, "the meadow over weeds is seamless");
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerSwayColumn), Is.EqualTo(Color.clear), "the grass is still");
+        Assert.That(LayerTexel(texels, 2, TerrainBlendLut.LayerSwayColumn), Is.EqualTo(new Color(2f, 2.5f, 12f, 0f)));
     }
 
     /// <summary>
@@ -690,9 +724,10 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
-    /// The project's meadow and tall grass (TerrainTypes.md, Phase 6) come right after dry grass in the shared order,
-    /// level, with no cell field, and sway in the grass's wind, tall grass further than the grass, their clumps leaning
-    /// whole (the grass's and dry grass's do not). The meadow is
+    /// The project's meadow and tall grass (TerrainTypes.md, Phase 6) come right after the weeds in the shared order,
+    /// level, with no cell mode. The meadow is still (Phase 12): flowers on the grass's ground, not animated. Tall grass
+    /// sways in the weeds' wind, further than the weeds, its clumps leaning whole (the weeds' and dry grass's do not).
+    /// The meadow is
     /// seamless over the grass, with no outline, rim, shadow or tufts (its ground is the grass's), and seamless over dry
     /// grass with green tufts, marked seamless in the lookup texture, and keeps the grass's edge over nothing; tall grass
     /// draws its default edge over every grass and over nothing: an outline, a shadow and a fringe of tufts, not
@@ -704,25 +739,27 @@ public class TerrainBlendLutTests
         TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset");
         TerrainMaterial grass = ProjectMaterial("Grass");
         TerrainMaterial dryGrass = ProjectMaterial("DryGrass");
+        TerrainMaterial weeds = ProjectMaterial("Weeds");
         TerrainMaterial meadow = ProjectMaterial("Meadow");
         TerrainMaterial tallGrass = ProjectMaterial("TallGrass");
 
-        Assert.That(style.LayerOrderIndexOf(meadow), Is.EqualTo(style.LayerOrderIndexOf(dryGrass) + 1));
-        Assert.That(style.LayerOrderIndexOf(tallGrass), Is.EqualTo(style.LayerOrderIndexOf(dryGrass) + 2));
+        Assert.That(style.LayerOrderIndexOf(meadow), Is.EqualTo(style.LayerOrderIndexOf(weeds) + 1));
+        Assert.That(style.LayerOrderIndexOf(tallGrass), Is.EqualTo(style.LayerOrderIndexOf(weeds) + 2));
         foreach (TerrainMaterial material in new[] { meadow, tallGrass })
         {
-            Assert.That(material.Sways, Is.True, material.name);
-            Assert.That(material.SwayPeriod, Is.EqualTo(grass.SwayPeriod), material.name);
-            Assert.That(material.GustLength, Is.EqualTo(grass.GustLength), material.name);
             Assert.That(material.SinkDepth, Is.Zero, material.name);
             Assert.That(material.Cells, Is.EqualTo(TerrainMaterial.CellMode.None), material.name);
             Assert.That(material.BankColour, Is.EqualTo(grass.BankColour), material.name);
         }
 
-        Assert.That(meadow.SwayAmplitude, Is.EqualTo(grass.SwayAmplitude));
-        Assert.That(tallGrass.SwayAmplitude, Is.GreaterThan(grass.SwayAmplitude));
-        Assert.That(meadow.WholeClumps && tallGrass.WholeClumps, Is.True, "Their flowers and tall blades lean whole over still ground.");
-        Assert.That(grass.WholeClumps || dryGrass.WholeClumps, Is.False, "The grass and dry grass sway as they always did.");
+        Assert.That(meadow.IsAnimated, Is.False, "The meadow's flowers stand still.");
+        Assert.That(meadow.Sways, Is.False);
+        Assert.That(tallGrass.Sways, Is.True);
+        Assert.That(tallGrass.SwayPeriod, Is.EqualTo(weeds.SwayPeriod));
+        Assert.That(tallGrass.GustLength, Is.EqualTo(weeds.GustLength));
+        Assert.That(tallGrass.SwayAmplitude, Is.GreaterThan(weeds.SwayAmplitude));
+        Assert.That(tallGrass.WholeClumps, Is.True, "Its tall blades lean whole over still ground.");
+        Assert.That(weeds.WholeClumps || dryGrass.WholeClumps, Is.False, "The weeds and dry grass sway per cell.");
 
         TerrainStyle.EdgeSettings meadowOverGrass = style.GetEdge(meadow, grass);
         Assert.That(meadowOverGrass.Seamless, Is.True);
@@ -739,7 +776,7 @@ public class TerrainBlendLutTests
         Assert.That(meadow.Edge.RimWidth, Is.EqualTo(grass.Edge.RimWidth));
         Assert.That(meadow.Edge.TuftHeight, Is.EqualTo(grass.Edge.TuftHeight));
 
-        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, meadow })
+        foreach (TerrainMaterial lower in new[] { null, grass, dryGrass, weeds, meadow })
         {
             Assert.That(style.GetEdge(tallGrass, lower), Is.SameAs(tallGrass.Edge), lower != null ? lower.name : "nothing");
         }

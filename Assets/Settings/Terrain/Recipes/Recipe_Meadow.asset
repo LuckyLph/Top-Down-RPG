@@ -73,8 +73,8 @@ MonoBehaviour:
   shadow:
     serializedVersion: 2
     rgba: 4280043542
-  flowerChance: 0.75
-  flowerDrift: 0.3
+  flowerChance: 1
+  flowerDrift: 0
   flowerStems: {x: 1, y: 3}
   stemHeight: {x: 2, y: 6}
   stemSpread: 2

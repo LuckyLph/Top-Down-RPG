@@ -9,13 +9,13 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for the area scene template (Assets/Settings/Scenes/AreaTemplate.unity, which AreaTemplate.scenetemplate
 /// instantiates): its grid holds a ground layer for every material of the project style's layer order but those it
-/// leaves out (lava, since a renderer draws at most 16 layers), empty, first among its children and drawn in that order
+/// leaves out (the ocean and lava, since a renderer draws at most 16 layers), empty, first among its children and drawn in that order
 /// by a terrain renderer with the project's style and materials, their
 /// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
 /// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
 /// trims it to the generator's layers, after which its renderer builds and its navigation grid blocks exactly the
 /// footprints, the water, except under a dock, the ocean, lava and the cliff of raised ground; a generator that lists
-/// lava, which the template leaves out, gets its layer from the writer, and one with raised ground its raised tilemap. The template is opened
+/// the ocean or lava, which the template leaves out, gets its layer from the writer, and one with raised ground its raised tilemap. The template is opened
 /// beside the open scenes and closed without saving.
 /// </summary>
 public class AreaTemplateTests
@@ -24,7 +24,7 @@ public class AreaTemplateTests
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string CollisionTilemapName = "CollisionTilemap";
 
-    private static readonly string[] LeftOut = { "Lava" };
+    private static readonly string[] LeftOut = { "Ocean", "Lava" };
 
     private static readonly string[] GeneratorPaths =
     {
@@ -64,8 +64,9 @@ public class AreaTemplateTests
     }
 
     /// <summary>
-    /// The template's grid holds a ground layer for every material of the project style's layer order but lava, which
-    /// it leaves out since a renderer draws at most 16 layers (a generator that lists lava adds its layer when it writes),
+    /// The template's grid holds a ground layer for every material of the project style's layer order but the ocean and
+    /// lava, which it leaves out since a renderer draws at most 16 layers (a generator that lists either adds its layer
+    /// when it writes),
     /// empty, first among its children in that order, each named after its material with that material's terrain type
     /// on its navigation source, so a new area can be painted with almost anything; its terrain renderer draws them in
     /// that order with the style, priorities in step, and every generator's layers but the left-out ones are among them. The navigation grid blocks the
@@ -143,8 +144,8 @@ public class AreaTemplateTests
     /// Each project generator's layout can be written into the template, which the generator trims to its own layers:
     /// the layers it does not list, all empty, are removed, and the renderer draws exactly the generator's, in its
     /// order. The renderer then builds, and the navigation grid blocks exactly the footprint cells, the water, except
-    /// under a dock, the ocean and lava, on the ground (the Lava Fields' lava layer, which the template leaves out, created
-    /// by the writer). A generator whose ground is not grass (the Snowfield's snow, the Lava Fields' dirt) has the
+    /// under a dock, the ocean and lava, on the ground (the Coast's ocean and the Lava Fields' lava layers, which the
+    /// template leaves out, created by the writer). A generator whose ground is not grass (the Snowfield's snow, the Lava Fields' dirt) has the
     /// area's terrain pointed at its ground layer first, as a new area of that ground is, or the template's empty grass
     /// layer, which the area's terrain lists, would be kept.
     /// </summary>

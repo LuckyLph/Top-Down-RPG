@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 417cd96ea5d33a1418d642fc4223bd16, type: 3}
   m_Name: Recipe_GrassGround
   m_EditorClassIdentifier: TopDownRPG.Editor::GrassTuftsRecipe
-  material: {fileID: 0}
+  material: {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   seed: 20261012
   repeatCells: 8
   heightWaves:
@@ -62,7 +62,7 @@ MonoBehaviour:
     rgba: 4281895994
   spotsPerCell: 6
   jitter: 0.42
-  tuftChance: 0.445
+  tuftChance: 0.801
   densityWaves:
   - x: 2
     y: 1

@@ -46,6 +46,8 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField] private TerrainLayer grass = new();
     [Tooltip("Straw-coloured grass in patches away from the lake, drawn over the grass without an edge.")]
     [SerializeField] private TerrainLayer dryGrass = new();
+    [Tooltip("Weeds: swaying clumps over the grass's own ground, laid in patches on it (Weeds_Palette).")]
+    [SerializeField] private TerrainLayer weeds = new();
     [Tooltip("Flower meadows on the open grass.")]
     [SerializeField] private TerrainLayer meadow = new();
     [Tooltip("Tall grass along the trees around the edge and along the marsh.")]
@@ -121,6 +123,10 @@ public sealed class LakesideGenerator : AreaGenerator
     [Tooltip("How far in cells from the band of trees, or from the mud, tall grass may grow.")]
     [SerializeField, Min(1)] private int tallGrassReach = 3;
 
+    [Header("Weeds")]
+    [Tooltip("Weed patches laid last, from the detail stream, on the plain grass: along the band of trees and around the marsh and anywhere on open ground.")]
+    [SerializeField] private WeedPatches weedPatches = new();
+
     [Header("Dock")]
     [Tooltip("Width in cells of the dock that runs on from the trail's end across the beach into the lake.")]
     [SerializeField, Min(1)] private int dockWidth = 3;
@@ -177,13 +183,14 @@ public sealed class LakesideGenerator : AreaGenerator
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
+    public WeedPatches Weeds => weedPatches;
 
     /// <summary>
     /// Grass, dry grass, meadow, tall grass, sand, mud, gravel, stone, shallows, water, then planks, in the style's layer
     /// order: each layer is drawn over the ones before it and decides its cells, so the road and the trail cross mud and
     /// sand, the lake covers everything under it and the dock lies over the lake and the beach.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, meadow, tallGrass, sand, mud, gravel, stone, shallows, water, planks };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, weeds, meadow, tallGrass, sand, mud, gravel, stone, shallows, water, planks };
 
     /// <summary>
     /// Lays out a lakeside from <paramref name="layoutSeed"/>.
@@ -271,6 +278,7 @@ public sealed class LakesideGenerator : AreaGenerator
             LayDock();
             LayTallGrass();
             LayMeadows();
+            LayWeeds();
             return builder.Layout;
         }
 
@@ -854,6 +862,16 @@ public sealed class LakesideGenerator : AreaGenerator
             Predicate<Vector3Int> allowed = cell => builder.Ground.Contains(cell) && builder.EdgeDistance(cell) > settings.borderDepth && !nearOthers.Contains(cell);
             builder.PaintPatches(meadow, settings.meadowCount, settings.meadowRadius, allowed, MeadowCentreClearance);
             builder.RemoveFragments(meadow, MinPatchPiece);
+        }
+
+        /// <summary>
+        /// Lays the weed patches last, from the detail stream, on the plain grass (<see cref="AreaLayoutBuilder.LayWeeds"/>):
+        /// the edge patches within the patches' reach of the band of trees or of the marsh's mud, the open ones anywhere.
+        /// </summary>
+        private void LayWeeds()
+        {
+            HashSet<Vector3Int> nearMud = AreaLayoutBuilder.CellsNear(builder.Layout.TerrainCells(settings.mud), settings.weedPatches.Reach);
+            builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach || nearMud.Contains(cell));
         }
 
         /// <summary>

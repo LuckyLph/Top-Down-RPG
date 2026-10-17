@@ -24,7 +24,7 @@ MonoBehaviour:
   cutGap: 0.5
   cutBevel: 18
   heightScale: 2.5
-  framesPerSecond: 8
+  framesPerSecond: 0
   glintColour: {r: 1, g: 1, b: 1, a: 1}
   glintPeriod: 3
   glintDuty: 0.2
@@ -33,10 +33,25 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
-  swayAmplitude: 2
+  swash: 0
+  waveSpacing: 0
+  wavePeriod: 3.2
+  waveWidth: 10
+  waveAngle: 8.5
+  waveWholeWithin: 40
+  waveStretch: 0.2
+  waveColour: {r: 0.17, g: 0.37, b: 0.59, a: 1}
+  waveCrestColour: {r: 0.55, g: 0.72, b: 0.85, a: 1}
+  waveTroughColour: {r: 0.05, g: 0.16, b: 0.31, a: 1}
+  washFoamColour: {r: 0.94, g: 0.96, b: 0.97, a: 1}
+  washFoamShadeColour: {r: 0.84, g: 0.89, b: 0.93, a: 1}
+  washFilmColour: {r: 0.59, g: 0.75, b: 0.87, a: 1}
+  washFilmBackColour: {r: 0.44, g: 0.65, b: 0.8, a: 1}
+  washWet: 0.15
+  swayAmplitude: 0
   swayPeriod: 2.5
   gustLength: 12
-  wholeClumps: 1
+  wholeClumps: 0
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.3764706, g: 0.2901961, b: 0.19607843, a: 1}

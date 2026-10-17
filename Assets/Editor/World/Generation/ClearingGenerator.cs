@@ -34,6 +34,8 @@ public sealed class ClearingGenerator : AreaGenerator
 
     [Header("Terrain")]
     [SerializeField] private TerrainLayer grass = new();
+    [Tooltip("Weeds: swaying clumps over the grass's own ground, laid in patches on it (Weeds_Palette).")]
+    [SerializeField] private TerrainLayer weeds = new();
     [Tooltip("Packed earth around the campsite.")]
     [SerializeField] private TerrainLayer dirt = new();
     [SerializeField] private TerrainLayer gravel = new();
@@ -70,6 +72,10 @@ public sealed class ClearingGenerator : AreaGenerator
     [Tooltip("Scatter layers, placed in this order: earlier layers take the room first.")]
     [SerializeField] private List<Scatter> scatters = new();
 
+    [Header("Weeds")]
+    [Tooltip("Weed patches laid last, from the detail stream, on the plain grass: along the band of trees and anywhere on open ground.")]
+    [SerializeField] private WeedPatches weedPatches = new();
+
     [Header("Campsite")]
     [Tooltip("Stands in the middle of the campsite; none for no campsite.")]
     [SerializeField] private GameObject campfirePrefab;
@@ -101,13 +107,14 @@ public sealed class ClearingGenerator : AreaGenerator
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
+    public WeedPatches Weeds => weedPatches;
 
     /// <summary>
     /// Grass, dirt, gravel, then stone, in the style's layer order: each layer is drawn over the ones before it and
     /// decides its cells, so the road and the gravel paths are drawn over the grass and the stone over the gravel where
     /// they meet.
     /// </summary>
-    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dirt, gravel, stone };
+    public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, dirt, gravel, stone };
 
     /// <summary>
     /// Lays out a clearing from <paramref name="layoutSeed"/>.
@@ -161,7 +168,9 @@ public sealed class ClearingGenerator : AreaGenerator
             }
 
             PlaceMobs();
+            builder.StartDetailStream();
             LayCampsite();
+            LayWeeds();
             return builder.Layout;
         }
 
@@ -177,9 +186,17 @@ public sealed class ClearingGenerator : AreaGenerator
                 return;
             }
 
-            builder.StartDetailStream();
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, builder.Layout.TerrainCells(settings.dirt), settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => true);
+        }
+
+        /// <summary>
+        /// Lays the weed patches last, from the detail stream, on the plain grass (<see cref="AreaLayoutBuilder.LayWeeds"/>):
+        /// the edge patches within the patches' reach of the band of trees, the open ones anywhere.
+        /// </summary>
+        private void LayWeeds()
+        {
+            builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach);
         }
 
         /// <summary>

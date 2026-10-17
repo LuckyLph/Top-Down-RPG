@@ -26,6 +26,7 @@ internal sealed class AreaLayoutBuilder
     private static readonly float[] PlateauScales = { 1f, 0.8f, 0.65f, 0.5f };
     private const int PlateauAttempts = 8;
     private const int RampApproachRows = 4;
+    private const int MinWeedPiece = 4;
 
     /// <summary>
     /// A campsite's settings for <see cref="LayCampsite"/>: the campfire in its middle, the seats around it, how many
@@ -844,6 +845,33 @@ internal sealed class AreaLayoutBuilder
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Lays weed patches into <paramref name="weeds"/> on the ground layer's plain cells, those two cells or more
+    /// inside the map's edge with no cell of another layer (a path, another look) within a step, so a patch meets only
+    /// the plain ground it shares its ground with: first the patches' edge count, each centred on and kept to cells that
+    /// also pass <paramref name="nearEdge"/> (the band of trees, a marsh), then their open count anywhere; pieces under
+    /// four cells are dropped. Draws from the current stream, after everything else a generator lays (a generator
+    /// calls <see cref="StartDetailStream"/> first), so nothing laid before moves.
+    /// </summary>
+    public void LayWeeds(HashSet<Vector3Int> weeds, AreaGenerator.WeedPatches patches, Predicate<Vector3Int> nearEdge)
+    {
+        List<Vector3Int> others = new();
+        for (int i = 0; i < Layout.TerrainLayerCount; i++)
+        {
+            HashSet<Vector3Int> cells = Layout.TerrainCells(i);
+            if (cells != Ground && cells != weeds)
+            {
+                others.AddRange(cells);
+            }
+        }
+
+        HashSet<Vector3Int> near = CellsNear(others, 1);
+        Predicate<Vector3Int> allowed = cell => Ground.Contains(cell) && EdgeDistance(cell) > 2 && !near.Contains(cell);
+        PaintPatches(weeds, patches.EdgeCount, patches.Radius, cell => allowed(cell) && nearEdge(cell), 0);
+        PaintPatches(weeds, patches.OpenCount, patches.Radius, allowed, 0);
+        RemoveFragments(weeds, MinWeedPiece);
     }
 
     /// <summary>

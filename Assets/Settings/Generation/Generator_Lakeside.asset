@@ -26,6 +26,11 @@ MonoBehaviour:
     tile: {fileID: 11400000, guid: 6856840c93e18284193bcea589f290d6, type: 2}
     terrainType: {fileID: 11400000, guid: 8c8e691577b8ba4489e176f659ef3974, type: 2}
     material: {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}
+  weeds:
+    tilemapName: WeedsTilemap
+    tile: {fileID: 11400000, guid: 2beb12642eb3e944ab14d6e032ddb9d7, type: 2}
+    terrainType: {fileID: 11400000, guid: 714f2ce0eda24cc42af517abdaa1fcaa, type: 2}
+    material: {fileID: 11400000, guid: bf6aaa7fb4e68f54fa17968b0f426bef, type: 2}
   meadow:
     tilemapName: MeadowTilemap
     tile: {fileID: 11400000, guid: eaf6b764d6bf14b47a58f752144849e7, type: 2}
@@ -96,6 +101,11 @@ MonoBehaviour:
   tallGrassCount: 7
   tallGrassRadius: {x: 2, y: 3.5}
   tallGrassReach: 3
+  weedPatches:
+    edgeCount: 5
+    openCount: 3
+    radius: {x: 2, y: 3.5}
+    reach: 3
   dockWidth: 3
   dockReach: {x: 4, y: 6}
   dockClearance: 2

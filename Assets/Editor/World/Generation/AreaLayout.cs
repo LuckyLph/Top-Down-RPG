@@ -64,7 +64,7 @@ public sealed class AreaLayout
         for (int i = 0; i < terrain.Length; i++)
         {
             terrainLayers[i] = layers[i];
-            terrain[i] = new HashSet<Vector3Int>();
+            terrain[i] = new HashSet<Vector3Int>(CellComparer.Instance);
         }
     }
 
@@ -82,12 +82,12 @@ public sealed class AreaLayout
     /// <summary>
     /// The cells of raised ground, ramps included, which the writer puts on the area's raised tilemap.
     /// </summary>
-    public HashSet<Vector3Int> Raised { get; } = new();
+    public HashSet<Vector3Int> Raised { get; } = new(CellComparer.Instance);
 
     /// <summary>
     /// The cells of <see cref="Raised"/> that are ramps.
     /// </summary>
-    public HashSet<Vector3Int> Ramps { get; } = new();
+    public HashSet<Vector3Int> Ramps { get; } = new(CellComparer.Instance);
 
     /// <summary>
     /// The filled cells of terrain layer <paramref name="layer"/>, indexed like <see cref="TerrainLayers"/>.

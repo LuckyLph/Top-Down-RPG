@@ -151,7 +151,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
         private readonly AreaLayoutBuilder builder;
         private readonly HashSet<Vector3Int> lava;
         private readonly List<Vector2> road = new();
-        private Dictionary<Vector3Int, int> lavaDistance = new();
+        private Dictionary<Vector3Int, int> lavaDistance = new(CellComparer.Instance);
         private readonly float halfWidth;
         private readonly float halfHeight;
 
@@ -258,7 +258,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
             };
             List<Vector2> samples = new();
             AreaLayoutBuilder.SampleSpline(points, samples);
-            HashSet<Vector3Int> river = new();
+            HashSet<Vector3Int> river = new(CellComparer.Instance);
             builder.Paint(samples, settings.riverWidth, river);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
@@ -283,7 +283,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
         /// </summary>
         private void FillIslands(Predicate<Vector3Int> allowed)
         {
-            HashSet<Vector3Int> seen = new();
+            HashSet<Vector3Int> seen = new(CellComparer.Instance);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (lava.Contains(cell) || seen.Contains(cell))
@@ -372,9 +372,9 @@ public sealed class LavaFieldsGenerator : AreaGenerator
             List<Vector2> samples = new();
             AreaLayoutBuilder.SampleSpline(new[] { start, leave }, samples);
             AreaLayoutBuilder.SampleSpline(new[] { leave, bend, target }, samples);
-            HashSet<Vector3Int> painted = new();
+            HashSet<Vector3Int> painted = new(CellComparer.Instance);
             builder.Paint(samples, settings.trailWidth, painted);
-            HashSet<Vector3Int> trail = new();
+            HashSet<Vector3Int> trail = new(CellComparer.Instance);
             foreach (Vector3Int cell in painted)
             {
                 if (builder.Stone.Contains(cell))
@@ -384,7 +384,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
 
                 if (LavaDistance(cell) < LavaGap)
                 {
-                    return new HashSet<Vector3Int>();
+                    return new HashSet<Vector3Int>(CellComparer.Instance);
                 }
 
                 trail.Add(cell);
@@ -504,7 +504,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
             float clear = settings.campsiteRadius + CampsiteLavaMargin;
             HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
-            builder.LayCampsite(campsite, new HashSet<Vector3Int>(), settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => LavaDistance(cell) > clear && !nearPaths.Contains(cell));
+            builder.LayCampsite(campsite, new HashSet<Vector3Int>(CellComparer.Instance), settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => LavaDistance(cell) > clear && !nearPaths.Contains(cell));
         }
 
         /// <summary>

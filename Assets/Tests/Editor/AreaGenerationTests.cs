@@ -239,7 +239,7 @@ public class AreaGenerationTests
         {
             AreaLayout layout = Layout(generator, seed);
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             int blocking = 0;
             foreach (AreaLayout.Prop prop in layout.Props)
             {
@@ -451,7 +451,7 @@ public class AreaGenerationTests
             AreaLayout layout = VillageForestLayout(seed).Layout;
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> paths = PathCells(layout);
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -653,7 +653,7 @@ public class AreaGenerationTests
             AreaLayout layout = Layout(lakeside, seed);
             HashSet<Vector3Int> shallows = Cells(layout, "Shallows");
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
-            HashSet<Vector3Int> other = new(Cells(layout, "Water"));
+            HashSet<Vector3Int> other = new(Cells(layout, "Water"), CellComparer.Instance);
             foreach (string name in new[] { "DryGrass", "Sand", "Mud", "Gravel", "Stone", "Planks" })
             {
                 other.UnionWith(Cells(layout, name));
@@ -675,7 +675,7 @@ public class AreaGenerationTests
             Expect(Cells(layout, "Water").SetEquals(Cells(plain, "Water")), $"seed {seed}: the lake is as it was");
 
             List<HashSet<Vector3Int>> ponds = new();
-            HashSet<Vector3Int> seen = new();
+            HashSet<Vector3Int> seen = new(CellComparer.Instance);
             foreach (Vector3Int cell in shallows)
             {
                 if (seen.Add(cell))
@@ -810,7 +810,7 @@ public class AreaGenerationTests
             AreaLayout plain = without.Generate(seed);
             int planksIndex = full.IndexOf(ProjectMaterial("Planks"));
             Assert.That(plain.TerrainCells(planksIndex), Is.Empty, $"seed {seed}: no dock");
-            HashSet<Vector3Int> near = new();
+            HashSet<Vector3Int> near = new(CellComparer.Instance);
             foreach (Vector3Int cell in full.TerrainCells(planksIndex))
             {
                 near.UnionWith(CellsWithin(cell, 1));
@@ -861,7 +861,7 @@ public class AreaGenerationTests
     private static List<string> BridgeCornerProblems(AreaLayout layout, HashSet<Vector3Int> cells)
     {
         int layers = layout.TerrainLayerCount;
-        HashSet<Vector3Int> corners = new();
+        HashSet<Vector3Int> corners = new(CellComparer.Instance);
         foreach (Vector3Int cell in cells)
         {
             corners.Add(cell);
@@ -1065,7 +1065,7 @@ public class AreaGenerationTests
             }
 
             Assert.That(Reachable(anyIce, ice.Contains).Count, Is.EqualTo(ice.Count), $"seed {seed}: the lake is one piece");
-            HashSet<Vector3Int> seen = new();
+            HashSet<Vector3Int> seen = new(CellComparer.Instance);
             int holes = 0;
             foreach (Vector3Int cell in water)
             {
@@ -1166,7 +1166,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> snow = Cells(layout, "Snow");
             HashSet<Vector3Int> ice = Cells(layout, "Ice");
             HashSet<Vector3Int> water = Cells(layout, "Water");
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -1249,9 +1249,9 @@ public class AreaGenerationTests
 
         HashSet<Vector3Int> ice = Cells(layout, "Ice");
         HashSet<Vector3Int> water = Cells(layout, "Water");
-        HashSet<Vector3Int> blocked = new(water);
+        HashSet<Vector3Int> blocked = new(water, CellComparer.Instance);
         blocked.UnionWith(Footprints(layout));
-        HashSet<Vector3Int> others = new(ice);
+        HashSet<Vector3Int> others = new(ice, CellComparer.Instance);
         foreach (string name in new[] { "Dirt", "Gravel", "Stone" })
         {
             others.UnionWith(Cells(layout, name));
@@ -1390,7 +1390,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> stone = Cells(layout, "Stone");
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             HashSet<Vector3Int> paths = PathCells(layout);
-            HashSet<Vector3Int> dry = new(paths);
+            HashSet<Vector3Int> dry = new(paths, CellComparer.Instance);
             dry.UnionWith(dirt);
             foreach (Vector3Int cell in dry)
             {
@@ -1469,9 +1469,9 @@ public class AreaGenerationTests
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
             HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
-            HashSet<Vector3Int> coastCells = new(sand);
+            HashSet<Vector3Int> coastCells = new(sand, CellComparer.Instance);
             coastCells.UnionWith(ocean);
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -1515,7 +1515,7 @@ public class AreaGenerationTests
                 }
             }
 
-            HashSet<Vector3Int> walked = new(sand);
+            HashSet<Vector3Int> walked = new(sand, CellComparer.Instance);
             walked.UnionWith(Cells(layout, "Gravel"));
             foreach (Vector3Int cell in walked)
             {
@@ -1543,7 +1543,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> ramps = layout.Ramps;
             HashSet<Vector3Int> grass = Cells(layout, "Grass");
             HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
-            HashSet<Vector3Int> coastCells = new(Cells(layout, "Sand"));
+            HashSet<Vector3Int> coastCells = new(Cells(layout, "Sand"), CellComparer.Instance);
             coastCells.UnionWith(ocean);
             HashSet<Vector3Int> paths = PathCells(layout);
             Assert.That(raised, Is.Not.Empty, $"seed {seed}: a plateau");
@@ -1561,7 +1561,7 @@ public class AreaGenerationTests
 
             int left = int.MaxValue;
             int right = int.MinValue;
-            HashSet<Vector3Int> clear = new();
+            HashSet<Vector3Int> clear = new(CellComparer.Instance);
             foreach (Vector3Int ramp in ramps)
             {
                 Expect(!(raised.Contains(ramp + Vector3Int.down)), $"seed {seed}: the ramp at {ramp} on the bottom row");
@@ -1599,7 +1599,7 @@ public class AreaGenerationTests
                 }
             }
 
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -1672,7 +1672,7 @@ public class AreaGenerationTests
         HashSet<Vector3Int> sand = Cells(layout, "Sand");
         HashSet<Vector3Int> ocean = Cells(layout, "Ocean");
         HashSet<Vector3Int> paths = PathCells(layout);
-        HashSet<Vector3Int> blocked = new(ocean);
+        HashSet<Vector3Int> blocked = new(ocean, CellComparer.Instance);
         blocked.UnionWith(Footprints(layout));
         foreach (Vector3Int cell in ocean)
         {
@@ -1778,7 +1778,7 @@ public class AreaGenerationTests
             }
 
             Expect(north && south, $"seed {seed}: the lava lies on both sides of the road");
-            HashSet<Vector3Int> seen = new();
+            HashSet<Vector3Int> seen = new(CellComparer.Instance);
             foreach (Vector3Int cell in lava)
             {
                 if (seen.Contains(cell))
@@ -1877,13 +1877,13 @@ public class AreaGenerationTests
             AreaLayout layout = Layout(lavaFields, seed);
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             HashSet<Vector3Int> lava = Cells(layout, "Lava");
-            HashSet<Vector3Int> nearLava = new();
+            HashSet<Vector3Int> nearLava = new(CellComparer.Instance);
             foreach (Vector3Int cell in lava)
             {
                 nearLava.UnionWith(CellsWithin(cell, 1));
             }
 
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -1963,7 +1963,7 @@ public class AreaGenerationTests
         HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
         HashSet<Vector3Int> lava = Cells(layout, "Lava");
         HashSet<Vector3Int> paths = PathCells(layout);
-        HashSet<Vector3Int> blocked = new(lava);
+        HashSet<Vector3Int> blocked = new(lava, CellComparer.Instance);
         blocked.UnionWith(Footprints(layout));
         foreach (Vector3Int cell in lava)
         {
@@ -2031,8 +2031,8 @@ public class AreaGenerationTests
     /// </summary>
     private static List<string> CornerProblems(AreaLayout layout, bool atMapEdge, string[] materials)
     {
-        Dictionary<Vector3Int, int> top = new();
-        HashSet<Vector3Int> corners = new();
+        Dictionary<Vector3Int, int> top = new(CellComparer.Instance);
+        HashSet<Vector3Int> corners = new(CellComparer.Instance);
         for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
         {
             foreach (Vector3Int cell in layout.TerrainCells(layer))
@@ -2115,7 +2115,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> sand = Cells(layout, "Sand");
             HashSet<Vector3Int> mud = Cells(layout, "Mud");
             HashSet<Vector3Int> paths = PathCells(layout);
-            HashSet<Vector3Int> footprints = new();
+            HashSet<Vector3Int> footprints = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -2325,7 +2325,7 @@ public class AreaGenerationTests
         navigation.BuildGrid();
         TerrainMovementProfile2D profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
         HashSet<Vector3Int> footprints = Footprints(layout);
-        HashSet<Vector3Int> water = new(CellsOrNone(layout, "Water"));
+        HashSet<Vector3Int> water = new(CellsOrNone(layout, "Water"), CellComparer.Instance);
         water.UnionWith(CellsOrNone(layout, "Ocean"));
         water.UnionWith(CellsOrNone(layout, "Lava"));
         water.ExceptWith(CellsOrNone(layout, "Planks"));
@@ -2638,7 +2638,7 @@ public class AreaGenerationTests
         int emptied = 0;
         for (int i = 0; i < layers.Count; i++)
         {
-            HashSet<Vector3Int> cells = new(first.TerrainCells(i));
+            HashSet<Vector3Int> cells = new(first.TerrainCells(i), CellComparer.Instance);
             cells.UnionWith(second.TerrainCells(i));
             int bit = 1 << i;
             foreach (Vector3Int cell in cells)
@@ -2874,7 +2874,7 @@ public class AreaGenerationTests
             HashSet<Vector3Int> gravel = Cells(layout, "Gravel");
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
             Vector2 fountain = Vector2.zero;
-            HashSet<Vector3Int> builtOn = new();
+            HashSet<Vector3Int> builtOn = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint);
@@ -3006,7 +3006,7 @@ public class AreaGenerationTests
                 Assert.That(full.Mobs[i].Cell, Is.EqualTo(plain.Mobs[i].Cell), $"seed {seed}: mob {i}");
             }
 
-            HashSet<Vector3Int> campsite = new();
+            HashSet<Vector3Int> campsite = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in full.Props)
             {
                 if (target is ClearingGenerator clearing && prop.Prefab == clearing.CampfirePrefab)
@@ -3114,8 +3114,8 @@ public class AreaGenerationTests
             HashSet<Vector3Int> tall = Cells(layout, "TallGrass");
             HashSet<Vector3Int> paths = PathCells(layout);
             HashSet<Vector3Int> dirt = Cells(layout, "Dirt");
-            HashSet<Vector3Int> builtOn = new();
-            HashSet<Vector3Int> plants = new();
+            HashSet<Vector3Int> builtOn = new(CellComparer.Instance);
+            HashSet<Vector3Int> plants = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -3241,13 +3241,13 @@ public class AreaGenerationTests
             HashSet<Vector3Int> meadow = Cells(layout, "Meadow");
             HashSet<Vector3Int> tall = Cells(layout, "TallGrass");
             HashSet<Vector3Int> mud = Cells(layout, "Mud");
-            HashSet<Vector3Int> others = new();
+            HashSet<Vector3Int> others = new(CellComparer.Instance);
             foreach (string name in new[] { "DryGrass", "Sand", "Mud", "Gravel", "Stone", "Shallows", "Water", "Planks" })
             {
                 others.UnionWith(Cells(layout, name));
             }
 
-            HashSet<Vector3Int> plants = new();
+            HashSet<Vector3Int> plants = new(CellComparer.Instance);
             foreach (AreaLayout.Prop prop in layout.Props)
             {
                 if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out _))
@@ -3380,7 +3380,7 @@ public class AreaGenerationTests
         {
             AreaLayout full = withPonds.Generate(seed);
             AreaLayout plain = without.Generate(seed);
-            HashSet<Vector3Int> wet = new();
+            HashSet<Vector3Int> wet = new(CellComparer.Instance);
             foreach (Vector3Int cell in Cells(full, "Shallows"))
             {
                 wet.UnionWith(CellsWithin(cell, 1));
@@ -3500,7 +3500,7 @@ public class AreaGenerationTests
     /// </summary>
     private static HashSet<Vector3Int> FilledCells(Tilemap tilemap)
     {
-        HashSet<Vector3Int> cells = new();
+        HashSet<Vector3Int> cells = new(CellComparer.Instance);
         foreach (Vector3Int cell in tilemap.cellBounds.allPositionsWithin)
         {
             if (tilemap.HasTile(cell))
@@ -3568,7 +3568,7 @@ public class AreaGenerationTests
     /// </summary>
     private static HashSet<Vector3Int> PathCells(AreaLayout layout)
     {
-        HashSet<Vector3Int> cells = new(Cells(layout, "Gravel"));
+        HashSet<Vector3Int> cells = new(Cells(layout, "Gravel"), CellComparer.Instance);
         cells.UnionWith(CellsOrNone(layout, "Plaza"));
         cells.UnionWith(Cells(layout, "Stone"));
         return cells;
@@ -3596,7 +3596,7 @@ public class AreaGenerationTests
     /// </summary>
     private static HashSet<Vector3Int> Footprints(AreaLayout layout)
     {
-        HashSet<Vector3Int> cells = new();
+        HashSet<Vector3Int> cells = new(CellComparer.Instance);
         foreach (AreaLayout.Prop prop in layout.Props)
         {
             if (PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
@@ -3631,7 +3631,7 @@ public class AreaGenerationTests
     /// </summary>
     private static HashSet<Vector3Int> Reachable(Vector3Int start, System.Predicate<Vector3Int> isOpen)
     {
-        HashSet<Vector3Int> region = new() { start };
+        HashSet<Vector3Int> region = new(CellComparer.Instance) { start };
         Queue<Vector3Int> queue = new();
         queue.Enqueue(start);
         while (queue.Count > 0)
@@ -3668,7 +3668,7 @@ public class AreaGenerationTests
     private static HashSet<Vector3Int> CellsOrNone(AreaLayout layout, string material)
     {
         int index = layout.IndexOf(ProjectMaterial(material));
-        return index >= 0 ? layout.TerrainCells(index) : new HashSet<Vector3Int>();
+        return index >= 0 ? layout.TerrainCells(index) : new HashSet<Vector3Int>(CellComparer.Instance);
     }
 
     /// <summary>

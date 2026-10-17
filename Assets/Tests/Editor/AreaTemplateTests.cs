@@ -192,7 +192,7 @@ public class AreaTemplateTests
         TerrainMaterial planks = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Planks.asset");
         TerrainMaterial ocean = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Ocean.asset");
         TerrainMaterial lava = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Lava.asset");
-        HashSet<Vector3Int> blocked = layout.IndexOf(water) >= 0 ? new HashSet<Vector3Int>(layout.TerrainCells(layout.IndexOf(water))) : new HashSet<Vector3Int>();
+        HashSet<Vector3Int> blocked = layout.IndexOf(water) >= 0 ? new HashSet<Vector3Int>(layout.TerrainCells(layout.IndexOf(water)), CellComparer.Instance) : new HashSet<Vector3Int>(CellComparer.Instance);
         if (layout.IndexOf(ocean) >= 0)
         {
             blocked.UnionWith(layout.TerrainCells(layout.IndexOf(ocean)));

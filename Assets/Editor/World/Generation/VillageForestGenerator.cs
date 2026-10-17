@@ -246,7 +246,7 @@ public sealed class VillageForestGenerator : AreaGenerator
     {
         private readonly VillageForestGenerator settings;
         private readonly AreaLayoutBuilder builder;
-        private readonly Dictionary<Vector3Int, Region> regions = new();
+        private readonly Dictionary<Vector3Int, Region> regions = new(CellComparer.Instance);
         private readonly List<Vector2> street = new();
         private readonly Dictionary<int, int> streetTop = new();
         private readonly List<Vector2> trailPoints = new();
@@ -378,7 +378,7 @@ public sealed class VillageForestGenerator : AreaGenerator
                 new(villageCentre.x - side * villageHalf.x, y + builder.Range(-1f, 1f) * meander)
             };
             AreaLayoutBuilder.SampleSpline(points, street);
-            HashSet<Vector3Int> cells = new();
+            HashSet<Vector3Int> cells = new(CellComparer.Instance);
             builder.Paint(street, settings.streetWidth, cells);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
@@ -1089,7 +1089,8 @@ public sealed class VillageForestGenerator : AreaGenerator
             }
 
             HashSet<Vector3Int> nearDirt = AreaLayoutBuilder.CellsNear(builder.Layout.TerrainCells(settings.dirt), 1);
-            Predicate<Vector3Int> allowed = cell => IsOnForestEdge(cell, settings.tallGrassReach) && builder.EdgeDistance(cell) > 2
+            HashSet<Vector3Int> forestEdge = ForestEdge(settings.tallGrassReach);
+            Predicate<Vector3Int> allowed = cell => forestEdge.Contains(cell) && builder.EdgeDistance(cell) > 2
                 && !builder.IsNearPath(cell) && !nearDirt.Contains(cell) && !IsNearLot(cell);
             HashSet<Vector3Int> tall = builder.Layout.TerrainCells(settings.tallGrass);
             builder.PaintPatches(tall, settings.tallGrassCount, settings.tallGrassRadius, allowed, 0);
@@ -1098,28 +1099,73 @@ public sealed class VillageForestGenerator : AreaGenerator
         }
 
         /// <summary>
-        /// Whether a cell of the other side of the forest's edge lies within <paramref name="reach"/> steps (8 neighbours)
-        /// of <paramref name="cell"/>: a clearing or village cell for a forest cell, a forest cell for the others.
+        /// The cells with a region within <paramref name="reach"/> steps (8 neighbours) of which lies a cell of the other
+        /// side of the forest's edge: a clearing or village cell for a forest cell, a forest cell for the others. Counts
+        /// the forest and the other regions' cells in every square of that reach from summed-area tables over the
+        /// regions' bounds, so each cell costs a few array reads rather than a lookup per cell of its square.
         /// </summary>
-        private bool IsOnForestEdge(Vector3Int cell, int reach)
+        private HashSet<Vector3Int> ForestEdge(int reach)
         {
-            if (!regions.TryGetValue(cell, out Region own))
+            int xMin = int.MaxValue;
+            int yMin = int.MaxValue;
+            int xMax = int.MinValue;
+            int yMax = int.MinValue;
+            foreach (Vector3Int cell in regions.Keys)
             {
-                return false;
+                xMin = Mathf.Min(xMin, cell.x);
+                yMin = Mathf.Min(yMin, cell.y);
+                xMax = Mathf.Max(xMax, cell.x);
+                yMax = Mathf.Max(yMax, cell.y);
             }
 
-            for (int dy = -reach; dy <= reach; dy++)
+            HashSet<Vector3Int> edge = new(CellComparer.Instance);
+            if (regions.Count == 0)
             {
-                for (int dx = -reach; dx <= reach; dx++)
+                return edge;
+            }
+
+            int width = xMax - xMin + 1;
+            int height = yMax - yMin + 1;
+            int[] forest = new int[(width + 1) * (height + 1)];
+            int[] others = new int[(width + 1) * (height + 1)];
+            foreach (KeyValuePair<Vector3Int, Region> entry in regions)
+            {
+                int index = (entry.Key.y - yMin + 1) * (width + 1) + entry.Key.x - xMin + 1;
+                if (entry.Value == Region.Forest)
                 {
-                    if (regions.TryGetValue(cell + new Vector3Int(dx, dy, 0), out Region other) && (other == Region.Forest) != (own == Region.Forest))
-                    {
-                        return true;
-                    }
+                    forest[index] = 1;
+                }
+                else
+                {
+                    others[index] = 1;
                 }
             }
 
-            return false;
+            for (int y = 1; y <= height; y++)
+            {
+                for (int x = 1; x <= width; x++)
+                {
+                    int index = y * (width + 1) + x;
+                    forest[index] += forest[index - 1] + forest[index - width - 1] - forest[index - width - 2];
+                    others[index] += others[index - 1] + others[index - width - 1] - others[index - width - 2];
+                }
+            }
+
+            foreach (KeyValuePair<Vector3Int, Region> entry in regions)
+            {
+                int x0 = Mathf.Max(entry.Key.x - reach - xMin, 0);
+                int y0 = Mathf.Max(entry.Key.y - reach - yMin, 0);
+                int x1 = Mathf.Min(entry.Key.x + reach - xMin + 1, width);
+                int y1 = Mathf.Min(entry.Key.y + reach - yMin + 1, height);
+                int[] opposite = entry.Value == Region.Forest ? others : forest;
+                int count = opposite[y1 * (width + 1) + x1] - opposite[y0 * (width + 1) + x1] - opposite[y1 * (width + 1) + x0] + opposite[y0 * (width + 1) + x0];
+                if (count > 0)
+                {
+                    edge.Add(entry.Key);
+                }
+            }
+
+            return edge;
         }
 
         /// <summary>
@@ -1208,7 +1254,14 @@ public sealed class VillageForestGenerator : AreaGenerator
             float nearest = float.MaxValue;
             for (int i = first; i < points.Count; i++)
             {
-                nearest = Mathf.Min(nearest, (points[i] - target).sqrMagnitude);
+                Vector2 point = points[i];
+                float x = point.x - target.x;
+                float y = point.y - target.y;
+                float squared = x * x + y * y;
+                if (squared < nearest)
+                {
+                    nearest = squared;
+                }
             }
 
             return nearest;

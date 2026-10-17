@@ -54,6 +54,81 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// The points of the props a scatter has placed, which must stay a spacing apart, bucketed in squares a little
+    /// larger than the spacing so a check reads only the nine squares around a point rather than every point placed.
+    /// </summary>
+    private sealed class SpacedPoints
+    {
+        private readonly float spacing;
+        private readonly float bucketSize;
+        private readonly Dictionary<Vector2Int, List<Vector2>> buckets = new();
+
+        /// <summary>
+        /// An empty set of points to be kept <paramref name="spacing"/> apart.
+        /// </summary>
+        public SpacedPoints(float spacing)
+        {
+            this.spacing = spacing;
+            bucketSize = Mathf.Max(spacing, 1f) * 1.0001f;
+        }
+
+        public int Count { get; private set; }
+
+        /// <summary>
+        /// Whether <paramref name="point"/> is at least the spacing from every point added.
+        /// </summary>
+        public bool IsFarFrom(Vector2 point)
+        {
+            float squared = spacing * spacing;
+            Vector2Int bucket = BucketOf(point);
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (!buckets.TryGetValue(bucket + new Vector2Int(dx, dy), out List<Vector2> points))
+                    {
+                        continue;
+                    }
+
+                    foreach (Vector2 other in points)
+                    {
+                        if ((other - point).sqrMagnitude < squared)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Adds <paramref name="point"/>.
+        /// </summary>
+        public void Add(Vector2 point)
+        {
+            Vector2Int bucket = BucketOf(point);
+            if (!buckets.TryGetValue(bucket, out List<Vector2> points))
+            {
+                points = new List<Vector2>();
+                buckets[bucket] = points;
+            }
+
+            points.Add(point);
+            Count++;
+        }
+
+        /// <summary>
+        /// The square holding <paramref name="point"/>.
+        /// </summary>
+        private Vector2Int BucketOf(Vector2 point)
+        {
+            return new Vector2Int(Mathf.FloorToInt(point.x / bucketSize), Mathf.FloorToInt(point.y / bucketSize));
+        }
+    }
+
+    /// <summary>
     /// A plateau's settings for <see cref="LayPlateau"/>: its half size in cells before its outline wobbles, and how
     /// many cells wide its ramp is.
     /// </summary>
@@ -76,7 +151,8 @@ internal sealed class AreaLayoutBuilder
     private readonly List<HashSet<Vector3Int>> otherPaths = new();
     private Random random;
     private readonly List<Vector3Int> orderedGround = new();
-    private readonly Dictionary<Vector3Int, int> edgeDistance = new();
+    private RectInt groundBounds;
+    private int[] edgeDistances = new int[0];
 
     /// <summary>
     /// Prepares an empty layout of <paramref name="layers"/>, a generator's terrain layers, whose
@@ -114,17 +190,17 @@ internal sealed class AreaLayoutBuilder
     /// <summary>
     /// Cells kept free of blocking props.
     /// </summary>
-    public HashSet<Vector3Int> Reserved { get; } = new();
+    public HashSet<Vector3Int> Reserved { get; } = new(CellComparer.Instance);
 
     /// <summary>
     /// Cells covered by a blocking prop's footprint.
     /// </summary>
-    public HashSet<Vector3Int> Occupied { get; } = new();
+    public HashSet<Vector3Int> Occupied { get; } = new(CellComparer.Instance);
 
     /// <summary>
     /// Cells holding a walk-through prop.
     /// </summary>
-    public HashSet<Vector3Int> Decorated { get; } = new();
+    public HashSet<Vector3Int> Decorated { get; } = new(CellComparer.Instance);
 
     /// <summary>
     /// From here on every random draw (<see cref="Range"/>, <see cref="Next"/>, <see cref="Shuffle{T}"/>,
@@ -202,7 +278,8 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public int EdgeDistance(Vector3Int cell)
     {
-        return edgeDistance.TryGetValue(cell, out int distance) ? distance : 0;
+        int index = GroundIndex(cell);
+        return index >= 0 ? edgeDistances[index] : 0;
     }
 
     /// <summary>
@@ -288,7 +365,7 @@ internal sealed class AreaLayoutBuilder
         Vector3Int deepest = orderedGround.Count > 0 ? orderedGround[0] : Vector3Int.zero;
         foreach (Vector3Int cell in orderedGround)
         {
-            if (edgeDistance[cell] > edgeDistance[deepest])
+            if (EdgeDistance(cell) > EdgeDistance(deepest))
             {
                 deepest = cell;
             }
@@ -367,7 +444,7 @@ internal sealed class AreaLayoutBuilder
         }
 
         Shuffle(candidates);
-        List<Vector2> placed = new();
+        SpacedPoints placed = new(spacing);
         foreach (Vector3Int cell in candidates)
         {
             if (placed.Count >= count)
@@ -378,11 +455,11 @@ internal sealed class AreaLayoutBuilder
             GameObject prefab = usable[random.Next(usable.Count)];
             if (PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
             {
-                TryPlaceBlocking(prefab, footprint, cell, spacing, placed);
+                TryPlaceBlocking(prefab, footprint, cell, placed);
             }
             else
             {
-                TryPlaceWalkThrough(prefab, cell, spacing, placed);
+                TryPlaceWalkThrough(prefab, cell, placed);
             }
         }
 
@@ -454,7 +531,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public Dictionary<Vector3Int, int> StepsFrom(Predicate<Vector3Int> source)
     {
-        Dictionary<Vector3Int, int> distances = new();
+        Dictionary<Vector3Int, int> distances = new(CellComparer.Instance);
         Queue<Vector3Int> queue = new();
         foreach (Vector3Int cell in orderedGround)
         {
@@ -522,7 +599,7 @@ internal sealed class AreaLayoutBuilder
         List<Vector3Int> cells = new();
         foreach (Vector3Int cell in orderedGround)
         {
-            if (reachable.Contains(cell) && edgeDistance[cell] > borderDepth && !TouchesProp(cell)
+            if (reachable.Contains(cell) && EdgeDistance(cell) > borderDepth && !TouchesProp(cell)
                 && Vector3Int.Distance(cell, Layout.SpawnCell) >= distanceFromSpawn)
             {
                 cells.Add(cell);
@@ -713,7 +790,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public void RemoveFragments(HashSet<Vector3Int> cells, int smallest)
     {
-        HashSet<Vector3Int> seen = new();
+        HashSet<Vector3Int> seen = new(CellComparer.Instance);
         foreach (Vector3Int cell in orderedGround)
         {
             if (!cells.Contains(cell) || seen.Contains(cell))
@@ -735,7 +812,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public static HashSet<Vector3Int> CellsNear(IEnumerable<Vector3Int> cells, int steps)
     {
-        HashSet<Vector3Int> near = new();
+        HashSet<Vector3Int> near = new(CellComparer.Instance);
         foreach (Vector3Int cell in cells)
         {
             for (int dy = -steps; dy <= steps; dy++)
@@ -893,7 +970,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public bool LayPlateau(Plateau plateau, HashSet<Vector3Int> raised, HashSet<Vector3Int> ramps, Predicate<Vector3Int> allowed, Predicate<Vector3Int> walkable)
     {
-        HashSet<Vector3Int> open = new();
+        HashSet<Vector3Int> open = new(CellComparer.Instance);
         foreach (Vector3Int cell in orderedGround)
         {
             if (allowed(cell))
@@ -930,7 +1007,7 @@ internal sealed class AreaLayoutBuilder
             return false;
         }
 
-        HashSet<Vector3Int> cells = new();
+        HashSet<Vector3Int> cells = new(CellComparer.Instance);
         List<Vector3Int> ramp = new();
         for (int attempt = 0; attempt < PlateauAttempts && ramp.Count == 0 && centres.Count > 0; attempt++)
         {
@@ -938,7 +1015,7 @@ internal sealed class AreaLayoutBuilder
             Vector3Int centre = centres[pick];
             centres.RemoveAt(pick);
             Vector2 middle = new(centre.x + 0.5f, centre.y + 0.5f);
-            cells = new HashSet<Vector3Int>();
+            cells = new HashSet<Vector3Int>(CellComparer.Instance);
             Vector2 main = new(half.x * Range(0.8f, 1f), half.y * Range(0.8f, 1f));
             AddBlock(cells, middle, main, allowed);
             int extra = 1 + Next(2);
@@ -962,7 +1039,7 @@ internal sealed class AreaLayoutBuilder
             return false;
         }
 
-        HashSet<Vector3Int> clear = new(ramp);
+        HashSet<Vector3Int> clear = new(ramp, CellComparer.Instance);
         foreach (Vector3Int cell in cells)
         {
             if (!cells.Contains(cell + Vector3Int.down))
@@ -1024,7 +1101,7 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public static HashSet<Vector3Int> FloodFill(Vector3Int start, Predicate<Vector3Int> isOpen)
     {
-        HashSet<Vector3Int> region = new();
+        HashSet<Vector3Int> region = new(CellComparer.Instance);
         if (!isOpen(start))
         {
             return region;
@@ -1079,24 +1156,6 @@ internal sealed class AreaLayoutBuilder
     public static Vector3Int CellAt(Vector2 point)
     {
         return new Vector3Int(Mathf.FloorToInt(point.x), Mathf.FloorToInt(point.y), 0);
-    }
-
-    /// <summary>
-    /// Whether <paramref name="point"/> is at least <paramref name="spacing"/> from every point in
-    /// <paramref name="placed"/>.
-    /// </summary>
-    public static bool IsFarFrom(List<Vector2> placed, Vector2 point, float spacing)
-    {
-        float squared = spacing * spacing;
-        foreach (Vector2 other in placed)
-        {
-            if ((other - point).sqrMagnitude < squared)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -1233,8 +1292,8 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     private HashSet<Vector3Int> LargestPiece(HashSet<Vector3Int> cells)
     {
-        HashSet<Vector3Int> largest = new();
-        HashSet<Vector3Int> seen = new();
+        HashSet<Vector3Int> largest = new(CellComparer.Instance);
+        HashSet<Vector3Int> seen = new(CellComparer.Instance);
         foreach (Vector3Int cell in InGroundOrder(cells))
         {
             if (!seen.Contains(cell))
@@ -1372,8 +1431,8 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     private void KeepLargestRegion(List<Vector3Int> cells)
     {
-        HashSet<Vector3Int> remaining = new(cells);
-        HashSet<Vector3Int> largest = new();
+        HashSet<Vector3Int> remaining = new(cells, CellComparer.Instance);
+        HashSet<Vector3Int> largest = new(CellComparer.Instance);
         foreach (Vector3Int start in cells)
         {
             if (!remaining.Contains(start))
@@ -1400,16 +1459,44 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Records for every ground cell how many steps (8 neighbours) it is from the nearest cell without ground.
+    /// Records for every ground cell how many steps (8 neighbours) it is from the nearest cell without ground, in an
+    /// array over the ground's bounds (<see cref="GroundIndex"/>), which every step of a generation reads many times.
     /// </summary>
     private void MeasureEdgeDistance()
     {
+        if (orderedGround.Count == 0)
+        {
+            groundBounds = default;
+            edgeDistances = new int[0];
+            return;
+        }
+
+        int xMin = int.MaxValue;
+        int yMin = int.MaxValue;
+        int xMax = int.MinValue;
+        int yMax = int.MinValue;
+        foreach (Vector3Int cell in orderedGround)
+        {
+            xMin = Mathf.Min(xMin, cell.x);
+            yMin = Mathf.Min(yMin, cell.y);
+            xMax = Mathf.Max(xMax, cell.x);
+            yMax = Mathf.Max(yMax, cell.y);
+        }
+
+        groundBounds = new RectInt(xMin, yMin, xMax - xMin + 1, yMax - yMin + 1);
+        edgeDistances = new int[groundBounds.width * groundBounds.height];
+        bool[] ground = new bool[edgeDistances.Length];
+        foreach (Vector3Int cell in orderedGround)
+        {
+            ground[GroundIndex(cell)] = true;
+        }
+
         Queue<Vector3Int> queue = new();
         foreach (Vector3Int cell in orderedGround)
         {
-            if (TouchesOutside(cell))
+            if (TouchesOutside(cell, ground))
             {
-                edgeDistance[cell] = 1;
+                edgeDistances[GroundIndex(cell)] = 1;
                 queue.Enqueue(cell);
             }
         }
@@ -1417,16 +1504,16 @@ internal sealed class AreaLayoutBuilder
         while (queue.Count > 0)
         {
             Vector3Int cell = queue.Dequeue();
-            int next = edgeDistance[cell] + 1;
+            int next = edgeDistances[GroundIndex(cell)] + 1;
             for (int dy = -1; dy <= 1; dy++)
             {
                 for (int dx = -1; dx <= 1; dx++)
                 {
-                    Vector3Int neighbour = cell + new Vector3Int(dx, dy, 0);
-                    if (Ground.Contains(neighbour) && !edgeDistance.ContainsKey(neighbour))
+                    int index = GroundIndex(cell + new Vector3Int(dx, dy, 0));
+                    if (index >= 0 && ground[index] && edgeDistances[index] == 0)
                     {
-                        edgeDistance[neighbour] = next;
-                        queue.Enqueue(neighbour);
+                        edgeDistances[index] = next;
+                        queue.Enqueue(cell + new Vector3Int(dx, dy, 0));
                     }
                 }
             }
@@ -1434,15 +1521,27 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// Whether one of the 8 neighbours of <paramref name="cell"/> has no ground.
+    /// The index of <paramref name="cell"/> in the arrays over the ground's bounds, or -1 outside them.
     /// </summary>
-    private bool TouchesOutside(Vector3Int cell)
+    private int GroundIndex(Vector3Int cell)
+    {
+        int x = cell.x - groundBounds.xMin;
+        int y = cell.y - groundBounds.yMin;
+        return x >= 0 && y >= 0 && x < groundBounds.width && y < groundBounds.height ? y * groundBounds.width + x : -1;
+    }
+
+    /// <summary>
+    /// Whether one of the 8 neighbours of <paramref name="cell"/> has no ground, by <paramref name="ground"/>, the
+    /// ground over its bounds.
+    /// </summary>
+    private bool TouchesOutside(Vector3Int cell, bool[] ground)
     {
         for (int dy = -1; dy <= 1; dy++)
         {
             for (int dx = -1; dx <= 1; dx++)
             {
-                if (!Ground.Contains(cell + new Vector3Int(dx, dy, 0)))
+                int index = GroundIndex(cell + new Vector3Int(dx, dy, 0));
+                if (index < 0 || !ground[index])
                 {
                     return true;
                 }
@@ -1457,12 +1556,12 @@ internal sealed class AreaLayoutBuilder
     /// allows, when every cell it covers is free ground and it is far enough from the props in
     /// <paramref name="placed"/>.
     /// </summary>
-    private void TryPlaceBlocking(GameObject prefab, Rect footprint, Vector3Int cell, float spacing, List<Vector2> placed)
+    private void TryPlaceBlocking(GameObject prefab, Rect footprint, Vector3Int cell, SpacedPoints placed)
     {
         Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
         Vector3Int corner = new(cell.x - (covered.x - 1) / 2, cell.y, 0);
         Vector2 centre = new(corner.x + covered.x * 0.5f, corner.y + covered.y * 0.5f);
-        if (!IsFarFrom(placed, centre, spacing) || !IsFree(corner, covered))
+        if (!placed.IsFarFrom(centre) || !IsFree(corner, covered))
         {
             return;
         }
@@ -1475,11 +1574,11 @@ internal sealed class AreaLayoutBuilder
     /// Places a walk-through prop at a random point in <paramref name="cell"/> when the cell and its neighbours are
     /// off the paths, nothing else stands in it, and it is far enough from the props in <paramref name="placed"/>.
     /// </summary>
-    private void TryPlaceWalkThrough(GameObject prefab, Vector3Int cell, float spacing, List<Vector2> placed)
+    private void TryPlaceWalkThrough(GameObject prefab, Vector3Int cell, SpacedPoints placed)
     {
         Vector2 offset = new(Range(0.2f, 0.8f), Range(0.15f, 0.6f));
         Vector2 point = new(cell.x + offset.x, cell.y + offset.y);
-        if (IsNearPath(cell) || Occupied.Contains(cell) || Decorated.Contains(cell) || !IsFarFrom(placed, point, spacing))
+        if (IsNearPath(cell) || Occupied.Contains(cell) || Decorated.Contains(cell) || !placed.IsFarFrom(point))
         {
             return;
         }

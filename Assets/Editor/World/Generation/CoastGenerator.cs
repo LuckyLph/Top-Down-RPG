@@ -168,8 +168,8 @@ public sealed class CoastGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> ocean;
         private readonly HashSet<Vector3Int> dirt;
         private readonly List<Vector2> road = new();
-        private Dictionary<Vector3Int, int> coastDistance = new();
-        private Dictionary<Vector3Int, int> seaDistance = new();
+        private Dictionary<Vector3Int, int> coastDistance = new(CellComparer.Instance);
+        private Dictionary<Vector3Int, int> seaDistance = new(CellComparer.Instance);
         private readonly float halfWidth;
         private readonly float halfHeight;
 
@@ -250,8 +250,8 @@ public sealed class CoastGenerator : AreaGenerator
                 }
             }
 
-            HashSet<Vector3Int> largest = new();
-            HashSet<Vector3Int> unseen = new(ocean);
+            HashSet<Vector3Int> largest = new(CellComparer.Instance);
+            HashSet<Vector3Int> unseen = new(ocean, CellComparer.Instance);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (unseen.Contains(cell))
@@ -365,7 +365,7 @@ public sealed class CoastGenerator : AreaGenerator
                 new(halfWidth + 3f, middle + builder.Range(-1f, 1f) * meander)
             };
             AreaLayoutBuilder.SampleSpline(points, road);
-            HashSet<Vector3Int> painted = new();
+            HashSet<Vector3Int> painted = new(CellComparer.Instance);
             builder.Paint(road, settings.roadWidth, painted);
             int close = 0;
             foreach (Vector3Int cell in builder.OrderedGround)
@@ -444,7 +444,7 @@ public sealed class CoastGenerator : AreaGenerator
             AreaLayoutBuilder.SampleSpline(new[] { start, leave }, samples);
             AreaLayoutBuilder.SampleSpline(new[] { leave, bend, approach }, samples);
             AreaLayoutBuilder.SampleSpline(new[] { approach, end }, samples);
-            HashSet<Vector3Int> trail = new();
+            HashSet<Vector3Int> trail = new(CellComparer.Instance);
             builder.Paint(samples, settings.trailWidth, trail);
             foreach (Vector3Int cell in builder.OrderedGround)
             {

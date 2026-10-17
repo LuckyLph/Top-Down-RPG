@@ -166,7 +166,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> water;
         private readonly HashSet<Vector3Int> dirt;
         private readonly List<Vector2> road = new();
-        private Dictionary<Vector3Int, int> iceDistance = new();
+        private Dictionary<Vector3Int, int> iceDistance = new(CellComparer.Instance);
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
@@ -260,8 +260,8 @@ public sealed class SnowfieldGenerator : AreaGenerator
                 }
             }
 
-            HashSet<Vector3Int> candidates = new(inside);
-            HashSet<Vector3Int> largest = new();
+            HashSet<Vector3Int> candidates = new(inside, CellComparer.Instance);
+            HashSet<Vector3Int> largest = new(CellComparer.Instance);
             foreach (Vector3Int start in inside)
             {
                 if (!candidates.Contains(start))
@@ -334,7 +334,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
             Vector2 bend = Vector2.Lerp(start, end, 0.5f) + new Vector2(builder.Range(-0.15f, 0.15f) * halfWidth, 0f);
             List<Vector2> samples = new();
             AreaLayoutBuilder.SampleSpline(new[] { start, bend, end }, samples);
-            HashSet<Vector3Int> trail = new();
+            HashSet<Vector3Int> trail = new(CellComparer.Instance);
             builder.Paint(samples, settings.trailWidth, trail);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
@@ -464,7 +464,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
                 return;
             }
 
-            HashSet<Vector3Int> nearMobs = new();
+            HashSet<Vector3Int> nearMobs = new(CellComparer.Instance);
             foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
             {
                 nearMobs.UnionWith(AreaLayoutBuilder.CellsNear(new[] { mob.Cell }, 1));

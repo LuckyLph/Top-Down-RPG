@@ -210,7 +210,7 @@ public sealed class LakesideGenerator : AreaGenerator
         private readonly HashSet<Vector3Int> meadow;
         private readonly HashSet<Vector3Int> tallGrass;
         private readonly List<Vector2> road = new();
-        private readonly Dictionary<Vector3Int, int> waterDistance = new();
+        private readonly Dictionary<Vector3Int, int> waterDistance = new(CellComparer.Instance);
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
@@ -314,8 +314,8 @@ public sealed class LakesideGenerator : AreaGenerator
                 }
             }
 
-            HashSet<Vector3Int> candidates = new(inside);
-            HashSet<Vector3Int> largest = new();
+            HashSet<Vector3Int> candidates = new(inside, CellComparer.Instance);
+            HashSet<Vector3Int> largest = new(CellComparer.Instance);
             foreach (Vector3Int start in inside)
             {
                 if (!candidates.Contains(start))
@@ -454,7 +454,7 @@ public sealed class LakesideGenerator : AreaGenerator
             Vector2 bend = Vector2.Lerp(start, end, 0.5f) + new Vector2(builder.Range(-0.15f, 0.15f) * halfWidth, 0f);
             List<Vector2> samples = new();
             AreaLayoutBuilder.SampleSpline(new[] { start, bend, end }, samples);
-            HashSet<Vector3Int> trail = new();
+            HashSet<Vector3Int> trail = new(CellComparer.Instance);
             builder.Paint(samples, settings.trailWidth, trail);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
@@ -561,7 +561,7 @@ public sealed class LakesideGenerator : AreaGenerator
         /// </summary>
         private void LayShallowPonds()
         {
-            HashSet<Vector3Int> blocked = new();
+            HashSet<Vector3Int> blocked = new(CellComparer.Instance);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
                 if (!IsPlainGrass(cell) || builder.EdgeDistance(cell) <= 2 || builder.Occupied.Contains(cell))
@@ -578,7 +578,7 @@ public sealed class LakesideGenerator : AreaGenerator
             HashSet<Vector3Int> near = AreaLayoutBuilder.CellsNear(blocked, 1);
             Vector3Int spawn = builder.Layout.SpawnCell;
             int clear = settings.spawnClearRadius;
-            HashSet<Vector3Int> fits = new();
+            HashSet<Vector3Int> fits = new(CellComparer.Instance);
             List<Vector3Int> centres = new();
             foreach (Vector3Int cell in builder.OrderedGround)
             {
@@ -862,7 +862,7 @@ public sealed class LakesideGenerator : AreaGenerator
         /// </summary>
         private HashSet<Vector3Int> OtherLooks()
         {
-            HashSet<Vector3Int> cells = new(water);
+            HashSet<Vector3Int> cells = new(water, CellComparer.Instance);
             cells.UnionWith(sand);
             cells.UnionWith(mud);
             cells.UnionWith(builder.Gravel);

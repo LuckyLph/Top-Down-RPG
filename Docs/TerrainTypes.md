@@ -525,7 +525,7 @@ Since Phase 3 the grass was the old weeds: `Recipe_Grass` drew swaying weed clum
 - [x] Generators lay weeds: the Clearing, the Village Forest, the Lakeside and the Coast, patches along the band of trees (and the Lakeside's marsh) and in the open, on the plain grass, from the detail stream after everything else, so nothing laid before them moves.
 - [x] The areas regenerated; byte for byte: the Snowfield and the Lava Fields, which list no grass, render as before, and every layout but its new weeds is unchanged.
 - [x] Tests (recipes and their sway contract, lookup texture, tiles and palettes, the generators' weeds over twenty seeds, the template) and the docs: this phase's notes, [Architecture.md](Architecture.md), [SceneGeneration.md](SceneGeneration.md) and [TerrainBlending.md](TerrainBlending.md).
-- [ ] The full EditMode and PlayMode suites, before merging the feature into `main`.
+- [x] The full EditMode and PlayMode suites, before merging the feature into `main`: they passed with TerrainLayers32.md's work merged in (798 EditMode tests, 6 explicit ones skipped; 50 PlayMode tests, 1 skipped; and the `ShaderCompile` test), see its Phase 4 notes.
 
 Notes:
 

@@ -52,15 +52,17 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         return;
     }
 
+#ifndef _TERRAIN_WIDE
     float d[TB_MAX_LAYERS];
-    TBDistances(ins, corner, worldPixel, d);
+#endif
+    TBDistances(ins, corner, worldPixel TB_D_ARG);
     uint count = TBLayersAt(ins, corner);
 
     uint start = 0u;
     [loop]
     for (uint m = 0u; m < count; m++)
     {
-        if (d[m] <= -0.5 && TBVisible(ins, d, m) && TBOpaqueInside(ins, m))
+        if (d[m] <= -0.5 && TBVisible(ins TB_D_ARG, m) && TBOpaqueInside(ins, m))
         {
             start = m;
         }
@@ -70,7 +72,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     [branch]
     if (ins.bridges != 0u)
     {
-        bridges = TBBridgesAt(ins, d);
+        bridges = TBBridgesAt(ins TB_D_ARG);
     }
 
     float4 acc = float4(0.0, 0.0, 0.0, 0.0);
@@ -82,17 +84,19 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         [branch]
         if (bridges != 0u)
         {
-            bridged = TBNearBridgeEdge(ins, d, bridges, n);
+            bridged = TBNearBridgeEdge(ins TB_D_ARG, bridges, n);
         }
 
         [branch]
-        if (TBVisible(ins, d, n) && (!bridged || d[n] < 0.5))
+        if (TBVisible(ins TB_D_ARG, n) && (!bridged || d[n] < 0.5))
         {
+#ifndef _TERRAIN_WIDE
             float w[TB_MAX_LAYERS + 1];
-            TBPairWeights(ins, d, n, w);
-            TBEdge e = TBGetEdge(ins, n, w);
+#endif
+            TBPairWeights(ins TB_D_ARG, n TB_W_ARG);
+            TBEdge e = TBGetEdge(ins, n TB_W_ARG);
             e.tuftHeight = bridged ? 0.0 : e.tuftHeight;
-            float4 c = TBLayer(ins, n, e, w, d[n], pixel, worldPixel, corner);
+            float4 c = TBLayer(ins, n, e TB_W_ARG, d[n], pixel, worldPixel, corner);
             acc = c + acc * (1.0 - c.a);
             if (c.a >= 0.5)
             {

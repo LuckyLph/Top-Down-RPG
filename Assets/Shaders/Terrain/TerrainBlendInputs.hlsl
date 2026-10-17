@@ -8,6 +8,28 @@
 #else
 #define TB_MAX_LAYERS 16
 #endif
+
+// The per-pixel arrays, every layer's distance (d) and the pair weights of the layer being drawn (w): static variables
+// every function reads in place in the wide variant, parameters in the narrow one. Each parameter is written with
+// TB_D_PARAM, TB_D_OUT_PARAM, TB_W_PARAM or TB_W_OUT_PARAM and each argument with TB_D_ARG or TB_W_ARG, which start
+// with their comma and expand to nothing in the wide variant.
+#ifdef _TERRAIN_WIDE
+static float d[TB_MAX_LAYERS];
+static float w[TB_MAX_LAYERS + 1];
+#define TB_D_PARAM
+#define TB_D_OUT_PARAM
+#define TB_W_PARAM
+#define TB_W_OUT_PARAM
+#define TB_D_ARG
+#define TB_W_ARG
+#else
+#define TB_D_PARAM , float d[TB_MAX_LAYERS]
+#define TB_D_OUT_PARAM , out float d[TB_MAX_LAYERS]
+#define TB_W_PARAM , float w[TB_MAX_LAYERS + 1]
+#define TB_W_OUT_PARAM , out float w[TB_MAX_LAYERS + 1]
+#define TB_D_ARG , d
+#define TB_W_ARG , w
+#endif
 #define TB_FAR 100.0
 #define TB_DIAGONAL_GAP 4.0
 #define TB_WHOLE_CLEARANCE 10.0

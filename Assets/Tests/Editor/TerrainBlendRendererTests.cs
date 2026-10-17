@@ -11,7 +11,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for <see cref="TerrainBlendRenderer"/>: 16 layers build, each drawn on top in its own debug colour, and a
-/// preview on the top layer shows over the others; built wide, 16 layers draw the same pixels as built narrow; tile changes from painting, from <see cref="AreaTerrain"/> on the
+/// preview on the top layer shows over the others, and so do 32, built wide; built wide, 16 layers draw the same pixels as
+/// built narrow; tile changes from painting, from <see cref="AreaTerrain"/> on the
 /// host and from replicated edits on a client reach the control map's texture, and so do undos; a render uploads pending
 /// changes once and stops listening; the chunks cover the layers and follow the bounds as they grow and shrink;
 /// disabling unsubscribes from everything and destroys what was built; nothing runs or allocates per frame while no
@@ -149,7 +150,7 @@ public class TerrainBlendRendererTests
     public IEnumerator SixteenLayers_BuildAndDrawEveryLayer_AndPreviewOnTheTopOne()
     {
         const int count = TerrainControlMap.NarrowLayers;
-        TerrainBlendRenderer renderer = SixteenLayerRenderer(-1, out Tilemap[] tilemaps);
+        TerrainBlendRenderer renderer = StripRenderer(count, -1, out Tilemap[] tilemaps);
 
         Assert.That(renderer.ControlMap, Is.Not.Null);
         Assert.That(renderer.IsWide, Is.False, "A renderer of 16 layers builds a narrow control map.");
@@ -181,6 +182,51 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A renderer of <see cref="TerrainControlMap.MaxLayers"/> layers (32), each its own material, builds wide on its
+    /// own (an RGBA32 control map and the _TERRAIN_WIDE keyword), a slice per layer and the lookup texture's 1089 rows.
+    /// Over a strip of the bottom layer, with each other layer filling its own 3 x 3 block, its debug view shows every
+    /// layer on top in its block, each in a colour the probe tells apart from the others, the 16 past the narrow cap
+    /// included; a preview on the top layer (bit 31) shows that layer over a block, and clearing it shows the block's own
+    /// layer again. Renders from a later editor update, until anything is drawn (at most 30 updates).
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ThirtyTwoLayers_BuildWide_DrawEveryLayer_AndPreviewOnTheTopOne()
+    {
+        const int count = TerrainControlMap.MaxLayers;
+        TerrainBlendRenderer renderer = StripRenderer(count, -1, out Tilemap[] tilemaps);
+
+        Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.IsWide, Is.True, "Past 16 layers the renderer builds wide.");
+        Assert.That(renderer.ControlMap.Texture.graphicsFormat, Is.EqualTo(UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(WideKeyword(renderer)), Is.True);
+        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(count));
+        Assert.That(renderer.AlbedoArray.depth, Is.EqualTo(count));
+        Assert.That(renderer.Lut.height, Is.EqualTo(TerrainBlendLut.Height(count)));
+        Assert.That(renderer.Lut.height, Is.EqualTo(1089));
+        Rect world = new(0f, 0f, 4 * count, 5f);
+        byte[] shown = new byte[count];
+        for (int frame = 0; frame < 30 && shown[0] == 0; frame++)
+        {
+            yield return null;
+            shown = DebugClasses(renderer, world, count);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            Assert.That(shown[i], Is.EqualTo(i + 1), $"block {i}");
+        }
+
+        Vector3Int previewed = new(1, 2, 0);
+        Assert.That(renderer.SetPreview(tilemaps[count - 1], BlockCells(0), true), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(previewed), Is.EqualTo(0x80000001u));
+        Assert.That(DebugClasses(renderer, world, count)[0], Is.EqualTo(count), "The preview shows the top layer.");
+        Assert.That(TexelOf(renderer, previewed), Is.EqualTo(0x80000001u), "The render uploaded bit 31.");
+
+        renderer.ClearPreview();
+        Assert.That(DebugClasses(renderer, world, count)[0], Is.EqualTo(1), "Clearing the preview shows the bottom layer again.");
+    }
+
+    /// <summary>
     /// A renderer of 16 layers built wide (<see cref="TerrainBlendRenderer.SetAlwaysWide"/>: an RGBA32 control map read
     /// by the shader's _TERRAIN_WIDE variant, with the high half of the bridge bits and the wide bridge mask) draws
     /// exactly the pixels it draws narrow, in the crisp look, the soft look and the debug view, with a bridge among its
@@ -190,7 +236,7 @@ public class TerrainBlendRendererTests
     [UnityTest]
     public IEnumerator AWideRenderer_DrawsTheSamePixelsAsANarrowOne()
     {
-        TerrainBlendRenderer renderer = SixteenLayerRenderer(9, out Tilemap[] tilemaps);
+        TerrainBlendRenderer renderer = StripRenderer(TerrainControlMap.NarrowLayers, 9, out Tilemap[] tilemaps);
         Tilemap top = tilemaps[tilemaps.Length - 1];
         Rect world = new(0f, 0f, 4 * tilemaps.Length, 5f);
         Vector3Int previewed = new(1, 2, 0);
@@ -2355,14 +2401,13 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// A renderer of <see cref="TerrainControlMap.NarrowLayers"/> layers (16), each its own plain material, over a strip
-    /// of the bottom layer 4 cells per layer long and 5 high, with each other layer filling its own 3 x 3 block
-    /// (<see cref="BlockCells"/>); the material of layer <paramref name="bridge"/> is a bridge (-1 for none).
+    /// A renderer of <paramref name="count"/> layers, each its own plain material, over a strip of the bottom layer 4
+    /// cells per layer long and 5 high, with each other layer filling its own 3 x 3 block (<see cref="BlockCells"/>);
+    /// the material of layer <paramref name="bridge"/> is a bridge (-1 for none).
     /// </summary>
-    private TerrainBlendRenderer SixteenLayerRenderer(int bridge, out Tilemap[] tilemaps)
+    private TerrainBlendRenderer StripRenderer(int count, int bridge, out Tilemap[] tilemaps)
     {
-        const int count = TerrainControlMap.NarrowLayers;
-        GameObject gridObject = Track(new GameObject("SixteenLayerGrid", typeof(Grid)));
+        GameObject gridObject = Track(new GameObject("LayerStripGrid", typeof(Grid)));
         gridObject.SetActive(false);
         tilemaps = new Tilemap[count];
         TerrainBlendRenderer.Layer[] drawn = new TerrainBlendRenderer.Layer[count];

@@ -101,13 +101,13 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
 // at the depth max(-d, 0) where the edge pixel is drawn along seamless pairs (onEdge, TBSeamlessEdge) or the inside is
 // drawn below a sunken layer's bank (inside, TBInside); black elsewhere. bank is the bank's height inside the edge
 // (TBBankHeight), 0 on the edge pixel and outside.
-float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, bool onEdge, bool inside, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float bank)
+float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, bool onEdge, bool inside, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float bank)
 {
     bank = 0.0;
     [branch]
     if (inside)
     {
-        bank = TBBankHeight(ins, m, w, corner, worldPixel, -d);
+        bank = TBBankHeight(ins, m TB_W_ARG, corner, worldPixel, -d);
     }
 
     float3 interior = float3(0.0, 0.0, 0.0);
@@ -122,10 +122,10 @@ float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1
 // The edge pixel of layer m along its seamless pairs: its own interior (own, TBLayerInterior) under the rim's first
 // texel, so a seamless pair with a rim (deep water fading in over shallows) starts its rim at the edge, and one without
 // (dry grass over grass) shows the interior alone.
-float3 TBSeamlessEdge(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float3 own)
+float3 TBSeamlessEdge(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float3 own)
 {
     float band;
-    float4 rim = TBRamp(ins, e, m, w, 0.0, band);
+    float4 rim = TBRamp(ins, e, m TB_W_ARG, 0.0, band);
     return own * (1.0 - rim.a) + rim.rgb;
 }
 
@@ -135,21 +135,21 @@ float3 TBSeamlessEdge(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1]
 // both (TBWaves), darkened by the bank's shadow over
 // as many pixels as the bank is high. A level layer has no bank, so this is the interior under the rim. band is how
 // much of the rim soft bands make up (0 in crisp and on the bank).
-float3 TBInside(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float depth, float2 worldPixel, float3 interior, float bank, out float band)
+float3 TBInside(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float depth, float2 worldPixel, float3 interior, float bank, out float band)
 {
     band = 0.0;
     float3 colour;
     [branch]
     if (depth < bank)
     {
-        float3 face = TBBankFace(ins, m, w);
+        float3 face = TBBankFace(ins, m TB_W_ARG);
         colour = depth >= bank - 1.0 ? face * 0.75 : face;
     }
     else
     {
         float below = depth - bank;
         colour = interior;
-        float4 rim = TBRamp(ins, e, m, w, max(below - TBSwell(ins, m, worldPixel), 0.0), band);
+        float4 rim = TBRamp(ins, e, m TB_W_ARG, max(below - TBSwell(ins, m, worldPixel), 0.0), band);
         colour = TBWaves(ins, m, colour * (1.0 - rim.a) + rim.rgb, worldPixel);
         if (below < bank)
         {

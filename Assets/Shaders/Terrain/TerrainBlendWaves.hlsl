@@ -116,7 +116,7 @@ float TBWashRise(float u)
 // colour more than TB_WASH_FILM_BACK pixels behind the front; at the front, while the wave runs up and briefly after,
 // foam broken by TBWaveBreak, its front pixel the foam colour and the next its shade. Pixels the swash left within its
 // last frames are darkened, the wetter the more recently. Clear for a layer without swash or waves.
-float4 TBWash(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], float outside, float2 worldPixel)
+float4 TBWash(TBInputs ins, uint m TB_W_PARAM, float outside, float2 worldPixel)
 {
     int row = TBLayerRow(m);
     float swash = TBLut(ins, TB_LAYER_SPARKLE_TIMING_COLUMN, row).y;
@@ -126,7 +126,7 @@ float4 TBWash(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1], float outside, f
     if (swash > 0.0 && waves.x > 0.0 && outside < swash)
     {
         float framesPerSecond = TBLut(ins, TB_LAYER_ANIMATION_COLUMN, row).x;
-        float along = saturate((1.0 - w[0]) - TBSeamlessBelow(ins, m, w));
+        float along = saturate((1.0 - w[0]) - TBSeamlessBelow(ins, m TB_W_ARG));
         float reachMax = swash * along * (0.85 + 0.15 * PeriodicEdgeNoise(worldPixel * 0.5));
         float u = frac(TBWavePhase(ins, waves, framesPerSecond, 0.0, worldPixel));
         float reach = reachMax * TBWashRise(u);

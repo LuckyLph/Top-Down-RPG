@@ -10,7 +10,7 @@
 // The interior is worked out once for the edge pixel and the inside (TBLayerInterior).
 // Where the pair has tufts, pixels of the edge and of the band outside it that a tuft covers are opaque: the outline
 // along the tuft's border, the rim's outer colour inside it.
-float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
+float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float3 edge = lerp(e.fill, e.outline, e.outlineWeight);
     float tuft = 0.0;
@@ -21,7 +21,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
     }
 
     float bank;
-    float3 interior = TBLayerInterior(ins, m, e, w, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, false, (TBCentre)0, bank);
+    float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, false, (TBCentre)0, bank);
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
     [branch]
     if (tuft > 0.5)
@@ -36,20 +36,20 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
             float shadowAlpha = e.shadowAlpha * (1.0 - (d - 0.5) / max(e.shadowWidth, 0.001));
             result = float4(e.shadow * shadowAlpha, shadowAlpha);
         }
-        float4 wash = TBWash(ins, m, w, d - 0.5, worldPixel);
+        float4 wash = TBWash(ins, m TB_W_ARG, d - 0.5, worldPixel);
         result = wash + result * (1.0 - wash.a);
     }
     else if (d > -0.5)
     {
         float edgeAlpha = e.shadowAlpha + (1.0 - e.shadowAlpha) * (0.5 - d);
-        float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, interior) : edge;
-        result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)) * edgeAlpha, edgeAlpha);
+        float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e TB_W_ARG, interior) : edge;
+        result = float4(TBEdgeColour(ins, m TB_W_ARG, corner, worldPixel, lerp(edge, own, e.seamless)) * edgeAlpha, edgeAlpha);
     }
     else
     {
         float depth = -d;
         float band;
-        float3 colour = TBInside(ins, m, e, w, depth, worldPixel, interior, bank, band);
+        float3 colour = TBInside(ins, m, e TB_W_ARG, depth, worldPixel, interior, bank, band);
         if (depth < 1.5 && depth >= bank)
         {
             colour = lerp(lerp(colour, e.outline, e.outlineWeight), colour, saturate(depth - 0.5));

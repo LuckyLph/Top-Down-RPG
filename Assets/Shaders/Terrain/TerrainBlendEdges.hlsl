@@ -7,7 +7,7 @@
 // Going down from m, a lower layer that covers the pixel takes the remaining weight in proportion to how far its edge
 // lies beyond the next layer up, ramping across the pair blend width around the pair margin, so the pair settings
 // change smoothly instead of switching where the margin is crossed.
-void TBPairWeights(TBInputs ins, float d[TB_MAX_LAYERS], uint m, out float w[TB_MAX_LAYERS + 1])
+void TBPairWeights(TBInputs ins TB_D_PARAM, uint m TB_W_OUT_PARAM)
 {
     [unroll]
     for (uint i = 0u; i <= (uint)TB_MAX_LAYERS; i++)
@@ -31,7 +31,7 @@ void TBPairWeights(TBInputs ins, float d[TB_MAX_LAYERS], uint m, out float w[TB_
 
 // The edge settings of layer m at a pixel, blended from the pairs it is drawn over, each pair's look-specific part
 // added by TBAddPairEdge.
-TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
+TBEdge TBGetEdge(TBInputs ins, uint m TB_W_PARAM)
 {
     TBEdge e = (TBEdge)0;
     e.firstRow = TBFirstPairRow(ins, m);
@@ -61,7 +61,7 @@ TBEdge TBGetEdge(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
 // The rim at a depth inside the edge, premultiplied: its colour and how much of the interior it covers, each pair's
 // texel as its look reads it (TBRampTexel: in the soft look a band instead where the pair has one); band is how much
 // of the result such bands make up (0 in crisp).
-float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float depth, out float band)
+float4 TBRamp(TBInputs ins, TBEdge e, uint m TB_W_PARAM, float depth, out float band)
 {
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
     band = 0.0;
@@ -81,7 +81,7 @@ float4 TBRamp(TBInputs ins, TBEdge e, uint m, float w[TB_MAX_LAYERS + 1], float 
 
 // How much of layer m's edge at a pixel lies over another layer along a seamless pair (deep water over shallows): the
 // two are one surface there, so a sunken layer shows no bank over it.
-float TBSeamlessBelow(TBInputs ins, uint m, float w[TB_MAX_LAYERS + 1])
+float TBSeamlessBelow(TBInputs ins, uint m TB_W_PARAM)
 {
     int firstRow = TBFirstPairRow(ins, m);
     float seamless = 0.0;

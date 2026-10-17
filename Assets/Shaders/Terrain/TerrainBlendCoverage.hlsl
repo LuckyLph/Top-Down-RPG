@@ -5,7 +5,7 @@
 
 // Every layer's signed distance in pixels at a corner patch (TBLayerDistance); TB_FAR for the layers above the
 // patch's highest filled layer (TBLayersAt), which cover none of its cells, and past the area's layers.
-void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel, out float d[TB_MAX_LAYERS])
+void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel TB_D_OUT_PARAM)
 {
     float4 terms = TBDistanceTerms(ins, corner, worldPixel);
     [unroll]
@@ -22,7 +22,7 @@ void TBDistances(TBInputs ins, TBCorner corner, float2 worldPixel, out float d[T
 }
 
 // The bridge layers (TBInputs.bridges) that cover the corner patch, as bits: those whose distance is not TB_FAR.
-uint TBBridgesAt(TBInputs ins, float d[TB_MAX_LAYERS])
+uint TBBridgesAt(TBInputs ins TB_D_PARAM)
 {
     uint found = 0u;
     uint bridges = ins.bridges;
@@ -41,7 +41,7 @@ uint TBBridgesAt(TBInputs ins, float d[TB_MAX_LAYERS])
 // bridge ends on the edge of a layer painted under it, TBVisible does not hide that layer there; it draws its edge
 // pixel and what lies inside, which fill the bridge's corners, but neither its shadow nor its tufts, which would show
 // past the bridge's own edge. With _TERRAIN_WIDE the mask of the bridges from m + 2 up never shifts by 32 or more.
-bool TBNearBridgeEdge(TBInputs ins, float d[TB_MAX_LAYERS], uint bridges, uint m)
+bool TBNearBridgeEdge(TBInputs ins TB_D_PARAM, uint bridges, uint m)
 {
     bool found = false;
 #ifdef _TERRAIN_WIDE
@@ -61,7 +61,7 @@ bool TBNearBridgeEdge(TBInputs ins, float d[TB_MAX_LAYERS], uint bridges, uint m
 
 // Whether a layer is drawn at a pixel: it covers the pixel's corner patch and its edge lies at least the pair margin
 // beyond the edge of the layer above it, so where two edges coincide only the upper one is drawn.
-bool TBVisible(TBInputs ins, float d[TB_MAX_LAYERS], uint m)
+bool TBVisible(TBInputs ins TB_D_PARAM, uint m)
 {
     bool present = d[m] < TB_FAR;
     uint up = min(m + 1u, (uint)TB_MAX_LAYERS - 1u);

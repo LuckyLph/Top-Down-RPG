@@ -13,7 +13,7 @@
 // half of a pixel, opaque. Bands are shaded by the cell field's grit like the base colour. A layer that
 // turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does. The
 // interior is worked out once for the edge pixel and the inside (TBLayerInterior).
-float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float d, float2 pixel, float2 worldPixel, TBCorner corner)
+float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner)
 {
     float4 shape = TBShape(ins, m);
     float grit = 0.0;
@@ -59,25 +59,25 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e, float w[TB_MAX_LAYERS + 1], float
         }
 
         float bank;
-        float3 interior = TBLayerInterior(ins, m, e, w, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, hasCentre, centre, bank);
+        float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, hasCentre, centre, bank);
         if (tuft > 0.5)
         {
             result = float4(tuft > 1.5 ? edge : e.fill, 1.0);
         }
         else if (d > -0.5 && d < 0.5)
         {
-            float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e, w, interior) : edge;
-            result = float4(TBEdgeColour(ins, m, w, corner, worldPixel, lerp(edge, own, e.seamless)), 1.0);
+            float3 own = e.seamless > 0.0 ? TBSeamlessEdge(ins, m, e TB_W_ARG, interior) : edge;
+            result = float4(TBEdgeColour(ins, m TB_W_ARG, corner, worldPixel, lerp(edge, own, e.seamless)), 1.0);
         }
         else if (d <= -0.5)
         {
             float band;
-            float3 colour = TBInside(ins, m, e, w, -d, worldPixel, interior, bank, band);
+            float3 colour = TBInside(ins, m, e TB_W_ARG, -d, worldPixel, interior, bank, band);
             result = float4(colour + grit * band, 1.0);
         }
         else
         {
-            float4 wash = TBWash(ins, m, w, d - 0.5, worldPixel);
+            float4 wash = TBWash(ins, m TB_W_ARG, d - 0.5, worldPixel);
             if (wash.a >= 0.5)
             {
                 result = float4(wash.rgb / wash.a, 1.0);

@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Rendering;
@@ -10,12 +13,13 @@ using UnityEngine.Rendering;
 /// warnings, in every pass, for vertex and fragment, in the crisp look and with the soft look's keyword, each with and
 /// without the 2D light keyword the area's light sets, raised ground's keyword and the wide control map's keyword,
 /// since compile warnings reach the console whenever a variant compiles; and that the soft, raised ground and wide
-/// keywords are local ones the drawing passes declare. The compile test is explicit (category ShaderCompile): it runs
-/// only when asked for.
+/// keywords are local ones the drawing passes declare; and that the debug view's colours are each the probe's own layer
+/// whatever the light. The compile test is explicit (category ShaderCompile): it runs only when asked for.
 /// </summary>
 public class TerrainBlendShaderTests
 {
     private const string ShaderPath = "Assets/Shaders/Terrain/TerrainBlend.shadergraph";
+    private const string DebugPath = "Assets/Shaders/Terrain/TerrainBlendDebug.hlsl";
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string SoftKeyword = "_TERRAIN_SOFT";
     private const string RaisedKeyword = "_TERRAIN_RAISED";
@@ -111,6 +115,68 @@ public class TerrainBlendShaderTests
         }
 
         Assert.That(problems, Is.Empty);
+    }
+
+    /// <summary>
+    /// The debug view's colours (TB_DEBUG_COLOURS) are one per layer, <see cref="TerrainControlMap.NarrowLayers"/> of
+    /// them before the wide variant's and <see cref="TerrainControlMap.WideLayers"/> in all, each channel in quarters
+    /// with one full, no two alike; scaled by a white light of any intensity from 0.1 to 1 and rounded to 8 bits, as the
+    /// probe's linear render reads them, each reads back through <see cref="TerrainBlendProbe.DebugClass"/> as its own
+    /// layer.
+    /// </summary>
+    [Test]
+    public void TheDebugColours_ReadBackAsTheirOwnLayer_UnderAnyLight()
+    {
+        string source = File.ReadAllText(DebugPath);
+        int table = source.IndexOf("TB_DEBUG_COLOURS[TB_MAX_LAYERS] =", System.StringComparison.Ordinal);
+        int wide = source.IndexOf("#ifdef _TERRAIN_WIDE", table, System.StringComparison.Ordinal);
+        int end = source.IndexOf("};", table, System.StringComparison.Ordinal);
+        Assert.That(table, Is.GreaterThanOrEqualTo(0));
+        Assert.That(wide, Is.GreaterThan(table).And.LessThan(end));
+        List<Vector3> colours = new();
+        int narrow = 0;
+        foreach (Match match in Regex.Matches(source.Substring(table, end - table), @"float3\(([0-9.]+), ([0-9.]+), ([0-9.]+)\)"))
+        {
+            colours.Add(new Vector3(Parse(match.Groups[1].Value), Parse(match.Groups[2].Value), Parse(match.Groups[3].Value)));
+            narrow += table + match.Index < wide ? 1 : 0;
+        }
+
+        Assert.That(narrow, Is.EqualTo(TerrainControlMap.NarrowLayers));
+        Assert.That(colours.Count, Is.EqualTo(TerrainControlMap.WideLayers));
+        List<string> problems = new();
+        for (int i = 0; i < colours.Count; i++)
+        {
+            Vector3 colour = colours[i];
+            if (Mathf.Max(colour.x, Mathf.Max(colour.y, colour.z)) != 1f || colour * 4f != new Vector3(Mathf.Round(colour.x * 4f), Mathf.Round(colour.y * 4f), Mathf.Round(colour.z * 4f)))
+            {
+                problems.Add($"layer {i}: {colour} is not in quarters with one channel full");
+            }
+
+            if (colours.IndexOf(colour) != i)
+            {
+                problems.Add($"layer {i}: {colour} is layer {colours.IndexOf(colour)}'s colour too");
+            }
+
+            foreach (float light in new[] { 0.1f, 0.25f, 0.5f, 0.85f, 1f })
+            {
+                Color32 read = new((byte)Mathf.RoundToInt(colour.x * light * 255f), (byte)Mathf.RoundToInt(colour.y * light * 255f), (byte)Mathf.RoundToInt(colour.z * light * 255f), 255);
+                byte cls = TerrainBlendProbe.DebugClass(read);
+                if (cls != i + 1)
+                {
+                    problems.Add($"layer {i} under a light of {light}: read as class {cls}");
+                }
+            }
+        }
+
+        Assert.That(problems, Is.Empty);
+    }
+
+    /// <summary>
+    /// A number written in the HLSL.
+    /// </summary>
+    private static float Parse(string value)
+    {
+        return float.Parse(value, CultureInfo.InvariantCulture);
     }
 
     /// <summary>

@@ -36,9 +36,12 @@ public static class TerrainBlendProbe
 
     private static readonly Vector3Int[] DebugColours =
     {
-        new(2, 0, 0), new(0, 2, 0), new(2, 2, 0), new(0, 0, 2), new(2, 0, 2), new(0, 2, 2), new(2, 2, 2),
-        new(2, 1, 0), new(2, 0, 1), new(1, 2, 0), new(0, 2, 1), new(1, 0, 2), new(0, 1, 2),
-        new(2, 2, 1), new(2, 1, 2), new(1, 2, 2)
+        new(4, 0, 0), new(0, 4, 0), new(4, 4, 0), new(0, 0, 4), new(4, 0, 4), new(0, 4, 4), new(4, 4, 4),
+        new(4, 2, 0), new(4, 0, 2), new(2, 4, 0), new(0, 4, 2), new(2, 0, 4), new(0, 2, 4),
+        new(4, 4, 2), new(4, 2, 4), new(2, 4, 4),
+        new(4, 1, 0), new(4, 0, 1), new(1, 4, 0), new(0, 4, 1), new(1, 0, 4), new(0, 1, 4),
+        new(4, 3, 0), new(4, 0, 3), new(3, 4, 0), new(0, 4, 3), new(3, 0, 4), new(0, 3, 4),
+        new(4, 2, 2), new(2, 4, 2), new(2, 2, 4), new(3, 3, 4)
     };
 
     /// <summary>
@@ -541,9 +544,9 @@ public static class TerrainBlendProbe
 
     /// <summary>
     /// The layer a debug view colour shows, plus one: 0 for nothing, <see cref="UnknownClass"/> for a colour that is no
-    /// layer's. Each channel reads as off, at half or full against the brightest one, and the three levels are looked
-    /// up in <see cref="DebugColours"/> (TB_DEBUG_COLOURS in the terrain shader), so the lights' intensity does not
-    /// matter.
+    /// layer's. Each channel reads as the nearest of five levels against the brightest one (off, a quarter, half, three
+    /// quarters, full), and the three levels are looked up in <see cref="DebugColours"/> (TB_DEBUG_COLOURS in the
+    /// terrain shader, in quarters), so the lights' intensity does not matter.
     /// </summary>
     internal static byte DebugClass(Color32 c)
     {
@@ -564,7 +567,7 @@ public static class TerrainBlendProbe
 
         return UnknownClass;
 
-        static int Level(int channel, int max) => channel * 4 >= max * 3 ? 2 : channel * 4 >= max ? 1 : 0;
+        static int Level(int channel, int max) => Mathf.Min(4, (channel * 8 + max) / (max * 2));
     }
 
     /// <summary>

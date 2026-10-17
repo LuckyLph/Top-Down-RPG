@@ -20,7 +20,7 @@ using UnityEngine.Tilemaps;
 /// </summary>
 public sealed class TerrainControlMap : IDisposable
 {
-    public const int MaxLayers = 16;
+    public const int MaxLayers = 32;
     public const int NarrowLayers = 16;
     public const int WideLayers = 32;
     public const int Margin = 1;

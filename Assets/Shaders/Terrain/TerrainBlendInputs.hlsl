@@ -3,7 +3,11 @@
 
 #include "Assets/Shaders/Terrain/TerrainBlendLut.hlsl"
 
+#ifdef _TERRAIN_WIDE
+#define TB_MAX_LAYERS 32
+#else
 #define TB_MAX_LAYERS 16
+#endif
 #define TB_FAR 100.0
 #define TB_DIAGONAL_GAP 4.0
 #define TB_WHOLE_CLEARANCE 10.0

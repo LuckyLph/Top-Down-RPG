@@ -9,7 +9,7 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for the area scene template (Assets/Settings/Scenes/AreaTemplate.unity, which AreaTemplate.scenetemplate
 /// instantiates): its grid holds a ground layer for every material of the project style's layer order but those it
-/// leaves out (the ocean and lava, since a renderer draws at most 16 layers), empty, first among its children and drawn in that order
+/// leaves out (the ocean and lava, from when a renderer drew at most 16 layers), empty, first among its children and drawn in that order
 /// by a terrain renderer with the project's style and materials, their
 /// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
 /// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
@@ -65,7 +65,7 @@ public class AreaTemplateTests
 
     /// <summary>
     /// The template's grid holds a ground layer for every material of the project style's layer order but the ocean and
-    /// lava, which it leaves out since a renderer draws at most 16 layers (a generator that lists either adds its layer
+    /// lava, which it leaves out from when a renderer drew at most 16 layers (a generator that lists either adds its layer
     /// when it writes),
     /// empty, first among its children in that order, each named after its material with that material's terrain type
     /// on its navigation source, so a new area can be painted with almost anything; its terrain renderer draws them in

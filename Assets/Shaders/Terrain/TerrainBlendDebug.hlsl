@@ -3,11 +3,14 @@
 
 #include "Assets/Shaders/Terrain/TerrainBlendInputs.hlsl"
 
-// The debug colours of the layers. Each channel is off, at half or full, and at least one is full, so no two layers'
-// colours are the same up to the 2D lights' intensity: layers 0 to 6 light red, green and blue fully by the bits of the
-// layer plus one (red, green, yellow, blue, magenta, cyan, white), layers 7 to 12 one channel full and another at half
-// (orange, rose, chartreuse, spring green, violet, azure), layers 13 to 15 two channels full and the third at half
-// (light yellow, light magenta, light cyan). TerrainBlendProbe's DebugColours lists the same table.
+// The debug colours of the layers. Each channel is off, at a quarter, half, three quarters or full, and at least one is
+// full, so no two layers' colours are the same up to the 2D lights' intensity: layers 0 to 6 light red, green and blue
+// fully by the bits of the layer plus one (red, green, yellow, blue, magenta, cyan, white), layers 7 to 12 one channel
+// full and another at half (orange, rose, chartreuse, spring green, violet, azure), layers 13 to 15 two channels full
+// and the third at half (light yellow, light magenta, light cyan). With _TERRAIN_WIDE, layers 16 to 21 are layers 7 to
+// 12 with the second channel at a quarter, layers 22 to 27 the same at three quarters, layers 28 to 30 one channel full
+// and the other two at half (pale red, green, blue), and layer 31 blue full and the others at three quarters, so the
+// first 16 keep their colours. TerrainBlendProbe's DebugColours lists the same table.
 static const float3 TB_DEBUG_COLOURS[TB_MAX_LAYERS] =
 {
     float3(1.0, 0.0, 0.0),
@@ -26,6 +29,25 @@ static const float3 TB_DEBUG_COLOURS[TB_MAX_LAYERS] =
     float3(1.0, 1.0, 0.5),
     float3(1.0, 0.5, 1.0),
     float3(0.5, 1.0, 1.0)
+#ifdef _TERRAIN_WIDE
+    ,
+    float3(1.0, 0.25, 0.0),
+    float3(1.0, 0.0, 0.25),
+    float3(0.25, 1.0, 0.0),
+    float3(0.0, 1.0, 0.25),
+    float3(0.25, 0.0, 1.0),
+    float3(0.0, 0.25, 1.0),
+    float3(1.0, 0.75, 0.0),
+    float3(1.0, 0.0, 0.75),
+    float3(0.75, 1.0, 0.0),
+    float3(0.0, 1.0, 0.75),
+    float3(0.75, 0.0, 1.0),
+    float3(0.0, 0.75, 1.0),
+    float3(1.0, 0.5, 0.5),
+    float3(0.5, 1.0, 0.5),
+    float3(0.5, 0.5, 1.0),
+    float3(0.75, 0.75, 1.0)
+#endif
 };
 
 // The debug colour of a layer (TB_DEBUG_COLOURS), black for none.

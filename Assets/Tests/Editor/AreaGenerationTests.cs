@@ -2549,14 +2549,14 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The writer refuses a generator of 17 layers with an error, changing nothing in the scene, and writes one of
-    /// <see cref="TerrainControlMap.MaxLayers"/> (16): a tilemap per layer, drawn by a renderer that builds them all,
-    /// each layer's cell holding its own bit alone. The layers reuse the Clearing's grass tile and terrain type under
+    /// The writer refuses a generator of 33 layers with an error, changing nothing in the scene, and writes one of
+    /// <see cref="TerrainControlMap.MaxLayers"/> (32): a tilemap per layer, drawn by a renderer that builds them all
+    /// (wide, past 16), each layer's cell holding its own bit alone. The layers reuse the Clearing's grass tile and terrain type under
     /// their own tilemap names, each drawn with its own material made for the test, in a style whose layer order lists
     /// those materials.
     /// </summary>
     [Test]
-    public void TheWriter_WritesSixteenLayers_AndRefusesSeventeen()
+    public void TheWriter_WritesThirtyTwoLayers_AndRefusesThirtyThree()
     {
         Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
         Track(new GameObject(PropsRootName));
@@ -2571,25 +2571,26 @@ public class AreaGenerationTests
         }
 
         TerrainStyle style = TestTerrainStyle.Create(created, order);
-        TestAreaGenerator seventeen = Track(TestAreaGenerator.Create(style, layers));
-        LogAssert.Expect(LogType.Error, "TestGenerator: 17 terrain layers, but the blended terrain draws at most 16.");
-        Assert.That(AreaLayoutWriter.Write(grid, seventeen, seventeen.Generate(1)), Is.False);
+        TestAreaGenerator tooMany = Track(TestAreaGenerator.Create(style, layers));
+        LogAssert.Expect(LogType.Error, "TestGenerator: 33 terrain layers, but the blended terrain draws at most 32.");
+        Assert.That(AreaLayoutWriter.Write(grid, tooMany, tooMany.Generate(1)), Is.False);
         Assert.That(grid.transform.childCount, Is.EqualTo(0), "Nothing is written.");
         Assert.That(grid.GetComponent<TerrainBlendRenderer>(), Is.Null);
 
         layers.RemoveAt(TerrainControlMap.MaxLayers);
-        TestAreaGenerator sixteen = Track(TestAreaGenerator.Create(style, layers));
-        Assert.That(AreaLayoutWriter.Write(grid, sixteen, sixteen.Generate(1)), Is.True);
+        TestAreaGenerator most = Track(TestAreaGenerator.Create(style, layers));
+        Assert.That(AreaLayoutWriter.Write(grid, most, most.Generate(1)), Is.True);
 
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
-        Assert.That(renderer.Layers.Count, Is.EqualTo(16));
+        Assert.That(renderer.Layers.Count, Is.EqualTo(32));
         renderer.RunScheduledRebuild();
-        Assert.That(renderer.ControlMap, Is.Not.Null, "The renderer builds 16 layers.");
-        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(16));
+        Assert.That(renderer.ControlMap, Is.Not.Null, "The renderer builds 32 layers.");
+        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(32));
+        Assert.That(renderer.IsWide, Is.True, "Past 16 layers the renderer builds wide.");
         for (int i = 0; i < layers.Count; i++)
         {
             Assert.That(renderer.Layers[i].Tilemap.name, Is.EqualTo(layers[i].TilemapName));
-            Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(i, 0, 0)), Is.EqualTo(1 << i), layers[i].TilemapName);
+            Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(i, 0, 0)), Is.EqualTo(1u << i), layers[i].TilemapName);
         }
     }
 
@@ -2753,7 +2754,7 @@ public class AreaGenerationTests
     /// <summary>
     /// The project's generators (only read) list the ground layers they use, bottom first: each one's tilemap, its
     /// plain ground tile from Assets/Tiles/Ground, its terrain type and the project's material of the name given, drawn
-    /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 16, so
+    /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 32, so
     /// the writer and Convert Ground take them: each lists only what it lays, the Clearing dirt for its campsite, the
     /// Village Forest the meadow, tall grass, dirt and the plaza, the Lakeside dry grass, the meadow and tall grass among
     /// its eleven.

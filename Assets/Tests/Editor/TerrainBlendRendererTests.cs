@@ -137,7 +137,7 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// A renderer of <see cref="TerrainControlMap.MaxLayers"/> layers (16), each its own material, builds a slice per
+    /// A renderer of <see cref="TerrainControlMap.NarrowLayers"/> layers (16), each its own material, builds a slice per
     /// layer and the lookup texture's rows for 16 layers. Over a strip of the bottom layer, with each other layer
     /// filling its own 3 x 3 block, its debug view shows every layer on top in its block, each in a colour the probe
     /// tells apart from the others; a preview on the top layer shows that layer over a block, and clearing it shows the
@@ -148,7 +148,7 @@ public class TerrainBlendRendererTests
     [UnityTest]
     public IEnumerator SixteenLayers_BuildAndDrawEveryLayer_AndPreviewOnTheTopOne()
     {
-        const int count = TerrainControlMap.MaxLayers;
+        const int count = TerrainControlMap.NarrowLayers;
         TerrainBlendRenderer renderer = SixteenLayerRenderer(-1, out Tilemap[] tilemaps);
 
         Assert.That(renderer.ControlMap, Is.Not.Null);
@@ -2355,13 +2355,13 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// A renderer of <see cref="TerrainControlMap.MaxLayers"/> layers (16), each its own plain material, over a strip
+    /// A renderer of <see cref="TerrainControlMap.NarrowLayers"/> layers (16), each its own plain material, over a strip
     /// of the bottom layer 4 cells per layer long and 5 high, with each other layer filling its own 3 x 3 block
     /// (<see cref="BlockCells"/>); the material of layer <paramref name="bridge"/> is a bridge (-1 for none).
     /// </summary>
     private TerrainBlendRenderer SixteenLayerRenderer(int bridge, out Tilemap[] tilemaps)
     {
-        const int count = TerrainControlMap.MaxLayers;
+        const int count = TerrainControlMap.NarrowLayers;
         GameObject gridObject = Track(new GameObject("SixteenLayerGrid", typeof(Grid)));
         gridObject.SetActive(false);
         tilemaps = new Tilemap[count];

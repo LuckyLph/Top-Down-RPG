@@ -87,7 +87,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
-    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 16.")]
+    [Tooltip("Ground data tilemaps, bottom layer first, each with the material it draws. Upper layers draw over lower ones, and a layer's place here is also its navigation priority: reordering the layers in this inspector sets each tilemap's Navigation Terrain Source 2D priority to its new index. At most 32; past 16 it builds a wide control map, which the shader draws in its slower wide variant.")]
     [SerializeField] private Layer[] layers = new Layer[0];
     [Tooltip("Optional: the tilemap whose cells are raised ground, drawn with a cliff face along their bottom edge, or a ramp where its tile is a ramp (Raised Ground Tile). Read, never written.")]
     [SerializeField] private Tilemap raisedTilemap;

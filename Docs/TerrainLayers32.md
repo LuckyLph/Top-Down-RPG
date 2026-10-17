@@ -152,12 +152,43 @@ Notes:
 
 ### Phase 3: 32 layers
 
-- [ ] `MaxLayers` 32, and `TB_MAX_LAYERS` 32 under `_TERRAIN_WIDE` (16 without it), as Phase 1 decided. The keyword itself is declared, set in `ApplyMode` and covered by `TerrainBlendShaderTests` since Phase 2, and the renderer already builds wide past 16 layers.
-- [ ] Debug view: 16 more colours (see Decisions), in the wide variant (only it draws layers past 16), plus `TerrainBlendProbe`'s `DebugColours`, `DebugClass` and `LayerNames` for 32.
+- [x] `MaxLayers` 32, and `TB_MAX_LAYERS` 32 under `_TERRAIN_WIDE` (16 without it), as Phase 1 decided. The keyword itself is declared, set in `ApplyMode` and covered by `TerrainBlendShaderTests` since Phase 2, and the renderer already builds wide past 16 layers.
+- [x] Debug view: 16 more colours (see Decisions), in the wide variant (only it draws layers past 16), plus `TerrainBlendProbe`'s `DebugColours`, `DebugClass` and `LayerNames` for 32.
 - [ ] Checks and messages: `TerrainBlendChecks`, `AreaGroundSetup` (writer and Convert Ground) and `AreaGenerator`'s docs allow 32.
 - [ ] Tests: a 32-layer renderer builds, draws every layer and previews strokes on the top one (bit 31); the control map and the writer accept 32 layers and refuse 33; the lookup texture has 1089 rows at 32; the debug colours stay distinct.
-- [ ] Measured: the 32-layer stress scene against the 16-layer one (cost, rebuild, memory); the six areas byte for byte and no slower; the compile test's time.
+- [x] Measured: the 32-layer stress scene against the 16-layer one (cost, rebuild, memory); the six areas byte for byte and no slower; the compile test's time.
 - [ ] Go or no-go, with the reasons, in this phase's notes.
+
+Notes:
+
+- **Measured first.** The cap, the debug table, `MaxLayers` and the probe's five-level read went in first. The measurements below come from that build, before the remaining tests, checks and docs, since the go or no-go depends on them.
+- **The cap.** `TB_MAX_LAYERS` is 32 under `_TERRAIN_WIDE` and 16 without it (`TerrainBlendInputs.hlsl`). The 16 new debug colours are added to `TB_DEBUG_COLOURS` under the keyword too, so the narrow table is unchanged. `MaxLayers` is 32, so `TerrainBlendChecks` and `AreaGroundSetup` accept 32 layers. The renderer builds wide on its own past 16: the 32-layer stress scene does, without the seam.
+- **The debug colours.** Layers 16 to 21 are layers 7 to 12 (orange, rose, chartreuse, spring green, violet, azure) with the second channel at a quarter, 22 to 27 the same at three quarters, 28 to 30 one channel full and the other two at half, and 31 is (0.75, 0.75, 1). Of the colours with channels in quarters, one channel full and none already in use, (0.75, 0.75, 1) lies furthest from its nearest neighbour (1.41 quarters against 1 for the others). `TerrainBlendProbe.DebugClass` now reads each channel as the nearest quarter of the brightest one. Its `DebugColours` lists the table in quarters. Under a white light from 0.1 to 1.0, each of the 32 colours, scaled and rounded to 8 bits, reads back as itself. The probe's classification of the first 16 colours did not change any blob check (below).
+- **The compiled code.** Without the keyword the four Sprite Lit fragment variants still compile to the same DXBC as at dfbee77. With it, the cap at 32 gives 126954 / 115474 / 149170 / 130634 bytes, 114 / 174 / 119 / 180 temps, the indexable arrays 32 and 33 long, and 4740 / 4254 / 5605 / 4824 instructions (crisp, soft, crisp with raised ground, soft with raised ground). The temps are Phase 1's at a cap of 32, and the instructions are Phase 1's plus the RGBA32 decode, the high bridge half and the new mask.
+- **Byte for byte.** The six areas and the 16-layer stress scene (42 captures, 7 blob checks) match Phase 1's baseline in two passes. Built narrow, they were classified by the new five-level probe. Built wide through `SetAlwaysWide`, they ran the 32-layer cap.
+- **The 32-layer stress scene** (`BuildStressScene(32)`, 74 x 50 cells) draws all 32 layers in its debug view. Its blob check names every one (grass, dry grass to planks, then dry grass to water again), with no unknown colour and no holes: 476 blobs under 200 px in crisp, 12 in soft. Planks fall at layer 17, a bridge with nearly square corners under the layers 18 to 31 painted over them. Since a layer continues under the layers above it, the planks show as slivers of 29 and 36 px at the rounded convex corners of those layers' discs. That follows from the scene's order, which puts planks under other layers, which no area does (planks come last in the style's order), so it is not a fault.
+- **Cost**, `MeasureCost`, the mean of two runs taken alternately (the 32-layer scene wide, the 16-layer scene narrow, the 16-layer scene wide, twice), ms per frame at 7680 x 4320 zoom 2 / 7680 x 4320 zoom 3 / 1920 x 1080 zoom 3. With the chunks hidden a frame took 0.74 to 0.79 / 0.74 to 0.76 / 0.61 to 0.64 ms in every run, and runs of the same scene differ by at most 8 %.
+
+  | | crisp | soft |
+  |---|---|---|
+  | the 16-layer stress scene, narrow | 3.98 / 7.39 / 1.07 | 4.31 / 8.06 / 1.14 |
+  | the 16-layer stress scene, wide | 6.54 / 12.79 / 1.44 | 13.06 / 27.44 / 2.33 |
+  | the 32-layer stress scene (wide) | 12.73 / 25.70 / 2.52 | 28.27 / 59.56 / 5.17 |
+  | wide against narrow, 16 layers | x1.64 / x1.73 / x1.35 | x3.03 / x3.40 / x2.05 |
+  | 32 layers against 16, both wide | x1.95 / x2.01 / x1.74 | x2.16 / x2.17 / x2.22 |
+  | 32 layers wide against 16 narrow | x3.20 / x3.48 / x2.35 | x6.55 / x7.39 / x4.54 |
+
+  The wide variant costs a scene that does not need it 1.4 to 1.7 times in crisp and 2 to 3.4 times in soft, which is Phase 1's finding again: the copies of `d` and `w` at a cap of 32 cost every pixel. Sixteen more layers painted on top then double it again. At 1920 x 1080 zoom 3, a 32-layer area takes 2.5 ms in crisp and 5.2 ms in soft against about 1.1 ms for a 16-layer one. Areas of 16 layers or fewer are not affected: they run the narrow variants, whose code is unchanged.
+- **Rebuild and memory** (`MeasureRebuildAndModeSwitch`, best of five; switching the look 6.7 to 7.3 us in all three):
+
+  | | full rebuild | arrays | lookup texture | control map |
+  |---|---|---|---|---|
+  | the 16-layer stress scene, narrow | 110.7 ms | 48.00 MiB | 37 x 289, 167.1 KiB | 74 x 50 R16, 7.2 KiB |
+  | the 16-layer stress scene, wide | 108.0 ms | 48.00 MiB | 37 x 289, 167.1 KiB | 74 x 50 RGBA32, 14.5 KiB |
+  | the 32-layer stress scene | 134.1 ms | 96.00 MiB | 37 x 1089, 629.6 KiB | 74 x 50 RGBA32, 14.5 KiB |
+
+- **The compile test** took 198.5 s with the cap at 32 under the keyword, against 193.3 and 193.5 s in Phase 2 with the cap at 16 in both variants (one run, not alternated).
+- **Decided after these numbers:** go, but first try the open question "arrays that are not copied" in the wide variant only, since going wide costs a scene that does not need it up to 3.4 times in soft. Only the wide variant changes, so areas of 16 layers or fewer stay byte for byte as they are. The remaining tests, checks and docs of this phase follow the experiment.
 
 ### Phase 4: the template, the docs and the merge
 

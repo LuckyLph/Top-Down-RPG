@@ -4,17 +4,20 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Editor checks for <see cref="TerrainBlendRenderer"/>: renders a world rectangle through a temporary camera at a
 /// whole number of screen pixels per art pixel and writes it as a PNG; checks the topmost visible layer for detached
 /// blobs and holes; measures shimmer at sub-pixel camera offsets, the cost of a frame, of a rebuild and of switching
-/// the look. Any check can run in either look through <see cref="InMode{T}"/>, which puts the renderer's mode back
-/// afterwards. Shaders compile synchronously during its renders, since a render skips variants still compiling in the
-/// background. It hides renderers only through <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and
-/// is not saved, and puts back what a render hid even when the render fails, clearing the dirty mark that setting it
-/// leaves: otherwise the next save would write every prop's sorting order (set in edit mode by its
-/// <see cref="YPositionSorter"/>) into the scene as a prefab override.
+/// the look; builds the stress scene those measurements share. Any check can run in either look through
+/// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. Shaders compile synchronously during its
+/// renders, since a render skips variants still compiling in the background. It hides renderers only through
+/// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved, and puts back what a render
+/// hid even when the render fails, clearing the dirty mark that setting it leaves: otherwise the next save would write
+/// every prop's sorting order (set in edit mode by its <see cref="YPositionSorter"/>) into the scene as a prefab
+/// override.
 /// </summary>
 public static class TerrainBlendProbe
 {
@@ -23,6 +26,13 @@ public static class TerrainBlendProbe
     private const string MenuRoot = "Tools/TopDownRPG/World/Terrain/";
     private const int DebugLayers = TerrainControlMap.MaxLayers;
     private const int UnknownClass = DebugLayers + 1;
+    private const string StylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
+    private const int StressWidth = 72;
+    private const int StressHeight = 48;
+    private const int StressDiscs = 4;
+    private const int StressMinRadius = 2;
+    private const int StressMaxRadius = 5;
+    private const float StressLightIntensity = 0.85f;
 
     private static readonly Vector3Int[] DebugColours =
     {
@@ -98,6 +108,64 @@ public static class TerrainBlendProbe
         }
 
         return $"rebuild: {rebuild:F3} ms; switching the look: {modeSwitch * 1000.0:F1} us (best of {repeats})";
+    }
+
+    /// <summary>
+    /// Builds the scene the terrain's cost is measured on into the active scene and returns its renderer, so every
+    /// session measures the same ground (TerrainLayers32.md's Decisions): a white Global Light 2D at 0.85, as in the
+    /// areas, and a grid at the origin whose renderer draws <paramref name="layers"/> layers of the project's style in
+    /// the crisp look. Layer 0 is the style's first material (grass) over 72 x 48 cells; layer i above it draws the
+    /// materials after the first in the style's order in turn, starting over after the last, painted as four discs of
+    /// radius 2 to 5 cells inside the grass at spots drawn from a <see cref="System.Random"/> seeded with i, so a
+    /// scene of more layers is one of fewer with more layers on top. The caller opens an empty scene first and saves
+    /// nothing. Chunks built here are drawn from the next editor update.
+    /// </summary>
+    public static TerrainBlendRenderer BuildStressScene(int layers)
+    {
+        if (layers < 1)
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(layers), layers, "A stress scene has at least one layer.");
+        }
+
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath);
+        if (style == null || style.LayerOrder.Count < 2)
+        {
+            throw new System.InvalidOperationException($"The stress scene needs the terrain style at {StylePath}, with at least two materials in its layer order.");
+        }
+
+        GameObject lightObject = new("Global Light 2D");
+        Light2D light = lightObject.AddComponent<Light2D>();
+        light.lightType = Light2D.LightType.Global;
+        light.color = Color.white;
+        light.intensity = StressLightIntensity;
+
+        GameObject gridObject = new("StressGrid", typeof(Grid));
+        gridObject.SetActive(false);
+        TerrainBlendRenderer.Layer[] drawn = new TerrainBlendRenderer.Layer[layers];
+        int later = style.LayerOrder.Count - 1;
+        for (int i = 0; i < layers; i++)
+        {
+            TerrainMaterial material = style.LayerOrder[i == 0 ? 0 : 1 + (i - 1) % later];
+            TileBase tile = AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(material));
+            if (tile == null)
+            {
+                throw new System.InvalidOperationException($"The stress scene needs {material.name}'s tile at {TerrainTileWriter.TilePath(material)}.");
+            }
+
+            GameObject layerObject = new($"{i:00} {material.name}", typeof(Tilemap));
+            layerObject.transform.SetParent(gridObject.transform, false);
+            Tilemap tilemap = layerObject.GetComponent<Tilemap>();
+            Vector3Int[] cells = StressCells(i).ToArray();
+            TileBase[] tiles = new TileBase[cells.Length];
+            System.Array.Fill(tiles, tile);
+            tilemap.SetTiles(cells, tiles);
+            drawn[i] = new TerrainBlendRenderer.Layer(tilemap, material);
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, drawn);
+        gridObject.SetActive(true);
+        return renderer;
     }
 
     /// <summary>
@@ -324,6 +392,49 @@ public static class TerrainBlendProbe
         }
 
         return report.ToString();
+    }
+
+    /// <summary>
+    /// The cells layer <paramref name="layer"/> of the stress scene fills: for layer 0 every cell of the 72 x 48
+    /// ground, for the others four discs, each of a radius and a centre drawn in turn from a
+    /// <see cref="System.Random"/> seeded with the layer, the centre at least the radius inside the ground, so a disc
+    /// never leaves it. A cell two discs cover is listed twice.
+    /// </summary>
+    private static List<Vector3Int> StressCells(int layer)
+    {
+        List<Vector3Int> cells = new();
+        if (layer == 0)
+        {
+            for (int y = 0; y < StressHeight; y++)
+            {
+                for (int x = 0; x < StressWidth; x++)
+                {
+                    cells.Add(new Vector3Int(x, y, 0));
+                }
+            }
+
+            return cells;
+        }
+
+        System.Random random = new(layer);
+        for (int disc = 0; disc < StressDiscs; disc++)
+        {
+            int radius = random.Next(StressMinRadius, StressMaxRadius + 1);
+            int cx = random.Next(radius, StressWidth - radius);
+            int cy = random.Next(radius, StressHeight - radius);
+            for (int y = cy - radius; y <= cy + radius; y++)
+            {
+                for (int x = cx - radius; x <= cx + radius; x++)
+                {
+                    if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius)
+                    {
+                        cells.Add(new Vector3Int(x, y, 0));
+                    }
+                }
+            }
+        }
+
+        return cells;
     }
 
     /// <summary>

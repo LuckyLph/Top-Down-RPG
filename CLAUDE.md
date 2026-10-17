@@ -23,6 +23,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/TerrainTypes.md` is the plan for the next ground materials (dirt, dry grass, meadow, tall grass, planks, plaza, shallows, ocean, lava, snow, ice, raised ground), 16 ground layers per area and per-area layer sets. Follow it when adding a terrain type, changing how many or which layers an area uses, and tick off its phase checklist as steps land.
 
+`Docs/TerrainLayers32.md` is the experiment raising a terrain renderer's layers from 16 to 32 (branch `feature/terrain-32-layers`). Follow it when working on the control map, the layer cap, the stress scene or the area template on that branch, and tick off its phase checklist as steps land.
+
 Use only art generated in this project (recipes and editor tools); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.

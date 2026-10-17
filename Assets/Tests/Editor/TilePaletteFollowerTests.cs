@@ -10,7 +10,9 @@ using UnityEngine.Tilemaps;
 /// tiles painted on it the palette holding one of them, a
 /// dual-grid layer the palette holding its data tile, and an object that is no tilemap or whose tiles no palette holds
 /// finds none; and the Terrain Brush's palette check (<see cref="TerrainBrushEditor.PaletteProblem"/>) for an area that
-/// draws only some of the ground materials. The project's materials, style, tiles and palettes are only read.
+/// draws only some of the ground materials, and its offer to add the layer of a material the area lacks
+/// (<see cref="TerrainBrushEditor.MissingMaterial"/>, <see cref="TerrainBrushEditor.AddMissingLayer"/>). The project's
+/// materials, style, tiles, terrain types and palettes are only read.
 /// </summary>
 public class TilePaletteFollowerTests
 {
@@ -74,7 +76,7 @@ public class TilePaletteFollowerTests
             palettes.Add(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid)));
         }
 
-        Assert.That(style.LayerOrder.Count, Is.EqualTo(17));
+        Assert.That(style.LayerOrder.Count, Is.EqualTo(18));
         foreach (TerrainMaterial material in style.LayerOrder)
         {
             Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
@@ -162,6 +164,60 @@ public class TilePaletteFollowerTests
         Assert.That(TerrainBrushEditor.PaletteProblem(grass.gameObject, new[] { waterTile }), Does.StartWith("Water is not one of this area's ground layers"));
         Assert.That(TerrainBrushEditor.PaletteProblem(other.gameObject, new[] { waterTile }), Is.Null);
         Assert.That(TerrainBrushEditor.PaletteProblem(null, new[] { waterTile }), Is.Null);
+    }
+
+    /// <summary>
+    /// In an area drawing only grass and sand, water's tile picked on the grass layer is a material the area lacks, which
+    /// the Terrain Brush offers to add, while sand's tile and a tilemap no renderer draws are not; adding it puts the
+    /// project's water layer (WaterTilemap, Tile_Water, Terrain_Water) after the sand, at water's place in the project
+    /// style's order, as one undo step, after which the palette check names that layer as the paint target.
+    /// </summary>
+    [Test]
+    public void ThePaletteCheck_OffersToAddTheLayerOfAMaterialTheAreaLacks()
+    {
+        Undo.IncrementCurrentGroup();
+        int undoGroup = Undo.GetCurrentGroup();
+        try
+        {
+            Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
+            Tilemap grass = AddTilemap(grid, "GrassTilemap");
+            Tilemap sand = AddTilemap(grid, "SandTilemap");
+            Tilemap other = AddTilemap(grid, "Other");
+            TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+            renderer.Configure(
+                AssetDatabase.LoadAssetAtPath<TerrainStyle>("Assets/Settings/Terrain/TerrainStyle.asset"),
+                new TerrainBlendRenderer.Layer(grass, AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Grass.asset")),
+                new TerrainBlendRenderer.Layer(sand, AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Sand.asset")));
+            TileBase sandTile = AssetDatabase.LoadAssetAtPath<TileBase>($"{TerrainTileWriter.TileFolder}/Tile_Sand.asset");
+            TileBase waterTile = AssetDatabase.LoadAssetAtPath<TileBase>($"{TerrainTileWriter.TileFolder}/Tile_Water.asset");
+            TerrainMaterial water = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Water.asset");
+
+            Assert.That(TerrainBrushEditor.MissingMaterial(grass.gameObject, new[] { sandTile }), Is.Null);
+            Assert.That(TerrainBrushEditor.MissingMaterial(other.gameObject, new[] { waterTile }), Is.Null);
+            Assert.That(TerrainBrushEditor.MissingMaterial(grass.gameObject, new[] { sandTile, waterTile }), Is.SameAs(water));
+            Assert.That(TerrainBrushEditor.PaletteProblem(grass.gameObject, new[] { waterTile }), Does.EndWith("Add the Water layer to paint it."));
+
+            Tilemap added = TerrainBrushEditor.AddMissingLayer(grass.gameObject, water);
+
+            Assert.That(added, Is.Not.Null);
+            Assert.That(added.name, Is.EqualTo("WaterTilemap"));
+            Assert.That(added.transform.parent, Is.SameAs(grid.transform));
+            Assert.That(renderer.Layers.Count, Is.EqualTo(3));
+            Assert.That(renderer.Layers[2].Tilemap, Is.SameAs(added));
+            Assert.That(renderer.Layers[2].Material, Is.SameAs(water));
+            Assert.That(added.GetComponent<NavigationTerrainSource2D>().TerrainType, Is.SameAs(AssetDatabase.LoadAssetAtPath<TerrainType2D>("Assets/Settings/AI/Terrain_Water.asset")));
+            Assert.That(TerrainBrushEditor.MissingMaterial(grass.gameObject, new[] { waterTile }), Is.Null);
+            Assert.That(TerrainBrushEditor.PaletteProblem(grass.gameObject, new[] { waterTile }), Does.Contain("Pick WaterTilemap as the paint target"));
+
+            Undo.PerformUndo();
+
+            Assert.That(grid.transform.Find("WaterTilemap"), Is.Null, "Adding the layer is one undo step.");
+            Assert.That(renderer.Layers.Count, Is.EqualTo(2));
+        }
+        finally
+        {
+            Undo.RevertAllDownToGroup(undoGroup);
+        }
     }
 
     /// <summary>

@@ -78,7 +78,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 
 - Logic should be testable in EditMode with fakes (see `ManualClock`). Add or update tests in `Assets/Tests/Editor` when changing AI, combat, pathfinding, or input behaviour. PlayMode tests are for things that need the engine loop.
 - Run tests through `ProjectTestRun.Start(mode, fixtures, categories, tests)` from UnityMCP `execute_code`, not `run_tests`, and wait for `Temp/TestRunSummary.txt` with one background shell loop instead of polling (see the Tests section of `Docs/Architecture.md`). After a compile, wait for it to finish and check `read_console` for errors before running.
-- While working, run only the test classes the change touches. Run the full EditMode and PlayMode suites only when a feature is done, before merging it into `main`. Run the `ShaderCompile` category (explicit, about a minute and a half) after changing a shader, and before merging one.
+- While working, run only the test classes the change touches. Run the full EditMode and PlayMode suites only when a feature is done, before merging it into `main`. Run the `ShaderCompile` category (explicit, about three and a quarter minutes) after changing a shader, and before merging one.
 - A change is not done until it compiles with no new console errors or warnings and the relevant tests pass.
 
 ## Working conventions

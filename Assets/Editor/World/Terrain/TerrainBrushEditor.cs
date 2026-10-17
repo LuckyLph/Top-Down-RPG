@@ -22,8 +22,10 @@ using UnityEngine.Tilemaps;
 /// the preview uploads once; a clear that happens, and a preview that added chunks, have the Scene view repaint so
 /// they show at once. Updating the preview allocates nothing once its list holds the largest stroke. In the Tile
 /// Palette it warns when the picked tile is a ground material's that the target layer is not drawn with
-/// (<see cref="PaletteProblem"/>), naming the area's layer for it or saying the area has none. On every other tilemap,
-/// a renderer that is off or has not built included, it is the <see cref="DualGridBrushEditor"/>.
+/// (<see cref="PaletteProblem"/>), naming the area's layer for it, or, when the area has none, offering a button that
+/// adds that material's layer (<see cref="AddMissingLayer"/>, Docs/TerrainLayers32.md's Phase 4) and makes it the paint
+/// target. On every other tilemap, a renderer that is off or has not built included, it is the
+/// <see cref="DualGridBrushEditor"/>.
 /// </summary>
 [CustomEditor(typeof(TerrainBrush))]
 public class TerrainBrushEditor : DualGridBrushEditor
@@ -103,11 +105,85 @@ public class TerrainBrushEditor : DualGridBrushEditor
             pickedTiles.Add(cell.tile);
         }
 
-        string problem = PaletteProblem(GridPaintingState.scenePaintTarget, pickedTiles);
-        if (problem != null)
+        GameObject target = GridPaintingState.scenePaintTarget;
+        string problem = PaletteProblem(target, pickedTiles);
+        if (problem == null)
         {
-            EditorGUILayout.HelpBox(problem, MessageType.Warning);
+            return;
         }
+
+        EditorGUILayout.HelpBox(problem, MessageType.Warning);
+        TerrainMaterial missing = MissingMaterial(target, pickedTiles);
+        if (missing != null && GUILayout.Button($"Add the {missing.name} layer"))
+        {
+            Tilemap added = AddMissingLayer(target, missing);
+            if (added != null)
+            {
+                GridPaintingState.scenePaintTarget = added.gameObject;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The first ground material among <paramref name="tiles"/> (<see cref="TerrainTileWriter.MaterialOf"/>) that the
+    /// area of <paramref name="target"/>, a ground layer, has no layer for, or null when there is none or
+    /// <paramref name="target"/> is no ground layer.
+    /// </summary>
+    internal static TerrainMaterial MissingMaterial(GameObject target, IEnumerable<TileBase> tiles)
+    {
+        if (target == null || !target.TryGetComponent(out Tilemap tilemap))
+        {
+            return null;
+        }
+
+        TerrainBlendRenderer renderer = TerrainBlendRenderer.FindLayerDrawing(tilemap, out _);
+        if (renderer == null)
+        {
+            return null;
+        }
+
+        foreach (TileBase tile in tiles)
+        {
+            TerrainMaterial material = TerrainTileWriter.MaterialOf(tile);
+            if (material != null && !Draws(renderer, material))
+            {
+                return material;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Adds <paramref name="material"/>'s ground layer to the area of <paramref name="target"/>, a ground layer, at its
+    /// place in the style's layer order (<see cref="GroundLayerMigration.AddLayer(Grid, TerrainMaterial)"/>, one undo
+    /// step), and returns its tilemap; null, after logging why, when it cannot be added.
+    /// </summary>
+    internal static Tilemap AddMissingLayer(GameObject target, TerrainMaterial material)
+    {
+        TerrainBlendRenderer renderer = target != null && target.TryGetComponent(out Tilemap tilemap) ? TerrainBlendRenderer.FindLayerDrawing(tilemap, out _) : null;
+        if (renderer == null)
+        {
+            return null;
+        }
+
+        return GroundLayerMigration.AddLayer(renderer.GetComponent<Grid>(), material);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="renderer"/> lists a layer drawn with <paramref name="material"/>.
+    /// </summary>
+    private static bool Draws(TerrainBlendRenderer renderer, TerrainMaterial material)
+    {
+        foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
+        {
+            if (layer != null && layer.Material == material && layer.Tilemap != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -116,7 +192,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// A ground layer is drawn with its own material whatever tile its cells hold, so a ground material's tile (see
     /// <see cref="TerrainTileWriter.MaterialOf"/>) only paints its material on that material's layer: on another layer
     /// of the area it names the layer to pick instead, and for a material the area has no layer for (each area lists
-    /// only the layers it uses, Docs/TerrainTypes.md) it says so and how to add one.
+    /// only the layers it uses, Docs/TerrainTypes.md) it says so, and the Tile Palette offers to add it.
     /// </summary>
     internal static string PaletteProblem(GameObject target, IEnumerable<TileBase> tiles)
     {
@@ -150,7 +226,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
                 }
             }
 
-            return $"{material.name} is not one of this area's ground layers, so {tile.name} painted on {tilemap.name} would be drawn as {drawnName}. To paint {material.name} here, add its layer to the area's generator and run Convert Ground.";
+            return $"{material.name} is not one of this area's ground layers, so {tile.name} painted on {tilemap.name} would be drawn as {drawnName}. Add the {material.name} layer to paint it.";
         }
 
         return null;

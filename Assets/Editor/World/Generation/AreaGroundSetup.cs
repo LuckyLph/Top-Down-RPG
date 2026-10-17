@@ -178,6 +178,47 @@ internal static class AreaGroundSetup
             }
         }
 
+        return ApplyPlan(grid, style, layers, plan, changes);
+    }
+
+    /// <summary>
+    /// Adds <paramref name="layer"/> to the ground layers <paramref name="grid"/>'s renderer draws, at its material's
+    /// place in <paramref name="style"/>'s layer order (above the layers whose material comes before it there, below
+    /// the others), and returns its tilemap (created empty when missing), for the caller to fill. Every layer the
+    /// renderer draws stays drawn in its order, empty ones included; the layers come first among the grid's children in
+    /// draw order with their index as navigation priority, <paramref name="layer"/>'s navigation source taking its
+    /// terrain type, as in <see cref="SetUpLayers"/>, recorded in the same order for undo. The caller checks that the
+    /// renderer does not draw the material yet and that the layers stay within <see cref="TerrainControlMap.MaxLayers"/>.
+    /// </summary>
+    public static Tilemap InsertLayer(Grid grid, TerrainStyle style, AreaGenerator.TerrainLayer layer, List<string> changes)
+    {
+        AreaGenerator.TerrainLayer[] layers = { layer };
+        List<PlannedLayer> plan = OtherDrawnLayers(grid, layers);
+        foreach (PlannedLayer drawn in plan)
+        {
+            drawn.Rank = style.LayerOrderIndexOf(drawn.Material);
+            drawn.Rank = drawn.Rank < 0 ? int.MaxValue : drawn.Rank;
+        }
+
+        int rank = style.LayerOrderIndexOf(layer.Material);
+        int place = plan.Count;
+        while (place > 0 && plan[place - 1].Rank > rank)
+        {
+            place--;
+        }
+
+        plan.Insert(place, new PlannedLayer { Layer = layer, Material = layer.Material, Rank = rank });
+        return ApplyPlan(grid, style, layers, plan, changes)[0];
+    }
+
+    /// <summary>
+    /// Has <paramref name="grid"/> draw the layers of <paramref name="plan"/>, bottom first, and returns the tilemaps of
+    /// <paramref name="layers"/> (the plan's entries with a layer) in their order: each of them prepared
+    /// (<see cref="PrepareLayer"/>), every layer first among the grid's children in draw order, each one's navigation
+    /// source given its index as priority (and its layer's terrain type), then the renderer set to draw them.
+    /// </summary>
+    private static Tilemap[] ApplyPlan(Grid grid, TerrainStyle style, IReadOnlyList<AreaGenerator.TerrainLayer> layers, List<PlannedLayer> plan, List<string> changes)
+    {
         Tilemap[] tilemaps = new Tilemap[layers.Count];
         int sibling = 0;
         foreach (PlannedLayer planned in plan)

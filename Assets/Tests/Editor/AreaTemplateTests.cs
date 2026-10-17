@@ -8,23 +8,20 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for the area scene template (Assets/Settings/Scenes/AreaTemplate.unity, which AreaTemplate.scenetemplate
-/// instantiates): its grid holds a ground layer for every material of the project style's layer order but those it
-/// leaves out (the ocean and lava, from when a renderer drew at most 16 layers), empty, first among its children and drawn in that order
-/// by a terrain renderer with the project's style and materials, their
-/// navigation priorities in step, an empty collision tilemap the navigation grid blocks and the area's terrain lists,
-/// empty Props and MobSpawns roots and a start spawn point; and each generator's layout can be written into it, which
-/// trims it to the generator's layers, after which its renderer builds and its navigation grid blocks exactly the
-/// footprints, the water, except under a dock, the ocean, lava and the cliff of raised ground; a generator that lists
-/// the ocean or lava, which the template leaves out, gets its layer from the writer, and one with raised ground its raised tilemap. The template is opened
-/// beside the open scenes and closed without saving.
+/// instantiates): its grid holds one ground layer, the grass, empty, first among its children and drawn by a terrain
+/// renderer with the project's style and grass material, its navigation priority in step, then an empty collision
+/// tilemap the navigation grid blocks; the area's terrain fills the grass with its tile, and the scene has empty Props
+/// and MobSpawns roots and a start spawn point. Every other material's layer is added when an area needs it (the
+/// Terrain Brush's button, the writer, Convert Ground; Docs/TerrainLayers32.md's Phase 4), so a new area lists only the
+/// layers it uses. Each generator's layout can be written into it, the writer creating the generator's layers, after
+/// which its renderer builds and its navigation grid blocks exactly the footprints, the water, except under a dock, the
+/// ocean, lava and the cliff of raised ground. The template is opened beside the open scenes and closed without saving.
 /// </summary>
 public class AreaTemplateTests
 {
     private const string TemplatePath = "Assets/Settings/Scenes/AreaTemplate.unity";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string CollisionTilemapName = "CollisionTilemap";
-
-    private static readonly string[] LeftOut = { "Ocean", "Lava" };
 
     private static readonly string[] GeneratorPaths =
     {
@@ -64,68 +61,42 @@ public class AreaTemplateTests
     }
 
     /// <summary>
-    /// The template's grid holds a ground layer for every material of the project style's layer order but the ocean and
-    /// lava, which it leaves out from when a renderer drew at most 16 layers (a generator that lists either adds its layer
-    /// when it writes),
-    /// empty, first among its children in that order, each named after its material with that material's terrain type
-    /// on its navigation source, so a new area can be painted with almost anything; its terrain renderer draws them in
-    /// that order with the style, priorities in step, and every generator's layers but the left-out ones are among them. The navigation grid blocks the
-    /// empty collision tilemap, the area's terrain fills the grass layer with its tile, and the scene has empty Props
-    /// and MobSpawns roots and a start spawn point.
+    /// The template's grid holds one ground layer, the grass, empty, first among its children, a data tilemap with the
+    /// grass's terrain type on its navigation source, which the terrain renderer draws with the project's style and grass
+    /// material, priorities in step; every other material's layer is added when an area needs it, so a new area lists
+    /// only what it uses and stays narrow until it uses more than 16 materials. Every generator draws with that
+    /// style. The navigation grid blocks the empty collision tilemap, the area's terrain fills the grass layer with its
+    /// tile, and the scene has empty Props and MobSpawns roots and a start spawn point.
     /// </summary>
     [Test]
-    public void TheTemplate_HoldsALayerForEveryMaterialOfTheSharedOrder_Empty()
+    public void TheTemplate_HoldsOnlyTheGrassLayer_Empty()
     {
         Grid grid = TemplateGrid();
         AreaGenerator lakeside = AssetDatabase.LoadAssetAtPath<AreaGenerator>(GeneratorPaths[2]);
         TerrainStyle style = lakeside.TerrainStyle;
+        TerrainMaterial grass = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{TerrainTileWriter.MaterialFolder}/Grass.asset");
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Assert.That(renderer, Is.Not.Null);
         Assert.That(renderer.Style, Is.SameAs(style));
-        List<TerrainMaterial> held = new();
-        foreach (TerrainMaterial material in style.LayerOrder)
-        {
-            if (System.Array.IndexOf(LeftOut, material.name) < 0)
-            {
-                held.Add(material);
-            }
-            else
-            {
-                Assert.That(grid.transform.Find($"{material.name}Tilemap"), Is.Null, $"{material.name} is left out");
-            }
-        }
-
-        Assert.That(held.Count, Is.EqualTo(style.LayerOrder.Count - LeftOut.Length), "every left-out material is in the order");
-        Assert.That(held.Count, Is.LessThanOrEqualTo(TerrainControlMap.MaxLayers));
-        Assert.That(renderer.Layers.Count, Is.EqualTo(held.Count));
-        for (int i = 0; i < held.Count; i++)
-        {
-            TerrainMaterial material = held[i];
-            Transform child = grid.transform.Find($"{material.name}Tilemap");
-            Assert.That(child, Is.Not.Null, material.name);
-            Assert.That(child.GetSiblingIndex(), Is.EqualTo(i), $"{child.name} at its place");
-            Tilemap tilemap = child.GetComponent<Tilemap>();
-            Assert.That(tilemap.GetUsedTilesCount(), Is.Zero, $"{child.name} is empty");
-            Assert.That(child.GetComponent<TilemapRenderer>(), Is.Null, $"{child.name} is a data tilemap");
-            Assert.That(child.GetComponent<NavigationTerrainSource2D>().TerrainType, Is.SameAs(AssetDatabase.LoadAssetAtPath<TerrainType2D>($"Assets/Settings/AI/Terrain_{material.name}.asset")), child.name);
-            Assert.That(renderer.Layers[i].Tilemap, Is.SameAs(tilemap), $"layer {i}");
-            Assert.That(renderer.Layers[i].Material, Is.SameAs(material), $"layer {i}");
-        }
-
+        Assert.That(renderer.Layers.Count, Is.EqualTo(1));
+        Transform child = grid.transform.Find(GroundLayerMigration.TilemapName(grass));
+        Assert.That(child, Is.Not.Null);
+        Assert.That(child.GetSiblingIndex(), Is.Zero, "The grass layer comes first.");
+        Tilemap tilemap = child.GetComponent<Tilemap>();
+        Assert.That(tilemap.GetUsedTilesCount(), Is.Zero, "The grass layer is empty.");
+        Assert.That(child.GetComponent<TilemapRenderer>(), Is.Null, "The grass layer is a data tilemap.");
+        Assert.That(child.GetComponent<NavigationTerrainSource2D>().TerrainType, Is.SameAs(AssetDatabase.LoadAssetAtPath<TerrainType2D>(GroundLayerMigration.TerrainTypePath(grass))));
+        Assert.That(renderer.Layers[0].Tilemap, Is.SameAs(tilemap));
+        Assert.That(renderer.Layers[0].Material, Is.SameAs(grass));
         Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
         foreach (string generatorPath in GeneratorPaths)
         {
-            AreaGenerator generator = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
-            Assert.That(generator.TerrainStyle, Is.SameAs(style), generatorPath);
-            foreach (AreaGenerator.TerrainLayer layer in generator.TerrainLayers)
-            {
-                if (System.Array.IndexOf(LeftOut, layer.Material.name) >= 0)
-                {
-                    continue;
-                }
+            Assert.That(AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath).TerrainStyle, Is.SameAs(style), generatorPath);
+        }
 
-                Assert.That(renderer.LayerIndexOf(grid.transform.Find(layer.TilemapName).GetComponent<Tilemap>()), Is.GreaterThanOrEqualTo(0), $"{generatorPath}: {layer.TilemapName}");
-            }
+        foreach (Transform layer in grid.transform)
+        {
+            Assert.That(layer == child || layer.name == CollisionTilemapName, Is.True, $"{layer.name} is no ground layer of the template");
         }
 
         Tilemap collision = grid.transform.Find(CollisionTilemapName).GetComponent<Tilemap>();
@@ -141,13 +112,14 @@ public class AreaTemplateTests
     }
 
     /// <summary>
-    /// Each project generator's layout can be written into the template, which the generator trims to its own layers:
-    /// the layers it does not list, all empty, are removed, and the renderer draws exactly the generator's, in its
-    /// order. The renderer then builds, and the navigation grid blocks exactly the footprint cells, the water, except
-    /// under a dock, the ocean and lava, on the ground (the Coast's ocean and the Lava Fields' lava layers, which the
-    /// template leaves out, created by the writer). A generator whose ground is not grass (the Snowfield's snow, the Lava Fields' dirt) has the
-    /// area's terrain pointed at its ground layer first, as a new area of that ground is, or the template's empty grass
-    /// layer, which the area's terrain lists, would be kept.
+    /// Each project generator's layout can be written into the template: the writer creates the generator's layers,
+    /// removes the empty grass layer when the generator does not list it, and the renderer draws exactly the generator's
+    /// layers, in its order. The renderer then builds, and the navigation grid blocks exactly the footprint cells, the
+    /// water, except under a dock, the ocean and lava, on the ground. A generator whose ground is not grass (the
+    /// Snowfield's snow, the Lava Fields' dirt) first has its ground layer added
+    /// (<see cref="GroundLayerMigration.AddLayer(Grid, AreaGenerator.TerrainLayer)"/>, as the Terrain Brush's button
+    /// does) and the area's terrain pointed at it, as a new area of that ground has, or the template's empty grass layer,
+    /// which the area's terrain lists, would be kept.
     /// </summary>
     [TestCase("Assets/Settings/Generation/Generator_Clearing.asset")]
     [TestCase("Assets/Settings/Generation/Generator_VillageForest.asset")]
@@ -155,14 +127,18 @@ public class AreaTemplateTests
     [TestCase("Assets/Settings/Generation/Generator_Snowfield.asset")]
     [TestCase("Assets/Settings/Generation/Generator_Coast.asset")]
     [TestCase("Assets/Settings/Generation/Generator_LavaFields.asset")]
-    public void TheTemplate_TakesAGeneratedLayout_TrimmedToTheGeneratorsLayers(string generatorPath)
+    public void TheTemplate_TakesAGeneratedLayout_WithTheGeneratorsLayers(string generatorPath)
     {
         Grid grid = TemplateGrid();
         AreaGenerator generator = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
         AreaLayout layout = generator.Generate(3);
+        AreaGenerator.TerrainLayer ground = generator.TerrainLayers[0];
+        Transform groundLayer = grid.transform.Find(ground.TilemapName);
+        Tilemap groundTilemap = groundLayer != null ? groundLayer.GetComponent<Tilemap>() : GroundLayerMigration.AddLayer(grid, ground);
+        Assert.That(groundTilemap, Is.Not.Null, ground.TilemapName);
         SerializedObject terrain = new(grid.GetComponent<AreaTerrain>());
         SerializedProperty groundEntry = terrain.FindProperty("layers").GetArrayElementAtIndex(0).FindPropertyRelative("tilemap");
-        groundEntry.objectReferenceValue = grid.transform.Find(generator.TerrainLayers[0].TilemapName).GetComponent<Tilemap>();
+        groundEntry.objectReferenceValue = groundTilemap;
         terrain.ApplyModifiedProperties();
 
         Assert.That(AreaLayoutWriter.Write(grid, generator, layout), Is.True);

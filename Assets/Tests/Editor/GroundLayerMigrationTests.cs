@@ -15,7 +15,11 @@ using UnityEngine.Tilemaps;
 /// in order and the navigation priorities from that order, creates a layer the area lacks empty at its place, keeps a
 /// painted layer it does not list (or an empty one the area terrain edits) at its place in the style's layer order and
 /// removes an empty one, sets the area terrain's fill tiles, leaves the walls alone, is undone in one step, and changes
-/// nothing when run again; for a generator with raised ground it sets up the raised tilemap, keeping its cells.
+/// nothing when run again; for a generator with raised ground it sets up the raised tilemap, keeping its cells. Adding
+/// one layer (<see cref="GroundLayerMigration.AddLayer(Grid, AreaGenerator.TerrainLayer)"/>) puts it at its material's
+/// place in the order and keeps every other layer, empty ones included, is undone in one step, is refused for a material
+/// the area draws or the order does not list and for a grid without a renderer, and past 16 layers makes the renderer
+/// build wide, up to 32.
 /// </summary>
 public class GroundLayerMigrationTests
 {
@@ -453,6 +457,170 @@ public class GroundLayerMigrationTests
 
         Assert.That(grass.GetComponent<DualGridTilemapModule>(), Is.Not.Null);
         Assert.That(grid.GetComponent<TerrainBlendRenderer>(), Is.Null);
+    }
+
+    /// <summary>
+    /// Adding the sand, water and weeds layers to the converted area puts each at its material's place in the style's
+    /// order (grass, weeds, sand, gravel, stone, water): created empty under the grid at that place among its children,
+    /// with a navigation source of its terrain type, every layer's priority its draw order, and drawn there by the
+    /// renderer. The empty sand layer stays when the others are added, and the painted layers keep their cells, which the
+    /// rebuilt control map holds at their new bits.
+    /// </summary>
+    [Test]
+    public void AddLayer_PutsTheLayerAtItsPlace_KeepingEveryOtherLayer_EmptyOnesIncluded()
+    {
+        GroundLayerMigration.Migrate(grid, style, layers);
+        AreaGenerator.TerrainLayer sand = NewLayer("Sand", sandMaterial);
+        AreaGenerator.TerrainLayer water = NewLayer("Water", waterMaterial);
+        AreaGenerator.TerrainLayer weeds = NewLayer("Weeds", weedsMaterial);
+
+        Tilemap sandLayer = GroundLayerMigration.AddLayer(grid, sand);
+        Tilemap waterLayer = GroundLayerMigration.AddLayer(grid, water);
+        Tilemap weedsLayer = GroundLayerMigration.AddLayer(grid, weeds);
+
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Tilemap[] drawn = { Layer(0), weedsLayer, sandLayer, Layer(1), Layer(2), waterLayer };
+        TerrainMaterial[] materials = { layers[0].Material, weedsMaterial, sandMaterial, layers[1].Material, layers[2].Material, waterMaterial };
+        Assert.That(renderer.Layers.Count, Is.EqualTo(drawn.Length));
+        for (int i = 0; i < drawn.Length; i++)
+        {
+            Assert.That(renderer.Layers[i].Tilemap, Is.SameAs(drawn[i]), $"layer {i}");
+            Assert.That(renderer.Layers[i].Material, Is.SameAs(materials[i]), $"layer {i}");
+            Assert.That(drawn[i].transform.parent, Is.SameAs(grid.transform), $"layer {i}");
+            Assert.That(drawn[i].transform.GetSiblingIndex(), Is.EqualTo(i), $"layer {i}");
+            Assert.That(drawn[i].GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), $"layer {i}");
+        }
+
+        foreach (AreaGenerator.TerrainLayer added in new[] { sand, water, weeds })
+        {
+            Tilemap tilemap = grid.transform.Find(added.TilemapName).GetComponent<Tilemap>();
+            Assert.That(tilemap.GetUsedTilesCount(), Is.Zero, $"{added.TilemapName} is empty");
+            Assert.That(tilemap.GetComponent<TilemapRenderer>(), Is.Null);
+            Assert.That(tilemap.GetComponent<NavigationTerrainSource2D>().TerrainType, Is.SameAs(added.TerrainType));
+        }
+
+        AssertHolds(Layer(0), GrassCells, layers[0].Tile);
+        AssertHolds(Layer(1), GravelCells, layers[1].Tile);
+        AssertHolds(Layer(2), StoneCells, layers[2].Tile);
+        Assert.That(renderer.HasNavigationPrioritiesInStep(), Is.True);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap.GetCell(new Vector3Int(1, 1, 0)), Is.EqualTo(0b1001u), "Grass (0) and gravel (3) fill that cell.");
+        Assert.That(renderer.ControlMap.GetCell(new Vector3Int(2, 1, 0)), Is.EqualTo(0b10001u), "Grass (0) and stone (4) fill that cell.");
+    }
+
+    /// <summary>
+    /// Each added layer is one undo step: undoing the water layer removes it and puts the renderer's layers and the
+    /// navigation priorities back as they were, and undoing the sand layer next leaves the converted area.
+    /// </summary>
+    [Test]
+    public void AddLayer_IsUndoneInOneStep()
+    {
+        GroundLayerMigration.Migrate(grid, style, layers);
+        GroundLayerMigration.AddLayer(grid, NewLayer("Sand", sandMaterial));
+        GroundLayerMigration.AddLayer(grid, NewLayer("Water", waterMaterial));
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+
+        Undo.PerformUndo();
+
+        Assert.That(grid.transform.Find("WaterTilemap"), Is.Null, "The water layer is gone.");
+        Assert.That(renderer.Layers.Count, Is.EqualTo(4));
+        Assert.That(renderer.Layers[1].Material, Is.SameAs(sandMaterial));
+        Assert.That(Layer(2).GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(3));
+
+        Undo.PerformUndo();
+
+        Assert.That(grid.transform.Find("SandTilemap"), Is.Null, "The sand layer is gone.");
+        Assert.That(renderer.Layers.Count, Is.EqualTo(3));
+        for (int i = 0; i < layers.Length; i++)
+        {
+            Assert.That(renderer.Layers[i].Tilemap, Is.SameAs(Layer(i)), $"layer {i}");
+            Assert.That(Layer(i).GetComponent<NavigationTerrainSource2D>().Priority, Is.EqualTo(TerrainBlendRenderer.NavigationPriorityOf(i)), $"layer {i}");
+        }
+    }
+
+    /// <summary>
+    /// A layer is refused, with an error and nothing changed, on a grid without a terrain renderer, for a material the
+    /// renderer already draws, and for one its style's layer order does not list.
+    /// </summary>
+    [Test]
+    public void AddLayer_IsRefused_WithoutARenderer_ForADrawnMaterial_AndForOneTheOrderDoesNotList()
+    {
+        LogAssert.Expect(LogType.Error, "Grid: has no TerrainBlendRenderer with a terrain style to add Sand's layer to.");
+        Assert.That(GroundLayerMigration.AddLayer(grid, NewLayer("Sand", sandMaterial)), Is.Null);
+        Assert.That(grid.transform.Find("SandTilemap"), Is.Null);
+
+        GroundLayerMigration.Migrate(grid, style, layers);
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        LogAssert.Expect(LogType.Error, "Grid: already draws Gravel on GravelTilemap.");
+        Assert.That(GroundLayerMigration.AddLayer(grid, NewLayer("Gravel2", layers[1].Material)), Is.Null);
+        LogAssert.Expect(LogType.Error, new Regex("layer order does not list Lava"));
+        Assert.That(GroundLayerMigration.AddLayer(grid, NewLayer("Lava", TestTerrainStyle.PlainMaterial("Lava", TerrainMaterial.CellMode.None, created))), Is.Null);
+
+        Assert.That(renderer.Layers.Count, Is.EqualTo(layers.Length));
+        Assert.That(grid.transform.Find("Gravel2Tilemap"), Is.Null);
+        Assert.That(grid.transform.Find("LavaTilemap"), Is.Null);
+    }
+
+    /// <summary>
+    /// On a grid of 16 layers, adding a 17th makes the renderer list 17 and build wide (an RGBA32 control map); layers
+    /// can be added up to <see cref="TerrainControlMap.MaxLayers"/> (32), and a 33rd is refused.
+    /// </summary>
+    [Test]
+    public void AddLayer_PastSixteen_MakesTheRendererBuildWide_UpToThirtyTwo()
+    {
+        Grid wideGrid = Track(new GameObject("WideGrid")).AddComponent<Grid>();
+        TerrainMaterial[] order = new TerrainMaterial[TerrainControlMap.MaxLayers + 1];
+        AreaGenerator.TerrainLayer[] all = new AreaGenerator.TerrainLayer[order.Length];
+        for (int i = 0; i < order.Length; i++)
+        {
+            order[i] = TestTerrainStyle.PlainMaterial($"Material{i}", TerrainMaterial.CellMode.None, created);
+            all[i] = NewLayer($"Material{i}", order[i]);
+        }
+
+        TerrainStyle wideStyle = TestTerrainStyle.Create(created, order);
+        AreaGenerator.TerrainLayer[] narrow = new AreaGenerator.TerrainLayer[TerrainControlMap.NarrowLayers];
+        System.Array.Copy(all, narrow, narrow.Length);
+        AddTilemapUnder(wideGrid, narrow[0].TilemapName).SetTile(Vector3Int.zero, narrow[0].Tile);
+        GroundLayerMigration.Migrate(wideGrid, wideStyle, narrow);
+        TerrainBlendRenderer renderer = wideGrid.GetComponent<TerrainBlendRenderer>();
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.IsWide, Is.False, "16 layers build narrow.");
+
+        Assert.That(GroundLayerMigration.AddLayer(wideGrid, all[TerrainControlMap.NarrowLayers]), Is.Not.Null);
+        renderer.RunScheduledRebuild();
+
+        Assert.That(renderer.Layers.Count, Is.EqualTo(TerrainControlMap.NarrowLayers + 1));
+        Assert.That(renderer.IsWide, Is.True, "A 17th layer builds wide.");
+        for (int i = TerrainControlMap.NarrowLayers + 1; i < TerrainControlMap.MaxLayers; i++)
+        {
+            Assert.That(GroundLayerMigration.AddLayer(wideGrid, all[i]), Is.Not.Null, $"layer {i}");
+        }
+
+        Assert.That(renderer.Layers.Count, Is.EqualTo(TerrainControlMap.MaxLayers));
+        LogAssert.Expect(LogType.Error, "WideGrid: already draws 32 ground layers, the most a TerrainBlendRenderer draws, so Material32's cannot be added.");
+        Assert.That(GroundLayerMigration.AddLayer(wideGrid, all[TerrainControlMap.MaxLayers]), Is.Null);
+        renderer.RunScheduledRebuild();
+        Assert.That(renderer.ControlMap, Is.Not.Null, "32 layers build.");
+        Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(TerrainControlMap.MaxLayers));
+    }
+
+    /// <summary>
+    /// A layer named after <paramref name="name"/> drawn with <paramref name="material"/>, with a tile and a terrain type
+    /// made for the test.
+    /// </summary>
+    private AreaGenerator.TerrainLayer NewLayer(string name, TerrainMaterial material)
+    {
+        return new AreaGenerator.TerrainLayer($"{name}Tilemap", CreateTile($"Tile_{name}"), Track(TerrainType2D.Create(name)), material);
+    }
+
+    /// <summary>
+    /// Adds a plain tilemap named <paramref name="name"/> under <paramref name="parent"/>.
+    /// </summary>
+    private static Tilemap AddTilemapUnder(Grid parent, string name)
+    {
+        GameObject child = new(name, typeof(Tilemap));
+        child.transform.SetParent(parent.transform, false);
+        return child.GetComponent<Tilemap>();
     }
 
     /// <summary>

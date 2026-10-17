@@ -7,10 +7,12 @@ using UnityEngine;
 /// holding both looks, so switching between them needs no rebuild. Its layout is named twice, by the constants here and
 /// by the #defines of Assets/Shaders/Terrain/TerrainBlendLut.hlsl (TB_ and the constant's name in capitals with
 /// underscores), which TerrainBlendLutTests checks agree. Row <see cref="SharedRow"/> holds the shared settings at
-/// <see cref="SharedColumn"/>: (edge noise, pair margin, pair blend, the bridge layers as bits: bit i for a layer i whose
-/// material is a bridge). Row <see cref="LayerRow"/> holds a layer's material: at <see cref="LayerShapeColumn"/>
-/// (outer radius, inner radius, repeat in pixels, cell mode), at <see cref="LayerChipsColumn"/> (keep margin, cut gap,
-/// cut bevel, 1 when the material has cut stones and one of the layer's pairs shows them whole in the soft look), at
+/// <see cref="SharedColumn"/>: (edge noise, pair margin, pair blend, the low 16 bits of the bridge layers: bit i for a
+/// layer i whose material is a bridge), and at <see cref="SharedHighBridgesColumn"/> the high 16 bits of the bridge
+/// layers in its first value, empty for 16 layers or fewer. Row <see cref="LayerRow"/> holds a layer's material: at
+/// <see cref="LayerShapeColumn"/> (outer radius, inner radius, repeat in pixels, cell mode), at
+/// <see cref="LayerChipsColumn"/> (keep margin, cut gap, cut bevel, 1 when the material has cut stones and one of the
+/// layer's pairs shows them whole in the soft look), at
 /// <see cref="LayerBaseColumn"/> its base colour, at <see cref="LayerHeightColumn"/> (soft height scale, 0 without a
 /// height texture, 1 when the material turns to its runs), for an animated material at
 /// <see cref="LayerAnimationColumn"/> (frames per second, glint period, glint duty, rim swell), at
@@ -42,6 +44,7 @@ public static class TerrainBlendLut
     public const int SharedCliffEdgeColumn = 3;
     public const int SharedCliffShadowColumn = 4;
     public const int SharedCliffRimColumn = 5;
+    public const int SharedHighBridgesColumn = 6;
     public const int LayerShapeColumn = 0;
     public const int LayerChipsColumn = 1;
     public const int LayerBaseColumn = 2;
@@ -105,7 +108,9 @@ public static class TerrainBlendLut
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
-        texels[SharedRow * Width + SharedColumn] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, BridgeBits(layerMaterials));
+        uint bridges = BridgeBits(layerMaterials);
+        texels[SharedRow * Width + SharedColumn] = new Color(style.EdgeNoise, style.PairMargin, style.PairBlend, bridges & 0xFFFFu);
+        texels[SharedRow * Width + SharedHighBridgesColumn] = new Color(bridges >> 16, 0f, 0f, 0f);
         if (raised)
         {
             int shared = SharedRow * Width;
@@ -199,17 +204,17 @@ public static class TerrainBlendLut
     }
 
     /// <summary>
-    /// The bits of the layers drawing a bridge material (<see cref="TerrainMaterial.Bridge"/>), bit i for layer i, as
-    /// the shader reads them from row 0: a float holds every one of 16 bits exactly.
+    /// The bits of the layers drawing a bridge material (<see cref="TerrainMaterial.Bridge"/>), bit i for layer i. Row 0
+    /// holds them in two halves of 16 bits, since a float holds every one of 16 bits exactly but not of 32.
     /// </summary>
-    public static float BridgeBits(IReadOnlyList<TerrainMaterial> layerMaterials)
+    public static uint BridgeBits(IReadOnlyList<TerrainMaterial> layerMaterials)
     {
-        int bits = 0;
+        uint bits = 0u;
         for (int layer = 0; layer < layerMaterials.Count; layer++)
         {
             if (layerMaterials[layer] != null && layerMaterials[layer].Bridge)
             {
-                bits |= 1 << layer;
+                bits |= 1u << layer;
             }
         }
 

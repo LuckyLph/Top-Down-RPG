@@ -5,8 +5,9 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for <see cref="TerrainCoastMap"/>: the signed distance to the coast of the layer with waves, rising out to sea
-/// and falling inland, the map's edge never a coast, a bridge over the land leaving it land, a single texel without a
-/// layer with waves, and the distances worked out again only when the coast moves.
+/// and falling inland, the map's edge never a coast, a bridge over the land leaving it land (in a map of three layers and
+/// in the top layers of a wide one), a single texel without a layer with waves, and the distances worked out again only
+/// when the coast moves.
 /// </summary>
 public class TerrainCoastMapTests
 {
@@ -73,7 +74,7 @@ public class TerrainCoastMapTests
     public void TheDistance_RisesOutToSea_AndFallsInland()
     {
         TerrainControlMap controlMap = ControlMap();
-        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0);
+        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0u);
 
         float previous = float.MinValue;
         for (int cy = CoastRow - 2; cy < Size - 2; cy++)
@@ -96,7 +97,7 @@ public class TerrainCoastMapTests
     {
         Paint(SeaLayer, 0, 0, Size - 1, Size - 1);
         TerrainControlMap controlMap = ControlMap();
-        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0);
+        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0u);
 
         foreach (ushort texel in coastMap.Texture.GetPixelData<ushort>(0))
         {
@@ -114,11 +115,35 @@ public class TerrainCoastMapTests
         Paint(DockLayer, 6, 2, 9, CoastRow + 1);
         TerrainControlMap controlMap = ControlMap();
 
-        TerrainCoastMap asSea = Build(controlMap, SeaLayer, 0);
-        TerrainCoastMap asBridge = Build(controlMap, SeaLayer, 1 << DockLayer);
+        TerrainCoastMap asSea = Build(controlMap, SeaLayer, 0u);
+        TerrainCoastMap asBridge = Build(controlMap, SeaLayer, 1u << DockLayer);
 
         Assert.That(DistanceAt(asSea, controlMap, 8, 3), Is.GreaterThan(0f));
         Assert.That(DistanceAt(asBridge, controlMap, 8, 3), Is.LessThan(-32f));
+    }
+
+    /// <summary>
+    /// In a wide control map whose sand, sea and dock are its last three layers (29 to 31, the dock's bit the top one),
+    /// the dock over the beach counts as sea when it is no bridge and as land when it is one, as in a map of three layers.
+    /// </summary>
+    [Test]
+    public void ABridgeOverTheLand_LeavesItLand_InTheTopLayersOfAWideMap()
+    {
+        Paint(DockLayer, 6, 2, 9, CoastRow + 1);
+        Tilemap[] wide = new Tilemap[TerrainControlMap.WideLayers];
+        int first = wide.Length - layers.Length;
+        layers.CopyTo(wide, first);
+        TerrainControlMap controlMap = new(wide, true);
+        controlMap.Apply();
+        disposables.Add(controlMap);
+
+        TerrainCoastMap asSea = Build(controlMap, first + SeaLayer, 0u);
+        TerrainCoastMap asBridge = Build(controlMap, first + SeaLayer, 1u << (first + DockLayer));
+
+        Assert.That(first + DockLayer, Is.EqualTo(31));
+        Assert.That(DistanceAt(asSea, controlMap, 8, 3), Is.GreaterThan(0f));
+        Assert.That(DistanceAt(asBridge, controlMap, 8, 3), Is.LessThan(-32f));
+        Assert.That(DistanceAt(asBridge, controlMap, 8, Size - 2), Is.GreaterThan(32f), "Out at sea is still sea.");
     }
 
     /// <summary>
@@ -127,7 +152,7 @@ public class TerrainCoastMapTests
     [Test]
     public void WithoutALayerWithWaves_TheMapIsOneTexel()
     {
-        TerrainCoastMap coastMap = Build(ControlMap(), -1, 0);
+        TerrainCoastMap coastMap = Build(ControlMap(), -1, 0u);
 
         Assert.That(coastMap.Texture.width, Is.EqualTo(1));
         Assert.That(coastMap.Texture.height, Is.EqualTo(1));
@@ -141,7 +166,7 @@ public class TerrainCoastMapTests
     public void TheDistances_AreWorkedOutAgain_OnlyWhenTheCoastMoves()
     {
         TerrainControlMap controlMap = ControlMap();
-        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0);
+        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0u);
         uint uploads = coastMap.Texture.updateCount;
         float before = DistanceAt(coastMap, controlMap, Size / 2, CoastRow - 1);
 
@@ -149,13 +174,13 @@ public class TerrainCoastMapTests
         layers[SandLayer].SetTile(new Vector3Int(Size / 2, Size - 1, 0), tile);
         controlMap.Rebuild();
         controlMap.Apply();
-        coastMap.Build(controlMap, SeaLayer, 0);
+        coastMap.Build(controlMap, SeaLayer, 0u);
         Assert.That(coastMap.Texture.updateCount, Is.EqualTo(uploads));
 
         Paint(SeaLayer, 0, CoastRow - 2, Size - 1, CoastRow - 1);
         controlMap.Rebuild();
         controlMap.Apply();
-        coastMap.Build(controlMap, SeaLayer, 0);
+        coastMap.Build(controlMap, SeaLayer, 0u);
         Assert.That(coastMap.Texture.updateCount, Is.GreaterThan(uploads));
         Assert.That(DistanceAt(coastMap, controlMap, Size / 2, CoastRow - 1), Is.GreaterThan(before + TerrainStyle.PixelsPerCell));
     }
@@ -174,7 +199,7 @@ public class TerrainCoastMapTests
     /// <summary>
     /// A coast map built over <paramref name="controlMap"/>, disposed in <see cref="TearDown"/>.
     /// </summary>
-    private TerrainCoastMap Build(TerrainControlMap controlMap, int waveLayer, int bridges)
+    private TerrainCoastMap Build(TerrainControlMap controlMap, int waveLayer, uint bridges)
     {
         TerrainCoastMap coastMap = new("Test Coast Map");
         disposables.Add(coastMap);

@@ -19,9 +19,10 @@ using UnityEngine.Tilemaps;
 /// before the next render; nothing runs per frame while no cell changes. A brush's hover preview
 /// (<see cref="SetPreview"/>, <see cref="ClearPreview"/>) shows cells of a layer filled or empty the same way without
 /// touching its tilemap. Its <see cref="BlendMode"/>, a developer toggle, only switches the soft look's shader keyword
-/// on the runtime material. Animated materials (water) move in the shader from the frame's time, with nothing done
-/// per frame here. The order of its layers is both the draw order and the navigation priority: a layer whose
-/// tilemap has a <see cref="NavigationTerrainSource2D"/> must have its index as priority
+/// on the runtime material. Past <see cref="TerrainControlMap.NarrowLayers"/> layers it builds a wide control map,
+/// which the shader reads in its wide variant. Animated materials (water) move in the shader from the frame's time,
+/// with nothing done per frame here. The order of its layers is both the draw order and the navigation priority: a
+/// layer whose tilemap has a <see cref="NavigationTerrainSource2D"/> must have its index as priority
 /// (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch is logged as an error while
 /// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them. Its
 /// chunks are a <see cref="TerrainChunkSet"/>, its build checks <see cref="TerrainBlendChecks"/>, and in the editor
@@ -79,6 +80,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
     private static readonly int CoastMapId = Shader.PropertyToID("_TerrainCoast");
     private static readonly int RaisedMapId = Shader.PropertyToID("_TerrainRaised");
+    internal const string WideKeywordName = "_TERRAIN_WIDE";
     private const string SoftKeywordName = "_TERRAIN_SOFT";
     private const string RaisedKeywordName = "_TERRAIN_RAISED";
     private static readonly MeshRenderer[] NoChunks = new MeshRenderer[0];
@@ -107,7 +109,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Tilemap builtRaisedTilemap;
     [NonSerialized] private bool elevationChanged;
     private int waveLayer = -1;
-    private int bridgeBits;
+    private uint bridgeBits;
     private Texture2DArray albedoArray;
     private Texture2DArray fieldArray;
     private Texture2DArray heightArray;
@@ -120,6 +122,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private float fixedTime;
     [NonSerialized] private float animationFramesPerSecond;
     [NonSerialized] private bool previewGrewBounds;
+    [NonSerialized] private bool alwaysWide;
 #if UNITY_EDITOR
     [NonSerialized] private bool enabledOnce;
     [NonSerialized] private TerrainBlendRebuilds rebuilds;
@@ -216,6 +219,11 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     internal TerrainControlMap ControlMap => controlMap;
+
+    /// <summary>
+    /// Whether it is built wide: an RGBA32 control map, read by the shader's wide variant (_TERRAIN_WIDE).
+    /// </summary>
+    internal bool IsWide => controlMap != null && controlMap.IsWide;
     internal Material RuntimeMaterial => material;
     internal Texture2DArray AlbedoArray => albedoArray;
     internal Texture2DArray FieldArray => fieldArray;
@@ -283,6 +291,22 @@ public class TerrainBlendRenderer : MonoBehaviour
     {
         debugView = on;
         UpdateInfo();
+    }
+
+    /// <summary>
+    /// Builds wide (<see cref="IsWide"/>) whatever the number of layers while <paramref name="on"/>, as it does past
+    /// <see cref="TerrainControlMap.NarrowLayers"/> layers, so tests and checks can compare the wide path with the narrow
+    /// one on the same layers; rebuilds when that changes. Not saved.
+    /// </summary>
+    internal void SetAlwaysWide(bool on)
+    {
+        if (alwaysWide == on)
+        {
+            return;
+        }
+
+        alwaysWide = on;
+        Rebuild();
     }
 
     /// <summary>
@@ -500,7 +524,8 @@ public class TerrainBlendRenderer : MonoBehaviour
         Rebuilds.Remember(style, layers, raisedTilemap, chunkSize, sortingLayerName, sortingOrder);
         Rebuilds.Follow(style, layers);
 #endif
-        if (!TerrainBlendChecks.IsUsable(this, grid, sortingLayerName))
+        bool wide = alwaysWide || (layers != null && layers.Length > TerrainControlMap.NarrowLayers);
+        if (!TerrainBlendChecks.IsUsable(this, grid, sortingLayerName, wide))
         {
             return;
         }
@@ -520,11 +545,11 @@ public class TerrainBlendRenderer : MonoBehaviour
             animationFramesPerSecond = Mathf.Max(animationFramesPerSecond, layerMaterial.IsAnimated ? layerMaterial.FramesPerSecond : 0f);
         }
 
-        controlMap = new TerrainControlMap(layerTilemaps, $"{name} Terrain Control Map");
+        controlMap = new TerrainControlMap(layerTilemaps, wide, $"{name} Terrain Control Map");
         controlMap.Apply();
         previewGrewBounds = false;
         waveLayer = Array.FindIndex(materials, m => m.HasWaves);
-        bridgeBits = (int)TerrainBlendLut.BridgeBits(materials);
+        bridgeBits = TerrainBlendLut.BridgeBits(materials);
         coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
         coastMap.Build(controlMap, waveLayer, bridgeBits);
         albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
@@ -552,10 +577,11 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Switches the soft look's keyword on the runtime material to match the mode, and the raised ground keyword to
-    /// whether it was built with a raised tilemap; warns instead when the style's shader has no such keyword and it
-    /// would be set. The keyword is looked up each time, which allocates nothing,
-    /// since one kept from an earlier import of the shader no longer switches anything once the shader is reimported.
+    /// Switches the soft look's keyword on the runtime material to match the mode, the raised ground keyword to
+    /// whether it was built with a raised tilemap, and the wide keyword to whether it was built wide; warns instead
+    /// when the style's shader has no such keyword and it would be set. The keyword is looked up each time, which
+    /// allocates nothing, since one kept from an earlier import of the shader no longer switches anything once the
+    /// shader is reimported.
     /// </summary>
     private void ApplyMode()
     {
@@ -582,6 +608,16 @@ public class TerrainBlendRenderer : MonoBehaviour
         else if (builtRaisedTilemap != null)
         {
             Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {RaisedKeywordName} keyword, so raised ground is drawn level.", this);
+        }
+
+        LocalKeyword wideKeyword = new(material.shader, WideKeywordName);
+        if (wideKeyword.isValid)
+        {
+            material.SetKeyword(wideKeyword, IsWide);
+        }
+        else if (IsWide)
+        {
+            Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {WideKeywordName} keyword, so its wide control map is read as a narrow one.", this);
         }
     }
 

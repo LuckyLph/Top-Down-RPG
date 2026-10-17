@@ -40,11 +40,15 @@ uint TBBridgesAt(TBInputs ins, float d[TB_MAX_LAYERS])
 // margin of m's edge at a pixel. The layer above m counts every layer over it but the bridges (TBCounted), so where a
 // bridge ends on the edge of a layer painted under it, TBVisible does not hide that layer there; it draws its edge
 // pixel and what lies inside, which fill the bridge's corners, but neither its shadow nor its tufts, which would show
-// past the bridge's own edge.
+// past the bridge's own edge. With _TERRAIN_WIDE the mask of the bridges from m + 2 up never shifts by 32 or more.
 bool TBNearBridgeEdge(TBInputs ins, float d[TB_MAX_LAYERS], uint bridges, uint m)
 {
     bool found = false;
+#ifdef _TERRAIN_WIDE
+    uint above = bridges & ~((2u << min(m + 1u, 31u)) - 1u);
+#else
     uint above = bridges & ~((1u << min(m + 2u, 31u)) - 1u);
+#endif
     [loop]
     while (above != 0u && !found)
     {

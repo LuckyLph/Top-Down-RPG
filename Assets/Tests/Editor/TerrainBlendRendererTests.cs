@@ -11,7 +11,7 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for <see cref="TerrainBlendRenderer"/>: 16 layers build, each drawn on top in its own debug colour, and a
-/// preview on the top layer shows over the others; tile changes from painting, from <see cref="AreaTerrain"/> on the
+/// preview on the top layer shows over the others; built wide, 16 layers draw the same pixels as built narrow; tile changes from painting, from <see cref="AreaTerrain"/> on the
 /// host and from replicated edits on a client reach the control map's texture, and so do undos; a render uploads pending
 /// changes once and stops listening; the chunks cover the layers and follow the bounds as they grow and shrink;
 /// disabling unsubscribes from everything and destroys what was built; nothing runs or allocates per frame while no
@@ -149,39 +149,11 @@ public class TerrainBlendRendererTests
     public IEnumerator SixteenLayers_BuildAndDrawEveryLayer_AndPreviewOnTheTopOne()
     {
         const int count = TerrainControlMap.MaxLayers;
-        GameObject gridObject = Track(new GameObject("SixteenLayerGrid", typeof(Grid)));
-        gridObject.SetActive(false);
-        Tilemap[] tilemaps = new Tilemap[count];
-        TerrainBlendRenderer.Layer[] drawn = new TerrainBlendRenderer.Layer[count];
-        for (int i = 0; i < count; i++)
-        {
-            GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
-            layerObject.transform.SetParent(gridObject.transform);
-            tilemaps[i] = layerObject.GetComponent<Tilemap>();
-            drawn[i] = new TerrainBlendRenderer.Layer(tilemaps[i], TestTerrainStyle.PlainMaterial($"Material{i}", TerrainMaterial.CellMode.None, createdObjects));
-        }
-
-        for (int x = 0; x < 4 * count; x++)
-        {
-            for (int y = 0; y < 5; y++)
-            {
-                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
-            }
-        }
-
-        for (int i = 1; i < count; i++)
-        {
-            foreach (Vector3Int cell in BlockCells(i))
-            {
-                tilemaps[i].SetTile(cell, tile);
-            }
-        }
-
-        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
-        renderer.Configure(style, drawn);
-        gridObject.SetActive(true);
+        TerrainBlendRenderer renderer = SixteenLayerRenderer(-1, out Tilemap[] tilemaps);
 
         Assert.That(renderer.ControlMap, Is.Not.Null);
+        Assert.That(renderer.IsWide, Is.False, "A renderer of 16 layers builds a narrow control map.");
+        Assert.That(renderer.ControlMap.Texture.format, Is.EqualTo(TextureFormat.R16));
         Assert.That(renderer.ControlMap.LayerCount, Is.EqualTo(count));
         Assert.That(renderer.AlbedoArray.depth, Is.EqualTo(count));
         Assert.That(renderer.HeightArray.depth, Is.EqualTo(count));
@@ -206,6 +178,64 @@ public class TerrainBlendRendererTests
 
         renderer.ClearPreview();
         Assert.That(DebugClasses(renderer, world, count)[0], Is.EqualTo(1), "Clearing the preview shows the bottom layer again.");
+    }
+
+    /// <summary>
+    /// A renderer of 16 layers built wide (<see cref="TerrainBlendRenderer.SetAlwaysWide"/>: an RGBA32 control map read
+    /// by the shader's _TERRAIN_WIDE variant, with the high half of the bridge bits and the wide bridge mask) draws
+    /// exactly the pixels it draws narrow, in the crisp look, the soft look and the debug view, with a bridge among its
+    /// layers and a preview on the top one, whose bit 15 is the green channel's top bit; built narrow again it drops the
+    /// keyword. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AWideRenderer_DrawsTheSamePixelsAsANarrowOne()
+    {
+        TerrainBlendRenderer renderer = SixteenLayerRenderer(9, out Tilemap[] tilemaps);
+        Tilemap top = tilemaps[tilemaps.Length - 1];
+        Rect world = new(0f, 0f, 4 * tilemaps.Length, 5f);
+        Vector3Int previewed = new(1, 2, 0);
+        Assert.That(renderer.SetPreview(top, BlockCells(0), true), Is.True);
+        List<Color32[]> narrow = new();
+        yield return RenderLooks(renderer, world, narrow);
+
+        Assert.That(renderer.IsWide, Is.False);
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(WideKeyword(renderer)), Is.False);
+        Assert.That(TexelOf(renderer, previewed), Is.EqualTo(0x8001u));
+
+        renderer.SetAlwaysWide(true);
+        Assert.That(renderer.SetPreview(top, BlockCells(0), true), Is.True, "The rebuild cleared the preview.");
+        Assert.That(renderer.IsWide, Is.True);
+        Assert.That(renderer.ControlMap.Texture.graphicsFormat, Is.EqualTo(UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(WideKeyword(renderer)), Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(previewed), Is.EqualTo(0x8001u));
+        List<Color32[]> wide = new();
+        yield return RenderLooks(renderer, world, wide);
+
+        Assert.That(TexelOf(renderer, previewed), Is.EqualTo(0x8001u), "The render uploaded the preview into the wide texel.");
+
+        string[] looks = { "crisp", "soft", "debug view" };
+        for (int look = 0; look < looks.Length; look++)
+        {
+            Assert.That(wide[look].Length, Is.EqualTo(narrow[look].Length));
+            int differing = 0;
+            int first = -1;
+            for (int i = 0; i < narrow[look].Length; i++)
+            {
+                Color32 a = narrow[look][i];
+                Color32 b = wide[look][i];
+                if (a.r != b.r || a.g != b.g || a.b != b.b || a.a != b.a)
+                {
+                    first = differing++ == 0 ? i : first;
+                }
+            }
+
+            Assert.That(differing, Is.Zero, $"{looks[look]}: {differing} pixels differ, the first at {first}.");
+        }
+
+        renderer.SetAlwaysWide(false);
+        Assert.That(renderer.IsWide, Is.False);
+        Assert.That(renderer.ControlMap.Texture.format, Is.EqualTo(TextureFormat.R16));
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(WideKeyword(renderer)), Is.False);
     }
 
     /// <summary>
@@ -2325,6 +2355,97 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A renderer of <see cref="TerrainControlMap.MaxLayers"/> layers (16), each its own plain material, over a strip
+    /// of the bottom layer 4 cells per layer long and 5 high, with each other layer filling its own 3 x 3 block
+    /// (<see cref="BlockCells"/>); the material of layer <paramref name="bridge"/> is a bridge (-1 for none).
+    /// </summary>
+    private TerrainBlendRenderer SixteenLayerRenderer(int bridge, out Tilemap[] tilemaps)
+    {
+        const int count = TerrainControlMap.MaxLayers;
+        GameObject gridObject = Track(new GameObject("SixteenLayerGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        tilemaps = new Tilemap[count];
+        TerrainBlendRenderer.Layer[] drawn = new TerrainBlendRenderer.Layer[count];
+        for (int i = 0; i < count; i++)
+        {
+            GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
+            layerObject.transform.SetParent(gridObject.transform);
+            tilemaps[i] = layerObject.GetComponent<Tilemap>();
+            TerrainMaterial material = TestTerrainStyle.PlainMaterial($"Material{i}", TerrainMaterial.CellMode.None, createdObjects);
+            if (i == bridge)
+            {
+                SerializedObject settings = new(material);
+                settings.FindProperty("bridge").boolValue = true;
+                settings.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            drawn[i] = new TerrainBlendRenderer.Layer(tilemaps[i], material);
+        }
+
+        for (int x = 0; x < 4 * count; x++)
+        {
+            for (int y = 0; y < 5; y++)
+            {
+                tilemaps[0].SetTile(new Vector3Int(x, y, 0), tile);
+            }
+        }
+
+        for (int i = 1; i < count; i++)
+        {
+            foreach (Vector3Int cell in BlockCells(i))
+            {
+                tilemaps[i].SetTile(cell, tile);
+            }
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, drawn);
+        gridObject.SetActive(true);
+        return renderer;
+    }
+
+    /// <summary>
+    /// Renders <paramref name="world"/> at time 0 in the crisp look, the soft look and the debug view, each on later
+    /// editor updates until the pixel at the centre of block 0 (<see cref="BlockCells"/>) is drawn (at most 30
+    /// updates), and adds their pixels to <paramref name="looks"/> in that order, leaving the renderer crisp, without
+    /// the debug view and at the frame's time.
+    /// </summary>
+    private static IEnumerator RenderLooks(TerrainBlendRenderer renderer, Rect world, List<Color32[]> looks)
+    {
+        int width = Mathf.RoundToInt(world.width * 32f);
+        int probe = Mathf.RoundToInt((2.5f - world.yMin) * 32f) * width + Mathf.RoundToInt((2.5f - world.xMin) * 32f);
+        for (int look = 0; look < 3; look++)
+        {
+            renderer.Mode = look == 1 ? TerrainBlendRenderer.BlendMode.Soft : TerrainBlendRenderer.BlendMode.Crisp;
+            renderer.SetDebugView(look == 2);
+            renderer.SetFixedTime(0f);
+            Color32[] pixels = null;
+            for (int frame = 0; frame < 30 && (pixels == null || !IsDrawn(pixels[probe])); frame++)
+            {
+                yield return null;
+                Texture2D rendered = TerrainBlendProbe.Render(renderer, world, 1, look == 2, true, true);
+                pixels = rendered.GetPixels32();
+                Object.DestroyImmediate(rendered);
+            }
+
+            Assert.That(IsDrawn(pixels[probe]), Is.True, $"Look {look} is drawn.");
+            looks.Add(pixels);
+        }
+
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
+        renderer.SetDebugView(false);
+        renderer.SetFixedTime(null);
+    }
+
+    /// <summary>
+    /// The wide keyword of the shader of <paramref name="renderer"/>'s runtime material.
+    /// </summary>
+    private static LocalKeyword WideKeyword(TerrainBlendRenderer renderer)
+    {
+        return new LocalKeyword(renderer.RuntimeMaterial.shader, TerrainBlendRenderer.WideKeywordName);
+    }
+
+    /// <summary>
     /// The 3 x 3 cells of block <paramref name="index"/> of a strip 5 cells high: cells 1 to 3 across and up, from 4
     /// cells per block along x.
     /// </summary>
@@ -2372,12 +2493,14 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
-    /// The control map texture's 16-bit texel for <paramref name="cell"/>.
+    /// The control map texture's texel for <paramref name="cell"/>: 16 bits in a narrow map, 32 in a wide one.
     /// </summary>
-    private static ushort TexelOf(TerrainBlendRenderer renderer, Vector3Int cell)
+    private static uint TexelOf(TerrainBlendRenderer renderer, Vector3Int cell)
     {
-        BoundsInt bounds = renderer.ControlMap.Bounds;
-        return renderer.ControlMap.Texture.GetPixelData<ushort>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
+        TerrainControlMap map = renderer.ControlMap;
+        BoundsInt bounds = map.Bounds;
+        int index = (cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin;
+        return map.IsWide ? map.Texture.GetPixelData<uint>(0)[index] : map.Texture.GetPixelData<ushort>(0)[index];
     }
 
     /// <summary>

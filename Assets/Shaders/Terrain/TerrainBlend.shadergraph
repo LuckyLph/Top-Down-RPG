@@ -31,6 +31,9 @@
         },
         {
             "m_Id": "d568f10fcaf04e0986ee887d1c79522f"
+        },
+        {
+            "m_Id": "f7ffd6e5bb864e018da4766070e1bd59"
         }
     ],
     "m_Dropdowns": [],
@@ -1743,5 +1746,33 @@
         "w": 0.0
     },
     "m_Labels": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.ShaderKeyword",
+    "m_ObjectId": "f7ffd6e5bb864e018da4766070e1bd59",
+    "m_Guid": {
+        "m_GuidSerialized": "e86109cc-b930-4f4b-9d74-0148fc8370f6"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Terrain Wide",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Terrain Wide",
+    "m_DefaultReferenceName": "_TERRAIN_WIDE",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": false,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_KeywordType": 0,
+    "m_KeywordDefinition": 1,
+    "m_KeywordScope": 0,
+    "m_KeywordStages": 2,
+    "m_Entries": [],
+    "m_Value": 0,
+    "m_IsEditable": true
 }
 

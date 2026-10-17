@@ -20,7 +20,8 @@
 // composites the layers bottom up, each drawn over the layer below it with that pair's edge (without its shadow or
 // tufts where a bridge ends on its edge, TBNearBridgeEdge), then, with the keyword _TERRAIN_RAISED, raised ground's
 // cliffs over them (TBRaisedOver), in the crisp look or,
-// with the keyword _TERRAIN_SOFT, the soft one. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
+// with the keyword _TERRAIN_SOFT, the soft one. With the keyword _TERRAIN_WIDE it reads a wide control map (TBCell) and
+// the high half of the bridge bits. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
 // visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
 // draws animated materials at the time Info.w instead of the frame's.
 void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
@@ -36,6 +37,9 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     ins.globals = TBLut(ins, TB_SHARED_COLUMN, TB_SHARED_ROW);
     ins.time = Info.z > 0.5 ? Info.w : _TimeParameters.x;
     ins.bridges = (uint)(ins.globals.w + 0.5);
+#ifdef _TERRAIN_WIDE
+    ins.bridges |= (uint)(TBLut(ins, TB_SHARED_HIGH_BRIDGES_COLUMN, TB_SHARED_ROW).x + 0.5) << 16;
+#endif
 
     float2 worldPixel = SnapToArtPixel(WorldPos.xy);
     float2 pixel = worldPixel - ControlRect.xy * ART_PIXELS_PER_UNIT;

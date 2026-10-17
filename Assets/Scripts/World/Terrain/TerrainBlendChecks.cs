@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
 
 /// <summary>
@@ -14,7 +15,8 @@ internal static class TerrainBlendChecks
     /// Returns false without a word for a renderer not configured at all (no style, no layers) outside play mode, as
     /// right after it is added. Otherwise logs an error for each thing that stops the renderer from drawing (no style
     /// or shader, no layers or more than <see cref="TerrainControlMap.MaxLayers"/>, a graphics device that cannot sample
-    /// the control map's format, a layer without a tilemap, a tilemap listed twice, a layer without a material, a
+    /// the format of the control map it builds, narrow or <paramref name="wide"/>, a wide one for a shader without
+    /// the wide keyword, a layer without a tilemap, a tilemap listed twice, a layer without a material, a
     /// material's textures missing or of the wrong size or format, an unknown sorting layer) and returns whether there
     /// was none; a material several layers draw is checked once.
     /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
@@ -22,7 +24,7 @@ internal static class TerrainBlendChecks
     /// <see cref="TilemapRenderer"/>, which would draw its tiles' sprites as well, and warns when
     /// <paramref name="grid"/> is not made of unrotated one-unit cells, which the shader assumes.
     /// </summary>
-    public static bool IsUsable(TerrainBlendRenderer renderer, Grid grid, string sortingLayerName)
+    public static bool IsUsable(TerrainBlendRenderer renderer, Grid grid, string sortingLayerName, bool wide)
     {
         string name = renderer.name;
         TerrainStyle style = renderer.Style;
@@ -44,9 +46,15 @@ internal static class TerrainBlendChecks
             return false;
         }
 
-        if (!TerrainControlMap.IsFormatSupported)
+        if (!TerrainControlMap.IsFormatSupported(wide))
         {
-            Debug.LogError($"{name}: this graphics device ({SystemInfo.graphicsDeviceType}) cannot sample the R16 control map {nameof(TerrainBlendRenderer)} draws from, so the ground is not drawn.", renderer);
+            Debug.LogError($"{name}: this graphics device ({SystemInfo.graphicsDeviceType}) cannot sample the {TerrainControlMap.FormatOf(wide)} control map {nameof(TerrainBlendRenderer)} draws from, so the ground is not drawn.", renderer);
+            return false;
+        }
+
+        if (wide && !new LocalKeyword(style.Shader, TerrainBlendRenderer.WideKeywordName).isValid)
+        {
+            Debug.LogError($"{name}: the terrain shader {style.Shader.name} has no {TerrainBlendRenderer.WideKeywordName} keyword to read the wide control map {nameof(TerrainBlendRenderer)} builds for more than {TerrainControlMap.NarrowLayers} layers, so the ground is not drawn.", renderer);
             return false;
         }
 

@@ -6,10 +6,12 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// The ground layers' cells as a texture for the terrain blending shader: one R16 texel per cell over the layers'
-/// bounds plus a margin of empty cells, one bit per layer (bit i for layer i, bottom first, up to
-/// <see cref="MaxLayers"/>). Built from the layers' tilemaps, then refreshed cell by cell after tile changes, growing
-/// when a filled cell lands outside the bounds or in the margin. <see cref="Bounds"/> are the cells the texture covers
+/// The ground layers' cells as a texture for the terrain blending shader: one texel per cell over the layers' bounds
+/// plus a margin of empty cells, one bit per layer (bit i for layer i, bottom first). A narrow map's texel is R16, for
+/// up to <see cref="NarrowLayers"/> layers; a wide map's is RGBA32, its four bytes the bits from red up, for up to
+/// <see cref="WideLayers"/> (<see cref="FormatOf"/>); a renderer draws at most <see cref="MaxLayers"/>, the shader's cap
+/// (TB_MAX_LAYERS). Built from the layers' tilemaps, then refreshed cell by cell after tile changes, growing when a
+/// filled cell lands outside the bounds or in the margin. <see cref="Bounds"/> are the cells the texture covers
 /// (z from 0 to 1; zero width while no layer has a filled cell). Changed cells are collected and written into the point-filtered texture in one batch by
 /// <see cref="Apply"/>, which creates the texture the first time (1 x 1 while the map is empty) and counts its uploads
 /// in <see cref="UploadCount"/> for tests. Preview bits, for a brush's hover, are kept apart from the real ones: they
@@ -19,35 +21,40 @@ using UnityEngine.Tilemaps;
 public sealed class TerrainControlMap : IDisposable
 {
     public const int MaxLayers = 16;
+    public const int NarrowLayers = 16;
+    public const int WideLayers = 32;
     public const int Margin = 1;
     public const int GrowthSlack = 8;
 
     /// <summary>The layer bits a preview replaces in one cell, and the values it shows instead.</summary>
     private struct PreviewBits
     {
-        public ushort Mask;
-        public ushort Value;
+        public uint Mask;
+        public uint Value;
     }
 
     private readonly Tilemap[] layers;
+    private readonly bool wide;
     private readonly string textureName;
     private readonly List<int> pending = new();
     private readonly Dictionary<Vector3Int, PreviewBits> preview = new();
-    private ushort[] cells = new ushort[0];
+    private uint[] cells = new uint[0];
     private bool[] pendingFlags = new bool[0];
     private BoundsInt bounds;
     private bool fullUploadPending;
     private Texture2D texture;
 
     /// <summary>
-    /// Builds the map from <paramref name="layers"/> (bottom first, at most <see cref="MaxLayers"/>; null entries
-    /// read as empty). The texture holds nothing until the first <see cref="Apply"/>.
+    /// Builds the map from <paramref name="layers"/> (bottom first, null entries read as empty): narrow, at most
+    /// <see cref="NarrowLayers"/>, or <paramref name="wide"/>, at most <see cref="WideLayers"/>. The texture holds
+    /// nothing until the first <see cref="Apply"/>.
     /// </summary>
-    public TerrainControlMap(IReadOnlyList<Tilemap> layers, string textureName = "TerrainControlMap")
+    public TerrainControlMap(IReadOnlyList<Tilemap> layers, bool wide = false, string textureName = "TerrainControlMap")
     {
-        if (layers.Count > MaxLayers)
+        int most = wide ? WideLayers : NarrowLayers;
+        if (layers.Count > most)
         {
-            throw new ArgumentException($"A control map holds at most {MaxLayers} layers.", nameof(layers));
+            throw new ArgumentException($"A {(wide ? "wide" : "narrow")} control map holds at most {most} layers.", nameof(layers));
         }
 
         this.layers = new Tilemap[layers.Count];
@@ -56,17 +63,30 @@ public sealed class TerrainControlMap : IDisposable
             this.layers[i] = layers[i];
         }
 
+        this.wide = wide;
         this.textureName = textureName;
         Rebuild();
     }
 
     /// <summary>
-    /// Whether the graphics device can sample the control map's 16-bit texture.
+    /// The format of a narrow map's texture (R16) or a <paramref name="wide"/> one's (RGBA32, red the lowest byte).
     /// </summary>
-    public static bool IsFormatSupported => SystemInfo.IsFormatSupported(GraphicsFormat.R16_UNorm, GraphicsFormatUsage.Sample);
+    public static GraphicsFormat FormatOf(bool wide)
+    {
+        return wide ? GraphicsFormat.R8G8B8A8_UNorm : GraphicsFormat.R16_UNorm;
+    }
+
+    /// <summary>
+    /// Whether the graphics device can sample a narrow or <paramref name="wide"/> map's texture.
+    /// </summary>
+    public static bool IsFormatSupported(bool wide)
+    {
+        return SystemInfo.IsFormatSupported(FormatOf(wide), GraphicsFormatUsage.Sample);
+    }
 
     public BoundsInt Bounds => bounds;
     public Texture2D Texture => texture;
+    public bool IsWide => wide;
     public int LayerCount => layers.Length;
     public bool IsEmpty => bounds.size.x <= 0 || bounds.size.y <= 0;
     public bool HasPendingChanges => fullUploadPending || pending.Count > 0;
@@ -122,7 +142,7 @@ public sealed class TerrainControlMap : IDisposable
         bounds = any
             ? new BoundsInt(min.x - Margin, min.y - Margin, 0, max.x - min.x + 1 + 2 * Margin, max.y - min.y + 1 + 2 * Margin, 1)
             : new BoundsInt(0, 0, 0, 0, 0, 1);
-        cells = new ushort[bounds.size.x * bounds.size.y];
+        cells = new uint[bounds.size.x * bounds.size.y];
         pendingFlags = new bool[cells.Length];
         pending.Clear();
         fullUploadPending = true;
@@ -135,7 +155,7 @@ public sealed class TerrainControlMap : IDisposable
                 continue;
             }
 
-            ushort bit = (ushort)(1 << layer);
+            uint bit = 1u << layer;
             BoundsInt cellBounds = blockBounds[layer];
             for (int index = 0; index < block.Length; index++)
             {
@@ -178,7 +198,7 @@ public sealed class TerrainControlMap : IDisposable
             Grow(min, max);
         }
 
-        ushort bit = (ushort)(1 << layer);
+        uint bit = 1u << layer;
         for (int i = 0; i < positions.Length; i++)
         {
             Vector3Int position = positions[i];
@@ -188,7 +208,7 @@ public sealed class TerrainControlMap : IDisposable
             }
 
             int index = IndexOf(position.x, position.y);
-            ushort value = tilemap.HasTile(position) ? (ushort)(cells[index] | bit) : (ushort)(cells[index] & ~bit);
+            uint value = tilemap.HasTile(position) ? cells[index] | bit : cells[index] & ~bit;
             if (value != cells[index])
             {
                 cells[index] = value;
@@ -200,17 +220,17 @@ public sealed class TerrainControlMap : IDisposable
     /// <summary>
     /// The real layer bits of <paramref name="cell"/>, without any preview; 0 outside the bounds.
     /// </summary>
-    public ushort GetCell(Vector3Int cell)
+    public uint GetCell(Vector3Int cell)
     {
-        return Contains(cell) ? cells[IndexOf(cell.x, cell.y)] : (ushort)0;
+        return Contains(cell) ? cells[IndexOf(cell.x, cell.y)] : 0u;
     }
 
     /// <summary>
     /// The layer bits <paramref name="cell"/> shows: the real bits with any preview applied; 0 outside the bounds.
     /// </summary>
-    public ushort GetShownCell(Vector3Int cell)
+    public uint GetShownCell(Vector3Int cell)
     {
-        return Contains(cell) ? Shown(IndexOf(cell.x, cell.y)) : (ushort)0;
+        return Contains(cell) ? Shown(IndexOf(cell.x, cell.y)) : 0u;
     }
 
     /// <summary>
@@ -220,7 +240,7 @@ public sealed class TerrainControlMap : IDisposable
     /// </summary>
     public void SetPreview(int layer, IReadOnlyList<Vector3Int> previewCells, bool filled)
     {
-        ushort bit = (ushort)(1 << layer);
+        uint bit = 1u << layer;
         if (filled)
         {
             bool grow = false;
@@ -245,7 +265,7 @@ public sealed class TerrainControlMap : IDisposable
             Vector3Int cell = new(previewCells[i].x, previewCells[i].y, 0);
             preview.TryGetValue(cell, out PreviewBits bits);
             bits.Mask |= bit;
-            bits.Value = filled ? (ushort)(bits.Value | bit) : (ushort)(bits.Value & ~bit);
+            bits.Value = filled ? bits.Value | bit : bits.Value & ~bit;
             preview[cell] = bits;
             if (Contains(cell))
             {
@@ -285,7 +305,7 @@ public sealed class TerrainControlMap : IDisposable
         int height = Mathf.Max(1, bounds.size.y);
         if (texture == null)
         {
-            texture = new Texture2D(width, height, TextureFormat.R16, false, true)
+            texture = new Texture2D(width, height, wide ? TextureFormat.RGBA32 : TextureFormat.R16, false, true)
             {
                 name = textureName,
                 filterMode = FilterMode.Point,
@@ -300,22 +320,26 @@ public sealed class TerrainControlMap : IDisposable
             fullUploadPending = true;
         }
 
-        NativeArray<ushort> data = texture.GetPixelData<ushort>(0);
+        NativeArray<byte> data = texture.GetPixelData<byte>(0);
         if (fullUploadPending)
         {
             if (cells.Length == 0)
             {
-                data[0] = 0;
+                WriteTexel(data, 0, 0u);
             }
             else
             {
-                data.CopyFrom(cells);
+                for (int i = 0; i < cells.Length; i++)
+                {
+                    WriteTexel(data, i, cells[i]);
+                }
+
                 foreach (KeyValuePair<Vector3Int, PreviewBits> entry in preview)
                 {
                     if (Contains(entry.Key))
                     {
                         int index = IndexOf(entry.Key.x, entry.Key.y);
-                        data[index] = Shown(index);
+                        WriteTexel(data, index, Shown(index));
                     }
                 }
             }
@@ -324,7 +348,7 @@ public sealed class TerrainControlMap : IDisposable
         {
             for (int i = 0; i < pending.Count; i++)
             {
-                data[pending[i]] = Shown(pending[i]);
+                WriteTexel(data, pending[i], Shown(pending[i]));
             }
         }
 
@@ -402,7 +426,7 @@ public sealed class TerrainControlMap : IDisposable
         }
 
         BoundsInt grown = new(xMin, yMin, 0, xMax - xMin + 1, yMax - yMin + 1, 1);
-        ushort[] grownCells = new ushort[grown.size.x * grown.size.y];
+        uint[] grownCells = new uint[grown.size.x * grown.size.y];
         for (int y = bounds.yMin; y < bounds.yMax; y++)
         {
             Array.Copy(cells, (y - bounds.yMin) * bounds.size.x, grownCells, (y - grown.yMin) * grown.size.x + bounds.xMin - grown.xMin, bounds.size.x);
@@ -446,16 +470,30 @@ public sealed class TerrainControlMap : IDisposable
     /// <summary>
     /// The bits cell <paramref name="index"/> shows: its real bits with any preview applied.
     /// </summary>
-    private ushort Shown(int index)
+    private uint Shown(int index)
     {
-        ushort value = cells[index];
+        uint value = cells[index];
         if (preview.Count == 0)
         {
             return value;
         }
 
         Vector3Int cell = new(bounds.xMin + index % bounds.size.x, bounds.yMin + index / bounds.size.x, 0);
-        return preview.TryGetValue(cell, out PreviewBits bits) ? (ushort)((value & ~bits.Mask) | (bits.Value & bits.Mask)) : value;
+        return preview.TryGetValue(cell, out PreviewBits bits) ? (value & ~bits.Mask) | (bits.Value & bits.Mask) : value;
+    }
+
+    /// <summary>
+    /// Writes <paramref name="bits"/> into texel <paramref name="index"/> of the texture's <paramref name="data"/>, lowest
+    /// byte first: the two bytes of a narrow map's R16 texel, or the four of a wide map's RGBA32 texel, red first.
+    /// </summary>
+    private void WriteTexel(NativeArray<byte> data, int index, uint bits)
+    {
+        int size = wide ? 4 : 2;
+        int start = index * size;
+        for (int b = 0; b < size; b++)
+        {
+            data[start + b] = (byte)(bits >> (8 * b));
+        }
     }
 
     /// <summary>

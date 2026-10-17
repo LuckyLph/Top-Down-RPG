@@ -19,7 +19,8 @@ using UnityEngine.TestTools;
 /// material's sway reaches its layer's row and a seamless edge marks its rim's outer colour, and the project's grass
 /// sways and keeps its edge over nothing; the project's dirt, dry grass and plaza meet the other materials
 /// with the edges and overrides TerrainTypes.md's Phase 3 decided, and its shallows glint, sink less than the water and
-/// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits and materials that turn to their runs mark
+/// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits (their high half past 16 layers in a column
+/// of its own, TerrainLayers32.md's Phase 2) and materials that turn to their runs mark
 /// their layer's row, and the project's planks are a level bridge drawn last with a shadow of their own on the water
 /// (Phase 5); raised ground's cliff settings reach row 0 only for layers drawn over raised ground (Phase 10); the shader's
 /// layout defines and the constants agree. The project's style and materials are only read.
@@ -682,11 +683,40 @@ public class TerrainBlendLutTests
         Assert.That(plain[0].a, Is.Zero, "No bridge.");
         Assert.That(TerrainBlendLut.BridgeBits(new[] { grass, water }), Is.Zero);
         Assert.That(texels[TerrainBlendLut.SharedRow * TerrainBlendLut.Width + TerrainBlendLut.SharedColumn].a, Is.EqualTo(8f), "Layer 3 is a bridge.");
-        Assert.That(TerrainBlendLut.BridgeBits(new[] { dock, grass, dock }), Is.EqualTo(5f));
+        Assert.That(texels[TerrainBlendLut.SharedRow * TerrainBlendLut.Width + TerrainBlendLut.SharedHighBridgesColumn], Is.EqualTo(Color.clear), "No bridge past layer 15.");
+        Assert.That(TerrainBlendLut.BridgeBits(new[] { dock, grass, dock }), Is.EqualTo(5u));
         Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerHeightColumn).g, Is.Zero);
         Assert.That(LayerTexel(texels, 1, TerrainBlendLut.LayerHeightColumn).g, Is.Zero);
         Assert.That(LayerTexel(texels, 2, TerrainBlendLut.LayerHeightColumn).g, Is.EqualTo(1f), "The walk turns to its runs.");
         Assert.That(LayerTexel(texels, 3, TerrainBlendLut.LayerHeightColumn).g, Is.EqualTo(1f), "The dock turns to its runs.");
+    }
+
+    /// <summary>
+    /// With 32 layers, bridges at layers 3, 17 and 31 reach both halves of row 0's bridge bits: layer 3's bit in the
+    /// shared texel's last value and layers 17's and 31's as bits 1 and 15 of the high half's column, each half a whole
+    /// number a float holds exactly; nothing else in that column.
+    /// </summary>
+    [Test]
+    public void TheBridgeBitsOfLayersPastSixteen_ReachTheHighHalf()
+    {
+        TerrainMaterial ground = Material("Ground", 0.1f);
+        TerrainMaterial dock = Material("Dock", 0.3f);
+        SerializedObject settings = new(dock);
+        settings.FindProperty("bridge").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainMaterial[] layers = new TerrainMaterial[32];
+        for (int i = 0; i < layers.Length; i++)
+        {
+            layers[i] = i == 3 || i == 17 || i == 31 ? dock : ground;
+        }
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), layers);
+        int shared = TerrainBlendLut.SharedRow * TerrainBlendLut.Width;
+
+        Assert.That(TerrainBlendLut.BridgeBits(layers), Is.EqualTo((1u << 3) | (1u << 17) | (1u << 31)));
+        Assert.That(texels.Length, Is.EqualTo(TerrainBlendLut.Width * TerrainBlendLut.Height(32)));
+        Assert.That(texels[shared + TerrainBlendLut.SharedColumn].a, Is.EqualTo(8f), "The low half holds layer 3.");
+        Assert.That(texels[shared + TerrainBlendLut.SharedHighBridgesColumn], Is.EqualTo(new Color((1 << 1) | (1 << 15), 0f, 0f, 0f)), "The high half holds layers 17 and 31.");
     }
 
     /// <summary>

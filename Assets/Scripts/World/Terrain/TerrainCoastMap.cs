@@ -51,7 +51,7 @@ public sealed class TerrainCoastMap : IDisposable
     /// none), <paramref name="bridges"/> holding a bit for each bridge layer, and uploads it; keeps the texture as it is
     /// when no cell changed sides since the last build.
     /// </summary>
-    public void Build(TerrainControlMap controlMap, int waveLayer, int bridges)
+    public void Build(TerrainControlMap controlMap, int waveLayer, uint bridges)
     {
         BoundsInt bounds = controlMap.Bounds;
         bool used = waveLayer >= 0 && !controlMap.IsEmpty;
@@ -66,13 +66,13 @@ public sealed class TerrainCoastMap : IDisposable
             return;
         }
 
-        int counted = ~(bridges & ~(1 << waveLayer));
+        uint counted = ~(bridges & ~(1u << waveLayer));
         bool changed = !built;
         for (int cy = 0; cy < bounds.size.y; cy++)
         {
             for (int cx = 0; cx < bounds.size.x; cx++)
             {
-                int bits = controlMap.GetCell(new Vector3Int(bounds.xMin + cx, bounds.yMin + cy, 0));
+                uint bits = controlMap.GetCell(new Vector3Int(bounds.xMin + cx, bounds.yMin + cy, 0));
                 bool isSea = bits == 0 || ((bits & counted) >> waveLayer) != 0;
                 for (int ty = 0; ty < TexelsPerCell; ty++)
                 {

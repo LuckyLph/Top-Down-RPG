@@ -4,14 +4,20 @@
 #include "Assets/Shaders/Include/PixelSnap.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendInputs.hlsl"
 
-// The layer bits of one cell of the control map, a 16-bit normalised texel; cells outside the map are empty.
+// The layer bits of one cell of the control map: a 16-bit normalised texel, or with _TERRAIN_WIDE an RGBA32 one whose
+// four bytes hold the bits from red up. Cells outside the map are empty.
 uint TBCell(TBInputs ins, int2 c)
 {
     if (c.x < 0 || c.y < 0 || c.x >= (int)ins.rect.z || c.y >= (int)ins.rect.w)
     {
         return 0u;
     }
+#ifdef _TERRAIN_WIDE
+    uint4 bytes = (uint4)(LOAD_TEXTURE2D(ins.control.tex, c) * 255.0 + 0.5);
+    return bytes.r | (bytes.g << 8) | (bytes.b << 16) | (bytes.a << 24);
+#else
     return (uint)(LOAD_TEXTURE2D(ins.control.tex, c).r * 65535.0 + 0.5);
+#endif
 }
 
 // The corner nearest the centre of a map pixel and the four cells around it.

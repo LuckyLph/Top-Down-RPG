@@ -16,7 +16,8 @@ static const float2 TB_LIGHT = float2(-0.6, 0.8);
 // lower one or over nothing (its edge in both looks). rect.xy is the world position of control map cell (0, 0),
 // rect.zw its size. The soft look (keyword _TERRAIN_SOFT) reads the height array's red and green channels; both looks
 // read its blue channel, the glint and sparkle phases of animated materials. time is the time animated materials are
-// drawn at. bridges holds a bit for each layer whose material is a bridge (row 0's last value). A layer's shape
+// drawn at. bridges holds a bit for each layer whose material is a bridge (row 0's last value, and with _TERRAIN_WIDE
+// the high half from TB_SHARED_HIGH_BRIDGES_COLUMN). A layer's shape
 // (radii, repeat, cell mode) is read from its row when needed (TBShape).
 struct TBInputs
 {

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.TestTools.Constraints;
 using UnityEngine.Tilemaps;
 using Is = UnityEngine.TestTools.Constraints.Is;
@@ -9,7 +10,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// <summary>
 /// Tests for <see cref="TerrainControlMap"/>: layer bits and bounds read from the tilemaps, patches inside the bounds,
 /// growth outside them or in the margin, one upload per batch of changes, preview bits kept apart from the real ones,
-/// and all 16 layers' bits round-tripping through the 16-bit texture while a 17th layer is refused.
+/// all 16 layers' bits round-tripping through a narrow map's 16-bit texture while a 17th layer is refused, and all 32
+/// layers' bits through a wide map's RGBA32 texture while a 33rd is refused.
 /// </summary>
 public class TerrainControlMapTests
 {
@@ -79,14 +81,14 @@ public class TerrainControlMapTests
     }
 
     /// <summary>
-    /// With <see cref="TerrainControlMap.MaxLayers"/> layers every bit round-trips through the cells, the preview and
-    /// the 16-bit texture: a cell per layer holds that layer's bit alone, a cell with every layer holds all 16, and a
-    /// preview on the top layer sets and clears bit 15 alone. A map of more layers is refused.
+    /// With <see cref="TerrainControlMap.NarrowLayers"/> layers every bit round-trips through a narrow map's cells, its
+    /// preview and its 16-bit texture: a cell per layer holds that layer's bit alone, a cell with every layer holds all
+    /// 16, and a preview on the top layer sets and clears bit 15 alone. A narrow map of more layers is refused.
     /// </summary>
     [Test]
     public void SixteenLayers_RoundTripEveryBit_AndASeventeenthIsRefused()
     {
-        Tilemap[] many = new Tilemap[TerrainControlMap.MaxLayers];
+        Tilemap[] many = new Tilemap[TerrainControlMap.NarrowLayers];
         for (int i = 0; i < many.Length; i++)
         {
             GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
@@ -121,9 +123,72 @@ public class TerrainControlMapTests
         Assert.That(Texel(map, new Vector3Int(0, 2, 0)), Is.EqualTo(0x7FFF));
         Assert.That(map.GetCell(new Vector3Int(0, 2, 0)), Is.EqualTo(0xFFFF));
 
-        Tilemap[] tooMany = new Tilemap[TerrainControlMap.MaxLayers + 1];
+        Tilemap[] tooMany = new Tilemap[TerrainControlMap.NarrowLayers + 1];
         many.CopyTo(tooMany, 0);
         Assert.That(() => new TerrainControlMap(tooMany), Throws.ArgumentException);
+    }
+
+    /// <summary>
+    /// With <see cref="TerrainControlMap.WideLayers"/> layers every bit round-trips through a wide map's cells, its
+    /// preview and its RGBA32 texture, bit i in byte i / 8 from red up: a cell per layer holds that layer's bit alone, in
+    /// its own channel, a cell with every layer holds all 32 (every channel full), and a preview on the top layer sets
+    /// and clears bit 31 alone, in alpha. A wide map of more layers is refused.
+    /// </summary>
+    [Test]
+    public void AWideMap_RoundTripsEveryBitOfAFullCell_AndAThirtyThirdLayerIsRefused()
+    {
+        Tilemap[] many = new Tilemap[TerrainControlMap.WideLayers];
+        for (int i = 0; i < many.Length; i++)
+        {
+            GameObject layerObject = new($"Layer{i}", typeof(Tilemap));
+            layerObject.transform.SetParent(layers[0].transform.parent);
+            many[i] = layerObject.GetComponent<Tilemap>();
+            many[i].SetTile(new Vector3Int(i, 0, 0), tile);
+            many[i].SetTile(new Vector3Int(0, 2, 0), tile);
+        }
+
+        TerrainControlMap map = new(many, true);
+        maps.Add(map);
+        Vector3Int full = new(0, 2, 0);
+        Vector3Int top = new(3, 4, 0);
+        map.SetPreview(many.Length - 1, new[] { top }, true);
+        map.Apply();
+
+        Assert.That(map.IsWide, Is.True);
+        Assert.That(map.LayerCount, Is.EqualTo(32));
+        Assert.That(map.Texture.graphicsFormat, Is.EqualTo(TerrainControlMap.FormatOf(true)));
+        Assert.That(map.Texture.graphicsFormat, Is.EqualTo(GraphicsFormat.R8G8B8A8_UNorm));
+        for (int i = 0; i < many.Length; i++)
+        {
+            Vector3Int cell = new(i, 0, 0);
+            Assert.That(map.GetCell(cell), Is.EqualTo(1u << i), $"layer {i}");
+            Assert.That(Texel(map, cell), Is.EqualTo(1u << i), $"texel of layer {i}");
+            Color32 channels = Channels(map, cell);
+            byte[] expected = new byte[4];
+            expected[i / 8] = (byte)(1 << (i % 8));
+            Assert.That(new[] { channels.r, channels.g, channels.b, channels.a }, Is.EqualTo(expected), $"channels of layer {i}");
+        }
+
+        Assert.That(map.GetCell(full), Is.EqualTo(0xFFFFFFFFu));
+        Assert.That(Texel(map, full), Is.EqualTo(0xFFFFFFFFu));
+        Assert.That(Channels(map, full), Is.EqualTo(new Color32(255, 255, 255, 255)));
+        Assert.That(map.GetCell(top), Is.EqualTo(0u));
+        Assert.That(map.GetShownCell(top), Is.EqualTo(0x80000000u));
+        Assert.That(Texel(map, top), Is.EqualTo(0x80000000u));
+        Assert.That(Channels(map, top), Is.EqualTo(new Color32(0, 0, 0, 128)));
+
+        map.ClearPreview();
+        map.SetPreview(many.Length - 1, new[] { full }, false);
+        map.Apply();
+        Assert.That(Texel(map, full), Is.EqualTo(0x7FFFFFFFu));
+        Assert.That(Channels(map, full), Is.EqualTo(new Color32(255, 255, 255, 127)));
+        Assert.That(map.GetShownCell(full), Is.EqualTo(0x7FFFFFFFu));
+        Assert.That(map.GetCell(full), Is.EqualTo(0xFFFFFFFFu));
+        Assert.That(Texel(map, top), Is.Zero, "Clearing the preview shows the real, empty cell again.");
+
+        Tilemap[] tooMany = new Tilemap[TerrainControlMap.WideLayers + 1];
+        many.CopyTo(tooMany, 0);
+        Assert.That(() => new TerrainControlMap(tooMany, true), Throws.ArgumentException);
     }
 
     /// <summary>
@@ -382,19 +447,28 @@ public class TerrainControlMapTests
     }
 
     /// <summary>
-    /// The texture's 16-bit texel for <paramref name="cell"/>.
+    /// The texture's texel for <paramref name="cell"/>.
     /// </summary>
-    private static ushort Texel(TerrainControlMap map, Vector3Int cell)
+    private static uint Texel(TerrainControlMap map, Vector3Int cell)
     {
         return Texel(map, IndexOf(map, cell));
     }
 
     /// <summary>
-    /// The texture's 16-bit texel at <paramref name="index"/>.
+    /// The texture's texel at <paramref name="index"/>: a narrow map's 16 bits or a wide map's 32.
     /// </summary>
-    private static ushort Texel(TerrainControlMap map, int index)
+    private static uint Texel(TerrainControlMap map, int index)
     {
-        return map.Texture.GetPixelData<ushort>(0)[index];
+        return map.IsWide ? map.Texture.GetPixelData<uint>(0)[index] : map.Texture.GetPixelData<ushort>(0)[index];
+    }
+
+    /// <summary>
+    /// The channels of a wide map's texel for <paramref name="cell"/>, as the texture itself reads them.
+    /// </summary>
+    private static Color32 Channels(TerrainControlMap map, Vector3Int cell)
+    {
+        BoundsInt bounds = map.Bounds;
+        return map.Texture.GetPixel(cell.x - bounds.xMin, cell.y - bounds.yMin);
     }
 
     /// <summary>

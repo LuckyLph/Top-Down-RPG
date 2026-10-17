@@ -657,12 +657,14 @@ public class TerrainBrushTests
     }
 
     /// <summary>
-    /// The control map texture's 16-bit texel for <paramref name="cell"/>.
+    /// The control map texture's texel for <paramref name="cell"/>: 16 bits in a narrow map, 32 in a wide one.
     /// </summary>
-    private ushort TexelOf(Vector3Int cell)
+    private uint TexelOf(Vector3Int cell)
     {
-        BoundsInt bounds = renderer.ControlMap.Bounds;
-        return renderer.ControlMap.Texture.GetPixelData<ushort>(0)[(cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin];
+        TerrainControlMap map = renderer.ControlMap;
+        BoundsInt bounds = map.Bounds;
+        int index = (cell.y - bounds.yMin) * bounds.size.x + cell.x - bounds.xMin;
+        return map.IsWide ? map.Texture.GetPixelData<uint>(0)[index] : map.Texture.GetPixelData<ushort>(0)[index];
     }
 
     /// <summary>

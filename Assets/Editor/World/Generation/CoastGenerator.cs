@@ -591,7 +591,8 @@ public sealed class CoastGenerator : AreaGenerator
         /// Lays a plateau of raised grass with a ramp on the detail stream after the campsite
         /// (<see cref="AreaLayoutBuilder.LayPlateau"/>), inside the border band and the plateau margin from the coast,
         /// the paths, the campsite's dirt and the spawn's disc, and a cell from every mob, so no mob stands on its cliff,
-        /// then warns when its cliff
+        /// with props cleared from as many rows of its face as the terrain style's cliff height reaches, then warns when
+        /// its cliff
         /// (<see cref="RaisedGround.IsCliff"/>) cuts the spawn off from the ramp, the top above it, the beach, the trail
         /// or a mob.
         /// </summary>
@@ -613,7 +614,8 @@ public sealed class CoastGenerator : AreaGenerator
 
             near.UnionWith(AreaLayoutBuilder.CellsNear(mobs, 1));
             float spawnClear = settings.spawnClearRadius + margin;
-            AreaLayoutBuilder.Plateau plateau = new(settings.plateauSize, settings.rampWidth);
+            float faceHeight = settings.TerrainStyle != null ? settings.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell : 0f;
+            AreaLayoutBuilder.Plateau plateau = new(settings.plateauSize, settings.rampWidth, RaisedGround.RowsReached(faceHeight));
             HashSet<Vector3Int> raised = builder.Layout.Raised;
             HashSet<Vector3Int> ramps = builder.Layout.Ramps;
             if (!builder.LayPlateau(plateau, raised, ramps, cell => builder.Ground.Contains(cell)

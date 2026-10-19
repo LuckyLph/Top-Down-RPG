@@ -60,8 +60,9 @@ public sealed class PathFollower2D
     }
 
     /// <summary>
-    /// Builds a path from <paramref name="start"/> to <paramref name="worldGoal"/>. Returns false, leaving the state
-    /// untouched, when no grid is configured; returns false and clears the path when no path exists.
+    /// Builds a path from <paramref name="start"/> to <paramref name="worldGoal"/>, moved off the cliff face first
+    /// (<see cref="NavigationGrid2D.MoveOffCliffFace"/>). Returns false, leaving the state untouched, when no grid is
+    /// configured; returns false and clears the path when no path exists.
     /// </summary>
     public bool BuildPath(Vector2 start, Vector2 worldGoal, bool allowPartial)
     {
@@ -70,6 +71,7 @@ public sealed class PathFollower2D
             return false;
         }
 
+        worldGoal = navigationGrid.MoveOffCliffFace(worldGoal);
         Vector3Int startCell = navigationGrid.WorldToCell(start);
         Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
 

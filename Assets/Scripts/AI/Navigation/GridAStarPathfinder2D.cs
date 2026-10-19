@@ -4,7 +4,8 @@ using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>
-/// A* over a <see cref="NavigationGrid2D"/>'s cost field, with 8 neighbours and no corner cutting. Search state lives
+/// A* over a <see cref="NavigationGrid2D"/>'s cost field, with 8 neighbours, no corner cutting and no step across the
+/// cliff of raised ground (<see cref="NavigationGrid2D.IsCliffStep"/>). Search state lives
 /// in flat arrays indexed like the grid and stamped per search, so nothing is cleared or allocated between searches.
 /// </summary>
 public class GridAStarPathfinder2D : IPathfinder2D
@@ -115,6 +116,7 @@ public class GridAStarPathfinder2D : IPathfinder2D
         int goalY = (goal / width) % height;
         int[] costs = field.Costs;
         int[] diagonalCosts = field.DiagonalCosts;
+        bool hasCliff = navigationGrid.HasCliffSides;
 
         int maxExpanded = goalIsReachable ? int.MaxValue : navigationGrid.MaxSearchCells;
         BeginSearch();
@@ -182,6 +184,11 @@ public class GridAStarPathfinder2D : IPathfinder2D
                     }
 
                     stepCost = diagonalCosts[neighbor];
+                }
+
+                if (hasCliff && navigationGrid.IsCliffStep(current, NeighborDx[i], NeighborDy[i]))
+                {
+                    continue;
                 }
 
                 bool isKnown = knownStamps[neighbor] == searchStamp;

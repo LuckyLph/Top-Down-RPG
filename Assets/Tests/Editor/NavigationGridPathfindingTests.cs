@@ -12,7 +12,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// <summary>
 /// Tests for <see cref="NavigationGrid2D"/> and its A* pathfinder: shortest and partial paths, search caps and
 /// allocations, terrain rules, costs and layer priority, blocking tilemaps and obstacle colliders, edge cost, cell
-/// refreshes and region connectivity, and the cliff of raised ground, which only a ramp crosses.
+/// refreshes and region connectivity, the cliff of raised ground, a line between cells that only a ramp crosses, with
+/// goals on its face moved to its top, and what blocks a cell.
 /// </summary>
 public class NavigationGridPathfindingTests
 {
@@ -25,6 +26,8 @@ public class NavigationGridPathfindingTests
     private TerrainMovementProfile2D landProfile;
     private TerrainMovementProfile2D amphibiousProfile;
     private DualGridRuleTile dualGridTile;
+    private RaisedGroundTile raisedTile;
+    private RaisedGroundTile rampTile;
 
     /// <summary>
     /// Destroys the grid root and every tile, terrain type, movement profile and dual-grid tile the test created.
@@ -71,6 +74,16 @@ public class NavigationGridPathfindingTests
         {
             Object.DestroyImmediate(dualGridTile.DataTile);
             Object.DestroyImmediate(dualGridTile);
+        }
+
+        if (raisedTile != null)
+        {
+            Object.DestroyImmediate(raisedTile);
+        }
+
+        if (rampTile != null)
+        {
+            Object.DestroyImmediate(rampTile);
         }
     }
 
@@ -432,55 +445,185 @@ public class NavigationGridPathfindingTests
     }
 
     /// <summary>
-    /// The cliff of raised ground blocks every cell of the plateau's rim (raised ground beside level ground) but its
-    /// ramp, so the top can be reached only over the ramp, and a path up goes over it; turning the ramp into raised
-    /// ground on the raised tilemap reaches a built grid at once and cuts the top off. A plateau covers columns 2 to 7
-    /// of rows 3 to 7 of a 10 x 10 ground, with a ramp in columns 4 and 5 of row 3.
+    /// The cliff of raised ground is a line between cells, not cells: the plateau's rim is walkable, while steps up its
+    /// face, onto its sides and back and diagonally past it are refused, so the top is reached only over the ramp, whose
+    /// foot opens to the ground below and whose sides to the top; a step across the cliff costs as a blocked one, a line
+    /// across it is not walkable, and a path up crosses none. Turning the ramp into raised ground on the raised tilemap
+    /// reaches a built grid at once and cuts the top off, rim included. The plateau of <see cref="SetupPlateau"/>.
     /// </summary>
     [Test]
-    public void RaisedGround_ItsCliffBlocks_AndOnlyItsRampLeadsUp()
+    public void RaisedGround_ItsCliffIsALineBetweenCells_ThatOnlyTheRampCrosses()
     {
-        SetupOpenGround(10);
-        Tilemap raisedMap = CreateTilemapObject("Raised");
-        RaisedGroundTile raised = RaisedGroundTile.Create(false);
-        RaisedGroundTile ramp = RaisedGroundTile.Create(true);
+        Tilemap raisedMap = SetupPlateau();
+        navigationGrid.BuildGrid();
+
+        Vector3Int below = new(0, 0, 0);
+        Vector3Int top = new(4, 5, 0);
+        foreach (Vector3Int rim in new[] { new Vector3Int(2, 3, 0), new Vector3Int(3, 3, 0), new Vector3Int(6, 3, 0), new Vector3Int(2, 5, 0), new Vector3Int(7, 5, 0), new Vector3Int(4, 7, 0) })
+        {
+            Assert.That(navigationGrid.IsCellWalkable(rim), Is.True, $"the rim at {rim}");
+        }
+
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(3, 2, 0), new Vector3Int(3, 3, 0)), Is.True, "up the face");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(1, 5, 0), new Vector3Int(2, 5, 0)), Is.True, "onto the side");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(4, 8, 0), new Vector3Int(4, 7, 0)), Is.True, "onto the back");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(1, 2, 0), new Vector3Int(2, 3, 0)), Is.True, "diagonally onto the corner");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(3, 2, 0), new Vector3Int(4, 3, 0)), Is.True, "diagonally past the face onto the ramp");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(4, 2, 0), new Vector3Int(4, 3, 0)), Is.False, "up the ramp");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(4, 3, 0), new Vector3Int(4, 4, 0)), Is.False, "from the ramp onto the top");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(4, 3, 0), new Vector3Int(3, 3, 0)), Is.False, "from the ramp along the front row");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(4, 1, 0), new Vector3Int(4, 6, 0)), Is.False, "a line up the ramp");
+        Assert.That(navigationGrid.CrossesCliff(new Vector3Int(3, 1, 0), new Vector3Int(3, 6, 0)), Is.True, "a line up the face");
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(3, 2, 0), new Vector3Int(3, 3, 0)), Is.EqualTo(int.MaxValue / 4), "a step up the face");
+        Assert.That(navigationGrid.TryGetLineCost(new Vector3Int(3, 1, 0), new Vector3Int(3, 5, 0), null, out _), Is.False, "a line up the face");
+        Assert.That(navigationGrid.TryGetLineCost(new Vector3Int(4, 1, 0), new Vector3Int(4, 5, 0), null, out _), Is.True, "a line up the ramp");
+
+        PathResult path = navigationGrid.Pathfinder.FindPath(new PathRequest(below, top, allowPartial: false));
+        Assert.That(path.Success, Is.True);
+        Assert.That(path.Cells.Any(cell => cell.y == 3 && (cell.x == 4 || cell.x == 5)), Is.True, "The path goes up the ramp.");
+        for (int i = 1; i < path.Cells.Count; i++)
+        {
+            Assert.That(navigationGrid.CrossesCliff(path.Cells[i - 1], path.Cells[i]), Is.False, $"the step from {path.Cells[i - 1]} to {path.Cells[i]}");
+        }
+
+        Assert.That(navigationGrid.AreCellsConnected(below, new Vector3Int(2, 5, 0), null), Is.True, "The rim is reached over the ramp.");
+
+        raisedMap.SetTile(new Vector3Int(4, 3, 0), raisedTile);
+        raisedMap.SetTile(new Vector3Int(5, 3, 0), raisedTile);
+
+        Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 3, 0)), Is.True, "the ramp turned to raised ground");
+        Assert.That(navigationGrid.AreCellsConnected(below, top, null), Is.False, "The top is cut off.");
+        Assert.That(navigationGrid.AreCellsConnected(top, new Vector3Int(4, 3, 0), null), Is.True, "The front row stays part of the top.");
+    }
+
+    /// <summary>
+    /// A profile's edge cost counts the cliff on both sides of it: a cell of the rim and a cell at the foot cost more
+    /// than a cell inside the top, the cell below the ramp and the ramp itself, which no cliff side bounds.
+    /// </summary>
+    [Test]
+    public void EdgeCost_CountsTheCliff_OnBothSidesOfIt()
+    {
+        SetupPlateau();
+        landProfile = TerrainMovementProfile2D.Create(true, 10, 5);
+        navigationGrid.BuildGrid();
+
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(4, 4, 0), new Vector3Int(4, 5, 0), landProfile), Is.EqualTo(10), "inside the top");
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(3, 5, 0), new Vector3Int(2, 5, 0), landProfile), Is.EqualTo(15), "the rim");
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(3, 1, 0), new Vector3Int(3, 2, 0), landProfile), Is.EqualTo(15), "the foot");
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(4, 1, 0), new Vector3Int(4, 2, 0), landProfile), Is.EqualTo(10), "below the ramp");
+        Assert.That(navigationGrid.MovementCost(new Vector3Int(4, 2, 0), new Vector3Int(4, 3, 0), landProfile), Is.EqualTo(10), "the ramp");
+    }
+
+    /// <summary>
+    /// A goal on a cliff face 14 px tall, which the terrain renderer on the grid draws over the bottom of the plateau's
+    /// front row at its style's cliff height, moves straight up to the face's top, and a path built toward it ends there;
+    /// goals above the face, on the ramp, in the rows behind and on the ground below stay, and so does every goal before
+    /// the grid is built. A face under a cell tall covers no whole cell, so the front row stays walkable.
+    /// </summary>
+    [Test]
+    public void RaisedGround_AGoalOnTheCliffFace_MovesUpToItsTop()
+    {
+        Tilemap raisedMap = SetupPlateau();
+        TerrainStyle style = TerrainStyle.Create(null);
         try
         {
-            for (int y = 3; y <= 7; y++)
-            {
-                for (int x = 2; x <= 7; x++)
-                {
-                    raisedMap.SetTile(new Vector3Int(x, y, 0), (x == 4 || x == 5) && y == 3 ? ramp : raised);
-                }
-            }
+            SetCliffHeight(style, 14f);
+            AddRaisedRenderer(style, raisedMap);
+            Vector2 onTheFace = new(3.5f, 3.2f);
+            Assert.That(navigationGrid.MoveOffCliffFace(onTheFace), Is.EqualTo(onTheFace), "before the grid is built");
 
-            navigationGrid.ConfigureRaisedTilemap(raisedMap);
             navigationGrid.BuildGrid();
 
-            Vector3Int below = new(0, 0, 0);
-            Vector3Int top = new(4, 5, 0);
-            foreach (Vector3Int rim in new[] { new Vector3Int(2, 3, 0), new Vector3Int(3, 3, 0), new Vector3Int(6, 3, 0), new Vector3Int(2, 5, 0), new Vector3Int(7, 5, 0), new Vector3Int(4, 7, 0) })
+            Vector2 faceTop = new(3.5f, 3f + 14f / TerrainStyle.PixelsPerCell);
+            Assert.That(Vector2.Distance(navigationGrid.MoveOffCliffFace(onTheFace), faceTop), Is.LessThan(0.0001f), "on the face");
+            foreach (Vector2 stays in new[] { new Vector2(3.5f, 3.6f), new Vector2(4.5f, 3.1f), new Vector2(3.5f, 4.2f), new Vector2(3.5f, 2.9f) })
             {
-                Assert.That(navigationGrid.IsCellWalkable(rim), Is.False, $"the cliff at {rim}");
+                Assert.That(navigationGrid.MoveOffCliffFace(stays), Is.EqualTo(stays), $"{stays}");
             }
 
-            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 3, 0)), Is.True, "the ramp");
-            Assert.That(navigationGrid.IsCellWalkable(top), Is.True, "the top");
-            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 2, 0)), Is.True, "the ground below");
-            PathResult path = navigationGrid.Pathfinder.FindPath(new PathRequest(below, top, allowPartial: false));
-            Assert.That(path.Success, Is.True);
-            Assert.That(path.Cells.Any(cell => cell.y == 3 && (cell.x == 4 || cell.x == 5)), Is.True, "The path goes up the ramp.");
-
-            raisedMap.SetTile(new Vector3Int(4, 3, 0), raised);
-            raisedMap.SetTile(new Vector3Int(5, 3, 0), raised);
-
-            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 3, 0)), Is.False, "the ramp turned to cliff");
-            Assert.That(navigationGrid.AreCellsConnected(below, top, null), Is.False, "The top is cut off.");
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(3, 3, 0)), Is.True, "The front row is walkable.");
+            PathFollower2D follower = new();
+            follower.Configure(navigationGrid, null, new PathFollowerSettings2D(0.1f, 0.1f, 8));
+            Assert.That(follower.BuildPath(new Vector2(0.5f, 0.5f), onTheFace, allowPartial: false), Is.True);
+            Assert.That(Vector2.Distance(follower.Waypoints[follower.Waypoints.Count - 1], faceTop), Is.LessThan(0.0001f), "The path ends on top of the face.");
         }
         finally
         {
-            Object.DestroyImmediate(raised);
-            Object.DestroyImmediate(ramp);
+            Object.DestroyImmediate(style);
+        }
+    }
+
+    /// <summary>
+    /// A cliff face 64 px tall covers the plateau's two front rows whole: those cells are blocked as
+    /// <see cref="NavigationGrid2D.Blocker.CliffFace"/>, but for the ramp and the slope above it, which a path from the
+    /// ground below takes to the top. A goal anywhere on the face moves up to its top, two cells above its foot, and a goal
+    /// on the slope stays. Painting the ramp over with raised ground turns its column into face and cuts the top off, and
+    /// erasing a foot cell lowers that column's face by a row, both reaching the built grid at once.
+    /// </summary>
+    [Test]
+    public void RaisedGround_AFaceTwoCellsTall_BlocksItsCells_ButNotTheRampsSlope()
+    {
+        Tilemap raisedMap = SetupPlateau();
+        TerrainStyle style = TerrainStyle.Create(null);
+        try
+        {
+            SetCliffHeight(style, 64f);
+            AddRaisedRenderer(style, raisedMap);
+            navigationGrid.BuildGrid();
+
+            Vector3Int below = new(4, 0, 0);
+            Vector3Int top = new(4, 6, 0);
+            foreach (Vector3Int face in new[] { new Vector3Int(2, 3, 0), new Vector3Int(3, 4, 0), new Vector3Int(6, 3, 0), new Vector3Int(7, 4, 0) })
+            {
+                Assert.That(navigationGrid.IsCellWalkable(face), Is.False, $"the face at {face}");
+                Assert.That(navigationGrid.GetBlocker(face, null), Is.EqualTo(NavigationGrid2D.Blocker.CliffFace), $"the face at {face}");
+            }
+
+            foreach (Vector3Int open in new[] { new Vector3Int(4, 3, 0), new Vector3Int(5, 3, 0), new Vector3Int(4, 4, 0), new Vector3Int(5, 4, 0), new Vector3Int(2, 5, 0), new Vector3Int(3, 2, 0) })
+            {
+                Assert.That(navigationGrid.IsCellWalkable(open), Is.True, $"{open}");
+            }
+
+            PathResult path = navigationGrid.Pathfinder.FindPath(new PathRequest(below, top, allowPartial: false));
+            Assert.That(path.Success, Is.True);
+            Assert.That(path.Cells.Any(cell => cell.y == 4 && (cell.x == 4 || cell.x == 5)), Is.True, "The path goes up the slope.");
+            for (int i = 1; i < path.Cells.Count; i++)
+            {
+                Assert.That(navigationGrid.CrossesCliff(path.Cells[i - 1], path.Cells[i]), Is.False, $"the step from {path.Cells[i - 1]} to {path.Cells[i]}");
+            }
+
+            Vector2 faceTop = new(3.5f, 5f);
+            foreach (Vector2 onTheFace in new[] { new Vector2(3.5f, 3.2f), new Vector2(3.5f, 4.9f) })
+            {
+                Assert.That(Vector2.Distance(navigationGrid.MoveOffCliffFace(onTheFace), faceTop), Is.LessThan(0.0001f), $"on the face at {onTheFace}");
+            }
+
+            foreach (Vector2 stays in new[] { new Vector2(4.5f, 4.5f), new Vector2(3.5f, 5.2f), new Vector2(3.5f, 2.9f) })
+            {
+                Assert.That(navigationGrid.MoveOffCliffFace(stays), Is.EqualTo(stays), $"{stays}");
+            }
+
+            PathFollower2D follower = new();
+            follower.Configure(navigationGrid, null, new PathFollowerSettings2D(0.1f, 0.1f, 8));
+            Assert.That(follower.BuildPath(new Vector2(0.5f, 0.5f), new Vector2(3.5f, 3.2f), allowPartial: false), Is.True);
+            Assert.That(Vector2.Distance(follower.Waypoints[follower.Waypoints.Count - 1], faceTop), Is.LessThan(0.0001f), "The path ends on top of the face.");
+
+            raisedMap.SetTile(new Vector3Int(4, 3, 0), raisedTile);
+            raisedMap.SetTile(new Vector3Int(5, 3, 0), raisedTile);
+
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 3, 0)), Is.False, "the ramp turned to face");
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(4, 4, 0)), Is.False, "the slope turned to face");
+            Assert.That(navigationGrid.AreCellsConnected(below, top, null), Is.False, "The top is cut off.");
+
+            raisedMap.SetTile(new Vector3Int(7, 3, 0), null);
+
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(7, 3, 0)), Is.True, "the erased foot is level ground");
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(7, 5, 0)), Is.False, "The face reaches a row higher.");
+            Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(7, 6, 0)), Is.True, "above the lowered face");
+        }
+        finally
+        {
+            Object.DestroyImmediate(style);
         }
     }
 
@@ -532,6 +675,63 @@ public class NavigationGridPathfindingTests
         navigationGrid.BuildGrid();
 
         Assert.That(navigationGrid.IsCellWalkable(new Vector3Int(1, 1, 0)), Is.True);
+    }
+
+    /// <summary>
+    /// <see cref="NavigationGrid2D.GetBlocker"/> tells what keeps a profile off each cell of an 8 x 8 ground: water the
+    /// profile cannot walk, a wall, a blocking prop, a hole in the ground and the world outside the bounds; nothing on
+    /// open ground, on the water without a profile, or on a 3 x 3 plateau, whose cliff blocks steps rather than cells.
+    /// </summary>
+    [Test]
+    public void GetBlocker_TellsWhatKeepsAProfileOffACell()
+    {
+        int obstacles = LayerMask.NameToLayer("Obstacles");
+        SetupOpenGround(8);
+        Vector3Int water = new(1, 1, 0);
+        Vector3Int wall = new(3, 1, 0);
+        Vector3Int rock = new(5, 1, 0);
+        Vector3Int hole = new(6, 6, 0);
+        root.transform.Find("Ground").GetComponent<Tilemap>().SetTile(hole, null);
+        waterTerrain = CreateTerrain("water");
+        landProfile = CreateProfile(true, Rule(waterTerrain, false, 10));
+        Tilemap waterMap = CreateTilemapObject("Water");
+        waterMap.SetTile(water, fillTile);
+        AttachTerrainSource(waterMap, waterTerrain);
+        Tilemap collisionMap = CreateTilemapObject("Collision");
+        blockTile = ScriptableObject.CreateInstance<Tile>();
+        collisionMap.SetTile(wall, blockTile);
+        CreateBox("Rock", obstacles, new Vector2(5.5f, 1.5f), new Vector2(0.8f, 0.8f), isTrigger: false);
+        Tilemap raisedMap = CreateTilemapObject("Raised");
+        RaisedGroundTile raised = RaisedGroundTile.Create(false);
+        try
+        {
+            for (int y = 4; y <= 6; y++)
+            {
+                for (int x = 1; x <= 3; x++)
+                {
+                    raisedMap.SetTile(new Vector3Int(x, y, 0), raised);
+                }
+            }
+
+            navigationGrid.ConfigureBlockingTilemaps(collisionMap);
+            navigationGrid.ConfigureObstacleLayers(1 << obstacles);
+            navigationGrid.ConfigureRaisedTilemap(raisedMap);
+            navigationGrid.BuildGrid();
+
+            Assert.That(navigationGrid.GetBlocker(Vector3Int.zero, landProfile), Is.EqualTo(NavigationGrid2D.Blocker.None));
+            Assert.That(navigationGrid.GetBlocker(water, landProfile), Is.EqualTo(NavigationGrid2D.Blocker.Terrain));
+            Assert.That(navigationGrid.GetBlocker(water, null), Is.EqualTo(NavigationGrid2D.Blocker.None), "Without a profile every terrain is walkable.");
+            Assert.That(navigationGrid.GetBlocker(wall, landProfile), Is.EqualTo(NavigationGrid2D.Blocker.Wall));
+            Assert.That(navigationGrid.GetBlocker(rock, landProfile), Is.EqualTo(NavigationGrid2D.Blocker.Obstacle));
+            Assert.That(navigationGrid.GetBlocker(new Vector3Int(1, 4, 0), landProfile), Is.EqualTo(NavigationGrid2D.Blocker.None), "the plateau's rim");
+            Assert.That(navigationGrid.GetBlocker(new Vector3Int(2, 5, 0), landProfile), Is.EqualTo(NavigationGrid2D.Blocker.None), "the plateau's middle");
+            Assert.That(navigationGrid.GetBlocker(hole, landProfile), Is.EqualTo(NavigationGrid2D.Blocker.NoGround));
+            Assert.That(navigationGrid.GetBlocker(new Vector3Int(20, 20, 0), landProfile), Is.EqualTo(NavigationGrid2D.Blocker.NoGround));
+        }
+        finally
+        {
+            Object.DestroyImmediate(raised);
+        }
     }
 
     /// <summary>
@@ -975,6 +1175,52 @@ public class NavigationGridPathfindingTests
 
         AttachTerrainSource(ground, groundTerrain);
         navigationGrid = root.AddComponent<NavigationGrid2D>();
+    }
+
+    /// <summary>
+    /// Builds a 10 x 10 open ground (<see cref="SetupOpenGround"/>) with a plateau of raised ground over columns 2 to 7
+    /// of rows 3 to 7 and a ramp in columns 4 and 5 of its front row, on a raised tilemap the grid reads; not built yet.
+    /// Returns the raised tilemap.
+    /// </summary>
+    private Tilemap SetupPlateau()
+    {
+        SetupOpenGround(10);
+        Tilemap raisedMap = CreateTilemapObject("Raised");
+        raisedTile = RaisedGroundTile.Create(false);
+        rampTile = RaisedGroundTile.Create(true);
+        for (int y = 3; y <= 7; y++)
+        {
+            for (int x = 2; x <= 7; x++)
+            {
+                raisedMap.SetTile(new Vector3Int(x, y, 0), (x == 4 || x == 5) && y == 3 ? rampTile : raisedTile);
+            }
+        }
+
+        navigationGrid.ConfigureRaisedTilemap(raisedMap);
+        return raisedMap;
+    }
+
+    /// <summary>
+    /// Sets <paramref name="style"/>'s cliff height to <paramref name="pixels"/>.
+    /// </summary>
+    private static void SetCliffHeight(TerrainStyle style, float pixels)
+    {
+        SerializedObject settings = new(style);
+        settings.FindProperty("cliffHeight").floatValue = pixels;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// Adds a disabled terrain renderer of <paramref name="style"/> drawing <paramref name="raisedMap"/> to the root, from
+    /// which the navigation grid reads the cliff face's height when it builds.
+    /// </summary>
+    private void AddRaisedRenderer(TerrainStyle style, Tilemap raisedMap)
+    {
+        root.SetActive(false);
+        TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, raisedMap);
+        renderer.enabled = false;
+        root.SetActive(true);
     }
 
     /// <summary>

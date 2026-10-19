@@ -5,17 +5,42 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps, the cliff of its raised
-/// tilemap (<see cref="RaisedGround.IsCliff"/>) and the cells under colliders on its obstacle layers (blocking props). Each movement profile
-/// gets a cost field: flat arrays over <see cref="WalkableBounds"/> holding every cell's traversal cost and connected
-/// region, baked on first use and rebaked when the profile is edited or the grid changes. While enabled it follows
-/// tile changes on its source and blocking tilemaps, updating just those cells and bumping <see cref="Version"/>.
+/// The walkable cells of an area, read from its terrain sources minus its blocking tilemaps, the cells under
+/// colliders on its obstacle layers (blocking props) and the cells the cliff face of its raised tilemap covers whole,
+/// and the cliff itself: a line along the sides between raised and level cells that steps cross only at a ramp's foot
+/// (<see cref="RaisedGround.CanCross"/>). Each
+/// movement profile gets a cost field: flat arrays over <see cref="WalkableBounds"/> holding every cell's traversal cost
+/// and connected region, baked on first use and rebaked when the profile is edited or the grid changes. While enabled
+/// it follows tile changes on its source, blocking and raised tilemaps, updating just those cells and bumping
+/// <see cref="Version"/>.
 /// </summary>
 public class NavigationGrid2D : MonoBehaviour
 {
     private const int DefaultTraversalCost = 10;
     private const int BlockedCost = int.MaxValue / 4;
     internal const float ObstacleEdgeInset = 0.01f;
+    internal const byte LeftSide = 1;
+    internal const byte RightSide = 2;
+    internal const byte DownSide = 4;
+    internal const byte UpSide = 8;
+
+    private static readonly Vector3Int[] SideSteps = { Vector3Int.left, Vector3Int.right, Vector3Int.down, Vector3Int.up };
+
+    /// <summary>
+    /// What keeps a movement profile off a cell (<see cref="GetBlocker"/>): nothing, no terrain, terrain the profile
+    /// cannot walk, a tile on a blocking tilemap, a collider on the obstacle layers, or the cliff face of raised ground
+    /// covering the whole cell (<see cref="RaisedGround.IsOnFace(Tilemap, Vector3Int, int)"/>). The cliff's line
+    /// blocks steps across it rather than cells (<see cref="GetCliffSides"/>).
+    /// </summary>
+    internal enum Blocker
+    {
+        None,
+        NoGround,
+        Terrain,
+        Wall,
+        Obstacle,
+        CliffFace,
+    }
 
     /// <summary>
     /// A walkable cell's terrain: the terrain types of its highest-priority terrain layer, and that priority.
@@ -56,7 +81,7 @@ public class NavigationGrid2D : MonoBehaviour
     [SerializeField] private bool discoverSourcesInChildren = true;
     [Tooltip("Tilemaps whose cells are blocked for every terrain layer, such as the collision tilemap.")]
     [SerializeField] private List<Tilemap> blockingTilemaps = new();
-    [Tooltip("Optional: the area's raised ground. Its cliff (raised cells that are no ramp with level ground beside them) is blocked for every terrain layer, so units move between raised and level ground only over a ramp.")]
+    [Tooltip("Optional: the area's raised ground. Its cliff, the line between raised and level cells, is crossed only at a ramp's foot, so units move between raised and level ground only over a ramp; the cells the cliff face the terrain renderer draws covers whole are blocked, and a goal on the face moves up to its top.")]
     [SerializeField] private Tilemap raisedTilemap;
     [Tooltip("Layers whose colliders block every cell they overlap, such as the footprints of blocking props. Read " +
         "when the grid builds; colliders on tilemaps and triggers are ignored.")]
@@ -80,10 +105,14 @@ public class NavigationGrid2D : MonoBehaviour
     private readonly List<Collider2D> obstacleHits = new();
     private readonly Dictionary<TerrainMovementProfile2D, CostField> fieldsByProfile = new();
     private CellData[] cells = Array.Empty<CellData>();
+    private byte[] cliffSides = Array.Empty<byte>();
+    private float cliffFaceHeight;
+    private int cliffFaceRows;
     private int[] regionQueue = Array.Empty<int>();
     private CostField defaultField;
     private GridAStarPathfinder2D pathfinder;
     private bool gizmoGridIsStale;
+    private bool gizmoBuildFailed;
     private BoundsInt walkableBounds;
     private int width;
     private int height;
@@ -109,6 +138,7 @@ public class NavigationGrid2D : MonoBehaviour
     public LayerMask ObstacleLayers => obstacleLayers;
 
     internal int CellCount => cells.Length;
+    internal bool HasCliffSides { get; private set; }
     internal int Width => width;
     internal int Height => height;
 
@@ -180,7 +210,7 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Sets the raised tilemap whose cliff is blocked (null for none), for grids set up in code. Takes effect on the next
+    /// Sets the raised tilemap whose cliff stops steps (null for none), for grids set up in code. Takes effect on the next
     /// <see cref="BuildGrid"/>.
     /// </summary>
     public void ConfigureRaisedTilemap(Tilemap tilemap)
@@ -198,9 +228,10 @@ public class NavigationGrid2D : MonoBehaviour
 
     /// <summary>
     /// Rebuilds the grid from scratch and bumps <see cref="Version"/>: collects the cells of every usable terrain
-    /// source (listed and, optionally, found in the children), removes cells with a tile on a blocking tilemap or under
-    /// a collider on the obstacle layers, bakes them over <see cref="WalkableBounds"/>, drops every cost field and
-    /// creates a new pathfinder. Logs an error and stays unbuilt when no source is usable.
+    /// source (listed and, optionally, found in the children), reads the cliff face's height, removes cells with a tile
+    /// on a blocking tilemap, under a collider on the obstacle layers or covered whole by the cliff face, bakes them over
+    /// <see cref="WalkableBounds"/> with the cliff sides of the raised tilemap, drops every cost field and creates a new
+    /// pathfinder. Logs an error and stays unbuilt when no source is usable.
     /// </summary>
     public void BuildGrid()
     {
@@ -212,6 +243,10 @@ public class NavigationGrid2D : MonoBehaviour
         fieldsByProfile.Clear();
         defaultField = null;
         cells = Array.Empty<CellData>();
+        cliffSides = Array.Empty<byte>();
+        HasCliffSides = false;
+        cliffFaceHeight = 0f;
+        cliffFaceRows = 0;
         pathfinder = null;
         walkableBounds = default;
         width = 0;
@@ -307,10 +342,13 @@ public class NavigationGrid2D : MonoBehaviour
             watchedTilemaps.Add(raisedTilemap);
         }
 
+        cliffFaceHeight = ResolveCliffFaceHeight();
+        cliffFaceRows = RaisedGround.RowsCovered(cliffFaceHeight);
         CollectObstacleCells();
         RemoveBlockedCells();
         walkableBounds = CalculateBounds();
         BakeCells();
+        BakeCliffSides();
         cellsByPosition.Clear();
         pathfinder = new GridAStarPathfinder2D(this);
     }
@@ -355,6 +393,103 @@ public class NavigationGrid2D : MonoBehaviour
     public bool IsCellWalkable(Vector3Int cell, TerrainMovementProfile2D movementProfile)
     {
         return TryGetIndex(cell, out int index) && GetCostField(movementProfile).Costs[index] > 0;
+    }
+
+    /// <summary>
+    /// What keeps <paramref name="movementProfile"/> (null = every terrain walkable) off <paramref name="cell"/>, or
+    /// <see cref="Blocker.None"/> when it can walk there. A cell without terrain, including one outside
+    /// <see cref="WalkableBounds"/>, is <see cref="Blocker.NoGround"/> unless a wall or an obstacle is on it or the
+    /// cliff face covers it.
+    /// </summary>
+    internal Blocker GetBlocker(Vector3Int cell, TerrainMovementProfile2D movementProfile)
+    {
+        if (TryGetIndex(cell, out int index) && cells[index] != null)
+        {
+            return GetCostField(movementProfile).Costs[index] > 0 ? Blocker.None : Blocker.Terrain;
+        }
+
+        Blocker blocker = BlockerOf(cell);
+        return blocker != Blocker.None ? blocker : Blocker.NoGround;
+    }
+
+    /// <summary>
+    /// The sides of <paramref name="cell"/> the cliff runs along, as <see cref="LeftSide"/>, <see cref="RightSide"/>,
+    /// <see cref="DownSide"/> and <see cref="UpSide"/> bits; none outside <see cref="WalkableBounds"/>.
+    /// </summary>
+    internal byte GetCliffSides(Vector3Int cell)
+    {
+        return TryGetIndex(cell, out int index) ? cliffSides[index] : (byte)0;
+    }
+
+    /// <summary>
+    /// Whether the Bresenham line from <paramref name="from"/> to <paramref name="to"/> crosses the cliff of raised
+    /// ground, a diagonal step counting when either way round its corner does (<see cref="IsCliffStep"/>); steps with an
+    /// end outside <see cref="WalkableBounds"/> cross nothing. For movement off the paths, such as crowd separation.
+    /// </summary>
+    public bool CrossesCliff(Vector3Int from, Vector3Int to)
+    {
+        int x = from.x;
+        int y = from.y;
+        int dx = Mathf.Abs(to.x - x);
+        int dy = Mathf.Abs(to.y - y);
+        int sx = x < to.x ? 1 : -1;
+        int sy = y < to.y ? 1 : -1;
+        int err = dx - dy;
+        Vector3Int previous = from;
+        while (x != to.x || y != to.y)
+        {
+            int e2 = err * 2;
+            if (e2 > -dy)
+            {
+                err -= dy;
+                x += sx;
+            }
+
+            if (e2 < dx)
+            {
+                err += dx;
+                y += sy;
+            }
+
+            Vector3Int current = new(x, y, from.z);
+            if (StepCrossesCliff(previous, current))
+            {
+                return true;
+            }
+
+            previous = current;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// <paramref name="point"/> moved off the cliff face the terrain renderer draws inside raised ground's bottom cells
+    /// (<see cref="RaisedGround.OffTheFace"/>), so a goal set on the face, the cells it covers whole included, is reached
+    /// on its top; unchanged without raised ground, before the grid is built, or where there is no face.
+    /// </summary>
+    public Vector2 MoveOffCliffFace(Vector2 point)
+    {
+        return raisedTilemap != null ? RaisedGround.OffTheFace(raisedTilemap, point, cliffFaceHeight) : point;
+    }
+
+    /// <summary>
+    /// Whether one step from the cell at flat index <paramref name="index"/> to its neighbour (<paramref name="dx"/>,
+    /// <paramref name="dy"/>), one of its 8 neighbours inside the grid, crosses the cliff: a straight step across a cliff
+    /// side, a diagonal one when either way round its corner does, so no diagonal cuts past the cliff.
+    /// </summary>
+    internal bool IsCliffStep(int index, int dx, int dy)
+    {
+        if (dx == 0 || dy == 0)
+        {
+            return (cliffSides[index] & SideToward(dx, dy)) != 0;
+        }
+
+        byte horizontal = SideToward(dx, 0);
+        byte vertical = SideToward(0, dy);
+        return (cliffSides[index] & (horizontal | vertical)) != 0
+            || (cliffSides[index + dx] & vertical) != 0
+            || (cliffSides[index + (dy * width)] & horizontal) != 0;
     }
 
     /// <summary>
@@ -640,7 +775,8 @@ public class NavigationGrid2D : MonoBehaviour
 
     /// <summary>
     /// Whether one step from <paramref name="from"/> to <paramref name="to"/> is allowed in <paramref name="field"/>:
-    /// the cells are adjacent, the target is walkable, and a diagonal step does not cut a blocked corner.
+    /// the cells are adjacent, the target is walkable, a diagonal step does not cut a blocked corner, and the step does
+    /// not cross the cliff.
     /// </summary>
     private bool CanTraverse(CostField field, Vector3Int from, Vector3Int to)
     {
@@ -659,22 +795,47 @@ public class NavigationGrid2D : MonoBehaviour
             return false;
         }
 
-        if (absX == 1 && absY == 1)
+        if (absX == 1 && absY == 1
+            && (!IsWalkable(field, new Vector3Int(from.x + dx, from.y, from.z)) || !IsWalkable(field, new Vector3Int(from.x, from.y + dy, from.z))))
         {
-            return IsWalkable(field, new Vector3Int(from.x + dx, from.y, from.z))
-                && IsWalkable(field, new Vector3Int(from.x, from.y + dy, from.z));
+            return false;
         }
 
-        return true;
+        return !StepCrossesCliff(from, to);
+    }
+
+    /// <summary>
+    /// Whether the step from <paramref name="from"/> to <paramref name="to"/>, one of its 8 neighbours, crosses the
+    /// cliff (<see cref="IsCliffStep"/>). False for cells that are not neighbours or lie outside the grid.
+    /// </summary>
+    private bool StepCrossesCliff(Vector3Int from, Vector3Int to)
+    {
+        int dx = to.x - from.x;
+        int dy = to.y - from.y;
+        if ((dx == 0 && dy == 0) || Mathf.Abs(dx) > 1 || Mathf.Abs(dy) > 1 || !TryGetIndex(to, out _))
+        {
+            return false;
+        }
+
+        return TryGetIndex(from, out int index) && IsCliffStep(index, dx, dy);
+    }
+
+    /// <summary>
+    /// The side of a cell facing the neighbour (<paramref name="dx"/>, <paramref name="dy"/>) away along one axis.
+    /// </summary>
+    private static byte SideToward(int dx, int dy)
+    {
+        return dx > 0 ? RightSide : dx < 0 ? LeftSide : dy > 0 ? UpSide : DownSide;
     }
 
     /// <summary>
     /// The cost of entering <paramref name="to"/> from <paramref name="from"/> in <paramref name="field"/>: its
-    /// diagonal cost for a diagonal step, its straight cost otherwise, or a prohibitive cost when it is blocked.
+    /// diagonal cost for a diagonal step, its straight cost otherwise, or a prohibitive cost when it is blocked or the
+    /// step crosses the cliff.
     /// </summary>
     private int MovementCost(CostField field, Vector3Int from, Vector3Int to)
     {
-        if (!TryGetIndex(to, out int index) || field.Costs[index] == 0)
+        if (!TryGetIndex(to, out int index) || field.Costs[index] == 0 || StepCrossesCliff(from, to))
         {
             return BlockedCost;
         }
@@ -716,8 +877,9 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Re-reads the changed cells when <paramref name="tilemap"/> is one of this grid's source or blocking tilemaps.
-    /// Called by the grid itself while enabled, and by an editor listener outside Play Mode so the gizmos stay current.
+    /// Re-reads the changed cells when <paramref name="tilemap"/> is one of this grid's source or blocking tilemaps, or
+    /// the cliff sides around them and the cells whose face they decide when it is the raised tilemap. Called by the grid
+    /// itself while enabled, and by an editor listener outside Play Mode so the gizmos stay current.
     /// </summary>
     internal void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
@@ -729,23 +891,90 @@ public class NavigationGrid2D : MonoBehaviour
         bool raised = tilemap == raisedTilemap;
         for (int i = 0; i < positions.Length; i++)
         {
-            if (!RefreshCell(positions[i]))
+            if (raised)
+            {
+                RefreshCliffSides(positions[i]);
+            }
+
+            if ((raised && !RefreshFaceColumn(positions[i])) || (!raised && !RefreshCell(positions[i])))
             {
                 BuildGrid();
                 return;
             }
+        }
 
-            for (int n = 0; raised && n < RaisedGround.NeighbourOffsets.Count; n++)
+        Version++;
+    }
+
+    /// <summary>
+    /// Re-reads <paramref name="changed"/>, a cell of the raised tilemap, and the cells above it up to the rows the cliff
+    /// face covers, whose face it decides (<see cref="RaisedGround.IsOnFace(Tilemap, Vector3Int, int)"/>); nothing when
+    /// the face covers no whole row. False when a cell needs a full rebuild (<see cref="RefreshCell"/>).
+    /// </summary>
+    private bool RefreshFaceColumn(Vector3Int changed)
+    {
+        if (cliffFaceRows == 0)
+        {
+            return true;
+        }
+
+        for (int z = walkableBounds.zMin; z < walkableBounds.zMax; z++)
+        {
+            for (int up = 0; up <= cliffFaceRows; up++)
             {
-                if (!RefreshCell(positions[i] + RaisedGround.NeighbourOffsets[n]))
+                if (!RefreshCell(new Vector3Int(changed.x, changed.y + up, z)))
                 {
-                    BuildGrid();
-                    return;
+                    return false;
                 }
             }
         }
 
-        Version++;
+        return true;
+    }
+
+    /// <summary>
+    /// Re-reads the cliff sides of <paramref name="changed"/>, a cell of the raised tilemap, and of its 4 neighbours, on
+    /// every layer of the grid.
+    /// </summary>
+    private void RefreshCliffSides(Vector3Int changed)
+    {
+        for (int z = walkableBounds.zMin; z < walkableBounds.zMax; z++)
+        {
+            Vector3Int cell = new(changed.x, changed.y, z);
+            if (TryGetIndex(cell, out int index))
+            {
+                cliffSides[index] = ReadCliffSides(cell);
+            }
+
+            for (int side = 0; side < SideSteps.Length; side++)
+            {
+                if (TryGetIndex(cell + SideSteps[side], out int neighbour))
+                {
+                    cliffSides[neighbour] = ReadCliffSides(cell + SideSteps[side]);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The sides of <paramref name="cell"/> a step across which <see cref="RaisedGround.CanCross"/> refuses, read from
+    /// the raised tilemap, as <see cref="LeftSide"/>, <see cref="RightSide"/>, <see cref="DownSide"/> and
+    /// <see cref="UpSide"/> bits.
+    /// </summary>
+    private byte ReadCliffSides(Vector3Int cell)
+    {
+        byte kind = RaisedGround.KindAt(raisedTilemap, cell);
+        byte sides = 0;
+        for (int side = 0; side < SideSteps.Length; side++)
+        {
+            Vector3Int step = SideSteps[side];
+            if (!RaisedGround.CanCross(kind, RaisedGround.KindAt(raisedTilemap, cell + step), step))
+            {
+                sides |= (byte)(1 << side);
+            }
+        }
+
+        return sides;
     }
 
     /// <summary>
@@ -800,24 +1029,43 @@ public class NavigationGrid2D : MonoBehaviour
 
     /// <summary>
     /// Whether <paramref name="cell"/> lies under an obstacle collider, any watched blocking tilemap has a tile there, or
-    /// it is cliff on the raised tilemap.
+    /// the cliff face covers it whole.
     /// </summary>
     private bool IsBlocked(Vector3Int cell)
     {
-        if (obstacleCells.Contains(cell) || (raisedTilemap != null && watchedTilemaps.Contains(raisedTilemap) && RaisedGround.IsCliff(raisedTilemap, cell)))
+        return BlockerOf(cell) != Blocker.None;
+    }
+
+    /// <summary>
+    /// What blocks <paramref name="cell"/> for every terrain layer, checked in this order: a collider on the obstacle
+    /// layers, a tile on a watched blocking tilemap, the cliff face covering it whole; <see cref="Blocker.None"/> when
+    /// nothing does.
+    /// </summary>
+    private Blocker BlockerOf(Vector3Int cell)
+    {
+        if (obstacleCells.Contains(cell))
         {
-            return true;
+            return Blocker.Obstacle;
         }
 
         for (int i = 0; i < blockingTilemaps.Count; i++)
         {
             if (blockingTilemaps[i] != null && watchedTilemaps.Contains(blockingTilemaps[i]) && blockingTilemaps[i].HasTile(cell))
             {
-                return true;
+                return Blocker.Wall;
             }
         }
 
-        return false;
+        return IsCoveredByCliffFace(cell) ? Blocker.CliffFace : Blocker.None;
+    }
+
+    /// <summary>
+    /// Whether the cliff face of the raised tilemap covers <paramref name="cell"/> whole: one of the rows of the face it
+    /// covers whole (<see cref="RaisedGround.RowsCovered"/>); never without a raised tilemap or a face height.
+    /// </summary>
+    private bool IsCoveredByCliffFace(Vector3Int cell)
+    {
+        return cliffFaceRows > 0 && raisedTilemap != null && RaisedGround.IsOnFace(raisedTilemap, cell, cliffFaceRows);
     }
 
     /// <summary>
@@ -885,8 +1133,8 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Removes every cell with a tile on a watched blocking tilemap, under an obstacle collider or on the raised
-    /// tilemap's cliff from the cells collected for the build.
+    /// Removes every cell with a tile on a watched blocking tilemap, under an obstacle collider or covered whole by the
+    /// cliff face from the cells collected for the build.
     /// </summary>
     private void RemoveBlockedCells()
     {
@@ -895,11 +1143,11 @@ public class NavigationGrid2D : MonoBehaviour
             cellsByPosition.Remove(cell);
         }
 
-        if (raisedTilemap != null)
+        if (cliffFaceRows > 0 && raisedTilemap != null)
         {
             foreach (Vector3Int cell in raisedTilemap.cellBounds.allPositionsWithin)
             {
-                if (RaisedGround.IsCliff(raisedTilemap, cell))
+                if (IsCoveredByCliffFace(cell))
                 {
                     cellsByPosition.Remove(cell);
                 }
@@ -942,6 +1190,37 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
+    /// Sizes the cliff sides to the cells and reads each cell's from the raised tilemap (<see cref="ReadCliffSides"/>);
+    /// none without a raised tilemap, which <see cref="HasCliffSides"/> tells A* so it skips the check.
+    /// </summary>
+    private void BakeCliffSides()
+    {
+        cliffSides = new byte[cells.Length];
+        HasCliffSides = raisedTilemap != null;
+        if (raisedTilemap == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < cliffSides.Length; i++)
+        {
+            cliffSides[i] = ReadCliffSides(GetCell(i));
+        }
+    }
+
+    /// <summary>
+    /// The height of the cliff face as a fraction of a cell: the cliff height of the style of the terrain renderer on this
+    /// object that draws the same raised tilemap, over the style's pixels per cell; 0 without one.
+    /// </summary>
+    private float ResolveCliffFaceHeight()
+    {
+        return raisedTilemap != null && TryGetComponent(out TerrainBlendRenderer renderer)
+            && renderer.RaisedTilemap == raisedTilemap && renderer.Style != null
+            ? renderer.Style.CliffHeight / TerrainStyle.PixelsPerCell
+            : 0f;
+    }
+
+    /// <summary>
     /// Fills <paramref name="field"/> for <paramref name="movementProfile"/>: traversal costs plus the profile's edge
     /// cost, diagonal costs, the minimum costs the heuristic uses, and the regions.
     /// </summary>
@@ -970,14 +1249,15 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds <paramref name="edgeCost"/> to every walkable cell with a blocked or missing cell among its 8 neighbours.
-    /// Costs only grow, so a cell's walkability does not change while the pass runs.
+    /// Adds <paramref name="edgeCost"/> to every walkable cell with a blocked or missing cell among its 8 neighbours or
+    /// the cliff along one of its sides, on either side of it. Costs only grow, so a cell's walkability does not change
+    /// while the pass runs.
     /// </summary>
     private void AddEdgeCost(int[] costs, int edgeCost)
     {
         for (int index = 0; index < costs.Length; index++)
         {
-            if (costs[index] > 0 && TouchesBlockedCell(costs, index))
+            if (costs[index] > 0 && (cliffSides[index] != 0 || TouchesBlockedCell(costs, index)))
             {
                 costs[index] += edgeCost;
             }
@@ -1046,8 +1326,8 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Labels the 4-connected regions of walkable cells in <paramref name="field"/> with a flood fill; blocked cells
-    /// get -1.
+    /// Labels the 4-connected regions of walkable cells in <paramref name="field"/> with a flood fill that does not cross
+    /// the cliff; blocked cells get -1.
     /// </summary>
     private void LabelRegions(CostField field)
     {
@@ -1077,22 +1357,22 @@ public class NavigationGrid2D : MonoBehaviour
                 int current = regionQueue[head++];
                 int x = current % width;
                 int y = (current / width) % height;
-                if (x > 0)
+                if (x > 0 && (cliffSides[current] & LeftSide) == 0)
                 {
                     tail = EnqueueRegionCell(current - 1, nextRegion, costs, regions, tail);
                 }
 
-                if (x < width - 1)
+                if (x < width - 1 && (cliffSides[current] & RightSide) == 0)
                 {
                     tail = EnqueueRegionCell(current + 1, nextRegion, costs, regions, tail);
                 }
 
-                if (y > 0)
+                if (y > 0 && (cliffSides[current] & DownSide) == 0)
                 {
                     tail = EnqueueRegionCell(current - width, nextRegion, costs, regions, tail);
                 }
 
-                if (y < height - 1)
+                if (y < height - 1 && (cliffSides[current] & UpSide) == 0)
                 {
                     tail = EnqueueRegionCell(current + width, nextRegion, costs, regions, tail);
                 }
@@ -1199,15 +1479,31 @@ public class NavigationGrid2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Outside Play Mode, rebuilds the grid when it is stale or unbuilt; then draws the walkable bounds and, when
-    /// enabled, up to a capped number of walkable cells.
+    /// Outside Play Mode, builds the grid for its gizmos when it is stale, or unbuilt and not failed already: a failed
+    /// build is tried again only once the grid goes stale, so a broken setup logs its error once rather than on every
+    /// repaint.
+    /// </summary>
+    internal void BuildGizmoGridIfStale()
+    {
+        if (Application.isPlaying || (!gizmoGridIsStale && (IsBuilt || gizmoBuildFailed)))
+        {
+            return;
+        }
+
+        gizmoGridIsStale = false;
+        BuildGrid();
+        gizmoBuildFailed = !IsBuilt;
+    }
+
+    /// <summary>
+    /// Builds the gizmo grid when it is stale (<see cref="BuildGizmoGridIfStale"/>); then draws the walkable bounds and,
+    /// when enabled, up to a capped number of walkable cells.
     /// </summary>
     private void OnDrawGizmosSelected()
     {
-        if (!Application.isPlaying && (drawGridBoundsGizmo || drawWalkableCellGizmos) && (!IsBuilt || gizmoGridIsStale))
+        if (drawGridBoundsGizmo || drawWalkableCellGizmos)
         {
-            gizmoGridIsStale = false;
-            BuildGrid();
+            BuildGizmoGridIfStale();
         }
 
         if (drawGridBoundsGizmo)

@@ -772,6 +772,43 @@ public class MobStateMachineTests
     }
 
     /// <summary>
+    /// Separation from a neighbor never pushes a mob across the cliff of raised ground: on the front row of ground raised
+    /// from row 1 up, a neighbor above pushes it toward the level cell below, which is walkable but beyond the cliff.
+    /// </summary>
+    [Test]
+    public void Separation_NeverPushesAMobOffTheCliff()
+    {
+        SetupWorld(new Vector3(0.5f, 1.15f, 0f));
+        GameObject raisedObject = new("Raised");
+        raisedObject.transform.SetParent(root.transform);
+        Tilemap raisedMap = raisedObject.AddComponent<Tilemap>();
+        RaisedGroundTile raised = RaisedGroundTile.Create(false);
+        try
+        {
+            for (int x = -10; x <= 10; x++)
+            {
+                for (int y = 1; y <= 10; y++)
+                {
+                    raisedMap.SetTile(new Vector3Int(x, y, 0), raised);
+                }
+            }
+
+            navGrid.ConfigureRaisedTilemap(raisedMap);
+            navGrid.BuildGrid();
+            CreateMob(new Vector3(0.5f, 1.45f, 0f));
+
+            brain.FixedTickStateMachine();
+
+            Assert.That(navGrid.IsCellWalkable(Vector3Int.zero), Is.True, "The cell below is walkable.");
+            Assert.That(brain.GetComponent<Rigidbody2D>().linearVelocity.y, Is.GreaterThanOrEqualTo(0f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(raised);
+        }
+    }
+
+    /// <summary>
     /// A chasing mob with an ally between it and the nearby target holds back instead of pushing into the ally.
     /// </summary>
     [Test]

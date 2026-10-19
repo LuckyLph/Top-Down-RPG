@@ -130,22 +130,25 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
-    /// A plateau's settings for <see cref="LayPlateau"/>: its half size in cells before its outline wobbles, and how
-    /// many cells wide its ramp is.
+    /// A plateau's settings for <see cref="LayPlateau"/>: its half size in cells before its outline wobbles, how many
+    /// cells wide its ramp is, and how many rows of cells its cliff face reaches into.
     /// </summary>
     public sealed class Plateau
     {
         /// <summary>
-        /// A plateau of <paramref name="halfSize"/> with a ramp <paramref name="rampWidth"/> cells wide.
+        /// A plateau of <paramref name="halfSize"/> with a ramp <paramref name="rampWidth"/> cells wide, whose cliff
+        /// face reaches <paramref name="faceRows"/> rows of cells up from its foot (at least one).
         /// </summary>
-        public Plateau(Vector2 halfSize, int rampWidth)
+        public Plateau(Vector2 halfSize, int rampWidth, int faceRows = 1)
         {
             HalfSize = halfSize;
             RampWidth = rampWidth;
+            FaceRows = Mathf.Max(1, faceRows);
         }
 
         public Vector2 HalfSize { get; }
         public int RampWidth { get; }
+        public int FaceRows { get; }
     }
 
     private readonly int seed;
@@ -993,8 +996,9 @@ internal sealed class AreaLayoutBuilder
     /// on either side, with the two rows below it ground that passes <paramref name="walkable"/> to walk up from; a
     /// plateau without such a run is
     /// laid again round another centre, up to a few times. Removes every prop on the cliff's face
-    /// (the bottom cells), the ramp, the row above it and the four rows below it a column wider on each side, so nothing
-    /// stands in front of the ramp, and every blocking prop whose footprint lies both on and off the plateau. Draws from the current stream. Warns and lays nothing when no plateau with a ramp fits.
+    /// (the bottom cells and the cells above them up to the plateau's face rows), the ramp, as many rows above it as the
+    /// face reaches and the four rows below it a column wider on each side, so nothing stands on the slope or in front of
+    /// the ramp, and every blocking prop whose footprint lies both on and off the plateau. Draws from the current stream. Warns and lays nothing when no plateau with a ramp fits.
     /// </summary>
     public bool LayPlateau(Plateau plateau, HashSet<Vector3Int> raised, HashSet<Vector3Int> ramps, Predicate<Vector3Int> allowed, Predicate<Vector3Int> walkable)
     {
@@ -1072,13 +1076,20 @@ internal sealed class AreaLayoutBuilder
         {
             if (!cells.Contains(cell + Vector3Int.down))
             {
-                clear.Add(cell);
+                for (int up = 0; up < plateau.FaceRows && cells.Contains(cell + (Vector3Int.up * up)); up++)
+                {
+                    clear.Add(cell + (Vector3Int.up * up));
+                }
             }
         }
 
         foreach (Vector3Int cell in ramp)
         {
-            clear.Add(cell + Vector3Int.up);
+            for (int up = 1; up <= plateau.FaceRows; up++)
+            {
+                clear.Add(cell + (Vector3Int.up * up));
+            }
+
             for (int below = 1; below <= RampApproachRows; below++)
             {
                 for (int side = -1; side <= 1; side++)

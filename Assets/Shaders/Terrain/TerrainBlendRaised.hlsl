@@ -111,8 +111,9 @@ float TBCliffShadow(TBInputs ins, float4 cliff, float4 shadow, float2 pixel)
     return alpha;
 }
 
-// The ramp's slope at a pixel of its face, row rows below its top: the ground there darkening by the ramp shade
-// (shadow.z) towards the foot, and a cheek of the cliff's foot colour along a side where the ramp meets a cliff.
+// The ramp's slope at a pixel of its face, row rows below its top, over the face's whole height above the ramp: the
+// ground there darkening by the ramp shade (shadow.z) towards the foot, and a cheek of the cliff's foot colour along a
+// side where the ramp meets a cliff. pixel is the slope's lowest pixel in its column, in the ramp's cell.
 float3 TBRampFace(TBInputs ins, float4 shadow, float3 colour, float3 foot, float row, float height, float2 pixel)
 {
     int2 cell = (int2)floor((pixel + 0.5) / ART_PIXELS_PER_UNIT);
@@ -180,7 +181,8 @@ float3 TBCliffRim(float4 cliff, float4 face, float4 edge, float4 rim, float3 col
 
 // Raised ground's top at a pixel on it (d, its distance to raised ground's edge, under 0.5), over the ground's colour
 // there (sRGB, its topmost opaque layer top): within the cliff's height (cliff.x) above its foot, the cliff face
-// (TBCliffFace) in the bank colour of top's material, or a ramp's slope (TBRampFace); above that the plateau's top, its
+// (TBCliffFace) in the bank colour of top's material, or, where the foot lies in a ramp's cell, the ramp's slope up
+// through the cells above it (TBRampFace); above that the plateau's top, its
 // edge pixel outlined in the bank colour darkened to edge.y and a ledge of earth inside it along its sides and back
 // (TBCliffRim).
 float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uint top, float d, float2 pixel, float2 worldPixel)
@@ -190,12 +192,12 @@ float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uin
     float3 bank = TBLut(ins, TB_LAYER_BANK_COLOUR_COLUMN, TBLayerRow(top)).rgb;
     float height = cliff.x;
     float rows = TBRowsAboveFoot(ins, cliff, pixel, height);
-    bool ramp = TBRaisedCellAt(ins, pixel) == TB_RAMP;
+    float2 foot = pixel - float2(0.0, rows - 1.0);
     float3 result;
     [branch]
-    if (rows <= height && ramp)
+    if (rows <= height && TBRaisedCellAt(ins, foot) == TB_RAMP)
     {
-        result = TBRampFace(ins, shadow, colour, bank * edge.x, height + 1.0 - rows, height, pixel);
+        result = TBRampFace(ins, shadow, colour, bank * edge.x, height + 1.0 - rows, height, foot);
     }
     else if (d > -1.0)
     {

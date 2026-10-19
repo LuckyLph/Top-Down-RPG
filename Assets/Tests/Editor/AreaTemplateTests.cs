@@ -115,7 +115,8 @@ public class AreaTemplateTests
     /// Each project generator's layout can be written into the template: the writer creates the generator's layers,
     /// removes the empty grass layer when the generator does not list it, and the renderer draws exactly the generator's
     /// layers, in its order. The renderer then builds, and the navigation grid blocks exactly the footprint cells, the
-    /// water, except under a dock, the ocean and lava, on the ground. A generator whose ground is not grass (the
+    /// water, except under a dock, the ocean, lava and the cells the cliff face of raised ground covers whole, on the
+    /// ground. A generator whose ground is not grass (the
     /// Snowfield's snow, the Lava Fields' dirt) first has its ground layer added
     /// (<see cref="GroundLayerMigration.AddLayer(Grid, AreaGenerator.TerrainLayer)"/>, as the Terrain Brush's button
     /// does) and the area's terrain pointed at it, as a new area of that ground has, or the template's empty grass layer,
@@ -199,9 +200,10 @@ public class AreaTemplateTests
             }
         }
 
+        int faceRows = RaisedGround.RowsCovered(renderer.Style.CliffHeight / TerrainStyle.PixelsPerCell);
         foreach (Vector3Int cell in layout.Raised)
         {
-            if (RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell))
+            if (RaisedGround.IsOnFace(layout.Raised, layout.Ramps, cell, faceRows))
             {
                 blocked.Add(cell);
             }

@@ -134,8 +134,8 @@ public sealed class MobSeparation2D
     }
 
     /// <summary>
-    /// Drops each axis of <paramref name="push"/> that would lead into an unwalkable cell within half the separation
-    /// radius; unchanged without a built grid.
+    /// Drops each axis of <paramref name="push"/> that would lead into an unwalkable cell, or across the cliff of raised
+    /// ground, within half the separation radius; unchanged without a built grid.
     /// </summary>
     private Vector2 ClampToWalkable(Vector2 push)
     {
@@ -152,8 +152,8 @@ public sealed class MobSeparation2D
     }
 
     /// <summary>
-    /// Whether the cell <paramref name="lookAhead"/> along <paramref name="direction"/> from the mob is walkable; true
-    /// for a zero direction.
+    /// Whether the cell <paramref name="lookAhead"/> along <paramref name="direction"/> from the mob is walkable and the
+    /// way there crosses no cliff of raised ground; true for a zero direction.
     /// </summary>
     private bool IsWalkableToward(Vector2 direction, float lookAhead)
     {
@@ -163,6 +163,7 @@ public sealed class MobSeparation2D
         }
 
         Vector3Int cell = navigationGrid.WorldToCell(position + direction.normalized * lookAhead);
-        return navigationGrid.IsCellWalkable(cell, config.MovementProfile);
+        return navigationGrid.IsCellWalkable(cell, config.MovementProfile)
+            && !navigationGrid.CrossesCliff(navigationGrid.WorldToCell(position), cell);
     }
 }

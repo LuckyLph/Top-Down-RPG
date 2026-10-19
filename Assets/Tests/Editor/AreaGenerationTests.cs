@@ -1578,14 +1578,18 @@ public class AreaGenerationTests
     /// For every Coast seed the plateau of raised grass (TerrainTypes.md's Phase 10) lies on the grass, off the coast
     /// and the paths by more than the plateau margin and outside the spawn's disc and the margin beyond it, in one
     /// 4-connected piece every cell of which lies in a run of three of them across and in one down; its ramp, the ramp width wide, lies in its bottom row with cliff on either side and two rows of walkable
-    /// ground below it; no prop stands on the cliff's face (the bottom cells), the ramp, the row above it or the four rows
-    /// in front of it a column wider, and no footprint lies both on and off the plateau; no mob stands on the cliff
-    /// (RaisedGround.IsCliff); and around the cliff, the footprints and the ocean the spawn reaches the ramp and the
-    /// row above it, but no cell of the plateau that is not cliff from anywhere but the ramp.
+    /// ground below it; no prop stands on the cliff's face (the bottom cells and the rows above them its style's cliff
+    /// height reaches into), the ramp, as many rows above it or the four rows in front of it a column wider, and no
+    /// footprint lies both on and off the plateau; no mob stands on the cliff
+    /// (RaisedGround.IsCliff); around the cliff, the footprints and the ocean the spawn reaches the ramp and the
+    /// row above it, but no cell of the plateau that is not cliff from anywhere but the ramp; and from the ramp every
+    /// cell of the plateau off the rows its cliff face covers whole is reached, so the face cuts no piece of the top off.
     /// </summary>
     [Test]
     public void CoastLayouts_LayAPlateau_ThatOnlyItsRampLeadsUp()
     {
+        int faceRows = RaisedGround.RowsReached(coast.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell);
+        Assert.That(faceRows, Is.EqualTo(2), "The project's cliff face reaches two rows.");
         for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = Layout(coast, seed);
@@ -1618,7 +1622,11 @@ public class AreaGenerationTests
                 Assert.That(ramp.y, Is.EqualTo(new List<Vector3Int>(ramps)[0].y), $"seed {seed}: the ramp in one row");
                 left = Mathf.Min(left, ramp.x);
                 right = Mathf.Max(right, ramp.x);
-                clear.Add(ramp + Vector3Int.up);
+                for (int up = 0; up <= faceRows; up++)
+                {
+                    clear.Add(ramp + (Vector3Int.up * up));
+                }
+
                 for (int below = 1; below <= 4; below++)
                 {
                     for (int side = -1; side <= 1; side++)
@@ -1643,7 +1651,7 @@ public class AreaGenerationTests
 
             foreach (Vector3Int cell in raised)
             {
-                if (!raised.Contains(cell + Vector3Int.down))
+                if (RaisedGround.IsOnFace(raised, ramps, cell, faceRows))
                 {
                     clear.Add(cell);
                 }
@@ -1687,6 +1695,14 @@ public class AreaGenerationTests
             {
                 Expect(!withoutRamp.Contains(cell), $"seed {seed}: the plateau at {cell} reached without the ramp");
             }
+
+            int coveredRows = RaisedGround.RowsCovered(coast.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell);
+            System.Predicate<Vector3Int> offTheFace = cell => raised.Contains(cell) && !RaisedGround.IsOnFace(raised, ramps, cell, coveredRows);
+            HashSet<Vector3Int> fromTheRamp = Reachable(new List<Vector3Int>(ramps)[0], offTheFace);
+            foreach (Vector3Int cell in raised)
+            {
+                Expect(!offTheFace(cell) || fromTheRamp.Contains(cell), $"seed {seed}: the top at {cell} cut off from the ramp by the face");
+            }
         }
     }
 
@@ -1695,8 +1711,9 @@ public class AreaGenerationTests
     /// terrain sources at their draw order's priorities, and the default movement profile's rules: stepping onto a
     /// beach cell with no blocked cell beside it costs grass's 10, every cell of the ocean is blocked, so no unit walks
     /// onto the sea or off the map's northern edge (the top cell of every column of the middle three quarters is
-    /// blocked), and every beach cell is joined to the spawn; the plateau's cliff is blocked, its ramp is not, and the
-    /// top above the ramp is joined to the spawn.
+    /// blocked), and every beach cell is joined to the spawn; the plateau's cells are walkable but for prop footprints
+    /// and the two rows its 64 px cliff face covers whole (but above the ramp), its cliff stops every step up its face but
+    /// the ramp's, and the slope above the ramp and the top above that are joined to the spawn.
     /// </summary>
     [Test]
     public void TheWriter_WalksTheCoastsBeach_AndBlocksItsOcean()
@@ -1764,21 +1781,30 @@ public class AreaGenerationTests
             Expect(navigation.AreCellsConnected(layout.SpawnCell, cell, profile), $"the beach at {cell} reachable");
         }
 
-        int cliffs = 0;
+        int faceRows = RaisedGround.RowsCovered(coast.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell);
+        Assert.That(faceRows, Is.EqualTo(2), "The project's cliff face covers two rows.");
+        int faces = 0;
+        int covered = 0;
         foreach (Vector3Int cell in layout.Raised)
         {
-            if (RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell))
+            bool onFace = RaisedGround.IsOnFace(layout.Raised, layout.Ramps, cell, faceRows);
+            covered += onFace ? 1 : 0;
+            Expect(navigation.IsCellWalkable(cell, profile) == !(blocked.Contains(cell) || onFace), $"raised ground at {cell}");
+            if (!layout.Raised.Contains(cell + Vector3Int.down) && !layout.Ramps.Contains(cell))
             {
-                Expect(!navigation.IsCellWalkable(cell, profile), $"the cliff at {cell}");
-                cliffs++;
+                Expect(navigation.CrossesCliff(cell + Vector3Int.down, cell), $"the face at {cell}");
+                faces++;
             }
         }
 
-        Assert.That(cliffs, Is.GreaterThan(10));
+        Assert.That(faces, Is.GreaterThan(3));
+        Assert.That(covered, Is.EqualTo(faces * 2), "Every column of the face covers two cells.");
         foreach (Vector3Int ramp in layout.Ramps)
         {
             Expect(navigation.IsCellWalkable(ramp, profile), $"the ramp at {ramp}");
-            Expect(navigation.AreCellsConnected(layout.SpawnCell, ramp + Vector3Int.up, profile), $"the top above the ramp at {ramp} reachable");
+            Expect(!navigation.CrossesCliff(ramp + Vector3Int.down, ramp), $"up the ramp at {ramp}");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, ramp + Vector3Int.up, profile), $"the slope above the ramp at {ramp} reachable");
+            Expect(navigation.AreCellsConnected(layout.SpawnCell, ramp + (Vector3Int.up * 2), profile), $"the top above the ramp at {ramp} reachable");
         }
     }
 
@@ -2286,8 +2312,8 @@ public class AreaGenerationTests
     /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
     /// points are replaced and the start spawn point moves; a generator with raised ground gets its raised tilemap,
     /// ramps included, drawn by the renderer and read by the navigation grid; the navigation grid then blocks exactly
-    /// the footprint cells, the water, the ocean, lava and the cliff of raised ground, and every mob can walk to the
-    /// spawn.
+    /// the footprint cells, the water, the ocean, lava and the cells the cliff face of raised ground covers whole at the
+    /// style's cliff height, the cliff stops steps up its face, and every mob can walk to the spawn.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -2395,13 +2421,22 @@ public class AreaGenerationTests
             }
 
             Assert.That(renderer.RaisedTilemap, Is.SameAs(raisedMap), "The renderer draws the raised ground.");
-            Assert.That(navigation.RaisedTilemap, Is.SameAs(raisedMap), "The navigation grid blocks its cliff.");
+            Assert.That(navigation.RaisedTilemap, Is.SameAs(raisedMap), "The navigation grid reads its cliff.");
+            foreach (Vector3Int cell in layout.Raised)
+            {
+                Vector3Int below = cell + Vector3Int.down;
+                if (!layout.Raised.Contains(below))
+                {
+                    Assert.That(navigation.CrossesCliff(below, cell), Is.EqualTo(!layout.Ramps.Contains(cell)), $"the step up to {cell}");
+                }
+            }
         }
 
+        int faceRows = RaisedGround.RowsCovered(target.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell);
         foreach (Vector3Int cell in layout.TerrainCells(0))
         {
-            bool cliff = RaisedGround.IsCliff(layout.Raised, layout.Ramps, cell);
-            Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!footprints.Contains(cell) && !water.Contains(cell) && !cliff), $"cell {cell}");
+            bool onFace = RaisedGround.IsOnFace(layout.Raised, layout.Ramps, cell, faceRows);
+            Assert.That(navigation.IsCellWalkable(cell, profile), Is.EqualTo(!footprints.Contains(cell) && !water.Contains(cell) && !onFace), $"cell {cell}");
         }
 
         foreach (AreaLayout.Mob mob in layout.Mobs)

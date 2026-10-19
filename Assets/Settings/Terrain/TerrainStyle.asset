@@ -1073,7 +1073,7 @@ MonoBehaviour:
       softBandColour: {r: 0.10980392, g: 0.3137255, b: 0.5568628, a: 1}
       softWholeStones: 0
       seamless: 0
-  cliffHeight: 14
+  cliffHeight: 64
   cliffRimWidth: 3
   cliffFringe: 3
   cliffOuterRadius: 14

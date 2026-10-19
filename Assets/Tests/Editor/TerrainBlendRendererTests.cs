@@ -1013,10 +1013,11 @@ public class TerrainBlendRendererTests
 
     /// <summary>
     /// Raised ground draws a cliff face along its bottom edge, inside its lowest cells, in the bank colour of the ground
-    /// on top; casts a shadow on the ground below the face; slopes down a ramp in the ground's own colour, darkening
-    /// towards its foot; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
+    /// on top, at the style's 64 px through two rows; casts a shadow on the ground below the face; slopes down a ramp in
+    /// the ground's own colour, darkening towards its foot, over the face's whole height, the raised cell above the ramp
+    /// included; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
     /// tilemap the same pixels show plain ground. Green ground with a red bank colour fills an 8 x 6 block, raised ground
-    /// covers columns 1 to 6 of rows 2 to 4, and columns 3 and 4 of row 2 are a ramp; no edge draws an outline, rim or
+    /// covers columns 1 to 6 of rows 2 to 5, and columns 3 and 4 of row 2 are a ramp; no edge draws an outline, rim or
     /// shadow, and the cliff has no fringe or pebbles. Renders from a later editor update, until anything is drawn.
     /// </summary>
     [UnityTest]
@@ -1047,7 +1048,7 @@ public class TerrainBlendRendererTests
             {
                 Vector3Int cell = new(x, y, 0);
                 groundMap.SetTile(cell, tile);
-                if (x >= 1 && x <= 6 && y >= 2 && y <= 4)
+                if (x >= 1 && x <= 6 && y >= 2 && y <= 5)
                 {
                     raisedMap.SetTile(cell, (x == 3 || x == 4) && y == 2 ? ramp : raised);
                 }
@@ -1062,14 +1063,18 @@ public class TerrainBlendRendererTests
         yield return RenderUntilDrawn(renderer, world, new Vector2Int(48, 70));
         Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
         Color32 face = pixels.GetPixel(48, 70);
-        Color32 top = pixels.GetPixel(48, 120);
+        Color32 faceAbove = pixels.GetPixel(48, 120);
+        Color32 top = pixels.GetPixel(48, 150);
         Color32 slope = pixels.GetPixel(112, 70);
+        Color32 slopeAbove = pixels.GetPixel(112, 120);
         Color32 shadowed = pixels.GetPixel(48, 62);
         Color32 open = pixels.GetPixel(48, 30);
         Color32 beside = pixels.GetPixel(240, 70);
         Object.DestroyImmediate(pixels);
 
         Assert.That(face.r, Is.GreaterThan(face.g), "The cliff face shows the bank colour.");
+        Assert.That(faceAbove.r, Is.GreaterThan(faceAbove.g), "The face reaches into the second row.");
+        Assert.That(slopeAbove.g, Is.GreaterThan(slopeAbove.r), "The ramp's slope reaches into the cell above it.");
         Assert.That(top, Is.EqualTo(open), "The plateau's top shows the ground.");
         Assert.That(beside, Is.EqualTo(open), "The ground beside the plateau shows no cliff.");
         Assert.That(shadowed.g, Is.LessThan(open.g), "The cliff casts a shadow below it.");

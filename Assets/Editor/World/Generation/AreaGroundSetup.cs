@@ -518,8 +518,8 @@ internal static class AreaGroundSetup
     /// <summary>
     /// Sets up <paramref name="grid"/>'s raised tilemap, the child named <see cref="AreaGenerator.RaisedTilemapName"/>,
     /// for a generator with raised ground: created empty when missing, a plain tilemap after the ground layers, and set
-    /// on the grid's terrain renderer, which draws it, and on its navigation grid, which blocks its cliff
-    /// (<see cref="RaisedGround.IsCliff"/>); each step recorded for undo and listed in <paramref name="changes"/>, and
+    /// on the grid's terrain renderer, which draws it, and on its navigation grid, which stops units at its cliff
+    /// (<see cref="RaisedGround.CanCross"/>); each step recorded for undo and listed in <paramref name="changes"/>, and
     /// nothing recorded when already so. Returns the tilemap.
     /// </summary>
     public static Tilemap SetUpRaised(Grid grid, List<string> changes)
@@ -548,7 +548,7 @@ internal static class AreaGroundSetup
             SerializedObject serialized = new(navigation);
             serialized.FindProperty("raisedTilemap").objectReferenceValue = raised;
             serialized.ApplyModifiedProperties();
-            changes.Add($"The navigation grid blocks the cliff of {raised.name}.");
+            changes.Add($"The navigation grid reads the cliff of {raised.name}.");
         }
 
         return raised;

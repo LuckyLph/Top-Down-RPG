@@ -154,8 +154,8 @@ public class TerrainStyle : ScriptableObject
     [Tooltip("Edges drawn in place of the upper material's default edge, each for one upper material over one lower material or over nothing.")]
     [SerializeField] private PairOverride[] pairOverrides = new PairOverride[0];
     [Header("Raised ground")]
-    [Tooltip("Height in pixels of the cliff face along the bottom of raised ground, drawn inside its cells, so the bottom of the plateau's lowest cells is the face and cannot be walked.")]
-    [SerializeField, Range(4f, 24f)] private float cliffHeight = 14f;
+    [Tooltip("Height in pixels of the cliff face along the bottom of raised ground, drawn inside its cells, so the bottom of the plateau's lowest cells is the face; navigation blocks the cells it covers whole and moves goals on it to its top. Above a ramp the ramp's slope rises the whole height.")]
+    [SerializeField, Range(4f, 64f)] private float cliffHeight = 64f;
     [Tooltip("Width in pixels of the ledge of earth along raised ground's sides and back, inside its outline, so its edge shows; under half a cell, as a pixel's distance to the edge reaches no further.")]
     [SerializeField, Range(0f, 15f)] private float cliffRimWidth = 3f;
     [Tooltip("Up to how many pixels the ground on top of raised ground hangs over its cliff face, varying from column to column.")]

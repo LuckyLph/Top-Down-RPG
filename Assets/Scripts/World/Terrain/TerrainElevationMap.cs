@@ -1,12 +1,14 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Which cells of a renderer's area are raised ground, as a texture for the terrain blending shader: one point-filtered
 /// R8 texel per cell over the control map's bounds holding what the cell of the renderer's raised tilemap is
-/// (<see cref="RaisedGround.KindOf"/>, as a byte; the shader reads r * 255). 1 x 1 and level without a
-/// raised tilemap. Built again whenever the control map's bounds or the raised tilemap change; owns its texture,
+/// (<see cref="RaisedGround.KindOf"/>, as a byte; the shader reads r * 255), or, where that cell is level, of a raised
+/// skirt source covering it (a neighbouring chunk's raised ground along the border). 1 x 1 and level without a
+/// raised tilemap or source. Built again whenever the control map's bounds or the raised tilemap change; owns its texture,
 /// <see cref="Dispose"/> destroys it.
 /// </summary>
 public sealed class TerrainElevationMap : IDisposable
@@ -31,7 +33,17 @@ public sealed class TerrainElevationMap : IDisposable
     /// </summary>
     public void Build(TerrainControlMap controlMap, Tilemap raised)
     {
-        bool used = raised != null && !controlMap.IsEmpty;
+        Build(controlMap, raised, null);
+    }
+
+    /// <summary>
+    /// Reads <paramref name="raised"/> (null for none) and the raised sources among <paramref name="skirt"/> (null for
+    /// none) over <paramref name="controlMap"/>'s bounds and uploads the map. A source counts only inside its cells,
+    /// where the renderer's own raised tilemap is level.
+    /// </summary>
+    public void Build(TerrainControlMap controlMap, Tilemap raised, IReadOnlyList<TerrainSkirtSource> skirt)
+    {
+        bool used = (raised != null || HasRaised(skirt)) && !controlMap.IsEmpty;
         bounds = used ? controlMap.Bounds : new BoundsInt(0, 0, 0, 1, 1, 1);
         int width = bounds.size.x;
         int height = bounds.size.y;
@@ -56,7 +68,7 @@ public sealed class TerrainElevationMap : IDisposable
         {
             for (int x = 0; x < width; x++)
             {
-                cells[y * width + x] = used ? RaisedGround.KindAt(raised, new Vector3Int(bounds.xMin + x, bounds.yMin + y, 0)) : RaisedGround.Level;
+                cells[y * width + x] = used ? KindAt(raised, skirt, new Vector3Int(bounds.xMin + x, bounds.yMin + y, 0)) : RaisedGround.Level;
             }
         }
 
@@ -72,6 +84,40 @@ public sealed class TerrainElevationMap : IDisposable
         int x = cell.x - bounds.xMin;
         int y = cell.y - bounds.yMin;
         return x < 0 || y < 0 || x >= bounds.size.x || y >= bounds.size.y || cells.Length == 0 ? RaisedGround.Level : cells[y * bounds.size.x + x];
+    }
+
+    /// <summary>
+    /// Whether <paramref name="skirt"/> holds any raised source.
+    /// </summary>
+    public static bool HasRaised(IReadOnlyList<TerrainSkirtSource> skirt)
+    {
+        for (int i = 0; skirt != null && i < skirt.Count; i++)
+        {
+            if (skirt[i].IsRaised && skirt[i].Tilemap != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// What <paramref name="cell"/> is: on <paramref name="raised"/>, or, where that is level, on the first raised
+    /// source of <paramref name="skirt"/> covering it.
+    /// </summary>
+    private static byte KindAt(Tilemap raised, IReadOnlyList<TerrainSkirtSource> skirt, Vector3Int cell)
+    {
+        byte kind = raised != null ? RaisedGround.KindAt(raised, cell) : RaisedGround.Level;
+        for (int i = 0; kind == RaisedGround.Level && skirt != null && i < skirt.Count; i++)
+        {
+            if (skirt[i].IsRaised && skirt[i].Tilemap != null && skirt[i].Contains(cell))
+            {
+                kind = RaisedGround.KindAt(skirt[i].Tilemap, cell);
+            }
+        }
+
+        return kind;
     }
 
     /// <summary>

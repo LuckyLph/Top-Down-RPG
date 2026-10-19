@@ -113,7 +113,7 @@ public class GameplayLifetimeScope : LifetimeScope
                 .WithParameter<LifetimeScope>(this)
                 .As<IWorldSession>()
                 .AsSelf();
-            builder.RegisterEntryPoint<LocalWorldPresentation>();
+            builder.RegisterEntryPoint<LocalWorldPresentation>().WithParameter(worldStreamingSettings);
         }
 
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());

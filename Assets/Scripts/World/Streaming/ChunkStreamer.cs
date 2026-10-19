@@ -44,13 +44,23 @@ public sealed class ChunkStreamer
     /// </summary>
     public ChunkStreamer(Vector2Int viewCells, int loadMargin, int unloadHysteresis, float emptyWorldGrace)
     {
-        Vector2Int half = new((viewCells.x + 1) / 2, (viewCells.y + 1) / 2);
-        loadExtents = half + Vector2Int.one * Mathf.Max(0, loadMargin);
-        keepExtents = loadExtents + Vector2Int.one * Mathf.Max(0, unloadHysteresis);
+        loadExtents = ExtentsOf(viewCells, loadMargin);
+        keepExtents = ExtentsOf(viewCells, loadMargin + Mathf.Max(0, unloadHysteresis));
         this.emptyWorldGrace = Mathf.Max(0f, emptyWorldGrace);
     }
 
     public bool IsBusy => pending.HasValue;
+
+    /// <summary>
+    /// How many cells around a player's cell a rectangle reaches on each side: half of <paramref name="viewCells"/>,
+    /// rounded up, plus <paramref name="margin"/>. With the load margin, the interest rectangle; with the load margin
+    /// and the unload hysteresis, the rectangle a chunk must leave to unload.
+    /// </summary>
+    public static Vector2Int ExtentsOf(Vector2Int viewCells, int margin)
+    {
+        Vector2Int half = new((viewCells.x + 1) / 2, (viewCells.y + 1) / 2);
+        return half + Vector2Int.one * Mathf.Max(0, margin);
+    }
 
     /// <summary>
     /// Whether nothing is loaded and nothing is being loaded or unloaded.

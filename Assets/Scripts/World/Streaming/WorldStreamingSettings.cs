@@ -25,6 +25,17 @@ public class WorldStreamingSettings : ScriptableObject
     public float EmptyWorldGraceSeconds => emptyWorldGraceSeconds;
 
     /// <summary>
+    /// The cells around a player's cell on each side of its interest rectangle: the view plus the load margin.
+    /// </summary>
+    public Vector2Int LoadExtents => ChunkStreamer.ExtentsOf(viewCells, loadMargin);
+
+    /// <summary>
+    /// The cells around a player's cell on each side of the rectangle a loaded chunk must leave to unload: the view
+    /// plus the load margin and the unload hysteresis.
+    /// </summary>
+    public Vector2Int KeepExtents => ChunkStreamer.ExtentsOf(viewCells, loadMargin + unloadHysteresis);
+
+    /// <summary>
     /// A streamer for these settings.
     /// </summary>
     public ChunkStreamer CreateStreamer()

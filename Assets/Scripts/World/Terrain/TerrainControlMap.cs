@@ -15,8 +15,11 @@ using UnityEngine.Tilemaps;
 /// (z from 0 to 1; zero width while no layer has a filled cell). Changed cells are collected and written into the point-filtered texture in one batch by
 /// <see cref="Apply"/>, which creates the texture the first time (1 x 1 while the map is empty) and counts its uploads
 /// in <see cref="UploadCount"/> for tests. Preview bits, for a brush's hover, are kept apart from the real ones: they
-/// show in the texture, never reach the tilemaps, and clear without touching the real bits. Owns its texture;
-/// <see cref="Dispose"/> destroys it.
+/// show in the texture, never reach the tilemaps, and clear without touching the real bits. A layer may also read
+/// <see cref="Source"/>s, extra tilemaps counted only inside their own cells (a chunk's skirt of its neighbours'
+/// border cells), so a cell of a layer is filled when its own tilemap or one of its sources holds a tile there. Built
+/// over a fixed <see cref="Area"/>, the bounds are that area whenever any cell is filled, and cells outside it are
+/// never read. Owns its texture; <see cref="Dispose"/> destroys it.
 /// </summary>
 public sealed class TerrainControlMap : IDisposable
 {
@@ -25,6 +28,32 @@ public sealed class TerrainControlMap : IDisposable
     public const int WideLayers = 32;
     public const int Margin = 1;
     public const int GrowthSlack = 8;
+
+    /// <summary>An extra tilemap a layer reads, counted only inside <see cref="Cells"/>.</summary>
+    public readonly struct Source
+    {
+        /// <summary>
+        /// A source of layer <paramref name="layer"/> reading <paramref name="tilemap"/> in <paramref name="cells"/>.
+        /// </summary>
+        public Source(Tilemap tilemap, int layer, RectInt cells)
+        {
+            Tilemap = tilemap;
+            Layer = layer;
+            Cells = cells;
+        }
+
+        public Tilemap Tilemap { get; }
+        public int Layer { get; }
+        public RectInt Cells { get; }
+
+        /// <summary>
+        /// Whether <paramref name="cell"/> lies inside <see cref="Cells"/>, ignoring z.
+        /// </summary>
+        public bool Contains(Vector3Int cell)
+        {
+            return cell.x >= Cells.xMin && cell.x < Cells.xMax && cell.y >= Cells.yMin && cell.y < Cells.yMax;
+        }
+    }
 
     /// <summary>The layer bits a preview replaces in one cell, and the values it shows instead.</summary>
     private struct PreviewBits
@@ -36,8 +65,11 @@ public sealed class TerrainControlMap : IDisposable
     private readonly Tilemap[] layers;
     private readonly bool wide;
     private readonly string textureName;
+    private readonly bool hasArea;
+    private readonly RectInt area;
     private readonly List<int> pending = new();
     private readonly Dictionary<Vector3Int, PreviewBits> preview = new();
+    private Source[] sources = new Source[0];
     private uint[] cells = new uint[0];
     private bool[] pendingFlags = new bool[0];
     private BoundsInt bounds;
@@ -50,6 +82,16 @@ public sealed class TerrainControlMap : IDisposable
     /// nothing until the first <see cref="Apply"/>.
     /// </summary>
     public TerrainControlMap(IReadOnlyList<Tilemap> layers, bool wide = false, string textureName = "TerrainControlMap")
+        : this(layers, wide, textureName, null, null)
+    {
+    }
+
+    /// <summary>
+    /// Builds the map from <paramref name="layers"/> as the other constructor does, each layer also reading its
+    /// <paramref name="layerSources"/> (null for none), over the fixed <paramref name="fixedArea"/> when it has one:
+    /// then the bounds are that area while any cell in it is filled, and nothing outside it is read.
+    /// </summary>
+    public TerrainControlMap(IReadOnlyList<Tilemap> layers, bool wide, string textureName, RectInt? fixedArea, IReadOnlyList<Source> layerSources)
     {
         int most = wide ? WideLayers : NarrowLayers;
         if (layers.Count > most)
@@ -65,6 +107,9 @@ public sealed class TerrainControlMap : IDisposable
 
         this.wide = wide;
         this.textureName = textureName;
+        hasArea = fixedArea.HasValue;
+        area = fixedArea ?? default;
+        SetSources(layerSources);
         Rebuild();
     }
 
@@ -91,75 +136,151 @@ public sealed class TerrainControlMap : IDisposable
     public bool IsEmpty => bounds.size.x <= 0 || bounds.size.y <= 0;
     public bool HasPendingChanges => fullUploadPending || pending.Count > 0;
     public bool HasPreview => preview.Count > 0;
+
+    /// <summary>
+    /// Whether the map is built over a fixed area (<see cref="Area"/>).
+    /// </summary>
+    public bool HasArea => hasArea;
+
+    /// <summary>
+    /// The fixed area the map covers when <see cref="HasArea"/>.
+    /// </summary>
+    public RectInt Area => area;
+    public IReadOnlyList<Source> Sources => sources;
     internal int UploadCount { get; private set; }
 
     /// <summary>
+    /// Replaces the extra tilemaps the layers read (null for none); they are read on the next <see cref="Rebuild"/>.
+    /// Throws for a source of a layer the map does not have.
+    /// </summary>
+    public void SetSources(IReadOnlyList<Source> layerSources)
+    {
+        int count = layerSources != null ? layerSources.Count : 0;
+        Source[] kept = new Source[count];
+        for (int i = 0; i < count; i++)
+        {
+            if (layerSources[i].Layer < 0 || layerSources[i].Layer >= layers.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(layerSources), $"A source of layer {layerSources[i].Layer} on a map of {layers.Length} layers.");
+            }
+
+            kept[i] = layerSources[i];
+        }
+
+        sources = kept;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> is one of the layers' own tilemaps or sources.
+    /// </summary>
+    public bool Reads(Tilemap tilemap)
+    {
+        if (tilemap == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < layers.Length; i++)
+        {
+            if (layers[i] == tilemap)
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (sources[i].Tilemap == tilemap)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Reads every layer again: the bounds become the filled cells' bounds (and any filled preview cell's) plus the
-    /// margin, and the whole texture is written on the next <see cref="Apply"/>.
+    /// margin, or the fixed area when the map has one and any cell in it is filled, and the whole texture is written on
+    /// the next <see cref="Apply"/>.
     /// </summary>
     public void Rebuild()
     {
         bool any = false;
         Vector2Int min = Vector2Int.zero;
         Vector2Int max = Vector2Int.zero;
-        TileBase[][] blocks = new TileBase[layers.Length][];
-        BoundsInt[] blockBounds = new BoundsInt[layers.Length];
-        for (int layer = 0; layer < layers.Length; layer++)
+        int blockCount = layers.Length + sources.Length;
+        TileBase[][] blocks = new TileBase[blockCount][];
+        BoundsInt[] blockBounds = new BoundsInt[blockCount];
+        for (int block = 0; block < blockCount; block++)
         {
-            Tilemap tilemap = layers[layer];
+            Tilemap tilemap = block < layers.Length ? layers[block] : sources[block - layers.Length].Tilemap;
             if (tilemap == null)
             {
                 continue;
             }
 
             BoundsInt cellBounds = tilemap.cellBounds;
-            if (cellBounds.size.x <= 0 || cellBounds.size.y <= 0)
+            RectInt read = new(cellBounds.xMin, cellBounds.yMin, cellBounds.size.x, cellBounds.size.y);
+            if (block >= layers.Length)
+            {
+                read = Intersect(read, sources[block - layers.Length].Cells);
+            }
+
+            if (hasArea)
+            {
+                read = Intersect(read, area);
+            }
+
+            if (read.width <= 0 || read.height <= 0)
             {
                 continue;
             }
 
-            cellBounds = new BoundsInt(cellBounds.xMin, cellBounds.yMin, 0, cellBounds.size.x, cellBounds.size.y, 1);
-            TileBase[] block = tilemap.GetTilesBlock(cellBounds);
-            blocks[layer] = block;
-            blockBounds[layer] = cellBounds;
-            for (int index = 0; index < block.Length; index++)
+            BoundsInt readBounds = new(read.xMin, read.yMin, 0, read.width, read.height, 1);
+            TileBase[] tiles = tilemap.GetTilesBlock(readBounds);
+            blocks[block] = tiles;
+            blockBounds[block] = readBounds;
+            for (int index = 0; index < tiles.Length; index++)
             {
-                if (block[index] != null)
+                if (tiles[index] != null)
                 {
-                    Include(new Vector2Int(cellBounds.xMin + index % cellBounds.size.x, cellBounds.yMin + index / cellBounds.size.x), ref any, ref min, ref max);
+                    Include(new Vector2Int(read.xMin + index % read.width, read.yMin + index / read.width), ref any, ref min, ref max);
                 }
             }
         }
 
         foreach (KeyValuePair<Vector3Int, PreviewBits> entry in preview)
         {
-            if ((entry.Value.Mask & entry.Value.Value) != 0)
+            if ((entry.Value.Mask & entry.Value.Value) != 0 && InArea(entry.Key))
             {
                 Include(new Vector2Int(entry.Key.x, entry.Key.y), ref any, ref min, ref max);
             }
         }
 
-        bounds = any
-            ? new BoundsInt(min.x - Margin, min.y - Margin, 0, max.x - min.x + 1 + 2 * Margin, max.y - min.y + 1 + 2 * Margin, 1)
-            : new BoundsInt(0, 0, 0, 0, 0, 1);
+        bounds = !any
+            ? new BoundsInt(0, 0, 0, 0, 0, 1)
+            : hasArea
+                ? new BoundsInt(area.xMin, area.yMin, 0, area.width, area.height, 1)
+                : new BoundsInt(min.x - Margin, min.y - Margin, 0, max.x - min.x + 1 + 2 * Margin, max.y - min.y + 1 + 2 * Margin, 1);
         cells = new uint[bounds.size.x * bounds.size.y];
         pendingFlags = new bool[cells.Length];
         pending.Clear();
         fullUploadPending = true;
 
-        for (int layer = 0; layer < layers.Length; layer++)
+        for (int block = 0; block < blockCount; block++)
         {
-            TileBase[] block = blocks[layer];
-            if (block == null)
+            TileBase[] tiles = blocks[block];
+            if (tiles == null)
             {
                 continue;
             }
 
-            uint bit = 1u << layer;
-            BoundsInt cellBounds = blockBounds[layer];
-            for (int index = 0; index < block.Length; index++)
+            uint bit = 1u << (block < layers.Length ? block : sources[block - layers.Length].Layer);
+            BoundsInt cellBounds = blockBounds[block];
+            for (int index = 0; index < tiles.Length; index++)
             {
-                if (block[index] != null)
+                if (tiles[index] != null)
                 {
                     cells[IndexOf(cellBounds.xMin + index % cellBounds.size.x, cellBounds.yMin + index / cellBounds.size.x)] |= bit;
                 }
@@ -168,26 +289,50 @@ public sealed class TerrainControlMap : IDisposable
     }
 
     /// <summary>
-    /// Reads <paramref name="positions"/> of layer <paramref name="layer"/> again after its tiles changed, growing the
-    /// bounds first when a filled cell lies outside them or in the margin, and records the cells whose bits changed
-    /// for the next <see cref="Apply"/>. Like <see cref="Rebuild"/>, it reads only z = 0 and ignores other positions.
-    /// Allocates nothing unless the bounds grow.
+    /// Reads <paramref name="positions"/> again after <paramref name="tilemap"/>'s tiles changed, for every layer that
+    /// has it as its own tilemap or as a source, like <see cref="Refresh(int, NativeArray{Vector3Int})"/>. Returns
+    /// whether any layer reads it. Allocates nothing unless the bounds grow.
+    /// </summary>
+    public bool Refresh(Tilemap tilemap, NativeArray<Vector3Int> positions)
+    {
+        bool read = false;
+        for (int layer = 0; tilemap != null && layer < layers.Length; layer++)
+        {
+            if (layers[layer] == tilemap)
+            {
+                Refresh(layer, positions);
+                read = true;
+            }
+        }
+
+        for (int i = 0; tilemap != null && i < sources.Length; i++)
+        {
+            if (sources[i].Tilemap == tilemap)
+            {
+                Refresh(sources[i].Layer, positions);
+                read = true;
+            }
+        }
+
+        return read;
+    }
+
+    /// <summary>
+    /// Reads <paramref name="positions"/> of layer <paramref name="layer"/> again after its tiles changed (on its own
+    /// tilemap or one of its sources), growing the bounds first when a filled cell lies outside them or in the margin,
+    /// and records the cells whose bits changed for the next <see cref="Apply"/>. Like <see cref="Rebuild"/>, it reads
+    /// only z = 0 and ignores other positions, and with a fixed area those outside it. Allocates nothing unless the
+    /// bounds grow.
     /// </summary>
     public void Refresh(int layer, NativeArray<Vector3Int> positions)
     {
-        Tilemap tilemap = layers[layer];
-        if (tilemap == null)
-        {
-            return;
-        }
-
         bool grow = false;
         Vector2Int min = Vector2Int.zero;
         Vector2Int max = Vector2Int.zero;
         for (int i = 0; i < positions.Length; i++)
         {
             Vector3Int position = positions[i];
-            if (position.z == 0 && !IsInsideMargin(position) && tilemap.HasTile(position))
+            if (position.z == 0 && NeedsGrowth(position) && IsFilled(layer, position))
             {
                 Include(new Vector2Int(position.x, position.y), ref grow, ref min, ref max);
             }
@@ -208,7 +353,7 @@ public sealed class TerrainControlMap : IDisposable
             }
 
             int index = IndexOf(position.x, position.y);
-            uint value = tilemap.HasTile(position) ? cells[index] | bit : cells[index] & ~bit;
+            uint value = IsFilled(layer, position) ? cells[index] | bit : cells[index] & ~bit;
             if (value != cells[index])
             {
                 cells[index] = value;
@@ -248,7 +393,7 @@ public sealed class TerrainControlMap : IDisposable
             Vector2Int max = Vector2Int.zero;
             for (int i = 0; i < previewCells.Count; i++)
             {
-                if (!IsInsideMargin(previewCells[i]))
+                if (NeedsGrowth(previewCells[i]))
                 {
                     Include(new Vector2Int(previewCells[i].x, previewCells[i].y), ref grow, ref min, ref max);
                 }
@@ -410,7 +555,14 @@ public sealed class TerrainControlMap : IDisposable
         int yMin;
         int xMax;
         int yMax;
-        if (IsEmpty)
+        if (hasArea)
+        {
+            xMin = area.xMin;
+            yMin = area.yMin;
+            xMax = area.xMax - 1;
+            yMax = area.yMax - 1;
+        }
+        else if (IsEmpty)
         {
             xMin = needMin.x;
             yMin = needMin.y;
@@ -440,14 +592,62 @@ public sealed class TerrainControlMap : IDisposable
     }
 
     /// <summary>
-    /// Whether <paramref name="cell"/> lies inside the bounds and outside the margin ring, where it may be filled
-    /// without the bounds growing.
+    /// Whether filling <paramref name="cell"/> grows the bounds: with a fixed area, when the map is empty and the cell
+    /// lies inside the area; otherwise when it lies outside the bounds or in the margin ring.
     /// </summary>
-    private bool IsInsideMargin(Vector3Int cell)
+    private bool NeedsGrowth(Vector3Int cell)
     {
-        return !IsEmpty
-            && cell.x >= bounds.xMin + Margin && cell.x < bounds.xMax - Margin
-            && cell.y >= bounds.yMin + Margin && cell.y < bounds.yMax - Margin;
+        if (hasArea)
+        {
+            return IsEmpty && InArea(cell);
+        }
+
+        return IsEmpty
+            || cell.x < bounds.xMin + Margin || cell.x >= bounds.xMax - Margin
+            || cell.y < bounds.yMin + Margin || cell.y >= bounds.yMax - Margin;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies inside the fixed area, or anywhere without one, ignoring z.
+    /// </summary>
+    private bool InArea(Vector3Int cell)
+    {
+        return !hasArea || (cell.x >= area.xMin && cell.x < area.xMax && cell.y >= area.yMin && cell.y < area.yMax);
+    }
+
+    /// <summary>
+    /// Whether layer <paramref name="layer"/> is filled at <paramref name="cell"/>: its own tilemap or one of its
+    /// sources covering the cell holds a tile there.
+    /// </summary>
+    private bool IsFilled(int layer, Vector3Int cell)
+    {
+        Tilemap own = layers[layer];
+        if (own != null && own.HasTile(cell))
+        {
+            return true;
+        }
+
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (sources[i].Layer == layer && sources[i].Tilemap != null && sources[i].Contains(cell) && sources[i].Tilemap.HasTile(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The cells <paramref name="a"/> and <paramref name="b"/> share; zero size when none.
+    /// </summary>
+    private static RectInt Intersect(RectInt a, RectInt b)
+    {
+        int xMin = Mathf.Max(a.xMin, b.xMin);
+        int yMin = Mathf.Max(a.yMin, b.yMin);
+        int xMax = Mathf.Min(a.xMax, b.xMax);
+        int yMax = Mathf.Min(a.yMax, b.yMax);
+        return new RectInt(xMin, yMin, Mathf.Max(0, xMax - xMin), Mathf.Max(0, yMax - yMin));
     }
 
     /// <summary>

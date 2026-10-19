@@ -143,12 +143,20 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
         int neighborIndex = rule.GetNeighborIndex(dataTileOffset);
         if (neighborIndex == -1) return true;
 
+        TileBase neighborDataTile;
+        if (dualGridTilemapModule != null)
+        {
+            neighborDataTile = dualGridTilemapModule.DataTileForRules(dataTilePosition);
+        }
+        else
+        {
 #if UNITY_EDITOR
-        var neighborDataTile = dataTilemap.GetEditorPreviewTile(dataTilePosition);
-        if (neighborDataTile == null) neighborDataTile = dataTilemap.GetTile(dataTilePosition);
+            neighborDataTile = dataTilemap.GetEditorPreviewTile(dataTilePosition);
+            if (neighborDataTile == null) neighborDataTile = dataTilemap.GetTile(dataTilePosition);
 #else
-        var neighborDataTile = dataTilemap.GetTile(dataTilePosition);
+            neighborDataTile = dataTilemap.GetTile(dataTilePosition);
 #endif
+        }
 
         return RuleMatch(rule.m_Neighbors[neighborIndex], neighborDataTile);
     }

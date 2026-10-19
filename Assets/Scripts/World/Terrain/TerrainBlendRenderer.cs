@@ -26,7 +26,10 @@ using UnityEngine.Tilemaps;
 /// (<see cref="NavigationPriorityOf"/>); its inspector keeps them in step, and a mismatch is logged as an error while
 /// the ground is still drawn. Reads its style, materials, textures and navigation sources and never writes them. Its
 /// chunks are a <see cref="TerrainChunkSet"/>, its build checks <see cref="TerrainBlendChecks"/>, and in the editor
-/// <see cref="TerrainBlendRebuilds"/> decides when an inspector change rebuilds it.
+/// <see cref="TerrainBlendRebuilds"/> decides when an inspector change rebuilds it. A chunk of a seamless world
+/// (<see cref="SetChunk"/>) builds its control map over its own cells and a skirt around them, reads its neighbours'
+/// border cells there (<see cref="SetSkirt"/>), draws quads over its own cells only, and takes its coast map from a
+/// texture baked for it (Docs/WorldStreaming.md: Terrain).
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -107,7 +110,16 @@ public class TerrainBlendRenderer : MonoBehaviour
     private TerrainCoastMap coastMap;
     private TerrainElevationMap elevationMap;
     private Tilemap builtRaisedTilemap;
+    [NonSerialized] private bool builtRaised;
     [NonSerialized] private bool elevationChanged;
+    [NonSerialized] private bool chunked;
+    [NonSerialized] private RectInt chunkCells;
+    [NonSerialized] private int skirtCells;
+    [NonSerialized] private Texture2D chunkCoastMap;
+    [NonSerialized] private bool coastBaked;
+    [NonSerialized] private TerrainSkirtSource[] skirt = new TerrainSkirtSource[0];
+    [NonSerialized] private TerrainMaterial[] builtMaterials = new TerrainMaterial[0];
+    [NonSerialized] private readonly List<TerrainSkirtSource> unbuiltSkirt = new();
     private int waveLayer = -1;
     private uint bridgeBits;
     private Texture2DArray albedoArray;
@@ -123,6 +135,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private float animationFramesPerSecond;
     [NonSerialized] private bool previewGrewBounds;
     [NonSerialized] private bool alwaysWide;
+    [NonSerialized] private bool live;
 #if UNITY_EDITOR
     [NonSerialized] private bool enabledOnce;
     [NonSerialized] private TerrainBlendRebuilds rebuilds;
@@ -221,6 +234,29 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal TerrainControlMap ControlMap => controlMap;
 
     /// <summary>
+    /// Whether it draws a chunk of a seamless world (<see cref="SetChunk"/>).
+    /// </summary>
+    internal bool IsChunk => chunked;
+    internal RectInt ChunkCells => chunkCells;
+    internal IReadOnlyList<TerrainSkirtSource> Skirt => skirt;
+
+    /// <summary>
+    /// The materials of the layers it built from, bottom first: its own layers', with any material its skirt shows
+    /// that none of them draws at its place in the style's layer order.
+    /// </summary>
+    internal IReadOnlyList<TerrainMaterial> BuiltMaterials => builtMaterials;
+
+    /// <summary>
+    /// Whether it draws the coast map baked for its chunk instead of building one.
+    /// </summary>
+    internal bool IsCoastBaked => coastBaked;
+
+    /// <summary>
+    /// The coast map the runtime material reads: the baked one, or the one it builds; null when nothing is built.
+    /// </summary>
+    internal Texture CoastTexture => material != null ? material.GetTexture(CoastMapId) : null;
+
+    /// <summary>
     /// Whether it is built wide: an RGBA32 control map, read by the shader's wide variant (_TERRAIN_WIDE).
     /// </summary>
     internal bool IsWide => controlMap != null && controlMap.IsWide;
@@ -268,12 +304,73 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Destroys everything built at runtime and builds it again from the layers and style, when enabled.
+    /// The cells a chunk's control map covers: its own <paramref name="cells"/> and <paramref name="skirtWidth"/> cells
+    /// around them, plus the control map's margin of one empty cell, so the coast map baked for the chunk lines up with
+    /// it.
+    /// </summary>
+    public static RectInt ChunkControlArea(RectInt cells, int skirtWidth)
+    {
+        int around = Mathf.Max(0, skirtWidth) + TerrainControlMap.Margin;
+        return new RectInt(cells.xMin - around, cells.yMin - around, cells.width + 2 * around, cells.height + 2 * around);
+    }
+
+    /// <summary>
+    /// Makes it draw the chunk of a seamless world owning <paramref name="cells"/>: its control map covers those cells
+    /// and <paramref name="skirtWidth"/> cells around them (<see cref="ChunkControlArea"/>), its quads only the cells,
+    /// and its waves read <paramref name="coastMap"/>, the map baked for that area, when it is not null and has the
+    /// area's size (otherwise it builds one from what it reads). Not saved; rebuilds when enabled.
+    /// </summary>
+    internal void SetChunk(RectInt cells, int skirtWidth, Texture2D coastMap)
+    {
+        chunked = true;
+        chunkCells = cells;
+        skirtCells = Mathf.Max(0, skirtWidth);
+        chunkCoastMap = coastMap;
+        Rebuild();
+    }
+
+    /// <summary>
+    /// Has it read <paramref name="sources"/>, the border cells of its loaded neighbours, too: a ground source counts
+    /// for its layer of the same material, and a material none of its layers draws adds a layer for it at its place
+    /// in the style's order, rebuilding it, once its source has a tile; a raised source counts as raised ground. Its
+    /// own tilemaps are never written. Not saved. When built, rebuilds only if the layers or raised ground it needs
+    /// changed, and otherwise reads its control map and elevation map again.
+    /// </summary>
+    internal void SetSkirt(IReadOnlyList<TerrainSkirtSource> sources)
+    {
+        int count = sources != null ? sources.Count : 0;
+        skirt = new TerrainSkirtSource[count];
+        for (int i = 0; i < count; i++)
+        {
+            skirt[i] = sources[i];
+        }
+
+        if (controlMap == null)
+        {
+            return;
+        }
+
+        if (!SameMaterials(LayerMaterials(out bool raised), builtMaterials) || builtRaised != raised)
+        {
+            Rebuild();
+            return;
+        }
+
+        BoundsInt before = controlMap.Bounds;
+        controlMap.SetSources(ControlMapSources());
+        controlMap.Rebuild();
+        elevationChanged |= builtRaised;
+        FollowControlMapChange(before);
+    }
+
+    /// <summary>
+    /// Destroys everything built at runtime and builds it again from the layers and style, when enabled (once its own
+    /// <c>OnEnable</c> has run, so a component enabled before it in the same load does not build it twice).
     /// </summary>
     [ContextMenu("Rebuild")]
     public void Rebuild()
     {
-        if (!isActiveAndEnabled)
+        if (!live || !isActiveAndEnabled)
         {
             return;
         }
@@ -390,18 +487,18 @@ public class TerrainBlendRenderer : MonoBehaviour
         if (controlMap != null && controlMap.Apply())
         {
             UpdateControlRect();
-            if (waveLayer >= 0)
+            if (waveLayer >= 0 && !coastBaked)
             {
                 coastMap.Build(controlMap, waveLayer, bridgeBits);
             }
 
-            elevationChanged |= builtRaisedTilemap != null;
+            elevationChanged |= builtRaised;
         }
 
         if (elevationChanged && elevationMap != null)
         {
             elevationChanged = false;
-            elevationMap.Build(controlMap, builtRaisedTilemap);
+            elevationMap.Build(controlMap, builtRaisedTilemap, skirt);
             material.SetTexture(RaisedMapId, elevationMap.Texture);
         }
     }
@@ -423,6 +520,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.Undo.undoRedoPerformed += HandleUndoRedo;
 #endif
+        live = true;
         Build();
 #if UNITY_EDITOR
         enabledOnce = true;
@@ -438,6 +536,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.Undo.undoRedoPerformed -= HandleUndoRedo;
 #endif
+        live = false;
         Teardown();
     }
 
@@ -469,7 +568,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
         BoundsInt before = controlMap.Bounds;
         controlMap.Rebuild();
-        elevationChanged |= builtRaisedTilemap != null;
+        elevationChanged |= builtRaised;
         FollowControlMapChange(before);
     }
 
@@ -530,14 +629,25 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
-        int count = layers.Length;
-        layerTilemaps = new Tilemap[count];
-        TerrainMaterial[] materials = new TerrainMaterial[count];
-        for (int i = 0; i < count; i++)
+        TerrainMaterial[] materials = LayerMaterials(out bool raised);
+        if (materials.Length > TerrainControlMap.MaxLayers)
         {
-            layerTilemaps[i] = layers[i].Tilemap;
-            materials[i] = layers[i].Material;
+            Debug.LogError($"{name}: its layers and the materials its skirt shows make {materials.Length} layers, more than the {TerrainControlMap.MaxLayers} a renderer draws; the skirt's are left out.", this);
+            skirt = new TerrainSkirtSource[0];
+            materials = LayerMaterials(out raised);
         }
+
+        int count = materials.Length;
+        wide = alwaysWide || count > TerrainControlMap.NarrowLayers;
+        layerTilemaps = new Tilemap[count];
+        for (int i = 0, own = 0; i < count; i++)
+        {
+            bool isOwn = own < layers.Length && layers[own].Material == materials[i];
+            layerTilemaps[i] = isOwn ? layers[own].Tilemap : null;
+            own += isOwn ? 1 : 0;
+        }
+
+        builtMaterials = materials;
 
         animationFramesPerSecond = 0f;
         foreach (TerrainMaterial layerMaterial in materials)
@@ -545,21 +655,28 @@ public class TerrainBlendRenderer : MonoBehaviour
             animationFramesPerSecond = Mathf.Max(animationFramesPerSecond, layerMaterial.IsAnimated ? layerMaterial.FramesPerSecond : 0f);
         }
 
-        controlMap = new TerrainControlMap(layerTilemaps, wide, $"{name} Terrain Control Map");
+        RectInt? area = chunked ? ChunkControlArea(chunkCells, skirtCells) : null;
+        controlMap = new TerrainControlMap(layerTilemaps, wide, $"{name} Terrain Control Map", area, ControlMapSources());
         controlMap.Apply();
         previewGrewBounds = false;
         waveLayer = Array.FindIndex(materials, m => m.HasWaves);
         bridgeBits = TerrainBlendLut.BridgeBits(materials);
-        coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
-        coastMap.Build(controlMap, waveLayer, bridgeBits);
+        coastBaked = waveLayer >= 0 && chunked && IsBakedFor(chunkCoastMap, area.Value);
+        if (!coastBaked)
+        {
+            coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
+            coastMap.Build(controlMap, waveLayer, bridgeBits);
+        }
+
         albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
         fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
         heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
         builtRaisedTilemap = raisedTilemap;
+        builtRaised = raised;
         elevationMap = new TerrainElevationMap($"{name} Terrain Elevation Map");
-        elevationMap.Build(controlMap, builtRaisedTilemap);
+        elevationMap.Build(controlMap, builtRaisedTilemap, skirt);
         elevationChanged = false;
-        lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaisedTilemap != null);
+        lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaised);
 
         material = new Material(style.Shader) { name = $"{name} Terrain (runtime)", hideFlags = HideFlags.DontSave };
         material.SetTexture(ControlMapId, controlMap.Texture);
@@ -567,7 +684,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         material.SetTexture(AlbedoArrayId, albedoArray);
         material.SetTexture(FieldArrayId, fieldArray);
         material.SetTexture(HeightArrayId, heightArray);
-        material.SetTexture(CoastMapId, coastMap.Texture);
+        material.SetTexture(CoastMapId, coastBaked ? chunkCoastMap : coastMap.Texture);
         material.SetTexture(RaisedMapId, elevationMap.Texture);
         ApplyMode();
         UpdateControlRect();
@@ -603,9 +720,9 @@ public class TerrainBlendRenderer : MonoBehaviour
         LocalKeyword raisedKeyword = new(material.shader, RaisedKeywordName);
         if (raisedKeyword.isValid)
         {
-            material.SetKeyword(raisedKeyword, builtRaisedTilemap != null);
+            material.SetKeyword(raisedKeyword, builtRaised);
         }
-        else if (builtRaisedTilemap != null)
+        else if (builtRaised)
         {
             Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {RaisedKeywordName} keyword, so raised ground is drawn level.", this);
         }
@@ -662,7 +779,140 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// </summary>
     private void UpdateChunks()
     {
-        chunkSet.Fit(controlMap.Bounds, controlMap.IsEmpty, material, SortingLayer.NameToID(sortingLayerName), sortingOrder);
+        BoundsInt bounds = controlMap.Bounds;
+        bool empty = controlMap.IsEmpty;
+        if (chunked && !empty)
+        {
+            int xMin = Mathf.Max(bounds.xMin, chunkCells.xMin);
+            int yMin = Mathf.Max(bounds.yMin, chunkCells.yMin);
+            int xMax = Mathf.Min(bounds.xMax, chunkCells.xMax);
+            int yMax = Mathf.Min(bounds.yMax, chunkCells.yMax);
+            empty = xMax <= xMin || yMax <= yMin;
+            bounds = new BoundsInt(xMin, yMin, 0, Mathf.Max(0, xMax - xMin), Mathf.Max(0, yMax - yMin), 1);
+        }
+
+        chunkSet.Fit(bounds, empty, material, SortingLayer.NameToID(sortingLayerName), sortingOrder);
+    }
+
+    /// <summary>
+    /// The materials to build layers for, bottom first: each layer's, then each material of a ground source of the
+    /// skirt that has a tile and that no layer draws, at its place in the style's layer order (after the layers when
+    /// the order does not list it); and in <paramref name="raised"/> whether it draws raised ground: it has a raised
+    /// tilemap, or a raised source of the skirt has a tile. Records the skirt's sources that a tile would make it
+    /// rebuild for: the ground sources left without a layer, and without raised ground the raised sources.
+    /// </summary>
+    private TerrainMaterial[] LayerMaterials(out bool raised)
+    {
+        List<TerrainMaterial> materials = new(layers.Length);
+        foreach (Layer layer in layers)
+        {
+            materials.Add(layer.Material);
+        }
+
+        unbuiltSkirt.Clear();
+        raised = raisedTilemap != null;
+        foreach (TerrainSkirtSource source in skirt)
+        {
+            if (source.IsRaised && source.Tilemap != null && !raised && source.HasAnyTile())
+            {
+                raised = true;
+            }
+        }
+
+        foreach (TerrainSkirtSource source in skirt)
+        {
+            if (source.IsRaised && source.Tilemap != null && !raised)
+            {
+                unbuiltSkirt.Add(source);
+            }
+
+            if (source.IsRaised || source.Tilemap == null || materials.Contains(source.Material))
+            {
+                continue;
+            }
+
+            if (!source.HasAnyTile())
+            {
+                unbuiltSkirt.Add(source);
+                continue;
+            }
+
+            int order = style != null ? style.LayerOrderIndexOf(source.Material) : -1;
+            int at = materials.Count;
+            for (int i = 0; order >= 0 && i < materials.Count; i++)
+            {
+                int other = style.LayerOrderIndexOf(materials[i]);
+                if (other < 0 || other > order)
+                {
+                    at = i;
+                    break;
+                }
+            }
+
+            materials.Insert(at, source.Material);
+        }
+
+        return materials.ToArray();
+    }
+
+    /// <summary>
+    /// The skirt's ground sources as control map sources, each counted for the first built layer drawing its
+    /// material; those no built layer draws are left out (and wait among the unbuilt skirt).
+    /// </summary>
+    private List<TerrainControlMap.Source> ControlMapSources()
+    {
+        List<TerrainControlMap.Source> sources = new(skirt.Length);
+        foreach (TerrainSkirtSource source in skirt)
+        {
+            int layer = source.IsRaised ? -1 : Array.IndexOf(builtMaterials, source.Material);
+            if (layer >= 0 && source.Tilemap != null)
+            {
+                sources.Add(new TerrainControlMap.Source(source.Tilemap, layer, source.Cells));
+            }
+        }
+
+        return sources;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> list the same materials in the same order.
+    /// </summary>
+    private static bool SameMaterials(IReadOnlyList<TerrainMaterial> a, IReadOnlyList<TerrainMaterial> b)
+    {
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="baked"/> is a coast map for a control map over <paramref name="area"/>:
+    /// <see cref="TerrainCoastMap.TexelsPerCell"/> texels per cell of it.
+    /// </summary>
+    private bool IsBakedFor(Texture2D baked, RectInt area)
+    {
+        if (baked == null)
+        {
+            return false;
+        }
+
+        if (baked.width != area.width * TerrainCoastMap.TexelsPerCell || baked.height != area.height * TerrainCoastMap.TexelsPerCell)
+        {
+            Debug.LogWarning($"{name}: the baked coast map {baked.name} is {baked.width} x {baked.height}, not the {area.width * TerrainCoastMap.TexelsPerCell} x {area.height * TerrainCoastMap.TexelsPerCell} of its chunk's control map, so the coast map is built instead; bake the world's coast maps again.", this);
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -705,22 +955,71 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
-        if (builtRaisedTilemap != null && tilemap == builtRaisedTilemap)
+        if (builtRaised && IsRaisedSource(tilemap))
         {
             elevationChanged = true;
             ScheduleFlush();
             return;
         }
 
-        int layer = BuiltLayerIndexOf(tilemap);
-        if (layer < 0)
+        BoundsInt before = controlMap.Bounds;
+        if (controlMap.Refresh(tilemap, positions))
         {
+            FollowControlMapChange(before);
             return;
         }
 
-        BoundsInt before = controlMap.Bounds;
-        controlMap.Refresh(layer, positions);
-        FollowControlMapChange(before);
+        if (FillsUnbuiltSkirt(tilemap, positions))
+        {
+            Rebuild();
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> is the raised tilemap it built from or a raised source of its skirt.
+    /// </summary>
+    private bool IsRaisedSource(Tilemap tilemap)
+    {
+        if (builtRaisedTilemap != null && tilemap == builtRaisedTilemap)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < skirt.Length; i++)
+        {
+            if (skirt[i].IsRaised && skirt[i].Tilemap == tilemap)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether a change to <paramref name="tilemap"/> at <paramref name="positions"/> put a tile in the cells of a
+    /// source of the skirt it did not build for: a ground source whose material no built layer draws, which then needs
+    /// a layer, or a raised source while it draws no raised ground.
+    /// </summary>
+    private bool FillsUnbuiltSkirt(Tilemap tilemap, NativeArray<Vector3Int> positions)
+    {
+        for (int s = 0; s < unbuiltSkirt.Count; s++)
+        {
+            if (unbuiltSkirt[s].Tilemap != tilemap)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                if (positions[i].z == 0 && unbuiltSkirt[s].Contains(positions[i]) && tilemap.HasTile(positions[i]))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -804,6 +1103,9 @@ public class TerrainBlendRenderer : MonoBehaviour
         elevationMap?.Dispose();
         elevationMap = null;
         builtRaisedTilemap = null;
+        builtRaised = false;
+        coastBaked = false;
+        builtMaterials = new TerrainMaterial[0];
         elevationChanged = false;
         waveLayer = -1;
         DestroyRuntime(material);

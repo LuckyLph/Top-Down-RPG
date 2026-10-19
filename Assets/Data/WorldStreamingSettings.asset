@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: WorldStreamingSettings
   m_EditorClassIdentifier: TopDownRPG.Gameplay::WorldStreamingSettings
   viewCells: {x: 20, y: 12}
-  loadMargin: 16
+  loadMargin: 12
   unloadHysteresis: 8
   emptyWorldGraceSeconds: 10

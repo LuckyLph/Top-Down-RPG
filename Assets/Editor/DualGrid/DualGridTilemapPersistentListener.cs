@@ -18,8 +18,9 @@ public static class DualGridTilemapPersistentListener
     }
 
     /// <summary>
-    /// Forwards a tilemap change to every module whose data tilemap is <paramref name="tilemap"/> so it rebuilds its
-    /// render tiles. Ignored in Play Mode, where the modules listen themselves.
+    /// Forwards a tilemap change to every module whose data tilemap is <paramref name="tilemap"/>, or that reads it
+    /// across a chunk border as a neighbour's data, so it rebuilds its render tiles. Ignored in Play Mode, where the
+    /// modules listen themselves.
     /// </summary>
     private static void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
@@ -29,7 +30,7 @@ public static class DualGridTilemapPersistentListener
         var dualGridModules = Object.FindObjectsByType<DualGridTilemapModule>();
         foreach (var module in dualGridModules)
         {
-            if (module.DataTilemap == tilemap)
+            if (module.DataTilemap == tilemap || module.ReadsNeighbourData(tilemap))
                 module.HandleTilemapPositionsChanged(tilemap, positions);
         }
     }

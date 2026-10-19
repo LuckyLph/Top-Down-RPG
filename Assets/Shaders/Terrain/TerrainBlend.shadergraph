@@ -23,6 +23,12 @@
         },
         {
             "m_Id": "add154cbe4da48ce88288419c2230fa8"
+        },
+        {
+            "m_Id": "ff3c901a8b7a456596fbd847ec3fd489"
+        },
+        {
+            "m_Id": "de80e49efec54a7f9102254eb5a42c2b"
         }
     ],
     "m_Keywords": [
@@ -1708,6 +1714,43 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DShaderProperty",
+    "m_ObjectId": "de80e49efec54a7f9102254eb5a42c2b",
+    "m_Guid": {
+        "m_GuidSerialized": "75917299-90fd-4be4-bceb-42a1fae73052"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Terrain Raised",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Terrain Raised",
+    "m_DefaultReferenceName": "_Terrain_Raised",
+    "m_OverrideReferenceName": "_TerrainRaised",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": true,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": {
+        "m_SerializedTexture": "",
+        "m_Guid": ""
+    },
+    "isMainTexture": false,
+    "useTilingAndOffset": false,
+    "useTexelSize": false,
+    "isHDR": false,
+    "m_Modifiable": true,
+    "m_DefaultType": 1
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Texture2DArrayInputMaterialSlot",
     "m_ObjectId": "e3ca9aa377b34bd6ad8916e7924a2f4c",
     "m_Id": 4,
@@ -1774,5 +1817,42 @@
     "m_Entries": [],
     "m_Value": 0,
     "m_IsEditable": true
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DShaderProperty",
+    "m_ObjectId": "ff3c901a8b7a456596fbd847ec3fd489",
+    "m_Guid": {
+        "m_GuidSerialized": "2eef28a3-89a7-48c7-84a7-41fb1aa71265"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Terrain Coast",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Terrain Coast",
+    "m_DefaultReferenceName": "_Terrain_Coast",
+    "m_OverrideReferenceName": "_TerrainCoast",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": true,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": {
+        "m_SerializedTexture": "",
+        "m_Guid": ""
+    },
+    "isMainTexture": false,
+    "useTilingAndOffset": false,
+    "useTexelSize": false,
+    "isHDR": false,
+    "m_Modifiable": true,
+    "m_DefaultType": 1
 }
 

@@ -91,6 +91,65 @@ public sealed class TerrainCoastMap : IDisposable
             return;
         }
 
+        Compute(width, height);
+        Upload();
+    }
+
+    /// <summary>
+    /// Builds the map over a window of <paramref name="cellsWide"/> x <paramref name="cellsHigh"/> cells from
+    /// <paramref name="seaCells"/>, a flag per cell, row by row from the bottom, telling whether the cell is the sea's
+    /// (as <see cref="Build"/> decides it from a control map), and uploads it. The editor's coast bake builds a chunk's
+    /// map this way from the cells of the whole world around it.
+    /// </summary>
+    public void BuildFromCells(bool[] seaCells, int cellsWide, int cellsHigh)
+    {
+        if (seaCells == null || seaCells.Length != cellsWide * cellsHigh || cellsWide <= 0 || cellsHigh <= 0)
+        {
+            throw new ArgumentException("The sea flags must hold one flag per cell of the window.", nameof(seaCells));
+        }
+
+        int width = cellsWide * TexelsPerCell;
+        int height = cellsHigh * TexelsPerCell;
+        Prepare(width, height);
+        for (int cy = 0; cy < cellsHigh; cy++)
+        {
+            for (int cx = 0; cx < cellsWide; cx++)
+            {
+                bool isSea = seaCells[cy * cellsWide + cx];
+                for (int ty = 0; ty < TexelsPerCell; ty++)
+                {
+                    int row = (cy * TexelsPerCell + ty) * width + cx * TexelsPerCell;
+                    for (int tx = 0; tx < TexelsPerCell; tx++)
+                    {
+                        sea[row + tx] = isSea;
+                    }
+                }
+            }
+        }
+
+        Compute(width, height);
+        Upload();
+    }
+
+    /// <summary>
+    /// The encoded distance of texel (<paramref name="x"/>, <paramref name="y"/>) of the last build, the texel at the
+    /// map's edge for one past it, as a clamped texture sampler reads it.
+    /// </summary>
+    public ushort EncodedAt(int x, int y)
+    {
+        int width = Mathf.Max(1, builtWidth);
+        int height = encoded.Length / width;
+        x = x < 0 ? 0 : x >= width ? width - 1 : x;
+        y = y < 0 ? 0 : y >= height ? height - 1 : y;
+        return encoded[y * width + x];
+    }
+
+    /// <summary>
+    /// Works the distances out from the sea flags of <paramref name="width"/> x <paramref name="height"/> texels and
+    /// encodes them.
+    /// </summary>
+    private void Compute(int width, int height)
+    {
         built = true;
         Chamfer(width, height, true, toLand);
         Chamfer(width, height, false, toSea);
@@ -119,8 +178,6 @@ public sealed class TerrainCoastMap : IDisposable
             level = level < 0f ? 0f : level > 1f ? 1f : level;
             encoded[i] = (ushort)(level * 65535f + 0.5f);
         }
-
-        Upload();
     }
 
     /// <summary>
@@ -285,19 +342,20 @@ public sealed class TerrainCoastMap : IDisposable
     /// <summary>
     /// Averages <paramref name="values"/> over <paramref name="radius"/> texels each way along rows
     /// (<paramref name="alongRows"/>) or columns, the map's edge texels repeating past it, using the land distances as
-    /// scratch.
+    /// scratch. The running sum is a double, so a texel's average does not depend on where its line starts: a coast
+    /// map baked over a window of the world gives the same texels as one over the whole world.
     /// </summary>
     private void BoxBlur(float[] values, int width, int height, bool alongRows, int radius)
     {
         int lines = alongRows ? height : width;
         int length = alongRows ? width : height;
         int stride = alongRows ? 1 : width;
-        float scale = 1f / (2 * radius + 1);
+        double scale = 1.0 / (2 * radius + 1);
         int last = (length - 1) * stride;
         for (int line = 0; line < lines; line++)
         {
             int start = alongRows ? line * width : line;
-            float sum = 0f;
+            double sum = 0.0;
             for (int k = -radius; k <= radius; k++)
             {
                 sum += values[start + (k < 0 ? 0 : k > length - 1 ? length - 1 : k) * stride];
@@ -308,7 +366,7 @@ public sealed class TerrainCoastMap : IDisposable
             for (int p = 0; p < length; p++)
             {
                 int at = start + p * stride;
-                toLand[at] = sum * scale;
+                toLand[at] = (float)(sum * scale);
                 int add = p + radius + 1;
                 int remove = p - radius;
                 sum += add < length ? values[start + add * stride] : end;

@@ -19,6 +19,10 @@ public enum GameObjectOrigin { None, DataTilemap, RenderTilemap }
 /// refreshes each affected render tile once; batches go through <see cref="SetDataTiles(IReadOnlyList{Vector3Int})"/>
 /// and <see cref="ClearDataTiles(IReadOnlyList{Vector3Int})"/>, which write the data and render tilemaps in bulk.
 /// <para></para>
+/// On a chunk of a seamless world (<see cref="SetChunk"/>) it draws the render tiles on its own cells, reading the
+/// data cells of its loaded neighbours' modules across the border, and the render tiles along its upper and right
+/// border only while the chunk owning them is not loaded; it follows its neighbours' data changes along the border.
+/// <para></para>
 /// Editor logic is kept in the associated editor script.
 /// </remarks>
 [RequireComponent(typeof(Tilemap))]
@@ -51,7 +55,21 @@ public class DualGridTilemapModule : MonoBehaviour
     private readonly HashSet<Vector3Int> pendingRenderTiles = new();
     private readonly List<Vector3Int> renderTilesToSet = new();
     private readonly List<Vector3Int> renderTilesToClear = new();
+    [NonSerialized] private readonly List<DualGridTilemapModule> neighbours = new();
     private bool isWritingDataTiles;
+    [NonSerialized] private bool hasChunk;
+    [NonSerialized] private RectInt chunkCells;
+
+    /// <summary>
+    /// Whether it draws the walls of a chunk of a seamless world (<see cref="SetChunk"/>).
+    /// </summary>
+    public bool HasChunk => hasChunk;
+
+    /// <summary>
+    /// The data cells of its chunk, when <see cref="HasChunk"/>.
+    /// </summary>
+    public RectInt ChunkCells => chunkCells;
+    internal IReadOnlyList<DualGridTilemapModule> Neighbours => neighbours;
 
     private Tilemap renderTilemap;
     public Tilemap RenderTilemap
@@ -94,6 +112,12 @@ public class DualGridTilemapModule : MonoBehaviour
     /// </summary>
     internal void HandleTilemapPositionsChanged(Tilemap tilemap, NativeArray<Vector3Int> positions)
     {
+        if (tilemap != DataTilemap && ReadsNeighbourData(tilemap))
+        {
+            HandleNeighbourDataChanged(positions);
+            return;
+        }
+
         if (tilemap != DataTilemap || isWritingDataTiles)
         {
             return;
@@ -190,6 +214,171 @@ public class DualGridTilemapModule : MonoBehaviour
     }
 
     /// <summary>
+    /// Makes it draw the walls of the chunk owning the data cells <paramref name="cells"/>, beside
+    /// <paramref name="neighbourModules"/>, the wall modules of its loaded neighbouring chunks (each with its own
+    /// chunk set): it reads their data cells across the border, leaves them the render tiles on their cells, and draws
+    /// those along its upper and right border only where no neighbour owns them. Refreshes the render tiles along its
+    /// border. Not saved.
+    /// </summary>
+    internal void SetChunk(RectInt cells, IReadOnlyList<DualGridTilemapModule> neighbourModules)
+    {
+        hasChunk = true;
+        chunkCells = cells;
+        neighbours.Clear();
+        for (int i = 0; neighbourModules != null && i < neighbourModules.Count; i++)
+        {
+            if (neighbourModules[i] != null && neighbourModules[i] != this)
+            {
+                neighbours.Add(neighbourModules[i]);
+            }
+        }
+
+        if (RenderTile == null || RenderTilemap == null)
+        {
+            return;
+        }
+
+        for (int x = cells.xMin; x <= cells.xMax; x++)
+        {
+            pendingRenderTiles.Add(new Vector3Int(x, cells.yMin, 0));
+            pendingRenderTiles.Add(new Vector3Int(x, cells.yMax, 0));
+        }
+
+        for (int y = cells.yMin; y <= cells.yMax; y++)
+        {
+            pendingRenderTiles.Add(new Vector3Int(cells.xMin, y, 0));
+            pendingRenderTiles.Add(new Vector3Int(cells.xMax, y, 0));
+        }
+
+        ApplyPendingRenderTiles();
+    }
+
+    /// <summary>
+    /// Whether it draws the render tile at <paramref name="renderTilePosition"/>: always without a chunk; on a chunk,
+    /// a tile on its own cells, or one along its upper or right border that no neighbour's cells hold.
+    /// </summary>
+    public bool OwnsRenderTile(Vector3Int renderTilePosition)
+    {
+        if (!hasChunk || Contains(chunkCells, renderTilePosition))
+        {
+            return true;
+        }
+
+        if (renderTilePosition.x < chunkCells.xMin || renderTilePosition.x > chunkCells.xMax
+            || renderTilePosition.y < chunkCells.yMin || renderTilePosition.y > chunkCells.yMax)
+        {
+            return false;
+        }
+
+        return NeighbourHolding(renderTilePosition) == null;
+    }
+
+    /// <summary>
+    /// The tile its rules read at the data cell <paramref name="dataTilePosition"/>: its own data tilemap's (in the
+    /// editor, its preview tile first), or on a chunk, past its cells, the data tilemap's of the neighbour holding the
+    /// cell; null where no loaded chunk holds it.
+    /// </summary>
+    internal TileBase DataTileForRules(Vector3Int dataTilePosition)
+    {
+        Tilemap source = DataTilemapAt(dataTilePosition);
+        if (source == null)
+        {
+            return null;
+        }
+
+#if UNITY_EDITOR
+        TileBase preview = source.GetEditorPreviewTile(dataTilePosition);
+        if (preview != null)
+        {
+            return preview;
+        }
+#endif
+        return source.GetTile(dataTilePosition);
+    }
+
+    /// <summary>
+    /// The data tilemap holding <paramref name="dataTilePosition"/>: its own, or on a chunk, past its cells, the
+    /// neighbour's whose cells hold it, or null.
+    /// </summary>
+    private Tilemap DataTilemapAt(Vector3Int dataTilePosition)
+    {
+        if (!hasChunk || Contains(chunkCells, dataTilePosition))
+        {
+            return DataTilemap;
+        }
+
+        DualGridTilemapModule neighbour = NeighbourHolding(dataTilePosition);
+        return neighbour != null ? neighbour.DataTilemap : null;
+    }
+
+    /// <summary>
+    /// The neighbour module whose chunk's cells hold <paramref name="cell"/>, or null.
+    /// </summary>
+    private DualGridTilemapModule NeighbourHolding(Vector3Int cell)
+    {
+        for (int i = 0; i < neighbours.Count; i++)
+        {
+            DualGridTilemapModule neighbour = neighbours[i];
+            if (neighbour != null && neighbour.hasChunk && Contains(neighbour.chunkCells, cell))
+            {
+                return neighbour;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> is the data tilemap of one of its neighbours across a chunk border.
+    /// </summary>
+    internal bool ReadsNeighbourData(Tilemap tilemap)
+    {
+        for (int i = 0; hasChunk && i < neighbours.Count; i++)
+        {
+            if (neighbours[i] != null && neighbours[i].DataTilemap == tilemap)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Refreshes its render tiles around the changed data cells of a neighbour that lie along its border.
+    /// </summary>
+    private void HandleNeighbourDataChanged(NativeArray<Vector3Int> positions)
+    {
+        if (RenderTile == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < positions.Length; i++)
+        {
+            Vector3Int position = positions[i];
+            if (position.x >= chunkCells.xMin - 1 && position.x <= chunkCells.xMax
+                && position.y >= chunkCells.yMin - 1 && position.y <= chunkCells.yMax)
+            {
+                QueueRenderTiles(position);
+            }
+        }
+
+        if (pendingRenderTiles.Count > 0)
+        {
+            ApplyPendingRenderTiles();
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies inside <paramref name="cells"/>, ignoring z.
+    /// </summary>
+    private static bool Contains(RectInt cells, Vector3Int cell)
+    {
+        return cell.x >= cells.xMin && cell.x < cells.xMax && cell.y >= cells.yMin && cell.y < cells.yMax;
+    }
+
+    /// <summary>
     /// Refreshes the 4 render tiles around <paramref name="dataTilePosition"/> from the current data tilemap.
     /// </summary>
     public void RefreshRenderTiles(Vector3Int dataTilePosition)
@@ -274,7 +463,7 @@ public class DualGridTilemapModule : MonoBehaviour
         renderTilesToClear.Clear();
         foreach (Vector3Int renderTilePosition in pendingRenderTiles)
         {
-            bool isInUse = IsInUseByDataTilemap(renderTilePosition);
+            bool isInUse = OwnsRenderTile(renderTilePosition) && IsInUseByDataTilemap(renderTilePosition);
             bool hasTile = render.HasTile(renderTilePosition);
             if (isInUse && !hasTile)
             {
@@ -317,13 +506,16 @@ public class DualGridTilemapModule : MonoBehaviour
     }
 
     /// <summary>
-    /// Checks if the render tile at <paramref name="renderTilePosition"/> is in use by any data tile.
+    /// Checks if the render tile at <paramref name="renderTilePosition"/> is in use by any data tile, its neighbours'
+    /// across the border of a chunk included.
     /// </summary>
     private bool IsInUseByDataTilemap(Vector3Int renderTilePosition)
     {
         for (int corner = 0; corner < DualGridUtils.CornerCount; corner++)
         {
-            if (DataTilemap.HasTile(DualGridUtils.GetDataTilePosition(renderTilePosition, corner)))
+            Vector3Int dataTilePosition = DualGridUtils.GetDataTilePosition(renderTilePosition, corner);
+            Tilemap source = DataTilemapAt(dataTilePosition);
+            if (source != null && source.HasTile(dataTilePosition))
             {
                 return true;
             }

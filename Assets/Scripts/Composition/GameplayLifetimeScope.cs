@@ -56,7 +56,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
-        builder.Register<ActiveNavigationGrid>(Lifetime.Singleton);
+        builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
@@ -102,6 +102,7 @@ public class GameplayLifetimeScope : LifetimeScope
 
         builder.Register<Worlds>(Lifetime.Singleton);
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
+        builder.RegisterInstance(new NavigationPagePool());
         if (worldStreamingSettings == null)
         {
             Debug.LogError($"{name} has no {nameof(WorldStreamingSettings)}; no world session can start.", this);

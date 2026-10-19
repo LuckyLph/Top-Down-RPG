@@ -32,9 +32,9 @@ public class ReturnToSpawnState : MobStateBase
             return;
         }
 
-        if (PathAgent.NavigationGrid != null)
+        if (PathAgent.Navigation != null)
         {
-            returnCell = PathAgent.NavigationGrid.WorldToCell(returnDestination);
+            returnCell = PathAgent.Navigation.WorldToCell(returnDestination);
         }
 
         bool pathFound = PathAgent.BuildPathToWorld(returnDestination, allowPartial: true);
@@ -89,22 +89,22 @@ public class ReturnToSpawnState : MobStateBase
     private bool TryResolveReturnDestination(out Vector2 destination)
     {
         destination = Patrol.SpawnPosition;
-        if (PathAgent.NavigationGrid == null)
+        if (PathAgent.Navigation == null)
         {
             return true;
         }
 
         TerrainMovementProfile2D movementProfile = Config != null ? Config.MovementProfile : null;
-        Vector3Int spawnCell = PathAgent.NavigationGrid.WorldToCell(Patrol.SpawnPosition);
-        if (PathAgent.NavigationGrid.IsCellWalkable(spawnCell, movementProfile))
+        Vector3Int spawnCell = PathAgent.Navigation.WorldToCell(Patrol.SpawnPosition);
+        if (PathAgent.Navigation.IsCellWalkable(spawnCell, movementProfile))
         {
-            destination = PathAgent.NavigationGrid.CellToWorldCenter(spawnCell);
+            destination = PathAgent.Navigation.CellToWorldCenter(spawnCell);
             return true;
         }
 
-        if (PathAgent.NavigationGrid.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.NearestCellSearchRadius))
+        if (PathAgent.Navigation.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.NearestCellSearchRadius))
         {
-            destination = PathAgent.NavigationGrid.CellToWorldCenter(nearest);
+            destination = PathAgent.Navigation.CellToWorldCenter(nearest);
             return true;
         }
 
@@ -116,12 +116,12 @@ public class ReturnToSpawnState : MobStateBase
     /// </summary>
     private bool IsInReturnCell()
     {
-        if (PathAgent.NavigationGrid == null)
+        if (PathAgent.Navigation == null)
         {
             return false;
         }
 
-        Vector3Int currentCell = PathAgent.NavigationGrid.WorldToCell(Transform.position);
+        Vector3Int currentCell = PathAgent.Navigation.WorldToCell(Transform.position);
         return currentCell == returnCell;
     }
 }

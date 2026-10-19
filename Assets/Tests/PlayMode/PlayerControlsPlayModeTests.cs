@@ -312,7 +312,7 @@ public class PlayerControlsPlayModeTests
 
         gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
         player = gameplay.Resolve<LocalPlayerTracker>().Current.Controller;
-        grid = gameplay.Resolve<ActiveNavigationGrid>().Current;
+        grid = (NavigationGrid2D)gameplay.Resolve<PlayerNavigation>().Area;
         profile = player.ControlSettings.MovementProfile;
         commands = new ScriptedCommands();
         player.SetCommandSource(commands);

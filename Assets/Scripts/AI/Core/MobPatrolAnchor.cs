@@ -12,7 +12,7 @@ public class MobPatrolAnchor : MonoBehaviour
     [SerializeField] private Color patrolRadiusColor = new(0.6f, 0.4f, 1f, 0.75f);
     [SerializeField] private Color spawnPointColor = new(0.9f, 0.9f, 1f, 0.85f);
 
-    private NavigationGrid2D navigationGrid;
+    private INavigation2D navigation;
     private MobConfig config;
     private IRandom random;
     private Vector2 spawnPosition;
@@ -28,11 +28,11 @@ public class MobPatrolAnchor : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the grid, config and random source, and records the current position as the spawn position again.
+    /// Takes the navigation, config and random source, and records the current position as the spawn position again.
     /// </summary>
-    public void Initialize(NavigationGrid2D navGrid, MobConfig mobConfig, IRandom randomSource)
+    public void Initialize(INavigation2D mobNavigation, MobConfig mobConfig, IRandom randomSource)
     {
-        navigationGrid = navGrid;
+        navigation = mobNavigation;
         config = mobConfig;
         random = randomSource;
         spawnPosition = transform.position;
@@ -56,7 +56,7 @@ public class MobPatrolAnchor : MonoBehaviour
     {
         destination = spawnPosition;
 
-        if (navigationGrid == null || config == null || random == null)
+        if (navigation == null || config == null || random == null)
         {
             return false;
         }
@@ -66,15 +66,15 @@ public class MobPatrolAnchor : MonoBehaviour
         {
             Vector2 offset = random.InsideUnitCircle() * config.PatrolRoamRadius;
             Vector2 candidateWorld = spawnPosition + offset;
-            Vector3Int candidateCell = navigationGrid.WorldToCell(candidateWorld);
+            Vector3Int candidateCell = navigation.WorldToCell(candidateWorld);
 
-            if (!navigationGrid.IsCellWalkable(candidateCell, config.MovementProfile)
-                && !navigationGrid.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.NearestCellSearchRadius))
+            if (!navigation.IsCellWalkable(candidateCell, config.MovementProfile)
+                && !navigation.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.NearestCellSearchRadius))
             {
                 continue;
             }
 
-            Vector2 candidate = navigationGrid.CellToWorldCenter(candidateCell);
+            Vector2 candidate = navigation.CellToWorldCenter(candidateCell);
             if (isReachable == null || isReachable(candidate))
             {
                 destination = candidate;

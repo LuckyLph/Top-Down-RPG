@@ -2,8 +2,8 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// Moves the player's <see cref="Rigidbody2D"/> along a <see cref="PathFollower2D"/> path on the current area's
-/// grid (a straight line when there is none) at the settings' speed times a speed scale (slows; 0 while stunned or
+/// Moves the player's <see cref="Rigidbody2D"/> along a <see cref="PathFollower2D"/> path on its own navigation, its
+/// world's or the area's (<see cref="PlayerNavigation"/>; a straight line when there is none) at the settings' speed times a speed scale (slows; 0 while stunned or
 /// rooted, which also keeps stall time from growing), tracks facing and stall time, and drives the animator. Remote
 /// copies show the owner's replicated movement instead.
 /// </summary>
@@ -25,9 +25,9 @@ public class PlayerMotor2D : MonoBehaviour
 
     private readonly PathFollower2D follower = new();
     private Rigidbody2D rb;
-    private ActiveNavigationGrid activeNavigationGrid;
+    private PlayerNavigation playerNavigation;
     private PlayerControlSettings settings;
-    private NavigationGrid2D configuredGrid;
+    private INavigation2D configuredNavigation;
     private bool followerConfigured;
     private Vector2 currentMove;
     private Vector2 facing = Vector2.down;
@@ -103,12 +103,12 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the holder of the current area's navigation grid that paths are built on.
+    /// Takes the lookup of the navigation this player paths on: its world's, or the area's.
     /// </summary>
     [Inject]
-    public void Construct(ActiveNavigationGrid navigationGrid)
+    public void Construct(PlayerNavigation navigation)
     {
-        activeNavigationGrid = navigationGrid;
+        playerNavigation = navigation;
     }
 
     /// <summary>
@@ -123,8 +123,9 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Builds a path from the body to <paramref name="destination"/> on the active grid (an unwalkable or
-    /// unreachable destination ends at the closest walkable cell), or a straight line without a grid.
+    /// Builds a path from the body to <paramref name="destination"/> on the player's navigation (an unwalkable or
+    /// unreachable destination ends at the closest walkable cell, one beyond the loaded chunks of a world at the loaded
+    /// edge), or a straight line without one.
     /// </summary>
     public bool MoveTo(Vector2 destination)
     {
@@ -133,18 +134,18 @@ public class PlayerMotor2D : MonoBehaviour
             return false;
         }
 
-        NavigationGrid2D grid = activeNavigationGrid != null ? activeNavigationGrid.Current : null;
-        if (!followerConfigured || !ReferenceEquals(grid, configuredGrid))
+        INavigation2D navigation = playerNavigation != null ? playerNavigation.Of(transform) : null;
+        if (!followerConfigured || !ReferenceEquals(navigation, configuredNavigation))
         {
-            follower.Configure(grid, settings.MovementProfile, settings.FollowerSettings);
-            configuredGrid = grid;
+            follower.Configure(navigation, settings.MovementProfile, settings.FollowerSettings);
+            configuredNavigation = navigation;
             followerConfigured = true;
         }
 
         if (follower.IsConfigured)
         {
             return follower.BuildPath(Position, destination, allowPartial: true)
-                || BuildTowardWalkableGround(grid, destination);
+                || BuildTowardWalkableGround(navigation, destination);
         }
 
         follower.BuildStraightPath(Position, destination);
@@ -256,7 +257,7 @@ public class PlayerMotor2D : MonoBehaviour
     /// For a destination with no walkable cell near it (e.g. far outside the map): walks back along the line toward
     /// the body until a walkable cell, and paths there instead.
     /// </summary>
-    private bool BuildTowardWalkableGround(NavigationGrid2D grid, Vector2 destination)
+    private bool BuildTowardWalkableGround(INavigation2D navigation, Vector2 destination)
     {
         Vector2 start = Position;
         Vector2 toStart = start - destination;
@@ -271,10 +272,10 @@ public class PlayerMotor2D : MonoBehaviour
         for (float travelled = GroundSearchStep; travelled < distance; travelled += GroundSearchStep)
         {
             point += step;
-            Vector3Int cell = grid.WorldToCell(point);
-            if (grid.IsCellWalkable(cell, settings.MovementProfile))
+            Vector3Int cell = navigation.WorldToCell(point);
+            if (navigation.IsCellWalkable(cell, settings.MovementProfile))
             {
-                return follower.BuildPath(start, grid.CellToWorldCenter(cell), allowPartial: true);
+                return follower.BuildPath(start, navigation.CellToWorldCenter(cell), allowPartial: true);
             }
         }
 

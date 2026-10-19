@@ -184,6 +184,52 @@ public class MovementBlockerGizmoTests
     }
 
     /// <summary>
+    /// On a chunk's grid in a world, the side of a walkable cell along the chunk's border is outlined while the chunk
+    /// across it is not loaded, and not once it is and its ground continues there.
+    /// </summary>
+    [Test]
+    public void Refresh_OnAChunkOfAWorld_OutlinesABorderOnlyWhileTheChunkAcrossIsNotLoaded()
+    {
+        WorldNavigation world = new(new NavigationPagePool());
+        try
+        {
+            NavigationGrid2D west = CreateOpenChunk(new Vector2Int(0, 0));
+            NavigationGrid2D east = CreateOpenChunk(new Vector2Int(1, 0));
+            world.AddChunk(west, new Vector2Int(0, 0));
+            MovementBlockerGizmo.BlockerMap map = new();
+
+            map.Refresh(west, null);
+            Assert.That(map.Edges.PointCount, Is.EqualTo(ChunkCoords.Size * 4 * 2), "All four sides of the chunk.");
+
+            world.AddChunk(east, new Vector2Int(1, 0));
+            map.Refresh(west, null);
+            Assert.That(map.Edges.PointCount, Is.EqualTo(ChunkCoords.Size * 3 * 2), "Not along the border with the loaded chunk.");
+        }
+        finally
+        {
+            world.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// A grid with open ground over the cells of the chunk at <paramref name="coords"/>, not built.
+    /// </summary>
+    private NavigationGrid2D CreateOpenChunk(Vector2Int coords)
+    {
+        GameObject root = Track(new GameObject($"Chunk {coords}"));
+        root.AddComponent<Grid>();
+        Tile tile = Track(ScriptableObject.CreateInstance<Tile>());
+        Tilemap groundMap = CreateTilemap(root, "Ground");
+        foreach (Vector2Int cell in ChunkCoords.Bounds(coords).allPositionsWithin)
+        {
+            groundMap.SetTile(new Vector3Int(cell.x, cell.y, 0), tile);
+        }
+
+        groundMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(Track(TerrainType2D.Create("ground")));
+        return root.AddComponent<NavigationGrid2D>();
+    }
+
+    /// <summary>
     /// Checks every part of <paramref name="run"/>.
     /// </summary>
     private static void AssertRun(MovementBlockerGizmo.BlockedRun run, Vector3Int start, int length, NavigationGrid2D.Blocker blocker, Vector3 center, Vector3 size)

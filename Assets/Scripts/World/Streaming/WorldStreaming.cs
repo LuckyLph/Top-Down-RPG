@@ -234,7 +234,13 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
             Debug.LogError($"{world.name}'s root scene has no {nameof(WorldLifetimeScope)}; its chunks get no scope parent.", world);
         }
 
-        worlds.Add(new LoadedWorld(world, scene, scope, SceneQuery.FindFirst<WorldLighting>(scene)));
+        WorldNavigation navigation = null;
+        if (scope != null && scope.Container != null)
+        {
+            scope.Container.TryResolve(out navigation);
+        }
+
+        worlds.Add(new LoadedWorld(world, scene, scope, SceneQuery.FindFirst<WorldLighting>(scene), navigation));
     }
 
     private async Awaitable LoadChunkAsync(WorldDefinition world, Vector2Int coords, CancellationToken cancellation)

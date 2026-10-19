@@ -74,7 +74,7 @@ public class MobPlayModeBehaviorTests
                 {
                     spawnedHere = true;
                     Assert.That(mob.gameObject.scene, Is.EqualTo(gameFlow.AreaScene));
-                    Assert.That(mob.NavigationGrid, Is.Not.Null);
+                    Assert.That(mob.Navigation, Is.Not.Null);
                     Assert.That(mob.Players, Is.Not.Null);
                 }
             }
@@ -98,14 +98,14 @@ public class MobPlayModeBehaviorTests
 
         Assert.That(navGrid, Is.Not.Null, "The clearing slice should contain a NavigationGrid2D.");
         Assert.That(firstMob, Is.Not.Null, "The clearing slice should contain at least one MobController.");
-        Assert.That(firstMob.NavigationGrid, Is.SameAs(navGrid));
+        Assert.That(firstMob.Navigation, Is.SameAs(navGrid));
 
         // Runtime spawns go through the area's container so they receive the same dependencies.
         IObjectResolver areaResolver = LifetimeScope.Find<AreaLifetimeScope>(navGrid.gameObject.scene).Container;
         MobController secondMob = areaResolver.Instantiate(firstMob, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
         yield return null;
 
-        Assert.That(secondMob.NavigationGrid, Is.SameAs(navGrid));
+        Assert.That(secondMob.Navigation, Is.SameAs(navGrid));
         Assert.That(secondMob.Players, Is.SameAs(firstMob.Players));
         Assert.That(secondMob.gameObject.scene, Is.EqualTo(navGrid.gameObject.scene));
 

@@ -20,7 +20,7 @@ public class MobPathAgent2D : MonoBehaviour
     private MobConfig config;
     private MobMotor2D motor;
 
-    public NavigationGrid2D NavigationGrid => follower.NavigationGrid;
+    public INavigation2D Navigation => follower.Navigation;
     public bool HasPath => follower.HasPath;
     public bool ReachedDestination => follower.ReachedDestination;
     public bool IsPartialPath => follower.IsPartialPath;
@@ -41,14 +41,14 @@ public class MobPathAgent2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Configures the follower with <paramref name="navGrid"/> and the config's movement profile and distances (no
+    /// Configures the follower with <paramref name="navigation"/> and the config's movement profile and distances (no
     /// straight-line shortcut), and clears any path.
     /// </summary>
-    public void Initialize(NavigationGrid2D navGrid, MobMotor2D mobMotor, MobConfig mobConfig)
+    public void Initialize(INavigation2D navigation, MobMotor2D mobMotor, MobConfig mobConfig)
     {
         motor = mobMotor;
         config = mobConfig;
-        follower.Configure(navGrid, config != null ? config.MovementProfile : null, CreateSettings(config));
+        follower.Configure(navigation, config != null ? config.MovementProfile : null, CreateSettings(config));
         ClearPath();
     }
 
@@ -146,11 +146,11 @@ public class MobPathAgent2D : MonoBehaviour
             return;
         }
 
-        NavigationGrid2D navigationGrid = follower.NavigationGrid;
-        if (follower.HasGoalCell && navigationGrid != null)
+        INavigation2D navigation = follower.Navigation;
+        if (follower.HasGoalCell && navigation != null)
         {
             Gizmos.color = goalColor;
-            Gizmos.DrawWireSphere(navigationGrid.CellToWorldCenter(follower.LastGoalCell), 0.08f);
+            Gizmos.DrawWireSphere(navigation.CellToWorldCenter(follower.LastGoalCell), 0.08f);
         }
 
         IReadOnlyList<Vector2> waypoints = follower.Waypoints;

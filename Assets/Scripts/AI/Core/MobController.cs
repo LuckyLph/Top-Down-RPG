@@ -36,7 +36,7 @@ public class MobController : MonoBehaviour
 
     private readonly Dictionary<MobStateId, IMobState> states = new();
 
-    private NavigationGrid2D navigationGrid;
+    private INavigation2D navigation;
     private IPlayerRegistry players;
     private IRandom random;
     private MobMotor2D motor;
@@ -54,7 +54,7 @@ public class MobController : MonoBehaviour
     private float deltaTime;
 
     public MobConfig Config => config;
-    public NavigationGrid2D NavigationGrid => navigationGrid;
+    public INavigation2D Navigation => navigation;
     public IPlayerRegistry Players => players;
     public IRandom Random => random;
     public MobMotor2D Motor => motor;
@@ -76,16 +76,16 @@ public class MobController : MonoBehaviour
     }
 
     /// <summary>
-    /// Logs an error when the mob was never given its navigation grid, players and random source, then enters Idle
+    /// Logs an error when the mob was never given its navigation, players and random source, then enters Idle
     /// unless a state is already running.
     /// </summary>
     private void Start()
     {
         EnsureInitialized();
 
-        if (navigationGrid == null || players == null || random == null)
+        if (navigation == null || players == null || random == null)
         {
-            Debug.LogError($"{name} was not injected with its navigation grid, players and random source; spawn mobs through a {nameof(MobSpawnPoint)} or resolver.Instantiate.", this);
+            Debug.LogError($"{name} was not injected with its navigation, players and random source; spawn mobs through a {nameof(MobSpawnPoint)} or resolver.Instantiate.", this);
         }
 
         if (currentState == null)
@@ -111,13 +111,13 @@ public class MobController : MonoBehaviour
     }
 
     /// <summary>
-    /// Injects the area's navigation grid, the player registry and the random source, and rebuilds the mob with them
+    /// Injects its navigation (the area's grid, or its world's navigation), the player registry and the random source, and rebuilds the mob with them
     /// when it has already initialized.
     /// </summary>
     [Inject]
-    public void Construct(NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
+    public void Construct(INavigation2D mobNavigation, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
-        navigationGrid = navGrid;
+        navigation = mobNavigation;
         players = playerRegistry;
         random = randomSource;
         Reinitialize();
@@ -127,10 +127,10 @@ public class MobController : MonoBehaviour
     /// Setup without dependency injection, used by tests: sets the config and dependencies, then rebuilds the mob,
     /// re-entering Idle when a state was running.
     /// </summary>
-    public void Configure(MobConfig mobConfig, NavigationGrid2D navGrid, IPlayerRegistry playerRegistry, IRandom randomSource)
+    public void Configure(MobConfig mobConfig, INavigation2D mobNavigation, IPlayerRegistry playerRegistry, IRandom randomSource)
     {
         config = mobConfig;
-        navigationGrid = navGrid;
+        navigation = mobNavigation;
         players = playerRegistry;
         random = randomSource;
         Rebuild();
@@ -259,7 +259,7 @@ public class MobController : MonoBehaviour
     }
 
     /// <summary>
-    /// One-time setup, run again after <see cref="Rebuild"/>: caches the components, builds the grid if needed and
+    /// One-time setup, run again after <see cref="Rebuild"/>: caches the components, builds an area grid if needed and
     /// prewarms its regions for the movement profile, initializes the components and separation, and registers the
     /// states. Disables the brain when no config is assigned.
     /// </summary>
@@ -279,22 +279,22 @@ public class MobController : MonoBehaviour
             return;
         }
 
-        if (navigationGrid != null)
+        if (navigation != null)
         {
-            if (!navigationGrid.IsBuilt)
+            if (navigation is NavigationGrid2D grid && !grid.IsBuilt)
             {
-                navigationGrid.BuildGrid();
+                grid.BuildGrid();
             }
 
-            navigationGrid.PrewarmRegions(config.MovementProfile);
+            navigation.PrewarmRegions(config.MovementProfile);
         }
 
         motor.Initialize(config);
-        pathAgent.Initialize(navigationGrid, motor, config);
+        pathAgent.Initialize(navigation, motor, config);
         perception.Initialize(players, config);
-        patrol.Initialize(navigationGrid, config, random);
+        patrol.Initialize(navigation, config, random);
         damageDealer.Initialize(config);
-        separation = new MobSeparation2D(selfCollider, config, navigationGrid);
+        separation = new MobSeparation2D(selfCollider, config, navigation);
 
         RegisterStates();
         initialized = true;

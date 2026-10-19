@@ -167,7 +167,7 @@ Main (MainLifetimeScope)
   - its persistent objects.
 
   Disposing it unregisters them.
-- **`Worlds`** (Gameplay scope, Phase 1) is the registry of loaded worlds: `TryGet(definition, out LoadedWorld)`, each with its definition, root scene, scope, lighting and loaded chunk scenes, and events as they come and go. Phase 3 adds each world's navigation, and it then replaces `ActiveNavigationGrid` and `ActiveSpawnPoint`: a player finds its own world's navigation through it, by its player's world.
+- **`Worlds`** (Gameplay scope, Phase 1) is the registry of loaded worlds: `TryGet(definition, out LoadedWorld)`, each with its definition, root scene, scope, lighting, navigation (Phase 3) and loaded chunk scenes, and events as they come and go. A player finds its own world's navigation through it, by its player's world (`PlayerNavigation`, which replaced `ActiveNavigationGrid` in Phase 3); `ActiveSpawnPoint` goes with the waystones (Phase 9).
 - **`PlayerWorlds`** (Gameplay scope, Phase 1) records each player's world. Offline it is set directly; Phase 7 fills it from the host's `NetworkVariable`.
 - **The streaming** lives in the Gameplay scope, since it streams across worlds (see Streaming).
 
@@ -237,11 +237,11 @@ Walls stay dual-grid tilemaps per chunk. Their render tilemap is offset by half 
   - Cliff sides along a border are computed when both pages are loaded.
   - Loading or unloading a page bumps the navigation's version, so paths re-check themselves as they do after a terrain edit.
 - **Regions.** Each page floods its own regions. A union-find over the regions meeting along loaded borders, rebuilt when a page loads, unloads or changes, gives the O(1) `AreCellsConnected` that `CanReach` and strict requests need.
-- **The API.** `NavigationGrid2D`'s public API moves to `WorldNavigation`: walkability, costs, line costs, nearest walkable cell, `CrossesCliff`, `MoveOffCliffFace`.
-  - `PathFollower2D` and the mob components take their world's `WorldNavigation` by injection from their chunk's scope.
-  - `PlayerMotor2D` looks its own up through `Worlds` by its player's world.
-- **What stays.** `NavigationTerrainSource2D` and `TerrainMovementProfile2D` stay as they are. `NavigationGrid2D` either becomes the page builder or is replaced by it; Phase 3 decides by reading the code.
-- **Cell data.** `CellData`'s per-cell `List<TerrainType2D>` becomes flat per-page arrays (a terrain index per layer bit), so a page allocates its arrays once.
+- **The API.** `INavigation2D` is what paths, players and mobs use: walkability, costs, line costs, nearest walkable cell, connectivity, `CrossesCliff`, `MoveOffCliffFace`, the pathfinder and the version. `NavigationMap2D` implements it over pages in a pool; `WorldNavigation` is a world's map, and an area's `NavigationGrid2D` is a map of a single page until the areas go (Phase 9).
+  - `PathFollower2D` and the mob components take an `INavigation2D`; from Phase 4 a chunk's mobs take their world's `WorldNavigation` by injection from their chunk's scope.
+  - `PlayerMotor2D` looks its own up through `PlayerNavigation`: its world's through `Worlds` by its player's world, or the area's.
+- **What stays.** `NavigationTerrainSource2D` and `TerrainMovementProfile2D` stay as they are. `NavigationGrid2D` is the page builder: it sits on every chunk's grid, holding what the page reads (ground layers, walls, raised ground, obstacle layers).
+- **Cell data.** `CellData`'s per-cell `List<TerrainType2D>` became flat per-page arrays (the layer bits of the highest priority per cell, a layer's terrain type found by its bit), so a page allocates its arrays once.
 
 ### Mobs
 
@@ -299,7 +299,7 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 
 ## Removals and migrations
 
-- **Area types.** `AreaLifetimeScope`, `AreaEntry`, `IAreaEntry`, `AreaEntryRequest`, `AreaMobSpawner`, `ActiveNavigationGrid`, `ActiveSpawnPoint`, `AreaAnnouncement`, `NetworkAreaSync` and `AreaEpoch` go once worlds replace them.
+- **Area types.** `AreaLifetimeScope`, `AreaEntry`, `IAreaEntry`, `AreaEntryRequest`, `AreaMobSpawner`, the area half of `PlayerNavigation` (which replaced `ActiveNavigationGrid` in Phase 3), `ActiveSpawnPoint`, `AreaAnnouncement`, `NetworkAreaSync` and `AreaEpoch` go once worlds replace them.
 - **`GameFlow`.** `ChangeAreaAsync`, `AreaLoading` and `AreaTransition` go. `GameFlow` keeps the menu and sessions.
 - **Party assumptions:**
   - `PlayerDeathHandler`'s restart when every player is dead goes.
@@ -391,10 +391,35 @@ Notes:
 
 ### Phase 3: navigation across chunks
 
-- [ ] `WorldNavigation` with pages in a shared slot pool, cross-border steps, cliff sides along borders, and region union-find.
-- [ ] Players and mobs use it, and `ActiveNavigationGrid` goes.
-- [ ] Partial paths stop at the loaded edge.
-- [ ] A path across a border matches the single-grid path on the same cells.
+- [x] `WorldNavigation` with pages in a shared slot pool, cross-border steps, cliff sides along borders, and region union-find.
+- [x] Players and mobs use it, and `ActiveNavigationGrid` goes.
+- [x] Partial paths stop at the loaded edge.
+- [x] A path across a border matches the single-grid path on the same cells.
+
+Notes:
+
+- **One abstraction for areas and worlds.** Paths, players and mobs use `INavigation2D`. `NavigationMap2D` implements it over `NavigationPage`s laid on a grid of equal pages and placed in a `NavigationPagePool`; every query, the cost fields, the regions and A* are written once, against pages.
+  - **An area** is a map of one page: `NavigationGrid2D` builds a page over its walkable bounds into a map and a one-slot pool of its own on every `BuildGrid`, and passes its public API through to that map. Its behaviour is unchanged (every area test passes as it was); a single-area map also reads its tilemaps outside its page, as the grid always did, and a partial path toward a goal far outside it still fails, so the player motor still walks back along the line.
+  - **A world** is a `WorldNavigation`, registered by its `WorldLifetimeScope`: a map with a page per loaded chunk on a 16 x 16 grid of 64-cell pages. Its pages live in the Gameplay scope's `NavigationPagePool`, shared by every loaded world: 24 slots of 4096 cells (16 chunks in interest on the host plus those waiting out their hysteresis), growing with a warning past that. The cost fields and A*'s stamped search arrays are sized to the pool and shared by every map in it, so nothing allocates once warm.
+  - **The page builder** is `NavigationGrid2D`, now also on every chunk's grid (`WorldAuthoring.SetUpNavigation`; `CreateChunk` adds it): its ground layers, walls, raised tilemap and obstacle layers say what the page reads. On a chunk it builds nothing in `Awake`; the chunk scope's `ChunkNavigation` entry point adds its page to the world's navigation in `Start` (after every collider of the scene is in the physics world) and takes it out when the scope is disposed.
+- **Players.** `ActiveNavigationGrid` became `PlayerNavigation` (Gameplay scope): `Of(player)` gives a player in a world its world's navigation, through `PlayerWorlds` and `Worlds` (`LoadedWorld.Navigation`, resolved from the world's scope as its root scene loads), and a player in no world the area's, which `AreaEntry` sets and clears as before. The area half goes in Phase 9. `PlayerMotor2D` asks it on every `MoveTo`.
+- **Mobs** take `INavigation2D` by injection: the area scope registers its grid as one, and the world scope registers its `WorldNavigation` as one, so Phase 4's chunk spawners inject it from the chunk scope (a child of the world's).
+- **Borders.**
+  - Each page knows the loaded pages around it (`Around`); A* steps off a page's edge into the neighbouring page's index directly, and a page's interior cells (all but its outer ring) take a fast path that never checks an edge.
+  - The edge cost of a cell beside a cell where no page is loaded counts it as blocked; beside a loaded page it reads that page's terrain.
+  - The cliff sides and the rows a cliff face covers read raised ground through `RaisedGround.IKinds`, from whichever page holds each cell. Loading or unloading a page reads again its neighbours' border cliff sides and the face rows of the page above, whose foot may be on the page below. With nothing loaded below, a plateau's lowest rows on a page count as face, as if level ground were below; they sit on the loaded edge, where no path goes.
+  - Every change stamps the pages it touches (a loaded or unloaded page's neighbours, a tile edit's page and, on a border cell, its neighbours), so a cost field bakes again only those pages, about 1 ms each in the editor.
+  - Live tile edits (`AreaTerrain`, painting outside Play Mode) refresh only the changed cells, in whichever pages they touch.
+- **Regions.** Each page floods its own 4-connected regions, labelled from its first index in the pool; after any change a union-find joins the regions meeting along loaded borders with no cliff between them and is flattened, so `AreCellsConnected` stays one read.
+- **Partial paths.** Toward a goal where no page is loaded and no walkable cell lies within the nearest-cell radius, a world's A* heads for the goal anyway, capped by `MaxSearchCells` (4096) as toward any unreachable goal, and returns the path to the loaded cell closest to it: the loaded edge. Strict requests and `CanReach` fail there.
+- **Versions.** A world's `Version` changes whenever any of its pages loads, unloads or changes, so path followers check their path again as after a terrain edit. A chunk grid's own `Version` (for the gizmo) also changes when a neighbour loads or unloads.
+- **The gizmo.** `MovementBlockerGizmo` works per chunk grid. In play mode a chunk's page reads its neighbours, so no edge line runs along a border the ground crosses. Outside Play Mode each chunk builds its page alone: its borders are outlined, and a plateau crossing a border shows a cliff line there and face rows at the upper chunk's bottom edge, which the game does not have (Architecture.md's Known gaps).
+- **Measured** (the editor, debug code):
+  - A Sandbox chunk's page (4 to 6 ground layers, walls, raised ground) builds in 1.0 ms alone and 2.8 to 3.1 ms beside loaded neighbours, whose borders it reads again; baking the players' profile for it and the neighbours it touched takes 0.9 ms a page (1 to 3.8 ms). A path from chunk (0, 0) to (1, 1) across the Sandbox: 71 cells.
+  - `PathfindingBenchmarkTests` on the single-area grid, 100 searches each, before (three runs) and after (two runs, final code), timed alternately with recompiles between: Maze 9.34 / 8.83 / 8.77 ms per search before, 9.05 / 9.03 after; Open field 0.144 / 0.133 / 0.138 before, 0.138 / 0.137 after; Unreachable goal (partial) 9.10 / 10.27 / 8.61 before, 9.32 / 8.82 after; BuildPathToWorld (maze) 25.1 / 23.3 / 16.4 before, 16.1 / 16.2 after. The same cells are expanded (5608, 57, 4096) and nothing allocates once warm. A first version that read each page's fields per expansion was about 12% slower on the maze; caching the current page and the interior fast path brought it back within the noise.
+- **Pages read row z = 0** of their tilemaps, as raised ground always did; the area grid's support for several z layers, which no scene used, is gone.
+- **The scenes.** Saving the Sandbox's chunks from the editor also rewrote the sprite indices of three chunks' wall render tilemaps (their border tiles are redrawn as linked neighbours open); only the added `NavigationGrid2D` was kept.
+- **Tests:** `WorldNavigationTests` (EditMode: a 2 x 2 chunk world against one grid over the same cells, and the borders, regions, partial paths, versions, tile edits, the shared pool and allocations), `PlayerNavigationTests` (was `ActiveNavigationGridTests`), a chunk test in `MovementBlockerGizmoTests`, and `WorldStreamingPlayModeTests` walking the player across a border in the Sandbox.
 
 ### Phase 4: mobs per chunk
 
@@ -446,7 +471,7 @@ Notes:
 - **EditMode:**
   - `ChunkCoords` and origin checks;
   - the streamer's decisions, including hysteresis, the empty-world grace, several players, players far apart and players in different worlds;
-  - `WorldNavigation` paths and regions across pages, and pages loading and unloading under a path;
+  - `WorldNavigation` paths and regions across pages, and pages loading and unloading under a path (Phase 3);
   - the trip and the readiness and release handshake as state machines without Netcode types, including a report from before a trip arriving after it;
   - `WorldState` round trips;
   - save version 2 parsing.

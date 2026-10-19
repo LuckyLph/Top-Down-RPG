@@ -59,7 +59,7 @@ public class AreaLifetimeScope : LifetimeScope
             return;
         }
 
-        builder.RegisterComponent(navigationGrid);
+        builder.RegisterComponent(navigationGrid).As<INavigation2D>().AsSelf();
         builder.RegisterEntryPoint<AreaMobSpawner>()
             .WithParameter(mobSpawnPoints)
             .WithParameter(gameObject.scene)

@@ -6,7 +6,7 @@ using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for <see cref="PlayerMotor2D"/>: straight-line and grid-aware move orders, the active grid, arrival and
+/// Tests for <see cref="PlayerMotor2D"/>: straight-line and grid-aware move orders, the area's navigation, arrival and
 /// stop, aim facing, remote copies, speed scaling, stall time, allocations and the player physics layer setup.
 /// </summary>
 public class PlayerMotor2DTests
@@ -16,24 +16,29 @@ public class PlayerMotor2DTests
 
     private readonly List<Object> createdObjects = new();
     private Tile fillTile;
-    private ActiveNavigationGrid activeGrid;
+    private PlayerWorlds playerWorlds;
+    private PlayerNavigation playerNavigation;
     private PlayerMotor2D motor;
     private Rigidbody2D body;
 
+    private NavigationGrid2D AreaGrid => (NavigationGrid2D)playerNavigation.Area;
+
     /// <summary>
-    /// Creates a kinematic player body with a <see cref="PlayerMotor2D"/> on an empty active grid holder, using
+    /// Creates a kinematic player body with a <see cref="PlayerMotor2D"/> whose navigation lookup has no area yet, using
     /// test control settings at the test move speed.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
         fillTile = Track(ScriptableObject.CreateInstance<Tile>());
-        activeGrid = new ActiveNavigationGrid();
+        PlayerRegistry players = new();
+        playerWorlds = new PlayerWorlds(players);
+        playerNavigation = new PlayerNavigation(players, playerWorlds, new Worlds());
         GameObject player = Track(new GameObject("Player"));
         body = player.AddComponent<Rigidbody2D>();
         body.bodyType = RigidbodyType2D.Kinematic;
         motor = player.AddComponent<PlayerMotor2D>();
-        motor.Construct(activeGrid);
+        motor.Construct(playerNavigation);
         motor.Initialize(Track(TestPlayerControlSettings.Create(moveSpeed: Speed)));
     }
 
@@ -43,6 +48,7 @@ public class PlayerMotor2DTests
     [TearDown]
     public void TearDown()
     {
+        playerWorlds.Dispose();
         foreach (Object created in createdObjects)
         {
             if (created != null)
@@ -55,7 +61,7 @@ public class PlayerMotor2DTests
     }
 
     /// <summary>
-    /// With no active grid, a move order is a single straight waypoint, and the body heads for it at move speed,
+    /// With no navigation, a move order is a single straight waypoint, and the body heads for it at move speed,
     /// facing the way it moves.
     /// </summary>
     [Test]
@@ -74,7 +80,7 @@ public class PlayerMotor2DTests
     }
 
     /// <summary>
-    /// On the active grid, a move order past a wall builds a multi-waypoint path over walkable cells that ends at
+    /// On the area's grid, a move order past a wall builds a multi-waypoint path over walkable cells that ends at
     /// the exact destination.
     /// </summary>
     [Test]
@@ -82,7 +88,7 @@ public class PlayerMotor2DTests
     {
         List<Vector3Int> cells = Rect(0, 0, 6, 4);
         cells.RemoveAll(cell => cell.x == 3 && cell.y <= 3);
-        activeGrid.Set(CreateGrid(cells));
+        playerNavigation.SetArea(CreateGrid(cells));
         Place(new Vector2(0.5f, 0.5f));
 
         Assert.That(motor.MoveTo(new Vector2(6.5f, 0.5f)), Is.True);
@@ -92,7 +98,7 @@ public class PlayerMotor2DTests
         Assert.That(waypoints[waypoints.Count - 1], Is.EqualTo(new Vector2(6.5f, 0.5f)));
         for (int i = 0; i < waypoints.Count; i++)
         {
-            Assert.That(activeGrid.Current.IsCellWalkable(activeGrid.Current.WorldToCell(waypoints[i])), Is.True);
+            Assert.That(AreaGrid.IsCellWalkable(AreaGrid.WorldToCell(waypoints[i])), Is.True);
         }
     }
 
@@ -103,7 +109,7 @@ public class PlayerMotor2DTests
     public void AClearStraightLine_SkipsAStar()
     {
         NavigationGrid2D grid = CreateGrid(Rect(0, 0, 8, 8));
-        activeGrid.Set(grid);
+        playerNavigation.SetArea(grid);
         Place(new Vector2(0.5f, 0.5f));
 
         Assert.That(motor.MoveTo(new Vector2(7.2f, 3.9f)), Is.True);
@@ -119,14 +125,14 @@ public class PlayerMotor2DTests
     {
         List<Vector3Int> cells = Rect(0, 0, 6, 2);
         cells.RemoveAll(cell => cell.x >= 4 && cell.y == 2);
-        activeGrid.Set(CreateGrid(cells));
+        playerNavigation.SetArea(CreateGrid(cells));
         Place(new Vector2(0.5f, 0.5f));
 
         Assert.That(motor.MoveTo(new Vector2(5.5f, 2.5f)), Is.True);
 
         IReadOnlyList<Vector2> waypoints = motor.Follower.Waypoints;
-        Vector3Int last = activeGrid.Current.WorldToCell(waypoints[waypoints.Count - 1]);
-        Assert.That(activeGrid.Current.IsCellWalkable(last), Is.True);
+        Vector3Int last = AreaGrid.WorldToCell(waypoints[waypoints.Count - 1]);
+        Assert.That(AreaGrid.IsCellWalkable(last), Is.True);
         Assert.That(last, Is.EqualTo(new Vector3Int(5, 1, 0)));
     }
 
@@ -136,7 +142,7 @@ public class PlayerMotor2DTests
     [Test]
     public void ADestinationFarOutsideTheMap_WalksToTheEdgeTowardIt()
     {
-        activeGrid.Set(CreateGrid(Rect(0, 0, 6, 2)));
+        playerNavigation.SetArea(CreateGrid(Rect(0, 0, 6, 2)));
         Place(new Vector2(0.5f, 1.5f));
 
         Assert.That(motor.MoveTo(new Vector2(60.5f, 1.5f)), Is.True);
@@ -146,7 +152,7 @@ public class PlayerMotor2DTests
     }
 
     /// <summary>
-    /// Each move order paths on whichever grid is active at the time, and with none active it falls back to a
+    /// Each move order paths on whichever area grid is set at the time, and with none it falls back to a
     /// straight line.
     /// </summary>
     [Test]
@@ -159,19 +165,19 @@ public class PlayerMotor2DTests
         Place(new Vector2(0.5f, 0.5f));
         Vector2 goal = new(6.5f, 0.5f);
 
-        activeGrid.Set(walledGrid);
+        playerNavigation.SetArea(walledGrid);
         motor.MoveTo(goal);
         Assert.That(motor.Follower.Waypoints.Count, Is.GreaterThan(1));
 
-        activeGrid.Clear(walledGrid);
-        activeGrid.Set(openGrid);
+        playerNavigation.ClearArea(walledGrid);
+        playerNavigation.SetArea(openGrid);
         motor.MoveTo(goal);
         Assert.That(motor.Follower.Waypoints, Is.EqualTo(new[] { goal }));
-        Assert.That(motor.Follower.NavigationGrid, Is.SameAs(openGrid));
+        Assert.That(motor.Follower.Navigation, Is.SameAs(openGrid));
 
-        activeGrid.Clear(openGrid);
+        playerNavigation.ClearArea(openGrid);
         motor.MoveTo(goal);
-        Assert.That(motor.Follower.NavigationGrid, Is.Null);
+        Assert.That(motor.Follower.Navigation, Is.Null);
         Assert.That(motor.Follower.Waypoints, Is.EqualTo(new[] { goal }));
     }
 
@@ -311,7 +317,7 @@ public class PlayerMotor2DTests
     {
         List<Vector3Int> cells = Rect(0, 0, 6, 4);
         cells.RemoveAll(cell => cell.x == 3 && cell.y <= 3);
-        activeGrid.Set(CreateGrid(cells));
+        playerNavigation.SetArea(CreateGrid(cells));
         Place(new Vector2(0.5f, 0.5f));
         Vector2 goal = new(6.5f, 0.5f);
         motor.MoveTo(goal);

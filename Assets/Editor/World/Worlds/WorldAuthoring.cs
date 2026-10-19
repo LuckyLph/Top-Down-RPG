@@ -11,7 +11,8 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Creates seamless worlds and their chunks as assets and scenes (Docs/WorldStreaming.md): a world's definition, its
 /// root scene with its scope and lighting, and chunk scenes whose grid sits at the world's origin with a
-/// <see cref="WorldChunk"/> and a terrain renderer over one grass layer. Every scene gets a
+/// <see cref="WorldChunk"/>, a terrain renderer over one grass layer and a <see cref="NavigationGrid2D"/> for its
+/// navigation page. Every scene gets a
 /// <see cref="SceneDefinition"/> and a place in the build list. Painting ground, walls and raised ground into the open
 /// chunks, keeping each chunk's layer list covering its neighbours' border materials, and baking the coast maps
 /// (<see cref="WorldCoastBake"/>) work across a whole world. The World Editor window (Phase 5) builds on these steps.
@@ -107,6 +108,7 @@ public static class WorldAuthoring
             TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
             renderer.Configure(AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath));
             GroundLayerMigration.AddLayer(gridObject.GetComponent<Grid>(), MaterialNamed("Grass"));
+            SetUpNavigation(gridObject.GetComponent<Grid>());
             gridObject.SetActive(true);
             EditorSceneManager.SaveScene(scene, path);
         }
@@ -279,6 +281,11 @@ public static class WorldAuthoring
             module.DataTilemap.ClearAllTiles();
             module.RenderTilemap.ClearAllTiles();
             EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+            if (grid.TryGetComponent(out NavigationGrid2D _))
+            {
+                SetUpNavigation(grid);
+            }
+
             RefreshLinks(grid);
             return module;
         }
@@ -286,6 +293,83 @@ public static class WorldAuthoring
         {
             EditorSceneManager.CloseScene(template, true);
         }
+    }
+
+    /// <summary>
+    /// Gives <paramref name="grid"/>, a chunk's grid, the <see cref="NavigationGrid2D"/> its navigation page is built
+    /// from, or brings the one it has in line: it reads the ground layers under the grid, is blocked by the walls
+    /// (<see cref="WallsName"/>) and by colliders on the Obstacles layer, and reads the cliff of the raised tilemap the
+    /// terrain renderer draws. Returns whether it changed anything.
+    /// </summary>
+    public static bool SetUpNavigation(Grid grid)
+    {
+        bool changed = false;
+        if (!grid.TryGetComponent(out NavigationGrid2D navigation))
+        {
+            navigation = Undo.AddComponent<NavigationGrid2D>(grid.gameObject);
+            changed = true;
+        }
+
+        SerializedObject data = new(navigation);
+        Transform walls = grid.transform.Find(WallsName);
+        Tilemap wallsTilemap = walls != null ? walls.GetComponent<Tilemap>() : null;
+        if (wallsTilemap != null && !navigation.BlockingTilemaps.Contains(wallsTilemap))
+        {
+            SerializedProperty blocking = data.FindProperty("blockingTilemaps");
+            blocking.arraySize++;
+            blocking.GetArrayElementAtIndex(blocking.arraySize - 1).objectReferenceValue = wallsTilemap;
+            changed = true;
+        }
+
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        Tilemap raised = renderer != null ? renderer.RaisedTilemap : null;
+        if (navigation.RaisedTilemap != raised)
+        {
+            data.FindProperty("raisedTilemap").objectReferenceValue = raised;
+            changed = true;
+        }
+
+        int obstacles = LayerMask.GetMask("Obstacles");
+        if (navigation.ObstacleLayers.value != obstacles)
+        {
+            data.FindProperty("obstacleLayers").intValue = obstacles;
+            changed = true;
+        }
+
+        data.ApplyModifiedProperties();
+        if (changed)
+        {
+            EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Sets up the navigation of every chunk scene of <paramref name="world"/> (<see cref="SetUpNavigation(Grid)"/>),
+    /// opening the scenes that are not open, and saves the ones it changed. Returns the names of the scenes it changed.
+    /// </summary>
+    public static List<string> SetUpNavigation(WorldDefinition world)
+    {
+        List<string> changed = new();
+        List<Scene> opened = new();
+        try
+        {
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in OpenChunks(world, opened))
+            {
+                if (SetUpNavigation(chunk.Value))
+                {
+                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
+                    changed.Add(chunk.Value.gameObject.scene.name);
+                }
+            }
+        }
+        finally
+        {
+            CloseScenes(opened);
+        }
+
+        return changed;
     }
 
     /// <summary>

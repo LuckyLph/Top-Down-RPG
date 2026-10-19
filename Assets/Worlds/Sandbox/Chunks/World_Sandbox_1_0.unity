@@ -47197,6 +47197,7 @@ GameObject:
   - component: {fileID: 1354915950}
   - component: {fileID: 1354915949}
   - component: {fileID: 1354915952}
+  - component: {fileID: 1354915953}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -47279,6 +47280,33 @@ MonoBehaviour:
   world: {fileID: 11400000, guid: b6376a2ae0bb44c44bd70deacbeb0358, type: 2}
   coords: {x: 1, y: 0}
   coastMap: {fileID: 0}
+--- !u!114 &1354915953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354915948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c20dbd52696b5ab4ea3a636fe34f040a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationGrid2D
+  terrainSources: []
+  discoverSourcesInChildren: 1
+  blockingTilemaps:
+  - {fileID: 1633809387}
+  raisedTilemap: {fileID: 253574831}
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 256
+  nearestCellSearchRadius: 8
+  maxSearchCells: 4096
+  drawGridBoundsGizmo: 1
+  drawWalkableCellGizmos: 0
+  maxWalkableCellsToDraw: 400
+  gridBoundsColor: {r: 0.35, g: 1, b: 1, a: 0.8}
+  walkableCellColor: {r: 0.25, g: 1, b: 0.3, a: 0.35}
 --- !u!1 &1459983644
 GameObject:
   m_ObjectHideFlags: 0

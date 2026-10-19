@@ -17,6 +17,41 @@ public static class RaisedGround
 
     private const float RowTolerance = 0.001f;
 
+    /// <summary>
+    /// A source of cell kinds (<see cref="Level"/>, <see cref="Raised"/>, <see cref="Ramp"/>) for the face rules.
+    /// </summary>
+    public interface IKinds
+    {
+        /// <summary>
+        /// What <paramref name="cell"/> is.
+        /// </summary>
+        byte KindAt(Vector3Int cell);
+    }
+
+    /// <summary>
+    /// The kinds of the cells of one raised tilemap (<see cref="RaisedGround.KindAt(Tilemap, Vector3Int)"/>).
+    /// </summary>
+    public readonly struct TilemapKinds : IKinds
+    {
+        private readonly Tilemap raised;
+
+        /// <summary>
+        /// Reads the kinds of <paramref name="raisedTilemap"/>.
+        /// </summary>
+        public TilemapKinds(Tilemap raisedTilemap)
+        {
+            raised = raisedTilemap;
+        }
+
+        /// <summary>
+        /// What <paramref name="cell"/> of the tilemap is.
+        /// </summary>
+        public byte KindAt(Vector3Int cell)
+        {
+            return RaisedGround.KindAt(raised, cell);
+        }
+    }
+
     private static readonly Vector3Int[] Neighbours =
     {
         new(-1, -1, 0), new(0, -1, 0), new(1, -1, 0), new(-1, 0, 0), new(1, 0, 0), new(-1, 1, 0), new(0, 1, 0), new(1, 1, 0)
@@ -79,18 +114,27 @@ public static class RaisedGround
     /// </summary>
     public static bool IsOnFace(Tilemap raised, Vector3Int cell, int rows)
     {
+        return IsOnFace(new TilemapKinds(raised), cell, rows);
+    }
+
+    /// <summary>
+    /// The same rule as <see cref="IsOnFace(Tilemap, Vector3Int, int)"/> over any source of cell kinds, such as
+    /// navigation pages reading raised ground across chunk borders.
+    /// </summary>
+    public static bool IsOnFace<TKinds>(TKinds kinds, Vector3Int cell, int rows) where TKinds : IKinds
+    {
         cell.z = 0;
         for (int up = 0; up < rows; up++)
         {
             Vector3Int foot = cell + (Vector3Int.down * up);
-            if (KindAt(raised, foot) == Level)
+            if (kinds.KindAt(foot) == Level)
             {
                 return false;
             }
 
-            if (KindAt(raised, foot + Vector3Int.down) == Level)
+            if (kinds.KindAt(foot + Vector3Int.down) == Level)
             {
-                return KindAt(raised, foot) == Raised;
+                return kinds.KindAt(foot) == Raised;
             }
         }
 
@@ -129,22 +173,31 @@ public static class RaisedGround
     /// </summary>
     public static Vector2 OffTheFace(Tilemap raised, Vector2 point, float faceHeight)
     {
-        Vector3Int cell = raised.WorldToCell(point);
+        return OffTheFace(new TilemapKinds(raised), raised, point, faceHeight);
+    }
+
+    /// <summary>
+    /// The same as <see cref="OffTheFace(Tilemap, Vector2, float)"/> over any source of cell kinds, with
+    /// <paramref name="layout"/> converting between world positions and its cells.
+    /// </summary>
+    public static Vector2 OffTheFace<TKinds>(TKinds kinds, GridLayout layout, Vector2 point, float faceHeight) where TKinds : IKinds
+    {
+        Vector3Int cell = layout.WorldToCell(point);
         cell.z = 0;
         int rows = RowsReached(faceHeight);
-        if (!IsOnFace(raised, cell, rows))
+        if (!IsOnFace(kinds, cell, rows))
         {
             return point;
         }
 
         Vector3Int foot = cell;
-        while (KindAt(raised, foot + Vector3Int.down) != Level)
+        while (kinds.KindAt(foot + Vector3Int.down) != Level)
         {
             foot += Vector3Int.down;
         }
 
-        float bottom = raised.CellToWorld(foot).y;
-        float top = bottom + faceHeight * (raised.CellToWorld(foot + Vector3Int.up).y - bottom);
+        float bottom = layout.CellToWorld(foot).y;
+        float top = bottom + faceHeight * (layout.CellToWorld(foot + Vector3Int.up).y - bottom);
         return point.y < top ? new Vector2(point.x, top) : point;
     }
 

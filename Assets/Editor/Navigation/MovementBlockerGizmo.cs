@@ -5,10 +5,12 @@ using UnityEngine;
 
 /// <summary>
 /// Draws what keeps players off the cells of every enabled <see cref="NavigationGrid2D"/>, selected or not, in edit and
-/// play mode: a translucent fill on each blocked cell inside the grid's walkable bounds, coloured by what blocks it (the
-/// cells raised ground's cliff face covers whole in yellow), a white line along every side where a walkable cell meets a
-/// blocked one or the bounds, and a yellow line along the cliff of raised ground, which blocks steps across it rather
-/// than cells. Walkability is the players' movement
+/// play mode: a translucent fill on each blocked cell inside the grid's walkable bounds (a chunk's cells, on a chunk's
+/// grid), coloured by what blocks it (the cells raised ground's cliff face covers whole in yellow), a white line along
+/// every side where a walkable cell meets a blocked one, and a yellow line along the cliff of raised ground, which blocks
+/// steps across it rather than cells. Across the edge of the bounds it reads the cell beyond from the grid's navigation:
+/// outside an area, or in a chunk not loaded, nothing is walkable, while a loaded neighbouring chunk's cells are read
+/// from its page, so no line is drawn along a border the ground crosses. Walkability is the players' movement
 /// profile, read from the project's <see cref="PlayerControlSettings"/>. Toggled from the Tools menu.
 /// </summary>
 public static class MovementBlockerGizmo
@@ -163,7 +165,7 @@ public static class MovementBlockerGizmo
             Vector3 right = grid.CellToWorldCenter(bounds.min + Vector3Int.right) - origin;
             Vector3 up = grid.CellToWorldCenter(bounds.min + Vector3Int.up) - origin;
             AddRuns(grid, width, count / width, right, up);
-            AddLines(grid, width, height, count, right * 0.5f, up * 0.5f);
+            AddLines(grid, movementProfile, width, height, count, right * 0.5f, up * 0.5f);
         }
 
         /// <summary>
@@ -200,11 +202,11 @@ public static class MovementBlockerGizmo
         }
 
         /// <summary>
-        /// Adds an edge along each side of a walkable cell that faces a blocked cell or the edge of the bounds, and a
-        /// cliff line along each cliff side, once per side: every cell's right and top sides, and the left and bottom
-        /// sides of the cells along the bounds.
+        /// Adds an edge along each side of a walkable cell that faces a blocked cell, inside the bounds or beyond them,
+        /// and a cliff line along each cliff side, once per side: every cell's right and top sides, and the left and
+        /// bottom sides of the cells along the bounds.
         /// </summary>
-        private void AddLines(NavigationGrid2D grid, int width, int height, int count, Vector3 halfRight, Vector3 halfUp)
+        private void AddLines(NavigationGrid2D grid, TerrainMovementProfile2D movementProfile, int width, int height, int count, Vector3 halfRight, Vector3 halfUp)
         {
             for (int i = 0; i < count; i++)
             {
@@ -226,26 +228,34 @@ public static class MovementBlockerGizmo
                     continue;
                 }
 
-                if (x == 0 || blockers[i - 1] != NavigationGrid2D.Blocker.None)
+                if (x == 0 ? IsBlockedBeyond(grid, cell + Vector3Int.left, movementProfile) : blockers[i - 1] != NavigationGrid2D.Blocker.None)
                 {
                     Edges.Add(bottomLeft, topLeft);
                 }
 
-                if (x == width - 1 || blockers[i + 1] != NavigationGrid2D.Blocker.None)
+                if (x == width - 1 ? IsBlockedBeyond(grid, cell + Vector3Int.right, movementProfile) : blockers[i + 1] != NavigationGrid2D.Blocker.None)
                 {
                     Edges.Add(bottomRight, topRight);
                 }
 
-                if (y == 0 || blockers[i - width] != NavigationGrid2D.Blocker.None)
+                if (y == 0 ? IsBlockedBeyond(grid, cell + Vector3Int.down, movementProfile) : blockers[i - width] != NavigationGrid2D.Blocker.None)
                 {
                     Edges.Add(bottomLeft, bottomRight);
                 }
 
-                if (y == height - 1 || blockers[i + width] != NavigationGrid2D.Blocker.None)
+                if (y == height - 1 ? IsBlockedBeyond(grid, cell + Vector3Int.up, movementProfile) : blockers[i + width] != NavigationGrid2D.Blocker.None)
                 {
                     Edges.Add(topLeft, topRight);
                 }
             }
+        }
+
+        /// <summary>
+        /// Whether <paramref name="cell"/>, beyond the grid's bounds, keeps the profile off it in the grid's navigation.
+        /// </summary>
+        private static bool IsBlockedBeyond(NavigationGrid2D grid, Vector3Int cell, TerrainMovementProfile2D movementProfile)
+        {
+            return grid.GetBlocker(cell, movementProfile) != NavigationGrid2D.Blocker.None;
         }
 
         /// <summary>

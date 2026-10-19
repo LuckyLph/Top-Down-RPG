@@ -4,8 +4,8 @@ using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
 /// <summary>
-/// A world loaded on this machine: its definition, its root scene and scope, its lighting, and the scenes of its
-/// loaded chunks.
+/// A world loaded on this machine: its definition, its root scene and scope, its lighting, its navigation, and the scenes
+/// of its loaded chunks.
 /// </summary>
 public sealed class LoadedWorld
 {
@@ -13,10 +13,12 @@ public sealed class LoadedWorld
 
     /// <summary>
     /// Records <paramref name="definition"/>'s root <paramref name="scene"/>, its <paramref name="scope"/> (the parent of
-    /// its chunks' scopes) and its <paramref name="lighting"/> (null when the scene has none).
+    /// its chunks' scopes), its <paramref name="lighting"/> (null when the scene has none) and its
+    /// <paramref name="navigation"/> (null when its scope has none).
     /// </summary>
-    public LoadedWorld(WorldDefinition definition, Scene scene, LifetimeScope scope, WorldLighting lighting)
+    public LoadedWorld(WorldDefinition definition, Scene scene, LifetimeScope scope, WorldLighting lighting, WorldNavigation navigation = null)
     {
+        Navigation = navigation;
         Definition = definition;
         Scene = scene;
         Scope = scope;
@@ -27,6 +29,7 @@ public sealed class LoadedWorld
     public Scene Scene { get; }
     public LifetimeScope Scope { get; }
     public WorldLighting Lighting { get; }
+    public WorldNavigation Navigation { get; }
     public IReadOnlyDictionary<Vector2Int, Scene> Chunks => chunks;
 
     /// <summary>

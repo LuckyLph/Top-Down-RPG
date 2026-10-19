@@ -128,7 +128,7 @@ public class SceneFlowPlayModeTests
         Assert.That(mob, Is.Not.Null);
         IPlayerRegistry sessionPlayers = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<IPlayerRegistry>();
         Assert.That(mob.Players, Is.SameAs(sessionPlayers), "Area mobs should be injected with the session's players.");
-        Assert.That(mob.NavigationGrid.gameObject.scene, Is.EqualTo(SceneManager.GetActiveScene()));
+        Assert.That(((NavigationGrid2D)mob.Navigation).gameObject.scene, Is.EqualTo(SceneManager.GetActiveScene()));
 
         LifetimeScope gameplayScope = Object.FindAnyObjectByType<GameplayLifetimeScope>();
         LifetimeScope areaScope = LifetimeScope.Find<LifetimeScope>(gameFlow.AreaScene);

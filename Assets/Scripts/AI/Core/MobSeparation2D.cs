@@ -14,7 +14,7 @@ public sealed class MobSeparation2D
     private readonly Collider2D[] neighbors = new Collider2D[MaxNeighbors];
     private readonly Collider2D self;
     private readonly MobConfig config;
-    private readonly NavigationGrid2D navigationGrid;
+    private readonly INavigation2D navigation;
     private readonly ContactFilter2D filter;
     private int neighborCount;
     private Vector2 position;
@@ -22,13 +22,14 @@ public sealed class MobSeparation2D
 
     /// <summary>
     /// Creates the separation for <paramref name="selfCollider"/>, sensing non-trigger colliders on its layer, with the
-    /// crowd tuning of <paramref name="mobConfig"/> and walkability from <paramref name="grid"/> (which may be null).
+    /// crowd tuning of <paramref name="mobConfig"/> and walkability from <paramref name="mobNavigation"/> (which may be
+    /// null).
     /// </summary>
-    public MobSeparation2D(Collider2D selfCollider, MobConfig mobConfig, NavigationGrid2D grid)
+    public MobSeparation2D(Collider2D selfCollider, MobConfig mobConfig, INavigation2D mobNavigation)
     {
         self = selfCollider;
         config = mobConfig;
-        navigationGrid = grid;
+        navigation = mobNavigation;
         filter = new ContactFilter2D
         {
             useLayerMask = true,
@@ -139,7 +140,7 @@ public sealed class MobSeparation2D
     /// </summary>
     private Vector2 ClampToWalkable(Vector2 push)
     {
-        if (navigationGrid == null || !navigationGrid.IsBuilt || push.sqrMagnitude <= 0f)
+        if (navigation == null || !navigation.IsBuilt || push.sqrMagnitude <= 0f)
         {
             return push;
         }
@@ -162,8 +163,8 @@ public sealed class MobSeparation2D
             return true;
         }
 
-        Vector3Int cell = navigationGrid.WorldToCell(position + direction.normalized * lookAhead);
-        return navigationGrid.IsCellWalkable(cell, config.MovementProfile)
-            && !navigationGrid.CrossesCliff(navigationGrid.WorldToCell(position), cell);
+        Vector3Int cell = navigation.WorldToCell(position + direction.normalized * lookAhead);
+        return navigation.IsCellWalkable(cell, config.MovementProfile)
+            && !navigation.CrossesCliff(navigation.WorldToCell(position), cell);
     }
 }

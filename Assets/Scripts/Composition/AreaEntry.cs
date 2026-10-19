@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The area scope's <see cref="IAreaEntry"/>: makes this area's navigation grid and requested spawn point the active
-/// ones, moves the players this machine simulates to their party slots at that spawn point, and snaps the camera.
-/// Clears the active grid again when the area unloads.
+/// The area scope's <see cref="IAreaEntry"/>: makes this area's navigation grid the one players path on
+/// (<see cref="PlayerNavigation"/>) and its requested spawn point the active one, moves the players this machine
+/// simulates to their party slots at that spawn point, and snaps the camera. Clears the area's navigation again when the
+/// area unloads.
 /// </summary>
 public sealed class AreaEntry : IAreaEntry, IDisposable
 {
@@ -14,12 +15,12 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
     private readonly NavigationGrid2D navigationGrid;
     private readonly IPlayerRegistry players;
     private readonly ActiveSpawnPoint activeSpawnPoint;
-    private readonly ActiveNavigationGrid activeNavigationGrid;
+    private readonly PlayerNavigation playerNavigation;
     private readonly CameraFollow2D cameraFollow;
 
     /// <summary>
-    /// Captures the entry request, the area's spawn points and navigation grid (may be null), and the
-    /// active-area holders, player registry and camera follow it uses on entry.
+    /// Captures the entry request, the area's spawn points and navigation grid (may be null), and the players'
+    /// navigation, the active spawn point holder, the player registry and the camera follow it uses on entry.
     /// </summary>
     public AreaEntry(
         AreaEntryRequest request,
@@ -27,7 +28,7 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
         NavigationGrid2D navigationGrid,
         IPlayerRegistry players,
         ActiveSpawnPoint activeSpawnPoint,
-        ActiveNavigationGrid activeNavigationGrid,
+        PlayerNavigation playerNavigation,
         CameraFollow2D cameraFollow)
     {
         this.request = request;
@@ -35,18 +36,18 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
         this.navigationGrid = navigationGrid;
         this.players = players;
         this.activeSpawnPoint = activeSpawnPoint;
-        this.activeNavigationGrid = activeNavigationGrid;
+        this.playerNavigation = playerNavigation;
         this.cameraFollow = cameraFollow;
     }
 
     /// <summary>
-    /// Sets the active navigation grid and spawn point, then teleports each player this machine simulates to the
+    /// Makes the area's grid the players' navigation and sets the active spawn point, then teleports each player this machine simulates to the
     /// spawn slot for its index in the party and snaps the camera. Warns and leaves the players in place when the
     /// area has no spawn point.
     /// </summary>
     public void Enter()
     {
-        activeNavigationGrid.Set(navigationGrid);
+        playerNavigation.SetArea(navigationGrid);
 
         SpawnPoint spawnPoint = FindSpawnPoint(request.SpawnId);
         activeSpawnPoint.Set(spawnPoint);
@@ -70,11 +71,12 @@ public sealed class AreaEntry : IAreaEntry, IDisposable
     }
 
     /// <summary>
-    /// Runs when the area's scope is disposed as its scene unloads, so the holder never outlives this area's grid.
+    /// Runs when the area's scope is disposed as its scene unloads, so the players' navigation never outlives this
+    /// area's grid.
     /// </summary>
     public void Dispose()
     {
-        activeNavigationGrid.Clear(navigationGrid);
+        playerNavigation.ClearArea(navigationGrid);
     }
 
     /// <summary>

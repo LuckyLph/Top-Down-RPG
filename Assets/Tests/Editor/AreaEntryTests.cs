@@ -68,7 +68,7 @@ public class AreaEntryTests
             null,
             players,
             activeSpawnPoint,
-            new ActiveNavigationGrid(),
+            new PlayerNavigation(players, new PlayerWorlds(players), new Worlds()),
             CreateCameraFollow());
         entry.Enter();
 

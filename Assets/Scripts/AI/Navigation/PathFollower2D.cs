@@ -2,9 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Builds smoothed paths on a <see cref="NavigationGrid2D"/> and follows their waypoints, returning the velocity
-/// its owner should move at each fixed tick. When the grid changes under a path (its <see cref="NavigationGrid2D.Version"/>
-/// moves on), the rest of the path is checked once and rebuilt toward the same goal if a cell on it was blocked.
+/// Builds smoothed paths on an <see cref="INavigation2D"/> (an area's grid or a world's navigation) and follows their
+/// waypoints, returning the velocity its owner should move at each fixed tick. When the navigation changes under a path
+/// (its <see cref="INavigation2D.Version"/> moves on: a tile edit, a chunk's page loading or unloading), the rest of the
+/// path is checked once and rebuilt toward the same goal if a cell on it was blocked.
 /// Shared by mobs and players; it owns no engine objects.
 /// </summary>
 public sealed class PathFollower2D
@@ -15,7 +16,7 @@ public sealed class PathFollower2D
     private readonly List<Vector3Int> pathCells = new();
     private readonly List<Vector3Int> smoothedCells = new();
     private readonly List<int> routeCost = new();
-    private NavigationGrid2D navigationGrid;
+    private INavigation2D navigation;
     private TerrainMovementProfile2D movementProfile;
     private PathFollowerSettings2D settings;
     private int waypointIndex;
@@ -33,10 +34,10 @@ public sealed class PathFollower2D
     private Vector2 pathGoal;
     private bool pathAllowsPartial;
 
-    public NavigationGrid2D NavigationGrid => navigationGrid;
+    public INavigation2D Navigation => navigation;
     public TerrainMovementProfile2D MovementProfile => movementProfile;
     public PathFollowerSettings2D Settings => settings;
-    public bool IsConfigured => navigationGrid != null && navigationGrid.IsBuilt;
+    public bool IsConfigured => navigation != null && navigation.IsBuilt;
     public bool HasPath => hasPath;
     public bool ReachedDestination => reachedDestination;
     public bool IsPartialPath => isPartialPath;
@@ -49,11 +50,11 @@ public sealed class PathFollower2D
     public int NextWaypointIndex => waypointIndex;
 
     /// <summary>
-    /// Sets the grid, terrain rules and distances used from now on, and clears the current path.
+    /// Sets the navigation, terrain rules and distances used from now on, and clears the current path.
     /// </summary>
-    public void Configure(NavigationGrid2D grid, TerrainMovementProfile2D profile, PathFollowerSettings2D followerSettings)
+    public void Configure(INavigation2D pathNavigation, TerrainMovementProfile2D profile, PathFollowerSettings2D followerSettings)
     {
-        navigationGrid = grid;
+        navigation = pathNavigation;
         movementProfile = profile;
         settings = followerSettings;
         Clear();
@@ -61,7 +62,7 @@ public sealed class PathFollower2D
 
     /// <summary>
     /// Builds a path from <paramref name="start"/> to <paramref name="worldGoal"/>, moved off the cliff face first
-    /// (<see cref="NavigationGrid2D.MoveOffCliffFace"/>). Returns false, leaving the state untouched, when no grid is
+    /// (<see cref="INavigation2D.MoveOffCliffFace"/>). Returns false, leaving the state untouched, when no grid is
     /// configured; returns false and clears the path when no path exists.
     /// </summary>
     public bool BuildPath(Vector2 start, Vector2 worldGoal, bool allowPartial)
@@ -71,9 +72,9 @@ public sealed class PathFollower2D
             return false;
         }
 
-        worldGoal = navigationGrid.MoveOffCliffFace(worldGoal);
-        Vector3Int startCell = navigationGrid.WorldToCell(start);
-        Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
+        worldGoal = navigation.MoveOffCliffFace(worldGoal);
+        Vector3Int startCell = navigation.WorldToCell(start);
+        Vector3Int goalCell = navigation.WorldToCell(worldGoal);
 
         if (settings.UseStraightLineShortcut && IsStraightLineOptimal(startCell, goalCell))
         {
@@ -85,7 +86,7 @@ public sealed class PathFollower2D
         }
 
         PathRequest request = new(startCell, goalCell, allowPartial, movementProfile);
-        PathResult result = navigationGrid.Pathfinder.FindPath(request, pathCells);
+        PathResult result = navigation.Pathfinder.FindPath(request, pathCells);
 
         hasGoalCell = true;
         lastGoalCell = goalCell;
@@ -109,7 +110,7 @@ public sealed class PathFollower2D
             bool isFinalCell = i == smoothed.Count - 1;
             Vector2 waypoint = isFinalCell && !result.IsPartial
                 ? worldGoal
-                : navigationGrid.CellToWorldCenter(smoothed[i]);
+                : navigation.CellToWorldCenter(smoothed[i]);
 
             waypoints.Add(waypoint);
         }
@@ -147,15 +148,15 @@ public sealed class PathFollower2D
             return false;
         }
 
-        Vector3Int goalCell = navigationGrid.WorldToCell(worldGoal);
-        if (!navigationGrid.IsCellWalkable(goalCell, movementProfile))
+        Vector3Int goalCell = navigation.WorldToCell(worldGoal);
+        if (!navigation.IsCellWalkable(goalCell, movementProfile))
         {
             return false;
         }
 
-        Vector3Int startCell = navigationGrid.WorldToCell(start);
-        return navigationGrid.TryGetNearestWalkableCell(startCell, movementProfile, out Vector3Int nearestStart, settings.NearestCellSearchRadius)
-            && navigationGrid.AreCellsConnected(nearestStart, goalCell, movementProfile);
+        Vector3Int startCell = navigation.WorldToCell(start);
+        return navigation.TryGetNearestWalkableCell(startCell, movementProfile, out Vector3Int nearestStart, settings.NearestCellSearchRadius)
+            && navigation.AreCellsConnected(nearestStart, goalCell, movementProfile);
     }
 
     /// <summary>
@@ -170,7 +171,7 @@ public sealed class PathFollower2D
             return Vector2.zero;
         }
 
-        if (pathFollowsGrid && navigationGrid.Version != pathGridVersion && !RevalidatePath(position))
+        if (pathFollowsGrid && navigation.Version != pathGridVersion && !RevalidatePath(position))
         {
             return Vector2.zero;
         }
@@ -217,7 +218,7 @@ public sealed class PathFollower2D
     private void RememberGridPath(Vector2 worldGoal, bool allowPartial)
     {
         pathFollowsGrid = true;
-        pathGridVersion = navigationGrid.Version;
+        pathGridVersion = navigation.Version;
         pathGoal = worldGoal;
         pathAllowsPartial = allowPartial;
     }
@@ -228,7 +229,7 @@ public sealed class PathFollower2D
     /// </summary>
     private bool RevalidatePath(Vector2 position)
     {
-        pathGridVersion = navigationGrid.Version;
+        pathGridVersion = navigation.Version;
         if (IsRemainingPathWalkable(position))
         {
             return true;
@@ -244,11 +245,11 @@ public sealed class PathFollower2D
     /// </summary>
     private bool IsRemainingPathWalkable(Vector2 position)
     {
-        Vector3Int from = navigationGrid.WorldToCell(position);
+        Vector3Int from = navigation.WorldToCell(position);
         for (int i = waypointIndex; i < waypoints.Count; i++)
         {
-            Vector3Int to = navigationGrid.WorldToCell(waypoints[i]);
-            if (to != from && !navigationGrid.TryGetLineCost(from, to, movementProfile, out _))
+            Vector3Int to = navigation.WorldToCell(waypoints[i]);
+            if (to != from && !navigation.TryGetLineCost(from, to, movementProfile, out _))
             {
                 return false;
             }
@@ -265,8 +266,8 @@ public sealed class PathFollower2D
     /// </summary>
     private bool IsStraightLineOptimal(Vector3Int startCell, Vector3Int goalCell)
     {
-        return navigationGrid.TryGetLineCost(startCell, goalCell, movementProfile, out int lineCost)
-            && lineCost <= navigationGrid.HeuristicCost(startCell, goalCell, movementProfile);
+        return navigation.TryGetLineCost(startCell, goalCell, movementProfile, out int lineCost)
+            && lineCost <= navigation.HeuristicCost(startCell, goalCell, movementProfile);
     }
 
     /// <summary>
@@ -305,7 +306,7 @@ public sealed class PathFollower2D
         routeCost.Add(0);
         for (int i = 1; i < sourceCells.Count; i++)
         {
-            routeCost.Add(routeCost[i - 1] + navigationGrid.MovementCost(sourceCells[i - 1], sourceCells[i], movementProfile));
+            routeCost.Add(routeCost[i - 1] + navigation.MovementCost(sourceCells[i - 1], sourceCells[i], movementProfile));
         }
 
         smoothedCells.Clear();
@@ -317,7 +318,7 @@ public sealed class PathFollower2D
             int furthestVisible = anchorIndex + 1;
             for (int i = anchorIndex + 2; i < sourceCells.Count; i++)
             {
-                if (navigationGrid.TryGetLineCost(sourceCells[anchorIndex], sourceCells[i], movementProfile, out int lineCost)
+                if (navigation.TryGetLineCost(sourceCells[anchorIndex], sourceCells[i], movementProfile, out int lineCost)
                     && lineCost <= routeCost[i] - routeCost[anchorIndex])
                 {
                     furthestVisible = i;

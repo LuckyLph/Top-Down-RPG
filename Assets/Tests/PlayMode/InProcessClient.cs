@@ -71,7 +71,9 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance(camera);
         builder.RegisterInstance(controlSettings);
         builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
-        builder.Register<ActiveNavigationGrid>(Lifetime.Singleton);
+        builder.Register<Worlds>(Lifetime.Singleton);
+        builder.Register<PlayerWorlds>(Lifetime.Singleton);
+        builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
@@ -88,7 +90,7 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         if (navigationGrid != null)
         {
-            builder.RegisterInstance(navigationGrid);
+            builder.RegisterInstance(navigationGrid).As<INavigation2D>().AsSelf();
         }
 
         builder.Register(_ => Object.FindAnyObjectByType<AreaTerrain>(), Lifetime.Transient);

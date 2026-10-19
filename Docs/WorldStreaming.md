@@ -201,38 +201,27 @@ Main (MainLifetimeScope)
 ### Presentation per machine
 
 - **`LocalWorldPresentation`** (Gameplay) follows the local player's world:
-  - turns on that world's global light and turns off every other loaded world's;
+  - turns on that world's global light and turns off every other loaded world's. URP warns about more than one global light per sorting layer and lights everything with one of them, whichever world it is in (Phase 0);
   - points the camera and the HUD at it;
-  - enables that world's terrain drawing only.
+  - enables only the chunk renderers of that world within the local player's interest rectangle.
 
   Worlds the host loads for other players are simulated but never drawn on the host, since they are thousands of units away from its camera.
 
 ### Terrain
 
-Ground must draw across chunk borders as if the world were one area. Two approaches; Phase 0 picks one by building both on two chunks.
+Decided in Phase 0: **a renderer per chunk, with a skirt of its neighbours' border cells and a baked coast map.** See Phase 0's notes for the measurements.
 
-- **A. One world renderer over a window.** One `TerrainBlendRenderer`-like component in each world's root scene, active only in the local camera's world.
-  - It draws a window of cells around the camera (for example 128 x 128) from the tilemaps of that world's loaded chunks, matched by material.
-  - Its layer list is the materials painted in its window, in the style's order. It is rebuilt when a chunk load or a re-centre brings a material in, or takes away the last cells of one. A list of all the world's materials does not work: the first world uses all eighteen, which would draw it in the wide variant everywhere, at about twice the cost in crisp (TerrainLayers32.md). A window rarely holds more than a region's handful.
-  - The window re-centres when the camera nears its edge. Re-centring and chunk loads patch the control map, coast map and elevation map, the way tile changes do today.
-  - Seams cannot exist, since the control map never stops at a chunk border.
-  - The coast map's distance field must not visibly shift when the window moves. Its far-out wave stretch reads distances up to 32 cells, so the window needs more margin than that around the view.
-- **B. A renderer per chunk with baked skirts.** Each chunk keeps its own renderer and layer list, plus a skirt.
-  - The skirt is a few cells of each neighbour's border, saved by the editor into hidden skirt tilemaps of that chunk.
-  - The control map reads the skirt, but the chunk's quads cover only its own 64 x 64 cells.
-  - Chunks stay independent and mostly narrow.
-  - The costs:
-    - every chunk's layer list must also list the materials of its skirt;
-    - a runtime edit near a border has to patch the neighbour's skirt;
-    - the skirt must be wider than every effect that reaches across a border: rims, shadows, tufts, a run's 3-cell reach, a 2-cell cliff face;
-    - the coast map would have to be baked per chunk from the whole world;
-    - the host would hold renderers for chunks of worlds it never draws, unless they are disabled outside the local camera's world.
-
-Leaning A: it removes the seam problem by construction, and draws only what the local camera sees, in one world. Before deciding, Phase 0 measures:
-
-- A's re-centring and chunk-load cost;
-- the cost of rebuilding its layer list when a material enters the window;
-- the frame time of a window holding all eighteen of the first world's materials.
+- **One renderer per chunk.** Each chunk scene keeps a `TerrainBlendRenderer` on its grid over its own ground layers, as an area does today. Its chunk quads cover only its own 64 x 64 cells.
+- **The skirt.** The renderer's control map and elevation map also read a 4-cell strip along the border of each loaded neighbour: the neighbour's ground layers and raised ground, matched by material.
+  - The renderer fills the strip when a neighbour loads, follows that neighbour's tile changes inside the strip (runtime edits, and painting in the editor), and empties it when the neighbour unloads.
+  - Only drawing reads the skirt. Navigation never does.
+  - A chunk at the edge of the loaded set has no skirt on its far side, so it draws its ground's edge there over nothing. That border lies outside every interest rectangle, at least `loadMargin` beyond the view, so no one sees it.
+  - A chunk's layer list holds the materials of its own cells and of its neighbours' border strips, in the style's order. The World Editor keeps it that way. A material that turns up in a skirt anyway, through a runtime edit, rebuilds the renderer with it.
+- **The coast map is baked per chunk.** The waves read a distance field that reaches 32 cells from the coast, more than any skirt. Computed per chunk, it drew three ocean pixels wrong on the Coast, and open sea far from the shore would be worse. Computing it at runtime is also slow: 22 µs per cell in the editor. So the World Editor bakes each chunk's coast map from the whole world into a texture asset beside its scene, and the renderer uses that texture instead of building one.
+  - Runtime edits never touch the sea (the ocean is not an `AreaTerrain` layer), so the baked map stays right.
+  - A world without waves bakes nothing.
+- **Only the local world draws.** `LocalWorldPresentation` enables chunk renderers only in the local player's world and within its interest rectangle. The host builds no ground for the chunks it loads for other players.
+- **Memory.** Per-chunk renderers cost more texture memory than one renderer would, since each holds its own arrays (about 3 MiB per layer at 512 px). Only the few chunks around the local player have them.
 
 Walls stay dual-grid tilemaps per chunk. Their render tilemap is offset by half a cell, so a chunk's walls need its neighbours' border wall cells to pick the corner sprites along the border. Each chunk's `DualGridTilemapModule` reads the neighbouring chunk's data tilemap for those cells when it is loaded, and refreshes the border when a neighbour loads. Phase 2 checks a wall drawn across a border.
 
@@ -301,7 +290,8 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
   - It creates a world at a free origin in the global layout, its root scene and its chunk scenes, and registers them in the `WorldDefinition`, the `SceneDefinition`s and the build list.
   - It opens a chunk with its neighbours additively, so the Scene view shows the world around the chunk being edited.
   - Opening two worlds at once is harmless, since their origins differ.
-- **Terrain Brush across borders.** It splits a stroke's cells by chunk and writes each part to that chunk's layer of the material, adding the layer to a chunk that lacks it. Its preview works across chunks through the world renderer (A) or each chunk's renderer (B).
+- **Terrain Brush across borders.** It splits a stroke's cells by chunk and writes each part to that chunk's layer of the material, adding the layer to a chunk that lacks it. Its preview shows on the renderer of each chunk it covers. A neighbour's skirt shows the stroke once it is painted.
+- **Layer lists and coast maps.** The World Editor keeps each chunk's layer list covering its neighbours' border materials. When the sea or its shore changes, it bakes the coast maps of the chunks within 32 cells of the change.
 - **Generators.** Writing generated layouts into a world, and the first world's regions, belong to the world generation plan. The Scene Generator window keeps working on standalone scenes until then.
 - **Validation.**
   - A prop whose footprint crosses a chunk border, or anything placed outside its chunk, is refused with an error that names it.
@@ -326,15 +316,34 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 
 ## Phases
 
-### Phase 0: spike (throwaway branch)
+### Phase 0: spike
 
-- [ ] Two hand-painted adjacent chunk scenes and a world root scene, loaded additively by a dev script, with a road, water and a coast crossing the border.
-- [ ] A second world at another origin, loaded at the same time: no physics, query, sprite or light crosstalk.
-- [ ] Terrain A: a world renderer over a moving window. Measure the cost of re-centring, of a chunk load patching it, of rebuilding its layer list when a material enters the window, and of drawing a window of 16 and of 18 materials.
-- [ ] Terrain B: per-chunk renderers with a hand-made skirt. Look at the seam in crisp and soft, the ocean's waves across the border, and a plateau's cliff across it.
-- [ ] Navigation: A* from one page into the other with the slot-indexed arrays. A path across the border matches the single-grid path on the same cells.
-- [ ] Loading: time a chunk scene's load and activation with ground, walls and mob spawn points, and look for a frame hitch.
-- [ ] Record the numbers here and decide the terrain approach and `loadMargin`.
+- [x] Ground split into chunks: `Area_Coast` (a road, a trail, the beach, the ocean and the plateau) split into its four 64-cell chunks, in memory, each a grid with its own renderer, drawn per chunk and compared with the area drawn whole.
+- [x] A second world at another origin: a second global light loaded alongside the first.
+- [x] Terrain A, one renderer over a window: the cost of a chunk arriving, of a rebuild when its layer list changes, and of its coast map.
+- [x] Terrain B, a renderer per chunk with a skirt: the seam in crisp and soft with skirts of 2, 3 and 4 cells, the ocean's waves across the border, the plateau's cliff across it, and the cost of one chunk's build.
+- [x] Decide the terrain approach: B, with live skirts and baked coast maps (see Architecture: Terrain).
+
+Moved out of the spike, since they need the real pieces: navigation across pages goes to Phase 3, whose tests check a path across a border against the single-grid path; chunk scene load times go to Phase 2, where `loadMargin` is tuned with `ChunkLoader` on real chunk scenes.
+
+Notes (the spike's code was not kept; times are the editor's, debug code, best of 2 or 3):
+
+- **The skirt, per chunk.** Each chunk drawn over only its own cells, stitched, against the Coast drawn whole (2144 x 1536 pixels, animation at a fixed time):
+  - 4 cells: 3 pixels differ, all ocean, 13 to 20 cells from a border, in crisp and in soft (the soft look's first render after switching came out black, as TerrainBlending.md's notes warn, and the second matched).
+  - 3 cells: those 3, plus 3 more, one at a border.
+  - 2 cells: 85, 80 of them at a border.
+  
+  The plateau, which crosses a chunk border, draws its cliff the same either way. The three ocean pixels are the coast map, which each chunk built from its own cells and skirt.
+- **One chunk's build** (its quarter of the Coast and the skirt): 2.6 to 3.0 ms without the ocean, 31 ms with it, nearly all of that its coast map. The Coast whole: 83 ms.
+- **The coast map** costs about 22 µs per cell: 364 ms for a window of 128 x 128 cells, 810 ms for 192 x 192. Under A it is rebuilt on every change to the coast in the window. Under B, a full 64-cell chunk with its skirt would take about 115 ms. Hence the bake.
+- **A's window** (128 x 128 cells, 6 materials, the ocean among them):
+  - a chunk arriving: its 9922 cells set on the window's tilemaps in 19 ms, with the change callbacks handled synchronously;
+  - the flush that follows: 365 ms, the coast map;
+  - a full rebuild, as when its layer list changes: 389 ms, about 25 ms without the coast map;
+  - at 192 x 192: 861 ms and about 50 ms.
+
+  Besides the cost, a window spanning regions can list more than 16 of the first world's 18 materials and switch the whole view to the wide variant (about twice the cost in crisp, TerrainLayers32.md), and the Terrain Brush's preview would need a chunk's tilemap mapped to the window's. B keeps every chunk narrow and each build small.
+- **Two global lights:** URP logs "More than one global light on layer Default / Terrain / Entities for light blend style index 0" and the ground kept the first light's colour: a red global light 4096 units away changed nothing. Lighting has to follow the local world (`LocalWorldPresentation`). Bodies, physics queries and sprites 2048 units apart never reach each other, so they needed no test.
 
 ### Phase 1: worlds and chunks, offline
 
@@ -347,15 +356,18 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 
 ### Phase 2: terrain across chunks
 
-- [ ] The approach Phase 0 chose, including the coast map and raised ground. No seam in crisp or soft.
+- [ ] Chunk renderers with live 4-cell skirts from their loaded neighbours, raised ground included, and layer lists covering the neighbours' border materials.
+- [ ] Coast maps baked per chunk from the whole world by an editor command (the World Editor's from Phase 5), used instead of building one.
+- [ ] A test drawing ground per chunk against the same ground drawn whole, in crisp and soft, as the spike compared them.
 - [ ] Walls drawn across a border.
-- [ ] `loadMargin` and `unloadHysteresis` tuned from measured load times.
+- [ ] Chunk scene load and activation timed with ground, walls and mob spawn points; `loadMargin` and `unloadHysteresis` tuned from those times.
 
 ### Phase 3: navigation across chunks
 
 - [ ] `WorldNavigation` with pages in a shared slot pool, cross-border steps, cliff sides along borders, and region union-find.
 - [ ] Players and mobs use it, and `ActiveNavigationGrid` goes.
 - [ ] Partial paths stop at the loaded edge.
+- [ ] A path across a border matches the single-grid path on the same cells.
 
 ### Phase 4: mobs per chunk
 
@@ -426,4 +438,4 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 
 ## Open questions
 
-- **Chunk size:** 64 cells, revisited only if Phase 0's load times call for smaller chunks. 32 cells would load less per chunk, but give four times as many scenes per world (1024).
+- **Chunk size:** 64 cells, revisited only if Phase 2's load times call for smaller chunks. 32 cells would load less per chunk, but give four times as many scenes per world (1024).

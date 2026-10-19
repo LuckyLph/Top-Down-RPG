@@ -25,6 +25,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/TerrainLayers32.md` is the experiment raising a terrain renderer's layers from 16 to 32 (branch `feature/terrain-32-layers`). Follow it when working on the control map, the layer cap, the stress scene or the area template on that branch, and tick off its phase checklist as steps land.
 
+`Docs/WorldStreaming.md` is the plan for seamless worlds that players travel between on their own: chunk scenes streamed around the players, worlds at separate origins, navigation and terrain across chunk borders, per-chunk networking and world persistence. Follow it when working on scene flow, areas or worlds, chunk loading, world navigation or world saves, and tick off its phase checklist as steps land.
+
 Use only art generated in this project (recipes and editor tools); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.

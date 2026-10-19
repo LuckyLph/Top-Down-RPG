@@ -13,8 +13,8 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. |
 | Internet play | No paid or account-bound services for now: direct IP only, and friends play over the internet through a virtual LAN (Tailscale, ZeroTier). A hosted relay is deferred until there is a distribution platform (see Phase 6). |
 | Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. |
-| Areas | The party is always in the same area. The host decides area changes. |
-| Death | A dead player respawns at the area's spawn point after a delay while a teammate is alive. Everyone dead at once restarts the area. |
+| Areas | Today: the party is always in the same area, and the host decides area changes. Planned: each player is in one world at a time and travels between worlds on their own, with no party (see [WorldStreaming.md](WorldStreaming.md)). |
+| Death | Today: a dead player respawns at the area's spawn point after a delay while a teammate is alive, and everyone dead at once restarts the area. Planned: each player respawns on their own at their nearest discovered waystone, and nothing restarts (see [WorldStreaming.md](WorldStreaming.md)). |
 | Friendly fire | Off. Hostile effects only land on the other faction and helpful ones within a faction, enforced by `DamageService` (see [DamageAndStatusEffects.md](DamageAndStatusEffects.md#decisions)). |
 | Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
 

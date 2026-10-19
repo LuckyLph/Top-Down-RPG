@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23c01d6aa81e27e40b2c24d911191a00, type: 3}
+  m_Name: Sandbox
+  m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
+  worldId: b6376a2ae0bb44c44bd70deacbeb0358
+  rootScene: {fileID: 11400000, guid: 41cf3236b41fc0a4dbb08637f3fa2477, type: 2}
+  origin: {x: 2048, y: 0}
+  sizeInChunks: {x: 2, y: 2}
+  chunks:
+  - coords: {x: 0, y: 0}
+    scene: {fileID: 11400000, guid: acd180dab5a16ac4d9bcdcd8f8ff7e68, type: 2}
+  - coords: {x: 1, y: 0}
+    scene: {fileID: 11400000, guid: c5c1376c49a24914e8ebece2169c8faf, type: 2}
+  - coords: {x: 0, y: 1}
+    scene: {fileID: 11400000, guid: c2253a6d985041540b2207ea055de19a, type: 2}
+  - coords: {x: 1, y: 1}
+    scene: {fileID: 11400000, guid: 79f8a32eb5d1f9a428ccda1a9e7c7224, type: 2}
+  entries:
+  - name: start
+    position: {x: 30.5, y: 42}
+    waystone: 1

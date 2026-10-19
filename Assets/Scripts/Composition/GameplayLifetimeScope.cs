@@ -3,8 +3,9 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// The composition root of the Gameplay scene, a child of the Main scope and parent of each area scope: registers
-/// the players, combat, abilities, statuses, HUD, menus and pointer feedback for the session.
+/// The composition root of the Gameplay scene, a child of the Main scope and parent of each area and world scope:
+/// registers the players, combat, abilities, statuses, HUD, menus, pointer feedback and the world streaming for the
+/// session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -13,6 +14,7 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private PointerFeedbackLayer pointerFeedbackLayer;
     [SerializeField] private GameplaySettings settings;
     [SerializeField] private CombatSettings combatSettings;
+    [SerializeField] private WorldStreamingSettings worldStreamingSettings;
 
     /// <summary>
     /// Registers the Gameplay services and entry points and, once built, the player network prefabs. Logs an error
@@ -96,6 +98,22 @@ public class GameplayLifetimeScope : LifetimeScope
         {
             builder.RegisterComponent(pointerFeedbackLayer);
             builder.RegisterEntryPoint<PointerFeedbackPresenter>();
+        }
+
+        builder.Register<Worlds>(Lifetime.Singleton);
+        builder.Register<PlayerWorlds>(Lifetime.Singleton);
+        if (worldStreamingSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(WorldStreamingSettings)}; no world session can start.", this);
+        }
+        else
+        {
+            builder.RegisterEntryPoint<WorldStreaming>()
+                .WithParameter(worldStreamingSettings)
+                .WithParameter<LifetimeScope>(this)
+                .As<IWorldSession>()
+                .AsSelf();
+            builder.RegisterEntryPoint<LocalWorldPresentation>();
         }
 
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());

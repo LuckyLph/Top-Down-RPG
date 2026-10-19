@@ -167,8 +167,9 @@ Main (MainLifetimeScope)
   - its persistent objects.
 
   Disposing it unregisters them.
-- **`Worlds`** (Gameplay scope) is the registry of loaded worlds: `TryGet(worldId, out LoadedWorld)`, each with its scope, navigation, entries and chunk registry. It replaces `ActiveNavigationGrid` and `ActiveSpawnPoint`. A player finds its own world's navigation through it, by its player's world.
-- **`ChunkStreamer`** lives in the Gameplay scope, since it streams across worlds (see Streaming).
+- **`Worlds`** (Gameplay scope, Phase 1) is the registry of loaded worlds: `TryGet(definition, out LoadedWorld)`, each with its definition, root scene, scope, lighting and loaded chunk scenes, and events as they come and go. Phase 3 adds each world's navigation, and it then replaces `ActiveNavigationGrid` and `ActiveSpawnPoint`: a player finds its own world's navigation through it, by its player's world.
+- **`PlayerWorlds`** (Gameplay scope, Phase 1) records each player's world. Offline it is set directly; Phase 7 fills it from the host's `NetworkVariable`.
+- **The streaming** lives in the Gameplay scope, since it streams across worlds (see Streaming).
 
 ### World data (Core)
 
@@ -176,14 +177,13 @@ Main (MainLifetimeScope)
   - a stable world id (its asset GUID);
   - the root scene's `SceneDefinition`;
   - the world's origin;
-  - the chunk size (64);
-  - the size in chunks (at most 16 x 16);
+  - the size in chunks (at most 16 x 16; the chunk size, 64, is `ChunkCoords.Size` for every world);
   - a `SceneDefinition` per present chunk;
   - the world's ground materials, for its terrain drawing;
   - its entries: name, position, whether it is a waystone.
 
   The editor checks that no two worlds' rectangles in the global layout come within 1024 units of each other.
-- **`GameScenes`** lists worlds instead of areas, with a starting world and entry. `SceneBuildValidator` checks that every chunk scene of a listed world is in the build.
+- **`GameScenes`** lists worlds beside the areas (Phase 1), and instead of them with a starting world and entry once the areas go. Every world scene has a `SceneDefinition` beside it, so `SceneBuildValidator` already checks it is in the build.
 - **`ChunkCoords`** is static chunk arithmetic: cell to chunk, chunk bounds, rectangle overlap, world origins. It is plain C# and tested in EditMode.
 
 ### Streaming
@@ -192,16 +192,16 @@ Main (MainLifetimeScope)
 - **Who a machine streams for:**
   - offline or on the host, every registered player;
   - on a client, its own player.
-- **`ChunkLoader`** (Core) is the doing part.
-  - It loads one scene at a time additively through `SceneLoader`: a world's root scene under the Gameplay scope, a chunk under its world's scope (`LifetimeScope.EnqueueParent`, as `GameFlow` does now).
-  - It reports when each is up.
-  - It refuses to unload a chunk whose networked objects are still visible to some client (see Networking).
+- **`WorldStreaming`** (Gameplay, Phase 1) is the doing part, and the `IWorldSession` `GameFlow` enters and leaves worlds through.
+  - Each frame it gives the streamer the streamed players' worlds and positions, and runs its next action through `SceneLoader`: a world's root scene under the Gameplay scope, a chunk under its world's scope (`LifetimeScope.EnqueueParent`, as `GameFlow` does), with the world's definition or the chunk's identity enqueued into the new scope.
+  - It records what is up in `Worlds`.
+  - From Phase 7 it does not unload a chunk whose networked objects are still visible to some client (see Networking).
 - **`GameFlow`** keeps the menu, starting a session, and the local player's fade. It no longer loads gameplay content itself. `TransitionTimeFreeze` follows only offline transitions, or goes.
 
 ### Presentation per machine
 
 - **`LocalWorldPresentation`** (Gameplay) follows the local player's world:
-  - turns on that world's global light and turns off every other loaded world's. URP warns about more than one global light per sorting layer and lights everything with one of them, whichever world it is in (Phase 0);
+  - turns on that world's global light and turns off every other loaded world's: each root scene holds its lights under a `WorldLighting` object it shows or hides. URP warns about more than one global light per sorting layer and lights everything with one of them, whichever world it is in (Phase 0);
   - points the camera and the HUD at it;
   - enables only the chunk renderers of that world within the local player's interest rectangle.
 
@@ -347,12 +347,19 @@ Notes (the spike's code was not kept; times are the editor's, debug code, best o
 
 ### Phase 1: worlds and chunks, offline
 
-- [ ] `WorldDefinition` with origins, `ChunkCoords`, world root and chunk scene setup, `WorldLifetimeScope`, `ChunkLifetimeScope`, `Worlds`.
-- [ ] Each player's world (offline: a plain field behind the same interface the `NetworkVariable` will fill).
-- [ ] `ChunkStreamer` and `ChunkLoader` stream around the local player offline, with hysteresis and one load at a time.
-- [ ] `GameFlow` starts a session into a world, and `BootFlow` boots into one opened in the editor.
-- [ ] `LocalWorldPresentation`: global light, camera and HUD follow the local player's world.
-- [ ] A hand-made 2 x 2 dev world and a one-chunk dev interior.
+- [x] `WorldDefinition` with origins, `ChunkCoords`, world root and chunk scene setup, `WorldLifetimeScope`, `ChunkLifetimeScope`, `Worlds`.
+- [x] Each player's world (offline: `PlayerWorlds`, which Phase 7 fills from the host's `NetworkVariable`).
+- [x] `ChunkStreamer` and `WorldStreaming` stream around the players offline, with hysteresis, the empty-world grace and one load at a time.
+- [x] `GameFlow` starts a session into a world (`StartWorldGameAsync`, and `RestartAsync` for a party wipe), and `BootFlow` boots into one opened in the editor.
+- [x] `LocalWorldPresentation`: the global light follows the local player's world; the camera and the HUD already follow the local player.
+- [x] The Sandbox (2 x 2 chunks at origin (2048, 0)) and the SandboxInterior (one chunk at (4096, 0)), made with `WorldAuthoring` and painted by script.
+
+Notes:
+
+- **Where things went.** The loading half of the streaming is `WorldStreaming` itself, not a separate `ChunkLoader`: one class runs the streamer's actions and is the `IWorldSession`, and nothing else loads chunks. `WorldDefinition` keeps no chunk size of its own; every world uses `ChunkCoords.Size`.
+- **Areas stay** beside worlds until Phase 9: `GameFlow` runs either an area session or a world session, and leaving a world session (to the menu, a new game or another world) unloads its chunks and worlds before anything else.
+- **Teleports.** The streamer reads the players' positions each frame, so a teleport (the entry, a test) streams like walking; `EnterAsync` waits until the chunks around the entry are up before the fade in.
+- **Tests:** `ChunkCoordsTests`, `ChunkStreamerTests` and `WorldStreamingPlayModeTests` (see Architecture.md's Tests).
 
 ### Phase 2: terrain across chunks
 

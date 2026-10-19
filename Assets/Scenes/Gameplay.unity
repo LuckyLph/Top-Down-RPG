@@ -353,6 +353,7 @@ MonoBehaviour:
   pointerFeedbackLayer: {fileID: 1598283671}
   settings: {fileID: 11400000, guid: 1b67014f06f5f6645825b52856b87320, type: 2}
   combatSettings: {fileID: 11400000, guid: 418926d2b15a1a544b4edc782443c711, type: 2}
+  worldStreamingSettings: {fileID: 11400000, guid: 23be795292e99c94d9d6a57acb34670d, type: 2}
 --- !u!4 &1350234814
 Transform:
   m_ObjectHideFlags: 0

@@ -6,9 +6,10 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// Moves the app between the main menu, a new game and area changes by loading and unloading scenes additively under
-/// the right DI scopes (menu and gameplay under Main, the area under gameplay), behind a screen fade. Runs one
-/// transition at a time and ignores requests made while one runs.
+/// Moves the app between the main menu, a new game, area changes and sessions in seamless worlds by loading and
+/// unloading scenes additively under the right DI scopes (menu and gameplay under Main, the area under gameplay; a
+/// world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. Runs one transition
+/// at a time and ignores requests made while one runs.
 /// </summary>
 public sealed class GameFlow
 {
@@ -21,6 +22,7 @@ public sealed class GameFlow
     private Scene gameplayScene;
     private Scene areaScene;
     private LifetimeScope gameplayScope;
+    private string currentEntry;
 
     /// <summary>
     /// Creates the flow; <paramref name="mainScope"/> is the parent scope for the menu and gameplay scenes.
@@ -39,8 +41,9 @@ public sealed class GameFlow
 
     public bool IsTransitioning { get; private set; }
     public bool IsInMenu => IsLoaded(menuScene);
-    public bool IsInGame => IsLoaded(gameplayScene) && IsLoaded(areaScene);
+    public bool IsInGame => IsLoaded(gameplayScene) && (IsLoaded(areaScene) || CurrentWorld != null);
     public SceneDefinition CurrentArea { get; private set; }
+    public WorldDefinition CurrentWorld { get; private set; }
     public Scene AreaScene => areaScene;
     public Scene GameplayScene => gameplayScene;
     public GameScenes Scenes => gameScenes;
@@ -75,15 +78,43 @@ public sealed class GameFlow
     }
 
     /// <summary>
+    /// Starts a new game session in the seamless <paramref name="world"/>: unloads the menu and any running game,
+    /// loads a fresh gameplay scene, and enters the world at its entry <paramref name="entryName"/> (its default entry
+    /// when null) through the gameplay scope's <see cref="IWorldSession"/>, fading in once the ground around the
+    /// players is loaded.
+    /// </summary>
+    public Awaitable StartWorldGameAsync(WorldDefinition world, string entryName = null, CancellationToken cancellation = default)
+    {
+        return RunTransitionAsync(token => StartWorldGameCoreAsync(world, entryName, token), cancellation);
+    }
+
+    /// <summary>
+    /// Starts the running session over where it began: the current world at the entry it was entered by, or the
+    /// current area at the starting spawn id.
+    /// </summary>
+    public Awaitable RestartAsync(CancellationToken cancellation = default)
+    {
+        return CurrentWorld != null
+            ? StartWorldGameAsync(CurrentWorld, currentEntry, cancellation)
+            : StartNewGameAsync(CurrentArea, null, cancellation);
+    }
+
+    /// <summary>
     /// Swaps the current area for <paramref name="area"/>, entering at <paramref name="spawnId"/>, while keeping the
     /// gameplay scene (and the players in it). Raises <see cref="AreaLoading"/> once the screen has faded out; logs an
-    /// error and does nothing when no game is running.
+    /// error and does nothing when no game is running or the session is in a world.
     /// </summary>
     public async Awaitable ChangeAreaAsync(SceneDefinition area, string spawnId, CancellationToken cancellation = default)
     {
         if (!IsLoaded(gameplayScene))
         {
             Debug.LogError($"{nameof(GameFlow)} cannot change area while no gameplay session is running.");
+            return;
+        }
+
+        if (CurrentWorld != null)
+        {
+            Debug.LogError($"{nameof(GameFlow)} cannot change area during a session in the world {CurrentWorld.name}.");
             return;
         }
 
@@ -142,6 +173,7 @@ public sealed class GameFlow
     /// </summary>
     private async Awaitable ShowMainMenuCoreAsync(CancellationToken cancellation)
     {
+        await LeaveWorldAsync(cancellation);
         await UnloadAreaAsync(cancellation);
         await UnloadGameplayAsync(cancellation);
         await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
@@ -166,12 +198,74 @@ public sealed class GameFlow
             menuScene = default;
         }
 
+        await LeaveWorldAsync(cancellation);
         await UnloadAreaAsync(cancellation);
         await UnloadGameplayAsync(cancellation);
         gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
         gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
 
         await LoadAreaCoreAsync(area, spawnId, cancellation);
+    }
+
+    /// <summary>
+    /// Unloads the menu and any running game, loads the gameplay scene under the main scope, makes it the active scene
+    /// and enters <paramref name="world"/> through its scope's <see cref="IWorldSession"/>. Logs an error and leaves the
+    /// gameplay scene without a world when the scope provides none.
+    /// </summary>
+    private async Awaitable StartWorldGameCoreAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
+    {
+        if (IsLoaded(menuScene))
+        {
+            await sceneLoader.UnloadAsync(menuScene, cancellation);
+            menuScene = default;
+        }
+
+        await LeaveWorldAsync(cancellation);
+        await UnloadAreaAsync(cancellation);
+        await UnloadGameplayAsync(cancellation);
+        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
+        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
+        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
+        SceneManager.SetActiveScene(gameplayScene);
+
+        if (!TryGetWorldSession(out IWorldSession session))
+        {
+            Debug.LogError($"The gameplay scene's scope provides no {nameof(IWorldSession)}; cannot enter {world.name}.");
+            return;
+        }
+
+        CurrentWorld = world;
+        currentEntry = entryName;
+        await session.EnterAsync(world, entryName, cancellation);
+    }
+
+    /// <summary>
+    /// Ends the world session, if one runs, unloading its worlds and chunks before anything else unloads.
+    /// </summary>
+    private async Awaitable LeaveWorldAsync(CancellationToken cancellation)
+    {
+        if (CurrentWorld == null)
+        {
+            return;
+        }
+
+        CurrentWorld = null;
+        currentEntry = null;
+        if (TryGetWorldSession(out IWorldSession session))
+        {
+            await session.LeaveAsync(cancellation);
+        }
+    }
+
+    /// <summary>
+    /// The gameplay scope's <see cref="IWorldSession"/>; false when no gameplay scene is loaded or its scope provides
+    /// none.
+    /// </summary>
+    private bool TryGetWorldSession(out IWorldSession session)
+    {
+        session = null;
+        return IsLoaded(gameplayScene) && gameplayScope != null && gameplayScope.Container != null
+            && gameplayScope.Container.TryResolve(out session);
     }
 
     /// <summary>

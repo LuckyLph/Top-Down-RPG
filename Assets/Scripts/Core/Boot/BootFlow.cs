@@ -38,14 +38,16 @@ public sealed class BootFlow : IAsyncStartable
 
 #if UNITY_EDITOR
     /// <summary>
-    /// Boots into the scenes the editor had open: the first one that is neither the menu nor the gameplay scene is
-    /// treated as an area (a transient definition when <see cref="GameScenes"/> does not list it) and a new game
-    /// starts there; the gameplay scene without an area starts a new game in the starting area; the menu scene on
-    /// its own shows the main menu. Returns false when <paramref name="scenePaths"/> gives nothing to boot into.
+    /// Boots into the scenes the editor had open: a world's root or chunk scene starts a session in that world at its
+    /// default entry; otherwise the first one that is neither the menu nor the gameplay scene is treated as an area (a
+    /// transient definition when <see cref="GameScenes"/> does not list it) and a new game starts there; the gameplay
+    /// scene without an area starts a new game in the starting area; the menu scene on its own shows the main menu.
+    /// Returns false when <paramref name="scenePaths"/> gives nothing to boot into.
     /// </summary>
     private async Awaitable<bool> TryBootFromEditorScenesAsync(string[] scenePaths, CancellationToken cancellation)
     {
         SceneDefinition area = null;
+        WorldDefinition world = null;
         bool wantsGameplay = false;
         bool wantsMenu = false;
 
@@ -59,10 +61,20 @@ public sealed class BootFlow : IAsyncStartable
             {
                 wantsGameplay = true;
             }
+            else if (world == null && FindWorldOwning(scenePath) is WorldDefinition owner)
+            {
+                world = owner;
+            }
             else if (area == null)
             {
                 area = gameScenes.FindArea(scenePath) ?? SceneDefinition.CreateTransient(scenePath);
             }
+        }
+
+        if (world != null)
+        {
+            await gameFlow.StartWorldGameAsync(world, null, cancellation);
+            return true;
         }
 
         if (area != null || wantsGameplay)
@@ -78,6 +90,31 @@ public sealed class BootFlow : IAsyncStartable
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The world whose root or chunk scene is at <paramref name="scenePath"/>: a world <see cref="GameScenes"/> lists,
+    /// or else any world asset in the project, so a world not listed yet can still be played from the editor; null
+    /// when no world owns the scene.
+    /// </summary>
+    private WorldDefinition FindWorldOwning(string scenePath)
+    {
+        WorldDefinition listed = gameScenes.FindWorldOwning(scenePath);
+        if (listed != null)
+        {
+            return listed;
+        }
+
+        foreach (string guid in UnityEditor.AssetDatabase.FindAssets($"t:{nameof(WorldDefinition)}"))
+        {
+            WorldDefinition world = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldDefinition>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+            if (world != null && world.OwnsScene(scenePath))
+            {
+                return world;
+            }
+        }
+
+        return null;
     }
 #endif
 }

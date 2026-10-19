@@ -173,7 +173,8 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Waits the restart delay, then starts a new game in the current area. Returns quietly when cancelled.
+    /// Waits the restart delay, then starts the session over in the current area or world. Returns quietly when
+    /// cancelled.
     /// </summary>
     private async Awaitable RestartAfterDelayAsync(CancellationToken cancellation)
     {
@@ -186,6 +187,6 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
             return;
         }
 
-        await gameFlow.StartNewGameAsync(gameFlow.CurrentArea);
+        await gameFlow.RestartAsync();
     }
 }

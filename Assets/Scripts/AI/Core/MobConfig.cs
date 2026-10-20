@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A mob type's tuning: movement, perception, search, combat, crowd, patrol, leash and navigation. Read-only at runtime;
+/// A mob type's tuning: movement, perception, search, combat, crowd, patrol, leash, respawn and navigation. Read-only at runtime;
 /// tests build their own with <see cref="Create"/>.
 /// </summary>
 [CreateAssetMenu(menuName = "AI/Mob Config", fileName = "MobConfig")]
@@ -47,6 +47,12 @@ public class MobConfig : ScriptableObject
     [SerializeField, Min(0), Tooltip("How many cells beyond its home chunk's edge a mob in a world chases before it gives up and walks home. Leash plus the detection radius must stay under the world streaming's load extents, and leash plus the lose distance under its keep extents, so a mob near a player always has its home chunk loaded (Docs/WorldStreaming.md: Leash). Mobs in areas have no home chunk and no leash.")]
     private int leashCells = 8;
 
+    [Header("Respawn")]
+    [SerializeField, Tooltip("Whether a mob killed in a world comes back. Off for mobs that stay dead, such as bosses.")]
+    private bool respawns = true;
+    [SerializeField, Min(0f), Tooltip("Seconds of game time after its death before a killed mob in a world comes back. It returns only when its chunk loads again, never in front of a player, so it may stay away longer (Docs/WorldStreaming.md: Persistence).")]
+    private float respawnDelaySeconds = 300f;
+
     [Header("Navigation")]
     [SerializeField, Min(0.01f)] private float repathInterval = 0.25f;
     [SerializeField, Min(1)] private int nearestCellSearchRadius = 8;
@@ -76,6 +82,8 @@ public class MobConfig : ScriptableObject
     public int PatrolSampleAttempts => patrolSampleAttempts;
     public Vector2 IdleDurationRange => idleDurationRange;
     public int LeashCells => leashCells;
+    public bool Respawns => respawns;
+    public float RespawnDelaySeconds => respawnDelaySeconds;
     public float RepathInterval => repathInterval;
     public int NearestCellSearchRadius => nearestCellSearchRadius;
     public float StuckTimeout => stuckTimeout;
@@ -111,7 +119,9 @@ public class MobConfig : ScriptableObject
         Vector2? idleDurationRange = null,
         float? repathInterval = null,
         TerrainMovementProfile2D movementProfile = null,
-        int? leashCells = null)
+        int? leashCells = null,
+        bool? respawns = null,
+        float? respawnDelaySeconds = null)
     {
         MobConfig config = CreateInstance<MobConfig>();
         config.moveSpeed = moveSpeed ?? config.moveSpeed;
@@ -129,6 +139,8 @@ public class MobConfig : ScriptableObject
         config.idleDurationRange = idleDurationRange ?? config.idleDurationRange;
         config.repathInterval = repathInterval ?? config.repathInterval;
         config.leashCells = leashCells ?? config.leashCells;
+        config.respawns = respawns ?? config.respawns;
+        config.respawnDelaySeconds = respawnDelaySeconds ?? config.respawnDelaySeconds;
         if (movementProfile != null)
         {
             config.movementProfile = movementProfile;

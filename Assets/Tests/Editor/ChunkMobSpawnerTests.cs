@@ -10,7 +10,8 @@ using VContainer;
 /// <summary>
 /// Tests for <see cref="ChunkMobSpawner"/> and <see cref="ChunkNetworkPrefabs"/>: a chunk's mobs spawned offline and on
 /// the host with their home chunk, despawned when the chunk unloads or its scope goes, spawn points without a prefab,
-/// and on a client each mob prefab registered once however many chunks list it, each copy arriving in its chunk.
+/// a killed mob recorded in its world's state and skipped as its chunk loads until its respawn delay has passed, and
+/// on a client each mob prefab registered once however many chunks list it, each copy arriving in its chunk.
 /// </summary>
 public class ChunkMobSpawnerTests
 {
@@ -22,9 +23,12 @@ public class ChunkMobSpawnerTests
     private readonly List<ChunkMobSpawner> spawners = new();
     private WorldDefinition world;
     private Worlds worlds;
+    private ManualClock gameClock;
+    private SessionSave sessionSave;
 
     /// <summary>
-    /// Creates the 2 x 2 chunk world at (2048, 0) the spawners belong to, and the registry of loaded worlds.
+    /// Creates the 2 x 2 chunk world at (2048, 0) the spawners belong to, the registry of loaded worlds, and an empty
+    /// session whose world clock the test moves.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -32,6 +36,9 @@ public class ChunkMobSpawnerTests
         world = WorldDefinition.Create("Spawner", Origin, new Vector2Int(2, 2), new[] { Vector2Int.zero, Chunk });
         created.Add(world);
         worlds = new Worlds();
+        gameClock = new ManualClock();
+        sessionSave = new SessionSave(gameClock);
+        sessionSave.StartNew();
     }
 
     /// <summary>
@@ -127,6 +134,66 @@ public class ChunkMobSpawnerTests
         worlds.RemoveChunk(loaded, Chunk);
         Assert.That(network.Despawned, Is.EquivalentTo(network.Spawned));
         Assert.That(spawner.Mobs, Is.Empty);
+    }
+
+    /// <summary>
+    /// A mob killed offline is recorded in its chunk's record of the world's state, by its spawn point's persistent id,
+    /// at the world clock's time; a mob whose spawn point has no id is not recorded.
+    /// </summary>
+    [Test]
+    public void AKilledMob_IsRecordedInItsChunk_ByItsSpawnPointsId_AtTheWorldClocksTime()
+    {
+        MobController template = CreateMobTemplate(networked: false);
+        template.gameObject.AddComponent<Health>();
+        MobSpawnPoint kept = CreateSpawnPoint("MobSpawn_A", template, LocalToWorld(70.5f, 10.5f), "weasel-a");
+        MobSpawnPoint unkept = CreateSpawnPoint("MobSpawn_B", template, LocalToWorld(100.5f, 40.5f));
+        ChunkMobSpawner spawner = CreateSpawner(new[] { kept, unkept }, new FakeNetworkObjects(), new WorldNavigation(new NavigationPagePool()));
+        spawner.PostStart();
+        gameClock.Advance(42f);
+
+        Health keptHealth = spawner.Mobs[0].GetComponent<Health>();
+        keptHealth.ApplyDamage(keptHealth.MaxHealth);
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("no PersistentId"));
+        Health unkeptHealth = spawner.Mobs[1].GetComponent<Health>();
+        unkeptHealth.ApplyDamage(unkeptHealth.MaxHealth);
+
+        WorldState state = sessionSave.WorldOf(world.WorldId);
+        Assert.That(state.TryGetChunk(Chunk, out ChunkState chunk), Is.True);
+        Assert.That(chunk.TryGetMobDeath("weasel-a", out double diedAt), Is.True);
+        Assert.That(diedAt, Is.EqualTo(42d));
+        Assert.That(chunk.DeadMobCount, Is.EqualTo(1), "A spawn point without an id keeps no death.");
+    }
+
+    /// <summary>
+    /// As its chunk loads, a spawn point whose mob was killed less than its respawn delay ago spawns nothing while the
+    /// others spawn; once the delay has passed it spawns again, and a mob that never respawns stays away.
+    /// </summary>
+    [Test]
+    public void AKilledMob_IsSkippedAsItsChunkLoads_UntilItsDelayHasPassed()
+    {
+        MobController weasel = CreateMobTemplate(networked: false, MobConfig.Create(respawnDelaySeconds: 100f));
+        MobController boss = CreateMobTemplate(networked: false, MobConfig.Create(respawns: false));
+        MobSpawnPoint killed = CreateSpawnPoint("MobSpawn_Killed", weasel, LocalToWorld(70.5f, 10.5f), "weasel-killed");
+        MobSpawnPoint alive = CreateSpawnPoint("MobSpawn_Alive", weasel, LocalToWorld(100.5f, 40.5f), "weasel-alive");
+        MobSpawnPoint bossPoint = CreateSpawnPoint("MobSpawn_Boss", boss, LocalToWorld(110.5f, 50.5f), "boss");
+        ChunkState chunk = sessionSave.WorldOf(world.WorldId).Chunk(Chunk);
+        chunk.RecordMobDeath("weasel-killed", 0d);
+        chunk.RecordMobDeath("boss", 0d);
+        gameClock.Time = 99f;
+
+        ChunkMobSpawner early = CreateSpawner(new[] { killed, alive, bossPoint }, new FakeNetworkObjects(), new WorldNavigation(new NavigationPagePool()));
+        early.PostStart();
+        Assert.That(early.Mobs.Count, Is.EqualTo(1), "Only the mob that never died spawns before the delay.");
+        Assert.That((Vector2)early.Mobs[0].transform.position, Is.EqualTo((Vector2)alive.transform.position));
+        early.Dispose();
+        spawners.Remove(early);
+
+        gameClock.Time = 100f;
+        ChunkMobSpawner late = CreateSpawner(new[] { killed, alive, bossPoint }, new FakeNetworkObjects(), new WorldNavigation(new NavigationPagePool()));
+        late.PostStart();
+        Assert.That(late.Mobs.Count, Is.EqualTo(2), "The killed weasel comes back once its delay has passed; the boss stays dead.");
+        Assert.That(chunk.TryGetMobDeath("weasel-killed", out _), Is.False, "A mob that came back is forgotten.");
+        Assert.That(chunk.TryGetMobDeath("boss", out _), Is.True);
     }
 
     /// <summary>
@@ -285,16 +352,18 @@ public class ChunkMobSpawnerTests
             SceneManager.GetActiveScene(),
             network,
             prefabs ?? new ChunkNetworkPrefabs(network),
-            worlds);
+            worlds,
+            sessionSave.WorldOf(world.WorldId),
+            sessionSave);
         spawners.Add(spawner);
         return spawner;
     }
 
     /// <summary>
     /// A mob stand-in in the scene (a brain and the components it requires, and a <see cref="NetworkObject"/> when
-    /// <paramref name="networked"/>) that spawn points use as their prefab.
+    /// <paramref name="networked"/>) that spawn points use as their prefab, with <paramref name="config"/> when given.
     /// </summary>
-    private MobController CreateMobTemplate(bool networked)
+    private MobController CreateMobTemplate(bool networked, MobConfig config = null)
     {
         GameObject template = new("MobTemplate");
         created.Add(template);
@@ -305,14 +374,23 @@ public class ChunkMobSpawnerTests
             template.AddComponent<NetworkObject>();
         }
 
-        return template.AddComponent<MobController>();
+        MobController mob = template.AddComponent<MobController>();
+        if (config != null)
+        {
+            created.Add(config);
+            SerializedObject serialized = new(mob);
+            serialized.FindProperty("config").objectReferenceValue = config;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        return mob;
     }
 
     /// <summary>
     /// A tracked spawn point named <paramref name="name"/> at <paramref name="position"/> that spawns
-    /// <paramref name="prefab"/> (null for none).
+    /// <paramref name="prefab"/> (null for none), with the persistent id <paramref name="persistentId"/> when given.
     /// </summary>
-    private MobSpawnPoint CreateSpawnPoint(string name, MobController prefab, Vector2 position)
+    private MobSpawnPoint CreateSpawnPoint(string name, MobController prefab, Vector2 position, string persistentId = null)
     {
         GameObject spawnObject = new(name);
         created.Add(spawnObject);
@@ -321,6 +399,13 @@ public class ChunkMobSpawnerTests
         SerializedObject serialized = new(spawnPoint);
         serialized.FindProperty("mobPrefab").objectReferenceValue = prefab;
         serialized.ApplyModifiedPropertiesWithoutUndo();
+        if (persistentId != null)
+        {
+            SerializedObject id = new(spawnObject.AddComponent<PersistentId>());
+            id.FindProperty("id").stringValue = persistentId;
+            id.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         return spawnPoint;
     }
 

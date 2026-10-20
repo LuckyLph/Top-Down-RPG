@@ -4,9 +4,11 @@ using UnityEngine.UI;
 using VContainer;
 
 /// <summary>
-/// The main menu's buttons: new game, continue from the save, host, join an address, options and quit. Starting
-/// anything is refused while a transition runs or a join is in progress, and a status line reports save and
-/// connection problems.
+/// The main menu's buttons: new game, continue from the save, host, join an address, options and quit. Every session
+/// runs in seamless worlds (Docs/WorldStreaming.md): New Game starts the session's saved state over and enters the
+/// starting world's entry; Continue, and Host Game when there is a save, continue it, the local player starting at its
+/// saved place (<see cref="PlayerStarts"/>). Starting anything is refused while a transition runs or a join is in
+/// progress, and a status line reports save and connection problems.
 /// </summary>
 [DisallowMultipleComponent]
 public class MainMenuController : MonoBehaviour
@@ -21,6 +23,8 @@ public class MainMenuController : MonoBehaviour
     private GameFlow gameFlow;
     private NetworkSession session;
     private GameSave gameSave;
+    private SessionSave sessionSave;
+    private PlayerStarts playerStarts;
     private OptionsMenuController options;
     private UISelection selection;
     private bool isJoining;
@@ -30,14 +34,24 @@ public class MainMenuController : MonoBehaviour
     internal GameObject ButtonsPanel => buttonsPanel;
 
     /// <summary>
-    /// Receives the scene flow, network session, save, options screen and UI selection services.
+    /// Receives the scene flow, network session, save, the session's saved state and where players start, the options
+    /// screen and the UI selection services.
     /// </summary>
     [Inject]
-    public void Construct(GameFlow flow, NetworkSession networkSession, GameSave save, OptionsMenuController optionsMenu, UISelection uiSelection)
+    public void Construct(
+        GameFlow flow,
+        NetworkSession networkSession,
+        GameSave save,
+        SessionSave savedSession,
+        PlayerStarts starts,
+        OptionsMenuController optionsMenu,
+        UISelection uiSelection)
     {
         gameFlow = flow;
         session = networkSession;
         gameSave = save;
+        sessionSave = savedSession;
+        playerStarts = starts;
         options = optionsMenu;
         selection = uiSelection;
     }
@@ -85,7 +99,8 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// New game button: starts an offline game in the starting area.
+    /// New game button: starts an offline game over, in the starting world at its entry. Its first save replaces the
+    /// save file.
     /// </summary>
     public void StartNewGame()
     {
@@ -94,11 +109,13 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        _ = gameFlow.StartNewGameAsync();
+        sessionSave.StartNew();
+        StartLocalPlayerSession("There is no world to start.");
     }
 
     /// <summary>
-    /// Continue button: starts an offline game in the saved area and spawn, or reports that there is no save.
+    /// Continue button: continues the save offline, the local player starting at its saved place, or reports that there
+    /// is no save.
     /// </summary>
     public void ContinueGame()
     {
@@ -107,19 +124,20 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        if (!gameSave.TryLoadArea(out SceneDefinition area, out string spawnId))
+        if (!gameSave.TryLoad(out GameSaveData data))
         {
             SetStatus("No saved game to continue.");
             return;
         }
 
-        _ = gameFlow.StartNewGameAsync(area, spawnId);
+        sessionSave.StartFrom(data);
+        StartLocalPlayerSession("There is no world to continue in.");
     }
 
     /// <summary>
-    /// Host button: starts hosting and then a game in the starting world at its entry (hosting from a save comes with
-    /// world saves, Docs/WorldStreaming.md's Phase 8). Reports and logs a failure to start the host, or a catalogue
-    /// without a starting world.
+    /// Host button: starts hosting, then continues the save when there is one, or starts a new game, the host's player
+    /// starting at its saved place or the starting world's entry. Reports and logs a failure to start the host, or a
+    /// catalogue without a starting world.
     /// </summary>
     public void HostGame()
     {
@@ -128,8 +146,7 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        WorldDefinition world = gameFlow.Scenes.StartingWorld;
-        if (world == null)
+        if (gameFlow.Scenes.StartingWorld == null)
         {
             SetStatus("There is no world to host.");
             Debug.LogError($"{nameof(GameScenes)} has no starting world; hosting needs one.", this);
@@ -143,7 +160,31 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        _ = gameFlow.StartWorldGameAsync(world, gameFlow.Scenes.StartingWorldEntry);
+        if (gameSave.TryLoad(out GameSaveData data))
+        {
+            sessionSave.StartFrom(data);
+        }
+        else
+        {
+            sessionSave.StartNew();
+        }
+
+        StartLocalPlayerSession("There is no world to host.");
+    }
+
+    /// <summary>
+    /// Starts a world session with the local player where <see cref="PlayerStarts"/> puts this install's player id, or
+    /// shows <paramref name="noWorldStatus"/> when there is nowhere to start.
+    /// </summary>
+    private void StartLocalPlayerSession(string noWorldStatus)
+    {
+        if (!playerStarts.TryGetStart(session.LocalPlayerId, out WorldDefinition world, out Vector2 position))
+        {
+            SetStatus(noWorldStatus);
+            return;
+        }
+
+        _ = gameFlow.StartWorldGameAsync(world, position);
     }
 
     /// <summary>
@@ -187,6 +228,7 @@ public class MainMenuController : MonoBehaviour
         if (connected)
         {
             SetStatus("Connected. Joining the host's world...");
+            sessionSave.StartNew();
             _ = gameFlow.StartJoinedGameAsync();
         }
         else
@@ -250,12 +292,12 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// True when the flow, session and save were injected; otherwise logs an error pointing at loading the menu
-    /// through the Main scene.
+    /// True when the flow, session, save, session state and player starts were injected; otherwise logs an error
+    /// pointing at loading the menu through the Main scene.
     /// </summary>
     private bool EnsureInjected()
     {
-        if (gameFlow != null && session != null && gameSave != null)
+        if (gameFlow != null && session != null && gameSave != null && sessionSave != null && playerStarts != null)
         {
             return true;
         }

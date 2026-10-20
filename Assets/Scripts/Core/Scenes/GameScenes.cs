@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// The game's scene catalogue: the main menu, the gameplay scene, the starting area and spawn id, the other areas, the
-/// seamless worlds, and the starting world and entry where hosted games start and where a player the host does not
-/// know arrives. Only areas listed here (the starting one included) can be saved, and only listed worlds travelled to.
+/// seamless worlds, and the starting world and entry where a new game starts and where a player the session does not
+/// know arrives. Only listed worlds are travelled to and restored from a save.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Scenes/Game Scenes", fileName = "GameScenes")]
 public class GameScenes : ScriptableObject
@@ -62,58 +62,29 @@ public class GameScenes : ScriptableObject
     }
 
     /// <summary>
-    /// The starting area or listed area whose scene is at <paramref name="scenePath"/>, or null when none is.
+    /// The starting area or listed area whose scene is at <paramref name="scenePath"/> (the starting area first), or
+    /// null for an empty path or when none is.
     /// </summary>
     public SceneDefinition FindArea(string scenePath)
     {
-        return FindArea(scenePath, false);
-    }
-
-    /// <summary>
-    /// The starting area or listed area whose scene asset has <paramref name="sceneGuid"/>, or null when none has.
-    /// </summary>
-    public SceneDefinition FindAreaByGuid(string sceneGuid)
-    {
-        return FindArea(sceneGuid, true);
-    }
-
-    /// <summary>
-    /// Searches the starting area, then the area list, for a definition matching <paramref name="key"/> as a GUID or
-    /// a path; null for an empty key or no match.
-    /// </summary>
-    private SceneDefinition FindArea(string key, bool byGuid)
-    {
-        if (string.IsNullOrEmpty(key))
+        if (string.IsNullOrEmpty(scenePath))
         {
             return null;
         }
 
-        if (Matches(startingArea, key, byGuid))
+        if (startingArea != null && startingArea.Matches(scenePath))
         {
             return startingArea;
         }
 
         for (int i = 0; i < areas.Length; i++)
         {
-            if (Matches(areas[i], key, byGuid))
+            if (areas[i] != null && areas[i].Matches(scenePath))
             {
                 return areas[i];
             }
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Whether a non-null <paramref name="definition"/> has <paramref name="key"/> as its scene GUID or path.
-    /// </summary>
-    private static bool Matches(SceneDefinition definition, string key, bool byGuid)
-    {
-        if (definition == null)
-        {
-            return false;
-        }
-
-        return byGuid ? definition.SceneGuid == key : definition.Matches(key);
     }
 }

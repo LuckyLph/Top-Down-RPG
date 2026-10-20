@@ -273,16 +273,17 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 ### Persistence
 
 - **World state.** `WorldState` (host or offline only) holds a record per chunk of a world, keyed by persistent id:
-  - killed mobs and the time they died, in the host's game clock;
+  - killed mobs and the time they died, on the world clock: the game time played on the save, which the next session continues;
   - opened containers, later;
   - runtime terrain edits.
 
-  The states of every world visited stay in memory for the session, loaded or not. A chunk reads its record when it loads and writes changes as they happen.
+  The states of every world visited stay in memory for the session, loaded or not, in the Main scope's `SessionSave`. A chunk reads its record when it loads and writes changes as they happen.
 - **Save format.** `GameSaveData` version 2 holds:
-  - per player id: world id, position, discovered waystones;
+  - the world clock's time;
+  - per player id: world id, position, discovered waystones (written empty until Phase 9);
   - per world id visited: its world state.
 
-  A version 1 save is ignored with a warning, as other versions are today.
+  A version 1 save is ignored with a warning, as other versions are.
 - **When the game saves.** When any player enters a world, on a timer (`autosaveInterval`), and when the session ends: the menu, quit, or the host leaving. It still writes only where `IGameAuthority.IsAuthoritative`. A client never saves.
 - **Mob respawn.** A killed mob comes back once `respawnDelay` of game time has passed and its chunk loads again. A loaded chunk does not spawn it in front of a player. The delay is a `MobConfig` value, so bosses can stay dead.
 
@@ -543,7 +544,7 @@ The exits have no art: Testlands' is on the road far east of the start (cells (1
 
 Two players, one world:
 
-1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2. Press Play, click Host Game in the main editor, then Join Game in Player 2. Both start at Testlands' `start` and see each other. The host's Console warns once that the client shares its player id (the virtual player reads the same `settings.json`); that is expected.
+1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2. Press Play, click Host Game in the main editor, then Join Game in Player 2. Both start at Testlands' `start` (with no save; see Phase 8 for a saved game) and see each other. Since Phase 8 each virtual player has its own `settings.Player2.json`, so the host does not warn about a shared player id.
 2. On Player 2 the start chunk's two Weasels appear (both at least 23 cells from the start). Fight one on Player 2: its health, hits and death show on both machines.
 3. Walk the host north-west into the meadow (chunk (0, 1)) and Player 2 east along the road past x 100 (chunk (1, 0)). On each machine the ground draws ahead of the player with no gap or visible hitch, and the next chunk's Weasels appear as it loads. In Player 2's Hierarchy only the chunks around Player 2 are loaded; in the host's, the chunks around both players.
 4. Walk Player 2 back to the start: the chunk it left unloads on Player 2 (it released it, the host hid its Weasels first), and walking back into a chunk shows its Weasels again. No "destroyed a spawned object" or "despawn" error appears on Player 2.
@@ -564,8 +565,39 @@ Four players, joining and leaving:
 
 ### Phase 8: persistence
 
-- [ ] `WorldState`, mob deaths and respawn delay, and terrain edits per chunk.
-- [ ] Save version 2 keyed by player id and world id, autosave, and Continue into each player's saved world and position.
+- [x] `WorldState`, mob deaths and respawn delay, and terrain edits per chunk.
+- [x] Save version 2 keyed by player id and world id, autosave, and Continue into each player's saved world and position.
+
+Notes:
+
+- **Decisions taken before starting.**
+  - Offline New Game and Continue moved to worlds in this phase, since the save knows only worlds: New Game starts Testlands' `start` offline and Continue the local player's saved place. Areas stay for opening an area scene in the editor and for their tests until Phase 9, and are never saved. The area save went with them: `GameSave.SaveArea`, `TryLoadArea`, `GetSavedOrStartingArea`, `GameFlow.AreaLoading`, `AreaTransition` and `GameScenes.FindAreaByGuid`.
+  - Each player's discovered waystones are in the save now, as an empty list, so Phase 9 needs no format bump.
+  - Death times are on a world clock that persists, not converted to the delay left: the save holds the game time played on it, and `SessionSave.Time` is that time plus the game time (`IClock`) since the session started. A time recorded in one session means the same in the next, and the delay is read from the mob's `MobConfig` as its chunk loads, so retuning a delay also applies to mobs already dead.
+  - Multiplayer Play Mode's virtual players are kept apart as separate installs: in the editor, an instance launched with `-name Player2` to `-name Player4` (the package FAQ's way to tell its players apart) keeps its own `save.Player2.json` and `settings.Player2.json` (`InstanceFiles`), so its own player id, key bindings and offline save. The host's new id for a duplicate stays, for a copied `settings.json`.
+- **Where the state lives.** `SessionSave` (Core, Main scope) holds the running session's state in memory: the world clock, each player's place by player id, and a `WorldState` per world visited, each a `ChunkState` per chunk. The menu starts it (`StartNew` for New Game, `StartFrom(data)` for Continue and Host Game with a save) before the session's Gameplay scene loads, and it outlives that scene, so the offline party-wipe restart, which reloads Gameplay, keeps the worlds' states. A world's scope registers its `WorldState` from it, and its chunks' spawner and terrain sync take it from there. A joined client empties it and never reads it: only the machine with authority spawns mobs, restores edits and saves.
+- **Mobs.** `ChunkMobSpawner` follows each of its mobs' `Health.Died` (offline or on the host) and records the death by its spawn point's `PersistentId` at the world clock's time; `ShouldSpawn` skips a spawn point whose mob `StaysDead` (`MobConfig.Respawns`, off for bosses, and `RespawnDelaySeconds`, 300 for the Weasel), and a death whose delay has passed is forgotten as the mob spawns again. A mob comes back only as its chunk loads, which happens when the chunk enters a streamed player's interest rectangle (the view plus the 12-cell load margin, so out of sight) or behind a fade (a session's start, a trip, a join), so no further check keeps it out of view. A despawn as the chunk unloads is no death. A spawn point without an id (which validation refuses in a world) comes back at every load, with a warning when its mob dies.
+- **Terrain edits.** `ChunkTerrainSync` now runs offline too: as its chunk loads it restores the chunk's edits (`AreaTerrain.RestoreEdits`, which writes and records them as the terrain's own, so the host's sync object, spawned after, sends them to clients like any edit), then records every edit made there into the chunk's record until its scope goes. Saved edits name the chunk terrain's layers by index, so re-authoring a chunk must only append layers; an edit of a layer that is gone is skipped with a warning.
+- **Players' places.** `GameSaveRecorder` (Gameplay scope) records each registered player's place under its player id as it saves: where it stands, or, during a trip, the entry it is going to until it gets there, since the authority puts a traveller in the target world before it moves. It learns each player's id as the player registers (its owner's `NetworkSession.PlayerIdOf` on the host, this install's offline), so a client leaving still has its place recorded as its player despawns, for its next join. A place is checked against its world's chunks when it is used (`PlayerStarts`): a world no longer listed, or a position on none of its chunks, starts the player at the starting entry with a warning.
+- **When it saves.** Only where `IGameAuthority.IsAuthoritative` and a world session runs: once a frame at most after any player enters a world (`PlayerWorlds.Changed`), every `GameplaySettings.AutosaveIntervalSeconds` (60) of game time, and at once as the session ends (`GameFlow.WorldSessionEnding`, raised while the players still stand in their worlds, before anything unloads: the menu, the host leaving, a new game or a restart) and on `Application.quitting` (leaving Play Mode in the editor). Area sessions never save, so booting the editor into an area scene leaves the world save alone; booting into a world scene starts a new game there whose first save replaces the save file, as booting into an area did before.
+- **Joining at a saved place.** The host now loads a joining player's start before spawning it: `GameplayPlayers` awaits `IWorldSession.PrepareAsync(world, position)`, which streams the place as an interest of its own until `IsSettled` there (at once when it already is: a start in a world a player is in), then spawns the player if its client is still joined. A chunk that fails to load counts as settled, so a join never hangs on one.
+- **Multiplayer.** Only the host records deaths, edits and places, and only it writes the save; a client saves nothing (it never did: `IsAuthoritative` is false while following a host). A client in another world is simulated by the host, which records that world's state as it does its own. A chunk a client holds is never unloaded by the host (Phase 7), so a death or an edit there is recorded once; when the host's own simulation unloads a chunk nobody holds and loads it again, it restores the chunk's state before the mobs and the sync object spawn, so a client that holds it afterwards receives it as a late joiner does.
+- **Compatibility.** Neither the protocol nor the join payload changed (the player id has been sent since Phase 7), so the build version stays 1.3. A version 1 save is ignored with a warning, so Continue is off until the first world save.
+- **Assets.** `Mob_Default` and `Mob_StressTest` were saved with the respawn fields, and `GameplaySettings` with the autosave interval; nothing else in them changed.
+- **Tests:** `WorldStateTests` and `PlayerStartsTests` (new), `GameSaveTests` (rewritten for version 2, the world clock and `InstanceFiles`), and new cases in `ChunkMobSpawnerTests` and `AreaTerrainTests` (EditMode); `WorldPersistencePlayModeTests` (new), `GameSavePlayModeTests` (rewritten for worlds: New Game, Continue, Host Game, a known player joining), and `NetworkSessionPlayModeTests`' host now saving (PlayMode). That a client writes no save stays covered by `NetworkSessionPlayModeTests`' join tests, which count the writes.
+
+#### Checking with Multiplayer Play Mode
+
+Start clean: in `%USERPROFILE%/AppData/LocalLow/<company>/<product>/`, delete `save.json` and any `save.Player2.json` to `save.Player4.json` (keep `settings.json`). Keep the main editor's Console in view: every step should log no error.
+
+1. Activate Player 2 and Player 3, press Play, click Host Game in the main editor and Join Game in Player 2. The host's Console logs no warning about a shared player id (Player 2 made its own `settings.Player2.json`); if it does, the virtual player was not launched with `-name Player2`, and its saved place cannot be kept apart from the host's.
+2. On the host, kill a Weasel of Testlands' start chunk. Walk Player 2 east along the road onto Testlands' exit to the Sandbox, a few cells past `fromTestlands`, and kill a Weasel there.
+3. Leave the game on Player 2 (in-game menu, Leave game), then click Join Game again: Player 2 arrives in the Sandbox where it stood, not at Testlands' `start`. The main editor's Hierarchy shows the Sandbox loading before Player 2's player appears.
+4. Join Game in Player 3: it starts at Testlands' `start`, a player the save does not know.
+5. Leave the game on the host: every client returns to the menu. Click Host Game again: the host stands where it left and its Weasel is still dead. Join Player 2 and Player 3: each lands where it was when the host left.
+6. Walk the host two chunks away from Testlands' start and back: the dead Weasel is still gone (its 300 s have not passed). Wait five minutes of play, walk away and back again: it is back.
+7. Stop Play Mode in the main editor while playing, press Play and click Continue (offline): the host's player stands where it was when Play Mode stopped.
+8. On Player 2, from its menu, click New Game, play a moment and return to the menu: it writes `save.Player2.json`, and the main editor's `save.json` keeps its modified time. While joined, a virtual player writes neither.
 
 ### Phase 9: death, respawn and cleanup
 

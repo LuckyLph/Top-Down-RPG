@@ -32,8 +32,8 @@ public class NetworkSessionPlayModeTests
     }
 
     /// <summary>
-    /// Hosting from the main menu starts a session in the starting world at its entry, writes no save (worlds are not
-    /// saved yet), and shuts down when the game returns to the menu.
+    /// Hosting from the main menu without a save starts a session in the starting world at its entry, saves the host's
+    /// place as its player enters, and shuts down when the game returns to the menu.
     /// </summary>
     [UnityTest]
     public IEnumerator HostFromMenu_EntersTheStartingWorld_AndReturningToTheMenuEndsTheSession()
@@ -54,7 +54,11 @@ public class NetworkSessionPlayModeTests
         Assert.That((Vector2)local.Transform.position, Is.EqualTo(world.ToWorld(world.FindEntry(gameFlow.Scenes.StartingWorldEntry).Position)));
         Assert.That(local.Controller.GetComponent<PlayerWorldSync>().State.WorldId, Is.EqualTo(world.WorldId), "The host's player carries its world.");
         Assert.That(session.IsActive, Is.True, "Entering the game must keep the session running.");
-        Assert.That(saveStore.WriteCount, Is.Zero, "Worlds are not saved yet.");
+        yield return SceneBootTestHelper.WaitUntil(() => saveStore.WriteCount > 0, "the host to save as its player enters the world");
+        Assert.That(GameSaveData.TryParse(saveStore.Contents, out GameSaveData data), Is.True);
+        Assert.That(data.Players, Has.Count.EqualTo(1));
+        Assert.That(data.Players[0].PlayerId, Is.EqualTo(session.LocalPlayerId));
+        Assert.That(data.Players[0].WorldId, Is.EqualTo(world.WorldId));
 
         gameFlow.ShowMainMenuAsync();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
@@ -169,6 +173,7 @@ public class NetworkSessionPlayModeTests
         Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.IsInGame, Is.True);
+        yield return SceneBootTestHelper.WaitUntil(() => saveStore.WriteCount > 0, "the offline game to save as its player enters the world");
         Assert.That(saveStore.WriteCount, Is.EqualTo(1), "An offline game after the lost session saves as usual.");
     }
 

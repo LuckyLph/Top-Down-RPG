@@ -1,24 +1,227 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>The saved game as written to disk: a format version, the area the party was last in and the spawn point it entered by.</summary>
+/// <summary>
+/// The saved game as written to disk (Docs/WorldStreaming.md: Persistence): a format version, the game time played on
+/// the save, each player's place by player id (its world, its position and the waystones it discovered), and the state
+/// of every world visited, a record per chunk of its killed mobs and runtime terrain edits.
+/// </summary>
 [Serializable]
 public sealed class GameSaveData
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
+
+    /// <summary>One player's place: the world it is in, its position there and the waystones it has discovered.</summary>
+    [Serializable]
+    public sealed class Player
+    {
+        [SerializeField] private string playerId;
+        [SerializeField] private string worldId;
+        [SerializeField] private Vector2 position;
+        [SerializeField] private List<Waystone> waystones = new();
+
+        /// <summary>
+        /// Creates an empty record for the serializer.
+        /// </summary>
+        public Player()
+        {
+        }
+
+        /// <summary>
+        /// Creates the place of <paramref name="playerId"/>: <paramref name="position"/> in the world
+        /// <paramref name="worldId"/>, with the discovered <paramref name="waystones"/> (none when null).
+        /// </summary>
+        public Player(string playerId, string worldId, Vector2 position, IEnumerable<Waystone> waystones = null)
+        {
+            this.playerId = playerId;
+            this.worldId = worldId;
+            this.position = position;
+            if (waystones != null)
+            {
+                this.waystones.AddRange(waystones);
+            }
+        }
+
+        public string PlayerId => playerId;
+        public string WorldId => worldId;
+        public Vector2 Position => position;
+        public IReadOnlyList<Waystone> Waystones => waystones;
+    }
+
+    /// <summary>A waystone a player discovered: a world's entry, by world id and entry name.</summary>
+    [Serializable]
+    public sealed class Waystone
+    {
+        [SerializeField] private string worldId;
+        [SerializeField] private string entry;
+
+        /// <summary>
+        /// Creates an empty record for the serializer.
+        /// </summary>
+        public Waystone()
+        {
+        }
+
+        /// <summary>
+        /// Creates the waystone <paramref name="entry"/> of the world <paramref name="worldId"/>.
+        /// </summary>
+        public Waystone(string worldId, string entry)
+        {
+            this.worldId = worldId;
+            this.entry = entry;
+        }
+
+        public string WorldId => worldId;
+        public string Entry => entry;
+    }
+
+    /// <summary>The state of one world visited: a record per chunk that has one.</summary>
+    [Serializable]
+    public sealed class World
+    {
+        [SerializeField] private string worldId;
+        [SerializeField] private List<Chunk> chunks = new();
+
+        /// <summary>
+        /// Creates an empty record for the serializer.
+        /// </summary>
+        public World()
+        {
+        }
+
+        /// <summary>
+        /// Creates the state of the world <paramref name="worldId"/> with <paramref name="chunks"/>.
+        /// </summary>
+        public World(string worldId, IEnumerable<Chunk> chunks)
+        {
+            this.worldId = worldId;
+            this.chunks.AddRange(chunks);
+        }
+
+        public string WorldId => worldId;
+        public IReadOnlyList<Chunk> Chunks => chunks;
+    }
+
+    /// <summary>One chunk's record: its killed mobs, by spawn point id, and its runtime terrain edits.</summary>
+    [Serializable]
+    public sealed class Chunk
+    {
+        [SerializeField] private Vector2Int coords;
+        [SerializeField] private List<MobDeath> deadMobs = new();
+        [SerializeField] private List<CellEdit> terrainEdits = new();
+
+        /// <summary>
+        /// Creates an empty record for the serializer.
+        /// </summary>
+        public Chunk()
+        {
+        }
+
+        /// <summary>
+        /// Creates the record of the chunk at <paramref name="coords"/>.
+        /// </summary>
+        public Chunk(Vector2Int coords, IEnumerable<MobDeath> deadMobs, IEnumerable<CellEdit> terrainEdits)
+        {
+            this.coords = coords;
+            this.deadMobs.AddRange(deadMobs);
+            this.terrainEdits.AddRange(terrainEdits);
+        }
+
+        public Vector2Int Coords => coords;
+        public IReadOnlyList<MobDeath> DeadMobs => deadMobs;
+        public IReadOnlyList<CellEdit> TerrainEdits => terrainEdits;
+    }
+
+    /// <summary>A killed mob: its spawn point's persistent id and the game time it died at.</summary>
+    [Serializable]
+    public sealed class MobDeath
+    {
+        [SerializeField] private string id;
+        [SerializeField] private double diedAt;
+
+        /// <summary>
+        /// Creates an empty record for the serializer.
+        /// </summary>
+        public MobDeath()
+        {
+        }
+
+        /// <summary>
+        /// Creates the death of the mob of spawn point <paramref name="id"/> at game time <paramref name="diedAt"/>.
+        /// </summary>
+        public MobDeath(string id, double diedAt)
+        {
+            this.id = id;
+            this.diedAt = diedAt;
+        }
+
+        public string Id => id;
+        public double DiedAt => diedAt;
+    }
+
+    /// <summary>One cell of a runtime terrain edit: the chunk terrain's layer index, the cell, and filled or emptied.</summary>
+    [Serializable]
+    public struct CellEdit : IEquatable<CellEdit>
+    {
+        [SerializeField] private int layer;
+        [SerializeField] private Vector2Int cell;
+        [SerializeField] private bool filled;
+
+        /// <summary>
+        /// Creates the edit of <paramref name="cell"/> on layer <paramref name="layer"/>.
+        /// </summary>
+        public CellEdit(int layer, Vector2Int cell, bool filled)
+        {
+            this.layer = layer;
+            this.cell = cell;
+            this.filled = filled;
+        }
+
+        public int Layer => layer;
+        public Vector2Int Cell => cell;
+        public bool Filled => filled;
+
+        /// <summary>
+        /// Value equality on layer, cell and filled flag.
+        /// </summary>
+        public bool Equals(CellEdit other)
+        {
+            return layer == other.layer && cell == other.cell && filled == other.filled;
+        }
+
+        /// <summary>
+        /// True when <paramref name="obj"/> is a <see cref="CellEdit"/> with the same layer, cell and filled flag.
+        /// </summary>
+        public override bool Equals(object obj)
+        {
+            return obj is CellEdit other && Equals(other);
+        }
+
+        /// <summary>
+        /// Hash of the layer, cell and filled flag, consistent with <see cref="Equals(CellEdit)"/>.
+        /// </summary>
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(layer, cell, filled);
+        }
+    }
 
     [SerializeField] private int version;
-    [SerializeField] private string areaSceneGuid;
-    [SerializeField] private string spawnId;
+    [SerializeField] private double time;
+    [SerializeField] private List<Player> players = new();
+    [SerializeField] private List<World> worlds = new();
 
     /// <summary>
-    /// Creates save data in the current format for <paramref name="areaSceneGuid"/> and <paramref name="spawnId"/>.
+    /// Creates save data in the current format: <paramref name="time"/> of game time played, and the given players'
+    /// places and worlds' states.
     /// </summary>
-    public GameSaveData(string areaSceneGuid, string spawnId)
+    public GameSaveData(double time, IEnumerable<Player> players, IEnumerable<World> worlds)
     {
         version = CurrentVersion;
-        this.areaSceneGuid = areaSceneGuid;
-        this.spawnId = spawnId;
+        this.time = time;
+        this.players.AddRange(players);
+        this.worlds.AddRange(worlds);
     }
 
     /// <summary>
@@ -29,8 +232,9 @@ public sealed class GameSaveData
     }
 
     public int Version => version;
-    public string AreaSceneGuid => areaSceneGuid;
-    public string SpawnId => spawnId;
+    public double Time => time;
+    public IReadOnlyList<Player> Players => players;
+    public IReadOnlyList<World> Worlds => worlds;
 
     /// <summary>
     /// The data as pretty-printed JSON.

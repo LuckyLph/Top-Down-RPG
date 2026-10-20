@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,11 +8,13 @@ using VContainer.Unity;
 
 /// <summary>
 /// A chunk scope's entry point for a chunk with an <see cref="AreaTerrain"/>: per-chunk terrain sync
-/// (Docs/WorldStreaming.md: Networking). In a session it registers the terrain's sync prefab for this chunk with
-/// <see cref="ChunkNetworkPrefabs"/>, so a client's copy arrives injected with this chunk's terrain. On the host it then
-/// applies the chunk's persisted edits, spawns the <see cref="NetworkAreaTerrain"/> into the chunk's scene as an object
-/// of this chunk, so a client receives the edits once it holds the chunk, as a late joiner does, and despawns it before
-/// the chunk unloads. Offline nothing is spawned: the edits only need to reach this machine.
+/// (Docs/WorldStreaming.md: Networking) and persistence (Persistence). Offline and on the host it restores the chunk's
+/// edits from its record in the world's <see cref="WorldState"/> as the chunk loads and records every edit made after
+/// that. In a session it registers the terrain's sync prefab for this chunk with <see cref="ChunkNetworkPrefabs"/>, so a
+/// client's copy arrives injected with this chunk's terrain; the host then spawns the <see cref="NetworkAreaTerrain"/>
+/// into the chunk's scene as an object of this chunk, after restoring the edits, so a client receives them once it holds
+/// the chunk, as a late joiner does, and despawns it before the chunk unloads. Offline nothing is spawned: the edits only
+/// need to reach this machine.
 /// </summary>
 public sealed class ChunkTerrainSync : IStartable, IDisposable
 {
@@ -22,13 +25,16 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     private readonly INetworkObjectSpawner networkObjects;
     private readonly ChunkNetworkPrefabs chunkPrefabs;
     private readonly Worlds worlds;
+    private readonly WorldState worldState;
     private NetworkObject registeredPrefab;
     private NetworkObject spawned;
     private bool following;
+    private bool recording;
 
     /// <summary>
     /// Creates the sync of <paramref name="chunkTerrain"/> in the chunk <paramref name="chunk"/>'s
-    /// <paramref name="chunkScene"/>, instantiating through the chunk's <paramref name="chunkResolver"/>.
+    /// <paramref name="chunkScene"/>, instantiating through the chunk's <paramref name="chunkResolver"/> and keeping the
+    /// chunk's edits in <paramref name="state"/>.
     /// </summary>
     public ChunkTerrainSync(
         IObjectResolver chunkResolver,
@@ -37,7 +43,8 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
         Scene chunkScene,
         INetworkObjectSpawner networkObjectSpawner,
         ChunkNetworkPrefabs networkPrefabs,
-        Worlds loadedWorlds)
+        Worlds loadedWorlds,
+        WorldState state)
     {
         resolver = chunkResolver;
         identity = chunk;
@@ -46,6 +53,7 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
         networkObjects = networkObjectSpawner;
         chunkPrefabs = networkPrefabs;
         worlds = loadedWorlds;
+        worldState = state;
     }
 
     /// <summary>
@@ -69,13 +77,20 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Host only: applies the chunk's persisted edits, then instantiates the sync prefab through the chunk's scope, moves
-    /// it into the chunk's scene and network-spawns it as an object of this chunk, and despawns it when the chunk starts
-    /// unloading. Logs an error when the terrain has no sync prefab.
+    /// Offline and on the host: restores the chunk's persisted edits and records new ones. On the host it then
+    /// instantiates the sync prefab through the chunk's scope, moves it into the chunk's scene and network-spawns it as
+    /// an object of this chunk, and despawns it when the chunk starts unloading; it logs an error when the terrain has
+    /// no sync prefab.
     /// </summary>
     public void Start()
     {
-        if (!networkObjects.IsActive || !networkObjects.IsServer)
+        if (networkObjects.IsActive && !networkObjects.IsServer)
+        {
+            return;
+        }
+
+        ApplyPersistedEdits();
+        if (!networkObjects.IsActive)
         {
             return;
         }
@@ -86,7 +101,6 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
             return;
         }
 
-        ApplyPersistedEdits();
         spawned = resolver.Instantiate(terrain.SyncPrefab);
         spawned.name = terrain.SyncPrefab.name;
         SceneManager.MoveGameObjectToScene(spawned.gameObject, scene);
@@ -96,10 +110,17 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Stops following the chunk's unloading, despawns the sync object if it is still there and unregisters the prefab.
+    /// Stops recording edits and following the chunk's unloading, despawns the sync object if it is still there and
+    /// unregisters the prefab.
     /// </summary>
     public void Dispose()
     {
+        if (recording)
+        {
+            terrain.EditRecorded -= HandleEditRecorded;
+            recording = false;
+        }
+
         if (following)
         {
             worlds.ChunkUnloading -= HandleChunkUnloading;
@@ -115,17 +136,40 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Where the chunk's persisted terrain edits are written onto its tilemaps before the sync object spawns, so it
-    /// starts with them: none until the world state keeps them (Docs/WorldStreaming.md: Persistence, Phase 8).
+    /// Writes the chunk's persisted terrain edits onto its tilemaps, recorded as the terrain's edits so they replicate,
+    /// then starts recording every new edit in the chunk's record.
     /// </summary>
     private void ApplyPersistedEdits()
     {
+        if (worldState.TryGetChunk(identity.Coords, out ChunkState chunk) && chunk.TerrainEdits.Count > 0)
+        {
+            IReadOnlyList<GameSaveData.CellEdit> saved = chunk.TerrainEdits;
+            List<TerrainEdit> restored = new(saved.Count);
+            for (int i = 0; i < saved.Count; i++)
+            {
+                restored.Add(new TerrainEdit(saved[i].Layer, (Vector3Int)saved[i].Cell, saved[i].Filled));
+            }
+
+            terrain.RestoreEdits(restored);
+        }
+
+        terrain.EditRecorded += HandleEditRecorded;
+        recording = true;
+    }
+
+    /// <summary>
+    /// Records the terrain's edit at <paramref name="index"/> in the chunk's record.
+    /// </summary>
+    private void HandleEditRecorded(int index)
+    {
+        TerrainEdit edit = terrain.Edits[index];
+        worldState.Chunk(identity.Coords).RecordTerrainEdit(edit.Layer, (Vector2Int)edit.Cell, edit.Filled);
     }
 
     /// <summary>
     /// Despawns the sync object before this chunk's scene unloads, so clients drop their copies first.
     /// </summary>
-    private void HandleChunkUnloading(LoadedWorld world, UnityEngine.Vector2Int coords)
+    private void HandleChunkUnloading(LoadedWorld world, Vector2Int coords)
     {
         if (world.Definition == identity.World && coords == identity.Coords)
         {

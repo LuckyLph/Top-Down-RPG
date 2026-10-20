@@ -8,7 +8,8 @@ using VContainer.Unity;
 
 /// <summary>
 /// Root DI scope of the app, living in the Main scene for the whole run: registers the scene flow, input, clock,
-/// menus, saves, user settings and network session that the menu, gameplay and area scopes inherit.
+/// menus, the save and the session's saved state, user settings and network session that the menu, gameplay, area and
+/// world scopes inherit.
 /// </summary>
 public class MainLifetimeScope : LifetimeScope
 {
@@ -59,9 +60,11 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<MenuStack>().AsSelf();
         builder.RegisterEntryPoint<TransitionTimeFreeze>();
 
-        builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, FileSaveStore.DefaultFileName)));
+        builder.RegisterInstance<ISaveStore>(new FileSaveStore(DataPath(FileSaveStore.DefaultFileName)));
         builder.Register<GameSave>(Lifetime.Singleton);
-        builder.RegisterInstance<ISaveStore>(new FileSaveStore(Path.Combine(Application.persistentDataPath, UserSettings.FileName)))
+        builder.Register<SessionSave>(Lifetime.Singleton);
+        builder.Register<PlayerStarts>(Lifetime.Singleton);
+        builder.RegisterInstance<ISaveStore>(new FileSaveStore(DataPath(UserSettings.FileName)))
             .Keyed(UserSettings.FileName);
         builder.Register<UserSettings>(Lifetime.Singleton);
 
@@ -87,9 +90,17 @@ public class MainLifetimeScope : LifetimeScope
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
-            builder.RegisterEntryPoint<GameSaveRecorder>();
         }
 
         builder.RegisterEntryPoint<BootFlow>();
+    }
+
+    /// <summary>
+    /// The path of this instance's file <paramref name="fileName"/> in the persistent data folder (a Multiplayer Play
+    /// Mode virtual player's own file in the editor, see <see cref="InstanceFiles"/>).
+    /// </summary>
+    private static string DataPath(string fileName)
+    {
+        return Path.Combine(Application.persistentDataPath, InstanceFiles.NameFor(fileName));
     }
 }

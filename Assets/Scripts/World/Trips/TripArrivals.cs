@@ -36,6 +36,15 @@ public sealed class TripArrivals
     }
 
     /// <summary>
+    /// The arrival of <paramref name="player"/>'s trip under way; false when it has none.
+    /// </summary>
+    public bool TryGet(PlayerHandle player, out StreamInterest arrival)
+    {
+        arrival = default;
+        return player != null && held.TryGetValue(player, out arrival);
+    }
+
+    /// <summary>
     /// Stops streaming <paramref name="player"/>'s arrival.
     /// </summary>
     public void Release(PlayerHandle player)

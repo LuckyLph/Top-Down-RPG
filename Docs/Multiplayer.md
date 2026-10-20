@@ -12,7 +12,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, area changes). |
 | Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. |
 | Internet play | No paid or account-bound services for now: direct IP only, and friends play over the internet through a virtual LAN (Tailscale, ZeroTier). A hosted relay is deferred until there is a distribution platform (see Phase 6). |
-| Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. Today only offline area games are saved; hosted world sessions are saved from [WorldStreaming.md](WorldStreaming.md)'s Phase 8. |
+| Saving | One local save file on the machine that decides game state (the host, or the single player), holding each player's place by player id and the state of every world visited (see [WorldStreaming.md](WorldStreaming.md#persistence)). Joining clients get the host's world through normal replication and save nothing. |
 | Worlds | Each player is in one world at a time and travels between worlds on their own, through exits the host validates, with no party (see [WorldStreaming.md](WorldStreaming.md)). Online sessions run in seamless worlds since its Phase 7; areas are played offline only until its Phase 9. |
 | Death | Today: a dead player respawns after a delay (at the area's spawn point, or where it died in a world); offline, everyone dead at once restarts the area or world, while a hosted session never restarts. Planned: each player respawns on their own at their nearest discovered waystone, and nothing restarts (see [WorldStreaming.md](WorldStreaming.md)). |
 | Friendly fire | Off. Hostile effects only land on the other faction and helpful ones within a faction, enforced by `DamageService` (see [DamageAndStatusEffects.md](DamageAndStatusEffects.md#decisions)). |
@@ -31,7 +31,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
 | Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
 | Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
-| Save data | Host | Not replicated. The host saves offline area games on area entry; hosted world sessions are not saved yet. |
+| Save data | Host | Not replicated. The host (or the single player) saves when any player enters a world, on an autosave timer and as the session ends; a joining player the host knows starts at its saved place. |
 | Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
@@ -120,14 +120,14 @@ Decision: no Unity Gaming Services for now. Relay has a free tier (50 average mo
 
 A relay is a transport swap: it replaces how `NetworkSession.StartHost`/`JoinAsync` configure the transport, while the replicated worlds and the per-chunk readiness handshake stay as they are. No connection-method abstraction was added ahead of that, since its shape depends on the transport chosen.
 
-Save data decisions:
-- What persists now: the area the party is in and the spawn point it entered by. Health is restored on respawn and every player starts with the same weapon, so neither is saved yet. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
+Save data decisions (format version 2 since [WorldStreaming.md](WorldStreaming.md)'s Phase 8; this phase saved the party's area and spawn point, version 1, which is now ignored):
+- What persists: per player id, its world, position and discovered waystones; per world visited, a record per chunk of its killed mobs (with when they died, on a world clock that continues across sessions) and runtime terrain edits. Health is restored on respawn and every player starts with the same weapon, so neither is saved yet. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
 - Where: a local JSON file at `Application.persistentDataPath/save.json`, written by the host (or the single player) only. No Cloud Save, so offline and direct-IP games need no sign-in.
-- When: every time an area is entered (new game, continue, area change, party-wipe restart). The save always matches the area the party is in, so leaving the session needs no extra write.
-- Menu: Continue starts the saved area offline; New Game starts over from the starting area (overwriting the save once entered). Host Game used to continue from the save; since WorldStreaming.md's Phase 7 it starts the starting world and saves nothing until world saves exist (its Phase 8).
-- Joining clients: get the host's world through their player's networked world and replication, and never write a save.
+- When: whenever any player enters a world (the session's start, a trip, a player joining), every `GameplaySettings` autosave interval (60 s of game time), and as the session ends (the menu, the host leaving, quitting).
+- Menu: Continue continues the save offline, the local player at its saved place; New Game starts over in the starting world (replacing the save at its first write); Host Game continues the save when there is one, else starts over.
+- Joining clients: get the host's world through their player's networked world and replication, and never write a save. A client the host knows by its player id starts at its saved place; the host loads that world before spawning it there.
 
-- [x] Save data: host-only local save of the current area and spawn, Continue in the menu, hosting continues from the save.
+- [x] Save data: host-only local save of the current area and spawn, Continue in the menu, hosting continues from the save (now world saves, WorldStreaming.md's Phase 8).
 - [x] Internet play without Unity services: documented virtual LAN setup over the existing direct-IP join (see Testing).
 - [ ] Hosted relay for internet play without a virtual LAN (deferred; Steam is the likely transport if the game ships there).
 
@@ -145,14 +145,14 @@ Save data decisions:
 
 Hosting listens on `0.0.0.0:7777`, so Windows may ask to allow the Unity editor through the firewall the first time.
 
-Virtual players use the same company and product name as the main editor, so they share its save file. Only the host writes it during a session, but a virtual player that starts an offline game also saves there.
+Virtual players use the same company and product name as the main editor, so they share its data folder, but each keeps files of its own there (`save.Player2.json`, `settings.Player2.json`, and so on, from the `-name` argument Multiplayer Play Mode launches it with): its own player id, key bindings and offline save, as a separate install would.
 
 ### Checking saves
 
-1. Play, click New Game, then return to the menu (or stop and press Play again). Continue is now enabled and selected.
-2. Click Continue: the game starts in the saved area.
-3. In Multiplayer Play Mode, Host Game in the main editor starts the starting world (Testlands) and writes nothing; Join Game in a virtual player follows the host into the world it is placed in and writes nothing.
-4. The file is `%USERPROFILE%/AppData/LocalLow/<company>/<product>/save.json` on Windows. Delete it to get a clean menu. Automated tests use an in-memory store and never touch it.
+1. Play, click New Game (Testlands' `start`), walk somewhere, kill a Weasel, then return to the menu (or stop and press Play again). Continue is now enabled and selected.
+2. Click Continue: the game starts where the player stood, and the Weasel stays dead until 300 s of game time have passed and its chunk loads again (walk two chunks away and back).
+3. In Multiplayer Play Mode, Host Game in the main editor continues the same save; Join Game in a virtual player starts it at the starting entry the first time, and at the place it left the next time (see WorldStreaming.md's Phase 8 steps). A virtual player writes nothing while joined.
+4. The file is `%USERPROFILE%/AppData/LocalLow/<company>/<product>/save.json` on Windows (`save.Player2.json` for Player 2). Delete it to get a clean menu. Automated tests use an in-memory store and never touch it.
 
 ### Checking runtime terrain edits
 

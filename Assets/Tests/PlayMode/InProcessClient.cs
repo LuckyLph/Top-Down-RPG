@@ -54,9 +54,10 @@ public sealed class InProcessClient : IDisposable
     /// Builds the client container (non-authoritative, scripted input, combat, ability and trip services, an empty
     /// world navigation), registers injecting prefab handlers for the player and, routed by the home chunk the host
     /// sends, for the mobs of the host's loaded chunks and the terrain sync object, then starts a cloned manager against
-    /// the host's port and records the host's release acknowledgements. Asserts the start succeeds.
+    /// the host's port and records the host's release acknowledgements. It joins with <paramref name="playerId"/>, or a
+    /// new id when null. Asserts the start succeeds.
     /// </summary>
-    public static InProcessClient Start(NetworkSession session, NetworkObject playerPrefab)
+    public static InProcessClient Start(NetworkSession session, NetworkObject playerPrefab, string playerId = null)
     {
         Camera camera = Camera.main;
         PlayerControlSettings controlSettings = playerPrefab.GetComponent<PlayerController>().ControlSettings;
@@ -72,7 +73,7 @@ public sealed class InProcessClient : IDisposable
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
         GameObject clientObject = manager.gameObject;
         clientObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
-        manager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version, Guid.NewGuid().ToString("N"));
+        manager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version, playerId ?? Guid.NewGuid().ToString("N"));
         manager.PrefabHandler.AddHandler(playerPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(playerPrefab, container)));
         InProcessClient client = new(session, manager, container, players, localPlayer, input);
         HashSet<NetworkObject> chunkPrefabs = new();

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -6,8 +8,9 @@ using VContainer.Unity;
 /// <summary>
 /// Gameplay-scope entry point that decides who spawns players: offline it spawns the local player; on the host it
 /// spawns the host's player plus one per joined client, now and as clients join, each where <see cref="PlayerStarts"/>
-/// places it; on a client it tells the host this machine has joined, so the host spawns its player and shows it the
-/// players.
+/// places it (its saved place by player id, else the starting world's entry), once the host has loaded that world and
+/// the chunks around the place (<see cref="IWorldSession.PrepareAsync"/>); on a client it tells the host this machine
+/// has joined, so the host spawns its player and shows it the players.
 /// </summary>
 public sealed class GameplayPlayers : IStartable, IDisposable
 {
@@ -15,12 +18,15 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     private readonly NetworkSession session;
     private readonly PlayerStarts starts;
     private readonly IObjectResolver resolver;
+    private readonly HashSet<ulong> preparing = new();
+    private readonly CancellationTokenSource disposeCancellation = new();
+    private IWorldSession worldSession;
     private bool registeredPrefab;
     private bool listeningForClients;
 
     /// <summary>
-    /// Captures the spawner, the session, where joining players start and the Gameplay scope's resolver that injects
-    /// network-spawned players.
+    /// Captures the spawner, the session, where players start and the Gameplay scope's resolver that injects
+    /// network-spawned players and provides the world session, when there is one.
     /// </summary>
     public GameplayPlayers(PlayerSpawner spawner, NetworkSession session, PlayerStarts starts, IObjectResolver resolver)
     {
@@ -63,6 +69,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
             return;
         }
 
+        resolver.TryResolve(out worldSession);
         spawner.SpawnLocalPlayer();
         foreach (ulong clientId in session.JoinedClients)
         {
@@ -74,10 +81,13 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Stops spawning for newly joined clients and unregisters the player prefab, whichever of them was set up.
+    /// Stops spawning for newly joined clients, drops the spawns still waiting for their world and unregisters the
+    /// player prefab, whichever of them was set up.
     /// </summary>
     public void Dispose()
     {
+        disposeCancellation.Cancel();
+        disposeCancellation.Dispose();
         if (listeningForClients)
         {
             session.ClientJoined -= SpawnFor;
@@ -90,16 +100,46 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Host only: spawns <paramref name="clientId"/>'s player where its player id starts, unless it already has one.
+    /// Host only: spawns <paramref name="clientId"/>'s player where its player id starts, once that place is loaded,
+    /// unless it already has one or one is on its way.
     /// </summary>
     private void SpawnFor(ulong clientId)
     {
-        if (session.HasPlayerObject(clientId))
+        if (session.HasPlayerObject(clientId) || preparing.Contains(clientId))
         {
             return;
         }
 
         if (starts.TryGetStart(session.PlayerIdOf(clientId), out WorldDefinition world, out Vector2 position))
+        {
+            _ = SpawnWhenPreparedAsync(clientId, world, position);
+        }
+    }
+
+    /// <summary>
+    /// Has the world session load <paramref name="world"/> around <paramref name="position"/> (at once when it already
+    /// is), then spawns <paramref name="clientId"/>'s player there if the client is still joined and has none.
+    /// </summary>
+    private async Awaitable SpawnWhenPreparedAsync(ulong clientId, WorldDefinition world, Vector2 position)
+    {
+        preparing.Add(clientId);
+        try
+        {
+            if (worldSession != null)
+            {
+                await worldSession.PrepareAsync(world, position, disposeCancellation.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        finally
+        {
+            preparing.Remove(clientId);
+        }
+
+        if (session.IsServer && session.IsClientJoined(clientId) && !session.HasPlayerObject(clientId))
         {
             spawner.SpawnRemotePlayer(clientId, world, position);
         }

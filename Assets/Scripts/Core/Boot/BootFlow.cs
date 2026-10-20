@@ -10,15 +10,17 @@ public sealed class BootFlow : IAsyncStartable
 {
     private readonly GameFlow gameFlow;
     private readonly GameScenes gameScenes;
+    private readonly SessionSave sessionSave;
 
     /// <summary>
-    /// Creates the boot flow that drives <paramref name="gameFlow"/> and resolves editor scene paths against
-    /// <paramref name="gameScenes"/>.
+    /// Creates the boot flow that drives <paramref name="gameFlow"/>, resolves editor scene paths against
+    /// <paramref name="gameScenes"/> and starts a world booted into as a new game in <paramref name="sessionSave"/>.
     /// </summary>
-    public BootFlow(GameFlow gameFlow, GameScenes gameScenes)
+    public BootFlow(GameFlow gameFlow, GameScenes gameScenes, SessionSave sessionSave)
     {
         this.gameFlow = gameFlow;
         this.gameScenes = gameScenes;
+        this.sessionSave = sessionSave;
     }
 
     /// <summary>
@@ -38,8 +40,8 @@ public sealed class BootFlow : IAsyncStartable
 
 #if UNITY_EDITOR
     /// <summary>
-    /// Boots into the scenes the editor had open: a world's root or chunk scene starts a session in that world at its
-    /// default entry; otherwise the first one that is neither the menu nor the gameplay scene is treated as an area (a
+    /// Boots into the scenes the editor had open: a world's root or chunk scene starts a new game in that world at its
+    /// default entry (whose first save replaces the save file, as New Game's does); otherwise the first one that is neither the menu nor the gameplay scene is treated as an area (a
     /// transient definition when <see cref="GameScenes"/> does not list it) and a new game starts there; the gameplay
     /// scene without an area starts a new game in the starting area; the menu scene on its own shows the main menu.
     /// Returns false when <paramref name="scenePaths"/> gives nothing to boot into.
@@ -73,6 +75,7 @@ public sealed class BootFlow : IAsyncStartable
 
         if (world != null)
         {
+            sessionSave.StartNew();
             await gameFlow.StartWorldGameAsync(world, null, cancellation);
             return true;
         }

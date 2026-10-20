@@ -149,6 +149,25 @@ public class WorldDefinition : ScriptableObject
     }
 
     /// <summary>
+    /// The world position of the entry <paramref name="entryName"/> (the default entry, with a warning, for an unknown
+    /// name), or of the world's middle when it has no entry.
+    /// </summary>
+    public Vector2 EntryPosition(string entryName)
+    {
+        Entry entry = FindEntry(entryName);
+        return ToWorld(entry != null ? entry.Position : LocalBounds.center);
+    }
+
+    /// <summary>
+    /// Whether the world position <paramref name="worldPosition"/> lies on one of this world's chunks.
+    /// </summary>
+    public bool HasChunkAt(Vector2 worldPosition)
+    {
+        Vector2Int cell = ChunkCoords.CellOf(ToLocal(worldPosition));
+        return LocalBounds.Contains(cell) && HasChunk(ChunkCoords.ChunkOf(cell));
+    }
+
+    /// <summary>
     /// Whether <paramref name="scenePath"/> is this world's root scene or one of its chunk scenes.
     /// </summary>
     public bool OwnsScene(string scenePath)

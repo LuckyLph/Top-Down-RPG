@@ -4,8 +4,8 @@ using VContainer.Unity;
 
 /// <summary>
 /// The composition root of the Gameplay scene, a child of the Main scope and parent of each area and world scope:
-/// registers the players, combat, abilities, statuses, HUD, menus, pointer feedback, the world streaming and the trips
-/// between worlds for the session.
+/// registers the players, combat, abilities, statuses, HUD, menus, pointer feedback, the world streaming, the trips
+/// between worlds and the saving of world sessions for the session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -59,7 +59,6 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
-        builder.Register<PlayerStarts>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
             .WithParameter(playerPrefab)
             .WithParameter(gameObject.scene);
@@ -108,6 +107,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
+        builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         if (worldStreamingSettings == null)
         {

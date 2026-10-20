@@ -12,8 +12,9 @@ using VContainer;
 /// and every changed cell is recorded in <see cref="Edits"/>, the last write per cell winning.
 /// <see cref="NetworkAreaTerrain"/> sends that record to clients, which apply it with <see cref="ApplyReplicated"/>,
 /// late joiners included. An area has one on its grid, and so does each chunk of a seamless world, whose edits replicate
-/// per chunk (<see cref="ChunkTerrainSync"/>). Navigation follows the tile changes by itself. Edits last while the
-/// scene is loaded; they are not saved.
+/// per chunk (<see cref="ChunkTerrainSync"/>). Navigation follows the tile changes by itself. A chunk's edits are kept
+/// in its world's <see cref="WorldState"/>, which <see cref="ChunkTerrainSync"/> restores them from as the chunk loads
+/// (<see cref="RestoreEdits"/>); an area's last only while its scene is loaded.
 /// </summary>
 [DisallowMultipleComponent]
 public class AreaTerrain : MonoBehaviour
@@ -151,6 +152,36 @@ public class AreaTerrain : MonoBehaviour
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Applies persisted edits as the terrain loads, on the machine with authority, and records them as if just made,
+    /// so they replicate like any other edit. Edits for a layer this terrain does not have are skipped with a warning.
+    /// </summary>
+    public void RestoreEdits(IReadOnlyList<TerrainEdit> restored)
+    {
+        int skipped = 0;
+        for (int i = 0; i < restored.Count; i++)
+        {
+            if (restored[i].Layer >= layers.Count)
+            {
+                skipped++;
+            }
+        }
+
+        if (skipped > 0)
+        {
+            Debug.LogWarning($"{name} skipped {skipped} saved terrain edits of layers it does not have.", this);
+        }
+
+        ApplyReplicated(restored);
+        for (int i = 0; i < restored.Count; i++)
+        {
+            if (restored[i].Layer < layers.Count)
+            {
+                Record(restored[i]);
+            }
+        }
     }
 
     /// <summary>

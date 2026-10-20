@@ -16,7 +16,10 @@ using VContainer.Unity;
 /// them. In a session it registers each distinct mob prefab for this chunk (<see cref="ChunkNetworkPrefabs"/>): on a
 /// client so the host's mobs whose home is this chunk arrive injected and in this chunk's scene, on the host so they
 /// carry their home chunk. On a client it spawns nothing. A mob stays in its home chunk's scene for its whole life,
-/// wherever it walks, so it goes with the chunk. Shares its spawning with <see cref="AreaMobSpawner"/> through
+/// wherever it walks, so it goes with the chunk. Persistence (Docs/WorldStreaming.md: Persistence): a mob killed here
+/// is recorded in the chunk's record of its <see cref="WorldState"/>, by its spawn point's <see cref="PersistentId"/>
+/// and the world clock's time, and a spawn point whose mob stays dead (<see cref="ChunkState.StaysDead"/>, by its
+/// config's respawn rule) is skipped as the chunk loads. Shares its spawning with <see cref="AreaMobSpawner"/> through
 /// <see cref="MobSpawning"/>.
 /// </summary>
 public sealed class ChunkMobSpawner : IPostStartable, IDisposable
@@ -28,13 +31,18 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     private readonly INetworkObjectSpawner networkObjects;
     private readonly ChunkNetworkPrefabs chunkPrefabs;
     private readonly Worlds worlds;
+    private readonly WorldState worldState;
+    private readonly SessionSave sessionSave;
     private readonly List<MobController> mobs = new();
+    private readonly List<Health> mobHealths = new();
+    private readonly List<string> mobIds = new();
     private readonly List<NetworkObject> registeredPrefabs = new();
     private bool following;
 
     /// <summary>
     /// Creates the spawner of the chunk <paramref name="chunk"/>'s <paramref name="chunkSpawnPoints"/>, instantiating
-    /// through <paramref name="chunkResolver"/> into <paramref name="chunkScene"/>.
+    /// through <paramref name="chunkResolver"/> into <paramref name="chunkScene"/>, reading and recording its mobs'
+    /// deaths in <paramref name="state"/> at the time of <paramref name="save"/>'s world clock.
     /// </summary>
     public ChunkMobSpawner(
         IObjectResolver chunkResolver,
@@ -43,7 +51,9 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
         Scene chunkScene,
         INetworkObjectSpawner networkObjectSpawner,
         ChunkNetworkPrefabs networkPrefabs,
-        Worlds loadedWorlds)
+        Worlds loadedWorlds,
+        WorldState state,
+        SessionSave save)
     {
         resolver = chunkResolver;
         identity = chunk;
@@ -52,6 +62,8 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
         networkObjects = networkObjectSpawner;
         chunkPrefabs = networkPrefabs;
         worlds = loadedWorlds;
+        worldState = state;
+        sessionSave = save;
     }
 
     /// <summary>
@@ -107,8 +119,9 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Spawns a mob at each spawn point that <see cref="ShouldSpawn"/> lets spawn, gives it this chunk as its home and
-    /// network-spawns it in a session. Logs an error for a spawn point without a prefab and skips it.
+    /// Spawns a mob at each spawn point that <see cref="ShouldSpawn"/> lets spawn, gives it this chunk as its home,
+    /// network-spawns it in a session and follows its death. Logs an error for a spawn point without a prefab and skips
+    /// it.
     /// </summary>
     public void SpawnAll()
     {
@@ -129,6 +142,14 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
             mob.SetHome(home);
             MobSpawning.NetworkSpawn(mob, networkObjects, ChunkId.Of(identity.World, identity.Coords));
             mobs.Add(mob);
+            Health health = mob.GetComponent<Health>();
+            if (health != null)
+            {
+                health.Died += HandleMobDied;
+            }
+
+            mobHealths.Add(health);
+            mobIds.Add(IdOf(spawnPoint));
         }
     }
 
@@ -140,10 +161,17 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     {
         for (int i = 0; i < mobs.Count; i++)
         {
+            if (mobHealths[i] != null)
+            {
+                mobHealths[i].Died -= HandleMobDied;
+            }
+
             MobSpawning.Despawn(mobs[i], networkObjects);
         }
 
         mobs.Clear();
+        mobHealths.Clear();
+        mobIds.Clear();
     }
 
     /// <summary>
@@ -168,12 +196,53 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Whether <paramref name="spawnPoint"/> spawns its mob as the chunk loads: always, until the world state records
-    /// killed mobs and their respawn delay (Docs/WorldStreaming.md: Persistence, Phase 8).
+    /// Whether <paramref name="spawnPoint"/> spawns its mob as the chunk loads: unless the chunk's record says its mob
+    /// was killed and stays dead, by its config's respawn rule at the world clock's time now. A spawn point without a
+    /// persistent id always spawns.
     /// </summary>
     private bool ShouldSpawn(MobSpawnPoint spawnPoint)
     {
-        return true;
+        string id = IdOf(spawnPoint);
+        if (id == null || !worldState.TryGetChunk(identity.Coords, out ChunkState chunk))
+        {
+            return true;
+        }
+
+        MobConfig config = spawnPoint.MobPrefab != null ? spawnPoint.MobPrefab.Config : null;
+        bool respawns = config == null || config.Respawns;
+        float delay = config != null ? config.RespawnDelaySeconds : 0f;
+        return !chunk.StaysDead(id, sessionSave.Time, respawns, delay);
+    }
+
+    /// <summary>
+    /// The persistent id of <paramref name="spawnPoint"/>, or null when it has none.
+    /// </summary>
+    private static string IdOf(MobSpawnPoint spawnPoint)
+    {
+        return spawnPoint.TryGetComponent(out PersistentId persistentId) && persistentId.HasId ? persistentId.Id : null;
+    }
+
+    /// <summary>
+    /// Records a killed mob's death in the chunk's record at the world clock's time, by its spawn point's id; warns for
+    /// a spawn point without one, whose mob comes back whenever the chunk loads.
+    /// </summary>
+    private void HandleMobDied(Health health)
+    {
+        int index = mobHealths.IndexOf(health);
+        if (index < 0)
+        {
+            return;
+        }
+
+        health.Died -= HandleMobDied;
+        string id = mobIds[index];
+        if (id == null)
+        {
+            Debug.LogWarning($"{health.name} died, but its spawn point in chunk {identity.Coords} has no {nameof(PersistentId)}; its death is not kept.", health);
+            return;
+        }
+
+        worldState.Chunk(identity.Coords).RecordMobDeath(id, sessionSave.Time);
     }
 
     /// <summary>

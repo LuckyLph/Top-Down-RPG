@@ -10,7 +10,8 @@ using VContainer;
 
 /// <summary>
 /// Tests for runtime terrain edits through <see cref="AreaTerrain"/> and for <see cref="ChunkTerrainSync"/>, which
-/// spawns or registers the network object that replicates a chunk's edits.
+/// spawns or registers the network object that replicates a chunk's edits, and restores a chunk's persisted edits from
+/// its world's state and records new ones there, offline and on the host.
 /// </summary>
 public class AreaTerrainTests
 {
@@ -208,11 +209,15 @@ public class AreaTerrainTests
         worlds.Add(loaded);
         worlds.AddChunk(loaded, Vector2Int.zero, default);
         worlds.AddChunk(loaded, Vector2Int.right, default);
-        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.right, worlds);
+        WorldState state = new(world.WorldId);
+        state.Chunk(Vector2Int.right).RecordTerrainEdit(0, new Vector2Int(70, 3), true);
+        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.right, worlds, state: state);
 
         sync.RegisterNetworkPrefab();
         sync.Start();
 
+        Assert.That(terrain.Edits, Is.EqualTo(new[] { new TerrainEdit(0, new Vector3Int(70, 3, 0), true) }), "The persisted edit is the terrain's before its sync object spawns, so it replicates.");
+        Assert.That(ground.GetTile(new Vector3Int(70, 3, 0)), Is.SameAs(groundTile));
         Assert.That(network.Registered, Is.EqualTo(new[] { prefab }), "The host registers the prefab so its spawn carries the home chunk.");
         Assert.That(network.Spawned.Count, Is.EqualTo(1));
         NetworkObject spawned = network.Spawned[0];
@@ -242,7 +247,9 @@ public class AreaTerrainTests
         FakeNetworkObjects network = new() { IsActive = true, IsServer = false };
         WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
         ChunkNetworkPrefabs prefabs = new(network);
-        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.zero, new Worlds(), prefabs);
+        WorldState state = new(world.WorldId);
+        state.Chunk(Vector2Int.zero).RecordTerrainEdit(0, new Vector2Int(1, 1), true);
+        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.zero, new Worlds(), prefabs, state);
 
         sync.RegisterNetworkPrefab();
         sync.RegisterNetworkPrefab();
@@ -251,16 +258,53 @@ public class AreaTerrainTests
         Assert.That(network.Registered, Is.EqualTo(new[] { prefab }));
         Assert.That(prefabs.IsRegistered(prefab), Is.True);
         Assert.That(network.Spawned, Is.Empty);
+        Assert.That(terrain.Edits, Is.Empty, "A client restores nothing: the host's edits reach it through the sync object.");
 
         sync.Dispose();
         Assert.That(network.Registered, Is.Empty);
     }
 
     /// <summary>
+    /// Offline a chunk's sync restores the chunk's persisted edits from its world's state (a filled ground cell, an
+    /// emptied one and a wall), skipping a layer the terrain does not have with a warning, and records every new edit in
+    /// the chunk's record, until disposed.
+    /// </summary>
+    [Test]
+    public void ChunkSync_Offline_RestoresThePersistedEdits_AndRecordsNewOnes()
+    {
+        AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative);
+        ground.SetTile(new Vector3Int(4, 4, 0), groundTile);
+        WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
+        WorldState state = new(world.WorldId);
+        ChunkState chunk = state.Chunk(Vector2Int.zero);
+        chunk.RecordTerrainEdit(0, new Vector2Int(1, 1), true);
+        chunk.RecordTerrainEdit(0, new Vector2Int(4, 4), false);
+        chunk.RecordTerrainEdit(1, new Vector2Int(2, 2), true);
+        chunk.RecordTerrainEdit(5, new Vector2Int(9, 9), true);
+        ChunkTerrainSync sync = CreateChunkSync(terrain, new FakeNetworkObjects(), world, Vector2Int.zero, new Worlds(), state: state);
+
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("layers it does not have"));
+        sync.Start();
+
+        Assert.That(ground.GetTile(new Vector3Int(1, 1, 0)), Is.SameAs(groundTile));
+        Assert.That(ground.GetTile(new Vector3Int(4, 4, 0)), Is.Null);
+        Assert.That(walls.DataTilemap.HasTile(new Vector3Int(2, 2, 0)), Is.True);
+        Assert.That(terrain.Edits.Count, Is.EqualTo(3), "The restored edits are the terrain's own, as if just made.");
+
+        terrain.TrySetCells(ground, new[] { new Vector3Int(6, 1, 0) }, true);
+        Assert.That(chunk.TerrainEdits, Does.Contain(new GameSaveData.CellEdit(0, new Vector2Int(6, 1), true)), "A new edit is recorded in the chunk's record.");
+
+        sync.Dispose();
+        int recorded = chunk.TerrainEdits.Count;
+        terrain.TrySetCells(ground, new[] { new Vector3Int(7, 1, 0) }, true);
+        Assert.That(chunk.TerrainEdits.Count, Is.EqualTo(recorded), "Nothing is recorded once the chunk's scope is gone.");
+    }
+
+    /// <summary>
     /// With no active network session a chunk's sync neither registers nor spawns anything.
     /// </summary>
     [Test]
-    public void ChunkSync_Offline_DoesNothing()
+    public void ChunkSync_Offline_RegistersAndSpawnsNothing()
     {
         AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative, LoadSyncPrefab());
         FakeNetworkObjects network = new();
@@ -277,9 +321,10 @@ public class AreaTerrainTests
 
     /// <summary>
     /// A <see cref="ChunkTerrainSync"/> of <paramref name="terrain"/> for the chunk at <paramref name="coords"/> of
-    /// <paramref name="world"/>, over <paramref name="network"/> and <paramref name="worlds"/>.
+    /// <paramref name="world"/>, over <paramref name="network"/> and <paramref name="worlds"/>, keeping its edits in
+    /// <paramref name="state"/> (an empty world state when null).
     /// </summary>
-    private ChunkTerrainSync CreateChunkSync(AreaTerrain terrain, FakeNetworkObjects network, WorldDefinition world, Vector2Int coords, Worlds worlds, ChunkNetworkPrefabs prefabs = null)
+    private ChunkTerrainSync CreateChunkSync(AreaTerrain terrain, FakeNetworkObjects network, WorldDefinition world, Vector2Int coords, Worlds worlds, ChunkNetworkPrefabs prefabs = null, WorldState state = null)
     {
         return new ChunkTerrainSync(
             BuildResolver(terrain),
@@ -288,7 +333,8 @@ public class AreaTerrainTests
             SceneManager.GetActiveScene(),
             network,
             prefabs ?? new ChunkNetworkPrefabs(network),
-            worlds);
+            worlds,
+            state ?? new WorldState(world.WorldId));
     }
 
     /// <summary>

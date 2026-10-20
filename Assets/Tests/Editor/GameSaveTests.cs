@@ -1,55 +1,30 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/> and <see cref="FileSaveStore"/>: saving and loading
-/// the current area by scene GUID, rejecting unreadable or stale saves, and writing the save file safely.
+/// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/>, <see cref="SessionSave"/>, <see cref="FileSaveStore"/>
+/// and <see cref="InstanceFiles"/>: the version 2 save keyed by player id and world id round trips, older, newer and
+/// unreadable saves are ignored with a warning, the world clock continues from the saved time, the save file is written
+/// safely, and a Multiplayer Play Mode virtual player keeps files of its own.
 /// </summary>
 public class GameSaveTests
 {
-    private readonly List<Object> created = new();
+    private const string WorldA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const string WorldB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string Alice = "alice-id";
+    private const string Bob = "bob-id";
+
     private string tempDirectory;
-    private SceneDefinition clearing;
-    private SceneDefinition cave;
-    private GameScenes gameScenes;
 
     /// <summary>
-    /// Builds two test area definitions and a <see cref="GameScenes"/> with the clearing as the starting area
-    /// (spawn "start") and the cave as its other area.
-    /// </summary>
-    [SetUp]
-    public void SetUp()
-    {
-        clearing = CreateArea("Assets/Scenes/Areas/Area_TestClearing.unity", "11111111111111111111111111111111");
-        cave = CreateArea("Assets/Scenes/Areas/Area_TestCave.unity", "22222222222222222222222222222222");
-        gameScenes = ScriptableObject.CreateInstance<GameScenes>();
-        created.Add(gameScenes);
-        SerializedObject serialized = new(gameScenes);
-        serialized.FindProperty("startingArea").objectReferenceValue = clearing;
-        serialized.FindProperty("startingSpawnId").stringValue = "start";
-        SerializedProperty areas = serialized.FindProperty("areas");
-        areas.arraySize = 1;
-        areas.GetArrayElementAtIndex(0).objectReferenceValue = cave;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-    }
-
-    /// <summary>
-    /// Destroys the created assets and deletes the test's temporary directory, if any.
+    /// Deletes the test's temporary directory, if any.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
-        foreach (Object instance in created)
-        {
-            Object.DestroyImmediate(instance);
-        }
-
-        created.Clear();
         if (tempDirectory != null && Directory.Exists(tempDirectory))
         {
             Directory.Delete(tempDirectory, true);
@@ -59,134 +34,211 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A saved area and spawn id load back as the same area definition and spawn id.
+    /// A session's players, worlds, chunk records and world clock written through <see cref="GameSave"/> load back into a
+    /// new session as they were, each player under its own id.
     /// </summary>
     [Test]
-    public void SaveArea_ThenTryLoadArea_ReturnsTheAreaAndSpawn()
+    public void ASessionWritten_LoadsBackIntoANewSession_KeyedByPlayerAndWorld()
     {
+        ManualClock clock = new() { Time = 50f };
+        SessionSave written = new(clock);
+        written.StartNew();
+        clock.Advance(125f);
+        written.SetPlace(Alice, WorldA, new Vector2(2100.5f, 40.25f));
+        written.SetPlace(Bob, WorldB, new Vector2(4130f, 33f));
+        ChunkState chunk = written.WorldOf(WorldA).Chunk(new Vector2Int(1, 0));
+        chunk.RecordMobDeath("mob-1", 100d);
+        chunk.RecordTerrainEdit(1, new Vector2Int(70, 12), true);
+        written.WorldOf(WorldB).Chunk(Vector2Int.zero).RecordTerrainEdit(0, new Vector2Int(3, 4), false);
         MemorySaveStore store = new();
-        GameSave save = new(store, gameScenes);
 
-        Assert.That(save.SaveArea(cave, "door_north"), Is.True);
-
+        Assert.That(new GameSave(store).Write(written.ToData()), Is.True);
+        GameSave save = new(store);
         Assert.That(save.HasSave, Is.True);
-        Assert.That(save.TryLoadArea(out SceneDefinition area, out string spawnId), Is.True);
-        Assert.That(area, Is.SameAs(cave));
-        Assert.That(spawnId, Is.EqualTo("door_north"));
+        Assert.That(save.TryLoad(out GameSaveData data), Is.True);
+        SessionSave loaded = new(clock);
+        loaded.StartFrom(data);
+
+        Assert.That(loaded.Time, Is.EqualTo(125d).Within(1e-6), "The world clock continues from the saved time.");
+        Assert.That(loaded.TryGetPlace(Alice, out string aliceWorld, out Vector2 alicePosition), Is.True);
+        Assert.That(aliceWorld, Is.EqualTo(WorldA));
+        Assert.That(alicePosition, Is.EqualTo(new Vector2(2100.5f, 40.25f)));
+        Assert.That(loaded.TryGetPlace(Bob, out string bobWorld, out Vector2 bobPosition), Is.True);
+        Assert.That(bobWorld, Is.EqualTo(WorldB));
+        Assert.That(bobPosition, Is.EqualTo(new Vector2(4130f, 33f)));
+        Assert.That(loaded.TryGetPlace("someone-else", out _, out _), Is.False);
+        Assert.That(loaded.TryGetWorld(WorldA, out WorldState worldA), Is.True);
+        Assert.That(worldA.TryGetChunk(new Vector2Int(1, 0), out ChunkState loadedChunk), Is.True);
+        Assert.That(loadedChunk.TryGetMobDeath("mob-1", out double diedAt), Is.True);
+        Assert.That(diedAt, Is.EqualTo(100d));
+        Assert.That(loadedChunk.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(1, new Vector2Int(70, 12), true) }));
+        Assert.That(loaded.TryGetWorld(WorldB, out WorldState worldB), Is.True);
+        Assert.That(worldB.TryGetChunk(Vector2Int.zero, out ChunkState chunkB), Is.True);
+        Assert.That(chunkB.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(0, new Vector2Int(3, 4), false) }));
     }
 
     /// <summary>
-    /// The written save holds the current format version and the area's scene GUID, never its scene path.
+    /// A hand-written version 2 save parses into its time, players with their waystones, and worlds with their chunk
+    /// records.
     /// </summary>
     [Test]
-    public void SaveArea_StoresTheSceneGuidAndFormatVersion()
+    public void AVersion2Save_Parses()
     {
+        string json = "{\"version\":2,\"time\":3600.5,"
+            + "\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":2060.5,\"y\":42.0},"
+            + "\"waystones\":[{\"worldId\":\"" + WorldA + "\",\"entry\":\"start\"}]}],"
+            + "\"worlds\":[{\"worldId\":\"" + WorldA + "\",\"chunks\":[{\"coords\":{\"x\":1,\"y\":0},"
+            + "\"deadMobs\":[{\"id\":\"mob-1\",\"diedAt\":3500.25}],"
+            + "\"terrainEdits\":[{\"layer\":1,\"cell\":{\"x\":70,\"y\":12},\"filled\":true}]}]}]}";
+
+        Assert.That(GameSaveData.TryParse(json, out GameSaveData data), Is.True);
+
+        Assert.That(data.Version, Is.EqualTo(2));
+        Assert.That(data.Time, Is.EqualTo(3600.5d));
+        Assert.That(data.Players, Has.Count.EqualTo(1));
+        Assert.That(data.Players[0].PlayerId, Is.EqualTo(Alice));
+        Assert.That(data.Players[0].WorldId, Is.EqualTo(WorldA));
+        Assert.That(data.Players[0].Position, Is.EqualTo(new Vector2(2060.5f, 42f)));
+        Assert.That(data.Players[0].Waystones, Has.Count.EqualTo(1));
+        Assert.That(data.Players[0].Waystones[0].WorldId, Is.EqualTo(WorldA));
+        Assert.That(data.Players[0].Waystones[0].Entry, Is.EqualTo("start"));
+        Assert.That(data.Worlds, Has.Count.EqualTo(1));
+        GameSaveData.Chunk chunk = data.Worlds[0].Chunks[0];
+        Assert.That(chunk.Coords, Is.EqualTo(new Vector2Int(1, 0)));
+        Assert.That(chunk.DeadMobs[0].Id, Is.EqualTo("mob-1"));
+        Assert.That(chunk.DeadMobs[0].DiedAt, Is.EqualTo(3500.25d));
+        Assert.That(chunk.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(1, new Vector2Int(70, 12), true) }));
+    }
+
+    /// <summary>
+    /// A save without players or worlds reads them as empty lists.
+    /// </summary>
+    [Test]
+    public void AVersion2Save_WithoutListsReadsThemEmpty()
+    {
+        Assert.That(GameSaveData.TryParse("{\"version\":2}", out GameSaveData data), Is.True);
+
+        Assert.That(data.Players, Is.Empty);
+        Assert.That(data.Worlds, Is.Empty);
+    }
+
+    /// <summary>
+    /// The written save holds the current format version, every player's waystones (none yet, so an empty list), and
+    /// no record for a chunk that has nothing in it.
+    /// </summary>
+    [Test]
+    public void TheWrittenSave_HoldsTheFormatVersion_EmptyWaystones_AndNoEmptyChunk()
+    {
+        SessionSave session = new(new ManualClock());
+        session.SetPlace(Alice, WorldA, Vector2.one);
+        session.WorldOf(WorldA).Chunk(new Vector2Int(1, 1));
         MemorySaveStore store = new();
-        new GameSave(store, gameScenes).SaveArea(cave, "door_north");
+
+        new GameSave(store).Write(session.ToData());
 
         Assert.That(GameSaveData.TryParse(store.Contents, out GameSaveData data), Is.True);
         Assert.That(data.Version, Is.EqualTo(GameSaveData.CurrentVersion));
-        Assert.That(data.AreaSceneGuid, Is.EqualTo(cave.SceneGuid));
-        Assert.That(store.Contents, Does.Not.Contain(cave.ScenePath), "Saves identify areas by GUID so moving a scene keeps saves valid.");
+        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(2));
+        Assert.That(store.Contents, Does.Contain("\"waystones\": []"));
+        Assert.That(data.Worlds[0].WorldId, Is.EqualTo(WorldA));
+        Assert.That(data.Worlds[0].Chunks, Is.Empty, "A chunk with no record is not written.");
     }
 
     /// <summary>
-    /// Saving a transient area that is not in <see cref="GameScenes"/>, or no area, fails without writing.
+    /// A version 1 save, which held the area the party was in, is ignored with a warning, so Continue is off.
     /// </summary>
     [Test]
-    public void SaveArea_AreaOutsideGameScenes_WritesNothing()
+    public void AVersion1Save_IsIgnoredWithAWarning()
     {
-        MemorySaveStore store = new();
-        GameSave save = new(store, gameScenes);
-        SceneDefinition transient = SceneDefinition.CreateTransient("Assets/Dev/StressTest/Area_StressTest.unity");
-        created.Add(transient);
+        GameSave save = new(new MemorySaveStore { Contents = "{\"version\":1,\"areaSceneGuid\":\"11111111111111111111111111111111\",\"spawnId\":\"start\"}" });
 
-        Assert.That(save.SaveArea(transient, null), Is.False);
-        Assert.That(save.SaveArea(null, null), Is.False);
-        Assert.That(store.WriteCount, Is.Zero);
+        LogAssert.Expect(LogType.Warning, new Regex("format version 1"));
+        Assert.That(save.TryLoad(out GameSaveData data), Is.False);
+        Assert.That(data, Is.Null);
     }
 
     /// <summary>
-    /// With an empty store there is no save, and loading fails with a null area.
+    /// A save from a newer format version is ignored with a warning.
     /// </summary>
     [Test]
-    public void TryLoadArea_WithoutASave_ReturnsFalse()
+    public void ANewerSave_IsIgnoredWithAWarning()
     {
-        GameSave save = new(new MemorySaveStore(), gameScenes);
-
-        Assert.That(save.HasSave, Is.False);
-        Assert.That(save.TryLoadArea(out SceneDefinition area, out _), Is.False);
-        Assert.That(area, Is.Null);
-    }
-
-    /// <summary>
-    /// A save that is not valid JSON fails to load and logs a warning.
-    /// </summary>
-    [Test]
-    public void TryLoadArea_CorruptFile_IsIgnoredWithAWarning()
-    {
-        GameSave save = new(new MemorySaveStore { Contents = "{ not json" }, gameScenes);
-
-        LogAssert.Expect(LogType.Warning, new Regex("could not be read"));
-        Assert.That(save.TryLoadArea(out _, out _), Is.False);
-    }
-
-    /// <summary>
-    /// A save written with a different format version fails to load and logs a warning.
-    /// </summary>
-    [Test]
-    public void TryLoadArea_OtherFormatVersion_IsIgnoredWithAWarning()
-    {
-        string json = new GameSaveData(cave.SceneGuid, "start").ToJson()
+        string json = new GameSaveData(0d, new GameSaveData.Player[0], new GameSaveData.World[0]).ToJson()
             .Replace($"\"version\": {GameSaveData.CurrentVersion}", $"\"version\": {GameSaveData.CurrentVersion + 1}");
-        GameSave save = new(new MemorySaveStore { Contents = json }, gameScenes);
+        GameSave save = new(new MemorySaveStore { Contents = json });
 
         LogAssert.Expect(LogType.Warning, new Regex("format version"));
-        Assert.That(save.TryLoadArea(out _, out _), Is.False);
+        Assert.That(save.TryLoad(out _), Is.False);
     }
 
     /// <summary>
-    /// An empty JSON object reads as format version 0 and is rejected with a warning.
+    /// With an empty store there is no save; a file that is not JSON, or an empty object (format version 0), is
+    /// ignored with a warning.
     /// </summary>
     [Test]
-    public void TryLoadArea_EmptyObject_IsIgnoredAsAnUnknownFormat()
+    public void NoSave_ACorruptFile_AndAnEmptyObject_LoadNothing()
     {
-        GameSave save = new(new MemorySaveStore { Contents = "{}" }, gameScenes);
+        Assert.That(new GameSave(new MemorySaveStore()).HasSave, Is.False);
+
+        LogAssert.Expect(LogType.Warning, new Regex("could not be read"));
+        Assert.That(new GameSave(new MemorySaveStore { Contents = "{ not json" }).TryLoad(out _), Is.False);
 
         LogAssert.Expect(LogType.Warning, new Regex("format version 0"));
-        Assert.That(save.TryLoadArea(out _, out _), Is.False);
+        Assert.That(new GameSave(new MemorySaveStore { Contents = "{}" }).TryLoad(out _), Is.False);
     }
 
     /// <summary>
-    /// A save whose scene GUID matches no area in <see cref="GameScenes"/> fails to load and logs a warning.
+    /// Places are keyed by player id: setting a player's place again replaces it and keeps the waystones it was loaded
+    /// with; an empty player or world id is not recorded.
     /// </summary>
     [Test]
-    public void TryLoadArea_AreaNoLongerInTheBuild_IsIgnoredWithAWarning()
+    public void Places_AreKeyedByPlayerId_AndKeepTheirWaystones()
     {
-        string json = new GameSaveData("33333333333333333333333333333333", "start").ToJson();
-        GameSave save = new(new MemorySaveStore { Contents = json }, gameScenes);
+        GameSaveData data = new(
+            0d,
+            new[] { new GameSaveData.Player(Alice, WorldA, Vector2.zero, new[] { new GameSaveData.Waystone(WorldA, "start") }) },
+            new GameSaveData.World[0]);
+        SessionSave session = new(new ManualClock());
+        session.StartFrom(data);
 
-        LogAssert.Expect(LogType.Warning, new Regex("not one of this build"));
-        Assert.That(save.TryLoadArea(out _, out _), Is.False);
+        session.SetPlace(Alice, WorldB, new Vector2(5f, 6f));
+        session.SetPlace(Bob, WorldA, new Vector2(7f, 8f));
+        session.SetPlace(string.Empty, WorldA, Vector2.zero);
+        session.SetPlace("carol-id", null, Vector2.zero);
+
+        Assert.That(session.PlayerCount, Is.EqualTo(2));
+        Assert.That(session.TryGetPlace(Alice, out string world, out Vector2 position), Is.True);
+        Assert.That(world, Is.EqualTo(WorldB));
+        Assert.That(position, Is.EqualTo(new Vector2(5f, 6f)));
+        Assert.That(session.WaystonesOf(Alice), Has.Count.EqualTo(1));
+        Assert.That(session.WaystonesOf(Alice)[0].Entry, Is.EqualTo("start"));
+        Assert.That(session.WaystonesOf(Bob), Is.Empty);
     }
 
     /// <summary>
-    /// Without a save the starting area and spawn are returned; once an area is saved, the saved one is.
+    /// The world clock is the saved time plus the game time since the session started; a new game starts it at zero
+    /// and forgets every player and world.
     /// </summary>
     [Test]
-    public void GetSavedOrStartingArea_PrefersTheSave_AndFallsBackToTheStartingArea()
+    public void TheWorldClock_ContinuesFromTheSave_AndANewGameStartsOver()
     {
-        MemorySaveStore store = new();
-        GameSave save = new(store, gameScenes);
+        ManualClock clock = new() { Time = 1000f };
+        SessionSave session = new(clock);
+        session.StartFrom(new GameSaveData(
+            500d,
+            new[] { new GameSaveData.Player(Alice, WorldA, Vector2.zero) },
+            new[] { new GameSaveData.World(WorldA, new GameSaveData.Chunk[0]) }));
 
-        save.GetSavedOrStartingArea(out SceneDefinition area, out string spawnId);
-        Assert.That(area, Is.SameAs(clearing));
-        Assert.That(spawnId, Is.EqualTo("start"));
+        Assert.That(session.Time, Is.EqualTo(500d));
+        clock.Advance(20f);
+        Assert.That(session.Time, Is.EqualTo(520d));
 
-        save.SaveArea(cave, "door_north");
-        save.GetSavedOrStartingArea(out area, out spawnId);
-        Assert.That(area, Is.SameAs(cave));
-        Assert.That(spawnId, Is.EqualTo("door_north"));
+        session.StartNew();
+        Assert.That(session.Time, Is.EqualTo(0d));
+        Assert.That(session.PlayerCount, Is.Zero);
+        Assert.That(session.WorldCount, Is.Zero);
+        clock.Advance(3f);
+        Assert.That(session.Time, Is.EqualTo(3d));
     }
 
     /// <summary>
@@ -209,19 +261,37 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// An area saved through one file store loads through a new <see cref="GameSave"/> reading the same file.
+    /// A save written through one file store loads through a new <see cref="GameSave"/> reading the same file.
     /// </summary>
     [Test]
     public void FileSaveStore_SaveSurvivesANewGameSave()
     {
         FileSaveStore store = new(Path.Combine(CreateTempDirectory(), FileSaveStore.DefaultFileName));
-        new GameSave(store, gameScenes).SaveArea(cave, "door_north");
+        SessionSave session = new(new ManualClock());
+        session.SetPlace(Alice, WorldA, new Vector2(1f, 2f));
+        new GameSave(store).Write(session.ToData());
 
-        GameSave reloaded = new(new FileSaveStore(store.FilePath), gameScenes);
+        GameSave reloaded = new(new FileSaveStore(store.FilePath));
 
-        Assert.That(reloaded.TryLoadArea(out SceneDefinition area, out string spawnId), Is.True);
-        Assert.That(area, Is.SameAs(cave));
-        Assert.That(spawnId, Is.EqualTo("door_north"));
+        Assert.That(reloaded.TryLoad(out GameSaveData data), Is.True);
+        Assert.That(data.Players[0].PlayerId, Is.EqualTo(Alice));
+        Assert.That(data.Players[0].Position, Is.EqualTo(new Vector2(1f, 2f)));
+    }
+
+    /// <summary>
+    /// A Multiplayer Play Mode virtual player (<c>-name Player2</c>) keeps files of its own; the main editor
+    /// (<c>Player1</c> or no name) and any other name keep the plain ones.
+    /// </summary>
+    [Test]
+    public void InstanceFiles_GiveAVirtualPlayerItsOwnFiles()
+    {
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "Player2" }), Is.EqualTo("save.Player2.json"));
+        Assert.That(InstanceFiles.NameFor("settings.json", new[] { "-projectPath", "x", "-name", "Player4" }), Is.EqualTo("settings.Player4.json"));
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "Player1" }), Is.EqualTo("save.json"));
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe" }), Is.EqualTo("save.json"));
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name" }), Is.EqualTo("save.json"));
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "../evil" }), Is.EqualTo("save.json"));
+        Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "PlayerX" }), Is.EqualTo("save.json"));
     }
 
     /// <summary>
@@ -232,20 +302,5 @@ public class GameSaveTests
     {
         tempDirectory = Path.Combine(Path.GetTempPath(), "TopDownRPG_SaveTests_" + System.Guid.NewGuid().ToString("N"));
         return tempDirectory;
-    }
-
-    /// <summary>
-    /// Creates a tracked <see cref="SceneDefinition"/> pointing at <paramref name="path"/> with scene GUID
-    /// <paramref name="guid"/>.
-    /// </summary>
-    private SceneDefinition CreateArea(string path, string guid)
-    {
-        SceneDefinition definition = ScriptableObject.CreateInstance<SceneDefinition>();
-        created.Add(definition);
-        SerializedObject serialized = new(definition);
-        serialized.FindProperty("sceneGuid").stringValue = guid;
-        serialized.FindProperty("scenePath").stringValue = path;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        return definition;
     }
 }

@@ -11,7 +11,8 @@ using VContainer.Unity;
 /// this machine streams for stand (every player offline or on the host, its own player on a client), and runs the
 /// streamer's next load or unload, one at a time: a world's root scene under the Gameplay scope, a chunk under its
 /// world's scope. It also streams the arrival of every trip under way (<see cref="TripArrivals"/>), so a trip's target
-/// world loads while the traveller's screen fades out. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
+/// world loads while the traveller's screen fades out, and the place the host prepares for a joining player
+/// (<see cref="PrepareAsync"/>), so that player's world is loaded before it spawns there. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
 /// enters and leaves worlds through, and that brings the local player to a trip's entry. In a session it runs the
 /// client's half of the per-chunk handshake (Docs/WorldStreaming.md: Networking): a client reports each chunk ready
 /// once it is loaded, again for the chunks of its new world when its player's trip count changes, and releases each
@@ -36,6 +37,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     private readonly IChunkHandshake handshake;
     private readonly ISessionStatus sessionStatus;
     private readonly List<StreamInterest> interests = new();
+    private readonly List<StreamInterest> preparations = new();
     private readonly CancellationTokenSource disposeCancellation = new();
     private bool active;
     private PlayerHandle reportedPlayer;
@@ -108,11 +110,11 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     }
 
     /// <summary>
-    /// Moves the players this machine moves into <paramref name="world"/> at its entry <paramref name="entryName"/>,
-    /// snaps the camera there, and completes once the world and the chunks around the local player are loaded. Throws
-    /// when no local player appears within <see cref="MaxFramesWaitingForPlayer"/> frames.
+    /// Moves the players this machine moves into <paramref name="world"/> at the world position
+    /// <paramref name="position"/>, snaps the camera there, and completes once the world and the chunks around the local
+    /// player are loaded. Throws when no local player appears within <see cref="MaxFramesWaitingForPlayer"/> frames.
     /// </summary>
-    public async Awaitable EnterAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
+    public async Awaitable EnterAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
     {
         if (world == null)
         {
@@ -131,7 +133,6 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
             await Awaitable.NextFrameAsync(cancellation);
         }
 
-        Vector2 position = EntryPosition(world, entryName);
         IReadOnlyList<PlayerHandle> party = players.Players;
         for (int i = 0; i < party.Count; i++)
         {
@@ -147,6 +148,33 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         while (!streamer.IsSettled(arrival))
         {
             await Awaitable.NextFrameAsync(cancellation);
+        }
+    }
+
+    /// <summary>
+    /// Streams <paramref name="world"/> around <paramref name="position"/> as an interest of its own, with no player
+    /// there, until that world and the chunks around the position are loaded, then stops streaming it; the player
+    /// placed there keeps them. Completes at once when no session is streaming, and when the session ends meanwhile.
+    /// </summary>
+    public async Awaitable PrepareAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
+    {
+        if (world == null)
+        {
+            throw new ArgumentNullException(nameof(world));
+        }
+
+        StreamInterest preparation = new(world, position);
+        preparations.Add(preparation);
+        try
+        {
+            while (active && !streamer.IsSettled(preparation))
+            {
+                await Awaitable.NextFrameAsync(cancellation);
+            }
+        }
+        finally
+        {
+            preparations.Remove(preparation);
         }
     }
 
@@ -218,7 +246,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
             Debug.LogWarning($"The local player arrives in {world.name} but is recorded in another world.");
         }
 
-        Vector2 position = EntryPosition(world, entryName);
+        Vector2 position = world.EntryPosition(entryName);
         local.Controller.Teleport(position);
         cameraFollow.SnapToTarget();
         StreamInterest arrival = new(world, position);
@@ -259,18 +287,9 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     }
 
     /// <summary>
-    /// The world position of <paramref name="world"/>'s entry <paramref name="entryName"/> (its default entry, with a
-    /// warning, for an unknown name), or of its middle when it has no entry.
-    /// </summary>
-    private static Vector2 EntryPosition(WorldDefinition world, string entryName)
-    {
-        WorldDefinition.Entry entry = world.FindEntry(entryName);
-        return world.ToWorld(entry != null ? entry.Position : world.LocalBounds.center);
-    }
-
-    /// <summary>
     /// Fills the interests with the players this machine streams for (every registered player in a world when it has
-    /// authority, its local player otherwise) and the arrivals of the trips under way.
+    /// authority, its local player otherwise), the arrivals of the trips under way and the places being prepared for
+    /// joining players.
     /// </summary>
     private void CollectInterests()
     {
@@ -293,6 +312,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         }
 
         arrivals.AddInterests(interests, playerWorlds);
+        interests.AddRange(preparations);
     }
 
     /// <summary>

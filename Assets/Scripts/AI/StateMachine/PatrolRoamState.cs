@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Mob state that walks to a random reachable point near its spawn, then idles; chases a detected target it can reach.
+/// Mob state that walks to a random reachable point near its spawn (inside its home chunk, for a mob of a world), then
+/// idles; chases a detected target it can reach.
 /// </summary>
 public class PatrolRoamState : MobStateBase
 {
@@ -31,12 +32,12 @@ public class PatrolRoamState : MobStateBase
     }
 
     /// <summary>
-    /// Goes to Chase when a detected target is reachable, and to Idle once the destination is reached or the mob has
-    /// stalled for <see cref="MobConfig.StuckTimeout"/>.
+    /// Goes to Chase when it spots a target within its leash that it can reach, and to Idle once the destination is
+    /// reached or the mob has stalled for <see cref="MobConfig.StuckTimeout"/>.
     /// </summary>
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
+        if (SpotsTarget())
         {
             Brain.ChangeState(MobStateId.Chase);
             return;

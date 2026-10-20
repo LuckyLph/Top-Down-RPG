@@ -102,6 +102,7 @@ public class GameplayLifetimeScope : LifetimeScope
 
         builder.Register<Worlds>(Lifetime.Singleton);
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
+        builder.Register<ChunkNetworkPrefabs>(Lifetime.Singleton);
         builder.RegisterInstance(new NavigationPagePool());
         if (worldStreamingSettings == null)
         {

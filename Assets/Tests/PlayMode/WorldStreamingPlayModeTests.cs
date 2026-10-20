@@ -5,18 +5,21 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
 using VContainer.Unity;
 
 /// <summary>
 /// PlayMode tests for seamless worlds on one machine: booting into a world, the chunks loading around the player under
 /// the right scopes, chunks following the player across the world, loaded neighbours drawing each other's border cells
-/// with only the chunks near the local player drawn, the player pathing across a border on its world's navigation, and
-/// leaving to the menu unloading everything.
+/// with only the chunks near the local player drawn, the player pathing across a border on its world's navigation, each
+/// chunk's mobs spawning into its scene and going with it, a mob chasing the player across a border stopping at its
+/// leash, and leaving to the menu unloading everything, mobs included.
 /// </summary>
 public class WorldStreamingPlayModeTests
 {
     private const string SandboxRootPath = "Assets/Worlds/Sandbox/World_Sandbox.unity";
     private const string WorldsFolder = "Assets/Worlds/";
+    private const float LeashTestTimeoutSeconds = 30f;
 
     /// <summary>
     /// Booting with the Sandbox's root scene open starts a session in that world at its default entry: the player
@@ -138,6 +141,8 @@ public class WorldStreamingPlayModeTests
             () => loaded.Chunks.Count == 1 && loaded.Chunks.ContainsKey(new Vector2Int(1, 1)),
             "the chunks to follow the player to (1, 1)");
         Assert.That(LoadedWorldScenes(), Is.EquivalentTo(new[] { "World_Sandbox", "World_Sandbox_1_1" }));
+        Assert.That(Object.FindObjectsByType<MobController>().Length, Is.EqualTo(MobSpawnerOf(loaded, new Vector2Int(1, 1)).Mobs.Count),
+            "Only the loaded chunk's mobs are about.");
 
         gameFlow.ShowMainMenuAsync();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
@@ -145,11 +150,130 @@ public class WorldStreamingPlayModeTests
         Assert.That(gameFlow.IsInMenu, Is.True);
         Assert.That(gameFlow.CurrentWorld, Is.Null);
         Assert.That(LoadedWorldScenes(), Is.Empty, "Leaving the session unloads every world and chunk scene.");
+        Assert.That(Object.FindObjectsByType<MobController>(), Is.Empty, "Leaving the session leaves no mob behind.");
+    }
+
+    /// <summary>
+    /// A loaded chunk spawns a mob at each of its spawn points into its own scene, on walkable ground, injected with
+    /// its world's navigation and players and given the chunk as its home; when the chunk unloads, its mobs go with it.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ChunkMobs_SpawnIntoTheirChunksScene_AndGoWhenItUnloads()
+    {
+        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+
+        WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
+        Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
+        worlds.TryGet(world, out LoadedWorld loaded);
+        Vector2Int coords = Vector2Int.zero;
+        Scene chunkScene = loaded.Chunks[coords];
+        ChunkMobSpawner spawner = MobSpawnerOf(loaded, coords);
+        MobSpawnPoint[] spawnPoints = SceneQuery.FindAll<MobSpawnPoint>(chunkScene);
+        PlayerHandle player = LocalPlayer().Handle;
+
+        Assert.That(spawnPoints, Is.Not.Empty);
+        Assert.That(spawner.Mobs.Count, Is.EqualTo(spawnPoints.Length), "Each spawn point spawns one mob.");
+        Rect home = new(world.ToWorld(Vector2.zero), new Vector2(ChunkCoords.Size, ChunkCoords.Size));
+        List<MobController> mobs = new(spawner.Mobs);
+        foreach (MobSpawnPoint spawnPoint in spawnPoints)
+        {
+            MobController mob = mobs.Find(candidate => Vector2.Distance(candidate.Patrol.SpawnPosition, spawnPoint.transform.position) < 0.01f);
+            Assert.That(mob, Is.Not.Null, $"No mob spawned at {spawnPoint.name}.");
+            Assert.That(mob.gameObject.scene, Is.EqualTo(chunkScene));
+            Assert.That(mob.Navigation, Is.SameAs(loaded.Navigation));
+            Assert.That(mob.Players, Is.InstanceOf<WorldPlayers>());
+            Assert.That(((WorldPlayers)mob.Players).World, Is.SameAs(world));
+            Assert.That(mob.Players.Contains(player), Is.True, "The player in the world is one the mob considers.");
+            Assert.That(mob.Patrol.HomeArea, Is.EqualTo(home));
+            Vector3Int cell = loaded.Navigation.WorldToCell(spawnPoint.transform.position);
+            Assert.That(loaded.Navigation.IsCellWalkable(cell, mob.Config.MovementProfile), Is.True, $"{spawnPoint.name} stands on walkable ground.");
+        }
+
+        LocalPlayer().Controller.Teleport(world.ToWorld(new Vector2(100.5f, 100.5f)));
+        yield return SceneBootTestHelper.WaitUntil(() => !loaded.Chunks.ContainsKey(coords), "chunk (0, 0) to unload");
+        yield return null;
+
+        Assert.That(mobs.TrueForAll(mob => mob == null), Is.True, "A chunk's mobs go with it.");
+    }
+
+    /// <summary>
+    /// A mob of chunk (0, 0) chases the player north across the border into chunk (0, 1), the player staying a few
+    /// cells ahead of it, gives up once the player is beyond its leash (8 cells past the border), never going further
+    /// itself, and walks home into its own chunk.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AMobChasingThePlayerAcrossABorder_StopsAtItsLeash_AndGoesHome()
+    {
+        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+
+        WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
+        Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
+        worlds.TryGet(world, out LoadedWorld loaded);
+        MobController mob = null;
+        foreach (MobController candidate in MobSpawnerOf(loaded, Vector2Int.zero).Mobs)
+        {
+            if (mob == null || candidate.Patrol.SpawnPosition.y > mob.Patrol.SpawnPosition.y)
+            {
+                mob = candidate;
+            }
+        }
+
+        Assert.That(mob, Is.Not.Null);
+        Assert.That(mob.Config.LeashCells, Is.EqualTo(8));
+        float border = world.ToWorld(new Vector2(0f, ChunkCoords.Size)).y;
+        float leashEdge = border + mob.Config.LeashCells;
+        PlayerController player = LocalPlayer().Controller;
+        float playerX = mob.transform.position.x;
+        float playerY = mob.transform.position.y + 3.5f;
+        player.Teleport(new Vector2(playerX, playerY));
+        yield return SceneBootTestHelper.WaitUntil(() => loaded.Navigation.HasChunk(new Vector2Int(0, 1)), "chunk (0, 1) to add its page");
+
+        float deadline = Time.realtimeSinceStartup + LeashTestTimeoutSeconds;
+        float highest = mob.transform.position.y;
+        bool chased = false;
+        while (!mob.Patrol.IsLeashed)
+        {
+            Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), $"Timed out waiting for the mob to give up; it is in {mob.CurrentStateId} at {(Vector2)mob.transform.position}.");
+            chased |= mob.CurrentStateId == MobStateId.Chase;
+            highest = Mathf.Max(highest, mob.transform.position.y);
+            float ahead = mob.transform.position.y + 3.5f;
+            if (ahead > playerY)
+            {
+                playerY = ahead;
+                player.Teleport(new Vector2(playerX, playerY));
+            }
+
+            yield return null;
+        }
+
+        Assert.That(chased, Is.True, "The mob chased the player.");
+        Assert.That(highest, Is.GreaterThan(border), "The mob followed the player across the border.");
+        Assert.That(highest, Is.LessThanOrEqualTo(leashEdge + 0.5f), "The mob never went beyond its leash.");
+        Assert.That(mob.CurrentStateId, Is.EqualTo(MobStateId.Return));
+
+        deadline = Time.realtimeSinceStartup + LeashTestTimeoutSeconds;
+        while (mob.transform.position.y >= border - 0.5f || mob.CurrentStateId == MobStateId.Return)
+        {
+            Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), $"Timed out waiting for the mob to get home; it is in {mob.CurrentStateId} at {(Vector2)mob.transform.position}.");
+            Assert.That(mob.CurrentStateId, Is.Not.EqualTo(MobStateId.Chase), "A leashed mob ignores the player on its way home.");
+            yield return null;
+        }
+
+        Assert.That(mob.Patrol.HomeArea.Contains(mob.transform.position), Is.True, "The mob is back in its home chunk.");
     }
 
     private static LocalPlayer LocalPlayer()
     {
         return SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
+    }
+
+    /// <summary>
+    /// The mob spawner of the loaded chunk at <paramref name="coords"/> of <paramref name="world"/>, from its scope.
+    /// </summary>
+    private static ChunkMobSpawner MobSpawnerOf(LoadedWorld world, Vector2Int coords)
+    {
+        LifetimeScope scope = LifetimeScope.Find<ChunkLifetimeScope>(world.Chunks[coords]);
+        return scope.Container.Resolve<ChunkMobSpawner>();
     }
 
     /// <summary>

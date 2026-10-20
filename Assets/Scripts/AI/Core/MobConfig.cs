@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A mob type's tuning: movement, perception, search, combat, crowd, patrol and navigation. Read-only at runtime;
+/// A mob type's tuning: movement, perception, search, combat, crowd, patrol, leash and navigation. Read-only at runtime;
 /// tests build their own with <see cref="Create"/>.
 /// </summary>
 [CreateAssetMenu(menuName = "AI/Mob Config", fileName = "MobConfig")]
@@ -43,6 +43,10 @@ public class MobConfig : ScriptableObject
     [SerializeField, Min(1)] private int patrolSampleAttempts = 12;
     [SerializeField] private Vector2 idleDurationRange = new(0.5f, 1.5f);
 
+    [Header("Leash")]
+    [SerializeField, Min(0), Tooltip("How many cells beyond its home chunk's edge a mob in a world chases before it gives up and walks home. Leash plus the detection radius must stay under the world streaming's load extents, and leash plus the lose distance under its keep extents, so a mob near a player always has its home chunk loaded (Docs/WorldStreaming.md: Leash). Mobs in areas have no home chunk and no leash.")]
+    private int leashCells = 8;
+
     [Header("Navigation")]
     [SerializeField, Min(0.01f)] private float repathInterval = 0.25f;
     [SerializeField, Min(1)] private int nearestCellSearchRadius = 8;
@@ -71,6 +75,7 @@ public class MobConfig : ScriptableObject
     public float PatrolRoamRadius => patrolRoamRadius;
     public int PatrolSampleAttempts => patrolSampleAttempts;
     public Vector2 IdleDurationRange => idleDurationRange;
+    public int LeashCells => leashCells;
     public float RepathInterval => repathInterval;
     public int NearestCellSearchRadius => nearestCellSearchRadius;
     public float StuckTimeout => stuckTimeout;
@@ -105,7 +110,8 @@ public class MobConfig : ScriptableObject
         float? patrolRoamRadius = null,
         Vector2? idleDurationRange = null,
         float? repathInterval = null,
-        TerrainMovementProfile2D movementProfile = null)
+        TerrainMovementProfile2D movementProfile = null,
+        int? leashCells = null)
     {
         MobConfig config = CreateInstance<MobConfig>();
         config.moveSpeed = moveSpeed ?? config.moveSpeed;
@@ -122,6 +128,7 @@ public class MobConfig : ScriptableObject
         config.patrolRoamRadius = patrolRoamRadius ?? config.patrolRoamRadius;
         config.idleDurationRange = idleDurationRange ?? config.idleDurationRange;
         config.repathInterval = repathInterval ?? config.repathInterval;
+        config.leashCells = leashCells ?? config.leashCells;
         if (movementProfile != null)
         {
             config.movementProfile = movementProfile;

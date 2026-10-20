@@ -27,6 +27,7 @@ MonoBehaviour:
   attackExitBuffer: 0.25
   attackDamage: 10
   attackDamageType: 0
+  attackStatuses: []
   attackInterval: 0.75
   separationRadius: 0.8
   separationStrength: 4
@@ -34,6 +35,7 @@ MonoBehaviour:
   patrolRoamRadius: 12
   patrolSampleAttempts: 12
   idleDurationRange: {x: 0.5, y: 1.5}
+  leashCells: 8
   repathInterval: 0.25
   nearestCellSearchRadius: 8
   stuckTimeout: 1

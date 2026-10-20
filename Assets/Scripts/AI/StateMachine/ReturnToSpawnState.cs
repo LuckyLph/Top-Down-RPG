@@ -45,12 +45,12 @@ public class ReturnToSpawnState : MobStateBase
     }
 
     /// <summary>
-    /// Goes to Chase when a detected target is reachable; otherwise goes to Idle once in the return cell, arrived, or
-    /// stalled for <see cref="MobConfig.StuckTimeout"/>.
+    /// Goes to Chase when it spots a target within its leash that it can reach; otherwise goes to Idle once in the
+    /// return cell, arrived, or stalled for <see cref="MobConfig.StuckTimeout"/>.
     /// </summary>
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
+        if (SpotsTarget())
         {
             Brain.ChangeState(MobStateId.Chase);
             return;

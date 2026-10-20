@@ -17,7 +17,13 @@ public interface INetworkObjectSpawner
     /// </summary>
     void RegisterPrefab(NetworkObject prefab, IObjectResolver resolver, Scene targetScene);
     /// <summary>
-    /// Removes the handler <see cref="RegisterPrefab"/> added for <paramref name="prefab"/>.
+    /// Makes client copies of <paramref name="prefab"/> be created and destroyed by <paramref name="handler"/>, for
+    /// prefabs whose copies need choosing a resolver and scene per instance. Netcode keeps one handler per prefab.
+    /// </summary>
+    void RegisterPrefab(NetworkObject prefab, INetworkPrefabInstanceHandler handler);
+    /// <summary>
+    /// Removes the handler <see cref="RegisterPrefab(NetworkObject, IObjectResolver, Scene)"/> added for
+    /// <paramref name="prefab"/>.
     /// </summary>
     void UnregisterPrefab(NetworkObject prefab);
     /// <summary>
@@ -25,4 +31,9 @@ public interface INetworkObjectSpawner
     /// it is ready and is destroyed with its scene.
     /// </summary>
     void Spawn(NetworkObject instance);
+    /// <summary>
+    /// Host only: despawns <paramref name="instance"/> so every client drops its copy, and destroys it; destroys one that
+    /// is not spawned. Nothing for null.
+    /// </summary>
+    void Despawn(NetworkObject instance);
 }

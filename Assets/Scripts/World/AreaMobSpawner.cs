@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Unity.Netcode;
-using UnityEngine;
 using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
@@ -9,7 +8,8 @@ using VContainer.Unity;
 /// <summary>
 /// Area-scope entry point that spawns one mob per <see cref="MobSpawnPoint"/> into the area scene. Offline or on
 /// the host it instantiates them through the area container and, in a session, spawns them as network objects; on
-/// a client it registers the mob prefabs so the host's mobs arrive injected and in this area's scene.
+/// a client it registers the mob prefabs so the host's mobs arrive injected and in this area's scene. Shares its
+/// spawning with <see cref="ChunkMobSpawner"/> through <see cref="MobSpawning"/>.
 /// </summary>
 public sealed class AreaMobSpawner : IStartable, IDisposable
 {
@@ -38,24 +38,15 @@ public sealed class AreaMobSpawner : IStartable, IDisposable
     /// </summary>
     public void RegisterNetworkPrefabs()
     {
-        if (!networkObjects.IsActive || networkObjects.IsServer)
+        if (!MobSpawning.IsClient(networkObjects) || registeredPrefabs.Count > 0)
         {
             return;
         }
 
-        foreach (MobSpawnPoint spawnPoint in spawnPoints)
+        MobSpawning.CollectNetworkPrefabs(spawnPoints, registeredPrefabs);
+        foreach (NetworkObject prefab in registeredPrefabs)
         {
-            if (spawnPoint == null || spawnPoint.MobPrefab == null)
-            {
-                continue;
-            }
-
-            NetworkObject prefab = spawnPoint.MobPrefab.GetComponent<NetworkObject>();
-            if (prefab != null && !registeredPrefabs.Contains(prefab))
-            {
-                networkObjects.RegisterPrefab(prefab, resolver, scene);
-                registeredPrefabs.Add(prefab);
-            }
+            networkObjects.RegisterPrefab(prefab, resolver, scene);
         }
     }
 
@@ -64,7 +55,7 @@ public sealed class AreaMobSpawner : IStartable, IDisposable
     /// </summary>
     public void Start()
     {
-        if (!networkObjects.IsActive || networkObjects.IsServer)
+        if (MobSpawning.HasAuthority(networkObjects))
         {
             SpawnAll();
         }
@@ -83,19 +74,10 @@ public sealed class AreaMobSpawner : IStartable, IDisposable
                 continue;
             }
 
-            if (spawnPoint.MobPrefab == null)
+            MobController mob = MobSpawning.Instantiate(spawnPoint, resolver, scene);
+            if (mob != null)
             {
-                Debug.LogError($"{spawnPoint.name} has no mob prefab assigned; nothing spawns there.", spawnPoint);
-                continue;
-            }
-
-            MobController mob = resolver.Instantiate(spawnPoint.MobPrefab, spawnPoint.transform.position, Quaternion.identity);
-            mob.name = spawnPoint.MobPrefab.name;
-            SceneManager.MoveGameObjectToScene(mob.gameObject, scene);
-
-            if (networkObjects.IsActive && mob.TryGetComponent(out NetworkObject networkObject))
-            {
-                networkObjects.Spawn(networkObject);
+                MobSpawning.NetworkSpawn(mob, networkObjects);
             }
         }
     }

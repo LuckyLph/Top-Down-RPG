@@ -27,13 +27,20 @@ public class AttackRangeState : MobStateBase
 
     /// <summary>
     /// Goes to Search when the target is lost but hidden within the lose distance, to Return when it is lost
-    /// otherwise, and to Chase when it left attack range; else attacks.
+    /// otherwise, gives up at the leash when the target or the mob is beyond it, and goes to Chase when the target left
+    /// attack range; else attacks.
     /// </summary>
     public override void Tick()
     {
         if (!Perception.HasDetectedTarget || Perception.CurrentTarget == null)
         {
             Brain.ChangeState(Perception.IsTargetHiddenInRange ? MobStateId.Search : MobStateId.Return);
+            return;
+        }
+
+        if (!IsWithinLeash(Perception.CurrentTarget.position))
+        {
+            GiveUpAtLeash();
             return;
         }
 

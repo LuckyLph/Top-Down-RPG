@@ -5,7 +5,8 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for <see cref="MobController"/>'s state machine on a test navigation grid: idle, patrol, chase, attack,
-/// search and return transitions, perception target choice, crowd control, separation and waiting behind allies.
+/// search and return transitions, perception target choice, crowd control, separation and waiting behind allies, and a
+/// world mob's leash and patrol inside its home chunk.
 /// </summary>
 public class MobStateMachineTests
 {
@@ -873,6 +874,154 @@ public class MobStateMachineTests
     }
 
     /// <summary>
+    /// A mob of a world chasing its target gives up once the target stands beyond its leash, walks home, and ignores the
+    /// target on the way even when it comes back inside the leash.
+    /// </summary>
+    [Test]
+    public void AWorldMob_ChasingATargetPastItsLeash_GivesUpAndWalksHome()
+    {
+        SetupWorld(leashCells: 2);
+        brain.SetHome(LeashTestHome);
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+
+        player.position = new Vector3(6.5f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return), "A target 1.5 cells beyond the leash is given up on.");
+        Assert.That(brain.Patrol.IsLeashed, Is.True);
+
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Chase), "A leashed mob goes home before it chases again.");
+    }
+
+    /// <summary>
+    /// A mob of a world does not start chasing a target it detects beyond its leash.
+    /// </summary>
+    [Test]
+    public void AWorldMob_DoesNotChaseATargetBeyondItsLeash()
+    {
+        SetupWorld(leashCells: 2);
+        brain.SetHome(LeashTestHome);
+        player.position = new Vector3(6.5f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.Perception.HasDetectedTarget, Is.True);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
+    }
+
+    /// <summary>
+    /// A mob of an area has no home chunk and no leash: it keeps chasing wherever the target goes within its lose
+    /// distance.
+    /// </summary>
+    [Test]
+    public void AnAreaMob_HasNoLeash()
+    {
+        SetupWorld(leashCells: 2);
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+
+        player.position = new Vector3(6.5f, 0f, 0f);
+        brain.TickStateMachine(0.1f);
+
+        Assert.That(brain.Patrol.HasHome, Is.False);
+        Assert.That(brain.Patrol.IsWithinLeash(new Vector2(1000f, 1000f)), Is.True);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    /// <summary>
+    /// A mob of a world gives up on a target inside its leash when the only path there leaves the leash (round the end
+    /// of a wall beyond it), and does not flip back to chasing on the next tick.
+    /// </summary>
+    [Test]
+    public void AWorldMob_GivesUp_WhenItsPathToTheTargetWouldLeaveTheLeash()
+    {
+        List<Vector3Int> wall = new();
+        for (int x = -10; x <= 5; x++)
+        {
+            wall.Add(new Vector3Int(x, 1, 0));
+        }
+
+        SetupWorld(blockedCells: wall, leashCells: 2);
+        brain.SetHome(LeashTestHome);
+        player.position = new Vector3(0.5f, 3.5f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase), "The target stands inside the leash and can be reached.");
+
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return), "The path round the wall's end at x = 6 leaves the leash.");
+        Assert.That(brain.Patrol.IsLeashed, Is.True);
+
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.Not.EqualTo(MobStateId.Chase), "Already home, it idles instead of chasing again.");
+    }
+
+    /// <summary>
+    /// A mob that gave up at its leash lets go of it once it has idled out its idle time, and spots targets again.
+    /// </summary>
+    [Test]
+    public void ALeashedMob_SpotsTargetsAgain_AfterIdlingAtHome()
+    {
+        SetupWorld(leashCells: 2);
+        brain.SetHome(LeashTestHome);
+        brain.Patrol.SetLeashed(true);
+        brain.ChangeState(MobStateId.Idle);
+
+        brain.TickStateMachine(10.5f);
+        Assert.That(brain.Patrol.IsLeashed, Is.False);
+
+        player.position = new Vector3(3f, 0f, 0f);
+        brain.ChangeState(MobStateId.Idle);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+    }
+
+    /// <summary>
+    /// A mob of a world picks patrol points only inside its home chunk, while an area mob with the same roam radius
+    /// roams beyond that rectangle.
+    /// </summary>
+    [Test]
+    public void AWorldMob_PatrolsOnlyInsideItsHomeChunk()
+    {
+        SetupWorld(new Vector3(1.5f, 0.5f, 0f), patrolRoamRadius: 6f);
+        Rect home = new(0f, -4f, 4f, 8f);
+        bool areaMobLeftTheRectangle = false;
+        for (int i = 0; i < 40; i++)
+        {
+            if (brain.Patrol.TryGetRoamDestination(null, out Vector2 destination) && !home.Contains(destination))
+            {
+                areaMobLeftTheRectangle = true;
+            }
+        }
+
+        brain.SetHome(home);
+        int destinations = 0;
+        for (int i = 0; i < 40; i++)
+        {
+            if (brain.Patrol.TryGetRoamDestination(null, out Vector2 destination))
+            {
+                destinations++;
+                Assert.That(home.Contains(destination), Is.True, $"{destination} lies outside the home chunk.");
+            }
+        }
+
+        Assert.That(areaMobLeftTheRectangle, Is.True);
+        Assert.That(destinations, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// The home chunk the leash tests give their mob: cells -3 to 2 each way, so a leash of 2 reaches from -5 to 5.
+    /// </summary>
+    private static Rect LeashTestHome => new(-3f, -3f, 6f, 6f);
+
+    /// <summary>
     /// Adds another living, damageable player at <paramref name="position"/> to the registry the mobs sense.
     /// </summary>
     private PlayerHandle AddPlayer(Vector3 position)
@@ -935,10 +1084,11 @@ public class MobStateMachineTests
 
     /// <summary>
     /// Builds a 21x21 walkable navigation grid centered on the origin, with an optional wall along row y = 1 and
-    /// extra <paramref name="blockedCells"/>, a registered player far out of range, the mob config and the mob
-    /// under test at <paramref name="spawnPosition"/> (the origin by default).
+    /// extra <paramref name="blockedCells"/>, a registered player far out of range, the mob config (with
+    /// <paramref name="leashCells"/>, which only a mob given a home uses) and the mob under test at
+    /// <paramref name="spawnPosition"/> (the origin by default).
     /// </summary>
-    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f)
+    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f, int leashCells = 8)
     {
         root = new GameObject("MobStateMachineTestRoot");
         Grid grid = root.AddComponent<Grid>();
@@ -1007,7 +1157,8 @@ public class MobStateMachineTests
             attackDamage: 1,
             attackInterval: 0.75f,
             repathInterval: 0.1f,
-            patrolRoamRadius: patrolRoamRadius);
+            patrolRoamRadius: patrolRoamRadius,
+            leashCells: leashCells);
 
         brain = CreateMob(spawnPosition ?? Vector3.zero);
     }

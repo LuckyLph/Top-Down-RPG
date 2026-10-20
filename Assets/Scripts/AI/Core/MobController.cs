@@ -111,8 +111,9 @@ public class MobController : MonoBehaviour
     }
 
     /// <summary>
-    /// Injects its navigation (the area's grid, or its world's navigation), the player registry and the random source, and rebuilds the mob with them
-    /// when it has already initialized.
+    /// Injects its navigation (the area's grid, or its world's navigation), its players (every player in an area, the
+    /// players in its world in a world, <see cref="WorldPlayers"/>) and the random source, and rebuilds the mob with
+    /// them when it has already initialized.
     /// </summary>
     [Inject]
     public void Construct(INavigation2D mobNavigation, IPlayerRegistry playerRegistry, IRandom randomSource)
@@ -134,6 +135,16 @@ public class MobController : MonoBehaviour
         players = playerRegistry;
         random = randomSource;
         Rebuild();
+    }
+
+    /// <summary>
+    /// Gives a mob of a world its home, its home chunk's area in world units: it patrols inside it and gives up on a
+    /// target or a path beyond its leash (<see cref="MobPatrolAnchor.SetHome"/>). Mobs of areas have none.
+    /// </summary>
+    public void SetHome(Rect homeArea)
+    {
+        CacheComponents();
+        patrol.SetHome(homeArea);
     }
 
     /// <summary>

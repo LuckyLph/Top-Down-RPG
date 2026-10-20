@@ -15,11 +15,17 @@ public class SearchState : MobStateBase
 
     /// <summary>
     /// Starts the search timer and builds a strict (not partial) path to the last known target position; goes to
-    /// Return when there is none.
+    /// Return when there is none, and gives up at the leash when that position lies beyond it.
     /// </summary>
     public override void Enter()
     {
         searchTimer = Config.SearchDuration;
+        if (!IsWithinLeash(Perception.LastKnownTargetPosition))
+        {
+            GiveUpAtLeash();
+            return;
+        }
+
         if (!PathAgent.BuildPathToWorld(Perception.LastKnownTargetPosition, allowPartial: false))
         {
             Brain.ChangeState(MobStateId.Return);
@@ -27,12 +33,12 @@ public class SearchState : MobStateBase
     }
 
     /// <summary>
-    /// Goes to Chase when a detected target is reachable; once arrived or stalled, counts the search time down and
-    /// then goes to Return.
+    /// Goes to Chase when it spots a target within its leash that it can reach; once arrived or stalled, counts the
+    /// search time down and then goes to Return.
     /// </summary>
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
+        if (SpotsTarget())
         {
             Brain.ChangeState(MobStateId.Chase);
             return;

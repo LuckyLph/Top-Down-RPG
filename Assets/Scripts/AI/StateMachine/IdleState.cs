@@ -23,11 +23,12 @@ public class IdleState : MobStateBase
     }
 
     /// <summary>
-    /// Goes to Chase when a detected target is reachable, else counts the idle time down and then goes to Patrol.
+    /// Goes to Chase when it spots a target within its leash that it can reach, else counts the idle time down, then
+    /// lets go of the leash (a mob that gave up at it spots targets again) and goes to Patrol.
     /// </summary>
     public override void Tick()
     {
-        if (Perception.HasDetectedTarget && Perception.CurrentTarget != null && PathAgent.CanReachWorldTarget(Perception.CurrentTarget.position))
+        if (SpotsTarget())
         {
             Brain.ChangeState(MobStateId.Chase);
             return;
@@ -36,6 +37,7 @@ public class IdleState : MobStateBase
         idleTimer -= Brain.DeltaTime;
         if (idleTimer <= 0f)
         {
+            Patrol.SetLeashed(false);
             Brain.ChangeState(MobStateId.Patrol);
         }
     }

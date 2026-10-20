@@ -77,7 +77,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Paths | Only within loaded chunks of the walker's own world. An unloaded chunk counts as blocked. Click-to-move goals are on screen, so this never limits a player. A mob that would leave the loaded region is leashed home. |
 | Load rule | Each machine keeps an interest rectangle around each player it streams for: the view (20 x 12 cells) plus `loadMargin` cells on every side. Every chunk the rectangle overlaps loads. A chunk unloads once no rectangle widened by a further `unloadHysteresis` overlaps it, so walking back and forth over a border never reloads it. With the margins Phase 2 measured for (`loadMargin` 12, `unloadHysteresis` 8), the interest rectangle is 45 x 37 cells and the one a chunk must leave to unload 61 x 53, both under a chunk's 64, so a player never holds more than four chunks and the host at most 16 for four players, however many worlds they are in. |
 | Ownership | Everything placed in a chunk belongs to the chunk holding its root. A blocking prop's footprint, a spawn point and a container lie inside their chunk; the editor tools refuse anything else. A mob belongs to the chunk of its spawn point, its home chunk, for its whole life, and never leaves its world. |
-| Leash | A mob never goes more than `leash` cells beyond its home chunk's edge. It gives up and returns home when its path or its target would take it further. With `leash` + the mob's detection radius under `loadMargin` + half the view, a mob near any player always has its home chunk loaded, so a chunk never unloads under a mob that is still in play. |
+| Leash | A mob never goes more than `leash` cells beyond its home chunk's edge. It gives up and returns home when its path or its target would take it further. With `leash` + the mob's detection radius under `loadMargin` + half the view (on the view's shorter side: 12 + 6 = 18 cells), a mob near any player always has its home chunk loaded, and with `leash` + its lose distance under the unload rectangle's reach (26), that chunk never unloads under a mob that is still chasing. |
 | Simulation and presentation | Loading a world or chunk for the game's logic happens in the background, with no fade and no change to time. A fade, blocked input and waiting for chunks belong to one machine's own player only. In a session, a trip never stops game time (`TransitionTimeFreeze` holds only offline, or not at all). Lighting, ambience and music follow the local camera's world: only that world's global light is on. |
 | Player identity | Each install has a player id, a GUID made once and kept in `settings.json`, sent in the join payload. The host's save keys each player's world, position and discovered waystones by player id. A player the host does not know starts at the starting world's entry. |
 | Death | Each player on their own: a dead player respawns at the nearest waystone they have discovered in their world, after the respawn delay. No rule looks at the other players. |
@@ -249,8 +249,9 @@ Walls stay dual-grid tilemaps per chunk. Their render tilemap is offset by half 
   - On the host or offline, it spawns each of its chunk's mob spawn points when the chunk becomes ready. A spawn point whose mob the world state marks as dead and not yet due to return is skipped.
   - It despawns the chunk's mobs before the chunk unloads.
   - Clients register the mob prefabs per chunk as they do per area today.
-- **Leash.** A mob carries its home chunk and its leash. Its state machine treats a target or path beyond the leash like a lost target and walks home. `MobPatrolAnchor` picks patrol points inside the home chunk.
-- **Targets.** A mob considers only players in its own world. Worlds are far apart, so distances already rule the others out; the filter makes it explicit and saves the distance checks.
+  - Clients register the mob prefabs per chunk through `ChunkNetworkPrefabs`, which keeps Netcode's one handler per prefab and sends each copy to its chunk (see Phase 4's notes).
+- **Leash.** A mob carries its home chunk and its leash. Its state machine treats a target or path beyond the leash like a lost target and walks home, ignoring targets until it has idled there. `MobPatrolAnchor` picks patrol points inside the home chunk.
+- **Targets.** A mob considers only players in its own world: the world's scope registers `WorldPlayers`, the players in that world, as its `IPlayerRegistry`. Worlds are far apart, so distances already rule the others out; the filter makes it explicit and saves the distance checks.
 - **Death.** A mob's death writes its spawn point's persistent id and the time into its world's state (see Persistence).
 
 ### Networking
@@ -423,8 +424,38 @@ Notes:
 
 ### Phase 4: mobs per chunk
 
-- [ ] `ChunkMobSpawner` spawns and despawns with its chunk.
-- [ ] Home chunk and leash, patrol inside the home chunk, and targets only in the mob's world.
+- [x] `ChunkMobSpawner` spawns and despawns with its chunk.
+- [x] Home chunk and leash, patrol inside the home chunk, and targets only in the mob's world.
+
+Notes:
+
+- **Spawning.** `ChunkMobSpawner` is a chunk-scope entry point. It spawns in `PostStart`, which VContainer runs after every `Start`, so `ChunkNavigation` has added the chunk's page by then. Offline or on the host it instantiates one mob per spawn point through the chunk's scope, so the mob gets its world's `WorldNavigation` and `WorldPlayers` from the world's scope. It moves the mob into the chunk's scene, gives it the chunk as its home and network-spawns it in a session.
+  - It despawns its mobs when `Worlds.ChunkUnloading` names its chunk, before the scene unloads, so in a session clients drop their copies first. Its `Dispose` takes out whatever is left, so no path leaves a mob behind.
+  - A mob lives in its home chunk's scene for its whole life, even after walking into a neighbour, so it can never outlive that chunk.
+  - Mobs are not pooled: a chunk loads three of them at most every second or two of walking.
+- **Shared with areas.** `AreaMobSpawner` and `ChunkMobSpawner` share `MobSpawning`: who spawns, the distinct networked prefabs, and spawning and despawning one mob. `INetworkObjectSpawner` gained `Despawn` and `RegisterPrefab` with a handler of one's own.
+- **The client path** (exercised with fakes until Phase 7 hosts worlds). Netcode keeps one prefab handler per prefab: a second `AddHandler` for the Weasel fails, and the first chunk to unload would remove the handler every other chunk relies on. So a client's chunks register through `ChunkNetworkPrefabs` (Gameplay scope):
+  - It installs one routing handler per prefab when the first chunk registers it, and removes it when the last one unregisters.
+  - Each copy is created through the scope of the registered chunk holding its spawn position, or the nearest registered chunk.
+  - Phase 7, which shows objects per chunk, must route by home chunk instead, for example with Netcode's instantiation data. A mob shown after it walked across a border would otherwise land in the neighbour's scene (Architecture.md's Known gaps).
+- **The seam for dead mobs.** `ChunkMobSpawner.ShouldSpawn` decides per spawn point and always says yes. Phase 8 asks the world state there.
+- **The leash.** `MobConfig.LeashCells`, 8 for every mob config. `MobPatrolAnchor` holds the home (the chunk's 64 x 64 cells in world units) and answers `IsWithinLeash` for a point and `IsPathWithinLeash` for a path's waypoints.
+  - Every state's "spots target" check (`MobStateBase.SpotsTarget`) also requires the target and the mob within the leash.
+  - Chase and AttackRange give up when either is beyond it. Chase also gives up when a repath's waypoints leave it, and Search when the last known position lies beyond it.
+  - Giving up marks the mob leashed and sends it home (Return). A leashed mob spots no target until Idle's timer runs out at home. Without that, a target inside the leash that is reachable only by a path leaving it pulled the mob between Chase and Return every frame.
+  - An area's mob has no home, so every leash check passes and it behaves as before.
+- **The constraint.** `WorldStreamingSettings.KeepsHomeChunkLoaded` checks two sums against the shorter side of each rectangle, since the view is 20 x 12 and a player may stand above or below the mob:
+  - leash plus detection radius under the load extents (22 x 18, so 18);
+  - leash plus lose distance under the keep extents (30 x 26, so 26), since a chasing mob keeps its target to its lose distance.
+
+  The Decisions' "under 22" holds only across. The Weasel's 8 + 6 = 14 and 8 + 8 = 16 leave room. `MobLeashConstraintTests` runs the check over every `MobConfig` asset against the project's settings, so a config edit that breaks it fails a test.
+- **Targets.** `WorldPlayers` is the Gameplay registry narrowed by `PlayerWorlds`. It follows players in and out of the world with no per-frame work, and a target that leaves the world is dropped like one that leaves the registry.
+- **The Sandbox.** Its twelve spawn points (three per chunk, all the Weasel) stand on walkable ground and needed no change. One of them, at (20.5, 54.5) in chunk (0, 0), is the one the PlayMode leash test uses.
+- **Assets.** `Mob_Default` and `Mob_StressTest` were saved with the leash, which also wrote `Mob_StressTest`'s missing search and crowd values (the C# defaults it already ran on), so that Known gap went.
+- **Tests:** `ChunkMobSpawnerTests`, `WorldPlayersTests`, `MobLeashConstraintTests` and leash and home-patrol cases in `MobStateMachineTests` (EditMode). `WorldStreamingPlayModeTests` covers:
+  - a chunk's mobs spawning into its scene and going with it;
+  - a mob chasing the player across a border, stopping within its leash and walking home;
+  - no mob left after the menu.
 
 ### Phase 5: authoring
 

@@ -29,15 +29,22 @@ public class ChaseState : MobStateBase
     }
 
     /// <summary>
-    /// Hands over to Search or Return when the target is lost and to AttackRange when it is in reach. Otherwise, unless
-    /// waiting behind the crowd, repaths when due and goes to Return when the target is unreachable or only partially
-    /// reachable.
+    /// Hands over to Search or Return when the target is lost, gives up at the leash
+    /// (<see cref="MobStateBase.GiveUpAtLeash"/>) when the target or the mob is beyond it, and goes to AttackRange when
+    /// the target is in reach. Otherwise, unless waiting behind the crowd, repaths when due, goes to Return when the
+    /// target is unreachable or only partially reachable, and gives up at the leash when the path leaves it.
     /// </summary>
     public override void Tick()
     {
         if (!Perception.HasDetectedTarget || Perception.CurrentTarget == null)
         {
             Brain.ChangeState(Perception.IsTargetHiddenInRange ? MobStateId.Search : MobStateId.Return);
+            return;
+        }
+
+        if (!IsWithinLeash(Perception.CurrentTarget.position))
+        {
+            GiveUpAtLeash();
             return;
         }
 
@@ -69,6 +76,10 @@ public class ChaseState : MobStateBase
             if (!pathFound || !PathAgent.ReachedResolvedGoal || PathAgent.GoalWasAdjusted)
             {
                 Brain.ChangeState(MobStateId.Return);
+            }
+            else if (!Patrol.IsPathWithinLeash(PathAgent.Waypoints))
+            {
+                GiveUpAtLeash();
             }
         }
     }

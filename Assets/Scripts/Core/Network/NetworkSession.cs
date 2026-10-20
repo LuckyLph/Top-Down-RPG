@@ -291,6 +291,39 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <summary>
+    /// Installs <paramref name="handler"/> for <paramref name="prefab"/>; logs an error when the prefab already has one,
+    /// since Netcode keeps one handler per prefab.
+    /// </summary>
+    public void RegisterPrefab(NetworkObject prefab, INetworkPrefabInstanceHandler handler)
+    {
+        if (!networkManager.PrefabHandler.AddHandler(prefab, handler))
+        {
+            Debug.LogError($"{prefab.name} already has a network prefab handler; the new one is ignored.", prefab);
+        }
+    }
+
+    /// <summary>
+    /// Host only: despawns <paramref name="instance"/> and destroys it, or destroys it when it is not spawned (the
+    /// session ended first). Nothing for null.
+    /// </summary>
+    public void Despawn(NetworkObject instance)
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        if (instance.IsSpawned && networkManager != null && networkManager.IsServer)
+        {
+            instance.Despawn(true);
+        }
+        else
+        {
+            Object.Destroy(instance.gameObject);
+        }
+    }
+
+    /// <summary>
     /// Removes <paramref name="prefab"/>'s handler; does nothing once the NetworkManager is destroyed.
     /// </summary>
     public void UnregisterPrefab(NetworkObject prefab)

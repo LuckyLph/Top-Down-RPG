@@ -1,18 +1,62 @@
 using NUnit.Framework;
 
 /// <summary>
-/// Tests for <see cref="JoinApproval"/>: the host's version and party size check on joining clients, and encoding
-/// its refusal into a disconnect reason.
+/// Tests for <see cref="JoinApproval"/>: the join payload carrying the version and the player id, the host's version
+/// and party size check on joining clients, and encoding its refusal into a disconnect reason.
 /// </summary>
 public class JoinApprovalTests
 {
+    /// <summary>
+    /// The payload carries the version, then the player id, and reads back as both.
+    /// </summary>
+    [Test]
+    public void Payload_CarriesTheVersionThenThePlayerId()
+    {
+        JoinApproval.ReadPayload(JoinApproval.CreatePayload("1.3", "0f8e2c7a9b"), out string version, out string playerId);
+
+        Assert.That(version, Is.EqualTo("1.3"));
+        Assert.That(playerId, Is.EqualTo("0f8e2c7a9b"));
+    }
+
+    /// <summary>
+    /// A payload with only a version, as a build before player ids sent, reads with an empty player id, and a missing
+    /// player id stays empty; line breaks never leak from one part into the other.
+    /// </summary>
+    [Test]
+    public void Payload_WithoutAPlayerId_ReadsAnEmptyOne()
+    {
+        JoinApproval.ReadPayload(System.Text.Encoding.UTF8.GetBytes("1.2"), out string oldVersion, out string oldId);
+        JoinApproval.ReadPayload(JoinApproval.CreatePayload("1.3", null), out string version, out string playerId);
+        JoinApproval.ReadPayload(JoinApproval.CreatePayload("1.3\nx", "a\r\nb"), out string cleanVersion, out string cleanId);
+        JoinApproval.ReadPayload(null, out string noVersion, out string noId);
+
+        Assert.That(oldVersion, Is.EqualTo("1.2"));
+        Assert.That(oldId, Is.Empty);
+        Assert.That(version, Is.EqualTo("1.3"));
+        Assert.That(playerId, Is.Empty);
+        Assert.That(cleanVersion, Is.EqualTo("1.3x"));
+        Assert.That(cleanId, Is.EqualTo("ab"));
+        Assert.That(noVersion, Is.Empty);
+        Assert.That(noId, Is.Empty);
+    }
+
+    /// <summary>
+    /// A client on the host's version joining a party with room is approved (no refusal), whatever its player id.
+    /// </summary>
+    [Test]
+    public void TheVersionIsReadFromAPayloadWithAPlayerId()
+    {
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", string.Empty), "1.2", 1, 4), Is.Null);
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "1.2"), "1.3", 1, 4), Does.Contain("runs 1.2"));
+    }
+
     /// <summary>
     /// A client on the host's version joining a party with room is approved (no refusal).
     /// </summary>
     [Test]
     public void SameVersionWithRoom_IsApproved()
     {
-        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2"), "1.2", 3, 4), Is.Null);
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "player"), "1.2", 3, 4), Is.Null);
     }
 
     /// <summary>
@@ -21,7 +65,7 @@ public class JoinApprovalTests
     [Test]
     public void FullParty_IsRefused()
     {
-        string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2"), "1.2", 4, 4);
+        string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "player"), "1.2", 4, 4);
 
         Assert.That(refusal, Does.Contain("full"));
         Assert.That(refusal, Does.Contain("4 players"));
@@ -33,7 +77,7 @@ public class JoinApprovalTests
     [Test]
     public void OtherVersion_IsRefusedNamingBothVersions()
     {
-        string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1"), "1.2", 1, 4);
+        string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1", "player"), "1.2", 1, 4);
 
         Assert.That(refusal, Does.Contain("1.1"));
         Assert.That(refusal, Does.Contain("1.2"));
@@ -55,7 +99,7 @@ public class JoinApprovalTests
     [Test]
     public void VersionIsCheckedBeforeRoom()
     {
-        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1"), "1.2", 4, 4), Does.Contain("1.1"));
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1", "player"), "1.2", 4, 4), Does.Contain("1.1"));
     }
 
     /// <summary>

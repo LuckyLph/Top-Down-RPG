@@ -44814,6 +44814,7 @@ GameObject:
   - component: {fileID: 1354915949}
   - component: {fileID: 1354915952}
   - component: {fileID: 1354915953}
+  - component: {fileID: 1354915954}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -44928,6 +44929,24 @@ MonoBehaviour:
   maxWalkableCellsToDraw: 400
   gridBoundsColor: {r: 0.35, g: 1, b: 1, a: 0.8}
   walkableCellColor: {r: 0.25, g: 1, b: 0.3, a: 0.35}
+--- !u!114 &1354915954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354915948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8127bb9208735a46a0f9a72de29b542, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::AreaTerrain
+  layers:
+  - tilemap: {fileID: 367289456}
+    fillTile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
+  - tilemap: {fileID: 1961533284}
+    fillTile: {fileID: 0}
+  syncPrefab: {fileID: 5165329758075950829, guid: 11ef7afc20a2a9f47a7f1d0952029b80, type: 3}
 --- !u!1 &1459983644
 GameObject:
   m_ObjectHideFlags: 0

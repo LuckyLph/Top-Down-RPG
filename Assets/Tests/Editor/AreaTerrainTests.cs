@@ -9,8 +9,8 @@ using UnityEngine.TestTools;
 using VContainer;
 
 /// <summary>
-/// Tests for runtime terrain edits through <see cref="AreaTerrain"/> and for <see cref="AreaTerrainSync"/>, which
-/// spawns or registers the network object that replicates them.
+/// Tests for runtime terrain edits through <see cref="AreaTerrain"/> and for <see cref="ChunkTerrainSync"/>, which
+/// spawns or registers the network object that replicates a chunk's edits.
 /// </summary>
 public class AreaTerrainTests
 {
@@ -192,41 +192,64 @@ public class AreaTerrainTests
     }
 
     /// <summary>
-    /// On the host the sync registers no prefab and spawns one <see cref="NetworkAreaTerrain"/> object.
+    /// On the host a chunk's sync registers its prefab for the chunk (so its spawn carries the home chunk), spawns one
+    /// <see cref="NetworkAreaTerrain"/> object of that chunk, and despawns it when its own chunk starts unloading, not
+    /// when another one does.
     /// </summary>
     [Test]
-    public void Sync_OnTheHost_SpawnsTheSyncObjectIntoTheArea()
+    public void ChunkSync_OnTheHost_SpawnsTheSyncObjectAsAnObjectOfItsChunk_AndDespawnsItWithTheChunk()
     {
-        AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative, LoadSyncPrefab());
+        NetworkObject prefab = LoadSyncPrefab();
+        AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative, prefab);
         FakeNetworkObjects network = new() { IsActive = true, IsServer = true };
-        AreaTerrainSync sync = new(BuildResolver(terrain), terrain, SceneManager.GetActiveScene(), network);
+        WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(2, 1), new[] { Vector2Int.zero, Vector2Int.right }));
+        Worlds worlds = new();
+        LoadedWorld loaded = new(world, default, null, null);
+        worlds.Add(loaded);
+        worlds.AddChunk(loaded, Vector2Int.zero, default);
+        worlds.AddChunk(loaded, Vector2Int.right, default);
+        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.right, worlds);
 
         sync.RegisterNetworkPrefab();
         sync.Start();
 
-        Assert.That(network.Registered, Is.Empty);
+        Assert.That(network.Registered, Is.EqualTo(new[] { prefab }), "The host registers the prefab so its spawn carries the home chunk.");
         Assert.That(network.Spawned.Count, Is.EqualTo(1));
-        Track(network.Spawned[0].gameObject);
-        Assert.That(network.Spawned[0].GetComponent<NetworkAreaTerrain>(), Is.Not.Null);
+        NetworkObject spawned = network.Spawned[0];
+        Track(spawned.gameObject);
+        Assert.That(spawned.GetComponent<NetworkAreaTerrain>(), Is.Not.Null);
+        Assert.That(network.HomeChunks[spawned], Is.EqualTo(ChunkId.Of(world, Vector2Int.right)));
+
+        worlds.RemoveChunk(loaded, Vector2Int.zero);
+        Assert.That(network.Despawned, Is.Empty, "Another chunk unloading leaves the sync object alone.");
+        worlds.RemoveChunk(loaded, Vector2Int.right);
+        Assert.That(network.Despawned, Is.EqualTo(new[] { spawned }), "The sync object goes before its chunk unloads.");
+
+        sync.Dispose();
+        Assert.That(network.Despawned.Count, Is.EqualTo(1), "Nothing is despawned twice.");
+        Assert.That(network.Registered, Is.Empty);
     }
 
     /// <summary>
-    /// On a client the sync registers its prefab once however often asked, spawns nothing, and unregisters the
-    /// prefab when disposed.
+    /// On a client a chunk's sync registers its prefab for the chunk once however often asked, spawns nothing, and
+    /// unregisters the prefab when disposed.
     /// </summary>
     [Test]
-    public void Sync_OnAClient_RegistersThePrefabOnce_SpawnsNothing_AndUnregistersOnDispose()
+    public void ChunkSync_OnAClient_RegistersThePrefabOnce_SpawnsNothing_AndUnregistersOnDispose()
     {
         NetworkObject prefab = LoadSyncPrefab();
         AreaTerrain terrain = CreateTerrain(new FixedGameAuthority(false), prefab);
         FakeNetworkObjects network = new() { IsActive = true, IsServer = false };
-        AreaTerrainSync sync = new(BuildResolver(terrain), terrain, SceneManager.GetActiveScene(), network);
+        WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
+        ChunkNetworkPrefabs prefabs = new(network);
+        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.zero, new Worlds(), prefabs);
 
         sync.RegisterNetworkPrefab();
         sync.RegisterNetworkPrefab();
         sync.Start();
 
         Assert.That(network.Registered, Is.EqualTo(new[] { prefab }));
+        Assert.That(prefabs.IsRegistered(prefab), Is.True);
         Assert.That(network.Spawned, Is.Empty);
 
         sync.Dispose();
@@ -234,20 +257,38 @@ public class AreaTerrainTests
     }
 
     /// <summary>
-    /// With no active network session the sync neither registers nor spawns anything.
+    /// With no active network session a chunk's sync neither registers nor spawns anything.
     /// </summary>
     [Test]
-    public void Sync_Offline_DoesNothing()
+    public void ChunkSync_Offline_DoesNothing()
     {
         AreaTerrain terrain = CreateTerrain(FixedGameAuthority.Authoritative, LoadSyncPrefab());
         FakeNetworkObjects network = new();
-        AreaTerrainSync sync = new(BuildResolver(terrain), terrain, SceneManager.GetActiveScene(), network);
+        WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
+        ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.zero, new Worlds());
 
         sync.RegisterNetworkPrefab();
         sync.Start();
+        sync.Dispose();
 
         Assert.That(network.Registered, Is.Empty);
         Assert.That(network.Spawned, Is.Empty);
+    }
+
+    /// <summary>
+    /// A <see cref="ChunkTerrainSync"/> of <paramref name="terrain"/> for the chunk at <paramref name="coords"/> of
+    /// <paramref name="world"/>, over <paramref name="network"/> and <paramref name="worlds"/>.
+    /// </summary>
+    private ChunkTerrainSync CreateChunkSync(AreaTerrain terrain, FakeNetworkObjects network, WorldDefinition world, Vector2Int coords, Worlds worlds, ChunkNetworkPrefabs prefabs = null)
+    {
+        return new ChunkTerrainSync(
+            BuildResolver(terrain),
+            new ChunkIdentity(world, coords),
+            terrain,
+            SceneManager.GetActiveScene(),
+            network,
+            prefabs ?? new ChunkNetworkPrefabs(network),
+            worlds);
     }
 
     /// <summary>

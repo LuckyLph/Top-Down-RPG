@@ -29,3 +29,6 @@ MonoBehaviour:
   - name: start
     position: {x: 24.5, y: 40.5}
     waystone: 1
+  - name: fromSandbox
+    position: {x: 117.5, y: 40}
+    waystone: 0

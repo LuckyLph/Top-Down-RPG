@@ -5,7 +5,7 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// Tests for <see cref="UserSettings"/>: loading the local settings file through an in-memory store, saving
-/// changes, and handling malformed, older and newer files.
+/// changes, handling malformed, older and newer files, and the install's player id.
 /// </summary>
 public class UserSettingsTests
 {
@@ -105,6 +105,42 @@ public class UserSettingsTests
         Assert.That(settings.IsReadOnly, Is.False);
         Assert.That(settings.SetInputBindingOverrides("y"), Is.True);
         Assert.That(store.WriteCount, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// The player id is made the first time it is asked for, written once with the bindings kept, and read back by the
+    /// next settings over the same file; a file from before player ids gets one the same way.
+    /// </summary>
+    [Test]
+    public void PlayerId_IsMadeOnce_AndKeptInTheFile()
+    {
+        MemorySaveStore store = new() { Contents = "{\"version\":1,\"inputBindingOverrides\":\"x\"}" };
+        UserSettings settings = new(store);
+        Assert.That(store.WriteCount, Is.Zero, "Nothing is written until the id is needed.");
+
+        string id = settings.PlayerId;
+
+        Assert.That(System.Guid.TryParse(id, out _), Is.True, id);
+        Assert.That(settings.PlayerId, Is.EqualTo(id));
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        UserSettings reread = new(store);
+        Assert.That(reread.PlayerId, Is.EqualTo(id));
+        Assert.That(reread.InputBindingOverrides, Is.EqualTo("x"), "Writing the id keeps the bindings.");
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// With a file from a newer build the player id is made for the session only and never written.
+    /// </summary>
+    [Test]
+    public void PlayerId_WithAFileFromANewerBuild_LastsTheSessionOnly()
+    {
+        MemorySaveStore store = new() { Contents = "{\"version\":2}" };
+        LogAssert.Expect(LogType.Warning, new Regex("newer build"));
+        UserSettings settings = new(store);
+
+        Assert.That(settings.PlayerId, Is.Not.Empty);
+        Assert.That(store.WriteCount, Is.Zero);
     }
 
     /// <summary>

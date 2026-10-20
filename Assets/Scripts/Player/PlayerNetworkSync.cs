@@ -1,11 +1,13 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using VContainer;
 
 /// <summary>
 /// Replicates a networked player. The owner binds it as the local player, writes its move and facing to owner
 /// network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
-/// which resolves them. Every other machine binds it as a remote copy with a kinematic body showing that movement.
+/// which resolves them. The owner's teleports (respawns, arriving at an entry) snap on the other machines instead of
+/// sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
@@ -21,8 +23,14 @@ public class PlayerNetworkSync : NetworkBehaviour
     private PlayerAbilities abilities;
     private Health health;
     private Rigidbody2D body;
+    private NetworkTransform networkTransform;
     private PlayerBinder binder;
     private PlayerHandle handle;
+
+    /// <summary>
+    /// The player's registry handle on this machine once it is bound, else null.
+    /// </summary>
+    internal PlayerHandle Handle => handle;
 
     /// <summary>
     /// Caches the controller, weapon, abilities, health and body on this player.
@@ -34,6 +42,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         abilities = GetComponent<PlayerAbilities>();
         health = GetComponent<Health>();
         body = GetComponent<Rigidbody2D>();
+        networkTransform = GetComponent<NetworkTransform>();
     }
 
     /// <summary>
@@ -61,6 +70,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (IsOwner)
         {
             handle = binder.BindLocal(controller);
+            controller.Teleported += HandleLocalTeleported;
             if (weapon != null)
             {
                 weapon.Attacked += HandleLocalAttack;
@@ -96,6 +106,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     /// </summary>
     public override void OnNetworkDespawn()
     {
+        controller.Teleported -= HandleLocalTeleported;
         if (weapon != null)
         {
             weapon.Attacked -= HandleLocalAttack;
@@ -157,6 +168,19 @@ public class PlayerNetworkSync : NetworkBehaviour
     private void HandleLocalRestored(Health _)
     {
         binder.PlaceAtActiveSpawn(handle);
+    }
+
+    /// <summary>
+    /// On the owner, makes the network transform jump to <paramref name="position"/> on the other machines instead of
+    /// interpolating there, which across worlds would slide the copy thousands of units.
+    /// </summary>
+    private void HandleLocalTeleported(Vector2 position)
+    {
+        if (networkTransform != null && IsSpawned && IsOwner)
+        {
+            Transform own = transform;
+            networkTransform.Teleport(new Vector3(position.x, position.y, own.position.z), own.rotation, own.localScale);
+        }
     }
 
     /// <summary>

@@ -32,3 +32,6 @@ MonoBehaviour:
   - name: fromInterior
     position: {x: 33.5, y: 42}
     waystone: 0
+  - name: fromTestlands
+    position: {x: 5.5, y: 42}
+    waystone: 0

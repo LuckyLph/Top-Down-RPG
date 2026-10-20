@@ -45489,6 +45489,7 @@ GameObject:
   - component: {fileID: 1528676024}
   - component: {fileID: 1528676023}
   - component: {fileID: 1528676022}
+  - component: {fileID: 1528676027}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -45600,6 +45601,22 @@ Transform:
   - {fileID: 433913362}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1528676027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1528676021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8127bb9208735a46a0f9a72de29b542, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::AreaTerrain
+  layers:
+  - tilemap: {fileID: 1481561697}
+    fillTile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
+  syncPrefab: {fileID: 5165329758075950829, guid: 11ef7afc20a2a9f47a7f1d0952029b80, type: 3}
 --- !u!1 &1556231254
 GameObject:
   m_ObjectHideFlags: 0

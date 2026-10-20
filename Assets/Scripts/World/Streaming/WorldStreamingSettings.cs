@@ -64,11 +64,11 @@ public class WorldStreamingSettings : ScriptableObject
     }
 
     /// <summary>
-    /// A streamer for these settings.
+    /// A streamer for these settings that keeps the chunks <paramref name="holds"/> says another machine holds.
     /// </summary>
-    public ChunkStreamer CreateStreamer()
+    public ChunkStreamer CreateStreamer(IChunkHolds holds = null)
     {
-        return new ChunkStreamer(viewCells, loadMargin, unloadHysteresis, emptyWorldGraceSeconds);
+        return new ChunkStreamer(viewCells, loadMargin, unloadHysteresis, emptyWorldGraceSeconds, holds);
     }
 
     /// <summary>

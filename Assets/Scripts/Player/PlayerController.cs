@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using VContainer;
 #if UNITY_EDITOR
@@ -30,6 +31,12 @@ public class PlayerController : MonoBehaviour
     private PlayerOrders orders;
     private StatusEffects statuses;
     private bool simulatesMovement = true;
+
+    /// <summary>
+    /// Raised with the position after every <see cref="Teleport"/>, so the owner's network transform can snap there on
+    /// the other machines.
+    /// </summary>
+    public event Action<Vector2> Teleported;
 
     public PlayerControlSettings ControlSettings => controlSettings;
     public Vector2 FacingDirection => Motor.FacingDirection;
@@ -150,12 +157,14 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Drops every order and moves the body to <paramref name="position"/> at rest (spawns and respawns).
+    /// Drops every order and moves the body to <paramref name="position"/> at rest (spawns, respawns and arriving at
+    /// an entry), then raises <see cref="Teleported"/>.
     /// </summary>
     public void Teleport(Vector2 position)
     {
         ClearOrders();
         Motor.Teleport(position);
+        Teleported?.Invoke(position);
     }
 
     /// <summary>

@@ -6,9 +6,10 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// Moves the app between the main menu, a new game, area changes and sessions in seamless worlds by loading and
-/// unloading scenes additively under the right DI scopes (menu and gameplay under Main, the area under gameplay; a
-/// world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. A trip of the local
+/// Moves the app between the main menu, a new game, area changes and sessions in seamless worlds (offline, hosted or
+/// joined) by loading and unloading scenes additively under the right DI scopes (menu and gameplay under Main, the area
+/// under gameplay; a world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade.
+/// Areas are played offline only; online sessions run in worlds. A trip of the local
 /// player between worlds is a transition too, flagged <see cref="IsTravelling"/>: a local fade only, which loads and
 /// unloads nothing itself and never stops game time. Runs one transition at a time and ignores requests made while
 /// one runs.
@@ -89,6 +90,18 @@ public sealed class GameFlow
     public Awaitable StartWorldGameAsync(WorldDefinition world, string entryName = null, CancellationToken cancellation = default)
     {
         return RunTransitionAsync(token => StartWorldGameCoreAsync(world, entryName, token), cancellation);
+    }
+
+    /// <summary>
+    /// Starts a joined client's session in whichever world the host puts its player: unloads the menu and any running
+    /// game, loads a fresh gameplay scene, and lets the gameplay scope's <see cref="IWorldSession"/> wait for the
+    /// host's spawn of this machine's player and the ground around it, fading in once it is loaded. When the session
+    /// ends before the player is placed it warns and leaves the gameplay scene without a world, and the session's
+    /// lifecycle takes the game back to the menu.
+    /// </summary>
+    public Awaitable StartJoinedGameAsync(CancellationToken cancellation = default)
+    {
+        return RunTransitionAsync(StartJoinedGameCoreAsync, cancellation);
     }
 
     /// <summary>
@@ -265,6 +278,44 @@ public sealed class GameFlow
     }
 
     /// <summary>
+    /// Unloads the menu and any running game, loads the gameplay scene under the main scope, makes it the active scene
+    /// and joins the host's world through its scope's <see cref="IWorldSession"/>, recording the world the host put the
+    /// local player in as <see cref="CurrentWorld"/>.
+    /// </summary>
+    private async Awaitable StartJoinedGameCoreAsync(CancellationToken cancellation)
+    {
+        if (IsLoaded(menuScene))
+        {
+            await sceneLoader.UnloadAsync(menuScene, cancellation);
+            menuScene = default;
+        }
+
+        await LeaveWorldAsync(cancellation);
+        await UnloadAreaAsync(cancellation);
+        await UnloadGameplayAsync(cancellation);
+        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
+        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
+        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
+        SceneManager.SetActiveScene(gameplayScene);
+
+        if (!TryGetWorldSession(out IWorldSession session))
+        {
+            Debug.LogError($"The gameplay scene's scope provides no {nameof(IWorldSession)}; cannot join the host's world.");
+            return;
+        }
+
+        WorldDefinition world = await session.JoinAsync(cancellation);
+        if (world == null)
+        {
+            Debug.LogWarning("The session ended before the host placed this player in a world.");
+            return;
+        }
+
+        CurrentWorld = world;
+        currentEntry = null;
+    }
+
+    /// <summary>
     /// Records <paramref name="world"/> and <paramref name="entryName"/> as where the session is, then has the world
     /// session bring the local player to that entry once the screen is dark. Logs an error when the session went
     /// meanwhile.
@@ -287,14 +338,10 @@ public sealed class GameFlow
     /// </summary>
     private async Awaitable LeaveWorldAsync(CancellationToken cancellation)
     {
-        if (CurrentWorld == null)
-        {
-            return;
-        }
-
+        bool inWorld = CurrentWorld != null;
         CurrentWorld = null;
         currentEntry = null;
-        if (TryGetWorldSession(out IWorldSession session))
+        if (TryGetWorldSession(out IWorldSession session) && (inWorld || session.IsActive))
         {
             await session.LeaveAsync(cancellation);
         }

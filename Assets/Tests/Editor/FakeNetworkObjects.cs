@@ -15,6 +15,7 @@ public sealed class FakeNetworkObjects : INetworkObjectSpawner
     public List<NetworkObject> Spawned { get; } = new();
     public List<NetworkObject> Despawned { get; } = new();
     public Dictionary<NetworkObject, INetworkPrefabInstanceHandler> Handlers { get; } = new();
+    public Dictionary<NetworkObject, ChunkId> HomeChunks { get; } = new();
 
     /// <summary>
     /// Adds <paramref name="prefab"/> to <see cref="Registered"/>; the resolver and scene are ignored.
@@ -49,6 +50,16 @@ public sealed class FakeNetworkObjects : INetworkObjectSpawner
     public void Spawn(NetworkObject instance)
     {
         Spawned.Add(instance);
+    }
+
+    /// <summary>
+    /// Adds <paramref name="instance"/> to <see cref="Spawned"/> and records <paramref name="homeChunk"/> in
+    /// <see cref="HomeChunks"/>, without spawning it on the network.
+    /// </summary>
+    public void Spawn(NetworkObject instance, ChunkId homeChunk)
+    {
+        Spawned.Add(instance);
+        HomeChunks[instance] = homeChunk;
     }
 
     /// <summary>

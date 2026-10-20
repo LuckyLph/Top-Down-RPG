@@ -56,10 +56,11 @@ public sealed class PlayerSpawner
     }
 
     /// <summary>
-    /// Host only: creates and spawns the network player object owned by client <paramref name="ownerClientId"/>,
-    /// unless that client already has one. Logs an error when called anywhere but the host.
+    /// Host only: creates the network player object owned by client <paramref name="ownerClientId"/> at
+    /// <paramref name="position"/>, puts it in <paramref name="world"/> as it spawns and spawns it, unless that client
+    /// already has one. Logs an error when called anywhere but the host.
     /// </summary>
-    public void SpawnRemotePlayer(ulong ownerClientId)
+    public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position)
     {
         if (!session.IsServer)
         {
@@ -73,6 +74,12 @@ public sealed class PlayerSpawner
         }
 
         PlayerController controller = CreateInstance();
+        controller.Teleport(position);
+        if (controller.TryGetComponent(out PlayerWorldSync worldSync))
+        {
+            worldSync.SetSpawnWorld(world);
+        }
+
         session.SpawnPlayerObject(controller.GetComponent<NetworkObject>(), ownerClientId);
     }
 

@@ -80,12 +80,13 @@ public class MainLifetimeScope : LifetimeScope
                 .As<IGameAuthority>()
                 .As<INetworkObjectSpawner>()
                 .As<IClientReadiness>()
+                .As<IChunkHandshake>()
+                .As<IChunkHolds>()
                 .As<ISessionStatus>()
                 .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
-            builder.RegisterEntryPoint<NetworkAreaSync>();
             builder.RegisterEntryPoint<GameSaveRecorder>();
         }
 

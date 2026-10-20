@@ -11,8 +11,9 @@ using VContainer;
 /// Only the machine with authority (the host, or offline) edits, through <see cref="TrySetCells"/>: the tiles change
 /// and every changed cell is recorded in <see cref="Edits"/>, the last write per cell winning.
 /// <see cref="NetworkAreaTerrain"/> sends that record to clients, which apply it with <see cref="ApplyReplicated"/>,
-/// late joiners included. Navigation follows the tile changes by itself. Edits last while the area scene is loaded;
-/// they are not saved.
+/// late joiners included. An area has one on its grid, and so does each chunk of a seamless world, whose edits replicate
+/// per chunk (<see cref="ChunkTerrainSync"/>). Navigation follows the tile changes by itself. Edits last while the
+/// scene is loaded; they are not saved.
 /// </summary>
 [DisallowMultipleComponent]
 public class AreaTerrain : MonoBehaviour
@@ -107,6 +108,23 @@ public class AreaTerrain : MonoBehaviour
         layers.Clear();
         layers.AddRange(terrainLayers);
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// Editor only: makes <paramref name="prefab"/>'s <see cref="NetworkObject"/> the sync prefab when none is set, for
+    /// the authoring tools. Returns whether it set it.
+    /// </summary>
+    public bool AssignSyncPrefabIfMissing(GameObject prefab)
+    {
+        if (syncPrefab != null || prefab == null || !prefab.TryGetComponent(out NetworkObject networkObject))
+        {
+            return false;
+        }
+
+        syncPrefab = networkObject;
+        return true;
+    }
+#endif
 
     /// <summary>
     /// Fills or empties <paramref name="cells"/> on <paramref name="layer"/> and records them for clients. Returns

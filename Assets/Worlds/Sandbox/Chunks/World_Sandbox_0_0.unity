@@ -45368,6 +45368,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1551693559}
+  - {fileID: 1044890261}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &610767256
@@ -45821,6 +45822,67 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PersistentId
   id: 7c5d3897a1d84265a9cf98fa3e913574
+--- !u!1 &1044890260
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1044890261}
+  - component: {fileID: 1044890263}
+  - component: {fileID: 1044890262}
+  m_Layer: 0
+  m_Name: Exit_Testlands
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1044890261
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1044890260}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2051.5, y: 41.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 389653854}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1044890262
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1044890260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f8c9da57dd47844ea85ec4fb8facc07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::WorldExit
+  targetWorld: {fileID: 11400000, guid: 45fbe595d915793439142f5a715ea480, type: 2}
+  targetEntry: fromSandbox
+  sizeInCells: {x: 1, y: 2}
+--- !u!114 &1044890263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1044890260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0503f23b14fde24db2a24120bf7e2e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PersistentId
+  id: 85f7bf452873499e9cf15e9a1d718a3a
 --- !u!1 &1354915948
 GameObject:
   m_ObjectHideFlags: 0
@@ -45834,6 +45896,7 @@ GameObject:
   - component: {fileID: 1354915949}
   - component: {fileID: 1354915952}
   - component: {fileID: 1354915953}
+  - component: {fileID: 1354915954}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -45942,6 +46005,24 @@ MonoBehaviour:
   maxWalkableCellsToDraw: 400
   gridBoundsColor: {r: 0.35, g: 1, b: 1, a: 0.8}
   walkableCellColor: {r: 0.25, g: 1, b: 0.3, a: 0.35}
+--- !u!114 &1354915954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354915948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8127bb9208735a46a0f9a72de29b542, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::AreaTerrain
+  layers:
+  - tilemap: {fileID: 367289456}
+    fillTile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}
+  - tilemap: {fileID: 1633809387}
+    fillTile: {fileID: 0}
+  syncPrefab: {fileID: 5165329758075950829, guid: 11ef7afc20a2a9f47a7f1d0952029b80, type: 3}
 --- !u!1 &1459983644
 GameObject:
   m_ObjectHideFlags: 0

@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The game's scene catalogue: the main menu, the gameplay scene, the starting area and spawn id, the other areas, and
-/// the seamless worlds. Only areas listed here (the starting one included) can be saved or followed by clients.
+/// The game's scene catalogue: the main menu, the gameplay scene, the starting area and spawn id, the other areas, the
+/// seamless worlds, and the starting world and entry where hosted games start and where a player the host does not
+/// know arrives. Only areas listed here (the starting one included) can be saved, and only listed worlds travelled to.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Scenes/Game Scenes", fileName = "GameScenes")]
 public class GameScenes : ScriptableObject
@@ -14,6 +15,10 @@ public class GameScenes : ScriptableObject
     [SerializeField] private string startingSpawnId = "start";
     [SerializeField] private SceneDefinition[] areas = new SceneDefinition[0];
     [SerializeField] private WorldDefinition[] worlds = new WorldDefinition[0];
+    [Tooltip("The world hosted games start in, and where a joining player the host does not know arrives.")]
+    [SerializeField] private WorldDefinition startingWorld;
+    [Tooltip("The starting world's entry; empty for its default entry.")]
+    [SerializeField] private string startingWorldEntry = "start";
 
     public SceneDefinition MainMenu => mainMenu;
     public SceneDefinition Gameplay => gameplay;
@@ -21,6 +26,8 @@ public class GameScenes : ScriptableObject
     public string StartingSpawnId => startingSpawnId;
     public IReadOnlyList<SceneDefinition> Areas => areas;
     public IReadOnlyList<WorldDefinition> Worlds => worlds;
+    public WorldDefinition StartingWorld => startingWorld;
+    public string StartingWorldEntry => startingWorldEntry;
 
     /// <summary>
     /// The listed world whose root scene or one of whose chunk scenes is at <paramref name="scenePath"/>, or null.

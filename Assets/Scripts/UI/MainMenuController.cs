@@ -117,13 +117,22 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Host button: starts hosting and then a game in the saved area, or the starting area when there is no save.
-    /// Reports and logs a failure to start the host.
+    /// Host button: starts hosting and then a game in the starting world at its entry (hosting from a save comes with
+    /// world saves, Docs/WorldStreaming.md's Phase 8). Reports and logs a failure to start the host, or a catalogue
+    /// without a starting world.
     /// </summary>
     public void HostGame()
     {
         if (!CanStartGame())
         {
+            return;
+        }
+
+        WorldDefinition world = gameFlow.Scenes.StartingWorld;
+        if (world == null)
+        {
+            SetStatus("There is no world to host.");
+            Debug.LogError($"{nameof(GameScenes)} has no starting world; hosting needs one.", this);
             return;
         }
 
@@ -134,12 +143,11 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        gameSave.GetSavedOrStartingArea(out SceneDefinition area, out string spawnId);
-        _ = gameFlow.StartNewGameAsync(area, spawnId);
+        _ = gameFlow.StartWorldGameAsync(world, gameFlow.Scenes.StartingWorldEntry);
     }
 
     /// <summary>
-    /// Join button: connects to the address in the join field in the background.
+    /// Join button: connects to the address in the join field in the background, then starts the joined game.
     /// </summary>
     public void JoinGame()
     {
@@ -152,8 +160,9 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Connects to the host within the session's timeout, blocking other starts meanwhile, and reports the
-    /// result: connected, refused with the host's reason, or unreachable. Stops quietly if the menu is destroyed.
+    /// Connects to the host within the session's timeout, blocking other starts meanwhile, then starts the joined game
+    /// in whichever world the host puts this player; otherwise reports why: refused with the host's reason, or
+    /// unreachable. Stops quietly if the menu is destroyed.
     /// </summary>
     private async Awaitable JoinGameAsync()
     {
@@ -177,7 +186,8 @@ public class MainMenuController : MonoBehaviour
 
         if (connected)
         {
-            SetStatus("Connected. Joining the host's area...");
+            SetStatus("Connected. Joining the host's world...");
+            _ = gameFlow.StartJoinedGameAsync();
         }
         else
         {

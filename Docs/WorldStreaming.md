@@ -168,7 +168,7 @@ Main (MainLifetimeScope)
 
   Disposing it unregisters them.
 - **`Worlds`** (Gameplay scope, Phase 1) is the registry of loaded worlds: `TryGet(definition, out LoadedWorld)`, each with its definition, root scene, scope, lighting, navigation (Phase 3) and loaded chunk scenes, and events as they come and go. A player finds its own world's navigation through it, by its player's world (`PlayerNavigation`, which replaced `ActiveNavigationGrid` in Phase 3); `ActiveSpawnPoint` goes with the waystones (Phase 9).
-- **`PlayerWorlds`** (Gameplay scope, Phase 1) records each player's world. Offline it is set directly; Phase 7 fills it from the host's `NetworkVariable`.
+- **`PlayerWorlds`** (Gameplay scope, Phase 1) records each player's world and trip count. Offline it is set directly; on a client `PlayerWorldSync` fills it from the host's `NetworkVariable` (Phase 7).
 - **The streaming** lives in the Gameplay scope, since it streams across worlds (see Streaming).
 
 ### World data (Core)
@@ -195,7 +195,7 @@ Main (MainLifetimeScope)
 - **`WorldStreaming`** (Gameplay, Phase 1) is the doing part, and the `IWorldSession` `GameFlow` enters and leaves worlds through.
   - Each frame it gives the streamer the streamed players' worlds and positions, and runs its next action through `SceneLoader`: a world's root scene under the Gameplay scope, a chunk under its world's scope (`LifetimeScope.EnqueueParent`, as `GameFlow` does), with the world's definition or the chunk's identity enqueued into the new scope.
   - It records what is up in `Worlds`.
-  - From Phase 7 it does not unload a chunk whose networked objects are still visible to some client (see Networking).
+  - From Phase 7 it does not unload a chunk some client still holds (see Networking).
 - **`GameFlow`** keeps the menu, starting a session, and the local player's fade. It no longer loads gameplay content itself. A trip is one of its transitions (`TravelAsync`, `IsTravelling`), which `TransitionTimeFreeze` leaves alone, so a trip never stops time, offline or not.
 - **Trips** (Phase 6) go through `ITripAuthority`: a player's machine sends `TripRequest`s (`LocalTripTraveller`, which watches the local player's cell against the loaded `WorldExits`), the authority (`LocalTripAuthority` offline) checks them, holds the arrival in `TripArrivals` for the streaming and sets the player's world, and its `Approved` event tells the player's machine to go.
 
@@ -511,13 +511,56 @@ Notes:
 
 ### Phase 7: multiplayer
 
-- [ ] Each player's world as a `NetworkVariable`, and trip requests over RPC.
-- [ ] The host streams for every player in every world, and a client for itself.
-- [ ] `ChunkReady` and `ChunkReleasing` with `NetworkShow`/`NetworkHide` per client, tagged with the trip count.
-- [ ] Per-chunk terrain sync.
-- [ ] The player id in the join payload, and a joining client spawns in its saved world.
-- [ ] Remove `NetworkAreaSync`, area announcements and `AreaEpoch`.
-- [ ] Multiplayer Play Mode check with 2 and 4 players: spread over one world, then in different worlds, travelling while others fight.
+- [x] Each player's world as a `NetworkVariable`, and trip requests over RPC.
+- [x] The host streams for every player in every world, and a client for itself.
+- [x] `ChunkReady` and `ChunkReleasing` with `NetworkShow`/`NetworkHide` per client, tagged with the trip count.
+- [x] Per-chunk terrain sync.
+- [x] The player id in the join payload, and a joining client spawns in its saved world (nothing is saved per player until Phase 8, so every joining player starts at the starting world's entry; `PlayerStarts.TryGetSaved` is the seam).
+- [x] Remove `NetworkAreaSync`, area announcements and `AreaEpoch`.
+- [ ] Multiplayer Play Mode check with 2 and 4 players: spread over one world, then in different worlds, travelling while others fight (steps below).
+
+Notes:
+
+- **Sessions moved to worlds.** `GameScenes` has a starting world and entry (`StartingWorld`, `StartingWorldEntry`: Testlands' `start`). Host Game starts there and no longer continues the area save; hosting from a world save is Phase 8, and a hosted session writes no save meanwhile. Join Game connects, then `GameFlow.StartJoinedGameAsync` loads Gameplay and `IWorldSession.JoinAsync` waits for the host to place the player. Offline New Game and Continue stay on areas until Phase 9: switching them was not needed for this phase, and Continue has no world save to continue from yet.
+- **Joining.** A client joins once its Gameplay scope is up (`NetworkSession.NotifyJoined`, from `GameplayPlayers.Start`, after the player prefab is registered). The host then shows it every player and spawns its own where `PlayerStarts` puts it: its saved place by player id (none until Phase 8), else the starting world's entry. The player is spawned with its world set (`PlayerWorldSync.SetSpawnWorld`), so the host starts streaming that world for it at once; spawning waits for nothing, which is fine while every start is the starting world, and Phase 8 may want to load a saved world before spawning there. A late joiner goes the same way. Players are never hidden: a client sees every player, in any world, as a far-away object that is never drawn.
+- **The player's world** is a server-written `NetworkVariable<PlayerWorldState>` on a new `PlayerWorldSync` on the player prefab: the world's id, the player's trip count and the entry its latest trip leads to. The host writes it from `PlayerWorlds` (`Changed`); each client applies it to its own `PlayerWorlds` (`Apply`), so every machine knows every player's world and `WorldPlayers`, `LocalWorldPresentation` and the streaming read it as offline. The trip count lives in `PlayerWorlds` (`Travel` counts one, `TripOf`), so a trip back into the same world is still a change.
+- **Trips.** `NetworkTripAuthority` is the Gameplay scope's `ITripAuthority`; `LocalTripAuthority` keeps the checks. A client's `Request` goes through the player's `ITripLink` (`PlayerWorldSync.RequestTripRpc`, naming the exit's persistent id) with the position the client has for its player, which the host checks instead of its lagging copy (clients own their movement, as with completed casts). The host approves through `LocalTripAuthority.TryApprove`, which holds the arrival (the host streams the entry at once) and puts the player in the target world for its next trip; the networked world carries that to the owner, whose `PlayerWorldSync` hands it to `NetworkTripAuthority.Deliver`: the client holds the arrival itself, so its own streaming loads the target, and `LocalTripTraveller` runs the fade as offline. The host's own trips stay local. Nobody else fades or pauses.
+- **Teleports snap.** The owner's teleports now go through `NetworkTransform.Teleport` (`PlayerController.Teleported`, `PlayerNetworkSync`), so arriving at an entry thousands of units away jumps there on the other machines instead of sliding, and the host's `TripArrivals` sees the player arrive. This also fixes Multiplayer.md's Phase 3 gap for respawns.
+- **Per-chunk readiness** is `ClientChunkReadiness` (Core, plain C#, `ClientChunkReadinessTests`), run by `NetworkSession` over named messages: joined, `ChunkReady(trip, chunk)`, `ChunkReleasing(chunk)` and its acknowledgement `ChunkReleased(chunk)`, all on Netcode's `ReliableFragmentedSequenced` channel, the one it creates and destroys objects on, so the acknowledgement arrives after the hides sent before it (named messages default to `ReliableSequenced`, another channel). A report tagged with an earlier trip is ignored; the host learns a client's trip as it writes that player's world (`IClientReadiness.BeginTrip`). To make up for an ignored report, a client reports every loaded chunk of its new world again when its trip count changes (a chunk kept from an earlier visit is up and may have been reported during an earlier trip). Visibility is a check per object: players are visible to joined clients, a chunk's objects to the clients holding their home chunk; joining, a report and a release each walk the spawned objects and `NetworkShow` or `NetworkHide` the ones whose check changed for that client.
+- **Holding a player.** `IClientReadiness.IsClientReady(clientId)` now means the client reported a chunk during its current trip; until then `NetworkStatusEffects` holds its player (its statuses neither tick nor run down). That covers a joining client and a travelling one from the approval until it reports the target's ground, which shortens the unprotected arrival (Architecture.md's Known gaps) on clients.
+- **Releasing.** `WorldStreaming` releases a chunk and waits for the acknowledgement before unloading it (a client only; nothing waits offline or on the host, and a lost connection ends the wait). The host's streamer takes the session as its `IChunkHolds` and never unloads a chunk a client holds, so neither does that chunk's world; a client's old world, kept for its grace, stays held on the host until the client releases it. Ending the session (`ReleaseAll`) ignores the holds: the host despawns everything as it leaves, and clients go back to the menu.
+- **Home chunks.** The host spawns every chunk object with `INetworkObjectSpawner.Spawn(instance, homeChunk)`, which sets the chunk as Netcode's instantiation data (`NetworkChunkId`); `ChunkNetworkPrefabs`' routers are `NetworkPrefabInstanceHandlerWithData<NetworkChunkId>` and create a client's copy in that chunk's scope, so a mob that walked into a neighbour still lands in its home chunk's scene (the Phase 4 gap). Netcode sets instantiation data only for a prefab with such a handler, so the host registers the chunks' prefabs too; it never instantiates through them.
+- **Per-chunk terrain sync.** Every chunk of the three worlds got an `AreaTerrain` listing its grass layer and its walls (`WorldAuthoring.SetUpTerrainEdits`, which `CreateChunk`, `AddWalls` and the brush's walls copy now run). `ChunkTerrainSync` (chunk scope) spawns its `NetworkAreaTerrain` on the host as an object of the chunk, after `ApplyPersistedEdits` (the Phase 8 seam), and despawns it as the chunk unloads; a client registers the prefab per chunk. `AreaTerrainSync` and `AreaClientReady` went with the area sessions.
+- **Player id.** `UserSettings.PlayerId` is a GUID made the first time it is asked for and kept in `settings.json` (the format version stays 1: a file without one reads with an empty id). `JoinApproval`'s payload is the version, a line break, then the id; the host keys clients by it (`NetworkSession.PlayerIdOf`). Multiplayer Play Mode's virtual players share the main editor's `settings.json`, so they arrive with the same id; the host gives a duplicate a new id for the session, with a warning.
+- **No restart online.** The party wipe restart reloaded the host's Gameplay scene, which clients followed through area announcements. With those gone, and an in-process test of a host reloading Gameplay freezing the editor, a hosted session no longer restarts: each player respawns on its own, as Phase 9 plans for every session. Offline the restart stays until Phase 9.
+- **Exits for hosted play.** Testlands, the starting world, had no exit, so it got `Exit_Sandbox` on the road at cells (120, 39) and (120, 40) of chunk (1, 0), leading to a new Sandbox entry `fromTestlands` at (5.5, 42), beside the Sandbox's new `Exit_Testlands` (cells (3, 41) and (3, 42)), which leads back to a new Testlands entry `fromSandbox` at (117.5, 40). Placed with `AddExit` and `SetEntry` on chunks opened alone; the chunk scenes' saves also redrew wall render tiles and wrote an empty `coastSource`, which were left out.
+- **Compatibility.** The protocol changed (messages, payload, a new `NetworkBehaviour` on the player), so the Player Settings version went from 1.2 to 1.3 and older builds are refused.
+- **Tests:** `ClientChunkReadinessTests`, and new cases in `JoinApprovalTests`, `WorldTripTests` (`NetworkTripAuthority`, trip counts), `ChunkStreamerTests` (holds), `ChunkMobSpawnerTests` (home-chunk routing), `AreaTerrainTests` (`ChunkTerrainSync`) and `UserSettingsTests` (EditMode); `NetworkWorldsPlayModeTests` (new), and `NetworkSessionPlayModeTests` and `NetworkTerrainPlayModeTests` rewritten for worlds, with `InProcessHost` (new) standing in for a host so the editor's own session joins as a client (PlayMode). The other network PlayMode tests host Testlands from the menu and pass unchanged but for their wording. `NetworkAreaSyncPlayModeTests` and `AreaAnnouncementTests` went with what they tested.
+
+#### Checking with Multiplayer Play Mode
+
+The exits have no art: Testlands' is on the road far east of the start (cells (120, 39) and (120, 40)), the Sandbox's to Testlands at the road's west end (x 3), its interior's on the road just east of its start (x 36), and the interior's on its room's bottom row. Walk along the road onto them. Keep the main editor's Console and Hierarchy in view; every check below should log no error.
+
+Two players, one world:
+
+1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2. Press Play, click Host Game in the main editor, then Join Game in Player 2. Both start at Testlands' `start` and see each other. The host's Console warns once that the client shares its player id (the virtual player reads the same `settings.json`); that is expected.
+2. On Player 2 the start chunk's two Weasels appear (both at least 23 cells from the start). Fight one on Player 2: its health, hits and death show on both machines.
+3. Walk the host north-west into the meadow (chunk (0, 1)) and Player 2 east along the road past x 100 (chunk (1, 0)). On each machine the ground draws ahead of the player with no gap or visible hitch, and the next chunk's Weasels appear as it loads. In Player 2's Hierarchy only the chunks around Player 2 are loaded; in the host's, the chunks around both players.
+4. Walk Player 2 back to the start: the chunk it left unloads on Player 2 (it released it, the host hid its Weasels first), and walking back into a chunk shows its Weasels again. No "destroyed a spawned object" or "despawn" error appears on Player 2.
+
+Two players, different worlds, travelling while the other fights:
+
+5. Walk Player 2 east along the road onto Testlands' exit. Player 2 fades out and in at the Sandbox's `fromTestlands`; the host does not fade or pause. Fight a Weasel on the host during Player 2's trip: it keeps attacking and the host keeps taking damage.
+6. Player 2 sees the Sandbox drawn and lit and the host's player gone from view; after about 10 s Testlands unloads in Player 2's Hierarchy. The host keeps Testlands drawn and loads the Sandbox's chunks for Player 2 without drawing them.
+7. On Player 2, fight a Sandbox Weasel near `fromTestlands`, then walk east along the road onto the interior's exit and back out through its bottom row. Each trip fades only Player 2.
+8. Walk the host onto Testlands' exit: both are in the Sandbox. With Player 2 fighting a Weasel near the start, walk the host onto the interior's exit: only the host fades, Player 2's fight goes on, and the Weasel keeps attacking Player 2 (the host keeps simulating the Sandbox). Walk the host back out.
+9. Walk Player 2 west along the road onto the Sandbox's exit to Testlands: it arrives at `fromSandbox` and sees Testlands' Weasels there once their chunk loads.
+
+Four players, joining and leaving:
+
+10. Stop, activate Players 2 to 4, press Play, Host Game, and join Players 2 and 3. Send Player 2 to the Sandbox and Player 3 into the interior. Each machine loads only its own player's world (Hierarchy); the host loads all three.
+11. Join Player 4 now: it starts at Testlands' `start` (a player the host does not know), sees every player and receives the start chunk's Weasels once its ground is up. Edit terrain near it from the host (Multiplayer.md's Checking runtime terrain edits): the edit shows on Player 4 and on every client holding that chunk, and on a client arriving there later.
+12. Walk Player 2 onto an exit and, while it is faded out, leave the host's game (in-game menu, Leave). Every client returns to the main menu, Player 2 once its trip ends.
 
 ### Phase 8: persistence
 
@@ -553,8 +596,8 @@ Notes:
   - a killed mob staying dead after its chunk unloads and loads, and returning after its delay;
   - a terrain edit surviving its chunk unloading;
   - a trip offline leaving game time running in the session case.
-- **Online tests.** An in-process client test where the host reloads Gameplay freezes the editor. Trips no longer reload Gameplay, so chunk and trip tests stay within one session.
-- **Manual:** Multiplayer Play Mode:
+- **Online tests.** An in-process client test where the host reloads Gameplay freezes the editor. Trips no longer reload Gameplay, so chunk and trip tests stay within one session (`NetworkWorldsPlayModeTests`, `NetworkSessionPlayModeTests` against `InProcessHost`), and a hosted session no longer restarts.
+- **Manual:** Multiplayer Play Mode (Phase 7's steps):
   - two players walk to opposite corners of a world and back;
   - one enters a dungeon while the other keeps fighting outside;
   - the host enters a dungeon while a client fights outside.

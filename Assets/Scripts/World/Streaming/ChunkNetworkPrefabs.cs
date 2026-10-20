@@ -6,11 +6,13 @@ using UnityEngine.SceneManagement;
 using VContainer;
 
 /// <summary>
-/// Gameplay-scope registry of the network prefabs that the loaded chunks of a client's worlds register, so the host's
-/// copies arrive injected by their chunk's scope and in their chunk's scene. Netcode keeps one handler per prefab while
-/// several chunks register the same prefab, so this keeps one <see cref="Router"/> per prefab, installed when the first
-/// chunk registers it and removed when the last one unregisters it, which sends each copy to the registered chunk
-/// holding its spawn position (the nearest one when none does).
+/// Gameplay-scope registry of the network prefabs that the loaded chunks of this machine's worlds register in a
+/// session, so the host's copies arrive on a client injected by their home chunk's scope and in its scene. Netcode keeps
+/// one handler per prefab while several chunks register the same prefab, so this keeps one <see cref="Router"/> per
+/// prefab, installed when the first chunk registers it and removed when the last one unregisters it. The host spawns
+/// each chunk object with its home chunk as instantiation data (<see cref="NetworkSession.Spawn(NetworkObject, ChunkId)"/>,
+/// which needs the handler installed on the host too), and the router sends each copy to that chunk; a copy without
+/// one, or whose chunk is not registered, goes to the registered chunk holding its spawn position, or the nearest.
 /// </summary>
 public sealed class ChunkNetworkPrefabs : IDisposable
 {
@@ -76,10 +78,10 @@ public sealed class ChunkNetworkPrefabs : IDisposable
     }
 
     /// <summary>
-    /// The one handler of a prefab: creates each copy through the registered chunk holding its spawn position, or the
-    /// nearest registered chunk, and destroys copies on despawn.
+    /// The one handler of a prefab: creates each copy through the registered chunk the host names as its home chunk,
+    /// else the one holding its spawn position, or the nearest registered chunk, and destroys copies on despawn.
     /// </summary>
-    private sealed class Router : INetworkPrefabInstanceHandler
+    private sealed class Router : NetworkPrefabInstanceHandlerWithData<NetworkChunkId>
     {
         private readonly NetworkObject prefab;
         private readonly List<Route> routes = new();
@@ -121,17 +123,33 @@ public sealed class ChunkNetworkPrefabs : IDisposable
         }
 
         /// <summary>
-        /// Creates the copy through the route of the chunk holding <paramref name="position"/>, or the nearest one.
+        /// Creates the copy through the route of its home chunk <paramref name="homeChunk"/>; without one (no
+        /// instantiation data), or with one no route leads to (logged as a warning), through the route of the chunk
+        /// holding <paramref name="position"/>, or the nearest one.
         /// </summary>
-        public NetworkObject Instantiate(ulong ownerClientId, Vector3 position, Quaternion rotation)
+        public override NetworkObject Instantiate(ulong ownerClientId, Vector3 position, Quaternion rotation, NetworkChunkId homeChunk)
         {
+            if (homeChunk.IsValid)
+            {
+                ChunkId home = homeChunk.ToChunkId();
+                for (int i = 0; i < routes.Count; i++)
+                {
+                    if (ChunkId.Of(routes[i].Chunk.World, routes[i].Chunk.Coords).Equals(home))
+                    {
+                        return routes[i].Handler.Instantiate(ownerClientId, position, rotation);
+                    }
+                }
+
+                Debug.LogWarning($"No loaded chunk registers {prefab.name} for its home chunk {home}; placing the copy by its position.");
+            }
+
             return RouteAt(position).Handler.Instantiate(ownerClientId, position, rotation);
         }
 
         /// <summary>
         /// Destroys the despawned copy's game object; ignores one that is already gone.
         /// </summary>
-        public void Destroy(NetworkObject networkObject)
+        public override void Destroy(NetworkObject networkObject)
         {
             if (networkObject != null)
             {

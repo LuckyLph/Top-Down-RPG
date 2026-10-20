@@ -81,6 +81,18 @@ public static class MobSpawning
     }
 
     /// <summary>
+    /// Spawns <paramref name="mob"/> as a network object of its <paramref name="homeChunk"/> when a session is active
+    /// and it has a <see cref="NetworkObject"/>; nothing offline.
+    /// </summary>
+    public static void NetworkSpawn(MobController mob, INetworkObjectSpawner networkObjects, ChunkId homeChunk)
+    {
+        if (networkObjects.IsActive && mob.TryGetComponent(out NetworkObject networkObject))
+        {
+            networkObjects.Spawn(networkObject, homeChunk);
+        }
+    }
+
+    /// <summary>
     /// Takes <paramref name="mob"/> out of the game: network-despawns it in a session, so clients drop their copies,
     /// and destroys it offline. Nothing for a mob already destroyed.
     /// </summary>

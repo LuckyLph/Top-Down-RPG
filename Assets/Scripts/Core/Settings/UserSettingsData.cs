@@ -1,7 +1,10 @@
 using System;
 using UnityEngine;
 
-/// <summary>The local machine's preferences as written to disk: a format version and the key binding overrides.</summary>
+/// <summary>
+/// The local machine's preferences as written to disk: a format version, the key binding overrides and this install's
+/// player id. A file without a player id (written before there was one) reads with an empty id.
+/// </summary>
 [Serializable]
 public sealed class UserSettingsData
 {
@@ -9,14 +12,17 @@ public sealed class UserSettingsData
 
     [SerializeField] private int version;
     [SerializeField] private string inputBindingOverrides;
+    [SerializeField] private string playerId;
 
     /// <summary>
-    /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/>.
+    /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/> and
+    /// <paramref name="playerId"/>.
     /// </summary>
-    public UserSettingsData(string inputBindingOverrides)
+    public UserSettingsData(string inputBindingOverrides, string playerId)
     {
         version = CurrentVersion;
         this.inputBindingOverrides = inputBindingOverrides;
+        this.playerId = playerId;
     }
 
     /// <summary>
@@ -28,6 +34,7 @@ public sealed class UserSettingsData
 
     public int Version => version;
     public string InputBindingOverrides => inputBindingOverrides ?? string.Empty;
+    public string PlayerId => playerId ?? string.Empty;
 
     /// <summary>
     /// The data as pretty-printed JSON.

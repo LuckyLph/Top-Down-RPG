@@ -6,7 +6,9 @@ using UnityEngine;
 /// streams for is an interest: a world and a position in it. Every chunk within the view plus the load margin of an
 /// interest loads, nearest first; a loaded chunk unloads once no interest is within the view plus the load margin and
 /// the unload hysteresis of it; a world nobody is in keeps everything it had for the empty-world grace, then unloads
-/// its chunks and itself. Plain logic with no engine lookups, so it is tested with fakes.
+/// its chunks and itself. A chunk another machine still holds (<see cref="IChunkHolds"/>: on the host, a chunk some
+/// client has not released) never unloads, nor does its world, until it is released or everything is let go. Plain
+/// logic with no engine lookups, so it is tested with fakes.
 /// </summary>
 public sealed class ChunkStreamer
 {
@@ -29,6 +31,7 @@ public sealed class ChunkStreamer
     private readonly Vector2Int loadExtents;
     private readonly Vector2Int keepExtents;
     private readonly float emptyWorldGrace;
+    private readonly IChunkHolds holds;
     private readonly List<WorldRecord> worlds = new();
     private readonly List<StreamInterest> interests = new();
     private readonly HashSet<Vector2Int> scratch = new();
@@ -40,10 +43,11 @@ public sealed class ChunkStreamer
     /// Creates a streamer for a view of <paramref name="viewCells"/> cells, loading what lies within
     /// <paramref name="loadMargin"/> cells of it, unloading only what lies beyond a further
     /// <paramref name="unloadHysteresis"/> cells, and keeping an empty world for <paramref name="emptyWorldGrace"/>
-    /// seconds.
+    /// seconds, never unloading a chunk <paramref name="chunkHolds"/> says another machine holds (none when null).
     /// </summary>
-    public ChunkStreamer(Vector2Int viewCells, int loadMargin, int unloadHysteresis, float emptyWorldGrace)
+    public ChunkStreamer(Vector2Int viewCells, int loadMargin, int unloadHysteresis, float emptyWorldGrace, IChunkHolds chunkHolds = null)
     {
+        holds = chunkHolds;
         loadExtents = ExtentsOf(viewCells, loadMargin);
         keepExtents = ExtentsOf(viewCells, loadMargin + Mathf.Max(0, unloadHysteresis));
         this.emptyWorldGrace = Mathf.Max(0f, emptyWorldGrace);
@@ -350,7 +354,7 @@ public sealed class ChunkStreamer
 
             foreach (Vector2Int chunk in record.Chunks)
             {
-                if (!scratch.Contains(chunk))
+                if (!scratch.Contains(chunk) && (releasingAll || !IsHeld(record.World, chunk)))
                 {
                     action = new StreamAction(StreamActionKind.UnloadChunk, record.World, chunk);
                     return true;
@@ -389,6 +393,14 @@ public sealed class ChunkStreamer
     private bool IsReleased(WorldRecord record)
     {
         return releasingAll || (!record.Occupied && now - record.EmptySince >= emptyWorldGrace);
+    }
+
+    /// <summary>
+    /// Whether another machine still holds the chunk at <paramref name="chunk"/> of <paramref name="world"/>.
+    /// </summary>
+    private bool IsHeld(WorldDefinition world, Vector2Int chunk)
+    {
+        return holds != null && holds.IsChunkHeld(ChunkId.Of(world, chunk));
     }
 
     private WorldRecord Record(WorldDefinition world)

@@ -140,6 +140,8 @@ public class WorldStreamingPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(
             () => loaded.Chunks.Count == 1 && loaded.Chunks.ContainsKey(new Vector2Int(1, 1)),
             "the chunks to follow the player to (1, 1)");
+        yield return null;
+
         Assert.That(LoadedWorldScenes(), Is.EquivalentTo(new[] { "World_Sandbox", "World_Sandbox_1_1" }));
         Assert.That(Object.FindObjectsByType<MobController>().Length, Is.EqualTo(MobSpawnerOf(loaded, new Vector2Int(1, 1)).Mobs.Count),
             "Only the loaded chunk's mobs are about.");

@@ -11,23 +11,32 @@ using Object = UnityEngine.Object;
 
 /// <summary>
 /// Owns this machine's <see cref="Unity.Netcode.NetworkManager"/> for the whole app: hosts or joins sessions, admits
-/// clients through <see cref="JoinApproval"/>, announces the host's area to clients and runs the ready handshake that
-/// keeps spawned objects hidden from a client until it has loaded the current area.
+/// clients through <see cref="JoinApproval"/> and keys them by their player id, and runs the readiness handshakes that
+/// decide what each client receives (Docs/WorldStreaming.md: Networking). A client joins once its Gameplay scene is up
+/// and then sees every player; it reports each chunk of its world ready as it loads and then sees the objects whose
+/// home chunk that is; before unloading a chunk it releases it and waits until the host has hidden that chunk's objects
+/// from it. The host keeps every chunk a client holds.
 /// </summary>
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, ISessionStatus, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IClientVisibility, IDisposable
 {
-    public const string ClientReadyMessage = "TopDownRPG.ClientReady";
-    public const string AreaAnnouncementMessage = "TopDownRPG.AreaAnnouncement";
-    private const int AnnouncementBufferSize = 1024;
+    public const string ClientJoinedMessage = "TopDownRPG.ClientJoined";
+    public const string ChunkReadyMessage = "TopDownRPG.ChunkReady";
+    public const string ChunkReleasingMessage = "TopDownRPG.ChunkReleasing";
+    public const string ChunkReleasedMessage = "TopDownRPG.ChunkReleased";
+    public const NetworkDelivery MessageDelivery = NetworkDelivery.ReliableFragmentedSequenced;
+    private const int ChunkMessageSize = 128;
 
     private readonly NetworkManager networkManager;
     private readonly UnityTransport transport;
     private readonly NetworkSettings settings;
-    private readonly HashSet<ulong> readyClients = new();
+    private readonly UserSettings userSettings;
+    private readonly ClientChunkReadiness readiness;
     private readonly HashSet<ulong> admittedClients = new();
-    private readonly NetworkObject.VisibilityDelegate visibleToReadyClients;
-    private readonly List<NetworkObject> despawnBuffer = new();
-    private AreaAnnouncement? currentArea;
+    private readonly Dictionary<ulong, string> playerIds = new();
+    private readonly HashSet<ChunkId> awaitingRelease = new();
+    private readonly HashSet<uint> chunkRoutedPrefabs = new();
+    private readonly List<NetworkObject> visibilityBuffer = new();
+    private readonly NetworkObject.VisibilityDelegate visibleToJoinedClients;
     private bool shutdownRequested;
     private bool quitting;
     private bool followingHost;
@@ -35,12 +44,15 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     /// <summary>
     /// Instantiates <paramref name="networkManagerPrefab"/>, hooks connection approval and the client callbacks, and
     /// starts watching for the application quitting; logs an error when the prefab has no
-    /// <see cref="UnityTransport"/> or has connection approval off.
+    /// <see cref="UnityTransport"/> or has connection approval off. <paramref name="localSettings"/> gives this install's
+    /// player id.
     /// </summary>
-    public NetworkSession(NetworkManager networkManagerPrefab, NetworkSettings settings)
+    public NetworkSession(NetworkManager networkManagerPrefab, NetworkSettings settings, UserSettings localSettings)
     {
         this.settings = settings;
-        visibleToReadyClients = IsClientReady;
+        userSettings = localSettings;
+        readiness = new ClientChunkReadiness(this);
+        visibleToJoinedClients = IsClientJoined;
         Application.quitting += HandleQuitting;
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
@@ -65,8 +77,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     public event Action ConnectionLost;
-    public event Action<ulong> ClientReady;
-    public event Action<AreaAnnouncement> AreaAnnounced;
+    public event Action<ulong> ClientJoined;
 
     public NetworkManager NetworkManager => networkManager;
     public NetworkSettings Settings => settings;
@@ -76,13 +87,17 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public bool IsConnectedClient => networkManager.IsConnectedClient;
     public bool IsAuthoritative => IsActive ? networkManager.IsServer : !followingHost;
     public ulong LocalClientId => networkManager.LocalClientId;
-    public IReadOnlyCollection<ulong> ReadyClients => readyClients;
-    public int AreaEpoch { get; private set; }
+    public IReadOnlyCollection<ulong> JoinedClients => readiness.JoinedClients;
     public string JoinRefusal { get; private set; }
 
     /// <summary>
-    /// Starts hosting on the configured listen address and port and listens for clients' ready reports. Returns false
-    /// when a session is already running, the transport is missing or Netcode fails to start.
+    /// The host's per-client readiness, for tests that check the handshake.
+    /// </summary>
+    internal ClientChunkReadiness Readiness => readiness;
+
+    /// <summary>
+    /// Starts hosting on the configured listen address and port and listens for clients' joins and chunk reports.
+    /// Returns false when a session is already running, the transport is missing or Netcode fails to start.
     /// </summary>
     public bool StartHost()
     {
@@ -98,15 +113,19 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
             return false;
         }
 
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ClientReadyMessage, HandleClientReadyMessage);
+        CustomMessagingManager messages = networkManager.CustomMessagingManager;
+        messages.RegisterNamedMessageHandler(ClientJoinedMessage, HandleClientJoinedMessage);
+        messages.RegisterNamedMessageHandler(ChunkReadyMessage, HandleChunkReadyMessage);
+        messages.RegisterNamedMessageHandler(ChunkReleasingMessage, HandleChunkReleasingMessage);
         return true;
     }
 
     /// <summary>
     /// Connects as a client to <paramref name="address"/> (the default address when blank), sending this build's
-    /// version, and waits up to <paramref name="timeoutSeconds"/> of real time for the connection. Returns false at
-    /// once when a session runs or the client cannot start; on a refusal, disconnect or timeout it records any
-    /// refusal in <see cref="JoinRefusal"/>, shuts down and returns false; on cancellation it shuts down and rethrows.
+    /// version and this install's player id, and waits up to <paramref name="timeoutSeconds"/> of real time for the
+    /// connection. Returns false at once when a session runs or the client cannot start; on a refusal, disconnect or
+    /// timeout it records any refusal in <see cref="JoinRefusal"/>, shuts down and returns false; on cancellation it
+    /// shuts down and rethrows.
     /// </summary>
     public async Awaitable<bool> JoinAsync(string address, float timeoutSeconds, CancellationToken cancellation)
     {
@@ -118,14 +137,14 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         ResetSessionState();
         string hostAddress = string.IsNullOrWhiteSpace(address) ? settings.DefaultAddress : address.Trim();
         transport.SetConnectionData(hostAddress, settings.Port);
-        networkManager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version);
+        networkManager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version, LocalPlayerId);
         if (!networkManager.StartClient())
         {
             return false;
         }
 
         followingHost = true;
-        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(AreaAnnouncementMessage, HandleAreaAnnouncementMessage);
+        networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ChunkReleasedMessage, HandleChunkReleasedMessage);
 
         float deadline = Time.realtimeSinceStartup + timeoutSeconds;
         try
@@ -159,7 +178,8 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     {
         shutdownRequested = true;
         followingHost = false;
-        readyClients.Clear();
+        readiness.Clear();
+        awaitingRelease.Clear();
         if (networkManager != null && networkManager.IsListening)
         {
             networkManager.Shutdown();
@@ -167,90 +187,117 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <summary>
-    /// Whether <paramref name="clientId"/> reported ready for the current area epoch; always true for the host's own
-    /// client.
+    /// This install's player id, from the user settings (made on first use).
     /// </summary>
-    public bool IsClientReady(ulong clientId)
+    public string LocalPlayerId => userSettings != null ? userSettings.PlayerId : string.Empty;
+
+    /// <summary>
+    /// The player id <paramref name="clientId"/> joined with: the host's own for the host's client; empty for a client
+    /// the host does not know. A client that came without an id, or with one already in the session, has a new id for
+    /// this session only.
+    /// </summary>
+    public string PlayerIdOf(ulong clientId)
     {
-        return clientId == NetworkManager.ServerClientId || readyClients.Contains(clientId);
+        if (clientId == NetworkManager.ServerClientId)
+        {
+            return LocalPlayerId;
+        }
+
+        return playerIds.TryGetValue(clientId, out string playerId) ? playerId : string.Empty;
     }
 
     /// <summary>
-    /// Client only: tells the host this machine has loaded the area of the current <see cref="AreaEpoch"/>. Does
-    /// nothing on the host or when not connected.
+    /// Whether <paramref name="clientId"/>'s Gameplay scene is up, so it may receive the players; always true for the
+    /// host's own client.
     /// </summary>
-    public void NotifyReady()
+    public bool IsClientJoined(ulong clientId)
+    {
+        return clientId == NetworkManager.ServerClientId || readiness.IsJoined(clientId);
+    }
+
+    /// <inheritdoc />
+    public bool IsClientReady(ulong clientId)
+    {
+        return clientId == NetworkManager.ServerClientId || readiness.IsSettled(clientId);
+    }
+
+    /// <inheritdoc />
+    public bool IsClientReady(ulong clientId, ChunkId chunk)
+    {
+        return clientId == NetworkManager.ServerClientId || readiness.IsReady(clientId, chunk);
+    }
+
+    /// <inheritdoc />
+    public void BeginTrip(ulong clientId, int trip)
+    {
+        if (networkManager.IsServer)
+        {
+            readiness.BeginTrip(clientId, trip);
+        }
+    }
+
+    /// <inheritdoc />
+    public bool IsChunkHeld(ChunkId chunk)
+    {
+        return networkManager.IsServer && readiness.IsHeld(chunk);
+    }
+
+    /// <summary>
+    /// Client only: tells the host this machine's Gameplay scene is up and its player prefab registered, so it may
+    /// receive the players and its own. Does nothing on the host or when not connected.
+    /// </summary>
+    public void NotifyJoined()
     {
         if (!networkManager.IsConnectedClient || networkManager.IsServer)
         {
             return;
         }
 
-        using FastBufferWriter writer = new(sizeof(int), Allocator.Temp);
-        writer.WriteValueSafe(AreaEpoch);
-        networkManager.CustomMessagingManager.SendNamedMessage(ClientReadyMessage, NetworkManager.ServerClientId, writer);
+        using FastBufferWriter writer = new(sizeof(byte), Allocator.Temp);
+        writer.WriteValueSafe((byte)1);
+        networkManager.CustomMessagingManager.SendNamedMessage(ClientJoinedMessage, NetworkManager.ServerClientId, writer, MessageDelivery);
     }
 
-    /// <summary>
-    /// Client only: adopts <paramref name="announcement"/>'s epoch as it starts loading that area, so its next ready
-    /// report matches the host's.
-    /// </summary>
-    public void BeginAnnouncedArea(AreaAnnouncement announcement)
+    /// <inheritdoc />
+    public void ReportChunkReady(int trip, ChunkId chunk)
     {
-        if (!networkManager.IsServer)
-        {
-            AreaEpoch = announcement.Epoch;
-        }
-    }
-
-    /// <summary>
-    /// Host only: starts a new area epoch, clears every client's readiness and sends the area to each connected
-    /// client; it is also kept to send to clients that connect later.
-    /// </summary>
-    public void AnnounceArea(string scenePath, string spawnId, bool newSession)
-    {
-        if (!networkManager.IsServer)
+        if (!networkManager.IsConnectedClient || networkManager.IsServer)
         {
             return;
         }
 
-        AreaEpoch++;
-        readyClients.Clear();
-        currentArea = new AreaAnnouncement(scenePath, spawnId, AreaEpoch, newSession);
-        foreach (ulong clientId in networkManager.ConnectedClientsIds)
-        {
-            if (clientId != NetworkManager.ServerClientId)
-            {
-                SendAreaAnnouncement(clientId, currentArea.Value);
-            }
-        }
+        using FastBufferWriter writer = new(ChunkMessageSize, Allocator.Temp);
+        writer.WriteValueSafe(trip);
+        writer.WriteValueSafe(new NetworkChunkId(chunk));
+        networkManager.CustomMessagingManager.SendNamedMessage(ChunkReadyMessage, NetworkManager.ServerClientId, writer, MessageDelivery);
     }
 
-    /// <summary>
-    /// Host only: despawns every spawned network object that lives in <paramref name="scene"/>.
-    /// </summary>
-    public void DespawnObjectsIn(Scene scene)
+    /// <inheritdoc />
+    public async Awaitable ReleaseChunkAsync(ChunkId chunk, CancellationToken cancellation)
     {
-        if (!networkManager.IsServer || !scene.IsValid())
+        if (!networkManager.IsConnectedClient || networkManager.IsServer)
         {
             return;
         }
 
-        despawnBuffer.Clear();
-        foreach (NetworkObject spawned in networkManager.SpawnManager.SpawnedObjectsList)
+        awaitingRelease.Add(chunk);
+        try
         {
-            if (spawned != null && spawned.gameObject.scene == scene)
+            using (FastBufferWriter writer = new(ChunkMessageSize, Allocator.Temp))
             {
-                despawnBuffer.Add(spawned);
+                writer.WriteValueSafe(new NetworkChunkId(chunk));
+                networkManager.CustomMessagingManager.SendNamedMessage(ChunkReleasingMessage, NetworkManager.ServerClientId, writer, MessageDelivery);
+            }
+
+            while (awaitingRelease.Contains(chunk) && networkManager.IsConnectedClient)
+            {
+                await Awaitable.NextFrameAsync(cancellation);
             }
         }
-
-        foreach (NetworkObject spawned in despawnBuffer)
+        finally
         {
-            spawned.Despawn();
+            awaitingRelease.Remove(chunk);
         }
-
-        despawnBuffer.Clear();
     }
 
     /// <summary>
@@ -262,22 +309,39 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <summary>
-    /// Host only: spawns <paramref name="instance"/> as a server-owned object, visible to ready clients only and
+    /// Host only: spawns <paramref name="instance"/> as a server-owned object visible to every joined client and
     /// destroyed with its scene.
     /// </summary>
     public void Spawn(NetworkObject instance)
     {
-        instance.CheckObjectVisibility = visibleToReadyClients;
+        instance.CheckObjectVisibility = visibleToJoinedClients;
+        instance.Spawn(destroyWithScene: true);
+    }
+
+    /// <summary>
+    /// Host only: spawns <paramref name="instance"/> as a server-owned object of <paramref name="homeChunk"/>: it is
+    /// visible to the clients that hold that chunk, destroyed with its scene, and carries the chunk as its
+    /// instantiation data when its prefab has a handler here (<c>ChunkNetworkPrefabs</c>), so each client creates its
+    /// copy in that chunk's scope.
+    /// </summary>
+    public void Spawn(NetworkObject instance, ChunkId homeChunk)
+    {
+        if (chunkRoutedPrefabs.Contains(instance.PrefabIdHash))
+        {
+            networkManager.PrefabHandler.SetInstantiationData(instance, new NetworkChunkId(homeChunk));
+        }
+
+        instance.CheckObjectVisibility = clientId => IsClientReady(clientId, homeChunk);
         instance.Spawn(destroyWithScene: true);
     }
 
     /// <summary>
     /// Host only: spawns <paramref name="instance"/> as <paramref name="ownerClientId"/>'s player object, visible to
-    /// ready clients only and destroyed with its scene.
+    /// every joined client whatever its world, and destroyed with its scene.
     /// </summary>
     public void SpawnPlayerObject(NetworkObject instance, ulong ownerClientId)
     {
-        instance.CheckObjectVisibility = visibleToReadyClients;
+        instance.CheckObjectVisibility = visibleToJoinedClients;
         instance.SpawnAsPlayerObject(ownerClientId, destroyWithScene: true);
     }
 
@@ -299,6 +363,12 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
         if (!networkManager.PrefabHandler.AddHandler(prefab, handler))
         {
             Debug.LogError($"{prefab.name} already has a network prefab handler; the new one is ignored.", prefab);
+            return;
+        }
+
+        if (handler is NetworkPrefabInstanceHandlerWithData<NetworkChunkId>)
+        {
+            chunkRoutedPrefabs.Add(prefab.PrefabIdHash);
         }
     }
 
@@ -328,10 +398,61 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     /// </summary>
     public void UnregisterPrefab(NetworkObject prefab)
     {
+        chunkRoutedPrefabs.Remove(prefab.PrefabIdHash);
         if (networkManager != null)
         {
             networkManager.PrefabHandler.RemoveHandler(prefab);
         }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="clientId"/> every spawned object whose visibility check now lets it see it.
+    /// </summary>
+    void IClientVisibility.ShowNowVisible(ulong clientId)
+    {
+        CollectSpawnedWithVisibility();
+        foreach (NetworkObject spawned in visibilityBuffer)
+        {
+            if (!spawned.IsNetworkVisibleTo(clientId) && spawned.CheckObjectVisibility(clientId))
+            {
+                spawned.NetworkShow(clientId);
+            }
+        }
+
+        visibilityBuffer.Clear();
+    }
+
+    /// <summary>
+    /// Hides from <paramref name="clientId"/> every spawned object it sees whose visibility check no longer lets it.
+    /// </summary>
+    void IClientVisibility.HideNoLongerVisible(ulong clientId)
+    {
+        CollectSpawnedWithVisibility();
+        foreach (NetworkObject spawned in visibilityBuffer)
+        {
+            if (spawned.IsNetworkVisibleTo(clientId) && !spawned.CheckObjectVisibility(clientId))
+            {
+                spawned.NetworkHide(clientId);
+            }
+        }
+
+        visibilityBuffer.Clear();
+    }
+
+    /// <summary>
+    /// Sends <paramref name="clientId"/> the acknowledgement of its release of <paramref name="chunk"/>, on the same
+    /// ordered channel as the hides that went before it, so it arrives after them.
+    /// </summary>
+    void IClientVisibility.AcknowledgeRelease(ulong clientId, ChunkId chunk)
+    {
+        if (!networkManager.IsServer || !networkManager.ConnectedClients.ContainsKey(clientId))
+        {
+            return;
+        }
+
+        using FastBufferWriter writer = new(ChunkMessageSize, Allocator.Temp);
+        writer.WriteValueSafe(new NetworkChunkId(chunk));
+        networkManager.CustomMessagingManager.SendNamedMessage(ChunkReleasedMessage, clientId, writer, MessageDelivery);
     }
 
     /// <summary>
@@ -358,6 +479,27 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <summary>
+    /// Fills the buffer with the spawned objects that have a visibility check, so showing and hiding them does not
+    /// touch the list being walked.
+    /// </summary>
+    private void CollectSpawnedWithVisibility()
+    {
+        visibilityBuffer.Clear();
+        if (!networkManager.IsServer)
+        {
+            return;
+        }
+
+        foreach (NetworkObject spawned in networkManager.SpawnManager.SpawnedObjectsList)
+        {
+            if (spawned != null && spawned.CheckObjectVisibility != null)
+            {
+                visibilityBuffer.Add(spawned);
+            }
+        }
+    }
+
+    /// <summary>
     /// Notes that the application is quitting, so the client stopping is not reported as a lost connection.
     /// </summary>
     private void HandleQuitting()
@@ -379,35 +521,27 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
 #endif
 
     /// <summary>
-    /// Clears everything left from a previous session (readiness, admissions, refusal, current area, epoch) and makes
-    /// this NetworkManager the Netcode singleton, which Netcode falls back to when spawning.
+    /// Clears everything left from a previous session (readiness, admissions, player ids, refusal, releases waiting)
+    /// and makes this NetworkManager the Netcode singleton, which Netcode falls back to when spawning.
     /// </summary>
     private void ResetSessionState()
     {
         shutdownRequested = false;
         followingHost = false;
-        readyClients.Clear();
+        readiness.Clear();
         admittedClients.Clear();
+        playerIds.Clear();
+        awaitingRelease.Clear();
         JoinRefusal = null;
-        currentArea = null;
-        AreaEpoch = 0;
         networkManager.SetSingleton();
-    }
-
-    /// <summary>
-    /// Sends <paramref name="announcement"/> to client <paramref name="clientId"/> as a named message.
-    /// </summary>
-    private void SendAreaAnnouncement(ulong clientId, AreaAnnouncement announcement)
-    {
-        using FastBufferWriter writer = new(AnnouncementBufferSize, Allocator.Temp);
-        announcement.Write(writer);
-        networkManager.CustomMessagingManager.SendNamedMessage(AreaAnnouncementMessage, clientId, writer);
     }
 
     /// <summary>
     /// Host: approves its own client, and other clients through <see cref="JoinApproval.Evaluate"/>, counting
     /// connected clients plus those approved but not yet connected; a refusal goes back as a tagged disconnect
-    /// reason. Never creates a player object, since players are spawned once a client is ready.
+    /// reason. Records an approved client's player id, giving one that came without an id, or with an id already in
+    /// the session, a new id for this session with a warning. Never creates a player object, since players are
+    /// spawned once a client joins.
     /// </summary>
     private void HandleConnectionApproval(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
     {
@@ -429,59 +563,94 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
 
         response.Approved = true;
         admittedClients.Add(request.ClientNetworkId);
+        JoinApproval.ReadPayload(request.Payload, out _, out string playerId);
+        if (string.IsNullOrEmpty(playerId) || IsPlayerIdInSession(playerId))
+        {
+            string reason = string.IsNullOrEmpty(playerId) ? "came without a player id" : $"shares the player id {playerId} with a player already here";
+            Debug.LogWarning($"Client {request.ClientNetworkId} {reason}; it plays as a new player this session.");
+            playerId = Guid.NewGuid().ToString("N");
+        }
+
+        playerIds[request.ClientNetworkId] = playerId;
     }
 
     /// <summary>
-    /// Moves <paramref name="clientId"/> from admitted to connected and, on the host, sends a late joiner the current
-    /// area.
+    /// Whether the host or a client already admitted has <paramref name="playerId"/>.
+    /// </summary>
+    private bool IsPlayerIdInSession(string playerId)
+    {
+        if (playerId == LocalPlayerId)
+        {
+            return true;
+        }
+
+        foreach (string known in playerIds.Values)
+        {
+            if (known == playerId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="clientId"/> from admitted to connected.
     /// </summary>
     private void HandleClientConnected(ulong clientId)
     {
         admittedClients.Remove(clientId);
-        if (networkManager.IsServer && clientId != NetworkManager.ServerClientId && currentArea.HasValue)
-        {
-            SendAreaAnnouncement(clientId, currentArea.Value);
-        }
     }
 
     /// <summary>
-    /// Client: reads the host's area announcement and raises <see cref="AreaAnnounced"/>.
+    /// Host: records that a client's Gameplay scene is up, shows it the players and raises <see cref="ClientJoined"/>;
+    /// a repeated join changes nothing.
     /// </summary>
-    private void HandleAreaAnnouncementMessage(ulong senderClientId, FastBufferReader payload)
+    private void HandleClientJoinedMessage(ulong senderClientId, FastBufferReader payload)
     {
-        AreaAnnounced?.Invoke(AreaAnnouncement.Read(payload));
+        if (senderClientId != NetworkManager.ServerClientId && readiness.Join(senderClientId))
+        {
+            ClientJoined?.Invoke(senderClientId);
+        }
     }
 
     /// <summary>
-    /// Host: records a client's ready report for the current epoch (ignoring stale epochs and repeats), shows it every
-    /// object spawned through this session that it cannot see yet, and raises <see cref="ClientReady"/>.
+    /// Host: takes a client's report that a chunk is up, ignoring one from before its latest trip.
     /// </summary>
-    private void HandleClientReadyMessage(ulong senderClientId, FastBufferReader payload)
+    private void HandleChunkReadyMessage(ulong senderClientId, FastBufferReader payload)
     {
-        payload.ReadValueSafe(out int epoch);
-        if (epoch != AreaEpoch || !readyClients.Add(senderClientId))
-        {
-            return;
-        }
-
-        foreach (NetworkObject spawned in networkManager.SpawnManager.SpawnedObjectsList)
-        {
-            if (spawned.CheckObjectVisibility == visibleToReadyClients && !spawned.IsNetworkVisibleTo(senderClientId))
-            {
-                spawned.NetworkShow(senderClientId);
-            }
-        }
-
-        ClientReady?.Invoke(senderClientId);
+        payload.ReadValueSafe(out int trip);
+        payload.ReadValueSafe(out NetworkChunkId chunk);
+        readiness.ReportReady(senderClientId, trip, chunk.ToChunkId());
     }
 
     /// <summary>
-    /// Forgets a disconnected client's admission and readiness.
+    /// Host: takes a client's release of a chunk, hiding that chunk's objects from it before acknowledging.
+    /// </summary>
+    private void HandleChunkReleasingMessage(ulong senderClientId, FastBufferReader payload)
+    {
+        payload.ReadValueSafe(out NetworkChunkId chunk);
+        readiness.Release(senderClientId, chunk.ToChunkId());
+    }
+
+    /// <summary>
+    /// Client: the host acknowledged the release of a chunk, which may now unload.
+    /// </summary>
+    private void HandleChunkReleasedMessage(ulong senderClientId, FastBufferReader payload)
+    {
+        payload.ReadValueSafe(out NetworkChunkId chunk);
+        awaitingRelease.Remove(chunk.ToChunkId());
+    }
+
+    /// <summary>
+    /// Forgets a disconnected client's admission, player id and readiness, which releases every chunk it held.
     /// </summary>
     private void HandleClientDisconnected(ulong clientId)
     {
         admittedClients.Remove(clientId);
-        readyClients.Remove(clientId);
+        playerIds.Remove(clientId);
+        readiness.Leave(clientId);
     }
 
     /// <summary>

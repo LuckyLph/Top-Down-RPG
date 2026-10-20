@@ -27,10 +27,16 @@ public interface INetworkObjectSpawner
     /// </summary>
     void UnregisterPrefab(NetworkObject prefab);
     /// <summary>
-    /// Spawns <paramref name="instance"/> as a server-owned network object (host only) that reaches each client once
-    /// it is ready and is destroyed with its scene.
+    /// Spawns <paramref name="instance"/> as a server-owned network object (host only) that reaches every client once
+    /// it has joined and is destroyed with its scene.
     /// </summary>
     void Spawn(NetworkObject instance);
+    /// <summary>
+    /// Spawns <paramref name="instance"/> as a server-owned network object (host only) whose home is
+    /// <paramref name="homeChunk"/>: it reaches each client that holds that chunk, is created there in that chunk's
+    /// scope, and is destroyed with its scene.
+    /// </summary>
+    void Spawn(NetworkObject instance, ChunkId homeChunk);
     /// <summary>
     /// Host only: despawns <paramref name="instance"/> so every client drops its copy, and destroys it; destroys one that
     /// is not spawned. Nothing for null.

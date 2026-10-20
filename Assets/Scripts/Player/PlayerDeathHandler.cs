@@ -5,8 +5,10 @@ using VContainer.Unity;
 
 /// <summary>
 /// The party's death flow, acting only where <see cref="IGameAuthority.IsAuthoritative"/>: a dead player respawns
-/// after the respawn delay, and once every registered player is dead the game restarts in the current area after the
-/// restart delay. Pending respawns and restarts are cancelled on dispose.
+/// after the respawn delay, and offline, once every registered player is dead, the game restarts in the current area or
+/// world after the restart delay. In a session nothing restarts: each player respawns on its own, as
+/// Docs/WorldStreaming.md's Death and respawn plans, since a restart would reload the host's Gameplay scene under its
+/// clients. Pending respawns and restarts are cancelled on dispose.
 /// </summary>
 public sealed class PlayerDeathHandler : IStartable, IDisposable
 {
@@ -15,19 +17,23 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     private readonly IGameAuthority authority;
     private readonly GameFlow gameFlow;
     private readonly GameplaySettings settings;
+    private readonly ISessionStatus session;
     private readonly CancellationTokenSource disposeCancellation = new();
     private bool restartPending;
 
     /// <summary>
-    /// Captures the registry, the respawner, the authority, the game flow that restarts and the delay settings.
+    /// Captures the registry, the respawner, the authority, the game flow that restarts, the delay settings and the
+    /// session status that rules restarts out online.
     /// </summary>
     public PlayerDeathHandler(
         IPlayerRegistry players,
         PlayerRespawner respawner,
         IGameAuthority authority,
         GameFlow gameFlow,
-        GameplaySettings settings)
+        GameplaySettings settings,
+        ISessionStatus sessionStatus)
     {
+        session = sessionStatus;
         this.players = players;
         this.respawner = respawner;
         this.authority = authority;
@@ -115,8 +121,8 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Schedules a restart, once, when there are players and none is alive. Returns true when a restart is pending
-    /// or this machine is not the authority, so the caller does nothing else.
+    /// Offline, schedules a restart, once, when there are players and none is alive. Returns true when a restart is
+    /// pending or this machine is not the authority, so the caller does nothing else.
     /// </summary>
     private bool RestartIfPartyWiped()
     {
@@ -125,7 +131,7 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
             return true;
         }
 
-        if (players.Players.Count == 0 || players.AnyAlive)
+        if (session.IsActive || players.Players.Count == 0 || players.AnyAlive)
         {
             return false;
         }

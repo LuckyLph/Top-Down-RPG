@@ -12,10 +12,12 @@ using VContainer.Unity;
 /// ready (in <c>PostStart</c>, after <see cref="ChunkNavigation"/> added the chunk's page in <c>Start</c>), through the
 /// chunk's scope, so they path on their world's <see cref="WorldNavigation"/> and consider only its
 /// <see cref="WorldPlayers"/>; each mob gets its home chunk, which bounds its patrol and its leash. In a session it
-/// spawns them as network objects and network-despawns them. On a client it spawns nothing and instead registers each
-/// distinct mob prefab for this chunk (<see cref="ChunkNetworkPrefabs"/>), so the host's mobs arrive injected and in
-/// this chunk's scene. A mob stays in its home chunk's scene for its whole life, wherever it walks, so it goes with the
-/// chunk. Shares its spawning with <see cref="AreaMobSpawner"/> through <see cref="MobSpawning"/>.
+/// spawns them as network objects of this chunk, which reach each client once it holds the chunk, and network-despawns
+/// them. In a session it registers each distinct mob prefab for this chunk (<see cref="ChunkNetworkPrefabs"/>): on a
+/// client so the host's mobs whose home is this chunk arrive injected and in this chunk's scene, on the host so they
+/// carry their home chunk. On a client it spawns nothing. A mob stays in its home chunk's scene for its whole life,
+/// wherever it walks, so it goes with the chunk. Shares its spawning with <see cref="AreaMobSpawner"/> through
+/// <see cref="MobSpawning"/>.
 /// </summary>
 public sealed class ChunkMobSpawner : IPostStartable, IDisposable
 {
@@ -71,12 +73,12 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Client only: registers each distinct networked mob prefab of the chunk's spawn points for this chunk. Runs from
-    /// the chunk scope's build callback; does nothing offline or on the host.
+    /// In a session, registers each distinct networked mob prefab of the chunk's spawn points for this chunk. Runs from
+    /// the chunk scope's build callback; does nothing offline.
     /// </summary>
     public void RegisterNetworkPrefabs()
     {
-        if (!MobSpawning.IsClient(networkObjects) || registeredPrefabs.Count > 0)
+        if (!networkObjects.IsActive || registeredPrefabs.Count > 0)
         {
             return;
         }
@@ -125,7 +127,7 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
             }
 
             mob.SetHome(home);
-            MobSpawning.NetworkSpawn(mob, networkObjects);
+            MobSpawning.NetworkSpawn(mob, networkObjects, ChunkId.Of(identity.World, identity.Coords));
             mobs.Add(mob);
         }
     }
@@ -145,8 +147,8 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Stops following the chunk's unloading, despawns any mob still here and unregisters the prefabs a client
-    /// registered, as the chunk's scope goes away.
+    /// Stops following the chunk's unloading, despawns any mob still here and unregisters the prefabs it registered, as
+    /// the chunk's scope goes away.
     /// </summary>
     public void Dispose()
     {

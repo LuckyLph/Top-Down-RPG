@@ -12,11 +12,15 @@ using VContainer.Unity;
 /// streamer's next load or unload, one at a time: a world's root scene under the Gameplay scope, a chunk under its
 /// world's scope. It also streams the arrival of every trip under way (<see cref="TripArrivals"/>), so a trip's target
 /// world loads while the traveller's screen fades out. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
-/// enters and leaves worlds through, and that brings the local player to a trip's entry.
+/// enters and leaves worlds through, and that brings the local player to a trip's entry. In a session it runs the
+/// client's half of the per-chunk handshake (Docs/WorldStreaming.md: Networking): a client reports each chunk ready
+/// once it is loaded, again for the chunks of its new world when its player's trip count changes, and releases each
+/// chunk before unloading it, waiting for the host; the host's streamer keeps every chunk a client holds.
 /// </summary>
-public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
+public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisposable
 {
     private const int MaxFramesWaitingForPlayer = 600;
+    private const float JoinTimeoutSeconds = 60f;
 
     private readonly ChunkStreamer streamer;
     private readonly SceneLoader sceneLoader;
@@ -29,9 +33,13 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     private readonly IClock clock;
     private readonly CameraFollow2D cameraFollow;
     private readonly TripArrivals arrivals;
+    private readonly IChunkHandshake handshake;
+    private readonly ISessionStatus sessionStatus;
     private readonly List<StreamInterest> interests = new();
     private readonly CancellationTokenSource disposeCancellation = new();
     private bool active;
+    private PlayerHandle reportedPlayer;
+    private int reportedTrip;
 
     /// <summary>
     /// Creates the driver with a streamer made from <paramref name="settings"/>, loading through
@@ -48,9 +56,13 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
         IGameAuthority authority,
         IClock clock,
         CameraFollow2D cameraFollow,
-        TripArrivals arrivals)
+        TripArrivals arrivals,
+        IChunkHandshake chunkHandshake,
+        ISessionStatus session)
     {
-        streamer = settings.CreateStreamer();
+        streamer = settings.CreateStreamer(chunkHandshake);
+        handshake = chunkHandshake;
+        sessionStatus = session;
         this.sceneLoader = sceneLoader;
         this.gameplayScope = gameplayScope;
         this.worlds = worlds;
@@ -69,6 +81,14 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     /// The streamer, for tests that check what is loaded.
     /// </summary>
     internal ChunkStreamer Streamer => streamer;
+
+    /// <summary>
+    /// Follows the local player's trips, to report its new world's chunks again.
+    /// </summary>
+    public void Start()
+    {
+        playerWorlds.Changed += HandlePlayerWorldChanged;
+    }
 
     /// <summary>
     /// Updates the streamer with where the streamed players stand and starts its next action when none is running.
@@ -131,6 +151,51 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     }
 
     /// <summary>
+    /// Waits, up to <see cref="JoinTimeoutSeconds"/> of real time, for the host to spawn this machine's player and put
+    /// it in a world, snaps the camera to it and completes once that world and the chunks around the player are loaded,
+    /// returning the world. Returns null when the session ends first; throws on the timeout.
+    /// </summary>
+    public async Awaitable<WorldDefinition> JoinAsync(CancellationToken cancellation)
+    {
+        streamer.Resume();
+        active = true;
+        float deadline = Time.realtimeSinceStartup + JoinTimeoutSeconds;
+        WorldDefinition world = null;
+        while (world == null)
+        {
+            if (!sessionStatus.IsActive)
+            {
+                return null;
+            }
+
+            if (Time.realtimeSinceStartup > deadline)
+            {
+                throw new InvalidOperationException($"The host placed no player for this machine within {JoinTimeoutSeconds} s.");
+            }
+
+            LocalPlayer local = localPlayer.Current;
+            world = local != null ? playerWorlds.Get(local.Handle) : null;
+            if (world == null)
+            {
+                await Awaitable.NextFrameAsync(cancellation);
+            }
+        }
+
+        cameraFollow.SnapToTarget();
+        while (!streamer.IsSettled(new StreamInterest(world, localPlayer.Current.Transform.position)))
+        {
+            if (!sessionStatus.IsActive)
+            {
+                return null;
+            }
+
+            await Awaitable.NextFrameAsync(cancellation);
+        }
+
+        return world;
+    }
+
+    /// <summary>
     /// Moves the local player, which the trip's authority has put in <paramref name="world"/>, to its entry
     /// <paramref name="entryName"/>, snaps the camera there, and completes once the world and the chunks around the
     /// entry are loaded. The world it left keeps everything for the empty-world grace. Throws without a local player.
@@ -188,6 +253,7 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     /// </summary>
     public void Dispose()
     {
+        playerWorlds.Changed -= HandlePlayerWorldChanged;
         disposeCancellation.Cancel();
         disposeCancellation.Dispose();
     }
@@ -309,17 +375,60 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
         }
 
         worlds.AddChunk(loaded, coords, scene);
+        handshake.ReportChunkReady(LocalTrip(), ChunkId.Of(world, coords));
     }
 
     private async Awaitable UnloadChunkAsync(WorldDefinition world, Vector2Int coords, CancellationToken cancellation)
     {
-        if (!worlds.TryGet(world, out LoadedWorld loaded) || !loaded.Chunks.TryGetValue(coords, out Scene scene))
+        if (!worlds.TryGet(world, out LoadedWorld loaded) || !loaded.Chunks.ContainsKey(coords))
+        {
+            return;
+        }
+
+        await handshake.ReleaseChunkAsync(ChunkId.Of(world, coords), cancellation);
+        if (!worlds.TryGet(world, out loaded) || !loaded.Chunks.TryGetValue(coords, out Scene scene))
         {
             return;
         }
 
         worlds.RemoveChunk(loaded, coords);
         await sceneLoader.UnloadAsync(scene, cancellation);
+    }
+
+    /// <summary>
+    /// The local player's trip count, which this machine's chunk reports carry.
+    /// </summary>
+    private int LocalTrip()
+    {
+        LocalPlayer local = localPlayer.Current;
+        return local != null ? playerWorlds.TripOf(local.Handle) : 0;
+    }
+
+    /// <summary>
+    /// When the local player's trip count changes, reports again every loaded chunk of its new world with the new count:
+    /// a chunk kept from an earlier visit is up here, and its report from before the trip may have been ignored.
+    /// </summary>
+    private void HandlePlayerWorldChanged(PlayerHandle player, WorldDefinition world)
+    {
+        LocalPlayer local = localPlayer.Current;
+        if (local == null || player != local.Handle)
+        {
+            return;
+        }
+
+        int trip = playerWorlds.TripOf(player);
+        bool newTrip = player != reportedPlayer || trip != reportedTrip;
+        reportedPlayer = player;
+        reportedTrip = trip;
+        if (!newTrip || world == null || !worlds.TryGet(world, out LoadedWorld loaded))
+        {
+            return;
+        }
+
+        foreach (Vector2Int coords in loaded.Chunks.Keys)
+        {
+            handshake.ReportChunkReady(trip, ChunkId.Of(world, coords));
+        }
     }
 
     private async Awaitable UnloadWorldAsync(WorldDefinition world, CancellationToken cancellation)

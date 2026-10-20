@@ -12,7 +12,9 @@ public class ChunkLifetimeScope : LifetimeScope
     /// <summary>
     /// Registers the <see cref="ChunkNavigation"/> entry point that adds the chunk's <see cref="NavigationGrid2D"/> page
     /// to its world's navigation, and the <see cref="ChunkMobSpawner"/> of the chunk's mob spawn points, whose network
-    /// prefabs a client registers once the container is built. Without a grid it logs an error and registers neither.
+    /// prefabs it registers in a session once the container is built, and, when the chunk has an
+    /// <see cref="AreaTerrain"/>, that terrain and its <see cref="ChunkTerrainSync"/>, whose prefab is registered the same
+    /// way. Without a grid it logs an error and registers neither the navigation nor the mobs.
     /// Logs an error and registers nothing without a parent scope, and logs one for every mob placed directly in the
     /// chunk, since mobs come from spawn points.
     /// </summary>
@@ -30,6 +32,16 @@ public class ChunkLifetimeScope : LifetimeScope
         foreach (MobController placedMob in SceneQuery.FindAll<MobController>(gameObject.scene))
         {
             Debug.LogError($"{placedMob.name} is placed in the chunk scene; use a {nameof(MobSpawnPoint)} instead so it is spawned at runtime.", placedMob);
+        }
+
+        AreaTerrain terrain = SceneQuery.FindFirst<AreaTerrain>(gameObject.scene);
+        if (terrain != null)
+        {
+            builder.RegisterComponent(terrain);
+            builder.RegisterEntryPoint<ChunkTerrainSync>()
+                .WithParameter(gameObject.scene)
+                .AsSelf();
+            builder.RegisterBuildCallback(resolver => resolver.Resolve<ChunkTerrainSync>().RegisterNetworkPrefab());
         }
 
         NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);

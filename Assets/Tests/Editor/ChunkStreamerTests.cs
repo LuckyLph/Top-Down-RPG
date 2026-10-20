@@ -5,7 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="ChunkStreamer"/>: worlds and chunks load around the players nearest first, one action at a
-/// time, unload past the hysteresis, and an empty world waits out its grace before going.
+/// time, unload past the hysteresis, an empty world waits out its grace before going, and a chunk another machine holds
+/// never unloads until released.
 /// </summary>
 public class ChunkStreamerTests
 {
@@ -202,9 +203,58 @@ public class ChunkStreamerTests
         Assert.That(streamer.IsChunkLoaded(world, new Vector2Int(0, 0)), Is.False);
     }
 
+    /// <summary>
+    /// The host never unloads a chunk a client holds: not when no player keeps it, and not with its world past the
+    /// grace, which waits for it; once released it goes, and then its world. Letting everything go, as the session
+    /// ends, ignores the holds.
+    /// </summary>
+    [Test]
+    public void NeverUnloadsAHeldChunk_OrItsWorld_UntilItIsReleased()
+    {
+        WorldDefinition a = World("A", Vector2Int.zero, 4);
+        WorldDefinition b = World("B", new Vector2Int(2048, 0), 2);
+        FakeHolds holds = new();
+        ChunkStreamer streamer = new(View, LoadMargin, Hysteresis, Grace, holds);
+        streamer.SetInterests(new[] { new StreamInterest(a, new Vector2(70.5f, 30.5f)) }, 0f);
+        Drain(streamer);
+        holds.Held.Add(ChunkId.Of(a, new Vector2Int(0, 0)));
+
+        streamer.SetInterests(new[] { new StreamInterest(a, new Vector2(100.5f, 30.5f)) }, 1f);
+        Assert.That(Drain(streamer), Is.Empty, "A held chunk stays though no player keeps it.");
+
+        streamer.SetInterests(new[] { new StreamInterest(b, new Vector2(2048 + 30.5f, 30.5f)) }, 2f);
+        Drain(streamer);
+        streamer.SetInterests(new[] { new StreamInterest(b, new Vector2(2048 + 30.5f, 30.5f)) }, 30f);
+        Assert.That(Drain(streamer), Is.EqualTo(new[] { "UnloadChunk A (1, 0)" }), "Past the grace only the chunk nobody holds goes.");
+        Assert.That(streamer.IsWorldLoaded(a), Is.True, "The world waits for its held chunk.");
+
+        holds.Held.Clear();
+        Assert.That(Drain(streamer), Is.EqualTo(new[] { "UnloadChunk A (0, 0)", "UnloadWorld A" }));
+
+        holds.Held.Add(ChunkId.Of(b, new Vector2Int(0, 0)));
+        streamer.ReleaseAll();
+        Assert.That(Drain(streamer), Is.EqualTo(new[] { "UnloadChunk B (0, 0)", "UnloadWorld B" }), "Ending the session ignores the holds.");
+    }
+
     private static ChunkStreamer Streamer()
     {
         return new ChunkStreamer(View, LoadMargin, Hysteresis, Grace);
+    }
+
+    /// <summary>
+    /// Chunks another machine holds, as the test sets them.
+    /// </summary>
+    private sealed class FakeHolds : IChunkHolds
+    {
+        public HashSet<ChunkId> Held { get; } = new();
+
+        /// <summary>
+        /// Whether the test holds <paramref name="chunk"/>.
+        /// </summary>
+        public bool IsChunkHeld(ChunkId chunk)
+        {
+            return Held.Contains(chunk);
+        }
     }
 
     /// <summary>

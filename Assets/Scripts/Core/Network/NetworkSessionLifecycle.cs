@@ -55,7 +55,7 @@ public sealed class NetworkSessionLifecycle : IStartable, IDisposable
     }
 
     /// <summary>
-    /// In the idle menu (a join still waiting for the host's announcement) just ends the session; anywhere else warns
+    /// In the idle menu (a join that has not started its game) just ends the session; anywhere else warns
     /// and returns to the menu, now or once the running transition finishes.
     /// </summary>
     private void HandleConnectionLost()

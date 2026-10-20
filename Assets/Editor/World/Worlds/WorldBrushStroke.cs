@@ -440,7 +440,8 @@ public static class WorldBrushStroke
 
     /// <summary>
     /// Gives <paramref name="chunk"/> walls like <paramref name="source"/>: an empty copy of its tilemap, module and
-    /// render tilemap under the chunk's grid, blocking the chunk's navigation, recorded for undo.
+    /// render tilemap under the chunk's grid, blocking the chunk's navigation and listed by its runtime terrain, recorded
+    /// for undo.
     /// </summary>
     private static DualGridTilemapModule CopyWalls(DualGridTilemapModule source, WorldChunk chunk)
     {
@@ -456,6 +457,7 @@ public static class WorldBrushStroke
             WorldAuthoring.SetUpNavigation(grid);
         }
 
+        WorldAuthoring.SetUpTerrainEdits(grid);
         chunk.RefreshLinks();
         return module;
     }

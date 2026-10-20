@@ -12,9 +12,9 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, area changes). |
 | Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. |
 | Internet play | No paid or account-bound services for now: direct IP only, and friends play over the internet through a virtual LAN (Tailscale, ZeroTier). A hosted relay is deferred until there is a distribution platform (see Phase 6). |
-| Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. |
-| Areas | Today: the party is always in the same area, and the host decides area changes. Planned: each player is in one world at a time and travels between worlds on their own, with no party (see [WorldStreaming.md](WorldStreaming.md)). |
-| Death | Today: a dead player respawns at the area's spawn point after a delay while a teammate is alive, and everyone dead at once restarts the area. Planned: each player respawns on their own at their nearest discovered waystone, and nothing restarts (see [WorldStreaming.md](WorldStreaming.md)). |
+| Saving | One local save file on the machine that decides game state (the host, or the single player). Joining clients get the host's world through normal replication and save nothing. Today only offline area games are saved; hosted world sessions are saved from [WorldStreaming.md](WorldStreaming.md)'s Phase 8. |
+| Worlds | Each player is in one world at a time and travels between worlds on their own, through exits the host validates, with no party (see [WorldStreaming.md](WorldStreaming.md)). Online sessions run in seamless worlds since its Phase 7; areas are played offline only until its Phase 9. |
+| Death | Today: a dead player respawns after a delay (at the area's spawn point, or where it died in a world); offline, everyone dead at once restarts the area or world, while a hosted session never restarts. Planned: each player respawns on their own at their nearest discovered waystone, and nothing restarts (see [WorldStreaming.md](WorldStreaming.md)). |
 | Friendly fire | Off. Hostile effects only land on the other faction and helpful ones within a faction, enforced by `DamageService` (see [DamageAndStatusEffects.md](DamageAndStatusEffects.md#decisions)). |
 | Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
 
@@ -29,9 +29,9 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
-| Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list (`NetworkAreaTerrain`); each client applies it and its grid follows |
-| Current area | Host | Area change message; each client loads and fades locally |
-| Save data | Host | Not replicated. The host saves on area entry and continues from its own save. |
+| Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
+| Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
+| Save data | Host | Not replicated. The host saves offline area games on area entry; hosted world sessions are not saved yet. |
 | Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
@@ -48,7 +48,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Area | Today | Target |
 |---|---|---|
 | `SwordSlashAttack` | The slash object decides what it hit (damage itself goes through `DamageService`) | Only the host's copy resolves hits; other clients' slashes are visual only |
-| `GameFlow` | Local player triggers area loads | Host decides the area; clients follow |
+| `GameFlow` | Each machine loads its own worlds and chunks; the host decides each player's world | Done in [WorldStreaming.md](WorldStreaming.md)'s Phase 7 |
 
 ## Phases
 
@@ -80,7 +80,7 @@ Until Phase 3, a client that joins only connects: it loads the starting area loc
 - [x] Ready handshake: a joining client reports ready once its Gameplay scope can receive spawns; until then the host hides spawned objects from it, then shows them and spawns its player.
 
 Known gaps (expected, not bugs):
-- A teleport by the owner is interpolated on other machines instead of snapping.
+- A teleport by the owner is interpolated on other machines instead of snapping. Fixed in WorldStreaming.md's Phase 7: the owner's teleports go through `NetworkTransform.Teleport`.
 - Mobs spawned by the dev stress-test spawner stay local to the host.
 
 ### Phase 4: mobs
@@ -99,6 +99,8 @@ Decision: keep `GameFlow` in charge with Netcode's scene management off (Option 
 - No scene-migration sync. Players live in the Gameplay scene and mobs in their area, so nothing networked moves between scenes.
 This also keeps each machine loading only what it needs, which leaves the door open to players in different areas later.
 
+Replaced in [WorldStreaming.md](WorldStreaming.md)'s Phase 7: scene management stays off, but area announcements, the area epoch and the single ready set went. Each player's world is a host-written network value on the player, a client loads its own player's world, and readiness is per chunk (a chunk's objects reach a client while it holds the chunk, tagged with the player's trip count). The rule above about runtime-spawned networked objects still holds, and a chunk's objects live in their home chunk's scene.
+
 - [x] Host-driven area changes: `GameFlow.AreaLoading` on the host despawns the scene's objects, bumps the area epoch and announces; clients follow through `GameFlow`, and new objects reach a client only after it reports ready for that epoch.
 - [x] Late join: a client connecting mid-game is told the current area, loads it, reports ready, and then receives the players, mobs and current HP.
 - [x] Party wipe: the host's restart is announced as a new session, so clients reload with it.
@@ -116,14 +118,14 @@ Decision: no Unity Gaming Services for now. Relay has a free tier (50 average mo
 | Epic Online Services P2P | Free relay, but no maintained NGO transport; we would own one. |
 | UPnP port mapping | Fails on routers with UPnP off and behind carrier-grade NAT. |
 
-A relay is a transport swap: it replaces how `NetworkSession.StartHost`/`JoinAsync` configure the transport, while area announcements, epochs and the ready handshake stay as they are. No connection-method abstraction was added ahead of that, since its shape depends on the transport chosen.
+A relay is a transport swap: it replaces how `NetworkSession.StartHost`/`JoinAsync` configure the transport, while the replicated worlds and the per-chunk readiness handshake stay as they are. No connection-method abstraction was added ahead of that, since its shape depends on the transport chosen.
 
 Save data decisions:
 - What persists now: the area the party is in and the spawn point it entered by. Health is restored on respawn and every player starts with the same weapon, so neither is saved yet. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
 - Where: a local JSON file at `Application.persistentDataPath/save.json`, written by the host (or the single player) only. No Cloud Save, so offline and direct-IP games need no sign-in.
 - When: every time an area is entered (new game, continue, area change, party-wipe restart). The save always matches the area the party is in, so leaving the session needs no extra write.
-- Menu: Continue starts the saved area offline; New Game starts over from the starting area (overwriting the save once entered); Host Game continues from the save when there is one, otherwise from the starting area.
-- Joining clients: get the host's area and world through the area announcement and replication, and never write a save.
+- Menu: Continue starts the saved area offline; New Game starts over from the starting area (overwriting the save once entered). Host Game used to continue from the save; since WorldStreaming.md's Phase 7 it starts the starting world and saves nothing until world saves exist (its Phase 8).
+- Joining clients: get the host's world through their player's networked world and replication, and never write a save.
 
 - [x] Save data: host-only local save of the current area and spawn, Continue in the menu, hosting continues from the save.
 - [x] Internet play without Unity services: documented virtual LAN setup over the existing direct-IP join (see Testing).
@@ -133,7 +135,7 @@ Save data decisions:
 
 - EditMode: all new plain-class logic (registry, targeting, commands, respawn rules) with fakes, as today.
 - PlayMode: host and client in the same process for spawn, replication and damage flows.
-- Manual: Multiplayer Play Mode with 2 and 4 players, and a small online test area.
+- Manual: Multiplayer Play Mode with 2 and 4 players, following [WorldStreaming.md](WorldStreaming.md#checking-with-multiplayer-play-mode)'s steps for seamless worlds online.
 
 ### Running two players in the editor
 
@@ -149,18 +151,18 @@ Virtual players use the same company and product name as the main editor, so the
 
 1. Play, click New Game, then return to the menu (or stop and press Play again). Continue is now enabled and selected.
 2. Click Continue: the game starts in the saved area.
-3. In Multiplayer Play Mode, Host Game in the main editor continues from that save; Join Game in a virtual player follows the host's area and writes nothing.
+3. In Multiplayer Play Mode, Host Game in the main editor starts the starting world (Testlands) and writes nothing; Join Game in a virtual player follows the host into the world it is placed in and writes nothing.
 4. The file is `%USERPROFILE%/AppData/LocalLow/<company>/<product>/save.json` on Windows. Delete it to get a clean menu. Automated tests use an in-memory store and never touch it.
 
 ### Checking runtime terrain edits
 
-Nothing in gameplay edits terrain yet, so the editor menu Tools > TopDownRPG > Dev > Toggle Terrain Cell At View Centre makes an edit by hand: in play mode it toggles the cell at the Scene view's pivot (or at the centre of the Game view when no Scene view is open) on the tilemap selected in the Hierarchy, through the area's `AreaTerrain`, as gameplay would. It runs in the main editor, which hosts.
+Nothing in gameplay edits terrain yet, so the editor menu Tools > TopDownRPG > Dev > Toggle Terrain Cell At View Centre makes an edit by hand: in play mode it toggles the cell at the Scene view's pivot (or at the centre of the Game view when no Scene view is open) on the tilemap selected in the Hierarchy, through its chunk's `AreaTerrain`, as gameplay would. It runs in the main editor, which hosts. Edits replicate per chunk: a client receives a chunk's edits while it holds that chunk.
 
 1. Open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2 and Player 3.
-2. Press Play. Click Host Game in the main editor and Join Game in Player 2. Both start in the Clearing.
-3. In the main editor's Hierarchy, under the Clearing's `Grid`, select `GrassTilemap`. Frame open grass near the players in the Scene view (its centre is the cell edited) and run the menu: a hole opens in the ground on the host, and the same hole opens in Player 2's Game view. Run it again to fill the cell back, and check Player 2 follows. The Console logs each edit.
-4. Select `CollisionTilemap`, frame another grass cell and run the menu: a wall piece appears on both machines, and a click past it on Player 2 walks around it.
-5. Leave a hole and a wall in place, then click Join Game in Player 3: the late joiner sees both as soon as it is in the area.
+2. Press Play. Click Host Game in the main editor and Join Game in Player 2. Both start at Testlands' `start`, in chunk (0, 0).
+3. In the main editor's Hierarchy, under the `Grid` of the scene `World_Testlands_0_0`, select `GrassTilemap`. Frame open grass near the players in the Scene view (its centre is the cell edited) and run the menu: a hole opens in the ground on the host, and the same hole opens in Player 2's Game view. Run it again to fill the cell back, and check Player 2 follows. The Console logs each edit.
+4. Select that chunk's `CollisionTilemap`, frame another grass cell and run the menu: a wall piece appears on both machines, and a click past it on Player 2 walks around it.
+5. Leave a hole and a wall in place, then click Join Game in Player 3: the late joiner sees both as soon as its start chunk is up. Walk Player 2 east past x 100 and back (it releases chunk (0, 0) after the hysteresis and holds it again on its return): the edits are still there.
 
 The edits travel as cell records (the runtime terrain edits row of the authority model); each machine redraws its ground from its own tilemaps, so nothing about the drawing is sent.
 
@@ -173,7 +175,7 @@ The edits travel as cell records (the runtime terrain edits row of the authority
 
 ### In-process test limits
 
-The PlayMode tests fake a second player with a second `NetworkManager` inside the editor (`InProcessClient`). Letting the host reload the Gameplay scene while that client is connected froze the editor every time (a deadlock inside the scene load, before any scene code ran), while area reloads were fine. Host restarts are therefore tested without a connected in-process client, and the client side of a restart is tested against an in-process host instead. Check a real host restart with a joined player in Multiplayer Play Mode, which uses separate processes.
+The PlayMode tests fake a second player with a second `NetworkManager` inside the editor (`InProcessClient`), or a bare host (`InProcessHost`) for the editor's own session to join. Letting the host reload the Gameplay scene while an in-process client is connected froze the editor every time (a deadlock inside the scene load, before any scene code ran). Sessions now run in worlds, whose chunks and trips load and unload scenes without reloading Gameplay, and a hosted session no longer restarts on a party wipe, so no test needs it. The in-process client shares the host's scenes, so it loads no world of its own: it sends the join and chunk messages a real client's streaming sends, while the client side of streaming, releasing and trips is tested with the editor's own session joined to an `InProcessHost`. Check a real joined player in Multiplayer Play Mode, which uses separate processes (see WorldStreaming.md's Phase 7 steps).
 
 ### Testing under a bad connection
 

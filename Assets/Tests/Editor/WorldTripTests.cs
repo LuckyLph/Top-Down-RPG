@@ -9,7 +9,9 @@ using UnityEngine.TestTools;
 /// world, the player at it, a listed target, the target's entry with the default as a fallback) and what an approved
 /// trip does (the arrival held for streaming, the player put in the target world, the approval raised);
 /// <see cref="WorldExits"/>' lookups; <see cref="ExitTriggerGuard"/>'s protection against firing again;
-/// <see cref="TripArrivals"/> streaming an arrival until the player reaches it; and the time freeze leaving trips alone.
+/// <see cref="TripArrivals"/> streaming an arrival until the player reaches it; the time freeze leaving trips alone;
+/// <see cref="NetworkTripAuthority"/> approving on the host and sending a client's request to it; and the players'
+/// trip counts.
 /// </summary>
 public class WorldTripTests
 {
@@ -269,6 +271,129 @@ public class WorldTripTests
         Assert.That(TransitionTimeFreeze.Freezes(true, false), Is.True);
         Assert.That(TransitionTimeFreeze.Freezes(true, true), Is.False);
         Assert.That(TransitionTimeFreeze.Freezes(false, false), Is.False);
+    }
+
+    /// <summary>
+    /// Offline or on the host the network authority checks a request here: the player is in the target world for its
+    /// first trip, its trip leads to the resolved entry, and the approval is raised for this machine.
+    /// </summary>
+    [Test]
+    public void NetworkAuthority_OnTheHost_ApprovesHere_CountingTheTrip()
+    {
+        WorldExit exit = PlaceExit(home, new Vector2Int(30, 30), away, "door", Vector2Int.one);
+        Stand(home, 30.5f, 30.5f);
+        NetworkTripAuthority network = new(authority, new FakeSessionStatus { IsActive = true, IsHost = true }, arrivals);
+        TripApproval? raised = null;
+        network.Approved += approval => raised = approval;
+
+        network.Request(new TripRequest(player, exit.Id));
+
+        Assert.That(raised.HasValue, Is.True);
+        Assert.That(network.SendsToHost, Is.False);
+        Assert.That(playerWorlds.Get(player), Is.SameAs(away));
+        Assert.That(playerWorlds.TripOf(player), Is.EqualTo(1), "Each approved trip counts.");
+        Assert.That(playerWorlds.EntryOf(player), Is.EqualTo("door"));
+    }
+
+    /// <summary>
+    /// A client's request names where its own machine has the player, and the host checks that position rather than
+    /// its lagging copy: at the exit there it goes even with the copy far away, and away from it there it is refused
+    /// even with the copy on the exit, with a warning.
+    /// </summary>
+    [Test]
+    public void NetworkAuthority_ChecksTheClientsOwnPosition_NotTheHostsCopy()
+    {
+        WorldExit exit = PlaceExit(home, new Vector2Int(30, 30), away, "start", Vector2Int.one);
+        NetworkTripAuthority network = new(authority, new FakeSessionStatus { IsActive = true, IsHost = true }, arrivals);
+
+        Stand(home, 30.5f, 30.5f);
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Trip refused: .*not at the exit"));
+        Assert.That(network.Approve(new TripRequest(player, exit.Id, home.ToWorld(new Vector2(40.5f, 30.5f)))), Is.False);
+        AssertNothingChanged();
+
+        Stand(home, 50.5f, 50.5f);
+        Assert.That(network.Approve(new TripRequest(player, exit.Id, home.ToWorld(new Vector2(30.5f, 31.5f)))), Is.True);
+        Assert.That(playerWorlds.Get(player), Is.SameAs(away));
+    }
+
+    /// <summary>
+    /// On a client a request goes to the host through the player's link, with the player's own position, and changes
+    /// nothing here; the host's answer, delivered, holds the arrival and raises the approval. A player without a link
+    /// sends nothing, with a warning.
+    /// </summary>
+    [Test]
+    public void NetworkAuthority_OnAClient_SendsThroughTheLink_AndActsOnTheDeliveredAnswer()
+    {
+        WorldExit exit = PlaceExit(home, new Vector2Int(30, 30), away, "door", Vector2Int.one);
+        Stand(home, 30.5f, 30.5f);
+        NetworkTripAuthority network = new(authority, new FakeSessionStatus { IsActive = true, IsHost = false }, arrivals);
+        int raised = 0;
+        network.Approved += _ => raised++;
+
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("no ITripLink"));
+        network.Request(new TripRequest(player, exit.Id));
+        FakeTripLink link = new();
+        network.LinkFinder = body => body == player.Transform ? link : null;
+        network.Request(new TripRequest(player, exit.Id));
+
+        Assert.That(network.SendsToHost, Is.True);
+        Assert.That(link.Sent.Count, Is.EqualTo(1));
+        Assert.That(link.Sent[0].ExitId, Is.EqualTo(exit.Id));
+        Assert.That(link.Sent[0].Position, Is.EqualTo((Vector2)player.Transform.position));
+        Assert.That(raised, Is.Zero, "Nothing goes before the host answers.");
+        AssertNothingChanged();
+
+        Vector2 entry = away.ToWorld(new Vector2(40.5f, 40.5f));
+        playerWorlds.Apply(player, away, 1, "door");
+        network.Deliver(new TripApproval(player, away, "door", entry));
+
+        Assert.That(raised, Is.EqualTo(1));
+        Assert.That(arrivals.IsHeld(player), Is.True, "The client streams the target world while it fades out.");
+    }
+
+    /// <summary>
+    /// The players' worlds count trips: a trip raises the change even back into the same world, applying another
+    /// machine's state raises it only when the world or the trip count changes, and leaving every world forgets the
+    /// trips.
+    /// </summary>
+    [Test]
+    public void PlayerWorlds_CountTrips()
+    {
+        int changes = 0;
+        playerWorlds.Changed += (_, _) => changes++;
+
+        playerWorlds.Travel(player, home, "back");
+        Assert.That(changes, Is.EqualTo(1), "A trip back into the same world still counts.");
+        Assert.That(playerWorlds.TripOf(player), Is.EqualTo(1));
+        Assert.That(playerWorlds.EntryOf(player), Is.EqualTo("back"));
+
+        playerWorlds.Set(player, away);
+        Assert.That(playerWorlds.TripOf(player), Is.EqualTo(1), "Moving a player without a trip keeps its count.");
+        playerWorlds.Apply(player, away, 1, "back");
+        Assert.That(changes, Is.EqualTo(2), "Applying the same world and trip again raises nothing.");
+        playerWorlds.Apply(player, away, 2, "door");
+        Assert.That(changes, Is.EqualTo(3));
+        Assert.That(playerWorlds.EntryOf(player), Is.EqualTo("door"));
+
+        playerWorlds.Set(player, null);
+        Assert.That(playerWorlds.TripOf(player), Is.Zero);
+        Assert.That(playerWorlds.EntryOf(player), Is.Empty);
+    }
+
+    /// <summary>
+    /// An <see cref="ITripLink"/> that records the requests a client would send the host instead of sending an RPC.
+    /// </summary>
+    private sealed class FakeTripLink : ITripLink
+    {
+        public List<(string ExitId, Vector2 Position)> Sent { get; } = new();
+
+        /// <summary>
+        /// Records the request.
+        /// </summary>
+        public void SendTripRequest(string exitId, Vector2 position)
+        {
+            Sent.Add((exitId, position));
+        }
     }
 
     private void AssertNothingChanged()

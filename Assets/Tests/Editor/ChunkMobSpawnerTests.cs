@@ -95,8 +95,9 @@ public class ChunkMobSpawnerTests
     }
 
     /// <summary>
-    /// On the host the spawner network-spawns its mobs, and network-despawns them when its own chunk starts unloading,
-    /// but not when another chunk does.
+    /// On the host the spawner registers its mob prefab (so each spawn carries its home chunk), network-spawns its mobs
+    /// as objects of its chunk, and network-despawns them when its own chunk starts unloading, but not when another chunk
+    /// does.
     /// </summary>
     [Test]
     public void OnTheHost_NetworkSpawnsItsMobs_AndDespawnsThemWhenItsChunkUnloads()
@@ -111,9 +112,14 @@ public class ChunkMobSpawnerTests
         worlds.AddChunk(loaded, Vector2Int.zero, default);
         worlds.AddChunk(loaded, Chunk, default);
 
+        spawner.RegisterNetworkPrefabs();
         spawner.PostStart();
         Assert.That(network.Spawned.Count, Is.EqualTo(2));
-        Assert.That(network.Registered, Is.Empty, "The host registers no prefab handlers.");
+        Assert.That(network.Registered, Is.EqualTo(new[] { template.GetComponent<NetworkObject>() }), "The host registers the prefab so its spawns carry their home chunk.");
+        foreach (NetworkObject mob in network.Spawned)
+        {
+            Assert.That(network.HomeChunks[mob], Is.EqualTo(ChunkId.Of(world, Chunk)), "Each mob is an object of its home chunk.");
+        }
 
         worlds.RemoveChunk(loaded, Vector2Int.zero);
         Assert.That(network.Despawned, Is.Empty, "Another chunk unloading leaves these mobs alone.");
@@ -223,6 +229,35 @@ public class ChunkMobSpawnerTests
 
         prefabs.Dispose();
         Assert.That(network.Registered, Is.Empty);
+    }
+
+    /// <summary>
+    /// The one handler of a prefab two chunks registered creates each copy through the scope of the home chunk the host
+    /// sends with it, wherever the copy stands (a mob that walked into the neighbouring chunk); a home chunk no chunk
+    /// registered falls back to the position, with a warning.
+    /// </summary>
+    [Test]
+    public void AClientsCopy_IsInjectedByItsHomeChunk_WhereverItStands()
+    {
+        GameObject prefabObject = new("NetworkedProbe");
+        created.Add(prefabObject);
+        NetworkObject prefab = prefabObject.AddComponent<NetworkObject>();
+        prefabObject.AddComponent<MeleeDamageDealer>();
+        FakeNetworkObjects network = new() { IsActive = true, IsServer = false };
+        ChunkNetworkPrefabs prefabs = new(network);
+        prefabs.Register(prefab, new ChunkIdentity(world, Vector2Int.zero), ResolverWithClockAt(100f), default);
+        prefabs.Register(prefab, new ChunkIdentity(world, Chunk), ResolverWithClockAt(200f), default);
+        NetworkPrefabInstanceHandlerWithData<NetworkChunkId> handler = (NetworkPrefabInstanceHandlerWithData<NetworkChunkId>)network.Handlers[prefab];
+        NetworkChunkId eastern = new(ChunkId.Of(world, Chunk));
+        NetworkChunkId western = new(ChunkId.Of(world, Vector2Int.zero));
+
+        Assert.That(ClockOf(handler.Instantiate(0, LocalToWorld(60.5f, 30.5f), Quaternion.identity, eastern)), Is.EqualTo(200f).Within(0.001f), "A mob of the eastern chunk that walked west still belongs to the east.");
+        Assert.That(ClockOf(handler.Instantiate(0, LocalToWorld(70.5f, 30.5f), Quaternion.identity, western)), Is.EqualTo(100f).Within(0.001f));
+
+        NetworkChunkId elsewhere = new(ChunkId.Of(world, new Vector2Int(1, 1)));
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("No loaded chunk registers NetworkedProbe"));
+        Assert.That(ClockOf(handler.Instantiate(0, LocalToWorld(70.5f, 30.5f), Quaternion.identity, elsewhere)), Is.EqualTo(200f).Within(0.001f));
+        prefabs.Dispose();
     }
 
     /// <summary>

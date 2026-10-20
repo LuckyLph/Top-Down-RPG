@@ -11,8 +11,8 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Creates seamless worlds and their chunks as assets and scenes (Docs/WorldStreaming.md): a world's definition, its
 /// root scene with its scope and lighting, and chunk scenes whose grid sits at the world's origin with a
-/// <see cref="WorldChunk"/>, a terrain renderer over one grass layer and a <see cref="NavigationGrid2D"/> for its
-/// navigation page. Every scene gets a
+/// <see cref="WorldChunk"/>, a terrain renderer over one grass layer, a <see cref="NavigationGrid2D"/> for its
+/// navigation page and an <see cref="AreaTerrain"/> for its runtime edits. Every scene gets a
 /// <see cref="SceneDefinition"/> and a place in the build list. Painting ground, walls and raised ground into the open
 /// chunks, keeping each chunk's layer list covering its neighbours' border materials, and baking the coast maps
 /// (<see cref="WorldCoastBake"/>, only where the sea changed when asked) work across a whole world. Chunks open with
@@ -27,6 +27,9 @@ public static class WorldAuthoring
     public const string AreaTemplatePath = "Assets/Settings/Scenes/AreaTemplate.unity";
     public const string WallsName = "CollisionTilemap";
     public const string ExitsRootName = "Exits";
+    public const string GrassLayerName = "GrassTilemap";
+    public const string GrassTilePath = "Assets/Tiles/Ground/Tile_Grass.asset";
+    public const string TerrainSyncPrefabPath = "Assets/Prefabs/Network/AreaTerrainSync.prefab";
     private const float GlobalLightIntensity = 0.85f;
 
     /// <summary>
@@ -127,6 +130,7 @@ public static class WorldAuthoring
             renderer.Configure(AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath));
             GroundLayerMigration.AddLayer(gridObject.GetComponent<Grid>(), MaterialNamed("Grass"));
             SetUpNavigation(gridObject.GetComponent<Grid>());
+            SetUpTerrainEdits(gridObject.GetComponent<Grid>());
             gridObject.SetActive(true);
             EditorSceneManager.SaveScene(scene, path);
         }
@@ -304,6 +308,7 @@ public static class WorldAuthoring
                 SetUpNavigation(grid);
             }
 
+            SetUpTerrainEdits(grid);
             RefreshLinks(grid);
             return module;
         }
@@ -383,6 +388,93 @@ public static class WorldAuthoring
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// Gives <paramref name="grid"/>, a chunk's grid, the <see cref="AreaTerrain"/> its runtime edits go through
+    /// (Docs/WorldStreaming.md: Networking), or brings the one it has in line: it lists the grass layer
+    /// (<see cref="GrassLayerName"/>, filled with <see cref="GrassTilePath"/>'s tile) and the walls
+    /// (<see cref="WallsName"/>) when the chunk has them, adding a missing one after those it lists so a layer keeps its
+    /// index, and replicates through the terrain sync prefab. Returns whether it changed anything.
+    /// </summary>
+    public static bool SetUpTerrainEdits(Grid grid)
+    {
+        bool changed = false;
+        if (!grid.TryGetComponent(out AreaTerrain terrain))
+        {
+            terrain = Undo.AddComponent<AreaTerrain>(grid.gameObject);
+            changed = true;
+        }
+
+        SerializedObject data = new(terrain);
+        SerializedProperty layers = data.FindProperty("layers");
+        Transform grass = grid.transform.Find(GrassLayerName);
+        Transform walls = grid.transform.Find(WallsName);
+        changed |= AddTerrainLayer(layers, grass != null ? grass.GetComponent<Tilemap>() : null, AssetDatabase.LoadAssetAtPath<TileBase>(GrassTilePath));
+        changed |= AddTerrainLayer(layers, walls != null ? walls.GetComponent<Tilemap>() : null, null);
+        data.ApplyModifiedProperties();
+        Undo.RecordObject(terrain, "Set the terrain sync prefab");
+        changed |= terrain.AssignSyncPrefabIfMissing(AssetDatabase.LoadAssetAtPath<GameObject>(TerrainSyncPrefabPath));
+        if (changed)
+        {
+            EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Sets up the runtime terrain edits of every chunk scene of <paramref name="world"/>
+    /// (<see cref="SetUpTerrainEdits(Grid)"/>), opening the scenes that are not open, and saves the ones it changed.
+    /// Returns the names of the scenes it changed.
+    /// </summary>
+    public static List<string> SetUpTerrainEdits(WorldDefinition world)
+    {
+        List<string> changed = new();
+        List<Scene> opened = new();
+        try
+        {
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in OpenChunks(world, opened))
+            {
+                if (SetUpTerrainEdits(chunk.Value))
+                {
+                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
+                    changed.Add(chunk.Value.gameObject.scene.name);
+                }
+            }
+        }
+        finally
+        {
+            CloseScenes(opened);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Appends <paramref name="tilemap"/> with <paramref name="fillTile"/> to an <see cref="AreaTerrain"/>'s
+    /// <paramref name="layers"/> unless it is null or already listed. Returns whether it added it.
+    /// </summary>
+    private static bool AddTerrainLayer(SerializedProperty layers, Tilemap tilemap, TileBase fillTile)
+    {
+        if (tilemap == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < layers.arraySize; i++)
+        {
+            if (layers.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue == tilemap)
+            {
+                return false;
+            }
+        }
+
+        layers.arraySize++;
+        SerializedProperty layer = layers.GetArrayElementAtIndex(layers.arraySize - 1);
+        layer.FindPropertyRelative("tilemap").objectReferenceValue = tilemap;
+        layer.FindPropertyRelative("fillTile").objectReferenceValue = fillTile;
+        return true;
     }
 
     /// <summary>

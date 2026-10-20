@@ -59,6 +59,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
+        builder.Register<PlayerStarts>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
             .WithParameter(playerPrefab)
             .WithParameter(gameObject.scene);
@@ -104,6 +105,9 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
         builder.Register<ChunkNetworkPrefabs>(Lifetime.Singleton);
         builder.Register<TripArrivals>(Lifetime.Singleton);
+        builder.Register<WorldExits>(Lifetime.Singleton);
+        builder.Register<LocalTripAuthority>(Lifetime.Singleton);
+        builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         if (worldStreamingSettings == null)
         {
@@ -117,8 +121,6 @@ public class GameplayLifetimeScope : LifetimeScope
                 .As<IWorldSession>()
                 .AsSelf();
             builder.RegisterEntryPoint<LocalWorldPresentation>().WithParameter(worldStreamingSettings);
-            builder.Register<WorldExits>(Lifetime.Singleton);
-            builder.Register<LocalTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
             builder.RegisterEntryPoint<LocalTripTraveller>().AsSelf();
         }
 

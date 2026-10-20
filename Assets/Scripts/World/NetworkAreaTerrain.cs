@@ -4,9 +4,10 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// Replicates an area's runtime terrain edits. The host spawns one per area (<see cref="AreaTerrainSync"/>) and keeps a
-/// server-only list in step with <see cref="AreaTerrain.Edits"/>. A client applies the whole list when the object
-/// reaches it, which happens once it is ready for the area, so a late joiner catches up, then each edit as it changes.
+/// Replicates a chunk's runtime terrain edits. The host spawns one per chunk of a seamless world
+/// (<see cref="ChunkTerrainSync"/>) and keeps a server-only list in step with <see cref="AreaTerrain.Edits"/>. A client
+/// applies the whole list when the object reaches it, which happens once it holds the chunk, so a client arriving in
+/// the chunk catches up as a late joiner does, then each edit as it changes.
 /// </summary>
 [DisallowMultipleComponent]
 public class NetworkAreaTerrain : NetworkBehaviour

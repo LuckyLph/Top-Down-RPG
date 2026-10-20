@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23c01d6aa81e27e40b2c24d911191a00, type: 3}
+  m_Name: Testlands
+  m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
+  worldId: 45fbe595d915793439142f5a715ea480
+  rootScene: {fileID: 11400000, guid: 476cd5e2a3bddf44099c8e9f0b89210a, type: 2}
+  origin: {x: 6144, y: 0}
+  sizeInChunks: {x: 2, y: 2}
+  chunks:
+  - coords: {x: 0, y: 0}
+    scene: {fileID: 11400000, guid: a8bcbd3b93d38dd49b2103ff21f24bf5, type: 2}
+  - coords: {x: 1, y: 0}
+    scene: {fileID: 11400000, guid: e63ff43c086047243be4b0fd526e1080, type: 2}
+  - coords: {x: 0, y: 1}
+    scene: {fileID: 11400000, guid: 4c9cfec1249462b45ae3f17cda982c32, type: 2}
+  - coords: {x: 1, y: 1}
+    scene: {fileID: 11400000, guid: 5879a398dffd0c943bcc95cbf8035f46, type: 2}
+  entries:
+  - name: start
+    position: {x: 24.5, y: 40.5}
+    waystone: 1

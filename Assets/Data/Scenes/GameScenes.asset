@@ -26,3 +26,4 @@ MonoBehaviour:
   worlds:
   - {fileID: 11400000, guid: b6376a2ae0bb44c44bd70deacbeb0358, type: 2}
   - {fileID: 11400000, guid: 3e445269de5de9148a0213aed5a691a5, type: 2}
+  - {fileID: 11400000, guid: 45fbe595d915793439142f5a715ea480, type: 2}

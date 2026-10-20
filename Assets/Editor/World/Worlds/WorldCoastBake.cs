@@ -15,6 +15,7 @@ using UnityEngine.Tilemaps;
 public static class WorldCoastBake
 {
     public const int Reach = 40;
+    public const string NoWaves = "none";
 
     /// <summary>
     /// A world's ground as one grid of cells: for each cell, a bit per material filled there.
@@ -153,48 +154,9 @@ public static class WorldCoastBake
         RectInt control = TerrainBlendRenderer.ChunkControlArea(chunkCells, WorldChunk.SkirtCells);
         width = control.width * TerrainCoastMap.TexelsPerCell;
         height = control.height * TerrainCoastMap.TexelsPerCell;
-        HashSet<TerrainMaterial> shown = world.MaterialsIn(Grow(chunkCells, WorldChunk.SkirtCells));
-        if (chunkMaterials != null)
-        {
-            shown.UnionWith(chunkMaterials);
-        }
-
-        TerrainMaterial waves = null;
-        int wavesOrder = int.MaxValue;
-        foreach (TerrainMaterial material in shown)
-        {
-            int order = style.LayerOrderIndexOf(material);
-            if (material != null && material.HasWaves && order < wavesOrder)
-            {
-                waves = material;
-                wavesOrder = order;
-            }
-        }
-
-        RectInt window = Intersect(Grow(chunkCells, Reach), world.Covered);
-        if (waves == null || window.width <= 0 || window.height <= 0)
+        if (!TryReadSea(world, style, chunkMaterials, chunkCells, out _, out RectInt window, out bool[] sea))
         {
             return null;
-        }
-
-        ulong counted = 0ul;
-        for (int i = 0; i < world.MaterialCount; i++)
-        {
-            TerrainMaterial material = world.MaterialOf(i);
-            if (style.LayerOrderIndexOf(material) >= wavesOrder && (material == waves || !material.Bridge))
-            {
-                counted |= 1ul << i;
-            }
-        }
-
-        bool[] sea = new bool[window.width * window.height];
-        for (int y = 0; y < window.height; y++)
-        {
-            for (int x = 0; x < window.width; x++)
-            {
-                ulong bits = world.BitsAt(new Vector2Int(window.xMin + x, window.yMin + y));
-                sea[y * window.width + x] = bits == 0ul || (bits & counted) != 0ul;
-            }
         }
 
         TerrainCoastMap map = new("Coast bake");
@@ -218,6 +180,96 @@ public static class WorldCoastBake
         {
             map.Dispose();
         }
+    }
+
+    /// <summary>
+    /// What the coast map of the chunk owning <paramref name="chunkCells"/> is baked from, as a short string: the
+    /// material with waves, the window read and which of its cells are sea (<see cref="BakeChunk"/>), hashed, or
+    /// <see cref="NoWaves"/> when the chunk shows no waves. Equal strings bake equal maps, so the World Editor bakes
+    /// again only the chunks whose string changed since their last bake. About a millisecond per chunk.
+    /// </summary>
+    public static string SourceOf(WorldCells world, TerrainStyle style, IEnumerable<TerrainMaterial> chunkMaterials, RectInt chunkCells)
+    {
+        if (!TryReadSea(world, style, chunkMaterials, chunkCells, out TerrainMaterial waves, out RectInt window, out bool[] sea))
+        {
+            return NoWaves;
+        }
+
+        Hash128 hash = new();
+        hash.Append(waves.name);
+        hash.Append(window.xMin);
+        hash.Append(window.yMin);
+        hash.Append(window.width);
+        hash.Append(window.height);
+        int word = 0;
+        for (int i = 0; i < sea.Length; i++)
+        {
+            word = (word << 1) | (sea[i] ? 1 : 0);
+            if (i % 32 == 31)
+            {
+                hash.Append(word);
+                word = 0;
+            }
+        }
+
+        hash.Append(word);
+        return hash.ToString();
+    }
+
+    /// <summary>
+    /// Which cells around the chunk owning <paramref name="chunkCells"/> its coast map counts as sea: the first
+    /// material with waves in the style's order among its layers and the ground within its skirt, and a window
+    /// <see cref="Reach"/> cells around the chunk, clipped to the world's ground and its margin, whose cells are sea
+    /// when empty or holding that material or a non-bridge one above it. False when the chunk shows no waves.
+    /// </summary>
+    private static bool TryReadSea(WorldCells world, TerrainStyle style, IEnumerable<TerrainMaterial> chunkMaterials, RectInt chunkCells, out TerrainMaterial waves, out RectInt window, out bool[] sea)
+    {
+        HashSet<TerrainMaterial> shown = world.MaterialsIn(Grow(chunkCells, WorldChunk.SkirtCells));
+        if (chunkMaterials != null)
+        {
+            shown.UnionWith(chunkMaterials);
+        }
+
+        waves = null;
+        int wavesOrder = int.MaxValue;
+        foreach (TerrainMaterial material in shown)
+        {
+            int order = style.LayerOrderIndexOf(material);
+            if (material != null && material.HasWaves && order < wavesOrder)
+            {
+                waves = material;
+                wavesOrder = order;
+            }
+        }
+
+        window = Intersect(Grow(chunkCells, Reach), world.Covered);
+        sea = null;
+        if (waves == null || window.width <= 0 || window.height <= 0)
+        {
+            return false;
+        }
+
+        ulong counted = 0ul;
+        for (int i = 0; i < world.MaterialCount; i++)
+        {
+            TerrainMaterial material = world.MaterialOf(i);
+            if (style.LayerOrderIndexOf(material) >= wavesOrder && (material == waves || !material.Bridge))
+            {
+                counted |= 1ul << i;
+            }
+        }
+
+        sea = new bool[window.width * window.height];
+        for (int y = 0; y < window.height; y++)
+        {
+            for (int x = 0; x < window.width; x++)
+            {
+                ulong bits = world.BitsAt(new Vector2Int(window.xMin + x, window.yMin + y));
+                sea[y * window.width + x] = bits == 0ul || (bits & counted) != 0ul;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

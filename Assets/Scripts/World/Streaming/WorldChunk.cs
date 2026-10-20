@@ -34,6 +34,8 @@ public class WorldChunk : MonoBehaviour
     [SerializeField] private Vector2Int coords;
     [Tooltip("The coast map baked for this chunk from the whole world, for its waves; none when the chunk shows no sea with waves. Written by the world's coast bake.")]
     [SerializeField] private Texture2D coastMap;
+    [Tooltip("What the coast map was baked from (a hash of the sea around the chunk, or none), written by the coast bake, so the World Editor bakes again only the chunks whose sea or shore changed.")]
+    [SerializeField] private string coastSource;
 
     [System.NonSerialized] private readonly List<WorldChunk> neighbours = new();
     [System.NonSerialized] private readonly List<TerrainSkirtSource> skirt = new();
@@ -44,6 +46,7 @@ public class WorldChunk : MonoBehaviour
     public WorldDefinition World => world;
     public Vector2Int Coords => coords;
     public Texture2D CoastMap => coastMap;
+    public string CoastSource => coastSource;
 
     /// <summary>
     /// The world-local cells this chunk owns.
@@ -157,7 +160,10 @@ public class WorldChunk : MonoBehaviour
 
         foreach (DualGridTilemapModule wall in walls)
         {
-            wall.SetChunk(Cells, null);
+            if (wall != null)
+            {
+                wall.SetChunk(Cells, null);
+            }
         }
 
         ForgetNeighbours();
@@ -295,6 +301,11 @@ public class WorldChunk : MonoBehaviour
 
         foreach (DualGridTilemapModule wall in walls)
         {
+            if (wall == null)
+            {
+                continue;
+            }
+
             neighbourWalls.Clear();
             foreach (WorldChunk neighbour in neighbours)
             {

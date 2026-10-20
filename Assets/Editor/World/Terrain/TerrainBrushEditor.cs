@@ -24,15 +24,19 @@ using UnityEngine.Tilemaps;
 /// Palette it warns when the picked tile is a ground material's that the target layer is not drawn with
 /// (<see cref="PaletteProblem"/>), naming the area's layer for it, or, when the area has none, offering a button that
 /// adds that material's layer (<see cref="AddMissingLayer"/>, Docs/TerrainLayers32.md's Phase 4) and makes it the paint
-/// target. On every other tilemap, a renderer that is off or has not built included, it is the
-/// <see cref="DualGridBrushEditor"/>.
+/// target. On a ground layer of a chunk of a seamless world the preview shows on the renderer of each chunk it covers,
+/// the target's and its linked neighbours', on their layer of the same material, each given the cells within its skirt
+/// so the preview blends across the border. On every other tilemap, a renderer that is off or has not built included,
+/// it is the <see cref="DualGridBrushEditor"/>.
 /// </summary>
 [CustomEditor(typeof(TerrainBrush))]
 public class TerrainBrushEditor : DualGridBrushEditor
 {
     private readonly List<Vector3Int> previewCells = new();
     private readonly List<TileBase> pickedTiles = new();
-    private TerrainBlendRenderer previewRenderer;
+    private readonly List<Vector3Int> chunkPreviewCells = new();
+    private List<TerrainBlendRenderer> previewRenderers = new();
+    private List<TerrainBlendRenderer> shownRenderers = new();
     private GridBrushBase.Tool sceneTool;
     private bool wasExecuting;
     private bool shiftHeld;
@@ -386,7 +390,8 @@ public class TerrainBrushEditor : DualGridBrushEditor
 
     /// <summary>
     /// On a ground layer, replaces the last preview with <paramref name="bounds"/>' cells shown filled or empty
-    /// (<paramref name="filled"/>), cancels a clear waiting for the end of the Scene view's GUI, and returns true;
+    /// (<paramref name="filled"/>), on the target's renderer or, on a chunk, on the renderers of the chunks they cover
+    /// (<see cref="ShowOnChunk"/>), cancels a clear waiting for the end of the Scene view's GUI, and returns true;
     /// returns false, showing nothing, on any other tilemap.
     /// </summary>
     private bool TryShowTerrainPreview(GameObject brushTarget, BoundsInt bounds, bool filled)
@@ -406,21 +411,95 @@ public class TerrainBrushEditor : DualGridBrushEditor
             }
         }
 
-        if (previewRenderer != null && previewRenderer != renderer)
+        shownRenderers.Clear();
+        TerrainMaterial material = renderer.Layers[renderer.LayerIndexOf(tilemap)].Material;
+        if (renderer.TryGetComponent(out WorldChunk chunk) && chunk.World != null && material != null)
         {
-            previewRenderer.ClearPreview();
+            ShowOnChunk(chunk, material, filled);
+            for (int i = 0; i < chunk.Neighbours.Count; i++)
+            {
+                ShowOnChunk(chunk.Neighbours[i], material, filled);
+            }
+        }
+        else
+        {
+            Show(renderer, tilemap, previewCells, filled);
         }
 
-        int chunks = renderer.Chunks.Count;
-        renderer.SetPreview(tilemap, previewCells, filled);
-        previewRenderer = renderer;
+        for (int i = 0; i < previewRenderers.Count; i++)
+        {
+            if (previewRenderers[i] != null && !shownRenderers.Contains(previewRenderers[i]))
+            {
+                previewRenderers[i].ClearPreview();
+            }
+        }
+
+        (previewRenderers, shownRenderers) = (shownRenderers, previewRenderers);
+        shownRenderers.Clear();
         clearDeferred = false;
+        return true;
+    }
+
+    /// <summary>
+    /// Shows the preview cells within <paramref name="chunk"/>'s cells and skirt on its renderer's layer of
+    /// <paramref name="material"/>, when it draws one and some cells fall there.
+    /// </summary>
+    private void ShowOnChunk(WorldChunk chunk, TerrainMaterial material, bool filled)
+    {
+        TerrainBlendRenderer renderer = chunk != null ? chunk.Terrain : null;
+        Tilemap layer = renderer != null ? LayerDrawing(renderer, material) : null;
+        if (layer == null || !renderer.IsDrawing(layer))
+        {
+            return;
+        }
+
+        RectInt cells = chunk.Cells;
+        RectInt reach = new(cells.xMin - WorldChunk.SkirtCells, cells.yMin - WorldChunk.SkirtCells, cells.width + 2 * WorldChunk.SkirtCells, cells.height + 2 * WorldChunk.SkirtCells);
+        chunkPreviewCells.Clear();
+        for (int i = 0; i < previewCells.Count; i++)
+        {
+            if (reach.Contains(new Vector2Int(previewCells[i].x, previewCells[i].y)))
+            {
+                chunkPreviewCells.Add(previewCells[i]);
+            }
+        }
+
+        if (chunkPreviewCells.Count > 0)
+        {
+            Show(renderer, layer, chunkPreviewCells, filled);
+        }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="cells"/> on <paramref name="renderer"/>'s <paramref name="layer"/> and records it as
+    /// showing a preview, repainting the Scene view when the preview added chunks.
+    /// </summary>
+    private void Show(TerrainBlendRenderer renderer, Tilemap layer, List<Vector3Int> cells, bool filled)
+    {
+        int chunks = renderer.Chunks.Count;
+        renderer.SetPreview(layer, cells, filled);
+        shownRenderers.Add(renderer);
         if (renderer.Chunks.Count != chunks)
         {
             SceneView.RepaintAll();
         }
+    }
 
-        return true;
+    /// <summary>
+    /// The tilemap of <paramref name="renderer"/>'s layer drawing <paramref name="material"/>, or null.
+    /// </summary>
+    private static Tilemap LayerDrawing(TerrainBlendRenderer renderer, TerrainMaterial material)
+    {
+        for (int i = 0; i < renderer.Layers.Count; i++)
+        {
+            TerrainBlendRenderer.Layer layer = renderer.Layers[i];
+            if (layer != null && layer.Material == material && layer.Tilemap != null)
+            {
+                return layer.Tilemap;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -457,7 +536,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     {
         if (inPaintSceneGUI)
         {
-            clearDeferred = previewRenderer != null;
+            clearDeferred = previewRenderers.Count > 0;
             return;
         }
 
@@ -471,14 +550,20 @@ public class TerrainBrushEditor : DualGridBrushEditor
     private void ClearTerrainPreviewNow()
     {
         clearDeferred = false;
-        TerrainBlendRenderer shown = previewRenderer;
-        previewRenderer = null;
-        if (shown == null)
+        if (previewRenderers.Count == 0)
         {
             return;
         }
 
-        shown.ClearPreview();
+        for (int i = 0; i < previewRenderers.Count; i++)
+        {
+            if (previewRenderers[i] != null)
+            {
+                previewRenderers[i].ClearPreview();
+            }
+        }
+
+        previewRenderers.Clear();
         SceneView.RepaintAll();
     }
 

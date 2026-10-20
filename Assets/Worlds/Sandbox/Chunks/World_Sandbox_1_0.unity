@@ -47105,6 +47105,7 @@ GameObject:
   m_Component:
   - component: {fileID: 827821752}
   - component: {fileID: 827821753}
+  - component: {fileID: 827821754}
   m_Layer: 0
   m_Name: MobSpawn_2
   m_TagString: Untagged
@@ -47140,6 +47141,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobSpawnPoint
   mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+--- !u!114 &827821754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 827821751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0503f23b14fde24db2a24120bf7e2e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PersistentId
+  id: c8da50cbe42c4feeb10c98840a42c2ec
 --- !u!1 &895143239
 GameObject:
   m_ObjectHideFlags: 0
@@ -47150,6 +47164,7 @@ GameObject:
   m_Component:
   - component: {fileID: 895143240}
   - component: {fileID: 895143241}
+  - component: {fileID: 895143242}
   m_Layer: 0
   m_Name: MobSpawn_3
   m_TagString: Untagged
@@ -47185,6 +47200,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobSpawnPoint
   mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+--- !u!114 &895143242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 895143239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0503f23b14fde24db2a24120bf7e2e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PersistentId
+  id: ee21c758902d4376adf22ff3bd76d7f4
 --- !u!1 &1354915948
 GameObject:
   m_ObjectHideFlags: 0
@@ -47979,6 +48007,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1805851318}
   - component: {fileID: 1805851319}
+  - component: {fileID: 1805851320}
   m_Layer: 0
   m_Name: MobSpawn_1
   m_TagString: Untagged
@@ -48014,6 +48043,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobSpawnPoint
   mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
+--- !u!114 &1805851320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1805851317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0503f23b14fde24db2a24120bf7e2e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PersistentId
+  id: 14ef9ff636664e77ae5cf546b0651626
 --- !u!1 &1825499903
 GameObject:
   m_ObjectHideFlags: 0

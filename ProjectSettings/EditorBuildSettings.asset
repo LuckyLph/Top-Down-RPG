@@ -53,5 +53,20 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Worlds/SandboxInterior/Chunks/World_SandboxInterior_0_0.unity
     guid: 3aab738e950359c4eb87edc2d41321a2
+  - enabled: 1
+    path: Assets/Worlds/Testlands/World_Testlands.unity
+    guid: ae54344657ed4e54789281314c412f8b
+  - enabled: 1
+    path: Assets/Worlds/Testlands/Chunks/World_Testlands_0_0.unity
+    guid: 399631b96da8d4c418e1991f7b3b5092
+  - enabled: 1
+    path: Assets/Worlds/Testlands/Chunks/World_Testlands_1_0.unity
+    guid: bb32b67cc77f15e47a505f872a8853d2
+  - enabled: 1
+    path: Assets/Worlds/Testlands/Chunks/World_Testlands_0_1.unity
+    guid: 532d12fec6d146d49ae8b5742c2dbc6a
+  - enabled: 1
+    path: Assets/Worlds/Testlands/Chunks/World_Testlands_1_1.unity
+    guid: dc466194075ee2a48a8562d1acba6def
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

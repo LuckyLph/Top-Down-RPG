@@ -182,7 +182,7 @@ Main (MainLifetimeScope)
   - the world's ground materials, for its terrain drawing;
   - its entries: name, position, whether it is a waystone.
 
-  The editor checks that no two worlds' rectangles in the global layout come within 1024 units of each other.
+  `WorldLayout` (Editor) checks that no two worlds' rectangles in the global layout come within 1024 units of each other and that each stays within 16 384 units of the origin; the World Editor checks it as a world is made and validated, and the build refuses a layout that breaks it.
 - **`GameScenes`** lists worlds beside the areas (Phase 1), and instead of them with a starting world and entry once the areas go. Every world scene has a `SceneDefinition` beside it, so `SceneBuildValidator` already checks it is in the build.
 - **`ChunkCoords`** is static chunk arithmetic: cell to chunk, chunk bounds, rectangle overlap, world origins. It is plain C# and tested in EditMode.
 
@@ -216,7 +216,7 @@ Decided in Phase 0: **a renderer per chunk, with a skirt of its neighbours' bord
   - The renderer fills the strip when a neighbour loads, follows that neighbour's tile changes inside the strip (runtime edits, and painting in the editor), and empties it when the neighbour unloads.
   - Only drawing reads the skirt. Navigation never does.
   - A chunk at the edge of the loaded set has no skirt on its far side, so it draws its ground's edge there over nothing. That border lies outside every interest rectangle, at least `loadMargin` beyond the view, so no one sees it.
-  - A chunk's layer list holds the materials of its own cells and of its neighbours' border strips, in the style's order. `WorldAuthoring.Paint` keeps it that way for the open neighbours and `SyncLayerLists` for a whole world; the World Editor will call them. A material that turns up in a skirt anyway, through a runtime edit, rebuilds the renderer with a layer for it (its saved list is untouched).
+  - A chunk's layer list holds the materials of its own cells and of its neighbours' border strips, in the style's order. The Terrain Brush (and `WorldAuthoring.Paint`) keeps it that way for the open neighbours and `SyncLayerLists` for a whole world, which the World Editor runs. A material that turns up in a skirt anyway, through a runtime edit, rebuilds the renderer with a layer for it (its saved list is untouched).
 - **The coast map is baked per chunk.** The waves read a distance field that reaches 32 cells from the coast, more than any skirt. Computed per chunk, it drew three ocean pixels wrong on the Coast, and open sea far from the shore would be worse. Computing it at runtime is also slow: 22 µs per cell in the editor. So the World Editor bakes each chunk's coast map from the whole world into a texture asset beside its scene, and the renderer uses that texture instead of building one.
   - Runtime edits never touch the sea (the ocean is not an `AreaTerrain` layer), so the baked map stays right.
   - A world without waves bakes nothing.
@@ -287,16 +287,29 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 
 ### Authoring (Editor)
 
-- **World Editor window.**
-  - It creates a world at a free origin in the global layout, its root scene and its chunk scenes, and registers them in the `WorldDefinition`, the `SceneDefinition`s and the build list.
-  - It opens a chunk with its neighbours additively, so the Scene view shows the world around the chunk being edited.
-  - Opening two worlds at once is harmless, since their origins differ.
-- **Terrain Brush across borders.** It splits a stroke's cells by chunk and writes each part to that chunk's layer of the material, adding the layer to a chunk that lacks it. Its preview shows on the renderer of each chunk it covers. A neighbour's skirt shows the stroke once it is painted.
-- **Layer lists and coast maps.** The World Editor keeps each chunk's layer list covering its neighbours' border materials. When the sea or its shore changes, it bakes the coast maps of the chunks within 32 cells of the change.
+- **World Editor window** (`Tools/TopDownRPG/World/World Editor`, `WorldEditorWindow` over `WorldAuthoring`, `WorldLayout`, `PersistentIds` and `WorldValidation`).
+  - It creates a world at the first free origin of the global layout (or one typed in and checked), its root scene and its chunk scenes, registers them in the `WorldDefinition`, the `SceneDefinition`s and the build list, and lists the world in `GameScenes`.
+  - It opens a chunk with its eight neighbours additively, or alone, so the Scene view shows the world around the chunk being edited, and closes them again, asking to save first. Opening two worlds at once is harmless, since their origins differ.
+  - It gives the selected open chunk walls or raised ground, for the Terrain Brush to paint.
+  - It edits the world's entries, the first the default, and marks waystones.
+  - It runs the whole-world steps: syncing the layer lists, baking the coast maps of the chunks whose sea changed, repairing persistent ids and validating.
+- **Terrain Brush across borders.** On a chunk, the brush splits a stroke's cells by chunk and writes each part to that chunk's tilemap of the same kind as the paint target (`WorldBrushStroke`): the layer of the target's material (added to a chunk that lacks it, and to each open neighbour whose skirt the stroke reaches), the walls, or the raised ground. Box fills, erases and flood fills go across borders the same way, the flood fill over the open chunks' cells. A part whose chunk is not open is skipped with a warning, and the stroke is one undo step across scenes. Its preview shows on the renderer of each chunk it covers. A neighbour's skirt shows the stroke once it is painted. A standalone area is painted as before.
+- **Layer lists and coast maps.** The brush keeps each chunk's layer list covering its open neighbours' border materials, and Sync layer lists covers the whole world. Each chunk records what its coast map was baked from (a hash of the sea within the bake's reach), so Bake changed coasts bakes again only the chunks whose sea or shore changed.
 - **Generators.** Writing generated layouts into a world, and the first world's regions, belong to the world generation plan. The Scene Generator window keeps working on standalone scenes until then.
-- **Validation.**
-  - A prop whose footprint crosses a chunk border, or anything placed outside its chunk, is refused with an error that names it.
-  - Every `PersistentId` must be unique within the world.
+- **Validation** (the World Editor's Validate, `Tools/TopDownRPG/World/Validate Worlds` and a pre-build check).
+  - A blocking prop whose footprint crosses a chunk border, or anything placed outside its chunk (a spawn point, a mob spawn point, a prop, an object with a persistent id), is refused with an error that names it.
+  - Every mob spawn point in a chunk has a `PersistentId`, every id is set, and every id is unique within the world. The editor gives a new or duplicated object its id as it is made.
+  - Worlds keep the layout.
+- **The edit-mode navigation.** Outside Play Mode the open chunks of a world join their navigation pages, as in play, so the movement blocker gizmo draws a border the ground crosses as the game reads it.
+
+#### Authoring a world
+
+1. Open the World Editor (`Tools/TopDownRPG/World/World Editor`). Under New world, type a name (letters and digits) and the size in chunks; the origin is the first free slot of the layout. Keep "Create every chunk" and "List in Game Scenes" ticked for an ordinary world, untick the first for a world with holes and create its chunks one by one from the grid. Create world.
+2. Pick a chunk in the grid and Open with neighbours. Each chunk starts as a grid at the world's origin with an empty grass layer, a terrain renderer and a navigation grid.
+3. Paint with the Terrain Brush (the Tile Palette's default brush) on any open chunk's tilemap: a ground layer, the walls or the raised ground. A stroke goes into whichever chunks it covers. To paint a material the chunk has no layer for, pick its tile and press the palette's "Add the <material> layer" button. Walls and raised ground start on one chunk with the window's Add walls and Add raised ground (shown for the selected chunk while it is open and lacks them); after that the brush gives them to the chunks a stroke reaches. Open the chunks around the area being painted: a part of a stroke on a chunk that is not open is skipped, with a warning.
+4. Place props with the Prop Placement window, and mob spawn points under a `MobSpawns` object in each chunk scene. Each must stand on its own chunk's cells, and a blocking prop's footprint must not cross a border. Mob spawn points get their `PersistentId` as they are made.
+5. Fill in the entries in the window: the first is where a new game starts; tick Waystone for the ones players discover.
+6. Run Sync layer lists, then Bake changed coasts when the world has an ocean, then Repair ids and Validate. Save the scenes, and check `git diff` for churn in the chunk scenes (wall render tiles redrawn as neighbours open) before committing.
 
 ## Removals and migrations
 
@@ -311,7 +324,7 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 - **Tests:**
   - `AreaGenerationTests` keeps testing the generators' layouts, and the writer on a standalone grid.
   - `AreaTemplateTests` goes with the template.
-  - The PlayMode tests that boot into the Clearing boot into a hand-painted test world instead. It keeps the margins in SceneGeneration.md's "What the PlayMode tests rely on".
+  - The PlayMode tests that boot into the Clearing boot into the hand-painted test world, Testlands, instead. It keeps the margins in SceneGeneration.md's "What the PlayMode tests rely on" (`TestlandsPlayModeTests`).
 - **Architecture.md.** Its "Scenes and boot flow", "Composition / DI", "Networking", "Save data", "Navigation and pathfinding" and "World and areas" sections are rewritten as each phase lands.
 - **Multiplayer.md.** Its Areas and Death decisions point here, and its Phase 5 notes link here.
 
@@ -459,10 +472,22 @@ Notes:
 
 ### Phase 5: authoring
 
-- [ ] World Editor window: create a world at a free origin and its chunks, and open a chunk with its neighbours.
-- [ ] Terrain Brush across chunk borders.
-- [ ] Ownership, `PersistentId` and origin validation.
-- [ ] A hand-painted test world with the Clearing's PlayMode margins, painted with the tools above.
+- [x] World Editor window: create a world at a free origin and its chunks, and open a chunk with its neighbours.
+- [x] Terrain Brush across chunk borders.
+- [x] Ownership, `PersistentId` and origin validation.
+- [x] A hand-painted test world with the Clearing's PlayMode margins, painted with the tools above.
+
+Notes:
+
+- **The World Editor** is a thin window over static steps that are tested on their own. It lists every `WorldDefinition` in the project, not only the listed ones, so a world being built can be picked before it is listed. Its only standing work is a flag set when a tile of an open chunk of the picked world changes, which shows a hint to check the coasts; nothing is computed per frame.
+- **Free origins.** New worlds take the first slot of a grid 2048 units apart, row by row from the origin, where the world keeps 1024 units from every other world's rectangle and stays within 16 384 units of the origin; the slot at the origin is skipped while the areas live there (Phase 9). The Sandbox and its interior hold (2048, 0) and (4096, 0), so Testlands took (6144, 0). An origin typed in by hand is checked against the same rule, measured as the distance between the rectangles, and so is every world by Validate and the build.
+- **The brush.** Unity's grid brush paints and erases through its box fill and box erase, so `TerrainBrush` overrides those two and the flood fill. The stroke's cells are world cells whichever chunk was the paint target, since every chunk's grid sits at the world's origin, so each cell goes to the chunk owning it, found among the open scenes. `GroundLayerMigration.AddLayer` gained a way to join the current undo group instead of making its own, so a stroke that adds layers to several chunks is still one undo step. A walls stroke on a chunk without walls copies the target's walls there, so the brush never needs the area template open. A tilemap of any other kind is written only inside its own chunk, so nothing lands silently in the wrong chunk. The ground preview shows on the target's renderer and its linked neighbours', each given the cells within its own cells and skirt; the walls' preview stays the Dual Grid Brush's on the target chunk (Architecture.md's Known gaps).
+- **Coast maps.** Rather than track which cells a stroke changed, each chunk's `WorldChunk` records what its map was baked from: a hash of the material with waves, the window the bake reads and which of its cells count as sea (`WorldCoastBake.SourceOf`). Reading the world and hashing every chunk takes a few milliseconds, so Check coasts and Bake changed coasts compare them for the whole world and bake only the chunks whose sea or shore within the bake's 40-cell reach changed. Ground that is no sea (grass, a path under the ocean's place in the order) changes nothing.
+- **`PersistentId`** is a component holding a GUID string. `PersistentIdWatcher` gives a mob spawn point in a chunk scene its id as it is created, and a duplicate or a paste a new one when its copied id is already loaded, through the editor's object change events; Repair ids makes every id of a world unique (the first holder keeps its id) for whatever the events missed, such as scenes written by script. The Sandbox's twelve mob spawn points got theirs (only those components were kept from the save; the wall render tiles it rewrote were not).
+- **Ownership.** `WorldValidation` reads the objects of a chunk scene: spawn points, mob spawn points, objects with a persistent id and the children of its `Props` root on its own cells, and a blocking prop's footprint, through `PropGridSnapping.BlockedCells` (the navigation's rule), only on its cells. The World Editor's Validate, `Tools/TopDownRPG/World/Validate Worlds` and `WorldBuildValidator`, a pre-build check after `SceneBuildValidator`, run it with the layout check and the id check over every world; it opens the chunk scenes that are closed and closes them unchanged, about 0.2 s for the three worlds.
+- **Navigation in the editor.** The Phase 3 gap is closed: `EditModeWorldNavigation` joins the open chunks' pages in a `WorldNavigation` of its own outside Play Mode, following scenes opening and closing and the hierarchy changing, once per editor update at most, so the movement blocker gizmo no longer outlines a border the ground crosses or draws a cliff along it. Only chunks in their world's saved scenes take part, up to 24 at once, and every page leaves before Play Mode.
+- **Testlands** (2 x 2 chunks at (6144, 0)) was made with the window's steps and painted with brush strokes run through `TerrainBrush`, each across the borders it crossed: grass everywhere, a stone road across column 64, a gravel trail across row 64, a meadow across row 64, tall grass across column 64, dirt on the corner, a pond with a sandy shore across column 64, a wall line across column 64 and a plateau with a ramp across row 64. Its entry, `start` on the road at (24.5, 40.5), keeps the Clearing's margins: every cell within 6 of it is open ground, a seven-cell wall two cells to its right leaves room to walk around, and its eight Weasel spawn points are 23 cells or more away. `TestlandsPlayModeTests` boots into it and checks them; the Clearing's tests move there in Phase 9.
+- **Tests:** `WorldBrushStrokeTests`, `WorldLayoutTests`, `WorldValidationTests`, `PersistentIdTests`, `EditModeWorldNavigationTests` and a coast source case in `WorldCoastBakeTests` (EditMode), and `TestlandsPlayModeTests`.
 
 ### Phase 6: world exits, offline
 

@@ -47,9 +47,10 @@ public static class GroundLayerMigration
     /// (<see cref="AddLayer(Grid, AreaGenerator.TerrainLayer)"/>): its tilemap named after it (<see cref="TilemapName"/>),
     /// its plain tile (<see cref="TerrainTileWriter.TilePath"/>) and its terrain type (<see cref="TerrainTypePath"/>).
     /// Returns the layer's tilemap, or null after logging why when the material has no tile or terrain type or the layer
-    /// cannot be added.
+    /// cannot be added. With <paramref name="ownUndoStep"/> false the change joins the current undo group instead of
+    /// making one of its own, so a brush stroke that adds layers to several chunks stays one undo step.
     /// </summary>
-    public static Tilemap AddLayer(Grid grid, TerrainMaterial material)
+    public static Tilemap AddLayer(Grid grid, TerrainMaterial material, bool ownUndoStep = true)
     {
         Tile tile = material != null ? AssetDatabase.LoadAssetAtPath<Tile>(TerrainTileWriter.TilePath(material)) : null;
         TerrainType2D terrainType = material != null ? AssetDatabase.LoadAssetAtPath<TerrainType2D>(TerrainTypePath(material)) : null;
@@ -60,7 +61,7 @@ public static class GroundLayerMigration
             return null;
         }
 
-        return AddLayer(grid, new AreaGenerator.TerrainLayer(TilemapName(material), tile, terrainType, material));
+        return AddLayer(grid, new AreaGenerator.TerrainLayer(TilemapName(material), tile, terrainType, material), ownUndoStep);
     }
 
     /// <summary>
@@ -71,9 +72,10 @@ public static class GroundLayerMigration
     /// above it moving up one (<see cref="AreaGroundSetup.InsertLayer"/>). Returns the layer's tilemap, or null after
     /// logging why when the grid has no renderer with a style, the style's order does not list the material, the
     /// renderer already draws it, it already draws <see cref="TerrainControlMap.MaxLayers"/> layers, or the layer has
-    /// no tilemap name or tile, or during play.
+    /// no tilemap name or tile, or during play. With <paramref name="ownUndoStep"/> false it joins the current undo
+    /// group.
     /// </summary>
-    public static Tilemap AddLayer(Grid grid, AreaGenerator.TerrainLayer layer)
+    public static Tilemap AddLayer(Grid grid, AreaGenerator.TerrainLayer layer, bool ownUndoStep = true)
     {
         string problem = AddProblem(grid, layer);
         if (problem != null)
@@ -83,12 +85,20 @@ public static class GroundLayerMigration
         }
 
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
-        Undo.IncrementCurrentGroup();
-        Undo.SetCurrentGroupName($"Add {layer.Material.name} layer");
+        if (ownUndoStep)
+        {
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName($"Add {layer.Material.name} layer");
+        }
+
         int undoGroup = Undo.GetCurrentGroup();
         List<string> changes = new();
         Tilemap tilemap = AreaGroundSetup.InsertLayer(grid, renderer.Style, layer, changes);
-        Undo.CollapseUndoOperations(undoGroup);
+        if (ownUndoStep)
+        {
+            Undo.CollapseUndoOperations(undoGroup);
+        }
+
         EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
         return tilemap;
     }

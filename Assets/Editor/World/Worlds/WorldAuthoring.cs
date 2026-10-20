@@ -15,7 +15,9 @@ using UnityEngine.Tilemaps;
 /// navigation page. Every scene gets a
 /// <see cref="SceneDefinition"/> and a place in the build list. Painting ground, walls and raised ground into the open
 /// chunks, keeping each chunk's layer list covering its neighbours' border materials, and baking the coast maps
-/// (<see cref="WorldCoastBake"/>) work across a whole world. The World Editor window (Phase 5) builds on these steps.
+/// (<see cref="WorldCoastBake"/>, only where the sea changed when asked) work across a whole world. Chunks open with
+/// their neighbours and close again, and a world is listed in <see cref="GameScenes"/>. The World Editor window
+/// (<see cref="WorldEditorWindow"/>) runs these steps.
 /// </summary>
 public static class WorldAuthoring
 {
@@ -31,6 +33,20 @@ public static class WorldAuthoring
     public static string FolderOf(string worldName)
     {
         return $"{WorldsFolder}/{worldName}";
+    }
+
+    /// <summary>
+    /// Why <paramref name="worldName"/> cannot name a new world, or null when it can: a name is letters and digits,
+    /// starting with a letter, since it names the world's folder and scenes, and no world's folder may have it yet.
+    /// </summary>
+    public static string NameProblem(string worldName)
+    {
+        if (string.IsNullOrEmpty(worldName) || !char.IsLetter(worldName[0]) || !worldName.All(char.IsLetterOrDigit))
+        {
+            return "A world's name is letters and digits, starting with a letter.";
+        }
+
+        return AssetDatabase.IsValidFolder(FolderOf(worldName)) ? $"{FolderOf(worldName)} already exists." : null;
     }
 
     /// <summary>
@@ -296,6 +312,28 @@ public static class WorldAuthoring
     }
 
     /// <summary>
+    /// Gives <paramref name="grid"/> a raised tilemap its terrain renderer draws and its navigation reads the cliff of,
+    /// as one undo step, or returns the one it has.
+    /// </summary>
+    public static Tilemap AddRaised(Grid grid)
+    {
+        TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
+        if (renderer != null && renderer.RaisedTilemap != null)
+        {
+            return renderer.RaisedTilemap;
+        }
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add raised ground");
+        int undoGroup = Undo.GetCurrentGroup();
+        Tilemap raised = AreaGroundSetup.SetUpRaised(grid, new List<string>());
+        Undo.CollapseUndoOperations(undoGroup);
+        EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+        RefreshLinks(grid);
+        return raised;
+    }
+
+    /// <summary>
     /// Gives <paramref name="grid"/>, a chunk's grid, the <see cref="NavigationGrid2D"/> its navigation page is built
     /// from, or brings the one it has in line: it reads the ground layers under the grid, is blocked by the walls
     /// (<see cref="WallsName"/>) and by colliders on the Obstacles layer, and reads the cliff of the raised tilemap the
@@ -395,12 +433,12 @@ public static class WorldAuthoring
                 {
                     chunk.Value.gameObject.SetActive(false);
                     marker = Undo.AddComponent<WorldChunk>(chunk.Value.gameObject);
-                    SetMarker(marker, world, chunk.Key, null);
+                    SetMarker(marker, world, chunk.Key, null, null);
                     chunk.Value.gameObject.SetActive(true);
                 }
                 else
                 {
-                    SetMarker(marker, world, chunk.Key, marker.CoastMap);
+                    SetMarker(marker, world, chunk.Key, marker.CoastMap, marker.CoastSource);
                 }
 
                 EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
@@ -458,11 +496,13 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Bakes the coast map of every chunk of <paramref name="world"/> from the whole world's ground
-    /// (<see cref="WorldCoastBake"/>), opening the scenes that are not open: a 16-bit PNG beside each chunk scene
-    /// showing waves (<c>World_name_x_y_Coast.png</c>), set on its <see cref="WorldChunk"/>; a chunk showing none loses
-    /// its map. Saves the scenes it changed. Returns a line per chunk with what it did and how long it took.
+    /// (<see cref="WorldCoastBake"/>), or with <paramref name="onlyChanged"/> only of the chunks whose sea or shore
+    /// within the bake's reach changed since their last bake (<see cref="IsCoastStale"/>), opening the scenes that are
+    /// not open: a 16-bit PNG beside each chunk scene showing waves (<c>World_name_x_y_Coast.png</c>), set on its
+    /// <see cref="WorldChunk"/> with what it was baked from; a chunk showing none loses its map. Saves the scenes it
+    /// changed. Returns a line per chunk with what it did and how long it took.
     /// </summary>
-    public static List<string> BakeCoastMaps(WorldDefinition world)
+    public static List<string> BakeCoastMaps(WorldDefinition world, bool onlyChanged = false)
     {
         List<string> report = new();
         List<Scene> opened = new();
@@ -484,7 +524,15 @@ public static class WorldAuthoring
                 }
 
                 System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
-                ushort[] encoded = WorldCoastBake.BakeChunk(cells, style, renderer.Layers.Select(l => l != null ? l.Material : null), ChunkCoords.Bounds(chunk.Key), out int width, out int height);
+                List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
+                string source = WorldCoastBake.SourceOf(cells, style, materials, ChunkCoords.Bounds(chunk.Key));
+                if (onlyChanged && !IsCoastStale(marker, source))
+                {
+                    report.Add($"{chunk.Value.gameObject.scene.name}: its sea has not changed; kept.");
+                    continue;
+                }
+
+                ushort[] encoded = WorldCoastBake.BakeChunk(cells, style, materials, ChunkCoords.Bounds(chunk.Key), out int width, out int height);
                 string path = CoastMapPath(world, chunk.Key);
                 Texture2D baked = null;
                 if (encoded != null)
@@ -501,9 +549,10 @@ public static class WorldAuthoring
                     AssetDatabase.DeleteAsset(path);
                 }
 
-                if (marker.CoastMap != baked)
+                string recorded = baked != null ? source : string.Empty;
+                if (marker.CoastMap != baked || (marker.CoastSource ?? string.Empty) != recorded)
                 {
-                    SetMarker(marker, world, chunk.Key, baked);
+                    SetMarker(marker, world, chunk.Key, baked, recorded);
                     EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
                 }
 
@@ -516,6 +565,58 @@ public static class WorldAuthoring
         }
 
         return report;
+    }
+
+    /// <summary>
+    /// The chunks of <paramref name="world"/> whose coast map is out of date (<see cref="IsCoastStale"/>), opening the
+    /// scenes that are not open and closing them again unchanged. About a millisecond a chunk once open.
+    /// </summary>
+    public static List<Vector2Int> StaleCoastMaps(WorldDefinition world)
+    {
+        List<Vector2Int> stale = new();
+        List<Scene> opened = new();
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath);
+        try
+        {
+            Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
+            WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
+            {
+                WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
+                TerrainBlendRenderer renderer = chunk.Value.GetComponent<TerrainBlendRenderer>();
+                if (marker == null || renderer == null)
+                {
+                    continue;
+                }
+
+                List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
+                if (IsCoastStale(marker, WorldCoastBake.SourceOf(cells, style, materials, ChunkCoords.Bounds(chunk.Key))))
+                {
+                    stale.Add(chunk.Key);
+                }
+            }
+        }
+        finally
+        {
+            CloseScenes(opened, false);
+        }
+
+        return stale;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="marker"/>'s coast map is out of date against <paramref name="source"/>, what it would be
+    /// baked from now (<see cref="WorldCoastBake.SourceOf"/>): a chunk showing waves needs a map baked from that
+    /// source, and one showing none needs no map.
+    /// </summary>
+    public static bool IsCoastStale(WorldChunk marker, string source)
+    {
+        if (source == WorldCoastBake.NoWaves)
+        {
+            return marker.CoastMap != null;
+        }
+
+        return marker.CoastMap == null || marker.CoastSource != source;
     }
 
     /// <summary>
@@ -552,15 +653,16 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Sets <paramref name="marker"/>'s world, coordinates and coast map through its serialized object, so the scene
-    /// records the change.
+    /// Sets <paramref name="marker"/>'s world, coordinates, coast map and what that map was baked from through its
+    /// serialized object, so the scene records the change.
     /// </summary>
-    private static void SetMarker(WorldChunk marker, WorldDefinition world, Vector2Int coords, Texture2D coastMap)
+    private static void SetMarker(WorldChunk marker, WorldDefinition world, Vector2Int coords, Texture2D coastMap, string coastSource)
     {
         SerializedObject data = new(marker);
         data.FindProperty("world").objectReferenceValue = world;
         data.FindProperty("coords").vector2IntValue = coords;
         data.FindProperty("coastMap").objectReferenceValue = coastMap;
+        data.FindProperty("coastSource").stringValue = coastSource ?? string.Empty;
         data.ApplyModifiedProperties();
         if (marker.isActiveAndEnabled)
         {
@@ -683,6 +785,25 @@ public static class WorldAuthoring
     private static Dictionary<Vector2Int, Grid> OpenChunks(WorldDefinition world, List<Scene> opened)
     {
         Dictionary<Vector2Int, Grid> grids = new();
+        foreach (KeyValuePair<Vector2Int, Scene> chunk in OpenChunkScenes(world, opened))
+        {
+            Grid grid = SceneQuery.FindFirst<Grid>(chunk.Value);
+            if (grid != null)
+            {
+                grids[chunk.Key] = grid;
+            }
+        }
+
+        return grids;
+    }
+
+    /// <summary>
+    /// The scenes of every chunk of <paramref name="world"/> by their coordinates, opening the ones that are not open
+    /// beside the others and adding them to <paramref name="opened"/>.
+    /// </summary>
+    public static Dictionary<Vector2Int, Scene> OpenChunkScenes(WorldDefinition world, List<Scene> opened)
+    {
+        Dictionary<Vector2Int, Scene> scenes = new();
         foreach (WorldDefinition.Chunk chunk in world.Chunks)
         {
             if (chunk == null || chunk.Scene == null || !chunk.Scene.IsValid)
@@ -697,30 +818,187 @@ public static class WorldAuthoring
                 opened.Add(scene);
             }
 
-            Grid grid = SceneQuery.FindFirst<Grid>(scene);
-            if (grid != null)
-            {
-                grids[chunk.Coords] = grid;
-            }
+            scenes[chunk.Coords] = scene;
         }
 
-        return grids;
+        return scenes;
     }
 
     /// <summary>
-    /// Saves and closes the scenes <see cref="OpenChunks"/> opened.
+    /// Closes the scenes <see cref="OpenChunkScenes"/> opened, saving the changed ones first unless
+    /// <paramref name="save"/> is false.
     /// </summary>
-    private static void CloseScenes(List<Scene> opened)
+    public static void CloseScenes(List<Scene> opened, bool save = true)
     {
         foreach (Scene scene in opened)
         {
-            if (scene.isDirty)
+            if (save && scene.isDirty)
             {
                 EditorSceneManager.SaveScene(scene);
             }
 
             EditorSceneManager.CloseScene(scene, true);
         }
+    }
+
+    /// <summary>
+    /// Opens the scene of the chunk at <paramref name="coords"/> of <paramref name="world"/>, with the scenes of its
+    /// eight neighbours when <paramref name="withNeighbours"/>, beside the open scenes (closing an untitled scene with no
+    /// changes), and makes it the active scene. Scenes already open stay as they are. Returns the chunk's scene; throws
+    /// when the world has no chunk there.
+    /// </summary>
+    public static Scene OpenChunk(WorldDefinition world, Vector2Int coords, bool withNeighbours = true)
+    {
+        if (!world.TryGetChunkScene(coords, out SceneDefinition definition) || !definition.IsValid)
+        {
+            throw new System.ArgumentException($"{world.name} has no chunk at {coords}.", nameof(coords));
+        }
+
+        Scene scene = OpenBeside(definition.ScenePath);
+        if (withNeighbours)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    Vector2Int at = coords + new Vector2Int(dx, dy);
+                    if (at != coords && world.TryGetChunkScene(at, out SceneDefinition neighbour) && neighbour.IsValid)
+                    {
+                        OpenBeside(neighbour.ScenePath);
+                    }
+                }
+            }
+        }
+
+        SceneManager.SetActiveScene(scene);
+        return scene;
+    }
+
+    /// <summary>
+    /// Opens the root scene of <paramref name="world"/> beside the open scenes, like <see cref="OpenChunk"/>.
+    /// </summary>
+    public static Scene OpenRoot(WorldDefinition world)
+    {
+        if (world.RootScene == null || !world.RootScene.IsValid)
+        {
+            throw new System.InvalidOperationException($"{world.name} has no root scene.");
+        }
+
+        return OpenBeside(world.RootScene.ScenePath);
+    }
+
+    /// <summary>
+    /// The coordinates of <paramref name="world"/>'s chunks whose scenes are open.
+    /// </summary>
+    public static List<Vector2Int> OpenChunkCoords(WorldDefinition world)
+    {
+        List<Vector2Int> open = new();
+        foreach (WorldDefinition.Chunk chunk in world.Chunks)
+        {
+            if (chunk != null && chunk.Scene != null && chunk.Scene.IsValid && IsOpen(chunk.Scene.ScenePath))
+            {
+                open.Add(chunk.Coords);
+            }
+        }
+
+        return open;
+    }
+
+    /// <summary>
+    /// The open scenes of <paramref name="world"/>'s chunks, its root scene included when <paramref name="root"/>,
+    /// except the chunks in <paramref name="keep"/>: the scenes <see cref="CloseChunks"/> closes.
+    /// </summary>
+    public static List<Scene> OpenScenesExcept(WorldDefinition world, ICollection<Vector2Int> keep, bool root)
+    {
+        List<Scene> scenes = new();
+        foreach (WorldDefinition.Chunk chunk in world.Chunks)
+        {
+            if (chunk != null && chunk.Scene != null && chunk.Scene.IsValid && (keep == null || !keep.Contains(chunk.Coords)) && IsOpen(chunk.Scene.ScenePath))
+            {
+                scenes.Add(SceneManager.GetSceneByPath(chunk.Scene.ScenePath));
+            }
+        }
+
+        if (root && world.RootScene != null && world.RootScene.IsValid && IsOpen(world.RootScene.ScenePath))
+        {
+            scenes.Add(SceneManager.GetSceneByPath(world.RootScene.ScenePath));
+        }
+
+        return scenes;
+    }
+
+    /// <summary>
+    /// Closes the open scenes of <paramref name="world"/>'s chunks except those in <paramref name="keep"/> (and its root
+    /// scene too when <paramref name="root"/>), discarding their unsaved changes: the caller asks to save them first.
+    /// The last scene open is never closed. Returns how many it closed.
+    /// </summary>
+    public static int CloseChunks(WorldDefinition world, ICollection<Vector2Int> keep, bool root = false)
+    {
+        int closed = 0;
+        foreach (Scene scene in OpenScenesExcept(world, keep, root))
+        {
+            if (SceneManager.sceneCount > 1 && EditorSceneManager.CloseScene(scene, true))
+            {
+                closed++;
+            }
+        }
+
+        return closed;
+    }
+
+    /// <summary>
+    /// Lists <paramref name="world"/> in the project's <see cref="GameScenes"/>, unless it is there already. Returns
+    /// whether it added it.
+    /// </summary>
+    public static bool ListInGameScenes(WorldDefinition world)
+    {
+        GameScenes gameScenes = ProjectScenes.LoadGameScenes();
+        if (gameScenes == null || gameScenes.Worlds.Contains(world))
+        {
+            return false;
+        }
+
+        SerializedObject data = new(gameScenes);
+        SerializedProperty worlds = data.FindProperty("worlds");
+        worlds.arraySize++;
+        worlds.GetArrayElementAtIndex(worlds.arraySize - 1).objectReferenceValue = world;
+        data.ApplyModifiedProperties();
+        AssetDatabase.SaveAssets();
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the scene at <paramref name="path"/> is open and loaded.
+    /// </summary>
+    private static bool IsOpen(string path)
+    {
+        Scene scene = SceneManager.GetSceneByPath(path);
+        return scene.IsValid() && scene.isLoaded;
+    }
+
+    /// <summary>
+    /// Opens the scene at <paramref name="path"/> beside the open scenes, or returns it when it is open, then closes an
+    /// untitled scene with no changes, which would only stand in the way of saving. Opening beside the others keeps the
+    /// assets already loaded alive, which opening a single scene would unload.
+    /// </summary>
+    private static Scene OpenBeside(string path)
+    {
+        if (IsOpen(path))
+        {
+            return SceneManager.GetSceneByPath(path);
+        }
+
+        Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+        for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
+        {
+            Scene open = SceneManager.GetSceneAt(i);
+            if (string.IsNullOrEmpty(open.path) && !open.isDirty && SceneManager.sceneCount > 1)
+            {
+                EditorSceneManager.CloseScene(open, true);
+            }
+        }
+
+        return scene;
     }
 
     /// <summary>

@@ -137,8 +137,11 @@ No other machine fades or pauses. On the host, its own player's trip is a local 
 
 ### Death and respawn
 
-- A dead player respawns at the nearest waystone they have discovered in their world, after `GameplaySettings.RespawnDelaySeconds`.
+- A player discovers a waystone (an entry marked as one) by coming within two cells of its cell along each axis. The host decides it for every player, since it has every position, and keeps it per player id in the save. The discovering player sees a short popup on its own screen.
 - A world's default entry counts as discovered from the start.
+- A dead player respawns at the nearest waystone they have discovered in their world, in a straight line from where they died (the first listed on a tie), after `GameplaySettings.RespawnDelaySeconds`. The respawn is a trip within that world: the host holds the arrival, so the waystone's chunks load at once, and puts the player in the world for one more trip; the player's own machine fades, moves its player there, waits for the chunks and reports them with the new trip count, as on any trip. The player stays dead on the way, and the host restores its health once it stands at the waystone with that chunk loaded and, for a client's player, held by its client.
+- A player that dies on a trip respawns once the trip has arrived, measured from its end.
+- A dead player is saved at the waystone it will respawn at, so leaving or quitting while dead neither skips the respawn nor brings it back beside its killer.
 - Nothing happens when every player is dead at once: each still respawns on their own, and no world restarts.
 
 ## Architecture
@@ -157,7 +160,7 @@ Main (MainLifetimeScope)
   - the world's navigation (`WorldNavigation`) and its terrain drawing (see Terrain);
   - the world's chunk registry (which chunks are loaded and ready);
   - the world state (see Persistence);
-  - the entries and waystones.
+  - the entries and waystones (data on its `WorldDefinition`; discoveries are per player in the `SessionSave`).
 
   Disposing it is the cleanup hook for the whole world.
 - **`ChunkLifetimeScope`** registers what a chunk scene contains:
@@ -279,7 +282,7 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
   The states of every world visited stay in memory for the session, loaded or not, in the Main scope's `SessionSave`. A chunk reads its record when it loads and writes changes as they happen.
 - **Save format.** `GameSaveData` version 2 holds:
   - the world clock's time;
-  - per player id: world id, position, discovered waystones (written empty until Phase 9);
+  - per player id: world id, position (a dead player's is the waystone it respawns at), discovered waystones (since Phase 9);
   - per world id visited: its world state.
 
   A version 1 save is ignored with a warning, as other versions are.
@@ -600,10 +603,10 @@ Start clean: in `%USERPROFILE%/AppData/LocalLow/<company>/<product>/`, delete `s
 
 ### Phase 9: death, respawn and cleanup
 
-- [ ] Waystones: discovery per player, and respawn at the nearest one.
+- [x] Waystones: discovery per player, and respawn at the nearest one.
 - [x] Remove the restart when every player is dead, and the remaining area and party code.
 - [x] The PlayMode tests boot into the test world, and the area scenes and template go.
-- [ ] Rewrite Architecture.md's sections, and update Multiplayer.md's decisions.
+- [x] Rewrite Architecture.md's sections, and update Multiplayer.md's decisions.
 
 Notes:
 
@@ -622,6 +625,30 @@ Notes:
   - **Scenes and assets.** The six area scenes, their `SceneDefinition`s, `AreaTemplate.unity`, `AreaTemplate.scenetemplate` and `Area_StressTest.unity` were deleted through the AssetDatabase, the build list lost the six areas, and `GameScenes.asset` and `GameplaySettings.asset` were reserialized without the removed fields. The generator assets and seeds stay. The world layout's origin slot is free again (`WorldLayout.TryFindFreeOrigin`), and the stress world took it.
   - **The stress world.** 2 x 2 chunks at (0, 0), made with `WorldAuthoring` into `Assets/Dev/Worlds` (`CreateWorld`'s parent folder), out of the build list and of `GameScenes`: `SceneBuildValidator` skips definitions under `Assets/Dev/` and `WorldAuthoring` does not add their scenes to the build. Each chunk's `StressTestMap` paints its own part of the 128 x 128 map in `Awake`, laid out alike in every chunk from the seed, before `ChunkNavigation` builds the page; the spawner in the root scene waits for every chunk's page, then spawns through the world's scope. The map's walled ring now lies on the map's outer cells, from cell (0, 0), instead of around a map centred on the origin.
   - **Tests moved to Testlands.** `SceneFlowPlayModeTests`, `PlayerControlsPlayModeTests`, `MobPlayModeBehaviorTests` and `GameMenuPlayModeTests` boot into Testlands (`SceneBootTestHelper.BootIntoTestlands`; `BootIntoWorld` replaced `BootIntoArea`). The area change and restart cases went; the time freeze case runs on an offline new game, and the death cases check that one player dying and everyone dying at once respawn without a reload or a transition. `PlayerControlsPlayModeTests` builds its wall through the start chunk's `AreaTerrain` and hides a mob of that chunk behind it. `PlayerMotor2DTests` paths on a world's navigation (a chunk page of a world built in memory) instead of an area grid. `AreaEntryTests`, `AreaMobSpawnerTests` and `AreaTemplateTests` went; `EntrySlotsTests` is new.
+- **Waystones** (their own commit, after the cleanup).
+  - **The rules** are `WaystoneRules` (Core, plain): `IsDiscovered` (the default entry always, a waystone once the player's list names it in that world), `TryFindNearest` and `TryFindDiscovery`. A player's discoveries are a list of `GameSaveData.Waystone` (world id, entry name), which `SessionSave` keeps per player id apart from its place (`Discover`, `WaystonesOf`) and writes into the player's record in the existing `waystones` list, so the format stays version 2. A player with discoveries but no place yet is left out of the file; every player in a world has its place recorded before each save.
+  - **Player ids** moved out of `GameSaveRecorder` into `PlayerIds` (Gameplay scope), which `WaystoneDiscovery` and `PlayerRespawner` read too. It learns a player's id as the player registers, while its owner is still known, and keeps it until another player registers after it leaves, so it is readable while the registry announces a removal whatever the order of the handlers. `NetworkSession` gives the ids as `IPlayerIdSource`, so the tests fake it.
+  - **Discovery** (`WaystoneDiscovery`) runs offline and on the host only, comparing each living player's cell with the last one every frame. A client's player is checked at the host's copy of its position, which follows the same cells a few frames late; arriving on a waystone by a trip discovers it too. The popup is `WaystonePopupPresenter` on the pooled popup layer, its text and colour in `GameplaySettings`; a client hears of its own player's discovery through `PlayerWorldSync.WaystoneDiscoveredRpc` (server to owner), its only new message.
+  - **Respawns.** `PlayerDeathHandler` keeps the timing: the delay on the game clock, then, once no trip of the player is under way, `PlayerRespawner.TrySendToWaystone` sends it through `NetworkTripAuthority.Send`, a trip the authority starts itself with no exit to check (`LocalTripAuthority.Send`, which an approved request also ends in). That one call gives the respawn everything trips have: the host streams the waystone's chunks for the player at once, in whatever world the host is in; the player's networked world carries the trip and its entry to its owner, whose `LocalTripTraveller` runs `GameFlow.TravelAsync` (never a time freeze); the client reports its chunks with the new trip count, and `IClientReadiness.BeginTrip` holds the client's player's statuses until it reports one. Statuses are cleared as a unit dies, so the hold matters only for what lands on the player at the waystone, until its first report.
+  - **The restore** waits for `PlayerRespawner.HasArrived`: the host's copy within two cells of the entry in that world (the client's teleport snaps there through `NetworkTransform.Teleport`), the entry's chunk loaded on the host and, for a client's player, held by its client. Holds outlive trips, so a waystone chunk the client already held counts at once; the host still waits for the player to stand there. A client sees its player come back a round trip after it arrives, sometimes just after its fade in (Architecture.md's Known gaps). A player in no world, or in a world without entries, is restored where it stands.
+  - **Saving a dead player.** `GameSaveRecorder` records a dead player that is on no trip at the waystone it will respawn at (`TryGetRespawnPlace`), and one on its respawn trip at the trip's entry, the waystone, as it records any traveller. A client that leaves while dead is recorded so as it leaves, and rejoins alive at that waystone; Continue does the same offline.
+  - **Multiplayer cases.** A player dying in a world the host is not in respawns the same way: the host simulates that world and streams the waystone's chunks for it. A player dying on a trip, or while its chunks still load after joining, waits for that trip's arrival or transition first (its machine's `LocalTripTraveller` waits for any running transition). A late joiner sees a dead player arrive dead (`NetworkHealth`) and come back with the host's restore. A dead player that disconnects is forgotten by the death handler and saved at its waystone.
+  - **Testlands** got a second waystone, `north` (30.5, 90.5) on the grass of chunk (0, 1), 50 cells from `start` and 19 from the nearest Weasel spawn point (`WorldAuthoring.SetEntry`); validation passes.
+  - **Compatibility.** The new RPC changes the protocol, so the build version went from 1.3 to 1.4. The join payload is unchanged.
+  - **Tests:** `WaystoneTests` and `PlayerDeathHandlerTests` (EditMode: the rules, the nearest choice, discoveries round-tripping through the save keyed by player id, `WaystoneDiscovery`, `PlayerIds`, a dead player's saved place, and the death handler with no restart: the delay, the trip within the world, the restore on arrival, everyone dead at once, a trip under way, a player in no world, no authority), and `WaystonePlayModeTests` (PlayMode: offline respawns at the nearest discovered waystone after the delay, walking to a waystone and Continue keeping it, and an in-process client's player respawning with the host deciding and the client moving). `SceneFlowPlayModeTests`' death cases check the trip and the respawn at `start`.
+
+#### Checking with Multiplayer Play Mode
+
+Testlands' waystones have no art: `start` is on the road where every new player starts, and `north` on the grass 50 cells north of it (cell (30, 90); walk north from `start` through the meadow). Waystones count within two cells. Keep the main editor's Console in view: every step should log no error. To die, stand beside a Weasel and let it attack: one kills a player in about eight seconds (10 damage every 0.75 s). One spawns 19 cells west-south-west of `north`, and the start chunk has two near its southern edge.
+
+1. Start clean (delete `save.json` and `save.Player2.json` to `save.Player4.json`). Activate Player 2 and Player 3, press Play, Host Game in the main editor, Join Game in Player 2.
+2. Walk Player 2 to `north`: "Waystone discovered" floats over Player 2 on Player 2's screen only. Walk the host there too: the host sees its own popup only.
+3. Let Player 2 die a few cells south of `north`. About three seconds later only Player 2 fades out and back in, standing at `north`, alive at full health; the host does not fade or pause. Let the host die near `north` while Player 2 is alive: only the host fades and respawns at `north`.
+4. Let both die beside the same Weasel, the second while the first is still dead: nothing restarts and no one returns to the menu; each respawns on its own, about three seconds after its own death.
+5. Walk Player 2 east along the road onto Testlands' exit to the Sandbox and die there: Player 2 respawns at the Sandbox's `start` (it discovered no Sandbox waystone), while the host, in Testlands, keeps playing. The host loads the Sandbox's `start` chunk for it without drawing it.
+6. Let Player 2 die south of `north`, and while it is still dead (within three seconds) leave the game on Player 2 (in-game menu, Leave game), then Join Game again: it arrives alive at `north`, the waystone it would have respawned at.
+7. Kill Player 2 and, while it is dead, Join Game in Player 3: Player 3 sees Player 2 lying dead, then come back at its waystone.
+8. Stop Play Mode in the main editor, press Play and click Continue: the host's discovered `north` is kept (die near it: it respawns there). In Player 2, New Game and walking to `north` writes the discovery to `save.Player2.json` only.
 
 ### Later: world generation (its own plan)
 
@@ -633,6 +660,7 @@ Notes:
 
 - **EditMode:**
   - `ChunkCoords` and origin checks;
+  - waystone discovery, the nearest-waystone choice, discoveries round-tripping through the save, and the death handler with no restart (Phase 9);
   - the streamer's decisions, including hysteresis, the empty-world grace, several players, players far apart and players in different worlds;
   - `WorldNavigation` paths and regions across pages, and pages loading and unloading under a path (Phase 3);
   - the trip and the readiness and release handshake as state machines without Netcode types, including a report from before a trip arriving after it;
@@ -644,7 +672,8 @@ Notes:
   - a mob leashed at its chunk's edge;
   - a killed mob staying dead after its chunk unloads and loads, and returning after its delay;
   - a terrain edit surviving its chunk unloading;
-  - a trip offline leaving game time running in the session case.
+  - a trip offline leaving game time running in the session case;
+  - a dead player respawning at its nearest discovered waystone, offline and for an in-process client (Phase 9).
 - **Online tests.** An in-process client test where the host reloads Gameplay freezes the editor. Trips no longer reload Gameplay, so chunk and trip tests stay within one session (`NetworkWorldsPlayModeTests`, `NetworkSessionPlayModeTests` against `InProcessHost`), and a hosted session no longer restarts.
 - **Manual:** Multiplayer Play Mode (Phase 7's steps):
   - two players walk to opposite corners of a world and back;

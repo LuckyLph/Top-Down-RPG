@@ -9,7 +9,7 @@ using VContainer.Unity;
 
 /// <summary>
 /// PlayMode tests for the scene flow: booting into Testlands, the Main, Gameplay, world and chunk scope hierarchy, the
-/// time freeze of offline transitions, the main menu, and respawns after deaths with nothing restarting.
+/// time freeze of offline transitions, the main menu, and respawns at a waystone after deaths with nothing restarting.
 /// </summary>
 public class SceneFlowPlayModeTests
 {
@@ -133,8 +133,9 @@ public class SceneFlowPlayModeTests
     }
 
     /// <summary>
-    /// The only player dies: it is disabled, then after the respawn delay it is back at full health with its
-    /// controller, collider and body on, the same player in the same Gameplay scene, with no transition.
+    /// The only player dies: it is disabled, then after the respawn delay it travels to `start` within Testlands (a trip,
+    /// which never stops time) and is back there at full health with its controller, collider and body on, the same
+    /// player in the same Gameplay scene and world.
     /// </summary>
     [UnityTest]
     public IEnumerator TheOnlyPlayerDying_RespawnsWithoutRestarting()
@@ -148,24 +149,30 @@ public class SceneFlowPlayModeTests
         Collider2D localCollider = localPlayer.GetComponent<Collider2D>();
         Rigidbody2D localBody = localPlayer.GetComponent<Rigidbody2D>();
 
+        WorldDefinition world = gameFlow.CurrentWorld;
+        localPlayer.Teleport(world.ToWorld(new Vector2(30.5f, 40.5f)));
         localHealth.ApplyDamage(localHealth.MaxHealth);
         Assert.That(localPlayer.enabled, Is.False, "A dead player stops responding to input.");
         Assert.That(localBody.simulated, Is.False);
 
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsTravelling, "the dead player's trip to its waystone");
+        Assert.That(Time.timeScale, Is.EqualTo(1f), "A respawn's trip never stops time.");
         yield return SceneBootTestHelper.WaitUntil(() => !localHealth.IsDead, "the dead player to respawn");
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
 
         Assert.That(localPlayer != null, Is.True, "The same player respawns; nothing reloads.");
         Assert.That(gameFlow.GameplayScene, Is.EqualTo(gameplay));
+        Assert.That(gameFlow.CurrentWorld, Is.SameAs(world));
+        Assert.That(Vector2.Distance(localPlayer.transform.position, world.EntryPosition("start")), Is.LessThan(1.5f), "It respawns at `start`.");
         Assert.That(localHealth.CurrentHealth, Is.EqualTo(localHealth.MaxHealth));
         Assert.That(localPlayer.enabled, Is.True);
         Assert.That(localCollider == null || localCollider.enabled, Is.True);
         Assert.That(localBody.simulated, Is.True);
-        Assert.That(gameFlow.IsTransitioning, Is.False, "A respawn restarts nothing.");
     }
 
     /// <summary>
     /// Every player dead at once restarts nothing: past the respawn delay the Gameplay scene and the local player are the
-    /// same, and each player respawns on its own.
+    /// same, and each player respawns on its own: the local one at its waystone, a player in no world where it stands.
     /// </summary>
     [UnityTest]
     public IEnumerator EveryPlayerDeadAtOnce_RestartsNothing()
@@ -190,8 +197,10 @@ public class SceneFlowPlayModeTests
         Assert.That(gameFlow.IsTransitioning, Is.False, "Everyone dead at once starts no transition.");
 
         yield return SceneBootTestHelper.WaitUntil(() => !localHealth.IsDead && !partner.Health.IsDead, "both players to respawn");
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
 
         Assert.That(localPlayer != null, Is.True, "Nothing reloaded the Gameplay scene.");
+        Assert.That((Vector2)partnerObject.transform.position, Is.EqualTo(new Vector2(1000f, 1000f)), "A player in no world comes back where it stands.");
         Assert.That(gameFlow.GameplayScene, Is.EqualTo(gameplay));
         Assert.That(gameFlow.IsInGame, Is.True);
         players.Remove(partner);

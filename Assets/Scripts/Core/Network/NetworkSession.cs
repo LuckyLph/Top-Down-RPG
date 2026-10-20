@@ -17,7 +17,7 @@ using Object = UnityEngine.Object;
 /// home chunk that is; before unloading a chunk it releases it and waits until the host has hidden that chunk's objects
 /// from it. The host keeps every chunk a client holds.
 /// </summary>
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IClientVisibility, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IPlayerIdSource, IClientVisibility, IDisposable
 {
     public const string ClientJoinedMessage = "TopDownRPG.ClientJoined";
     public const string ChunkReadyMessage = "TopDownRPG.ChunkReady";

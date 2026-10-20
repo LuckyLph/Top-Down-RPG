@@ -4,19 +4,28 @@ using VContainer.Unity;
 
 /// <summary>
 /// Each player's death flow, acting only where <see cref="IGameAuthority.IsAuthoritative"/> (Docs/WorldStreaming.md:
-/// Death and respawn): a dead player respawns on its own after <see cref="GameplaySettings.RespawnDelaySeconds"/> of
-/// game time. No rule looks at the other players, so nothing happens when every player is dead at once. A player that
-/// leaves the registry forgets its pending respawn, and so does everything on dispose.
+/// Death and respawn). <see cref="GameplaySettings.RespawnDelaySeconds"/> of game time after a player dies (and once a
+/// trip it was on has arrived), <see cref="PlayerRespawner"/> sends it to the nearest waystone it discovered in its
+/// world; once it stands there its health is restored. No rule looks at the other players, so nothing happens when every
+/// player is dead at once. A player that leaves the registry, or comes back to life some other way, is forgotten, and so
+/// is everything on dispose.
 /// </summary>
 public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
 {
+    private struct Pending
+    {
+        public float DueTime;
+        public bool Travelling;
+        public PlayerRespawner.Respawn Respawn;
+    }
+
     private readonly IPlayerRegistry players;
     private readonly PlayerRespawner respawner;
     private readonly IGameAuthority authority;
     private readonly GameplaySettings settings;
     private readonly IClock clock;
-    private readonly Dictionary<PlayerHandle, float> pending = new();
-    private readonly List<PlayerHandle> due = new();
+    private readonly Dictionary<PlayerHandle, Pending> pending = new();
+    private readonly List<PlayerHandle> waiting = new();
 
     /// <summary>
     /// Captures the registry, the respawner, the authority, the delay settings and the game clock the delay runs on.
@@ -31,9 +40,17 @@ public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// The number of players waiting to respawn, for tests.
+    /// The number of players waiting to respawn or travelling to their waystone, for tests.
     /// </summary>
     internal int PendingCount => pending.Count;
+
+    /// <summary>
+    /// Whether <paramref name="player"/> is on its way to its waystone, for tests.
+    /// </summary>
+    internal bool IsTravellingToWaystone(PlayerHandle player)
+    {
+        return player != null && pending.TryGetValue(player, out Pending state) && state.Travelling;
+    }
 
     /// <summary>
     /// Listens for the death of every registered player, now and as players are added, and for players leaving.
@@ -50,7 +67,8 @@ public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Respawns every dead player whose delay has run out.
+    /// Sends every dead player whose delay has run out, and that is on no trip, to its waystone (restoring it where it
+    /// stands when it has none), and restores every player that reached its waystone.
     /// </summary>
     public void Tick()
     {
@@ -60,19 +78,28 @@ public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
         }
 
         float now = clock.Time;
-        due.Clear();
-        foreach (KeyValuePair<PlayerHandle, float> respawn in pending)
+        waiting.Clear();
+        waiting.AddRange(pending.Keys);
+        for (int i = 0; i < waiting.Count; i++)
         {
-            if (now >= respawn.Value)
+            PlayerHandle player = waiting[i];
+            Pending state = pending[player];
+            if (player.Health == null || !player.Health.IsDead)
             {
-                due.Add(respawn.Key);
+                pending.Remove(player);
             }
-        }
-
-        for (int i = 0; i < due.Count; i++)
-        {
-            pending.Remove(due[i]);
-            respawner.TryRespawn(due[i]);
+            else if (state.Travelling)
+            {
+                if (respawner.HasArrived(player, state.Respawn))
+                {
+                    pending.Remove(player);
+                    respawner.TryRestore(player);
+                }
+            }
+            else if (now >= state.DueTime && !respawner.IsTravelling(player))
+            {
+                Depart(player);
+            }
         }
     }
 
@@ -90,6 +117,22 @@ public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
         }
 
         pending.Clear();
+    }
+
+    /// <summary>
+    /// Sends <paramref name="player"/> to its waystone and waits for it there, or restores it where it stands when it
+    /// has none.
+    /// </summary>
+    private void Depart(PlayerHandle player)
+    {
+        if (respawner.TrySendToWaystone(player, out PlayerRespawner.Respawn respawn))
+        {
+            pending[player] = new Pending { Travelling = true, Respawn = respawn };
+            return;
+        }
+
+        pending.Remove(player);
+        respawner.TryRestore(player);
     }
 
     /// <summary>
@@ -136,7 +179,7 @@ public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
         PlayerHandle deadPlayer = FindPlayer(deadHealth);
         if (deadPlayer != null)
         {
-            pending[deadPlayer] = clock.Time + settings.RespawnDelaySeconds;
+            pending[deadPlayer] = new Pending { DueTime = clock.Time + settings.RespawnDelaySeconds };
         }
     }
 

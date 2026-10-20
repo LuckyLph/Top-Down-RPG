@@ -7,12 +7,14 @@ using VContainer;
 /// count and trip entry from its <see cref="PlayerWorlds"/> into a network variable whenever they change, and tells the
 /// session a client's player set off on a trip so that client's chunk reports from before it are ignored. Every client
 /// feeds the variable into its own <see cref="PlayerWorlds"/>, so each machine knows every player's world; the owner
-/// also hands a new trip to <see cref="NetworkTripAuthority.Deliver"/>, which sets its fade and arrival off. As the
-/// player's <see cref="ITripLink"/> it sends its owner's trip requests to the host as an RPC naming the exit.
+/// also hands a new trip to <see cref="NetworkTripAuthority.Deliver"/>, which sets its fade and arrival off; a respawn
+/// at a waystone is such a trip. As the player's <see cref="ITripLink"/> it sends its owner's trip requests to the host
+/// as an RPC naming the exit, and as its <see cref="IWaystoneLink"/> it tells a client's owner which waystone its player
+/// discovered, raised there on <see cref="WaystoneNotices"/>.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerNetworkSync))]
-public class PlayerWorldSync : NetworkBehaviour, ITripLink
+public class PlayerWorldSync : NetworkBehaviour, ITripLink, IWaystoneLink
 {
     private readonly NetworkVariable<PlayerWorldState> state = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -21,6 +23,7 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink
     private GameScenes gameScenes;
     private NetworkTripAuthority trips;
     private IClientReadiness readiness;
+    private WaystoneNotices waystoneNotices;
     private PlayerHandle handle;
     private WorldDefinition spawnWorld;
     private bool following;
@@ -39,16 +42,17 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink
     }
 
     /// <summary>
-    /// Takes the record of players' worlds, the catalogue world ids are resolved against, the trip authority and the
-    /// session's client readiness.
+    /// Takes the record of players' worlds, the catalogue world ids are resolved against, the trip authority, the
+    /// session's client readiness and where waystone discoveries are told.
     /// </summary>
     [Inject]
-    public void Construct(PlayerWorlds worldsOfPlayers, GameScenes scenes, NetworkTripAuthority tripAuthority, IClientReadiness clientReadiness)
+    public void Construct(PlayerWorlds worldsOfPlayers, GameScenes scenes, NetworkTripAuthority tripAuthority, IClientReadiness clientReadiness, WaystoneNotices notices)
     {
         playerWorlds = worldsOfPlayers;
         gameScenes = scenes;
         trips = tripAuthority;
         readiness = clientReadiness;
+        waystoneNotices = notices;
     }
 
     /// <summary>
@@ -123,6 +127,30 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink
         }
 
         RequestTripRpc(exitId ?? string.Empty, position);
+    }
+
+    /// <summary>
+    /// Host only: tells this player's owner, when it is a client, that its player discovered the waystone
+    /// <paramref name="entryName"/>.
+    /// </summary>
+    public void SendWaystoneDiscovered(string entryName)
+    {
+        if (IsSpawned && IsServer && !IsOwnedByServer)
+        {
+            WaystoneDiscoveredRpc(entryName ?? string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Runs on the owner: raises the discovery of the waystone <paramref name="entryName"/> by this machine's player.
+    /// </summary>
+    [Rpc(SendTo.Owner, InvokePermission = RpcInvokePermission.Server)]
+    private void WaystoneDiscoveredRpc(string entryName)
+    {
+        if (handle != null && waystoneNotices != null)
+        {
+            waystoneNotices.Raise(handle, entryName);
+        }
     }
 
     /// <summary>

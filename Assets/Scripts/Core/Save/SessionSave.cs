@@ -3,16 +3,17 @@ using UnityEngine;
 
 /// <summary>
 /// The running session's saved state, in memory (Docs/WorldStreaming.md: Persistence): the world clock, each player's
-/// place by player id, and the <see cref="WorldState"/> of every world visited, loaded or not. It is used where game
-/// state is decided, offline or on the host; a client keeps an empty one it never writes. A session starts new
-/// (<see cref="StartNew"/>) or from the save file (<see cref="StartFrom"/>), and lasts across restarts, which reload the
-/// Gameplay scene. The world clock is the game time played on the save: the saved time plus the game time since the
-/// session started, so a time recorded in one session still means the same in the next.
+/// place and discovered waystones by player id, and the <see cref="WorldState"/> of every world visited, loaded or not.
+/// It is used where game state is decided, offline or on the host; a client keeps an empty one it never writes. A
+/// session starts new (<see cref="StartNew"/>) or from the save file (<see cref="StartFrom"/>), and lasts as long as the
+/// Main scope, across Gameplay scenes. The world clock is the game time played on the save: the saved time plus the
+/// game time since the session started, so a time recorded in one session still means the same in the next.
 /// </summary>
 public sealed class SessionSave
 {
     private readonly IClock clock;
-    private readonly Dictionary<string, GameSaveData.Player> players = new();
+    private readonly Dictionary<string, GameSaveData.Player> places = new();
+    private readonly Dictionary<string, List<GameSaveData.Waystone>> waystones = new();
     private readonly Dictionary<string, WorldState> worlds = new();
     private double savedTime;
     private float clockAtStart;
@@ -30,7 +31,7 @@ public sealed class SessionSave
     /// </summary>
     public double Time => savedTime + (clock.Time - clockAtStart);
 
-    public int PlayerCount => players.Count;
+    public int PlayerCount => places.Count;
     public int WorldCount => worlds.Count;
 
     /// <summary>
@@ -52,7 +53,8 @@ public sealed class SessionSave
         {
             if (player != null && !string.IsNullOrEmpty(player.PlayerId))
             {
-                players[player.PlayerId] = player;
+                places[player.PlayerId] = new GameSaveData.Player(player.PlayerId, player.WorldId, player.Position);
+                waystones[player.PlayerId] = new List<GameSaveData.Waystone>(player.Waystones);
             }
         }
 
@@ -71,7 +73,7 @@ public sealed class SessionSave
     /// </summary>
     public bool TryGetPlace(string playerId, out string worldId, out Vector2 position)
     {
-        if (!string.IsNullOrEmpty(playerId) && players.TryGetValue(playerId, out GameSaveData.Player player))
+        if (!string.IsNullOrEmpty(playerId) && places.TryGetValue(playerId, out GameSaveData.Player player))
         {
             worldId = player.WorldId;
             position = player.Position;
@@ -84,18 +86,46 @@ public sealed class SessionSave
     }
 
     /// <summary>
-    /// The waystones <paramref name="playerId"/> has discovered; empty for a player this session does not know.
+    /// The waystones <paramref name="playerId"/> has discovered; empty for a player that discovered none. The list
+    /// stays this session's and grows with <see cref="Discover"/>.
     /// </summary>
     public IReadOnlyList<GameSaveData.Waystone> WaystonesOf(string playerId)
     {
-        return !string.IsNullOrEmpty(playerId) && players.TryGetValue(playerId, out GameSaveData.Player player)
-            ? player.Waystones
+        return !string.IsNullOrEmpty(playerId) && waystones.TryGetValue(playerId, out List<GameSaveData.Waystone> discovered)
+            ? discovered
             : System.Array.Empty<GameSaveData.Waystone>();
     }
 
     /// <summary>
-    /// Records <paramref name="playerId"/> at <paramref name="position"/> in the world <paramref name="worldId"/>,
-    /// keeping its discovered waystones. Nothing for an empty player or world id.
+    /// Records that <paramref name="playerId"/> discovered the waystone <paramref name="entryName"/> of the world
+    /// <paramref name="worldId"/>. Returns whether that is new; false, changing nothing, for an empty id or name or a
+    /// waystone already recorded.
+    /// </summary>
+    public bool Discover(string playerId, string worldId, string entryName)
+    {
+        if (string.IsNullOrEmpty(playerId) || string.IsNullOrEmpty(worldId) || string.IsNullOrEmpty(entryName))
+        {
+            return false;
+        }
+
+        if (!waystones.TryGetValue(playerId, out List<GameSaveData.Waystone> discovered))
+        {
+            discovered = new List<GameSaveData.Waystone>();
+            waystones.Add(playerId, discovered);
+        }
+
+        if (WaystoneRules.Contains(discovered, worldId, entryName))
+        {
+            return false;
+        }
+
+        discovered.Add(new GameSaveData.Waystone(worldId, entryName));
+        return true;
+    }
+
+    /// <summary>
+    /// Records <paramref name="playerId"/> at <paramref name="position"/> in the world <paramref name="worldId"/>; its
+    /// discovered waystones stay. Nothing for an empty player or world id.
     /// </summary>
     public void SetPlace(string playerId, string worldId, Vector2 position)
     {
@@ -104,7 +134,7 @@ public sealed class SessionSave
             return;
         }
 
-        players[playerId] = new GameSaveData.Player(playerId, worldId, position, WaystonesOf(playerId));
+        places[playerId] = new GameSaveData.Player(playerId, worldId, position);
     }
 
     /// <summary>
@@ -132,10 +162,18 @@ public sealed class SessionSave
     }
 
     /// <summary>
-    /// The state as save data in the current format, at the world clock's time.
+    /// The state as save data in the current format, at the world clock's time: a record per player with a place, its
+    /// discovered waystones in it. A player with discoveries but no place yet is left out; every player in a world has
+    /// its place recorded before each save.
     /// </summary>
     public GameSaveData ToData()
     {
+        List<GameSaveData.Player> players = new(places.Count);
+        foreach (GameSaveData.Player place in places.Values)
+        {
+            players.Add(new GameSaveData.Player(place.PlayerId, place.WorldId, place.Position, WaystonesOf(place.PlayerId)));
+        }
+
         List<GameSaveData.World> saved = new(worlds.Count);
         foreach (WorldState world in worlds.Values)
         {
@@ -145,7 +183,7 @@ public sealed class SessionSave
             }
         }
 
-        return new GameSaveData(Time, players.Values, saved);
+        return new GameSaveData(Time, players, saved);
     }
 
     /// <summary>
@@ -153,7 +191,8 @@ public sealed class SessionSave
     /// </summary>
     private void Restart(double time)
     {
-        players.Clear();
+        places.Clear();
+        waystones.Clear();
         worlds.Clear();
         savedTime = time;
         clockAtStart = clock.Time;

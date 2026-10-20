@@ -32,3 +32,6 @@ MonoBehaviour:
   - name: fromSandbox
     position: {x: 117.5, y: 40}
     waystone: 0
+  - name: north
+    position: {x: 30.5, y: 90.5}
+    waystone: 1

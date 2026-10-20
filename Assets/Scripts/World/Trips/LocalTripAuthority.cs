@@ -11,7 +11,8 @@ using UnityEngine;
 /// trip, holding the arrival in <see cref="TripArrivals"/> so the target world and the chunks around the entry start
 /// loading, puts the player in the target world for one more trip (<see cref="PlayerWorlds.Travel"/>), and raises
 /// <see cref="Approved"/> for the player's machine to go. A player whose trip is under way cannot ask for another until
-/// it arrives.
+/// it arrives. The authority also starts trips of its own (<see cref="Send"/>): a dead player's to the waystone it
+/// respawns at, within its world.
 /// </summary>
 public sealed class LocalTripAuthority : ITripAuthority
 {
@@ -110,12 +111,26 @@ public sealed class LocalTripAuthority : ITripAuthority
             return false;
         }
 
-        Vector2 position = target.ToWorld(entry.Position);
-        arrivals.Hold(player, new StreamInterest(target, position));
-        playerWorlds.Travel(player, target, entry.Name);
-        approval = new TripApproval(player, target, entry.Name, position);
+        approval = Send(player, target, entry.Name);
         refusal = null;
         return true;
+    }
+
+    /// <summary>
+    /// Sends <paramref name="player"/> on a trip to <paramref name="world"/>'s entry <paramref name="entryName"/> (the
+    /// default entry, with a warning, for an unknown name; the world's middle when it has no entry), checking nothing:
+    /// holds the arrival so the world and the chunks around the entry start loading, puts the player in the world for
+    /// one more trip, and returns the approval its machine goes by. A trip approved from a request goes this way, and so
+    /// does a respawn, which needs no exit.
+    /// </summary>
+    internal TripApproval Send(PlayerHandle player, WorldDefinition world, string entryName)
+    {
+        WorldDefinition.Entry entry = world.FindEntry(entryName);
+        string resolved = entry != null ? entry.Name : string.Empty;
+        Vector2 position = world.EntryPosition(resolved);
+        arrivals.Hold(player, new StreamInterest(world, position));
+        playerWorlds.Travel(player, world, resolved);
+        return new TripApproval(player, world, resolved, position);
     }
 
     private bool IsListed(WorldDefinition world)

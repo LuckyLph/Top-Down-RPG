@@ -143,6 +143,7 @@ public sealed class InProcessClient : IDisposable
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton);
+        builder.Register<WaystoneNotices>(Lifetime.Singleton);
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);

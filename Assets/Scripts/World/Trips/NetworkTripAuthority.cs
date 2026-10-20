@@ -9,7 +9,8 @@ using UnityEngine;
 /// (<see cref="PlayerWorldSync"/>). On a client a request goes to the host through its player's <see cref="ITripLink"/>,
 /// with where its own machine has the player, and the host's answer comes back as <see cref="Deliver"/>: the arrival is
 /// held so the target world starts loading here, and <see cref="Approved"/> sets this machine's trip off. Nobody else
-/// fades or pauses.
+/// fades or pauses. The host also sends players on trips of its own (<see cref="Send"/>: a respawn at a waystone), which
+/// reach a client's player the same way.
 /// </summary>
 public sealed class NetworkTripAuthority : ITripAuthority
 {
@@ -84,6 +85,19 @@ public sealed class NetworkTripAuthority : ITripAuthority
 
         Debug.LogWarning($"Trip refused: {refusal}");
         return false;
+    }
+
+    /// <summary>
+    /// Offline or on the host: sends <paramref name="player"/> on a trip to <paramref name="world"/>'s entry
+    /// <paramref name="entryName"/> that no request asked for (a dead player to its waystone), as an approved trip goes:
+    /// the arrival held, the player put in the world for one more trip, and <see cref="Approved"/> raised, which a
+    /// client's player hears of through its networked world. Returns the approval.
+    /// </summary>
+    public TripApproval Send(PlayerHandle player, WorldDefinition world, string entryName)
+    {
+        TripApproval approval = local.Send(player, world, entryName);
+        Approved?.Invoke(approval);
+        return approval;
     }
 
     /// <summary>

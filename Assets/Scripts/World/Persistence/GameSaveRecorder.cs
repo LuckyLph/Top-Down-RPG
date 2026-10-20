@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -8,24 +7,24 @@ using VContainer.Unity;
 /// Gameplay-scope entry point that writes the save during a world session (Docs/WorldStreaming.md: Persistence), only
 /// on the machine that decides game state (offline or the host; a client never saves): when any player enters a world
 /// (the session starting, a trip, a player joining), every <see cref="GameplaySettings.AutosaveIntervalSeconds"/> of
-/// game time, and as the session ends (the menu, a new game or restart, the host leaving, quitting). Each save first
-/// records every player's place in the <see cref="SessionSave"/> by player id: where it stands, or the entry of the trip
-/// it is on until it gets there. A player that leaves has its place recorded as it goes, for its next join. Area
-/// sessions are not saved.
+/// game time, and as the session ends (the menu, a new game, the host leaving, quitting). Each save first records every
+/// player's place in the <see cref="SessionSave"/> by its player id (<see cref="PlayerIds"/>): where it stands, the
+/// entry of the trip it is on until it gets there, or, for a dead player, the waystone it will respawn at, so leaving or
+/// quitting while dead neither skips the respawn nor brings it back beside its killer. A player that leaves has its
+/// place recorded as it goes, for its next join.
 /// </summary>
 public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
 {
     private readonly GameSave gameSave;
     private readonly SessionSave sessionSave;
     private readonly IGameAuthority authority;
-    private readonly NetworkSession session;
+    private readonly PlayerIds playerIds;
     private readonly IPlayerRegistry players;
     private readonly PlayerWorlds playerWorlds;
     private readonly TripArrivals arrivals;
     private readonly GameFlow gameFlow;
     private readonly GameplaySettings settings;
     private readonly IClock clock;
-    private readonly Dictionary<PlayerHandle, string> playerIds = new();
     private readonly Dictionary<PlayerHandle, WorldDefinition> lastWorlds = new();
     private bool saveRequested;
     private float nextAutosave;
@@ -33,13 +32,13 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
 
     /// <summary>
     /// Creates the recorder that writes <paramref name="sessionSave"/> through <paramref name="gameSave"/>, following
-    /// the players, their worlds and trips and the session's end.
+    /// the players, their ids, worlds and trips and the session's end.
     /// </summary>
     public GameSaveRecorder(
         GameSave gameSave,
         SessionSave sessionSave,
         IGameAuthority authority,
-        NetworkSession session,
+        PlayerIds playerIds,
         IPlayerRegistry players,
         PlayerWorlds playerWorlds,
         TripArrivals arrivals,
@@ -50,7 +49,7 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
         this.gameSave = gameSave;
         this.sessionSave = sessionSave;
         this.authority = authority;
-        this.session = session;
+        this.playerIds = playerIds;
         this.players = players;
         this.playerWorlds = playerWorlds;
         this.arrivals = arrivals;
@@ -65,12 +64,11 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null;
 
     /// <summary>
-    /// Follows the players, their worlds, the session's end and the application quitting, and learns the players
-    /// already registered.
+    /// Follows the players leaving, their worlds, the session's end and the application quitting, and the worlds of the
+    /// players already registered.
     /// </summary>
     public void Start()
     {
-        players.PlayerAdded += HandlePlayerAdded;
         players.PlayerRemoved += HandlePlayerRemoved;
         playerWorlds.Changed += HandlePlayerWorldChanged;
         gameFlow.WorldSessionEnding += HandleWorldSessionEnding;
@@ -79,7 +77,6 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
         IReadOnlyList<PlayerHandle> registered = players.Players;
         for (int i = 0; i < registered.Count; i++)
         {
-            HandlePlayerAdded(registered[i]);
             WorldDefinition world = playerWorlds.Get(registered[i]);
             if (world != null)
             {
@@ -142,7 +139,6 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
         }
 
         started = false;
-        players.PlayerAdded -= HandlePlayerAdded;
         players.PlayerRemoved -= HandlePlayerRemoved;
         playerWorlds.Changed -= HandlePlayerWorldChanged;
         gameFlow.WorldSessionEnding -= HandleWorldSessionEnding;
@@ -174,52 +170,51 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Records <paramref name="player"/>'s place in its last world under its player id, when it has both and a place
-    /// (see <see cref="TryGetPlace"/>).
+    /// The place to save for a dead player of <paramref name="world"/> standing at <paramref name="standing"/>: the
+    /// waystone it will respawn at, the nearest of <paramref name="discovered"/> and the world's default entry
+    /// (<see cref="WaystoneRules.TryFindNearest"/>). False when the world has no entry.
+    /// </summary>
+    internal static bool TryGetRespawnPlace(WorldDefinition world, Vector2 standing, IReadOnlyList<GameSaveData.Waystone> discovered, out Vector2 place)
+    {
+        if (WaystoneRules.TryFindNearest(world, standing, discovered, out WorldDefinition.Entry entry))
+        {
+            place = world.ToWorld(entry.Position);
+            return true;
+        }
+
+        place = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Records <paramref name="player"/>'s place in its last world under its player id, when it has both and a place:
+    /// its trip's entry while it travels, the waystone it respawns at while it is dead (<see cref="TryGetRespawnPlace"/>),
+    /// else where it stands (see <see cref="TryGetPlace"/>).
     /// </summary>
     private void RecordPlace(PlayerHandle player)
     {
-        if (player == null || player.Transform == null
-            || !playerIds.TryGetValue(player, out string playerId) || string.IsNullOrEmpty(playerId)
+        string playerId = playerIds.IdOf(player);
+        if (player == null || player.Transform == null || string.IsNullOrEmpty(playerId)
             || !lastWorlds.TryGetValue(player, out WorldDefinition world) || world == null)
         {
             return;
         }
 
+        Vector2 standing = player.Transform.position;
         bool travelling = arrivals.TryGet(player, out StreamInterest arrival);
-        if (TryGetPlace(world, player.Transform.position, travelling, arrival, out Vector2 place))
+        bool dead = player.Health != null && player.Health.IsDead && !travelling;
+        Vector2 place;
+        bool placed = dead
+            ? TryGetRespawnPlace(world, standing, sessionSave.WaystonesOf(playerId), out place)
+            : TryGetPlace(world, standing, travelling, arrival, out place);
+        if (placed)
         {
             sessionSave.SetPlace(playerId, world.WorldId, place);
         }
     }
 
     /// <summary>
-    /// The player id of <paramref name="player"/>: its owner's on the host, this install's offline.
-    /// </summary>
-    private string IdOf(PlayerHandle player)
-    {
-        if (session.IsActive && player.Transform != null
-            && player.Transform.TryGetComponent(out NetworkObject networkObject) && networkObject.IsSpawned)
-        {
-            return session.PlayerIdOf(networkObject.OwnerClientId);
-        }
-
-        return session.LocalPlayerId;
-    }
-
-    /// <summary>
-    /// Learns a new player's id while it is spawned, since its owner may be gone by the time it leaves.
-    /// </summary>
-    private void HandlePlayerAdded(PlayerHandle player)
-    {
-        if (player != null)
-        {
-            playerIds[player] = IdOf(player);
-        }
-    }
-
-    /// <summary>
-    /// Records the place of a player that leaves (a client disconnecting, the session ending), then forgets it.
+    /// Records the place of a player that leaves (a client disconnecting, the session ending), then forgets its world.
     /// </summary>
     private void HandlePlayerRemoved(PlayerHandle player)
     {
@@ -228,7 +223,6 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
             RecordPlace(player);
         }
 
-        playerIds.Remove(player);
         lastWorlds.Remove(player);
     }
 

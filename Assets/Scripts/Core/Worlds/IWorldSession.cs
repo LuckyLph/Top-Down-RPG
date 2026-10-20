@@ -2,8 +2,9 @@ using System.Threading;
 using UnityEngine;
 
 /// <summary>
-/// What the gameplay scope provides so <see cref="GameFlow"/> can start a session in a seamless world and end it: the
-/// streaming of worlds and chunks around the players, behind the screen fade.
+/// What the gameplay scope provides so <see cref="GameFlow"/> can start a session in a seamless world, take the local
+/// player to another world's entry and end the session: the streaming of worlds and chunks around the players, behind
+/// the screen fade.
 /// </summary>
 public interface IWorldSession
 {
@@ -17,6 +18,13 @@ public interface IWorldSession
     /// default entry when null) and completes once the world and the chunks around them are loaded.
     /// </summary>
     Awaitable EnterAsync(WorldDefinition world, string entryName, CancellationToken cancellation);
+
+    /// <summary>
+    /// Ends a trip of the local player, already put in <paramref name="world"/> by the trip's authority: moves it to
+    /// the entry <paramref name="entryName"/> (the default entry when there is none of that name) and completes once
+    /// the world and the chunks around it are loaded. The worlds it left stay loaded for the empty-world grace.
+    /// </summary>
+    Awaitable ArriveAsync(WorldDefinition world, string entryName, CancellationToken cancellation);
 
     /// <summary>
     /// Ends the session: unloads every chunk and world, one at a time, and completes once nothing is left.

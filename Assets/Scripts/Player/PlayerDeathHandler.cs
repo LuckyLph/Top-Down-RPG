@@ -173,7 +173,8 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Waits the restart delay, then starts the session over in the current area or world. Returns quietly when
+    /// Waits the restart delay and for any running transition (a trip between worlds keeps game time running, so the
+    /// delay can end during one), then starts the session over in the current area or world. Returns quietly when
     /// cancelled.
     /// </summary>
     private async Awaitable RestartAfterDelayAsync(CancellationToken cancellation)
@@ -181,6 +182,10 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
         try
         {
             await Awaitable.WaitForSecondsAsync(settings.RestartDelaySeconds, cancellation);
+            while (gameFlow.IsTransitioning)
+            {
+                await Awaitable.NextFrameAsync(cancellation);
+            }
         }
         catch (OperationCanceledException)
         {

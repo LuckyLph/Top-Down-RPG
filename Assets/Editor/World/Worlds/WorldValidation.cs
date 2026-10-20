@@ -10,15 +10,18 @@ using UnityEngine.SceneManagement;
 /// the scene's Props root) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the
 /// rule <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
-/// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Each problem is a line naming
-/// the object; the World Editor shows them and <see cref="WorldBuildValidator"/> refuses a build with any.
+/// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Every <see cref="WorldExit"/>
+/// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has. Each
+/// problem is a line naming the object; the World Editor shows them and <see cref="WorldBuildValidator"/> refuses a
+/// build with any.
 /// </summary>
 public static class WorldValidation
 {
     /// <summary>
-    /// The ownership problems of the objects in <paramref name="chunk"/>'s scene.
+    /// The ownership problems of the objects in <paramref name="chunk"/>'s scene, its exits checked against
+    /// <paramref name="listedWorlds"/> (the project's <see cref="GameScenes"/> list when null).
     /// </summary>
-    public static List<string> ValidateChunk(WorldChunk chunk)
+    public static List<string> ValidateChunk(WorldChunk chunk, IReadOnlyList<WorldDefinition> listedWorlds = null)
     {
         List<string> problems = new();
         Scene scene = chunk.gameObject.scene;
@@ -45,10 +48,15 @@ public static class WorldValidation
                 problems.Add($"{PersistentIds.PathOf(id)}: its {nameof(PersistentId)} has no id; run Repair ids in the World Editor.");
             }
 
-            if (!id.TryGetComponent(out MobSpawnPoint _) && !id.TryGetComponent(out SpawnPoint _))
+            if (!id.TryGetComponent(out MobSpawnPoint _) && !id.TryGetComponent(out SpawnPoint _) && !id.TryGetComponent(out WorldExit _))
             {
                 CheckInside(problems, id, grid, cells, "object with a persistent id");
             }
+        }
+
+        foreach (WorldExit exit in SceneQuery.FindAll<WorldExit>(scene))
+        {
+            CheckExit(problems, exit, grid, cells, listedWorlds ?? ListedWorlds());
         }
 
         foreach (GameObject root in scene.GetRootGameObjects())
@@ -154,6 +162,68 @@ public static class WorldValidation
         }
 
         return problems;
+    }
+
+    /// <summary>
+    /// Adds a problem for each way <paramref name="exit"/> is wrong: a cell outside <paramref name="cells"/>, no target
+    /// world, a target missing from <paramref name="listedWorlds"/>, or a target entry the world does not have (or no
+    /// default entry for an empty name).
+    /// </summary>
+    private static void CheckExit(List<string> problems, WorldExit exit, GridLayout grid, RectInt cells, IReadOnlyList<WorldDefinition> listedWorlds)
+    {
+        Vector3Int first = grid.WorldToCell(exit.transform.position);
+        RectInt covered = new(new Vector2Int(first.x, first.y), exit.SizeInCells);
+        if (covered.xMin < cells.xMin || covered.yMin < cells.yMin || covered.xMax > cells.xMax || covered.yMax > cells.yMax)
+        {
+            problems.Add($"{PersistentIds.PathOf(exit)}: a world exit covering cells ({covered.xMin}, {covered.yMin}) to ({covered.xMax - 1}, {covered.yMax - 1}), outside its chunk's cells {Describe(cells)}.");
+        }
+
+        WorldDefinition target = exit.TargetWorld;
+        if (target == null)
+        {
+            problems.Add($"{PersistentIds.PathOf(exit)}: a world exit leading to no world.");
+            return;
+        }
+
+        bool listed = false;
+        for (int i = 0; i < listedWorlds.Count && !listed; i++)
+        {
+            listed = listedWorlds[i] == target;
+        }
+
+        if (!listed)
+        {
+            problems.Add($"{PersistentIds.PathOf(exit)}: a world exit leading to {target.name}, which Game Scenes does not list.");
+        }
+
+        if (string.IsNullOrEmpty(exit.TargetEntry))
+        {
+            if (target.DefaultEntry == null)
+            {
+                problems.Add($"{PersistentIds.PathOf(exit)}: a world exit leading to {target.name}, which has no entry.");
+            }
+
+            return;
+        }
+
+        foreach (WorldDefinition.Entry entry in target.Entries)
+        {
+            if (entry != null && entry.Name == exit.TargetEntry)
+            {
+                return;
+            }
+        }
+
+        problems.Add($"{PersistentIds.PathOf(exit)}: a world exit leading to entry '{exit.TargetEntry}' of {target.name}, which has no entry of that name.");
+    }
+
+    /// <summary>
+    /// The worlds the project's <see cref="GameScenes"/> lists; none without one.
+    /// </summary>
+    private static IReadOnlyList<WorldDefinition> ListedWorlds()
+    {
+        GameScenes gameScenes = ProjectScenes.LoadGameScenes();
+        return gameScenes != null ? gameScenes.Worlds : new WorldDefinition[0];
     }
 
     /// <summary>

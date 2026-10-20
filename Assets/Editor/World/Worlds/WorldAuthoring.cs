@@ -16,7 +16,8 @@ using UnityEngine.Tilemaps;
 /// <see cref="SceneDefinition"/> and a place in the build list. Painting ground, walls and raised ground into the open
 /// chunks, keeping each chunk's layer list covering its neighbours' border materials, and baking the coast maps
 /// (<see cref="WorldCoastBake"/>, only where the sea changed when asked) work across a whole world. Chunks open with
-/// their neighbours and close again, and a world is listed in <see cref="GameScenes"/>. The World Editor window
+/// their neighbours and close again, and a world is listed in <see cref="GameScenes"/>. World exits are placed in the
+/// open chunks and entries set on a world. The World Editor window
 /// (<see cref="WorldEditorWindow"/>) runs these steps.
 /// </summary>
 public static class WorldAuthoring
@@ -25,6 +26,7 @@ public static class WorldAuthoring
     public const string StylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
     public const string AreaTemplatePath = "Assets/Settings/Scenes/AreaTemplate.unity";
     public const string WallsName = "CollisionTilemap";
+    public const string ExitsRootName = "Exits";
     private const float GlobalLightIntensity = 0.85f;
 
     /// <summary>
@@ -944,6 +946,117 @@ public static class WorldAuthoring
         }
 
         return closed;
+    }
+
+    /// <summary>
+    /// Places a <see cref="WorldExit"/> on <paramref name="world"/>'s cell <paramref name="cell"/> (its lower-left
+    /// cell, counted from the world's origin) in the open chunk owning that cell, under the scene's
+    /// <see cref="ExitsRootName"/> root (made when missing), with a new <see cref="PersistentId"/>, leading to
+    /// <paramref name="target"/>'s entry <paramref name="entryName"/> and covering <paramref name="size"/> cells, as
+    /// one undo step. Throws when that chunk is not open.
+    /// </summary>
+    public static WorldExit AddExit(WorldDefinition world, Vector2Int cell, WorldDefinition target, string entryName, Vector2Int size)
+    {
+        Vector2Int coords = ChunkCoords.ChunkOf(cell);
+        Grid grid = OpenChunkGrid(world, coords);
+        if (grid == null)
+        {
+            throw new System.InvalidOperationException($"Chunk {coords} of {world.name}, which owns cell {cell}, is not open.");
+        }
+
+        Scene scene = grid.gameObject.scene;
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add world exit");
+        int undoGroup = Undo.GetCurrentGroup();
+        GameObject root = null;
+        foreach (GameObject candidate in scene.GetRootGameObjects())
+        {
+            if (candidate.name == ExitsRootName)
+            {
+                root = candidate;
+            }
+        }
+
+        if (root == null)
+        {
+            root = new GameObject(ExitsRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            Undo.RegisterCreatedObjectUndo(root, "Add world exit");
+        }
+
+        GameObject exitObject = new($"Exit_{(target != null ? target.name : "Nowhere")}");
+        exitObject.transform.SetParent(root.transform, false);
+        exitObject.transform.position = world.ToWorld(cell + Vector2.one * 0.5f);
+        WorldExit exit = exitObject.AddComponent<WorldExit>();
+        PersistentIds.SetId(exitObject.GetComponent<PersistentId>(), PersistentIds.NewId());
+        ConfigureExit(exit, target, entryName, size);
+        Undo.RegisterCreatedObjectUndo(exitObject, "Add world exit");
+        Undo.CollapseUndoOperations(undoGroup);
+        EditorSceneManager.MarkSceneDirty(scene);
+        return exit;
+    }
+
+    /// <summary>
+    /// Sets where <paramref name="exit"/> leads and how many cells it covers, through its serialized object, recorded
+    /// for undo.
+    /// </summary>
+    public static void ConfigureExit(WorldExit exit, WorldDefinition target, string entryName, Vector2Int size)
+    {
+        SerializedObject data = new(exit);
+        data.FindProperty("targetWorld").objectReferenceValue = target;
+        data.FindProperty("targetEntry").stringValue = entryName ?? string.Empty;
+        data.FindProperty("sizeInCells").vector2IntValue = Vector2Int.Max(size, Vector2Int.one);
+        data.ApplyModifiedProperties();
+    }
+
+    /// <summary>
+    /// The exits in <paramref name="world"/>'s open chunk scenes, in chunk order.
+    /// </summary>
+    public static List<WorldExit> OpenExits(WorldDefinition world)
+    {
+        List<WorldExit> exits = new();
+        foreach (Vector2Int coords in OpenChunkCoords(world))
+        {
+            Grid grid = OpenChunkGrid(world, coords);
+            if (grid != null)
+            {
+                exits.AddRange(SceneQuery.FindAll<WorldExit>(grid.gameObject.scene));
+            }
+        }
+
+        return exits;
+    }
+
+    /// <summary>
+    /// Gives <paramref name="world"/> the entry <paramref name="entryName"/> at <paramref name="localPosition"/> from
+    /// its origin, replacing the one of that name or adding it after the others (so the default stays first), and
+    /// saves the world.
+    /// </summary>
+    public static void SetEntry(WorldDefinition world, string entryName, Vector2 localPosition, bool waystone)
+    {
+        List<WorldDefinition.Entry> entries = new();
+        bool replaced = false;
+        foreach (WorldDefinition.Entry entry in world.Entries)
+        {
+            if (entry != null && entry.Name == entryName)
+            {
+                entries.Add(new WorldDefinition.Entry(entryName, localPosition, waystone));
+                replaced = true;
+            }
+            else
+            {
+                entries.Add(entry);
+            }
+        }
+
+        if (!replaced)
+        {
+            entries.Add(new WorldDefinition.Entry(entryName, localPosition, waystone));
+        }
+
+        Undo.RecordObject(world, "Set world entry");
+        world.SetEntries(entries.ToArray());
+        AssetDatabase.SaveAssetIfDirty(world);
     }
 
     /// <summary>

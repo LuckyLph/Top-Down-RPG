@@ -29,3 +29,6 @@ MonoBehaviour:
   - name: start
     position: {x: 30.5, y: 42}
     waystone: 1
+  - name: fromInterior
+    position: {x: 33.5, y: 42}
+    waystone: 0

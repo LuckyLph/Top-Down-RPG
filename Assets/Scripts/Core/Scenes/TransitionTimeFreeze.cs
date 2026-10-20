@@ -4,7 +4,8 @@ using VContainer.Unity;
 /// <summary>
 /// Stops game time while a <see cref="GameFlow"/> transition runs: it holds the <see cref="TimeFreeze"/> from
 /// <see cref="GameFlow.TransitionStarted"/> to <see cref="GameFlow.TransitionFinished"/>, so nothing ticks, moves
-/// or expires behind the fade. The fader runs on unscaled time.
+/// or expires behind the fade. A trip between worlds (<see cref="GameFlow.IsTravelling"/>) is a local fade only and
+/// never stops time. The fader runs on unscaled time.
 /// </summary>
 public sealed class TransitionTimeFreeze : IStartable, IDisposable
 {
@@ -41,11 +42,20 @@ public sealed class TransitionTimeFreeze : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Holds the freeze while a transition runs and releases it otherwise.
+    /// Whether game time stops: while a transition runs (<paramref name="transitioning"/>) that is not a trip between
+    /// worlds (<paramref name="travelling"/>).
+    /// </summary>
+    internal static bool Freezes(bool transitioning, bool travelling)
+    {
+        return transitioning && !travelling;
+    }
+
+    /// <summary>
+    /// Holds the freeze while a transition that stops time runs and releases it otherwise.
     /// </summary>
     private void Refresh()
     {
-        if (gameFlow.IsTransitioning)
+        if (Freezes(gameFlow.IsTransitioning, gameFlow.IsTravelling))
         {
             timeFreeze.Hold(this);
         }

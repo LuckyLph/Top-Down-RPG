@@ -10,8 +10,11 @@ using VContainer.Unity;
 /// (<see cref="WorldChunk"/>) is enabled once the local player's interest rectangle (the view plus the load margin)
 /// overlaps it, and stays enabled until it leaves the rectangle widened by the unload hysteresis, so walking back and
 /// forth over a border rebuilds nothing; every chunk of another world is disabled, so the host builds no ground for
-/// the chunks it loads for other players. It applies this when the local player, its world, its cell or the loaded
-/// worlds and chunks change; each frame it only compares the local player's cell with the last one.
+/// the chunks it loads for other players. The world shown is the local player's world once the player stands in it:
+/// on a trip the player is put in the target world before it is moved there, so the world it is leaving stays shown,
+/// lit and drawn, until it arrives behind the fade (<see cref="PresentedWorld"/>). It applies this when the local
+/// player, its world, its cell or the loaded worlds and chunks change; each frame it only compares the local player's
+/// cell with the last one.
 /// </summary>
 public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
 {
@@ -72,7 +75,6 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
             }
         }
 
-        ApplyLighting();
         Tick();
     }
 
@@ -89,13 +91,14 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Shows and hides the chunks' ground when the local player's world or cell changed, or a chunk came or went.
+    /// Shows the lighting of the world presented and the ground of its chunks near the local player when that world or
+    /// the player's cell changed, or a world or chunk came or went.
     /// </summary>
     public void Tick()
     {
-        WorldDefinition local = LocalWorld();
-        Vector2Int cell = shownCell;
         Transform body = localPlayer.Current != null ? localPlayer.Current.Handle.Transform : null;
+        WorldDefinition local = body != null ? PresentedWorld(LocalWorld(), body.position, shownWorld) : LocalWorld();
+        Vector2Int cell = shownCell;
         if (local != null && body != null)
         {
             cell = ChunkCoords.CellOf(local.ToLocal(body.position));
@@ -109,6 +112,7 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
         dirty = false;
         shownWorld = local;
         shownCell = cell;
+        ApplyLighting();
         RectInt draw = ChunkCoords.Around(cell, drawExtents);
         RectInt keep = ChunkCoords.Around(cell, keepExtents);
         for (int i = chunks.Count - 1; i >= 0; i--)
@@ -136,6 +140,22 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
+    /// The world to present for a local player recorded in <paramref name="playerWorld"/> and standing at
+    /// <paramref name="position"/>, while <paramref name="shown"/> is presented: the player's world once the player
+    /// stands on its cells, or when nothing is shown yet; the world shown otherwise, as when a trip has put the player
+    /// in its target world but not moved it there yet.
+    /// </summary>
+    internal static WorldDefinition PresentedWorld(WorldDefinition playerWorld, Vector2 position, WorldDefinition shown)
+    {
+        if (playerWorld == null || shown == null || playerWorld == shown)
+        {
+            return playerWorld;
+        }
+
+        return playerWorld.LocalBounds.Contains(ChunkCoords.CellOf(playerWorld.ToLocal(position))) ? playerWorld : shown;
+    }
+
+    /// <summary>
     /// The local player's world, or null.
     /// </summary>
     private WorldDefinition LocalWorld()
@@ -144,16 +164,25 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Turns on the lighting of the local player's world and off every other loaded world's.
+    /// Turns off the lighting of every loaded world but the one presented, then on that one's, so two global lights
+    /// are never enabled together.
     /// </summary>
     private void ApplyLighting()
     {
-        WorldDefinition local = LocalWorld();
-        foreach (LoadedWorld world in worlds.Loaded)
+        IReadOnlyList<LoadedWorld> loaded = worlds.Loaded;
+        for (int i = 0; i < loaded.Count; i++)
         {
-            if (world.Lighting != null)
+            if (loaded[i].Lighting != null && loaded[i].Definition != shownWorld)
             {
-                world.Lighting.SetShown(world.Definition == local);
+                loaded[i].Lighting.SetShown(false);
+            }
+        }
+
+        for (int i = 0; i < loaded.Count; i++)
+        {
+            if (loaded[i].Lighting != null && loaded[i].Definition == shownWorld)
+            {
+                loaded[i].Lighting.SetShown(true);
             }
         }
     }
@@ -175,6 +204,7 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
     private void HandleWorldLoaded(LoadedWorld world)
     {
         ApplyLighting();
+        dirty = true;
     }
 
     private void HandleChunkLoaded(LoadedWorld world, Vector2Int coords)
@@ -199,13 +229,11 @@ public sealed class LocalWorldPresentation : IStartable, ITickable, IDisposable
 
     private void HandlePlayerWorldChanged(PlayerHandle player, WorldDefinition world)
     {
-        ApplyLighting();
         dirty = true;
     }
 
     private void HandleLocalPlayerChanged(LocalPlayer player)
     {
-        ApplyLighting();
         dirty = true;
     }
 }

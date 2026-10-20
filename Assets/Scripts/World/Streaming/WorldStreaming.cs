@@ -10,7 +10,9 @@ using VContainer.Unity;
 /// Gameplay-scope driver of seamless worlds: each frame it tells its <see cref="ChunkStreamer"/> where the players
 /// this machine streams for stand (every player offline or on the host, its own player on a client), and runs the
 /// streamer's next load or unload, one at a time: a world's root scene under the Gameplay scope, a chunk under its
-/// world's scope. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/> enters and leaves worlds through.
+/// world's scope. It also streams the arrival of every trip under way (<see cref="TripArrivals"/>), so a trip's target
+/// world loads while the traveller's screen fades out. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
+/// enters and leaves worlds through, and that brings the local player to a trip's entry.
 /// </summary>
 public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
 {
@@ -26,6 +28,7 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     private readonly IGameAuthority authority;
     private readonly IClock clock;
     private readonly CameraFollow2D cameraFollow;
+    private readonly TripArrivals arrivals;
     private readonly List<StreamInterest> interests = new();
     private readonly CancellationTokenSource disposeCancellation = new();
     private bool active;
@@ -44,7 +47,8 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
         LocalPlayerTracker localPlayer,
         IGameAuthority authority,
         IClock clock,
-        CameraFollow2D cameraFollow)
+        CameraFollow2D cameraFollow,
+        TripArrivals arrivals)
     {
         streamer = settings.CreateStreamer();
         this.sceneLoader = sceneLoader;
@@ -56,6 +60,7 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
         this.authority = authority;
         this.clock = clock;
         this.cameraFollow = cameraFollow;
+        this.arrivals = arrivals;
     }
 
     public bool IsActive => active;
@@ -106,8 +111,7 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
             await Awaitable.NextFrameAsync(cancellation);
         }
 
-        WorldDefinition.Entry entry = world.FindEntry(entryName);
-        Vector2 position = world.ToWorld(entry != null ? entry.Position : world.LocalBounds.center);
+        Vector2 position = EntryPosition(world, entryName);
         IReadOnlyList<PlayerHandle> party = players.Players;
         for (int i = 0; i < party.Count; i++)
         {
@@ -127,11 +131,45 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     }
 
     /// <summary>
+    /// Moves the local player, which the trip's authority has put in <paramref name="world"/>, to its entry
+    /// <paramref name="entryName"/>, snaps the camera there, and completes once the world and the chunks around the
+    /// entry are loaded. The world it left keeps everything for the empty-world grace. Throws without a local player.
+    /// </summary>
+    public async Awaitable ArriveAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
+    {
+        if (world == null)
+        {
+            throw new ArgumentNullException(nameof(world));
+        }
+
+        LocalPlayer local = localPlayer.Current;
+        if (local == null || local.Controller == null)
+        {
+            throw new InvalidOperationException($"No local player to bring to {world.name}.");
+        }
+
+        if (playerWorlds.Get(local.Handle) != world)
+        {
+            Debug.LogWarning($"The local player arrives in {world.name} but is recorded in another world.");
+        }
+
+        Vector2 position = EntryPosition(world, entryName);
+        local.Controller.Teleport(position);
+        cameraFollow.SnapToTarget();
+        StreamInterest arrival = new(world, position);
+        while (!streamer.IsSettled(arrival))
+        {
+            await Awaitable.NextFrameAsync(cancellation);
+        }
+    }
+
+    /// <summary>
     /// Stops streaming and unloads every chunk and world, one at a time, then takes every player out of its world.
     /// </summary>
     public async Awaitable LeaveAsync(CancellationToken cancellation)
     {
         active = false;
+        arrivals.Clear();
         streamer.ReleaseAll();
         while (!streamer.IsEmpty)
         {
@@ -155,8 +193,18 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Fills the interests with the players this machine streams for: every registered player in a world when it has
-    /// authority, its local player otherwise.
+    /// The world position of <paramref name="world"/>'s entry <paramref name="entryName"/> (its default entry, with a
+    /// warning, for an unknown name), or of its middle when it has no entry.
+    /// </summary>
+    private static Vector2 EntryPosition(WorldDefinition world, string entryName)
+    {
+        WorldDefinition.Entry entry = world.FindEntry(entryName);
+        return world.ToWorld(entry != null ? entry.Position : world.LocalBounds.center);
+    }
+
+    /// <summary>
+    /// Fills the interests with the players this machine streams for (every registered player in a world when it has
+    /// authority, its local player otherwise) and the arrivals of the trips under way.
     /// </summary>
     private void CollectInterests()
     {
@@ -177,6 +225,8 @@ public sealed class WorldStreaming : IWorldSession, ITickable, IDisposable
                 interests.Add(new StreamInterest(world, player.Transform.position));
             }
         }
+
+        arrivals.AddInterests(interests, playerWorlds);
     }
 
     /// <summary>

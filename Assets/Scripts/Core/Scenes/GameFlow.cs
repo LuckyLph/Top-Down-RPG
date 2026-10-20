@@ -8,8 +8,10 @@ using VContainer.Unity;
 /// <summary>
 /// Moves the app between the main menu, a new game, area changes and sessions in seamless worlds by loading and
 /// unloading scenes additively under the right DI scopes (menu and gameplay under Main, the area under gameplay; a
-/// world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. Runs one transition
-/// at a time and ignores requests made while one runs.
+/// world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. A trip of the local
+/// player between worlds is a transition too, flagged <see cref="IsTravelling"/>: a local fade only, which loads and
+/// unloads nothing itself and never stops game time. Runs one transition at a time and ignores requests made while
+/// one runs.
 /// </summary>
 public sealed class GameFlow
 {
@@ -40,6 +42,7 @@ public sealed class GameFlow
     public event Action<AreaTransition> AreaLoading;
 
     public bool IsTransitioning { get; private set; }
+    public bool IsTravelling { get; private set; }
     public bool IsInMenu => IsLoaded(menuScene);
     public bool IsInGame => IsLoaded(gameplayScene) && (IsLoaded(areaScene) || CurrentWorld != null);
     public SceneDefinition CurrentArea { get; private set; }
@@ -89,8 +92,27 @@ public sealed class GameFlow
     }
 
     /// <summary>
-    /// Starts the running session over where it began: the current world at the entry it was entered by, or the
-    /// current area at the starting spawn id.
+    /// Takes the local player on a trip to <paramref name="world"/>'s entry <paramref name="entryName"/>, once the
+    /// trip's authority has approved it and put the player in that world: fades out, has the gameplay scope's
+    /// <see cref="IWorldSession"/> move the local player to the entry and wait for the ground around it, and fades in.
+    /// The world becomes <see cref="CurrentWorld"/> and the entry the one a restart uses. Gameplay input is off for the
+    /// whole trip, as in every transition, but game time runs on (<see cref="IsTravelling"/>). Logs an error and does
+    /// nothing outside a world session.
+    /// </summary>
+    public async Awaitable TravelAsync(WorldDefinition world, string entryName, CancellationToken cancellation = default)
+    {
+        if (world == null || CurrentWorld == null || !TryGetWorldSession(out _))
+        {
+            Debug.LogError($"{nameof(GameFlow)} can only travel to a world during a world session.");
+            return;
+        }
+
+        await RunTransitionAsync(token => TravelCoreAsync(world, entryName, token), cancellation, true);
+    }
+
+    /// <summary>
+    /// Starts the running session over where the local player is: the current world (the one it last travelled to) at
+    /// the entry it arrived by, or the current area at the starting spawn id.
     /// </summary>
     public Awaitable RestartAsync(CancellationToken cancellation = default)
     {
@@ -129,10 +151,11 @@ public sealed class GameFlow
 
     /// <summary>
     /// Runs <paramref name="transition"/> between a fade out and a fade in, raising <see cref="TransitionStarted"/>
-    /// and, whatever happens, <see cref="TransitionFinished"/>. Cancellation (also on application exit) ends it
-    /// quietly; other exceptions are logged and rethrown. Warns and does nothing while another transition runs.
+    /// and, whatever happens, <see cref="TransitionFinished"/>, with <see cref="IsTravelling"/> set for a trip
+    /// (<paramref name="travel"/>). Cancellation (also on application exit) ends it quietly; other exceptions are
+    /// logged and rethrown. Warns and does nothing while another transition runs.
     /// </summary>
-    private async Awaitable RunTransitionAsync(Func<CancellationToken, Awaitable> transition, CancellationToken cancellation)
+    private async Awaitable RunTransitionAsync(Func<CancellationToken, Awaitable> transition, CancellationToken cancellation, bool travel = false)
     {
         if (IsTransitioning)
         {
@@ -145,6 +168,7 @@ public sealed class GameFlow
         CancellationToken token = linked.Token;
 
         IsTransitioning = true;
+        IsTravelling = travel;
         TransitionStarted?.Invoke();
         try
         {
@@ -163,6 +187,7 @@ public sealed class GameFlow
         finally
         {
             IsTransitioning = false;
+            IsTravelling = false;
             TransitionFinished?.Invoke();
         }
     }
@@ -237,6 +262,24 @@ public sealed class GameFlow
         CurrentWorld = world;
         currentEntry = entryName;
         await session.EnterAsync(world, entryName, cancellation);
+    }
+
+    /// <summary>
+    /// Records <paramref name="world"/> and <paramref name="entryName"/> as where the session is, then has the world
+    /// session bring the local player to that entry once the screen is dark. Logs an error when the session went
+    /// meanwhile.
+    /// </summary>
+    private async Awaitable TravelCoreAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
+    {
+        if (CurrentWorld == null || !TryGetWorldSession(out IWorldSession session))
+        {
+            Debug.LogError($"{nameof(GameFlow)} lost the world session before the trip to {world.name}.");
+            return;
+        }
+
+        CurrentWorld = world;
+        currentEntry = entryName;
+        await session.ArriveAsync(world, entryName, cancellation);
     }
 
     /// <summary>

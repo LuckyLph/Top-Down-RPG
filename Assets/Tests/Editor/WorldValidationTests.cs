@@ -138,6 +138,46 @@ public class WorldValidationTests
     }
 
     /// <summary>
+    /// An exit on the chunk's cells leading to a listed world's entry passes; one whose cells cross the border, one
+    /// leading to a world not listed, one naming an entry its target lacks and one leading nowhere are each refused,
+    /// by name.
+    /// </summary>
+    [Test]
+    public void WorldExits_AreCheckedForTheirCellsTargetAndEntry()
+    {
+        WorldDefinition target = Track(WorldDefinition.Create("ExitTarget", new Vector2Int(4096, 0), Vector2Int.one, new[] { Vector2Int.zero }, new WorldDefinition.Entry("start", new Vector2(10.5f, 10.5f), true)));
+        WorldDefinition other = Track(WorldDefinition.Create("NotListed", new Vector2Int(6144, 0), Vector2Int.one, new[] { Vector2Int.zero }, new WorldDefinition.Entry("start", new Vector2(10.5f, 10.5f), true)));
+        WorldDefinition[] listed = { world, target };
+        PlaceExit("Good exit", 70.5f, 10.5f, target, "start", Vector2Int.one);
+        PlaceExit("Default exit", 71.5f, 10.5f, target, string.Empty, new Vector2Int(2, 2));
+        Assert.That(WorldValidation.ValidateChunk(chunk, listed), Is.Empty);
+
+        PlaceExit("Wide exit", 126.5f, 10.5f, target, "start", new Vector2Int(3, 1));
+        PlaceExit("Unlisted exit", 80.5f, 10.5f, other, "start", Vector2Int.one);
+        PlaceExit("Lost exit", 81.5f, 10.5f, target, "cellar", Vector2Int.one);
+        PlaceExit("Blind exit", 82.5f, 10.5f, null, null, Vector2Int.one);
+
+        List<string> problems = WorldValidation.ValidateChunk(chunk, listed);
+
+        Assert.That(problems.Count, Is.EqualTo(4), string.Join("\n", problems));
+        Assert.That(problems.Exists(p => p.Contains("Wide exit") && p.Contains("(126, 10) to (128, 10)")), Is.True);
+        Assert.That(problems.Exists(p => p.Contains("Unlisted exit") && p.Contains("does not list")), Is.True);
+        Assert.That(problems.Exists(p => p.Contains("Lost exit") && p.Contains("'cellar'")), Is.True);
+        Assert.That(problems.Exists(p => p.Contains("Blind exit") && p.Contains("no world")), Is.True);
+    }
+
+    /// <summary>
+    /// A world exit named <paramref name="name"/> with a persistent id at world-local (<paramref name="x"/>,
+    /// <paramref name="y"/>), leading to <paramref name="target"/>'s entry <paramref name="entry"/>.
+    /// </summary>
+    private void PlaceExit(string name, float x, float y, WorldDefinition target, string entry, Vector2Int size)
+    {
+        WorldExit exit = Place<WorldExit>(name, x, y);
+        PersistentIds.SetId(exit.GetComponent<PersistentId>(), PersistentIds.NewId());
+        WorldAuthoring.ConfigureExit(exit, target, entry, size);
+    }
+
+    /// <summary>
     /// A new object named <paramref name="name"/> with a <typeparamref name="T"/> at world-local
     /// (<paramref name="x"/>, <paramref name="y"/>).
     /// </summary>

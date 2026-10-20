@@ -10,7 +10,8 @@ using UnityEngine.Tilemaps;
 /// <c>Tools/TopDownRPG/World/World Editor</c> (Docs/WorldStreaming.md: Authoring): creates a world at the first free
 /// origin of the global layout with its chunks, lists it in <see cref="GameScenes"/>, opens a chunk with its eight
 /// neighbours (or alone) and closes them again, gives an open chunk walls or raised ground for the Terrain Brush to
-/// paint, opens the root scene, edits the world's entries and waystones, and runs
+/// paint, opens the root scene, edits the world's entries and waystones, places and edits the world exits of its open
+/// chunks, and runs
 /// the whole-world steps: syncing the layer lists, baking the coast maps of the chunks whose sea changed (or all of
 /// them), repairing persistent ids and validating the world. The steps live in <see cref="WorldAuthoring"/>,
 /// <see cref="WorldLayout"/>, <see cref="PersistentIds"/> and <see cref="WorldValidation"/>; the window only draws
@@ -87,6 +88,8 @@ public class WorldEditorWindow : EditorWindow
             DrawChunks();
             EditorGUILayout.Space();
             DrawEntries();
+            EditorGUILayout.Space();
+            DrawExits();
             EditorGUILayout.Space();
             DrawSteps();
         }
@@ -313,6 +316,95 @@ public class WorldEditorWindow : EditorWindow
                 EditorGUILayout.HelpBox($"Entry '{entry.Name}' at {entry.Position} is on no chunk of the world.", MessageType.Warning);
             }
         }
+    }
+
+    /// <summary>
+    /// The exits of the picked world's open chunks, each with where it leads (a world and one of its entries, or its
+    /// default entry), its size, and a button selecting it; then a button placing a new exit in the selected chunk, at
+    /// the Scene view's pivot when it lies on that chunk and at its middle otherwise.
+    /// </summary>
+    private void DrawExits()
+    {
+        EditorGUILayout.LabelField("Exits (in the open chunks)", EditorStyles.boldLabel);
+        foreach (WorldExit exit in WorldAuthoring.OpenExits(world))
+        {
+            DrawExit(exit);
+        }
+
+        Grid grid = WorldAuthoring.OpenChunkGrid(world, selected);
+        using (new EditorGUI.DisabledScope(grid == null))
+        {
+            if (GUILayout.Button(grid == null ? "Add exit (open the selected chunk first)" : $"Add exit to chunk {selected}"))
+            {
+                Vector2Int cell = ExitCell();
+                Run(() => Selection.activeGameObject = WorldAuthoring.AddExit(world, cell, null, null, Vector2Int.one).gameObject);
+            }
+        }
+    }
+
+    /// <summary>
+    /// One exit's row: its name and first cell, its target world and entry, its size and a button selecting it.
+    /// </summary>
+    private void DrawExit(WorldExit exit)
+    {
+        RectInt cells = exit.CellsIn(world);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField($"{exit.name} at {cells.position}", GUILayout.MinWidth(120f));
+        if (GUILayout.Button("Select", GUILayout.Width(60f)))
+        {
+            Selection.activeGameObject = exit.gameObject;
+            EditorGUIUtility.PingObject(exit.gameObject);
+        }
+
+        EditorGUILayout.EndHorizontal();
+        EditorGUI.indentLevel++;
+        EditorGUI.BeginChangeCheck();
+        WorldDefinition target = (WorldDefinition)EditorGUILayout.ObjectField("Leads to", exit.TargetWorld, typeof(WorldDefinition), false);
+        string entry = exit.TargetEntry;
+        if (target != null)
+        {
+            List<string> names = new() { "(default entry)" };
+            foreach (WorldDefinition.Entry candidate in target.Entries)
+            {
+                if (candidate != null)
+                {
+                    names.Add(candidate.Name);
+                }
+            }
+
+            int index = string.IsNullOrEmpty(entry) ? 0 : Mathf.Max(0, names.IndexOf(entry));
+            index = EditorGUILayout.Popup("Entry", index, names.ToArray());
+            entry = index == 0 ? string.Empty : names[index];
+        }
+
+        Vector2Int size = EditorGUILayout.Vector2IntField("Size in cells", exit.SizeInCells);
+        if (EditorGUI.EndChangeCheck())
+        {
+            WorldAuthoring.ConfigureExit(exit, target, entry, size);
+            EditorSceneManager.MarkSceneDirty(exit.gameObject.scene);
+        }
+
+        EditorGUI.indentLevel--;
+    }
+
+    /// <summary>
+    /// Where a new exit goes in the selected chunk: the cell under the Scene view's pivot when it lies on that chunk,
+    /// the chunk's middle cell otherwise.
+    /// </summary>
+    private Vector2Int ExitCell()
+    {
+        RectInt chunkCells = ChunkCoords.Bounds(selected);
+        SceneView view = SceneView.lastActiveSceneView;
+        if (view != null)
+        {
+            Vector2Int pivot = ChunkCoords.CellOf(world.ToLocal(view.pivot));
+            if (chunkCells.Contains(pivot))
+            {
+                return pivot;
+            }
+        }
+
+        return chunkCells.position + chunkCells.size / 2;
     }
 
     /// <summary>

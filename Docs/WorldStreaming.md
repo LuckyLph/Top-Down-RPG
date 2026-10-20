@@ -118,19 +118,19 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ### Travelling between worlds
 
-1. A player walks into a world exit, a trigger in a chunk naming a target world and entry. Its own machine asks the host for the trip. On the host, or offline, the request is local.
+1. A player walks into a world exit, a rectangle of cells in a chunk naming a target world and entry (`WorldExit`). Its own machine asks the host for the trip, naming the exit by its persistent id. On the host, or offline, the request is local. An exit fires once per step onto it from a cell that is no exit, and never right after a trip (see Phase 6's notes).
 2. The host checks the trip:
    - the exit exists in the player's world;
    - the player is at the exit;
    - the target is a listed world.
-3. The host loads the target world, if no other player is in it, and its chunks around the entry, in the background.
+3. The host loads the target world, if no other player is in it, and its chunks around the entry, in the background: the entry is streamed as an interest of its own from the moment the trip is approved.
 4. The host sets the player's world and tells the player's machine to go.
 5. The player's machine:
-   - fades out and blocks its input;
-   - keeps the old world, untouched, for the empty-world grace, then releases its chunks (see Networking) and unloads it. A trip back within the grace reuses it;
-   - loads the new world's root scene and its chunks around the entry;
+   - fades out and blocks its input, with game time running;
+   - keeps the old world, untouched, lit and drawn until the player has moved, then for the empty-world grace, then releases its chunks (see Networking) and unloads it. A trip back within the grace reuses it;
+   - loads the new world's root scene and its chunks around the entry (offline and on the host, already loading since step 3);
    - moves its player to the entry, since a client owns its player's movement;
-   - reports the chunks ready and fades in.
+   - waits until the ground around the entry is loaded, reports the chunks ready and fades in.
 6. The host unloads the old world once no player has been in it for the empty-world grace and no client still holds any of its chunks.
 
 No other machine fades or pauses. On the host, its own player's trip is a local fade only: the host keeps simulating every other world.
@@ -196,11 +196,12 @@ Main (MainLifetimeScope)
   - Each frame it gives the streamer the streamed players' worlds and positions, and runs its next action through `SceneLoader`: a world's root scene under the Gameplay scope, a chunk under its world's scope (`LifetimeScope.EnqueueParent`, as `GameFlow` does), with the world's definition or the chunk's identity enqueued into the new scope.
   - It records what is up in `Worlds`.
   - From Phase 7 it does not unload a chunk whose networked objects are still visible to some client (see Networking).
-- **`GameFlow`** keeps the menu, starting a session, and the local player's fade. It no longer loads gameplay content itself. `TransitionTimeFreeze` follows only offline transitions, or goes.
+- **`GameFlow`** keeps the menu, starting a session, and the local player's fade. It no longer loads gameplay content itself. A trip is one of its transitions (`TravelAsync`, `IsTravelling`), which `TransitionTimeFreeze` leaves alone, so a trip never stops time, offline or not.
+- **Trips** (Phase 6) go through `ITripAuthority`: a player's machine sends `TripRequest`s (`LocalTripTraveller`, which watches the local player's cell against the loaded `WorldExits`), the authority (`LocalTripAuthority` offline) checks them, holds the arrival in `TripArrivals` for the streaming and sets the player's world, and its `Approved` event tells the player's machine to go.
 
 ### Presentation per machine
 
-- **`LocalWorldPresentation`** (Gameplay) follows the local player's world:
+- **`LocalWorldPresentation`** (Gameplay) follows the local player's world, once the player stands in it (during a trip the player is put in the target world before it is moved there, and the world being left stays shown until then):
   - turns on that world's global light and turns off every other loaded world's: each root scene holds its lights under a `WorldLighting` object it shows or hides. URP warns about more than one global light per sorting layer and lights everything with one of them, whichever world it is in (Phase 0);
   - points the camera and the HUD at it;
   - enables only the chunk renderers of that world within the local player's interest rectangle, keeping each until it leaves the rectangle widened by the unload hysteresis, so walking back and forth over the rectangle's edge rebuilds nothing. A chunk scene's terrain starts disabled in play mode (its `WorldChunk` disables it before it builds), so nothing is built for a chunk that will not be drawn.
@@ -259,7 +260,7 @@ Walls stay dual-grid tilemaps per chunk. Their render tilemap is offset by half 
 Scene management stays off: each machine loads its own worlds and chunks, as it loads areas today.
 
 - **Each player's world** is a `NetworkVariable` on the player object, written by the host. It replaces area announcements, `AreaEpoch` and `NetworkAreaSync`. A client loads its own player's world when that value changes. Other players' worlds matter to it only for what it is shown.
-- **Trip requests.** A client asks for a trip with an RPC naming the exit's persistent id. The host checks it, prepares the target world and sets the player's world, which tells the client to go (see Travelling between worlds).
+- **Trip requests.** A client asks for a trip with an RPC naming the exit's persistent id. The host checks it, prepares the target world and sets the player's world, which tells the client to go (see Travelling between worlds). Phase 6 laid this out offline: `ITripAuthority.Request` is where the RPC goes, `LocalTripAuthority.TryApprove` is the host's check, and `Approved` is where the client's go message arrives.
 - **Per-chunk readiness** replaces the single ready set. Every message carries the chunk id (world, cx, cy) and the player's trip count, so a report from before a trip is ignored.
   - A client reports `ChunkReady(trip, chunk)` once a chunk is up and its prefabs are registered. The host shows that client every spawned object whose home chunk that is.
   - Before unloading a chunk, a client sends `ChunkReleasing(chunk)` and waits. The host hides that chunk's objects from it (`NetworkHide`) and acknowledges, and only then does the client unload, so a client never destroys a spawned object locally.
@@ -491,8 +492,22 @@ Notes:
 
 ### Phase 6: world exits, offline
 
-- [ ] World exits and entries, travelling with a local fade and no time freeze in a session.
-- [ ] The old world unloads once no player has been in it for `emptyWorldGrace` (10 s), and a trip back within that reuses it.
+- [x] World exits and entries, travelling with a local fade and no time freeze in a session.
+- [x] The old world unloads once no player has been in it for `emptyWorldGrace` (10 s), and a trip back within that reuses it.
+
+Notes:
+
+- **Exits.** A `WorldExit` is a marker in a chunk scene: a target world, an entry name (empty for the default entry) and a size in cells from the cell holding its position, with a `PersistentId` (`[RequireComponent]`). It is not a trigger collider: `LocalTripTraveller` compares the local player's cell with the last one each frame and only on a new cell asks `WorldExits` (the exits of the loaded chunks, read from each chunk's scene as `Worlds` reports it loaded) whether the cell is an exit's. That keeps the per-frame work to one cell comparison, needs no physics layer or collision matrix, and works the same on a client, whose player is the only one it moves.
+- **Re-trigger protection.** `ExitTriggerGuard` fires only when the player steps onto an exit from a cell that is none. It starts unarmed and is disarmed after every trip, so a player that appears on an exit (an entry placed on one, a new session) must step off first, walking along a wide exit fires nothing more, and a refused request is not sent again every frame. The Sandbox's `fromInterior` entry also stands two and a half cells in front of its exit.
+- **The trip flow.** Request: `LocalTripTraveller` sends a `TripRequest` (the player, the exit's id) to `ITripAuthority`. Check: `LocalTripAuthority` finds the exit among the loaded exits of the player's world, requires the player within one cell of its cells (room for a client's position arriving late in Phase 7), requires a target that `GameScenes` lists, and resolves the entry (an unknown name falls back to the default entry with a warning; a world with no entry is refused); a player already travelling is refused, and every refusal is logged as a warning. Prepare: the arrival (target world, entry position) goes into `TripArrivals`, which `WorldStreaming` streams as an extra interest until the player stands within two cells of the entry in that world, so loading starts while the screen fades out. Set: `PlayerWorlds.Set`. Go: `Approved` reaches `LocalTripTraveller`, which waits for any running transition, stops the player and runs `GameFlow.TravelAsync`: fade out, `IWorldSession.ArriveAsync` (teleport to the entry, snap the camera, wait for `IsSettled` there), fade in.
+- **No time freeze.** A trip is a `GameFlow` transition flagged `IsTravelling`, not a separate presentation transition, so `GameFlow`'s one-transition rule keeps a trip and a menu, restart or session change from overlapping either way; `GameplayInputGate` turns gameplay and menu input off for it as for any transition; `TransitionTimeFreeze` does not hold for it (`Freezes(transitioning, travelling)`). Game time runs on through the fade, offline too, so mobs and statuses keep ticking (Architecture.md's Known gaps: the arrival is not protected). A party-wipe restart whose delay ends during a trip waits for it to finish instead of being dropped.
+- **Between Set and the teleport** the player is recorded in the target world while it still stands in the old one, as a client's player will be in Phase 7 until it moves. The old world's mobs drop it at once (`WorldPlayers`), the old world starts its grace, the player's own interest falls outside the target world's chunks and loads nothing, and `LocalWorldPresentation` keeps showing the old world (lighting and ground) until the player stands on the target world's cells (`PresentedWorld`), so nothing goes dark behind the fade out.
+- **Global lights.** A trip loads the target world's root scene beside the one on screen, and URP logs an error as soon as a second global light is enabled, not when it draws. `WorldLighting` now hides its object in `Awake` in play mode (execution order -1000, before the lights under it enable) and `LocalWorldPresentation` shows the world on screen, also at once as a world loads.
+- **The world left behind** keeps everything for the grace, as `ChunkStreamer` already did: a trip straight back reuses the same `LoadedWorld` and scenes, and a world nobody returns to unloads its chunks and itself once 10 s of game time have passed (both checked by `WorldTripPlayModeTests`).
+- **Restart.** `GameFlow.CurrentWorld` is now the local player's world: the one the session started in, then each one it travelled to. `RestartAsync` (the party wipe, until Phase 9 removes it) restarts the session in that world at the entry the player last arrived by, since players move between worlds and the world the session began in may be far behind them. The save still knows only areas (Phase 8).
+- **Authoring.** `WorldAuthoring.AddExit` places an exit under a chunk scene's `Exits` root with a new id, `ConfigureExit` sets where it leads, and `SetEntry` adds or moves an entry; the World Editor lists the exits of the open chunks with their target world, an entry popup and size, and adds one at the Scene view's pivot. Validation checks each exit's cells lie in its chunk and that it leads to a listed world at an entry it has.
+- **The test content.** The Sandbox has an exit on the road at cells (36, 41) and (36, 42), east of its `start`, leading to the SandboxInterior's `start`, and a new entry `fromInterior` at (33.5, 42); the interior has an exit on its room's bottom row, cells (31, 24) and (32, 24), leading back to `fromInterior`. Both were placed with `AddExit` on chunks opened alone; saving them also redrew the Sandbox chunk's wall render tiles along its upper and right borders and wrote an empty `coastSource` on both chunks, which were left out.
+- **Tests:** `WorldTripTests` (EditMode: the authority's checks and approval, `WorldExits`, the guard, `TripArrivals`, the time freeze), exit cases in `WorldValidationTests` and `LocalWorldPresentationTests`, and `WorldTripPlayModeTests` (the trip into the interior and back within the grace, the grace running out, the menu after a trip).
 
 ### Phase 7: multiplayer
 

@@ -27,6 +27,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/WorldStreaming.md` is the plan for seamless worlds that players travel between on their own: chunk scenes streamed around the players, worlds at separate origins, navigation and terrain across chunk borders, per-chunk networking and world persistence. Follow it when working on scene flow, areas or worlds, chunk loading, world navigation or world saves, and tick off its phase checklist as steps land.
 
+`Docs/WorldGeneration.md` is the plan for generating worlds in the editor: a world generator that composes a world from the area generators' layouts as regions, with wilds, roads and the sea between them, and writes it into the world's chunk scenes, starting with the Overworld, the first world. Follow it when working on world generation, the regions, the Overworld, or regenerating a world without breaking saves or hand work, and tick off its phase checklist as steps land.
+
 Use only art generated in this project (recipes and editor tools); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.

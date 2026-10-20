@@ -93,3 +93,4 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 - Prefer editing existing files over creating new ones; do not add speculative abstractions.
 - Check the official Unity/package docs (`unity_docs` tool, or the web) before reverse-engineering behaviour.
 - New `*LifetimeScope.cs` files can be overwritten by Unity's script template on first import; verify the contents after creating one.
+- Never publish an artifact (a claude.ai page). Share previews, images and reports as files in the scratchpad or the repo, with their paths in the reply.

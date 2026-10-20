@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Ownership checks of seamless worlds (Docs/WorldStreaming.md: Ownership): everything placed in a chunk lies inside
-/// its 64 x 64 cells. A spawn point, a mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of
+/// its 64 x 64 cells. A mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of
 /// the scene's Props root) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the
 /// rule <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
@@ -27,11 +27,6 @@ public static class WorldValidation
         Scene scene = chunk.gameObject.scene;
         Grid grid = chunk.GetComponent<Grid>();
         RectInt cells = chunk.Cells;
-        foreach (SpawnPoint point in SceneQuery.FindAll<SpawnPoint>(scene))
-        {
-            CheckInside(problems, point, grid, cells, "spawn point");
-        }
-
         foreach (MobSpawnPoint point in SceneQuery.FindAll<MobSpawnPoint>(scene))
         {
             CheckInside(problems, point, grid, cells, "mob spawn point");
@@ -48,7 +43,7 @@ public static class WorldValidation
                 problems.Add($"{PersistentIds.PathOf(id)}: its {nameof(PersistentId)} has no id; run Repair ids in the World Editor.");
             }
 
-            if (!id.TryGetComponent(out MobSpawnPoint _) && !id.TryGetComponent(out SpawnPoint _) && !id.TryGetComponent(out WorldExit _))
+            if (!id.TryGetComponent(out MobSpawnPoint _) && !id.TryGetComponent(out WorldExit _))
             {
                 CheckInside(problems, id, grid, cells, "object with a persistent id");
             }

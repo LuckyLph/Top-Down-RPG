@@ -33,17 +33,25 @@ public static class SceneSetMenu
     }
 
     /// <summary>
-    /// Opens Main with the Gameplay scene and the starting area additively, making the area active; warns and does
-    /// nothing when the <see cref="GameScenes"/> asset is missing.
+    /// Opens Main with the Gameplay scene and the starting world's root scene additively, making the world's root
+    /// active; warns and does nothing when the <see cref="GameScenes"/> asset is missing or lists no starting world.
     /// </summary>
-    [MenuItem(OpenScenesMenu + "Main + Gameplay + Starting Area", priority = 22)]
+    [MenuItem(OpenScenesMenu + "Main + Gameplay + Starting World", priority = 22)]
     private static void OpenGameplay()
     {
         GameScenes gameScenes = LoadGameScenesOrWarn();
-        if (gameScenes != null)
+        if (gameScenes == null)
         {
-            Open(ProjectScenes.MainScenePath, gameScenes.Gameplay.ScenePath, gameScenes.StartingArea.ScenePath);
+            return;
         }
+
+        if (gameScenes.StartingWorld == null || gameScenes.StartingWorld.RootScene == null)
+        {
+            Debug.LogWarning($"{gameScenes.name} has no starting world with a root scene.", gameScenes);
+            return;
+        }
+
+        Open(ProjectScenes.MainScenePath, gameScenes.Gameplay.ScenePath, gameScenes.StartingWorld.RootScene.ScenePath);
     }
 
     /// <summary>
@@ -63,7 +71,6 @@ public static class SceneSetMenu
             EditorSceneManager.OpenScene(scenePaths[i], OpenSceneMode.Additive);
         }
 
-        // Edit the last scene of the set by default (menu or area), not Main.
         EditorSceneManager.SetActiveScene(EditorSceneManager.GetSceneByPath(scenePaths[scenePaths.Length - 1]));
     }
 

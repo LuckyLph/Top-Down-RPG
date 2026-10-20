@@ -27,7 +27,7 @@ public class WorldTripPlayModeTests
     [UnityTest]
     public IEnumerator WalkingIntoAnExit_TravelsToTheInterior_AndBackWithinTheGrace_ReusingTheSandbox()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
@@ -89,7 +89,7 @@ public class WorldTripPlayModeTests
     [UnityTest]
     public IEnumerator TheWorldLeftBehind_UnloadsOnceTheGraceIsOver()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();

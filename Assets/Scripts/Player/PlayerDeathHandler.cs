@@ -1,45 +1,39 @@
 using System;
-using System.Threading;
-using UnityEngine;
+using System.Collections.Generic;
 using VContainer.Unity;
 
 /// <summary>
-/// The party's death flow, acting only where <see cref="IGameAuthority.IsAuthoritative"/>: a dead player respawns
-/// after the respawn delay, and offline, once every registered player is dead, the game restarts in the current area or
-/// world after the restart delay. In a session nothing restarts: each player respawns on its own, as
-/// Docs/WorldStreaming.md's Death and respawn plans, since a restart would reload the host's Gameplay scene under its
-/// clients. Pending respawns and restarts are cancelled on dispose.
+/// Each player's death flow, acting only where <see cref="IGameAuthority.IsAuthoritative"/> (Docs/WorldStreaming.md:
+/// Death and respawn): a dead player respawns on its own after <see cref="GameplaySettings.RespawnDelaySeconds"/> of
+/// game time. No rule looks at the other players, so nothing happens when every player is dead at once. A player that
+/// leaves the registry forgets its pending respawn, and so does everything on dispose.
 /// </summary>
-public sealed class PlayerDeathHandler : IStartable, IDisposable
+public sealed class PlayerDeathHandler : IStartable, ITickable, IDisposable
 {
     private readonly IPlayerRegistry players;
     private readonly PlayerRespawner respawner;
     private readonly IGameAuthority authority;
-    private readonly GameFlow gameFlow;
     private readonly GameplaySettings settings;
-    private readonly ISessionStatus session;
-    private readonly CancellationTokenSource disposeCancellation = new();
-    private bool restartPending;
+    private readonly IClock clock;
+    private readonly Dictionary<PlayerHandle, float> pending = new();
+    private readonly List<PlayerHandle> due = new();
 
     /// <summary>
-    /// Captures the registry, the respawner, the authority, the game flow that restarts, the delay settings and the
-    /// session status that rules restarts out online.
+    /// Captures the registry, the respawner, the authority, the delay settings and the game clock the delay runs on.
     /// </summary>
-    public PlayerDeathHandler(
-        IPlayerRegistry players,
-        PlayerRespawner respawner,
-        IGameAuthority authority,
-        GameFlow gameFlow,
-        GameplaySettings settings,
-        ISessionStatus sessionStatus)
+    public PlayerDeathHandler(IPlayerRegistry players, PlayerRespawner respawner, IGameAuthority authority, GameplaySettings settings, IClock clock)
     {
-        session = sessionStatus;
         this.players = players;
         this.respawner = respawner;
         this.authority = authority;
-        this.gameFlow = gameFlow;
         this.settings = settings;
+        this.clock = clock;
     }
+
+    /// <summary>
+    /// The number of players waiting to respawn, for tests.
+    /// </summary>
+    internal int PendingCount => pending.Count;
 
     /// <summary>
     /// Listens for the death of every registered player, now and as players are added, and for players leaving.
@@ -56,7 +50,34 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Stops listening to the registry and every player, and cancels any pending respawn or restart.
+    /// Respawns every dead player whose delay has run out.
+    /// </summary>
+    public void Tick()
+    {
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        float now = clock.Time;
+        due.Clear();
+        foreach (KeyValuePair<PlayerHandle, float> respawn in pending)
+        {
+            if (now >= respawn.Value)
+            {
+                due.Add(respawn.Key);
+            }
+        }
+
+        for (int i = 0; i < due.Count; i++)
+        {
+            pending.Remove(due[i]);
+            respawner.TryRespawn(due[i]);
+        }
+    }
+
+    /// <summary>
+    /// Stops listening to the registry and every player, and forgets every pending respawn.
     /// </summary>
     public void Dispose()
     {
@@ -68,8 +89,7 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
             Unsubscribe(player);
         }
 
-        disposeCancellation.Cancel();
-        disposeCancellation.Dispose();
+        pending.Clear();
     }
 
     /// <summary>
@@ -95,20 +115,20 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Stops listening to a player that left and restarts when everyone still registered is dead.
+    /// Stops listening to a player that left and forgets its pending respawn.
     /// </summary>
     private void HandlePlayerRemoved(PlayerHandle player)
     {
         Unsubscribe(player);
-        RestartIfPartyWiped();
+        pending.Remove(player);
     }
 
     /// <summary>
-    /// On the authority, restarts if this death wiped the party and otherwise schedules the dead player's respawn.
+    /// On the authority, schedules the dead player's respawn after the respawn delay.
     /// </summary>
     private void HandleDied(Health deadHealth)
     {
-        if (!authority.IsAuthoritative || RestartIfPartyWiped())
+        if (!authority.IsAuthoritative)
         {
             return;
         }
@@ -116,29 +136,8 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
         PlayerHandle deadPlayer = FindPlayer(deadHealth);
         if (deadPlayer != null)
         {
-            _ = RespawnAfterDelayAsync(deadPlayer, disposeCancellation.Token);
+            pending[deadPlayer] = clock.Time + settings.RespawnDelaySeconds;
         }
-    }
-
-    /// <summary>
-    /// Offline, schedules a restart, once, when there are players and none is alive. Returns true when a restart is
-    /// pending or this machine is not the authority, so the caller does nothing else.
-    /// </summary>
-    private bool RestartIfPartyWiped()
-    {
-        if (restartPending || !authority.IsAuthoritative)
-        {
-            return true;
-        }
-
-        if (session.IsActive || players.Players.Count == 0 || players.AnyAlive)
-        {
-            return false;
-        }
-
-        restartPending = true;
-        _ = RestartAfterDelayAsync(disposeCancellation.Token);
-        return true;
     }
 
     /// <summary>
@@ -155,49 +154,5 @@ public sealed class PlayerDeathHandler : IStartable, IDisposable
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Waits the respawn delay, then respawns <paramref name="player"/> unless a restart became pending meanwhile.
-    /// Returns quietly when cancelled.
-    /// </summary>
-    private async Awaitable RespawnAfterDelayAsync(PlayerHandle player, CancellationToken cancellation)
-    {
-        try
-        {
-            await Awaitable.WaitForSecondsAsync(settings.RespawnDelaySeconds, cancellation);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (!restartPending)
-        {
-            respawner.TryRespawn(player);
-        }
-    }
-
-    /// <summary>
-    /// Waits the restart delay and for any running transition (a trip between worlds keeps game time running, so the
-    /// delay can end during one), then starts the session over in the current area or world. Returns quietly when
-    /// cancelled.
-    /// </summary>
-    private async Awaitable RestartAfterDelayAsync(CancellationToken cancellation)
-    {
-        try
-        {
-            await Awaitable.WaitForSecondsAsync(settings.RestartDelaySeconds, cancellation);
-            while (gameFlow.IsTransitioning)
-            {
-                await Awaitable.NextFrameAsync(cancellation);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        await gameFlow.RestartAsync();
     }
 }

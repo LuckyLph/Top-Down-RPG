@@ -10,6 +10,8 @@ using UnityEngine;
 /// </summary>
 public class SceneBuildValidator : IPreprocessBuildWithReport
 {
+    public const string DevFolder = "Assets/Dev/";
+
     public int callbackOrder => 0;
 
     /// <summary>
@@ -45,7 +47,9 @@ public class SceneBuildValidator : IPreprocessBuildWithReport
 
     /// <summary>
     /// Checks that Main is the first enabled build scene and that every <see cref="SceneDefinition"/> asset points at
-    /// a scene enabled in the build list, refreshing their paths first. Returns the problems found, empty when valid.
+    /// a scene enabled in the build list, refreshing their paths first. Definitions under <see cref="DevFolder"/> (the
+    /// dev-only stress world, played from the editor) need no build scene. Returns the problems found, empty when
+    /// valid.
     /// </summary>
     public static List<string> Validate()
     {
@@ -63,6 +67,11 @@ public class SceneBuildValidator : IPreprocessBuildWithReport
         foreach (string guid in AssetDatabase.FindAssets($"t:{nameof(SceneDefinition)}"))
         {
             string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (assetPath.StartsWith(DevFolder))
+            {
+                continue;
+            }
+
             SceneDefinition definition = AssetDatabase.LoadAssetAtPath<SceneDefinition>(assetPath);
             if (definition == null)
             {

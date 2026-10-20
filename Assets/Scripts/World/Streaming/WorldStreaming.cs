@@ -36,6 +36,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     private readonly TripArrivals arrivals;
     private readonly IChunkHandshake handshake;
     private readonly ISessionStatus sessionStatus;
+    private readonly float slotSpacing;
     private readonly List<StreamInterest> interests = new();
     private readonly List<StreamInterest> preparations = new();
     private readonly CancellationTokenSource disposeCancellation = new();
@@ -45,7 +46,8 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
 
     /// <summary>
     /// Creates the driver with a streamer made from <paramref name="settings"/>, loading through
-    /// <paramref name="sceneLoader"/> with <paramref name="gameplayScope"/> as the parent of every world's scope.
+    /// <paramref name="sceneLoader"/> with <paramref name="gameplayScope"/> as the parent of every world's scope, and
+    /// placing arriving players <paramref name="gameplaySettings"/>' entry slot spacing apart.
     /// </summary>
     public WorldStreaming(
         WorldStreamingSettings settings,
@@ -60,8 +62,10 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         CameraFollow2D cameraFollow,
         TripArrivals arrivals,
         IChunkHandshake chunkHandshake,
-        ISessionStatus session)
+        ISessionStatus session,
+        GameplaySettings gameplaySettings)
     {
+        slotSpacing = gameplaySettings != null ? gameplaySettings.EntrySlotSpacing : 0f;
         streamer = settings.CreateStreamer(chunkHandshake);
         handshake = chunkHandshake;
         sessionStatus = session;
@@ -111,8 +115,9 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
 
     /// <summary>
     /// Moves the players this machine moves into <paramref name="world"/> at the world position
-    /// <paramref name="position"/>, snaps the camera there, and completes once the world and the chunks around the local
-    /// player are loaded. Throws when no local player appears within <see cref="MaxFramesWaitingForPlayer"/> frames.
+    /// <paramref name="position"/>, each on a free slot there (<see cref="EntrySlots"/>), snaps the camera there, and
+    /// completes once the world and the chunks around the local player are loaded. Throws when no local player appears
+    /// within <see cref="MaxFramesWaitingForPlayer"/> frames.
     /// </summary>
     public async Awaitable EnterAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
     {
@@ -139,7 +144,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
             if (party[i].Transform != null && party[i].Transform.TryGetComponent(out PlayerController controller) && controller.SimulatesMovement)
             {
                 playerWorlds.Set(party[i], world);
-                controller.Teleport(position);
+                controller.Teleport(EntrySlots.FreeSlot(position, slotSpacing, world, players, playerWorlds, party[i]));
             }
         }
 
@@ -224,9 +229,10 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     }
 
     /// <summary>
-    /// Moves the local player, which the trip's authority has put in <paramref name="world"/>, to its entry
-    /// <paramref name="entryName"/>, snaps the camera there, and completes once the world and the chunks around the
-    /// entry are loaded. The world it left keeps everything for the empty-world grace. Throws without a local player.
+    /// Moves the local player, which the trip's authority has put in <paramref name="world"/>, to a free slot of its
+    /// entry <paramref name="entryName"/> (<see cref="EntrySlots"/>), snaps the camera there, and completes once the
+    /// world and the chunks around the entry are loaded. The world it left keeps everything for the empty-world grace.
+    /// Throws without a local player.
     /// </summary>
     public async Awaitable ArriveAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
     {
@@ -247,7 +253,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         }
 
         Vector2 position = world.EntryPosition(entryName);
-        local.Controller.Teleport(position);
+        local.Controller.Teleport(EntrySlots.FreeSlot(position, slotSpacing, world, players, playerWorlds, local.Handle));
         cameraFollow.SnapToTarget();
         StreamInterest arrival = new(world, position);
         while (!streamer.IsSettled(arrival))

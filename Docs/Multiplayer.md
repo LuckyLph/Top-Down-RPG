@@ -9,14 +9,14 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Mode | Co-op only. No PvP. |
 | Topology | Host and play (listen server). One player is both server and client. No dedicated server. |
 | Players | Designed and balanced for 2, must support up to 4. Single player is the same code path with one player. |
-| Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, area changes). |
+| Trust | Co-op between friends: each client owns its own player's movement. The host owns everything else (mobs, health, damage, spawning, deaths and respawns, trips between worlds). |
 | Library | Netcode for GameObjects (NGO) + Unity Transport. Multiplayer Play Mode for multi-player testing in one editor. |
 | Internet play | No paid or account-bound services for now: direct IP only, and friends play over the internet through a virtual LAN (Tailscale, ZeroTier). A hosted relay is deferred until there is a distribution platform (see Phase 6). |
 | Saving | One local save file on the machine that decides game state (the host, or the single player), holding each player's place by player id and the state of every world visited (see [WorldStreaming.md](WorldStreaming.md#persistence)). Joining clients get the host's world through normal replication and save nothing. |
-| Worlds | Each player is in one world at a time and travels between worlds on their own, through exits the host validates, with no party (see [WorldStreaming.md](WorldStreaming.md)). Online sessions run in seamless worlds since its Phase 7; areas are played offline only until its Phase 9. |
-| Death | Today: a dead player respawns after a delay (at the area's spawn point, or where it died in a world); offline, everyone dead at once restarts the area or world, while a hosted session never restarts. Planned: each player respawns on their own at their nearest discovered waystone, and nothing restarts (see [WorldStreaming.md](WorldStreaming.md)). |
+| Worlds | Each player is in one world at a time and travels between worlds on their own, through exits the host validates, with no party (see [WorldStreaming.md](WorldStreaming.md)). Every session, offline, hosted or joined, runs in seamless worlds; the area path went in its Phase 9. |
+| Death | Each player on their own: a dead player respawns after `GameplaySettings.RespawnDelaySeconds`, and nothing restarts when every player is dead at once, offline or online (see [WorldStreaming.md](WorldStreaming.md#death-and-respawn)). |
 | Friendly fire | Off. Hostile effects only land on the other faction and helpful ones within a faction, enforced by `DamageService` (see [DamageAndStatusEffects.md](DamageAndStatusEffects.md#decisions)). |
-| Mob counts | The large-crowd stress scene stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
+| Mob counts | The large-crowd stress world stays a local, single-player profiling tool. Online gets its own test scenes sized for 2–4 players. |
 
 ## Authority model
 
@@ -28,7 +28,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
-| Player death, respawn and party-wipe restart | Host | `Health` restore + transform |
+| Player death and respawn | Host | `Health` restore + transform |
 | Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
 | Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
 | Save data | Host | Not replicated. The host (or the single player) saves when any player enters a world, on an autosave timer and as the session ends; a joining player the host knows starts at its saved place. |
@@ -61,7 +61,7 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 - [x] Player command source split out of `PlayerController`.
 - [x] Combat: damage application in one place (`DamageService`); popups driven by `CombatEvents`, death effects by `Health.Died`. Which copy of a slash resolves hits is decided in Phase 3.
 - [x] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
-- [x] Per-player death and respawn: a dead player respawns at the area's spawn point after `GameplaySettings.RespawnDelaySeconds` while a teammate is alive; everyone dead at once restarts the area.
+- [x] Per-player death and respawn: a dead player respawns at the area's spawn point after `GameplaySettings.RespawnDelaySeconds` while a teammate is alive; everyone dead at once restarts the area. Replaced in WorldStreaming.md's Phase 9: each player respawns on its own and nothing restarts.
 - [x] Remaining gameplay timers through `IClock`, injected RNG (`IRandom`). Visual-only animations keep `Time.deltaTime`.
 
 ### Phase 2: networking foundation
@@ -103,7 +103,7 @@ Replaced in [WorldStreaming.md](WorldStreaming.md)'s Phase 7: scene management s
 
 - [x] Host-driven area changes: `GameFlow.AreaLoading` on the host despawns the scene's objects, bumps the area epoch and announces; clients follow through `GameFlow`, and new objects reach a client only after it reports ready for that epoch.
 - [x] Late join: a client connecting mid-game is told the current area, loads it, reports ready, and then receives the players, mobs and current HP.
-- [x] Party wipe: the host's restart is announced as a new session, so clients reload with it.
+- [x] Party wipe: the host's restart is announced as a new session, so clients reload with it. Gone since WorldStreaming.md's Phase 7 (a hosted session never restarted) and Phase 9 (nothing restarts).
 - [x] Disconnects: a leaving client's player is removed by Netcode; the host leaving sends every client back to the menu, including a client still loading or changing area (it goes back once that load ends).
 - [x] Connection approval: the host refuses clients beyond `NetworkSettings.MaxPlayers` (4, host included) and clients running another build version, and the joining player sees why.
 
@@ -175,7 +175,7 @@ The edits travel as cell records (the runtime terrain edits row of the authority
 
 ### In-process test limits
 
-The PlayMode tests fake a second player with a second `NetworkManager` inside the editor (`InProcessClient`), or a bare host (`InProcessHost`) for the editor's own session to join. Letting the host reload the Gameplay scene while an in-process client is connected froze the editor every time (a deadlock inside the scene load, before any scene code ran). Sessions now run in worlds, whose chunks and trips load and unload scenes without reloading Gameplay, and a hosted session no longer restarts on a party wipe, so no test needs it. The in-process client shares the host's scenes, so it loads no world of its own: it sends the join and chunk messages a real client's streaming sends, while the client side of streaming, releasing and trips is tested with the editor's own session joined to an `InProcessHost`. Check a real joined player in Multiplayer Play Mode, which uses separate processes (see WorldStreaming.md's Phase 7 steps).
+The PlayMode tests fake a second player with a second `NetworkManager` inside the editor (`InProcessClient`), or a bare host (`InProcessHost`) for the editor's own session to join. Letting the host reload the Gameplay scene while an in-process client is connected froze the editor every time (a deadlock inside the scene load, before any scene code ran). Sessions now run in worlds, whose chunks and trips load and unload scenes without reloading Gameplay, and nothing restarts on a party wipe any more, so no test needs it. The in-process client shares the host's scenes, so it loads no world of its own: it sends the join and chunk messages a real client's streaming sends, while the client side of streaming, releasing and trips is tested with the editor's own session joined to an `InProcessHost`. Check a real joined player in Multiplayer Play Mode, which uses separate processes (see WorldStreaming.md's Phase 7 steps).
 
 ### Testing under a bad connection
 

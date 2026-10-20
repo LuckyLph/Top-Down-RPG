@@ -1,15 +1,17 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// PlayMode tests for mobs in the booted starting area: detection, spawning through the area scope, melee attacks
-/// and their pacing, deaths on both sides, and the player HUD.
+/// PlayMode tests for mobs in Testlands, the booted test world: detection, spawning through the chunk scopes, melee
+/// attacks and their pacing, deaths on both sides, and the player HUD.
 /// </summary>
 public class MobPlayModeBehaviorTests
 {
@@ -18,16 +20,16 @@ public class MobPlayModeBehaviorTests
     /// out of range.
     /// </summary>
     [UnityTest]
-    public IEnumerator MobInClearing_DetectsAndLosesTarget()
+    public IEnumerator MobInTestlands_DetectsAndLosesTarget()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         MobController brain = KeepOneMobActive();
-        Assert.That(brain, Is.Not.Null, "The clearing slice should contain at least one MobController.");
+        Assert.That(brain, Is.Not.Null, "Testlands' start chunks should have at least one mob.");
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
-        Assert.That(player, Is.Not.Null, "The clearing slice should contain a Player tag target.");
+        Assert.That(player, Is.Not.Null, "The session should have a Player tag target.");
 
         Vector3 originalPlayerPosition = player.transform.position;
         Vector3 mobPosition = brain.transform.position;
@@ -50,64 +52,63 @@ public class MobPlayModeBehaviorTests
     }
 
     /// <summary>
-    /// Each mob spawn point spawns exactly one mob at its position, in the area scene and with its navigation grid and
-    /// player registry injected.
+    /// Each mob spawn point of a loaded chunk spawns exactly one mob at its position, in that chunk's scene and with its
+    /// world's navigation and players injected.
     /// </summary>
     [UnityTest]
-    public IEnumerator AreaMobs_AreSpawnedFromSpawnPointsIntoTheAreaScene()
+    public IEnumerator ChunkMobs_AreSpawnedFromSpawnPointsIntoTheirChunkScene()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
 
-        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
-        MobSpawnPoint[] spawnPoints = Object.FindObjectsByType<MobSpawnPoint>();
-        MobController[] mobs = Object.FindObjectsByType<MobController>();
-
-        Assert.That(spawnPoints, Is.Not.Empty, "The clearing should define at least one mob spawn point.");
-        Assert.That(mobs.Length, Is.EqualTo(spawnPoints.Length), "Each spawn point should spawn exactly one mob.");
-
-        foreach (MobSpawnPoint spawnPoint in spawnPoints)
+        LoadedWorld loaded = CurrentWorld();
+        IPlayerRegistry worldPlayers = loaded.Scope.Container.Resolve<IPlayerRegistry>();
+        int spawnPointCount = 0;
+        foreach (KeyValuePair<Vector2Int, Scene> chunk in loaded.Chunks)
         {
-            bool spawnedHere = false;
-            foreach (MobController mob in mobs)
+            MobSpawnPoint[] spawnPoints = SceneQuery.FindAll<MobSpawnPoint>(chunk.Value);
+            MobController[] mobs = SceneQuery.FindAll<MobController>(chunk.Value);
+            spawnPointCount += spawnPoints.Length;
+            Assert.That(mobs.Length, Is.EqualTo(spawnPoints.Length), $"Each spawn point of chunk {chunk.Key} should spawn exactly one mob.");
+            foreach (MobSpawnPoint spawnPoint in spawnPoints)
             {
-                if (Vector2.Distance(mob.Patrol.SpawnPosition, spawnPoint.transform.position) < 0.01f)
+                bool spawnedHere = false;
+                foreach (MobController mob in mobs)
                 {
-                    spawnedHere = true;
-                    Assert.That(mob.gameObject.scene, Is.EqualTo(gameFlow.AreaScene));
-                    Assert.That(mob.Navigation, Is.Not.Null);
-                    Assert.That(mob.Players, Is.Not.Null);
+                    if (Vector2.Distance(mob.Patrol.SpawnPosition, spawnPoint.transform.position) < 0.01f)
+                    {
+                        spawnedHere = true;
+                        Assert.That(mob.Navigation, Is.SameAs(loaded.Navigation));
+                        Assert.That(mob.Players, Is.SameAs(worldPlayers));
+                    }
                 }
-            }
 
-            Assert.That(spawnedHere, Is.True, $"No mob was spawned at {spawnPoint.name}.");
+                Assert.That(spawnedHere, Is.True, $"No mob was spawned at {spawnPoint.name}.");
+            }
         }
+
+        Assert.That(spawnPointCount, Is.GreaterThan(0), "The loaded chunks should define at least one mob spawn point.");
     }
 
     /// <summary>
-    /// A mob instantiated at runtime through the area scope's container lands in the area scene and shares the scene
-    /// mob's navigation grid and player registry.
+    /// A mob instantiated at runtime through a chunk scope's container shares the spawned mobs' world navigation and
+    /// players.
     /// </summary>
     [UnityTest]
-    public IEnumerator MobsSpawnedThroughAreaScope_ShareGridAndPlayer()
+    public IEnumerator MobsSpawnedThroughAChunkScope_ShareTheWorldsNavigationAndPlayers()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
-        NavigationGrid2D navGrid = Object.FindAnyObjectByType<NavigationGrid2D>();
         MobController firstMob = Object.FindAnyObjectByType<MobController>();
+        Assert.That(firstMob, Is.Not.Null, "Testlands' start chunks should have at least one mob.");
+        Assert.That(firstMob.Navigation, Is.SameAs(CurrentWorld().Navigation));
 
-        Assert.That(navGrid, Is.Not.Null, "The clearing slice should contain a NavigationGrid2D.");
-        Assert.That(firstMob, Is.Not.Null, "The clearing slice should contain at least one MobController.");
-        Assert.That(firstMob.Navigation, Is.SameAs(navGrid));
-
-        // Runtime spawns go through the area's container so they receive the same dependencies.
-        IObjectResolver areaResolver = LifetimeScope.Find<AreaLifetimeScope>(navGrid.gameObject.scene).Container;
-        MobController secondMob = areaResolver.Instantiate(firstMob, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
+        IObjectResolver chunkResolver = LifetimeScope.Find<ChunkLifetimeScope>(firstMob.gameObject.scene).Container;
+        MobController secondMob = chunkResolver.Instantiate(firstMob, firstMob.transform.position + Vector3.right * 2f, Quaternion.identity);
         yield return null;
 
-        Assert.That(secondMob.Navigation, Is.SameAs(navGrid));
+        Assert.That(secondMob.Navigation, Is.SameAs(firstMob.Navigation));
         Assert.That(secondMob.Players, Is.SameAs(firstMob.Players));
-        Assert.That(secondMob.gameObject.scene, Is.EqualTo(navGrid.gameObject.scene));
 
         Object.Destroy(secondMob.gameObject);
     }
@@ -117,9 +118,9 @@ public class MobPlayModeBehaviorTests
     /// layer, which fades out and returns to the pool.
     /// </summary>
     [UnityTest]
-    public IEnumerator MobInClearing_AttackDamagesPlayerAndPopupFadesOut()
+    public IEnumerator MobInTestlands_AttackDamagesPlayerAndPopupFadesOut()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         MobController brain = KeepOneMobActive();
@@ -156,9 +157,9 @@ public class MobPlayModeBehaviorTests
     /// A mob in melee range does not hit again within 0.2 s of its first hit, but has hit again 0.9 s after it.
     /// </summary>
     [UnityTest]
-    public IEnumerator MobInClearing_AttackRespectsConfiguredInterval()
+    public IEnumerator MobInTestlands_AttackRespectsConfiguredInterval()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         MobController brain = KeepOneMobActive();
@@ -190,9 +191,9 @@ public class MobPlayModeBehaviorTests
     /// attacking and chasing.
     /// </summary>
     [UnityTest]
-    public IEnumerator PlayerInClearing_DeathDisablesControlsAndMobDisengages()
+    public IEnumerator PlayerInTestlands_DeathDisablesControlsAndMobDisengages()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         MobController brain = KeepOneMobActive();
@@ -223,9 +224,9 @@ public class MobPlayModeBehaviorTests
     /// playback.
     /// </summary>
     [UnityTest]
-    public IEnumerator MobInClearing_DeathSpawnsAnimationAndDestroysMob()
+    public IEnumerator MobInTestlands_DeathSpawnsAnimationAndDestroysMob()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         MobController mob = Object.FindAnyObjectByType<MobController>();
@@ -255,9 +256,9 @@ public class MobPlayModeBehaviorTests
     /// attack still deals the weapon's damage to an adjacent mob.
     /// </summary>
     [UnityTest]
-    public IEnumerator PlayerInClearing_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
+    public IEnumerator PlayerInTestlands_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -266,7 +267,7 @@ public class MobPlayModeBehaviorTests
 
         Assert.That(player, Is.Not.Null);
         Assert.That(mob, Is.Not.Null);
-        Assert.That(hud, Is.Not.Null, "The clearing slice should contain the reusable PlayerHudView.");
+        Assert.That(hud, Is.Not.Null, "The Gameplay scene should contain the reusable PlayerHudView.");
 
         PlayerController playerController = player.GetComponent<PlayerController>();
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
@@ -320,8 +321,17 @@ public class MobPlayModeBehaviorTests
     }
 
     /// <summary>
-    /// Picks one of the area's mobs and deactivates the others, so the test sees only that mob's hits and states.
-    /// Returns null when the area has none.
+    /// The loaded world the local player is in.
+    /// </summary>
+    private static LoadedWorld CurrentWorld()
+    {
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(SceneBootTestHelper.ResolveGameFlow().CurrentWorld, out LoadedWorld loaded), Is.True);
+        return loaded;
+    }
+
+    /// <summary>
+    /// Picks one of the loaded mobs and deactivates the others, so the test sees only that mob's hits and states.
+    /// Returns null when there is none.
     /// </summary>
     private static MobController KeepOneMobActive()
     {

@@ -42,7 +42,6 @@ public class GameSavePlayModeTests
         Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.CurrentWorld, Is.SameAs(world), "New Game plays the starting world.");
-        Assert.That(gameFlow.CurrentArea, Is.Null);
         yield return SceneBootTestHelper.WaitUntil(() => saveStore.Contents != null, "entering the world to write a save");
 
         Assert.That(GameSaveData.TryParse(saveStore.Contents, out GameSaveData data), Is.True);

@@ -7,28 +7,28 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Writes an <see cref="AreaLayout"/> into the scene of an area's <see cref="Grid"/> as one undo step. Each terrain
+/// Writes an <see cref="AreaLayout"/> into the scene of a standalone <see cref="Grid"/> as one undo step. Each terrain
 /// layer's data tilemap under the grid is repainted with the layer's plain tile (and created, with its navigation
 /// source, when the scene has none) and is left a plain tilemap: a dual-grid module, render tilemap or Tilemap Renderer
 /// still on it is removed, since every cell is repainted anyway. The grid's <see cref="TerrainBlendRenderer"/> (added
 /// when missing) draws the layers in the generator's order with their materials and the generator's terrain style, and
 /// any layer it drew that the generator does not list is kept at its place in the style's layer order when painted,
 /// and removed when empty (<see cref="AreaGroundSetup.SetUpLayers"/>); each layer's navigation priority is its place in
-/// the renderer, and the area's <see cref="AreaTerrain"/> fills the layers it lists with their tiles. Every prop under the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is
-/// replaced, and the party's start <see cref="SpawnPoint"/> moves to the layout's spawn cell. The collision tilemap and
-/// everything else in the scene stay as they are.
+/// the renderer, and the grid's <see cref="AreaTerrain"/> fills the layers it lists with their tiles. Every prop under
+/// the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is replaced. The layout's spawn cell is written
+/// nowhere: it only shapes the layout (the generator's preview shows it). The collision tilemap and everything else in
+/// the scene stay as they are.
 /// </summary>
 public static class AreaLayoutWriter
 {
     public const string MobSpawnsRootName = "MobSpawns";
-    public const string StartSpawnId = "start";
 
     /// <summary>
     /// Replaces the terrain, props and mob spawns of <paramref name="grid"/>'s scene with <paramref name="layout"/>,
-    /// laid out by <paramref name="generator"/>, and moves the start spawn point. Logs an error and changes nothing
-    /// when the grid's cells are not one unit, the layout was laid out with other layers than the generator's, or the
-    /// generator's layers cannot be set up (<see cref="AreaGroundSetup.Problem"/>: no terrain style, too many layers, a
-    /// layer lacking a tilemap name, a tile or a material, or layers out of the style's layer order).
+    /// laid out by <paramref name="generator"/>. Logs an error and changes nothing when the grid's cells are not one
+    /// unit, the layout was laid out with other layers than the generator's, or the generator's layers cannot be set up
+    /// (<see cref="AreaGroundSetup.Problem"/>: no terrain style, too many layers, a layer lacking a tilemap name, a tile
+    /// or a material, or layers out of the style's layer order).
     /// </summary>
     public static bool Write(Grid grid, AreaGenerator generator, AreaLayout layout)
     {
@@ -56,7 +56,6 @@ public static class AreaLayoutWriter
         WriteRaised(grid, generator, layout, changes);
         WriteProps(grid, scene, layout.Props);
         WriteMobSpawns(grid, scene, layout.Mobs);
-        MoveStartSpawn(grid, scene, layout.SpawnCell);
 
         if (grid.TryGetComponent(out NavigationGrid2D navigation))
         {
@@ -194,34 +193,5 @@ public static class AreaLayoutWriter
             spawn.FindProperty("mobPrefab").objectReferenceValue = mob.Prefab;
             spawn.ApplyModifiedPropertiesWithoutUndo();
         }
-    }
-
-    /// <summary>
-    /// Moves the scene's start spawn point (the first spawn point when none has the start id) to the centre of
-    /// <paramref name="cell"/>, creating one when the scene has none.
-    /// </summary>
-    private static void MoveStartSpawn(Grid grid, Scene scene, Vector3Int cell)
-    {
-        SpawnPoint[] spawnPoints = SceneQuery.FindAll<SpawnPoint>(scene);
-        SpawnPoint start = spawnPoints.Length > 0 ? spawnPoints[0] : null;
-        foreach (SpawnPoint spawnPoint in spawnPoints)
-        {
-            if (spawnPoint.SpawnId == StartSpawnId)
-            {
-                start = spawnPoint;
-                break;
-            }
-        }
-
-        if (start == null)
-        {
-            GameObject created = new($"SpawnPoint_{StartSpawnId}");
-            SceneManager.MoveGameObjectToScene(created, scene);
-            Undo.RegisterCreatedObjectUndo(created, "Create spawn point");
-            start = created.AddComponent<SpawnPoint>();
-        }
-
-        Undo.RecordObject(start.transform, "Move spawn point");
-        start.transform.position = CellCentre(grid, cell);
     }
 }

@@ -6,7 +6,7 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// What <see cref="AreaMobSpawner"/> and <see cref="ChunkMobSpawner"/> share: who spawns mobs, the distinct networked
+/// What <see cref="ChunkMobSpawner"/> spawns mobs with: who spawns mobs, the distinct networked
 /// mob prefabs of a set of spawn points, and spawning and despawning one mob.
 /// </summary>
 public static class MobSpawning

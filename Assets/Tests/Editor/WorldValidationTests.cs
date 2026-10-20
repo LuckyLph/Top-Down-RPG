@@ -50,18 +50,16 @@ public class WorldValidationTests
     }
 
     /// <summary>
-    /// Objects on the chunk's cells pass; a spawn point, a mob spawn point and a walk-through prop one cell past its
-    /// western border are each refused, by name and cell.
+    /// Objects on the chunk's cells pass; a mob spawn point one cell past its upper border and a walk-through prop
+    /// past its eastern border are each refused, by name and cell.
     /// </summary>
     [Test]
     public void ObjectsOutsideTheChunk_AreRefusedByName()
     {
-        Place<SpawnPoint>("Inside spawn", 70.5f, 10.5f);
         Place<MobSpawnPoint>("Inside mob", 100.5f, 60.5f).gameObject.AddComponent<PersistentId>();
         PersistentIds.MakeUnique(new List<PersistentId>(Object.FindObjectsByType<PersistentId>(FindObjectsInactive.Include)));
         Assert.That(WorldValidation.ValidateChunk(chunk), Is.Empty);
 
-        Place<SpawnPoint>("Outside spawn", 63.5f, 10.5f);
         MobSpawnPoint outsideMob = Place<MobSpawnPoint>("Outside mob", 100.5f, 64.5f);
         PersistentIds.SetId(outsideMob.gameObject.AddComponent<PersistentId>(), PersistentIds.NewId());
         GameObject plant = Track(new GameObject("Fern"));
@@ -70,8 +68,7 @@ public class WorldValidationTests
 
         List<string> problems = WorldValidation.ValidateChunk(chunk);
 
-        Assert.That(problems.Count, Is.EqualTo(3), string.Join("\n", problems));
-        Assert.That(problems.Exists(p => p.Contains("Outside spawn") && p.Contains("(63, 10)")), Is.True);
+        Assert.That(problems.Count, Is.EqualTo(2), string.Join("\n", problems));
         Assert.That(problems.Exists(p => p.Contains("Outside mob") && p.Contains("(100, 64)")), Is.True);
         Assert.That(problems.Exists(p => p.Contains("Fern") && p.Contains("prop")), Is.True);
     }

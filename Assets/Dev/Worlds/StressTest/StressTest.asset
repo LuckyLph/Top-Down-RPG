@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23c01d6aa81e27e40b2c24d911191a00, type: 3}
+  m_Name: StressTest
+  m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
+  worldId: 78a4e45ce27d1a8418adf2bdd72d5b10
+  rootScene: {fileID: 11400000, guid: 415206a3c0fd891428af149b348f0b8e, type: 2}
+  origin: {x: 0, y: 0}
+  sizeInChunks: {x: 2, y: 2}
+  chunks:
+  - coords: {x: 0, y: 0}
+    scene: {fileID: 11400000, guid: fdab6a0e714550943b3ad742ae39f2c6, type: 2}
+  - coords: {x: 1, y: 0}
+    scene: {fileID: 11400000, guid: e44253557f76c324196c52589ef17480, type: 2}
+  - coords: {x: 0, y: 1}
+    scene: {fileID: 11400000, guid: 4f3c3ec17f7b13f4496bccd7b6b14a02, type: 2}
+  - coords: {x: 1, y: 1}
+    scene: {fileID: 11400000, guid: 000ce4eeac886764fa3cfc0f1b9b043d, type: 2}
+  entries:
+  - name: start
+    position: {x: 64.5, y: 64.5}
+    waystone: 1

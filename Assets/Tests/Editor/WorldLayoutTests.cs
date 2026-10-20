@@ -3,7 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 
 /// <summary>
-/// Tests for <see cref="WorldLayout"/>: the first free origin skips the slot at the origin and the slots worlds take,
+/// Tests for <see cref="WorldLayout"/>: the first free origin is the first slot no world takes, the origin's included,
 /// fits a full-size world, and gives up when the layout is full; a world too close to another, or leaving the layout,
 /// is refused with a reason naming it, and a gap of exactly <see cref="WorldLayout.MinimumGap"/> is allowed; validating
 /// a layout names each world that breaks it. Each test builds its own unsaved worlds.
@@ -27,16 +27,21 @@ public class WorldLayoutTests
     }
 
     /// <summary>
-    /// With no world, the first free origin is the slot right of the origin; with the Sandbox's and its interior's
-    /// slots taken, the next one along; a full 16 x 16 world fits there too, 1024 units from its neighbour.
+    /// With no world, the first free origin is the origin itself; with the origin's slot and the Sandbox's and its
+    /// interior's taken, the next one along; a full 16 x 16 world fits there too, 1024 units from its neighbour.
     /// </summary>
     [Test]
-    public void TheFirstFreeOrigin_SkipsTheOriginAndTakenSlots()
+    public void TheFirstFreeOrigin_IsTheFirstSlotNoWorldTakes()
     {
         Assert.That(WorldLayout.TryFindFreeOrigin(new Vector2Int(2, 2), new WorldDefinition[0], out Vector2Int origin), Is.True);
-        Assert.That(origin, Is.EqualTo(new Vector2Int(2048, 0)));
+        Assert.That(origin, Is.EqualTo(Vector2Int.zero));
 
-        List<WorldDefinition> worlds = new() { World("A", new Vector2Int(2048, 0), new Vector2Int(2, 2)), World("B", new Vector2Int(4096, 0), Vector2Int.one) };
+        List<WorldDefinition> worlds = new()
+        {
+            World("Origin", Vector2Int.zero, Vector2Int.one),
+            World("A", new Vector2Int(2048, 0), new Vector2Int(2, 2)),
+            World("B", new Vector2Int(4096, 0), Vector2Int.one),
+        };
         Assert.That(WorldLayout.TryFindFreeOrigin(new Vector2Int(2, 2), worlds, out origin), Is.True);
         Assert.That(origin, Is.EqualTo(new Vector2Int(6144, 0)));
 
@@ -51,7 +56,7 @@ public class WorldLayoutTests
     [Test]
     public void TheFirstFreeOrigin_StaysClearOfAWorldOffTheSlots()
     {
-        List<WorldDefinition> worlds = new() { World("Odd", new Vector2Int(2600, 0), Vector2Int.one) };
+        List<WorldDefinition> worlds = new() { World("Origin", Vector2Int.zero, Vector2Int.one), World("Odd", new Vector2Int(2600, 0), Vector2Int.one) };
 
         Assert.That(WorldLayout.TryFindFreeOrigin(Vector2Int.one, worlds, out Vector2Int origin), Is.True);
         Assert.That(origin, Is.EqualTo(new Vector2Int(4096, 0)), "(2048, 0) is 488 units from it.");

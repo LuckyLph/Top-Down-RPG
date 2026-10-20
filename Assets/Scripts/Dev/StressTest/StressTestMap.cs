@@ -6,10 +6,13 @@ using Debug = UnityEngine.Debug;
 using Random = System.Random;
 
 /// <summary>
-/// Dev-only generator for the stress test area: fills a rectangle of its plain ground tilemap with the ground tile (the
-/// area's <see cref="TerrainBlendRenderer"/> draws it), rings it with a dual-grid wall border, adds walls in the chosen
-/// <see cref="WallLayout"/>, keeps the centre clear and rebuilds the navigation grid. Runs early so the map exists
-/// before anything spawns on it.
+/// Dev-only generator for the stress world: lays a map of <c>width</c> x <c>height</c> cells from cell (0, 0) of its
+/// grid, filling its plain ground tilemap with the ground tile (the grid's <see cref="TerrainBlendRenderer"/> draws it),
+/// walling the map's outer ring with dual-grid walls, adding walls in the chosen <see cref="WallLayout"/> and keeping
+/// the centre clear. On a chunk's grid (one with a <see cref="WorldChunk"/>) it paints only the chunk's own cells of the
+/// map, which every chunk lays out alike from the seed, so the walls run on across borders, and leaves the navigation
+/// page to the chunk, built in its scope's <c>Start</c>; on a standalone grid it rebuilds the navigation grid. Runs
+/// early, in <c>Awake</c>, so the map exists before the chunk's page and anything spawned on it.
 /// </summary>
 [DefaultExecutionOrder(-1000)]
 public class StressTestMap : MonoBehaviour
@@ -24,7 +27,7 @@ public class StressTestMap : MonoBehaviour
         Corridors
     }
 
-    [Tooltip("Plain ground data tilemap, a layer of the area's Terrain Blend Renderer.")]
+    [Tooltip("Plain ground data tilemap, a layer of the grid's Terrain Blend Renderer.")]
     [SerializeField] private Tilemap groundTilemap;
     [Tooltip("Plain tile written into every ground cell (Tile_Grass).")]
     [SerializeField] private TileBase groundTile;
@@ -33,7 +36,9 @@ public class StressTestMap : MonoBehaviour
     [SerializeField] private NavigationGrid2D navigationGrid;
 
     [Header("Layout")]
+    [Tooltip("Cells across, from the grid's cell (0, 0): the whole stress world, every chunk of it laid out alike.")]
     [SerializeField, Min(8)] private int width = 128;
+    [Tooltip("Cells up, from the grid's cell (0, 0).")]
     [SerializeField, Min(8)] private int height = 128;
     [SerializeField] private WallLayout layout = WallLayout.Scattered;
     [Tooltip("Scattered layout: roughly the fraction of cells covered by wall segments.")]
@@ -47,7 +52,7 @@ public class StressTestMap : MonoBehaviour
     public int Height => height;
 
     /// <summary>
-    /// Generates the map as soon as the area loads.
+    /// Generates the map as soon as its scene loads.
     /// </summary>
     private void Awake()
     {
@@ -55,9 +60,9 @@ public class StressTestMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Clears and repaints the ground and wall layers from the current settings and seed, rebuilds the
-    /// <see cref="NavigationGrid2D"/> and logs the size, wall count and time taken. Logs an error and does nothing when
-    /// a reference is missing.
+    /// Clears and repaints the ground and wall layers from the current settings and seed (only the chunk's cells on a
+    /// chunk's grid), rebuilds a standalone grid's <see cref="NavigationGrid2D"/> and logs the size, wall count and time
+    /// taken. Logs an error and does nothing when a reference is missing.
     /// </summary>
     public void Generate()
     {
@@ -68,38 +73,46 @@ public class StressTestMap : MonoBehaviour
         }
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        int minX = -width / 2;
-        int minY = -height / 2;
-
+        bool isChunk = TryGetComponent(out WorldChunk chunk);
+        RectInt painted = isChunk ? chunk.Cells : new RectInt(0, 0, width, height);
         List<Vector3Int> groundCells = new(width * height);
-        for (int x = minX; x < minX + width; x++)
+        for (int x = 0; x < width; x++)
         {
-            for (int y = minY; y < minY + height; y++)
+            for (int y = 0; y < height; y++)
             {
-                groundCells.Add(new Vector3Int(x, y, 0));
+                if (painted.Contains(new Vector2Int(x, y)))
+                {
+                    groundCells.Add(new Vector3Int(x, y, 0));
+                }
             }
         }
 
         HashSet<Vector3Int> wallCells = new();
-        AddBorder(wallCells, minX, minY);
+        AddBorder(wallCells);
         switch (layout)
         {
             case WallLayout.Scattered:
-                AddScatteredWalls(wallCells, minX, minY);
+                AddScatteredWalls(wallCells);
                 break;
             case WallLayout.Corridors:
-                AddCorridorWalls(wallCells, minX, minY);
+                AddCorridorWalls(wallCells);
                 break;
         }
 
-        wallCells.RemoveWhere(cell => Mathf.Abs(cell.x) < clearRadius && Mathf.Abs(cell.y) < clearRadius);
+        int centreX = width / 2;
+        int centreY = height / 2;
+        wallCells.RemoveWhere(cell => (Mathf.Abs(cell.x - centreX) < clearRadius && Mathf.Abs(cell.y - centreY) < clearRadius)
+            || !painted.Contains(new Vector2Int(cell.x, cell.y)));
 
         PaintGround(groundCells);
         PaintWalls(new List<Vector3Int>(wallCells));
 
-        navigationGrid.BuildGrid();
+        if (!isChunk)
+        {
+            navigationGrid.BuildGrid();
+        }
 
-        Debug.Log($"[StressTest] Generated a {width}x{height} {layout} map with {wallCells.Count} wall cells " +
+        Debug.Log($"[StressTest] Generated {(isChunk ? $"chunk {chunk.Coords} of " : string.Empty)}a {width}x{height} {layout} map with {wallCells.Count} wall cells " +
             $"in {stopwatch.ElapsedMilliseconds} ms.", this);
     }
 
@@ -125,30 +138,31 @@ public class StressTestMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds a one-cell wall ring just outside the ground rectangle that starts at <paramref name="minX"/>,
-    /// <paramref name="minY"/>.
+    /// Adds a one-cell wall ring along the map's outer cells.
     /// </summary>
-    private void AddBorder(HashSet<Vector3Int> cells, int minX, int minY)
+    private void AddBorder(HashSet<Vector3Int> cells)
     {
-        for (int x = minX - 1; x <= minX + width; x++)
+        for (int x = 0; x < width; x++)
         {
-            cells.Add(new Vector3Int(x, minY - 1, 0));
-            cells.Add(new Vector3Int(x, minY + height, 0));
+            cells.Add(new Vector3Int(x, 0, 0));
+            cells.Add(new Vector3Int(x, height - 1, 0));
         }
 
-        for (int y = minY - 1; y <= minY + height; y++)
+        for (int y = 0; y < height; y++)
         {
-            cells.Add(new Vector3Int(minX - 1, y, 0));
-            cells.Add(new Vector3Int(minX + width, y, 0));
+            cells.Add(new Vector3Int(0, y, 0));
+            cells.Add(new Vector3Int(width - 1, y, 0));
         }
     }
 
     /// <summary>
     /// Adds seeded random horizontal and vertical wall segments, enough to cover roughly the configured wall
-    /// density, clipped to the ground rectangle.
+    /// density, clipped to the map.
     /// </summary>
-    private void AddScatteredWalls(HashSet<Vector3Int> cells, int minX, int minY)
+    private void AddScatteredWalls(HashSet<Vector3Int> cells)
     {
+        const int minX = 0;
+        const int minY = 0;
         const int averageSegmentLength = 5;
         Random random = new(seed);
         int segmentCount = Mathf.RoundToInt(width * height * wallDensity / averageSegmentLength);
@@ -171,8 +185,10 @@ public class StressTestMap : MonoBehaviour
     /// <summary>
     /// Adds full-height wall columns every corridor spacing, each with a two-cell gap at a seeded random height.
     /// </summary>
-    private void AddCorridorWalls(HashSet<Vector3Int> cells, int minX, int minY)
+    private void AddCorridorWalls(HashSet<Vector3Int> cells)
     {
+        const int minX = 0;
+        const int minY = 0;
         Random random = new(seed);
         for (int x = minX + corridorSpacing / 2; x < minX + width; x += corridorSpacing)
         {

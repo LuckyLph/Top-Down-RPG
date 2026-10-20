@@ -27,7 +27,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator AKilledMob_StaysDeadAfterItsChunkReloads_AndReturnsAfterItsDelay()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         SessionSave sessionSave = SceneBootTestHelper.ResolveFromMain<SessionSave>();
         ChunkMobSpawner spawner = SpawnerOf(world, Vector2Int.zero);
@@ -60,7 +60,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator ATerrainEdit_SurvivesItsChunkUnloading()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Vector3Int cell = new(30, 30, 0);
         Tilemap grass = GrassOf(world, Vector2Int.zero);
@@ -84,7 +84,7 @@ public class WorldPersistencePlayModeTests
     public IEnumerator LeavingToTheMenu_SavesTheWorld_AndContinueBringsItBack()
     {
         MemorySaveStore saveStore = new();
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath, saveStore);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath, saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition world = gameFlow.CurrentWorld;
         ChunkMobSpawner spawner = SpawnerOf(world, Vector2Int.zero);

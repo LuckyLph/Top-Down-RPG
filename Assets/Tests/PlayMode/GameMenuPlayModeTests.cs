@@ -16,7 +16,7 @@ public class GameMenuPlayModeTests
     [UnityTest]
     public IEnumerator Solo_TheMenuPausesTheGame_AndBlocksGameplayInputUntilItCloses()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         PlayerInputService input = SceneBootTestHelper.ResolveFromMain<PlayerInputService>();
         GameMenuController menu = SceneBootTestHelper.ResolveFromGameplay<GameMenuController>();
 
@@ -44,7 +44,7 @@ public class GameMenuPlayModeTests
     [UnityTest]
     public IEnumerator Solo_LeavingFromAPause_ReachesTheMainMenuWithTimeRunning()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         PlayerInputService input = SceneBootTestHelper.ResolveFromMain<PlayerInputService>();
         GameMenuController menu = SceneBootTestHelper.ResolveFromGameplay<GameMenuController>();

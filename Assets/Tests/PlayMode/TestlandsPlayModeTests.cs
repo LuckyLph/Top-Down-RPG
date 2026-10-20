@@ -7,14 +7,13 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// Smoke tests of Testlands, the hand-painted test world (Docs/WorldStreaming.md's Phase 5) that keeps the margins the
-/// Clearing's PlayMode tests rely on (Docs/SceneGeneration.md): booting into it puts the player at its default entry on
+/// PlayMode tests booting into it rely on (Docs/SceneGeneration.md): booting into it puts the player at its default entry on
 /// open ground, every cell within <see cref="SpawnClearRadius"/> of it walkable, with five clear cells in a straight
 /// line on one side, and every mob at least <see cref="MobDistanceFromSpawn"/> cells away; a seven-cell wall built two
 /// cells right of the player blocks the straight line, and the player walks around it on the world's navigation.
 /// </summary>
 public class TestlandsPlayModeTests
 {
-    private const string TestlandsRootPath = "Assets/Worlds/Testlands/World_Testlands.unity";
     private const int SpawnClearRadius = 6;
     private const int MobDistanceFromSpawn = 14;
     private const int ClearLine = 5;
@@ -25,7 +24,7 @@ public class TestlandsPlayModeTests
     [UnityTest]
     public IEnumerator Boot_PutsThePlayerOnOpenGround_WithTheClearingsMargins()
     {
-        yield return SceneBootTestHelper.BootIntoArea(TestlandsRootPath);
+        yield return SceneBootTestHelper.BootIntoTestlands();
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Assert.That(world, Is.Not.Null);
@@ -77,13 +76,13 @@ public class TestlandsPlayModeTests
     }
 
     /// <summary>
-    /// A seven-cell wall built two cells right of the player, as the Clearing's tests build one, blocks the straight
+    /// A seven-cell wall built two cells right of the player, as the controls tests build one, blocks the straight
     /// line to a point behind it, and the player paths around it there.
     /// </summary>
     [UnityTest]
     public IEnumerator AWallBuiltBesideTheSpawn_IsWalkedAround()
     {
-        yield return SceneBootTestHelper.BootIntoArea(TestlandsRootPath);
+        yield return SceneBootTestHelper.BootIntoTestlands();
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(world, out LoadedWorld loaded);

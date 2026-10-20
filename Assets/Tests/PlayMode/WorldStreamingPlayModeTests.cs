@@ -29,13 +29,12 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator Boot_EntersTheWorld_WithTheChunksAroundThePlayerUnderTheWorldsScope()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition world = gameFlow.CurrentWorld;
         Assert.That(world, Is.Not.Null);
         Assert.That(world.name, Is.EqualTo("Sandbox"));
-        Assert.That(gameFlow.CurrentArea, Is.Null);
 
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
         Assert.That(worlds.TryGet(world, out LoadedWorld loaded), Is.True);
@@ -67,7 +66,7 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator NeighbouringChunks_LinkTheirGroundAndWallsAcrossTheBorder()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
@@ -95,7 +94,7 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator ThePlayer_PathsAcrossAChunkBorder_OnItsWorldsNavigation()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
@@ -129,7 +128,7 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator Moving_StreamsChunksAroundThePlayer_AndTheMenuUnloadsTheWorld()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition world = gameFlow.CurrentWorld;
@@ -162,7 +161,7 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator ChunkMobs_SpawnIntoTheirChunksScene_AndGoWhenItUnloads()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
@@ -206,7 +205,7 @@ public class WorldStreamingPlayModeTests
     [UnityTest]
     public IEnumerator AMobChasingThePlayerAcrossABorder_StopsAtItsLeash_AndGoesHome()
     {
-        yield return SceneBootTestHelper.BootIntoArea(SandboxRootPath);
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
 
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();

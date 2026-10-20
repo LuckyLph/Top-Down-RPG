@@ -5,9 +5,11 @@ using VContainer.Unity;
 using Random = System.Random;
 
 /// <summary>
-/// Dev-only seeded mob spawner for the stress test area. Instantiates mobs through the container on walkable cells
-/// reachable from its own position, either in a band around the player or anywhere on the navigation grid, and
-/// tracks them so they can be counted and cleared.
+/// Dev-only seeded mob spawner for the stress world, in its root scene and injected from the world's scope. Once every
+/// chunk of the world has its navigation page, it instantiates its initial mobs through that scope (so they path on
+/// the world's navigation and see its players) on walkable cells reachable from its own position, in a band around it
+/// and anywhere on the world, then stops updating. Later spawns come from the overlay's buttons. It tracks its mobs so
+/// they can be counted and cleared. Its mobs have no home chunk, so no leash holds them.
 /// </summary>
 public class StressTestSpawner : MonoBehaviour
 {
@@ -16,7 +18,7 @@ public class StressTestSpawner : MonoBehaviour
     [SerializeField] private MobController mobPrefab;
     [SerializeField, Min(0)] private int initialNearSpawn = 20;
     [SerializeField, Min(0)] private int initialAcrossMap = 40;
-    [Tooltip("Distance band around the player (or spawn point) for 'near' spawns. Detection radius is 6.")]
+    [Tooltip("Distance band around the player (or this spawner) for 'near' spawns; keep it near the mob's detection radius.")]
     [SerializeField] private Vector2 nearDistance = new(2.5f, 7f);
     [Tooltip("Mobs never spawn closer than this to the player.")]
     [SerializeField, Min(0f)] private float minPlayerDistance = 2f;
@@ -24,7 +26,8 @@ public class StressTestSpawner : MonoBehaviour
 
     private readonly List<MobController> mobs = new();
     private IObjectResolver resolver;
-    private NavigationGrid2D navigationGrid;
+    private WorldNavigation navigation;
+    private WorldDefinition world;
     private LocalPlayerTracker localPlayer;
     private Random random;
     private Transform mobRoot;
@@ -51,25 +54,26 @@ public class StressTestSpawner : MonoBehaviour
     public int InitialMobCount => initialNearSpawn + initialAcrossMap;
 
     /// <summary>
-    /// Receives the area container used to instantiate mobs, the navigation grid and the local player tracker.
+    /// Receives the world scope's container used to instantiate mobs, the world's navigation and definition, and the
+    /// local player tracker.
     /// </summary>
     [Inject]
-    public void Construct(IObjectResolver objectResolver, NavigationGrid2D grid, LocalPlayerTracker localPlayerTracker)
+    public void Construct(IObjectResolver objectResolver, WorldNavigation worldNavigation, WorldDefinition worldDefinition, LocalPlayerTracker localPlayerTracker)
     {
         resolver = objectResolver;
-        navigationGrid = grid;
+        navigation = worldNavigation;
+        world = worldDefinition;
         localPlayer = localPlayerTracker;
     }
 
     /// <summary>
-    /// Disables itself with an error when it was not injected or has no mob prefab; otherwise creates the mob root
-    /// and spawns the initial mobs around itself and across the map.
+    /// Disables itself with an error when it was not injected or has no mob prefab; otherwise creates the mob root.
     /// </summary>
     private void Start()
     {
-        if (resolver == null || mobPrefab == null)
+        if (resolver == null || navigation == null || world == null || mobPrefab == null)
         {
-            Debug.LogError($"{name} needs a mob prefab and must be listed in the AreaLifetimeScope's auto-inject objects.", this);
+            Debug.LogError($"{name} needs a mob prefab and must be listed in the stress world's WorldLifetimeScope auto-inject objects.", this);
             enabled = false;
             return;
         }
@@ -77,9 +81,26 @@ public class StressTestSpawner : MonoBehaviour
         random = new Random(seed);
         mobRoot = new GameObject("StressMobs").transform;
         mobRoot.SetParent(transform, false);
+    }
+
+    /// <summary>
+    /// Waits for every chunk of the world to have its navigation page, then spawns the initial mobs around itself and
+    /// across the world, once, and stops updating.
+    /// </summary>
+    private void Update()
+    {
+        IReadOnlyList<WorldDefinition.Chunk> chunks = world.Chunks;
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            if (!navigation.HasChunk(chunks[i].Coords))
+            {
+                return;
+            }
+        }
 
         SpawnAround(transform.position, initialNearSpawn);
         SpawnAcrossMap(initialAcrossMap);
+        enabled = false;
     }
 
     /// <summary>
@@ -106,13 +127,12 @@ public class StressTestSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawns up to <paramref name="count"/> mobs on random cells within the navigation grid's walkable bounds.
-    /// Returns how many were spawned.
+    /// Spawns up to <paramref name="count"/> mobs on random cells of the world. Returns how many were spawned.
     /// </summary>
     public int SpawnAcrossMap(int count)
     {
-        BoundsInt bounds = navigationGrid.WalkableBounds;
-        return Spawn(count, () => navigationGrid.CellToWorldCenter(new Vector3Int(
+        RectInt bounds = world.LocalBounds;
+        return Spawn(count, () => navigation.CellToWorldCenter(new Vector3Int(
             random.Next(bounds.xMin, bounds.xMax),
             random.Next(bounds.yMin, bounds.yMax),
             0)));
@@ -148,7 +168,7 @@ public class StressTestSpawner : MonoBehaviour
         }
 
         TerrainMovementProfile2D profile = mobPrefab.Config != null ? mobPrefab.Config.MovementProfile : null;
-        if (!navigationGrid.TryGetNearestWalkableCell(navigationGrid.WorldToCell(transform.position), profile, out Vector3Int anchorCell))
+        if (!navigation.TryGetNearestWalkableCell(navigation.WorldToCell(transform.position), profile, out Vector3Int anchorCell))
         {
             Debug.LogError($"{name} is not near any walkable cell, so no mobs can spawn.", this);
             return 0;
@@ -157,13 +177,13 @@ public class StressTestSpawner : MonoBehaviour
         int spawned = 0;
         for (int attempt = 0; attempt < count * AttemptsPerMob && spawned < count; attempt++)
         {
-            Vector3Int cell = navigationGrid.WorldToCell(sampleCandidate());
-            if (!navigationGrid.IsCellWalkable(cell, profile) || !navigationGrid.AreCellsConnected(anchorCell, cell, profile))
+            Vector3Int cell = navigation.WorldToCell(sampleCandidate());
+            if (!navigation.IsCellWalkable(cell, profile) || !navigation.AreCellsConnected(anchorCell, cell, profile))
             {
                 continue;
             }
 
-            Vector2 position = navigationGrid.CellToWorldCenter(cell);
+            Vector2 position = navigation.CellToWorldCenter(cell);
             if (Vector2.Distance(position, PlayerPosition()) < minPlayerDistance)
             {
                 continue;

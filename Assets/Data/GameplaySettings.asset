@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dadcf658eff06340aeb3041bb5c33f1, type: 3}
   m_Name: GameplaySettings
   m_EditorClassIdentifier: TopDownRPG.Gameplay::GameplaySettings
-  restartDelaySeconds: 1.5
   respawnDelaySeconds: 3
+  entrySlotSpacing: 0.6
   autosaveIntervalSeconds: 60

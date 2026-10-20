@@ -11,20 +11,18 @@ public class PlayerBinderTests
     private readonly List<GameObject> createdObjects = new();
     private PlayerRegistry players;
     private LocalPlayerTracker localPlayer;
-    private ActiveSpawnPoint activeSpawnPoint;
     private PlayerBinder binder;
 
     /// <summary>
-    /// Creates an empty player registry, local player tracker and active spawn point, and a binder over them with
-    /// a local command source on fake input.
+    /// Creates an empty player registry and local player tracker, and a binder over them with a local command source
+    /// on fake input.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
         players = new PlayerRegistry();
         localPlayer = new LocalPlayerTracker();
-        activeSpawnPoint = new ActiveSpawnPoint();
-        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null), activeSpawnPoint);
+        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null));
     }
 
     /// <summary>
@@ -45,16 +43,14 @@ public class PlayerBinderTests
     }
 
     /// <summary>
-    /// Binding the local player registers it, assigns and announces it as the local player, lets it simulate its
-    /// own movement and moves it to the active spawn point.
+    /// Binding the local player registers it, assigns and announces it as the local player and lets it simulate its
+    /// own movement, leaving it where it stands: placing it is the world session's.
     /// </summary>
     [Test]
-    public void BindLocal_RegistersTheLocalPlayer_AndPlacesItAtTheActiveSpawnPoint()
+    public void BindLocal_RegistersTheLocalPlayer_WithoutMovingIt()
     {
-        GameObject spawnObject = Create("Spawn");
-        spawnObject.transform.position = new Vector3(4f, -2f, 0f);
-        activeSpawnPoint.Set(spawnObject.AddComponent<SpawnPoint>());
         PlayerController controller = CreatePlayer();
+        controller.transform.position = new Vector3(4f, -2f, 0f);
         LocalPlayer assigned = null;
         localPlayer.Changed += player => assigned = player;
 

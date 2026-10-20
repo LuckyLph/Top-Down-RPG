@@ -41,15 +41,15 @@ public sealed class BootFlow : IAsyncStartable
 #if UNITY_EDITOR
     /// <summary>
     /// Boots into the scenes the editor had open: a world's root or chunk scene starts a new game in that world at its
-    /// default entry (whose first save replaces the save file, as New Game's does); otherwise the first one that is neither the menu nor the gameplay scene is treated as an area (a
-    /// transient definition when <see cref="GameScenes"/> does not list it) and a new game starts there; the gameplay
-    /// scene without an area starts a new game in the starting area; the menu scene on its own shows the main menu.
-    /// Returns false when <paramref name="scenePaths"/> gives nothing to boot into.
+    /// default entry (whose first save replaces the save file, as New Game's does); the gameplay scene without a world
+    /// starts a new game in the starting world at its entry; the menu scene shows the main menu. Any other scene is no
+    /// world: it boots to the main menu with a warning. Returns false when <paramref name="scenePaths"/> gives nothing
+    /// to boot into.
     /// </summary>
     private async Awaitable<bool> TryBootFromEditorScenesAsync(string[] scenePaths, CancellationToken cancellation)
     {
-        SceneDefinition area = null;
         WorldDefinition world = null;
+        string entryName = null;
         bool wantsGameplay = false;
         bool wantsMenu = false;
 
@@ -63,26 +63,34 @@ public sealed class BootFlow : IAsyncStartable
             {
                 wantsGameplay = true;
             }
-            else if (world == null && FindWorldOwning(scenePath) is WorldDefinition owner)
+            else if (FindWorldOwning(scenePath) is WorldDefinition owner)
             {
-                world = owner;
+                if (world == null)
+                {
+                    world = owner;
+                }
             }
-            else if (area == null)
+            else
             {
-                area = gameScenes.FindArea(scenePath) ?? SceneDefinition.CreateTransient(scenePath);
+                Debug.LogWarning($"{scenePath} is not a world's scene; booting to the main menu.");
+                wantsMenu = true;
+            }
+        }
+
+        if (world == null && wantsGameplay)
+        {
+            world = gameScenes.StartingWorld;
+            entryName = gameScenes.StartingWorldEntry;
+            if (world == null)
+            {
+                Debug.LogError($"{gameScenes.name} has no starting world to boot the gameplay scene into.", gameScenes);
             }
         }
 
         if (world != null)
         {
             sessionSave.StartNew();
-            await gameFlow.StartWorldGameAsync(world, null, cancellation);
-            return true;
-        }
-
-        if (area != null || wantsGameplay)
-        {
-            await gameFlow.StartNewGameAsync(area, null, cancellation);
+            await gameFlow.StartWorldGameAsync(world, entryName, cancellation);
             return true;
         }
 

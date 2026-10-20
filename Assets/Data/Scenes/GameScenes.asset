@@ -14,15 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Core::GameScenes
   mainMenu: {fileID: 11400000, guid: 06482ad2efb38274e94b312d9e9a56d7, type: 2}
   gameplay: {fileID: 11400000, guid: 6369c5fd92cf4c74fa255d72905e3742, type: 2}
-  startingArea: {fileID: 11400000, guid: 1d086e110f27b644ca75fd1509664a6b, type: 2}
-  startingSpawnId: start
-  areas:
-  - {fileID: 11400000, guid: 1d086e110f27b644ca75fd1509664a6b, type: 2}
-  - {fileID: 11400000, guid: 42abb6baff3572948a980a02bbcab07e, type: 2}
-  - {fileID: 11400000, guid: 20547fc54d1cca2458e7155709549cd5, type: 2}
-  - {fileID: 11400000, guid: aadc583671bba7e42b6775cbd91091b6, type: 2}
-  - {fileID: 11400000, guid: 221f1ecd6f6a59b43b509b2d5a0a0921, type: 2}
-  - {fileID: 11400000, guid: 346968b72a7660544aedfc3ce1ec90bb, type: 2}
   worlds:
   - {fileID: 11400000, guid: b6376a2ae0bb44c44bd70deacbeb0358, type: 2}
   - {fileID: 11400000, guid: 3e445269de5de9148a0213aed5a691a5, type: 2}

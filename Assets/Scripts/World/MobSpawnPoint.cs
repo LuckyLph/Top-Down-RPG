@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Marks where one mob of the given prefab spawns in an area or chunk scene. <see cref="AreaMobSpawner"/> spawns them
-/// when the area loads and <see cref="ChunkMobSpawner"/> when the chunk does; mobs are never placed in scenes directly.
+/// Marks where one mob of the given prefab spawns in a chunk scene. <see cref="ChunkMobSpawner"/> spawns them when the
+/// chunk loads; mobs are never placed in scenes directly.
 /// </summary>
 public class MobSpawnPoint : MonoBehaviour
 {
-    [Tooltip("Mob prefab spawned here when the area or chunk loads.")]
+    [Tooltip("Mob prefab spawned here when the chunk loads.")]
     [SerializeField] private MobController mobPrefab;
 
     public MobController MobPrefab => mobPrefab;

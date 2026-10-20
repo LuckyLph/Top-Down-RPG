@@ -263,14 +263,16 @@ public class WorldTripTests
     }
 
     /// <summary>
-    /// Game time stops for every transition but a trip between worlds.
+    /// Game time stops for every offline transition but a trip, and for nothing in a session.
     /// </summary>
     [Test]
-    public void TheTimeFreeze_HoldsForTransitions_ButNotForTrips()
+    public void TheTimeFreeze_HoldsForOfflineTransitions_ButNotForTripsOrSessions()
     {
-        Assert.That(TransitionTimeFreeze.Freezes(true, false), Is.True);
-        Assert.That(TransitionTimeFreeze.Freezes(true, true), Is.False);
-        Assert.That(TransitionTimeFreeze.Freezes(false, false), Is.False);
+        Assert.That(TransitionTimeFreeze.Freezes(true, false, false), Is.True);
+        Assert.That(TransitionTimeFreeze.Freezes(true, true, false), Is.False);
+        Assert.That(TransitionTimeFreeze.Freezes(false, false, false), Is.False);
+        Assert.That(TransitionTimeFreeze.Freezes(true, false, true), Is.False, "A session's own start, join or leave stops nobody's game.");
+        Assert.That(TransitionTimeFreeze.Freezes(true, true, true), Is.False);
     }
 
     /// <summary>

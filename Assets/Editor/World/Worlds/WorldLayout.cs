@@ -7,7 +7,7 @@ using UnityEngine;
 /// world and one camera, so no two worlds' rectangles may come within <see cref="MinimumGap"/> units of each other, and
 /// the layout stays within <see cref="Extent"/> units of the origin, where float precision is a sixteenth of an art
 /// pixel. New worlds take the first free slot of a grid <see cref="SlotSize"/> units apart, twice the largest world, so
-/// worlds in different slots are always far enough apart; the slot at the origin is left to the areas until they go.
+/// worlds in different slots are always far enough apart.
 /// </summary>
 public static class WorldLayout
 {
@@ -114,8 +114,7 @@ public static class WorldLayout
 
     /// <summary>
     /// The first slot origin, row by row from the origin outwards, where a world <paramref name="sizeInChunks"/> chunks
-    /// across fits beside <paramref name="worlds"/> (<see cref="Problem"/>), skipping the slot at the origin; false
-    /// when the layout is full.
+    /// across fits beside <paramref name="worlds"/> (<see cref="Problem"/>); false when the layout is full.
     /// </summary>
     public static bool TryFindFreeOrigin(Vector2Int sizeInChunks, IEnumerable<WorldDefinition> worlds, out Vector2Int origin)
     {
@@ -125,11 +124,6 @@ public static class WorldLayout
         {
             for (int x = 0; x < slots; x++)
             {
-                if (x == 0 && y == 0)
-                {
-                    continue;
-                }
-
                 origin = new Vector2Int(x * SlotSize, y * SlotSize);
                 if (Problem(origin, sizeInChunks, placed) == null)
                 {

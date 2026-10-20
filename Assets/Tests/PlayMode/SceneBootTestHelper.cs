@@ -17,27 +17,27 @@ using UnityEditor.SceneManagement;
 public static class SceneBootTestHelper
 {
     public const string MainScenePath = "Assets/Scenes/Main.unity";
-    public const string StartingAreaPath = "Assets/Scenes/Areas/Area_Clearing.unity";
+    public const string TestlandsRootPath = "Assets/Worlds/Testlands/World_Testlands.unity";
     private const float TimeoutSeconds = 15f;
 
     /// <summary>
-    /// Boots into a gameplay session in the starting area, backed by <paramref name="saveStore"/> or a fresh in-memory
-    /// store.
+    /// Boots into a new game in Testlands, the hand-painted test world, at its default entry, backed by
+    /// <paramref name="saveStore"/> or a fresh in-memory store.
     /// </summary>
-    public static IEnumerator BootIntoStartingArea(ISaveStore saveStore = null)
+    public static IEnumerator BootIntoTestlands(ISaveStore saveStore = null)
     {
-        yield return BootIntoArea(StartingAreaPath, saveStore);
+        yield return BootIntoWorld(TestlandsRootPath, saveStore);
     }
 
     /// <summary>
-    /// Boots into a gameplay session in <paramref name="areaScenePath"/>, starting a new game if the boot lands in the
-    /// menu, and asserts it ends in game. Any scene can be booted as an area in the editor, listed in GameScenes or
-    /// not (see BootFlow).
+    /// Boots into a new game in the world whose root or chunk scene is <paramref name="worldScenePath"/>, at its
+    /// default entry, starting a new game in the starting world if the boot lands in the menu, and asserts it ends in
+    /// game. Any world's scene can be booted into in the editor, listed in GameScenes or not (see BootFlow).
     /// </summary>
-    public static IEnumerator BootIntoArea(string areaScenePath, ISaveStore saveStore = null)
+    public static IEnumerator BootIntoWorld(string worldScenePath, ISaveStore saveStore = null)
     {
 #if UNITY_EDITOR
-        EditorBootRequest.Set(new[] { areaScenePath });
+        EditorBootRequest.Set(new[] { worldScenePath });
 #endif
         yield return LoadMainScene(saveStore);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
@@ -47,8 +47,7 @@ public static class SceneBootTestHelper
 
         if (!gameFlow.IsInGame)
         {
-            // Builds (or a missing editor request) boot to the menu first.
-            gameFlow.StartNewGameAsync();
+            gameFlow.StartWorldGameAsync(gameFlow.Scenes.StartingWorld, gameFlow.Scenes.StartingWorldEntry);
             yield return WaitForTransition(gameFlow);
         }
 

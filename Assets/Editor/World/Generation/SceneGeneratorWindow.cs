@@ -5,10 +5,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Editor window that generates the active area scene's content from an <see cref="AreaGenerator"/> asset. It shows
-/// the generator's settings in place and a map of the layout they give, redrawn on every change; Random Seed picks a
-/// new seed and Generate replaces the scene's terrain, props and mob spawns with that layout as one undo step, through
-/// <see cref="AreaLayoutWriter"/>. The scene is left unsaved for review.
+/// Editor window that generates the content of the active scene's standalone grid from an <see cref="AreaGenerator"/>
+/// asset. It shows the generator's settings in place and a map of the layout they give, redrawn on every change; Random
+/// Seed picks a new seed and Generate replaces the scene's terrain, props and mob spawns with that layout as one undo
+/// step, through <see cref="AreaLayoutWriter"/>. The scene is left unsaved for review. New scratch scene makes a scene
+/// to generate into (<see cref="WorldAuthoring.CreateScratchScene"/>). A world chunk's grid is refused: writing
+/// layouts into worlds belongs to the world generation plan (Docs/WorldStreaming.md).
 /// </summary>
 public sealed class SceneGeneratorWindow : EditorWindow
 {
@@ -84,13 +86,26 @@ public sealed class SceneGeneratorWindow : EditorWindow
     private void OnGUI()
     {
         Grid grid = TargetGrid();
+        using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+        {
+            if (GUILayout.Button(new GUIContent("New scratch scene", "Replaces the open scenes, after offering to save them, with an unsaved scene holding a standalone grid set up like a chunk's, to generate into.")))
+            {
+                EditorApplication.delayCall += () => WorldAuthoring.CreateScratchScene();
+            }
+        }
+
         if (grid == null)
         {
-            EditorGUILayout.HelpBox("Make an area scene active: the generator writes into the active scene's Grid.", MessageType.Info);
+            EditorGUILayout.HelpBox("Make a scene with a standalone Grid active, or make a new scratch scene: the generator writes into the active scene's Grid.", MessageType.Info);
+        }
+        else if (grid.TryGetComponent(out WorldChunk _))
+        {
+            EditorGUILayout.HelpBox($"{grid.gameObject.scene.name} is a world's chunk: the generator writes into standalone scenes only.", MessageType.Error);
+            grid = null;
         }
         else
         {
-            EditorGUILayout.LabelField("Area", grid.gameObject.scene.name);
+            EditorGUILayout.LabelField("Scene", grid.gameObject.scene.name);
         }
 
         EditorGUI.BeginChangeCheck();
@@ -201,7 +216,7 @@ public sealed class SceneGeneratorWindow : EditorWindow
 
         string sceneName = grid.gameObject.scene.name;
         if (!EditorUtility.DisplayDialog(
-            "Generate area",
+            "Generate",
             $"Replace the terrain, props and mob spawns of {sceneName} with {target.name}'s layout for seed {target.Seed}? Undo reverts it.",
             "Generate",
             "Cancel"))
@@ -393,7 +408,7 @@ public sealed class SceneGeneratorWindow : EditorWindow
     }
 
     /// <summary>
-    /// The active scene's area grid: the one carrying its <see cref="NavigationGrid2D"/>, else its first
+    /// The active scene's grid: the one carrying its <see cref="NavigationGrid2D"/>, else its first
     /// <see cref="Grid"/>. Cached until the hierarchy or the active scene changes.
     /// </summary>
     private Grid TargetGrid()

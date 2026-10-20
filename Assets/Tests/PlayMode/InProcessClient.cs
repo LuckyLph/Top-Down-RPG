@@ -137,7 +137,6 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance(camera);
         builder.RegisterInstance(controlSettings);
         builder.RegisterInstance(gameScenes);
-        builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
         builder.Register<Worlds>(Lifetime.Singleton);
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
         builder.Register<TripArrivals>(Lifetime.Singleton);

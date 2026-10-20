@@ -3,7 +3,7 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// The composition root of the Gameplay scene, a child of the Main scope and parent of each area and world scope:
+/// The composition root of the Gameplay scene, a child of the Main scope and parent of each world's scope:
 /// registers the players, combat, abilities, statuses, HUD, menus, pointer feedback, the world streaming, the trips
 /// between worlds and the saving of world sessions for the session.
 /// </summary>
@@ -55,7 +55,6 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
-        builder.Register<ActiveSpawnPoint>(Lifetime.Singleton);
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);

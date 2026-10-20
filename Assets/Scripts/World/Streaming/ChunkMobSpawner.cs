@@ -19,7 +19,7 @@ using VContainer.Unity;
 /// wherever it walks, so it goes with the chunk. Persistence (Docs/WorldStreaming.md: Persistence): a mob killed here
 /// is recorded in the chunk's record of its <see cref="WorldState"/>, by its spawn point's <see cref="PersistentId"/>
 /// and the world clock's time, and a spawn point whose mob stays dead (<see cref="ChunkState.StaysDead"/>, by its
-/// config's respawn rule) is skipped as the chunk loads. Shares its spawning with <see cref="AreaMobSpawner"/> through
+/// config's respawn rule) is skipped as the chunk loads. Spawns and despawns each mob through
 /// <see cref="MobSpawning"/>.
 /// </summary>
 public sealed class ChunkMobSpawner : IPostStartable, IDisposable

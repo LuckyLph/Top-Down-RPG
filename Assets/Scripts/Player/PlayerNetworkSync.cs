@@ -6,8 +6,8 @@ using VContainer;
 /// <summary>
 /// Replicates a networked player. The owner binds it as the local player, writes its move and facing to owner
 /// network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
-/// which resolves them. The owner's teleports (respawns, arriving at an entry) snap on the other machines instead of
-/// sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
+/// which resolves them. The owner's teleports (arriving at an entry, a waystone included) snap on the other machines
+/// instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
@@ -21,7 +21,6 @@ public class PlayerNetworkSync : NetworkBehaviour
     private PlayerController controller;
     private PlayerWeaponController weapon;
     private PlayerAbilities abilities;
-    private Health health;
     private Rigidbody2D body;
     private NetworkTransform networkTransform;
     private PlayerBinder binder;
@@ -33,14 +32,13 @@ public class PlayerNetworkSync : NetworkBehaviour
     internal PlayerHandle Handle => handle;
 
     /// <summary>
-    /// Caches the controller, weapon, abilities, health and body on this player.
+    /// Caches the controller, weapon, abilities, body and network transform on this player.
     /// </summary>
     private void Awake()
     {
         controller = GetComponent<PlayerController>();
         weapon = GetComponent<PlayerWeaponController>();
         abilities = GetComponent<PlayerAbilities>();
-        health = GetComponent<Health>();
         body = GetComponent<Rigidbody2D>();
         networkTransform = GetComponent<NetworkTransform>();
     }
@@ -55,7 +53,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// The owner binds the player as local and starts relaying its swings, restores and casts; any other machine
+    /// The owner binds the player as local and starts relaying its swings, teleports and casts; any other machine
     /// makes the body kinematic without interpolation, binds it as remote and shows the current replicated movement.
     /// Logs an error and does nothing when the prefab was spawned without injection.
     /// </summary>
@@ -74,11 +72,6 @@ public class PlayerNetworkSync : NetworkBehaviour
             if (weapon != null)
             {
                 weapon.Attacked += HandleLocalAttack;
-            }
-
-            if (health != null)
-            {
-                health.Restored += HandleLocalRestored;
             }
 
             if (abilities != null)
@@ -110,11 +103,6 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (weapon != null)
         {
             weapon.Attacked -= HandleLocalAttack;
-        }
-
-        if (health != null)
-        {
-            health.Restored -= HandleLocalRestored;
         }
 
         if (abilities != null)
@@ -159,15 +147,6 @@ public class PlayerNetworkSync : NetworkBehaviour
         {
             facing.Value = currentFacing;
         }
-    }
-
-    /// <summary>
-    /// On the owner, moves a respawned player (its health restored, on a client by the host's replication) to its
-    /// slot at the active spawn point, since only the owner moves its own body.
-    /// </summary>
-    private void HandleLocalRestored(Health _)
-    {
-        binder.PlaceAtActiveSpawn(handle);
     }
 
     /// <summary>

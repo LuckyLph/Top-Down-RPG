@@ -1,13 +1,14 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using VContainer;
 
 /// <summary>
-/// PlayMode tests for the click-to-move controls in the booted starting area, driven by scripted commands: pathing,
-/// attack orders, attack moves, player overlap, the ability and status HUD, the dev status panel and death.
+/// PlayMode tests for the click-to-move controls in Testlands, the booted test world, driven by scripted commands:
+/// pathing, attack orders, attack moves, player overlap, the ability and status HUD, the dev status panel and death.
 /// </summary>
 public class PlayerControlsPlayModeTests
 {
@@ -15,20 +16,24 @@ public class PlayerControlsPlayModeTests
 
     private IObjectResolver gameplay;
     private PlayerController player;
-    private NavigationGrid2D grid;
+    private INavigation2D navigation;
+    private Scene startChunk;
+    private NavigationGrid2D chunkGrid;
     private TerrainMovementProfile2D profile;
     private ScriptedCommands commands;
 
     /// <summary>
-    /// After booting into the starting area, the active navigation grid is the one in the area scene.
+    /// After booting into Testlands, the player paths on its world's navigation, which has the start chunk's page.
     /// </summary>
     [UnityTest]
-    public IEnumerator EnteringTheClearing_MakesItsGridTheActiveOne()
+    public IEnumerator EnteringTestlands_GivesThePlayerItsWorldsNavigation()
     {
         yield return Boot();
 
-        Assert.That(grid, Is.Not.Null);
-        Assert.That(grid.gameObject.scene, Is.EqualTo(SceneBootTestHelper.ResolveGameFlow().AreaScene));
+        Assert.That(navigation, Is.Not.Null);
+        Assert.That(gameplay.Resolve<PlayerNavigation>().Of(player.transform), Is.SameAs(navigation));
+        Assert.That(chunkGrid, Is.Not.Null);
+        Assert.That(navigation.IsCellWalkable(navigation.WorldToCell(player.transform.position), profile), Is.True);
     }
 
     /// <summary>
@@ -60,7 +65,7 @@ public class PlayerControlsPlayModeTests
     public IEnumerator RightClickOnAMobBehindAWall_PathsAroundAndKillsIt()
     {
         yield return Boot();
-        MobController mob = Object.FindAnyObjectByType<MobController>();
+        MobController mob = MobOfTheStartChunk();
         Assert.That(mob, Is.Not.Null);
         foreach (MobController other in Object.FindObjectsByType<MobController>())
         {
@@ -100,7 +105,7 @@ public class PlayerControlsPlayModeTests
     public IEnumerator AttackMove_PastAMob_KillsIt_ThenWalksOnToItsPoint()
     {
         yield return Boot();
-        MobController mob = Object.FindAnyObjectByType<MobController>();
+        MobController mob = MobOfTheStartChunk();
         Assert.That(mob, Is.Not.Null);
         foreach (MobController other in Object.FindObjectsByType<MobController>())
         {
@@ -222,7 +227,7 @@ public class PlayerControlsPlayModeTests
         StatusVisual aura = player.GetComponent<StatusVisuals>().GetShown(0);
         Assert.That(Vector2.Distance(aura.transform.position, player.transform.position), Is.LessThan(0.01f), "The visual follows the player.");
 
-        MobController mob = Object.FindAnyObjectByType<MobController>();
+        MobController mob = MobOfTheStartChunk();
         Assert.That(statuses.Apply(mob.GetComponent<DamageReceiver>(), burn, player.gameObject), Is.EqualTo(StatusApplyOutcome.Landed));
         yield return null;
         Assert.That(mob.GetComponentInChildren<WorldStatusIcons>().ShownCount, Is.EqualTo(1), "The mob shows its debuff above its health bar.");
@@ -249,7 +254,7 @@ public class PlayerControlsPlayModeTests
         Assert.That(panel.ApplyToSelf(chill), Is.EqualTo(StatusApplyOutcome.Landed));
         Assert.That(player.GetComponent<StatusEffects>().GetStacks(chill), Is.EqualTo(1));
 
-        MobController mob = Object.FindAnyObjectByType<MobController>();
+        MobController mob = MobOfTheStartChunk();
         mob.enabled = false;
         Collider2D mobCollider = mob.GetComponent<Collider2D>();
         Vector2 mobScreenPoint = gameplay.Resolve<Camera>().WorldToScreenPoint(mobCollider.bounds.center);
@@ -302,17 +307,21 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// Boots into the starting area, caches the gameplay container, local player, active grid and movement profile,
-    /// and switches the player to scripted commands.
+    /// Boots into Testlands, caches the gameplay container, local player, its world's navigation, the scene and grid of
+    /// the chunk it stands in and its movement profile, and switches the player to scripted commands.
     /// </summary>
     private IEnumerator Boot()
     {
-        yield return SceneBootTestHelper.BootIntoStartingArea();
+        yield return SceneBootTestHelper.BootIntoTestlands();
         yield return null;
 
         gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
         player = gameplay.Resolve<LocalPlayerTracker>().Current.Controller;
-        grid = (NavigationGrid2D)gameplay.Resolve<PlayerNavigation>().Area;
+        WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
+        Assert.That(gameplay.Resolve<Worlds>().TryGet(world, out LoadedWorld loaded), Is.True);
+        navigation = loaded.Navigation;
+        startChunk = loaded.Chunks[ChunkCoords.ChunkOf(ChunkCoords.CellOf(world.ToLocal(player.transform.position)))];
+        chunkGrid = SceneQuery.FindFirst<NavigationGrid2D>(startChunk);
         profile = player.ControlSettings.MovementProfile;
         commands = new ScriptedCommands();
         player.SetCommandSource(commands);
@@ -332,6 +341,14 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
+    /// The first mob whose home is the chunk the player started in, which lives in that chunk's scene.
+    /// </summary>
+    private MobController MobOfTheStartChunk()
+    {
+        return SceneQuery.FindFirst<MobController>(startChunk);
+    }
+
+    /// <summary>
     /// Deactivates every mob so none attacks or blocks the player during the test.
     /// </summary>
     private static void DisableMobs()
@@ -343,16 +360,16 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// Builds a seven-cell collision wall two cells to the right of the player through the area's
-    /// <see cref="AreaTerrain"/> (the Clearing has no walls of its own) and returns a point straight behind it. The
-    /// grid picks the new tiles up by itself, and the wall's render tilemap draws over the blended ground.
+    /// Builds a seven-cell collision wall two cells to the right of the player through its chunk's
+    /// <see cref="AreaTerrain"/> and returns a point straight behind it. The chunk's grid picks the new tiles up by
+    /// itself, and the wall's render tilemap draws over the blended ground.
     /// </summary>
     private Vector2 BuildWallInFrontOfThePlayer()
     {
-        Tilemap collision = grid.BlockingTilemaps.Count > 0 ? grid.BlockingTilemaps[0] : null;
-        Assert.That(collision, Is.Not.Null, "The Clearing should have a collision tilemap.");
-        AreaTerrain terrain = Object.FindAnyObjectByType<AreaTerrain>();
-        Vector3Int start = grid.WorldToCell(player.transform.position);
+        Tilemap collision = chunkGrid.BlockingTilemaps.Count > 0 ? chunkGrid.BlockingTilemaps[0] : null;
+        Assert.That(collision, Is.Not.Null, "The start chunk should have a collision tilemap.");
+        AreaTerrain terrain = SceneQuery.FindFirst<AreaTerrain>(startChunk);
+        Vector3Int start = navigation.WorldToCell(player.transform.position);
         Vector3Int[] wall = new Vector3Int[7];
         for (int dy = -3; dy <= 3; dy++)
         {
@@ -368,8 +385,8 @@ public class PlayerControlsPlayModeTests
         Assert.That(wallArt.RenderTilemap.HasTile(DualGridUtils.GetRenderTilePosition(wall[0], 3)), Is.True, "Its render tilemap draws the new wall.");
         Assert.That(wallArt.RenderTilemap.gameObject.layer, Is.Not.EqualTo(collision.gameObject.layer), "The wall art is on a layer the camera draws.");
         TilemapRenderer wallRenderer = wallArt.RenderTilemap.GetComponent<TilemapRenderer>();
-        TerrainBlendRenderer ground = grid.GetComponent<TerrainBlendRenderer>();
-        Assert.That(ground, Is.Not.Null, "The Clearing's ground is the blended terrain.");
+        TerrainBlendRenderer ground = chunkGrid.GetComponent<TerrainBlendRenderer>();
+        Assert.That(ground, Is.Not.Null, "The chunk's ground is the blended terrain.");
         Assert.That(ground.Chunks, Is.Not.Empty);
         foreach (MeshRenderer chunk in ground.Chunks)
         {
@@ -380,9 +397,9 @@ public class PlayerControlsPlayModeTests
         Physics2D.SyncTransforms();
 
         Vector3Int goal = new(start.x + 4, start.y, start.z);
-        Assert.That(grid.IsCellWalkable(goal, profile), Is.True);
-        Assert.That(grid.TryGetLineCost(start, goal, profile, out _), Is.False, "The wall should block the straight line.");
-        return grid.CellToWorldCenter(goal);
+        Assert.That(navigation.IsCellWalkable(goal, profile), Is.True);
+        Assert.That(navigation.TryGetLineCost(start, goal, profile, out _), Is.False, "The wall should block the straight line.");
+        return navigation.CellToWorldCenter(goal);
     }
 
     /// <summary>
@@ -392,14 +409,14 @@ public class PlayerControlsPlayModeTests
     /// </summary>
     private Vector2 FindClearGoal(Vector2 from, int distance)
     {
-        Vector3Int start = grid.WorldToCell(from);
+        Vector3Int start = navigation.WorldToCell(from);
         Vector3Int[] directions = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
         foreach (Vector3Int direction in directions)
         {
             Vector3Int cell = start + direction * distance;
-            if (grid.TryGetLineCost(start, cell, profile, out _) && ClearOfWalls(start, direction, distance))
+            if (navigation.TryGetLineCost(start, cell, profile, out _) && ClearOfWalls(start, direction, distance))
             {
-                return grid.CellToWorldCenter(cell);
+                return navigation.CellToWorldCenter(cell);
             }
         }
 
@@ -417,7 +434,7 @@ public class PlayerControlsPlayModeTests
         for (int step = 0; step <= distance; step++)
         {
             Vector3Int cell = start + direction * step;
-            if (!grid.IsCellWalkable(cell + side, profile) || !grid.IsCellWalkable(cell - side, profile))
+            if (!navigation.IsCellWalkable(cell + side, profile) || !navigation.IsCellWalkable(cell - side, profile))
             {
                 return false;
             }

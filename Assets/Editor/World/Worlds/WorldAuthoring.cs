@@ -24,7 +24,7 @@ public static class WorldAuthoring
 {
     public const string WorldsFolder = "Assets/Worlds";
     public const string StylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
-    public const string AreaTemplatePath = "Assets/Settings/Scenes/AreaTemplate.unity";
+    public const string WallsPrefabPath = "Assets/Prefabs/World/Walls.prefab";
     public const string WallsName = "CollisionTilemap";
     public const string ExitsRootName = "Exits";
     public const string GrassLayerName = "GrassTilemap";
@@ -57,12 +57,14 @@ public static class WorldAuthoring
     /// <summary>
     /// Creates the world <paramref name="worldName"/> at <paramref name="origin"/>, <paramref name="sizeInChunks"/>
     /// chunks across, with no chunks yet: its folder, root scene (a <see cref="WorldLifetimeScope"/>, and a
-    /// <see cref="WorldLighting"/> holding a white Global Light 2D at 0.85 as in the areas), the scene's definition and
-    /// the world's definition. Leaves the scenes open as they were. Throws when the folder already exists.
+    /// <see cref="WorldLighting"/> holding a white Global Light 2D at 0.85), the scene's definition and the world's
+    /// definition, in <see cref="WorldsFolder"/> or another <paramref name="parentFolder"/> (a dev world's, under
+    /// <see cref="SceneBuildValidator.DevFolder"/>, stays out of the build list). Leaves the scenes open as they were.
+    /// Throws when the folder already exists.
     /// </summary>
-    public static WorldDefinition CreateWorld(string worldName, Vector2Int origin, Vector2Int sizeInChunks)
+    public static WorldDefinition CreateWorld(string worldName, Vector2Int origin, Vector2Int sizeInChunks, string parentFolder = WorldsFolder)
     {
-        string folder = FolderOf(worldName);
+        string folder = $"{parentFolder}/{worldName}";
         if (AssetDatabase.IsValidFolder(folder))
         {
             throw new System.InvalidOperationException($"{folder} already exists.");
@@ -75,12 +77,7 @@ public static class WorldAuthoring
         {
             new GameObject("WorldLifetimeScope", typeof(WorldLifetimeScope));
             GameObject lighting = new("Lighting", typeof(WorldLighting));
-            GameObject lightObject = new("Global Light 2D");
-            lightObject.transform.SetParent(lighting.transform, false);
-            Light2D light = lightObject.AddComponent<Light2D>();
-            light.lightType = Light2D.LightType.Global;
-            light.color = Color.white;
-            light.intensity = GlobalLightIntensity;
+            AddGlobalLight(lighting.transform);
             EditorSceneManager.SaveScene(scene, rootPath);
         }
         finally
@@ -100,8 +97,9 @@ public static class WorldAuthoring
     /// <summary>
     /// Creates the chunk at <paramref name="coords"/> of <paramref name="world"/>: a scene with a
     /// <see cref="ChunkLifetimeScope"/> and a grid at the world's origin with its <see cref="WorldChunk"/> and a terrain
-    /// renderer drawing one empty grass layer, its definition, its entry in the world and its place in the build list. Returns the scene path. Throws
-    /// when the chunk lies outside the world or already has a scene.
+    /// renderer drawing one empty grass layer (<see cref="SetUpGround"/>), its definition, its entry in the world and its
+    /// place in the build list (none for a dev world). Returns the scene path. Throws when the chunk lies outside the
+    /// world or already has a scene.
     /// </summary>
     public static string CreateChunk(WorldDefinition world, Vector2Int coords)
     {
@@ -126,11 +124,7 @@ public static class WorldAuthoring
             gridObject.transform.position = new Vector3(world.Origin.x, world.Origin.y, 0f);
             gridObject.SetActive(false);
             gridObject.AddComponent<WorldChunk>().Configure(world, coords, null);
-            TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
-            renderer.Configure(AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath));
-            GroundLayerMigration.AddLayer(gridObject.GetComponent<Grid>(), MaterialNamed("Grass"));
-            SetUpNavigation(gridObject.GetComponent<Grid>());
-            SetUpTerrainEdits(gridObject.GetComponent<Grid>());
+            SetUpGround(gridObject.GetComponent<Grid>());
             gridObject.SetActive(true);
             EditorSceneManager.SaveScene(scene, path);
         }
@@ -143,6 +137,30 @@ public static class WorldAuthoring
         AddToBuild(path);
         AssetDatabase.SaveAssets();
         return path;
+    }
+
+    /// <summary>
+    /// Replaces the open scenes, after offering to save them, with a new unsaved scratch scene for the Scene Generator:
+    /// a Global Light 2D and a standalone grid at the origin set up as a chunk's (<see cref="SetUpGround"/>, then
+    /// <see cref="AddWalls"/>) with no <see cref="WorldChunk"/>, so no world streams it. Returns the grid, or null when
+    /// the save was declined.
+    /// </summary>
+    public static Grid CreateScratchScene()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        {
+            return null;
+        }
+
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        AddGlobalLight(null);
+        GameObject gridObject = new("Grid", typeof(Grid));
+        gridObject.SetActive(false);
+        Grid grid = gridObject.GetComponent<Grid>();
+        SetUpGround(grid);
+        gridObject.SetActive(true);
+        AddWalls(grid);
+        return grid;
     }
 
     /// <summary>
@@ -280,42 +298,33 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Gives <paramref name="grid"/> the walls of the area template: a copy of its empty <see cref="WallsName"/>, a
-    /// dual-grid data tilemap on the Obstacles layer with its collider, its wall module and its half-cell render
-    /// tilemap, placed after the ground layers. Returns its module.
+    /// Gives <paramref name="grid"/> the walls of the walls prefab (<see cref="WallsPrefabPath"/>): an unlinked copy of
+    /// its empty <see cref="WallsName"/>, a dual-grid data tilemap on the Obstacles layer with its collider, its wall
+    /// module and its half-cell render tilemap, placed after the ground layers. Returns its module.
     /// </summary>
     public static DualGridTilemapModule AddWalls(Grid grid)
     {
-        Scene template = EditorSceneManager.OpenScene(AreaTemplatePath, OpenSceneMode.Additive);
-        try
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(WallsPrefabPath);
+        if (prefab == null || !prefab.TryGetComponent(out DualGridTilemapModule _))
         {
-            Grid templateGrid = SceneQuery.FindFirst<Grid>(template);
-            Transform source = templateGrid != null ? templateGrid.transform.Find(WallsName) : null;
-            if (source == null)
-            {
-                throw new System.InvalidOperationException($"{AreaTemplatePath} has no {WallsName} under its grid.");
-            }
-
-            GameObject copy = Object.Instantiate(source.gameObject, grid.transform, false);
-            copy.name = WallsName;
-            Undo.RegisterCreatedObjectUndo(copy, $"Add {WallsName}");
-            DualGridTilemapModule module = copy.GetComponent<DualGridTilemapModule>();
-            module.DataTilemap.ClearAllTiles();
-            module.RenderTilemap.ClearAllTiles();
-            EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
-            if (grid.TryGetComponent(out NavigationGrid2D _))
-            {
-                SetUpNavigation(grid);
-            }
-
-            SetUpTerrainEdits(grid);
-            RefreshLinks(grid);
-            return module;
+            throw new System.InvalidOperationException($"{WallsPrefabPath} is missing or has no {nameof(DualGridTilemapModule)}.");
         }
-        finally
+
+        GameObject copy = Object.Instantiate(prefab, grid.transform, false);
+        copy.name = WallsName;
+        Undo.RegisterCreatedObjectUndo(copy, $"Add {WallsName}");
+        DualGridTilemapModule module = copy.GetComponent<DualGridTilemapModule>();
+        module.DataTilemap.ClearAllTiles();
+        module.RenderTilemap.ClearAllTiles();
+        EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+        if (grid.TryGetComponent(out NavigationGrid2D _))
         {
-            EditorSceneManager.CloseScene(template, true);
+            SetUpNavigation(grid);
         }
+
+        SetUpTerrainEdits(grid);
+        RefreshLinks(grid);
+        return module;
     }
 
     /// <summary>
@@ -1290,12 +1299,43 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Adds the scene at <paramref name="scenePath"/> to the build list, enabled, unless it is there already.
+    /// Gives a grid, inactive while it is set up, a terrain renderer with the project's style drawing one empty grass
+    /// layer, its <see cref="NavigationGrid2D"/> and its <see cref="AreaTerrain"/>.
+    /// </summary>
+    private static void SetUpGround(Grid grid)
+    {
+        TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath));
+        GroundLayerMigration.AddLayer(grid, MaterialNamed("Grass"));
+        SetUpNavigation(grid);
+        SetUpTerrainEdits(grid);
+    }
+
+    /// <summary>
+    /// Adds a white Global Light 2D at 0.85 under <paramref name="parent"/> (at the scene's root when null).
+    /// </summary>
+    private static void AddGlobalLight(Transform parent)
+    {
+        GameObject lightObject = new("Global Light 2D");
+        if (parent != null)
+        {
+            lightObject.transform.SetParent(parent, false);
+        }
+
+        Light2D light = lightObject.AddComponent<Light2D>();
+        light.lightType = Light2D.LightType.Global;
+        light.color = Color.white;
+        light.intensity = GlobalLightIntensity;
+    }
+
+    /// <summary>
+    /// Adds the scene at <paramref name="scenePath"/> to the build list, enabled, unless it is there already or it is a
+    /// dev scene (under <see cref="SceneBuildValidator.DevFolder"/>), played from the editor only.
     /// </summary>
     private static void AddToBuild(string scenePath)
     {
         List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
-        if (scenes.Any(s => s.path == scenePath))
+        if (scenePath.StartsWith(SceneBuildValidator.DevFolder) || scenes.Any(s => s.path == scenePath))
         {
             return;
         }

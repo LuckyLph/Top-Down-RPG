@@ -14,23 +14,32 @@ public sealed class PlayerSpawner
     private readonly IObjectResolver resolver;
     private readonly PlayerBinder binder;
     private readonly NetworkSession session;
+    private readonly IPlayerRegistry players;
+    private readonly PlayerWorlds playerWorlds;
+    private readonly GameplaySettings settings;
     private readonly PlayerController playerPrefab;
     private readonly Scene scene;
 
     /// <summary>
-    /// Captures the resolver that injects new players, the binder, the session, the player prefab and the scene new
-    /// players are moved into.
+    /// Captures the resolver that injects new players, the binder, the session, the players and their worlds a joining
+    /// player is placed among, the entry slot spacing, the player prefab and the scene new players are moved into.
     /// </summary>
     public PlayerSpawner(
         IObjectResolver resolver,
         PlayerBinder binder,
         NetworkSession session,
+        IPlayerRegistry players,
+        PlayerWorlds playerWorlds,
+        GameplaySettings settings,
         PlayerController playerPrefab,
         Scene scene)
     {
         this.resolver = resolver;
         this.binder = binder;
         this.session = session;
+        this.players = players;
+        this.playerWorlds = playerWorlds;
+        this.settings = settings;
         this.playerPrefab = playerPrefab;
         this.scene = scene;
     }
@@ -56,9 +65,10 @@ public sealed class PlayerSpawner
     }
 
     /// <summary>
-    /// Host only: creates the network player object owned by client <paramref name="ownerClientId"/> at
-    /// <paramref name="position"/>, puts it in <paramref name="world"/> as it spawns and spawns it, unless that client
-    /// already has one. Logs an error when called anywhere but the host.
+    /// Host only: creates the network player object owned by client <paramref name="ownerClientId"/> on a free slot at
+    /// <paramref name="position"/> (<see cref="EntrySlots"/>, so players joining at the same entry stand apart), puts
+    /// it in <paramref name="world"/> as it spawns and spawns it, unless that client already has one. Logs an error
+    /// when called anywhere but the host.
     /// </summary>
     public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position)
     {
@@ -73,8 +83,10 @@ public sealed class PlayerSpawner
             return;
         }
 
+        float spacing = settings != null ? settings.EntrySlotSpacing : 0f;
+        Vector2 slot = EntrySlots.FreeSlot(position, spacing, world, players, playerWorlds, null);
         PlayerController controller = CreateInstance();
-        controller.Teleport(position);
+        controller.Teleport(slot);
         if (controller.TryGetComponent(out PlayerWorldSync worldSync))
         {
             worldSync.SetSpawnWorld(world);

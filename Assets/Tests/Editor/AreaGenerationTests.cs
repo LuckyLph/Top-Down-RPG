@@ -1028,7 +1028,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(lakeside, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -1282,7 +1281,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(snowfield);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(snowfield, 1);
         Assert.That(AreaLayoutWriter.Write(grid, snowfield, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -1720,7 +1718,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(coast);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(coast, 1);
         Assert.That(AreaLayoutWriter.Write(grid, coast, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -2025,7 +2022,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(lavaFields);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(lavaFields, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lavaFields, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -2310,7 +2306,7 @@ public class AreaGenerationTests
     /// holding the layer's tile in exactly the layout's cells, with a navigation source of its terrain type whose
     /// priority is its index; the grid's terrain renderer draws the layers in that order with their materials and the
     /// generator's style, and the area's terrain fills the grass layer with its tile. The old props and mob spawn
-    /// points are replaced and the start spawn point moves; a generator with raised ground gets its raised tilemap,
+    /// points are replaced; a generator with raised ground gets its raised tilemap,
     /// ramps included, drawn by the renderer and read by the navigation grid; the navigation grid then blocks exactly
     /// the footprint cells, the water, the ocean, lava and the cells the cliff face of raised ground covers whole at the
     /// style's cliff height, the cliff stops steps up its face, and every mob can walk to the spawn.
@@ -2332,7 +2328,6 @@ public class AreaGenerationTests
         stale.transform.SetParent(props, false);
         GameObject oldMob = Track(new GameObject("OldMobSpawn"));
         oldMob.AddComponent<MobSpawnPoint>();
-        SpawnPoint start = Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(target, 3);
 
         Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
@@ -2394,8 +2389,6 @@ public class AreaGenerationTests
             Assert.That(spawns[i].transform.parent.name, Is.EqualTo(AreaLayoutWriter.MobSpawnsRootName));
         }
 
-        Assert.That((Vector2)start.transform.position, Is.EqualTo(CellCentre(layout.SpawnCell)));
-
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
         navigation.ConfigureObstacleLayers(LayerMask.GetMask("Obstacles"));
         navigation.BuildGrid();
@@ -2455,7 +2448,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(lakeside, 3);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         AreaGenerator.TerrainLayer water = Layer(lakeside, "Water");
@@ -2486,7 +2478,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(lakeside);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(lakeside, 1);
         Assert.That(AreaLayoutWriter.Write(grid, lakeside, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -2535,7 +2526,6 @@ public class AreaGenerationTests
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
         Grid grid = CreateAreaWithDualGridGrass(target);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout layout = Layout(target, 1);
         Assert.That(AreaLayoutWriter.Write(grid, target, layout), Is.True);
         NavigationGrid2D navigation = grid.GetComponent<NavigationGrid2D>();
@@ -2595,7 +2585,6 @@ public class AreaGenerationTests
     {
         Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaGenerator.TerrainLayer source = generator.TerrainLayers[0];
         TerrainMaterial[] order = new TerrainMaterial[TerrainControlMap.MaxLayers + 1];
         List<AreaGenerator.TerrainLayer> layers = new();
@@ -2665,7 +2654,6 @@ public class AreaGenerationTests
         TestAreaGenerator partial = Track(TestAreaGenerator.Create(lakeside.TerrainStyle, layers));
         Grid grid = CreateAreaWithDualGridGrass(partial);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         Assert.That(AreaLayoutWriter.Write(grid, partial, partial.Generate(1)), Is.True);
         Tilemap grass = grid.transform.Find(layers[0].TilemapName).GetComponent<Tilemap>();
         for (int y = 0; y < 5; y++)
@@ -2709,7 +2697,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         AreaLayout first = Layout(villageForest, 3);
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, first), Is.True);
         IReadOnlyList<AreaGenerator.TerrainLayer> layers = villageForest.TerrainLayers;
@@ -2752,7 +2739,6 @@ public class AreaGenerationTests
     {
         Grid grid = CreateAreaWithDualGridGrass(villageForest);
         Track(new GameObject(PropsRootName));
-        Track(new GameObject("SpawnPoint_start")).AddComponent<SpawnPoint>();
         Assert.That(AreaLayoutWriter.Write(grid, villageForest, Layout(villageForest, 3)), Is.True);
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
         Undo.IncrementCurrentGroup();

@@ -6,13 +6,12 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// Moves the app between the main menu, a new game, area changes and sessions in seamless worlds (offline, hosted or
-/// joined) by loading and unloading scenes additively under the right DI scopes (menu and gameplay under Main, the area
-/// under gameplay; a world's scenes through the gameplay scope's <see cref="IWorldSession"/>), behind a screen fade.
-/// Areas are played offline only; online sessions run in worlds. A trip of the local
-/// player between worlds is a transition too, flagged <see cref="IsTravelling"/>: a local fade only, which loads and
-/// unloads nothing itself and never stops game time. Runs one transition at a time and ignores requests made while
-/// one runs.
+/// Moves the app between the main menu and sessions in seamless worlds (offline, hosted or joined) by loading and
+/// unloading scenes additively under the right DI scopes (menu and gameplay under Main; a world's scenes through the
+/// gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. A trip of the local player between worlds, or
+/// to a waystone as it respawns, is a transition too, flagged <see cref="IsTravelling"/>: a local fade only, which
+/// loads and unloads nothing itself and never stops game time. Runs one transition at a time and ignores requests made
+/// while one runs.
 /// </summary>
 public sealed class GameFlow
 {
@@ -23,9 +22,8 @@ public sealed class GameFlow
 
     private Scene menuScene;
     private Scene gameplayScene;
-    private Scene areaScene;
     private LifetimeScope gameplayScope;
-    private Vector2 restartPosition;
+    private WorldDefinition enteringWorld;
 
     /// <summary>
     /// Creates the flow; <paramref name="mainScope"/> is the parent scope for the menu and gameplay scenes.
@@ -42,42 +40,25 @@ public sealed class GameFlow
     public event Action TransitionFinished;
 
     /// <summary>
-    /// Raised as a world session is about to end (the menu, a new session, a restart), while its players are still in
-    /// their worlds and before anything unloads.
+    /// Raised as a world session is about to end (the menu, a new session), while its players are still in their worlds
+    /// and before anything unloads.
     /// </summary>
     public event Action WorldSessionEnding;
 
     public bool IsTransitioning { get; private set; }
     public bool IsTravelling { get; private set; }
     public bool IsInMenu => IsLoaded(menuScene);
-    public bool IsInGame => IsLoaded(gameplayScene) && (IsLoaded(areaScene) || CurrentWorld != null);
-    public SceneDefinition CurrentArea { get; private set; }
+    public bool IsInGame => IsLoaded(gameplayScene) && CurrentWorld != null;
     public WorldDefinition CurrentWorld { get; private set; }
-    public Scene AreaScene => areaScene;
     public Scene GameplayScene => gameplayScene;
     public GameScenes Scenes => gameScenes;
 
     /// <summary>
-    /// Unloads any area and gameplay scene and shows the main menu, loading it if needed.
+    /// Unloads any gameplay scene and shows the main menu, loading it if needed.
     /// </summary>
     public Awaitable ShowMainMenuAsync(CancellationToken cancellation = default)
     {
         return RunTransitionAsync(ShowMainMenuCoreAsync, cancellation);
-    }
-
-    /// <summary>
-    /// Starts a new game session in an area: unloads the menu and any running game, loads a fresh gameplay scene, then
-    /// enters <paramref name="area"/> at <paramref name="spawnId"/> (the starting area and spawn id when omitted). Areas
-    /// are played offline and are not saved.
-    /// </summary>
-    public Awaitable StartNewGameAsync(
-        SceneDefinition area = null,
-        string spawnId = null,
-        CancellationToken cancellation = default)
-    {
-        SceneDefinition targetArea = area != null ? area : gameScenes.StartingArea;
-        string targetSpawn = string.IsNullOrEmpty(spawnId) ? gameScenes.StartingSpawnId : spawnId;
-        return RunTransitionAsync(token => StartNewGameCoreAsync(targetArea, targetSpawn, token), cancellation);
     }
 
     /// <summary>
@@ -114,9 +95,9 @@ public sealed class GameFlow
 
     /// <summary>
     /// Takes the local player on a trip to <paramref name="world"/>'s entry <paramref name="entryName"/>, once the
-    /// trip's authority has approved it and put the player in that world: fades out, has the gameplay scope's
-    /// <see cref="IWorldSession"/> move the local player to the entry and wait for the ground around it, and fades in.
-    /// The world becomes <see cref="CurrentWorld"/> and the entry the one a restart uses. Gameplay input is off for the
+    /// trip's authority has approved it (or sent the dead player to a waystone) and put the player in that world: fades
+    /// out, has the gameplay scope's <see cref="IWorldSession"/> move the local player to the entry and wait for the
+    /// ground around it, and fades in. The world becomes <see cref="CurrentWorld"/>. Gameplay input is off for the
     /// whole trip, as in every transition, but game time runs on (<see cref="IsTravelling"/>). Logs an error and does
     /// nothing outside a world session.
     /// </summary>
@@ -129,40 +110,6 @@ public sealed class GameFlow
         }
 
         await RunTransitionAsync(token => TravelCoreAsync(world, entryName, token), cancellation, true);
-    }
-
-    /// <summary>
-    /// Starts the running session over where the local player is: the current world (the one it last travelled to) at
-    /// the entry it arrived by, or where the session started when it has not travelled, or the current area at the
-    /// starting spawn id.
-    /// </summary>
-    public Awaitable RestartAsync(CancellationToken cancellation = default)
-    {
-        return CurrentWorld != null
-            ? StartWorldGameAsync(CurrentWorld, restartPosition, cancellation)
-            : StartNewGameAsync(CurrentArea, null, cancellation);
-    }
-
-    /// <summary>
-    /// Swaps the current area for <paramref name="area"/>, entering at <paramref name="spawnId"/>, while keeping the
-    /// gameplay scene (and the players in it). Logs an error and does nothing when no game is running or the session is
-    /// in a world.
-    /// </summary>
-    public async Awaitable ChangeAreaAsync(SceneDefinition area, string spawnId, CancellationToken cancellation = default)
-    {
-        if (!IsLoaded(gameplayScene))
-        {
-            Debug.LogError($"{nameof(GameFlow)} cannot change area while no gameplay session is running.");
-            return;
-        }
-
-        if (CurrentWorld != null)
-        {
-            Debug.LogError($"{nameof(GameFlow)} cannot change area during a session in the world {CurrentWorld.name}.");
-            return;
-        }
-
-        await RunTransitionAsync(token => LoadAreaCoreAsync(area, spawnId, token), cancellation);
     }
 
     /// <summary>
@@ -209,13 +156,12 @@ public sealed class GameFlow
     }
 
     /// <summary>
-    /// Unloads the area and gameplay scenes and unused assets, loads the menu under the main scope unless it is
-    /// already loaded, and makes it the active scene.
+    /// Ends any world session, unloads the gameplay scene and unused assets, loads the menu under the main scope unless
+    /// it is already loaded, and makes it the active scene.
     /// </summary>
     private async Awaitable ShowMainMenuCoreAsync(CancellationToken cancellation)
     {
         await LeaveWorldAsync(cancellation);
-        await UnloadAreaAsync(cancellation);
         await UnloadGameplayAsync(cancellation);
         await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
 
@@ -228,47 +174,23 @@ public sealed class GameFlow
     }
 
     /// <summary>
-    /// Unloads the menu and any running game, loads the gameplay scene under the main scope, finds its scope, and
-    /// loads <paramref name="area"/> under it.
-    /// </summary>
-    private async Awaitable StartNewGameCoreAsync(SceneDefinition area, string spawnId, CancellationToken cancellation)
-    {
-        if (IsLoaded(menuScene))
-        {
-            await sceneLoader.UnloadAsync(menuScene, cancellation);
-            menuScene = default;
-        }
-
-        await LeaveWorldAsync(cancellation);
-        await UnloadAreaAsync(cancellation);
-        await UnloadGameplayAsync(cancellation);
-        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
-        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
-
-        await LoadAreaCoreAsync(area, spawnId, cancellation);
-    }
-
-    /// <summary>
     /// Unloads the menu and any running game, loads the gameplay scene under the main scope, makes it the active scene
     /// and enters <paramref name="world"/> at <paramref name="position"/> through its scope's
-    /// <see cref="IWorldSession"/>. Logs an error and leaves the gameplay scene without a world when the scope provides
-    /// none.
+    /// <see cref="IWorldSession"/>. The world is held while unused assets unload, so one that no loaded object
+    /// references (a world booted from the editor that <see cref="GameScenes"/> does not list) stays loaded. Logs an error
+    /// and leaves the gameplay scene without a world when the scope provides none.
     /// </summary>
     private async Awaitable StartWorldGameCoreAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
     {
-        if (IsLoaded(menuScene))
+        enteringWorld = world;
+        try
         {
-            await sceneLoader.UnloadAsync(menuScene, cancellation);
-            menuScene = default;
+            await ReplaceWithGameplayAsync(cancellation);
         }
-
-        await LeaveWorldAsync(cancellation);
-        await UnloadAreaAsync(cancellation);
-        await UnloadGameplayAsync(cancellation);
-        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
-        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
-        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
-        SceneManager.SetActiveScene(gameplayScene);
+        finally
+        {
+            enteringWorld = null;
+        }
 
         if (!TryGetWorldSession(out IWorldSession session))
         {
@@ -277,7 +199,6 @@ public sealed class GameFlow
         }
 
         CurrentWorld = world;
-        restartPosition = position;
         await session.EnterAsync(world, position, cancellation);
     }
 
@@ -288,20 +209,7 @@ public sealed class GameFlow
     /// </summary>
     private async Awaitable StartJoinedGameCoreAsync(CancellationToken cancellation)
     {
-        if (IsLoaded(menuScene))
-        {
-            await sceneLoader.UnloadAsync(menuScene, cancellation);
-            menuScene = default;
-        }
-
-        await LeaveWorldAsync(cancellation);
-        await UnloadAreaAsync(cancellation);
-        await UnloadGameplayAsync(cancellation);
-        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
-        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
-        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
-        SceneManager.SetActiveScene(gameplayScene);
-
+        await ReplaceWithGameplayAsync(cancellation);
         if (!TryGetWorldSession(out IWorldSession session))
         {
             Debug.LogError($"The gameplay scene's scope provides no {nameof(IWorldSession)}; cannot join the host's world.");
@@ -316,13 +224,31 @@ public sealed class GameFlow
         }
 
         CurrentWorld = world;
-        restartPosition = world.EntryPosition(null);
     }
 
     /// <summary>
-    /// Records <paramref name="world"/> and <paramref name="entryName"/> as where the session is, then has the world
-    /// session bring the local player to that entry once the screen is dark. Logs an error when the session went
-    /// meanwhile.
+    /// Unloads the menu, ends any world session, unloads the gameplay scene and unused assets, then loads a fresh
+    /// gameplay scene under the main scope, finds its scope and makes it the active scene.
+    /// </summary>
+    private async Awaitable ReplaceWithGameplayAsync(CancellationToken cancellation)
+    {
+        if (IsLoaded(menuScene))
+        {
+            await sceneLoader.UnloadAsync(menuScene, cancellation);
+            menuScene = default;
+        }
+
+        await LeaveWorldAsync(cancellation);
+        await UnloadGameplayAsync(cancellation);
+        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
+        gameplayScene = await LoadUnderScopeAsync(gameScenes.Gameplay, mainScope, cancellation);
+        gameplayScope = LifetimeScope.Find<LifetimeScope>(gameplayScene);
+        SceneManager.SetActiveScene(gameplayScene);
+    }
+
+    /// <summary>
+    /// Records <paramref name="world"/> as where the session is, then has the world session bring the local player to
+    /// its entry <paramref name="entryName"/> once the screen is dark. Logs an error when the session went meanwhile.
     /// </summary>
     private async Awaitable TravelCoreAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
     {
@@ -333,7 +259,6 @@ public sealed class GameFlow
         }
 
         CurrentWorld = world;
-        restartPosition = world.EntryPosition(entryName);
         await session.ArriveAsync(world, entryName, cancellation);
     }
 
@@ -368,28 +293,6 @@ public sealed class GameFlow
     }
 
     /// <summary>
-    /// Unloads the current area and unused assets, loads <paramref name="area"/> under the gameplay scope with an
-    /// <see cref="AreaEntryRequest"/> for <paramref name="spawnId"/> registered into its scope, makes it the active
-    /// scene and enters it.
-    /// </summary>
-    private async Awaitable LoadAreaCoreAsync(SceneDefinition area, string spawnId, CancellationToken cancellation)
-    {
-        await UnloadAreaAsync(cancellation);
-        await sceneLoader.UnloadUnusedAssetsAsync(cancellation);
-
-        AreaEntryRequest entryRequest = new AreaEntryRequest(area, spawnId);
-        using (LifetimeScope.Enqueue(builder => builder.RegisterInstance(entryRequest)))
-        {
-            areaScene = await LoadUnderScopeAsync(area, gameplayScope, cancellation);
-        }
-
-        CurrentArea = area;
-
-        SceneManager.SetActiveScene(areaScene);
-        EnterArea(areaScene);
-    }
-
-    /// <summary>
     /// Loads <paramref name="definition"/> additively with <paramref name="parent"/> queued as the parent of the
     /// scopes the scene creates.
     /// </summary>
@@ -402,22 +305,6 @@ public sealed class GameFlow
         {
             return await sceneLoader.LoadAdditiveAsync(definition, cancellation);
         }
-    }
-
-    /// <summary>
-    /// Unloads the area scene, if loaded, forgetting it and <see cref="CurrentArea"/> before the unload starts.
-    /// </summary>
-    private async Awaitable UnloadAreaAsync(CancellationToken cancellation)
-    {
-        if (!IsLoaded(areaScene))
-        {
-            return;
-        }
-
-        Scene scene = areaScene;
-        areaScene = default;
-        CurrentArea = null;
-        await sceneLoader.UnloadAsync(scene, cancellation);
     }
 
     /// <summary>
@@ -434,23 +321,6 @@ public sealed class GameFlow
         gameplayScene = default;
         gameplayScope = null;
         await sceneLoader.UnloadAsync(scene, cancellation);
-    }
-
-    /// <summary>
-    /// Calls <see cref="IAreaEntry.Enter"/> from the area scene's scope; warns and leaves the players where they are
-    /// when the scene has no scope providing one.
-    /// </summary>
-    private static void EnterArea(Scene scene)
-    {
-        LifetimeScope scope = LifetimeScope.Find<LifetimeScope>(scene);
-        if (scope == null || scope.Container == null || !scope.Container.TryResolve(out IAreaEntry areaEntry))
-        {
-            Debug.LogWarning(
-                $"Area scene '{scene.name}' has no LifetimeScope providing {nameof(IAreaEntry)}; the player was not placed.");
-            return;
-        }
-
-        areaEntry.Enter();
     }
 
     /// <summary>

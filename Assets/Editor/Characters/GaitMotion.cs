@@ -7,7 +7,8 @@ using UnityEngine;
 /// mid-stance when walking, lowest when running), the body leans, the arms swing against the legs and the shoulders
 /// twist with them, and the cape flows. Frame 0 has the left foot planted in front, so every gait starts at the same
 /// place in the stride. Strides scale with the recipe's legs and arm swings with its arms; a carried weapon changes the
-/// arm that holds it (<see cref="CharacterWeaponArt.Carry"/>).
+/// arm that holds it (<see cref="CharacterWeaponArt.Carry"/>). It names its gait (walk, run or sprint), and its ground
+/// speed is how fast a planted foot slides back: the speed at which the feet do not slide.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Gait Motion", fileName = "Motion_Gait")]
 public sealed class GaitMotion : CharacterMotion
@@ -16,6 +17,8 @@ public sealed class GaitMotion : CharacterMotion
     public const float TunedArmLength = 10.4f;
 
     [Header("Cycle")]
+    [Tooltip("Which gait this is: the runtime picks it by speed between the others.")]
+    [SerializeField] private CharacterGait gait = CharacterGait.Run;
     [Tooltip("Frames in one cycle (two steps).")]
     [SerializeField, Range(4, 16)] private int frames = 8;
     [Tooltip("Frames per second at the gait's natural speed.")]
@@ -23,7 +26,7 @@ public sealed class GaitMotion : CharacterMotion
 
     [Header("Feet (rig units for 14-unit legs)")]
     [Tooltip("Share of the cycle a foot is planted. Under half, both feet leave the ground between steps.")]
-    [SerializeField, Range(0.2f, 0.8f)] private float duty = 0.38f;
+    [SerializeField, Range(0.1f, 0.8f)] private float duty = 0.38f;
     [Tooltip("How far forward of the hips a foot lands.")]
     [SerializeField] private float front = 3.6f;
     [Tooltip("How far behind the hips a foot leaves the ground (negative).")]
@@ -60,6 +63,7 @@ public sealed class GaitMotion : CharacterMotion
     [SerializeField, Range(0f, 1f)] private float capeFlow = 0.55f;
 
     public override int FrameCount => frames;
+    public override CharacterGait Gait => gait;
     public float FramesPerSecond => framesPerSecond;
 
     /// <summary>
@@ -68,6 +72,16 @@ public sealed class GaitMotion : CharacterMotion
     public override float FrameSeconds(int frame)
     {
         return 1f / framesPerSecond;
+    }
+
+    /// <summary>
+    /// The stride a planted foot slides back, from in front to behind, over the share of the cycle it is planted.
+    /// </summary>
+    public override float GroundSpeed(CharacterRecipe recipe)
+    {
+        float legScale = (recipe.Thigh + recipe.Shin) / TunedLegLength;
+        float stanceSeconds = duty * frames / framesPerSecond;
+        return (front - back) * legScale / stanceSeconds;
     }
 
     /// <summary>

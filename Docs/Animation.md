@@ -73,7 +73,7 @@ What the editor tool draws (Phase 1). It was settled on Python mockups (Phase 0)
 
 ## Runtime (Phases 2 to 4)
 
-- `CharacterAnimationSet` (runtime ScriptableObject the baker writes): per clip, the sprites per direction and frame, each frame's duration at natural speed, and markers: the contact frame of an attack, the natural speed of a gait (the distance its feet travel per second at its natural rate).
+- `CharacterAnimationSet` (runtime ScriptableObject the baker writes): per clip, the sprites per direction and frame, each frame's duration at natural speed, and markers: the contact frame of an attack (Phase 3), the natural speed of a gait (the distance its feet travel per second at its natural rate, east or west).
 - `CharacterAnimator` (plain class): a locomotion layer (idle, walk, run, sprint), an action layer (an attack or cast playing its timeline) above it, and an overlay (hit flash, hit-stop). It returns the sprite to show; it allocates nothing per frame and runs on an injected clock, so EditMode tests drive it.
 - A component on the character's visuals applies the sprite and asks the animator each frame, fed by the motor (velocity, facing) and the weapon (attack phases). It replaces the player's and mobs' Mecanim controllers.
 - Direction: the nearest of 8 to the facing, kept until the facing is a margin past the boundary, so it does not flicker.
@@ -127,8 +127,18 @@ Phase 1 notes:
 - Baking a clip takes about 0.25 s, so the inspector bakes only the clip it previews, and only when something it is made from changed.
 
 ### Phase 2: locomotion at runtime
-- [ ] `CharacterAnimationSet` written by the baker; `CharacterAnimator` with the locomotion layer and directions; the visuals component.
-- [ ] The player shows the rogue's walk, run and sprint from its speed (slows and statuses included), on every machine; `Player.controller` and the old sheet are retired.
+- [x] `CharacterAnimationSet` written by the baker; `CharacterAnimator` with the locomotion layer and directions; the visuals component.
+- [x] The player shows the rogue's walk, run and sprint from its speed (slows and statuses included), on every machine; `Player.controller` and the old sheet are retired.
+
+Phase 2 notes:
+- Measured on the Phase 1 gaits, from the planted left foot in the baked frames and from the motions' strides: walk 0.52, run 1.35 and sprint 2.57 units per second at their natural rates facing east or west, and half that facing north or south, where the view's pitch shows ground depth at half its length while the world's ground is drawn at full length. The player moves at 5 (3 chilled), so the run would have played at 3.7 times its rate.
+- Compared on previews: rates clamped at 1.6 (the feet keep up 43% at 5 units per second), clamped at 2.5 (68%, the legs cycling at about 30 frames a second), longer strides, and a slower game (the player at 2.7). Chosen: longer strides with more time in the air, retuned in the gait motions and generated again. The natural speeds are now walk 1.02, run 4.23 and sprint 5.61; the carried runs (sword, greatsword, bow) share the run's motion and changed with it.
+- Bands (`Locomotion_Player`): walk from 0.1, run from 2.4, sprint from 5.6 units per second, each boundary crossed only 8% past it either way; gaits play at 0.5 to 1.5 times their rate. The player runs at 1.18 times the run's rate at 5 and 0.71 chilled, its feet keeping up east and west. Nothing in play reaches the walk or the sprint yet.
+- North and south the feet keep up with half the speed at any rate (about four fifths on the diagonals). Accepted: the rate is the same in every direction, as most top-down pixel games do, rather than legs cycling twice as fast going north.
+- The idle is a very slight breath on the standing pose: 8 frames at 4 a second (a 2 s loop), the pelvis sinking under a pixel so only a pixel or two at the shoulders and hands shifts now and then, and a faint stir of the cape; at most 52 to 80 pixels change from its first frame. It was toned down after review from a one-pixel bob with a lean and hand sway (up to 250 pixels changing). Starting to move or stopping begins the new clip at its first frame; only switches between gaits keep the phase.
+- The sprites pivot on the feet, so the player's `Visuals` moved from half a unit up to its root. Units now sort by their feet: the Weasel's and the prop bases' sorters take their root as a sorting point, and the death effect sorts where the body did. The slash follows the sprite, so the sword's slash offsets went up half a unit to keep it in place.
+- `move` now replicates the actual speed over the base speed, where it was a share of the slowed speed, so a slowed copy picks the owner's gait and rate. The build version went to 1.6.
+- Still to check by hand in Multiplayer Play Mode (the in-process tests share one scene): with a host and 2 to 3 clients, each machine's copies run in the right direction when players walk in all eight directions; a chilled player's copies run at the owner's slower rate; copies stand idle facing the owner's way when it stops, is stunned or dies, and run again after a respawn; a late joiner sees a moving player run and a standing one idle at once.
 
 ### Phase 3: attack timeline
 - [ ] Windup, contact and recovery on the weapon, attack speed, cancel rules as data, hits at contact; `PlayerOrders` and the motor follow the attack state.
@@ -149,7 +159,7 @@ Phase 1 notes:
 
 ## Testing
 
-- EditMode: the baker is deterministic (the same recipe gives the same bytes); every clip has 8 rows of its frame count; slices are named, sized and pivoted as specified at 32 PPU; the standing character is the target height; no frame touches its edge; the face shows its eyes from the front and none from behind. Later: the animator's gait choice, hysteresis, phase keeping and direction snapping on `ManualClock`; the attack timeline's phases, attack speed and each cancel rule.
+- EditMode: the baker is deterministic (the same recipe gives the same bytes); every clip has 8 rows of its frame count; slices are named, sized and pivoted as specified at 32 PPU; the standing character is the target height; no frame touches its edge; the face shows its eyes from the front and none from behind; a planted foot moves back at its gait's natural speed; the animation set holds every clip; the animator's gait choice, hysteresis, rate clamping, phase keeping and direction snapping on `ManualClock`. Later: the attack timeline's phases, attack speed and each cancel rule.
 - PlayMode: the player's sprite follows its speed and facing; an attack's contact frame shows when its hit lands.
 - Manual: Multiplayer Play Mode with 2–4 players attacking the same mob, cancelling windups, and a late join.
 

@@ -13,7 +13,10 @@ using UnityEngine;
 /// <c>&lt;sheet name&gt;_&lt;clip&gt;_&lt;direction&gt;_&lt;frame&gt;</c>, at <see cref="CharacterSheet.FrameRect"/> with
 /// its pivot on the clip's feet pixel. Slices that already exist keep their sprite IDs; ones no longer baked are
 /// removed. Every sheet is baked before any file is written; a sheet whose bytes did not change is not rewritten, and
-/// one whose import settings and slices did not change either is not reimported.
+/// one whose import settings and slices did not change either is not reimported. Then it writes the runtime
+/// <see cref="CharacterAnimationSet"/>, <c>&lt;sheet name&gt;_AnimationSet.asset</c> beside the sheets: per clip its
+/// sprites by direction and frame, each frame's duration at natural speed, its gait, whether it is armed, and a gait's
+/// natural speed (<see cref="NaturalSpeed"/>); the asset keeps its GUID and is saved only when it changed.
 /// </summary>
 public static class CharacterSheetWriter
 {
@@ -21,8 +24,9 @@ public static class CharacterSheetWriter
     public const int PixelsPerUnit = 32;
 
     /// <summary>
-    /// Bakes and writes every clip of <paramref name="recipe"/>, returning the sheets' paths. Logs an error and writes
-    /// nothing when the recipe cannot bake (<see cref="CharacterRecipe.CanGenerate"/>).
+    /// Bakes and writes every clip of <paramref name="recipe"/>, then its animation set, returning the sheets' paths
+    /// followed by the set's. Logs an error and writes nothing when the recipe cannot bake
+    /// (<see cref="CharacterRecipe.CanGenerate"/>).
     /// </summary>
     public static IReadOnlyList<string> Generate(CharacterRecipe recipe)
     {
@@ -58,7 +62,82 @@ public static class CharacterSheetWriter
             paths.Add(path);
         }
 
+        paths.Add(WriteSet(recipe, baker));
         return paths;
+    }
+
+    /// <summary>
+    /// The path of <paramref name="recipe"/>'s animation set.
+    /// </summary>
+    public static string SetPath(CharacterRecipe recipe)
+    {
+        return $"{FolderOf(recipe)}/{recipe.SheetName}_AnimationSet.asset";
+    }
+
+    /// <summary>
+    /// How fast <paramref name="clip"/>'s planted feet travel at its natural speed, in units per second: its motion's
+    /// ground speed at the baker's pixels per rig unit, over <see cref="PixelsPerUnit"/>. This holds facing east or
+    /// west; facing north or south the view's pitch shows the stride at half its length.
+    /// </summary>
+    public static float NaturalSpeed(CharacterBaker baker, CharacterRecipe recipe, CharacterClip clip)
+    {
+        return clip.Motion.GroundSpeed(recipe) * baker.Scale / PixelsPerUnit;
+    }
+
+    /// <summary>
+    /// An unsaved set of <paramref name="recipe"/>'s clips over the sprites of its written sheets, without touching an
+    /// asset.
+    /// </summary>
+    public static CharacterAnimationSet BuildSet(CharacterRecipe recipe, CharacterBaker baker)
+    {
+        List<CharacterAnimationClip> clips = new();
+        foreach (CharacterClip clip in recipe.Clips)
+        {
+            Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(SheetPath(recipe, clip)).OfType<Sprite>().ToDictionary(s => s.name);
+            int frames = clip.Motion.FrameCount;
+            Sprite[] ordered = new Sprite[CharacterDirections.Count * frames];
+            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            {
+                for (int frame = 0; frame < frames; frame++)
+                {
+                    sprites.TryGetValue(SliceName(recipe, clip, direction, frame), out ordered[direction * frames + frame]);
+                }
+            }
+
+            float[] seconds = Enumerable.Range(0, frames).Select(clip.Motion.FrameSeconds).ToArray();
+            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip)));
+        }
+
+        return CharacterAnimationSet.Create(clips);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="recipe"/>'s animation set: creates the asset, or copies the new set over it when it
+    /// differs, keeping its GUID. Returns its path.
+    /// </summary>
+    private static string WriteSet(CharacterRecipe recipe, CharacterBaker baker)
+    {
+        string path = SetPath(recipe);
+        string setName = Path.GetFileNameWithoutExtension(path);
+        CharacterAnimationSet fresh = BuildSet(recipe, baker);
+        fresh.name = setName;
+        CharacterAnimationSet existing = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(path);
+        if (existing == null)
+        {
+            AssetDatabase.CreateAsset(fresh, path);
+            return path;
+        }
+
+        if (EditorJsonUtility.ToJson(existing) != EditorJsonUtility.ToJson(fresh))
+        {
+            EditorUtility.CopySerialized(fresh, existing);
+            existing.name = setName;
+            EditorUtility.SetDirty(existing);
+            AssetDatabase.SaveAssetIfDirty(existing);
+        }
+
+        Object.DestroyImmediate(fresh);
+        return path;
     }
 
     /// <summary>

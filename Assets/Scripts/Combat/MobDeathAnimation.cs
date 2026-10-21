@@ -62,10 +62,10 @@ public class MobDeathAnimation : MonoBehaviour
     }
 
     /// <summary>
-    /// Copies the dead body's position, rotation, material, color, flips, mask interaction and sorting (order only
-    /// without a <see cref="YPositionSorter"/>) from <paramref name="sourceRenderer"/>, scales to 1.2 times its
-    /// height and arms the lifetime; starts the clip right away if already enabled. Without a source it only arms
-    /// the lifetime.
+    /// Copies the dead body's position, rotation, material, color, flips, mask interaction and sorting from
+    /// <paramref name="sourceRenderer"/> (its order without a <see cref="YPositionSorter"/>; with one, it sorts at the
+    /// height the body's sorter sorted by, its feet), scales to 1.2 times its height and arms the lifetime; starts the
+    /// clip right away if already enabled. Without a source it only arms the lifetime.
     /// </summary>
     public void InitializeFrom(SpriteRenderer sourceRenderer)
     {
@@ -92,6 +92,10 @@ public class MobDeathAnimation : MonoBehaviour
         if (yPositionSorter == null)
         {
             spriteRenderer.sortingOrder = sourceRenderer.sortingOrder;
+        }
+        else if (sourceRenderer.TryGetComponent(out YPositionSorter sourceSorter))
+        {
+            yPositionSorter.SetSortingReferenceY(sourceSorter.SortingY);
         }
 
         if (spriteRenderer.sprite != null && sourceRenderer.bounds.size.y > 0.0001f)

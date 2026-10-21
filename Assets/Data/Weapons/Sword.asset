@@ -15,14 +15,15 @@ MonoBehaviour:
   displayName: Sword
   damage: 20
   damageType: 0
+  onHitStatuses: []
   attackCooldown: 0.35
   attackRange: 0.3
   slashSpawnDistance: 0.55
   slashSpawnOffsets:
-  - {x: 0, y: -0.1}
-  - {x: 0, y: 0}
-  - {x: -0.1, y: 0}
-  - {x: 0.1, y: 0}
+  - {x: 0, y: 0.4}
+  - {x: 0, y: 0.5}
+  - {x: -0.1, y: 0.5}
+  - {x: 0.1, y: 0.5}
   slashPrefab: {fileID: 2237708894164175470, guid: 009c5117978435b41a3efd90ce168f55, type: 3}
   hudIcon: {fileID: 5154499244127856136, guid: ebbeb1c067ea7ad46bcd2727188da217, type: 3}
   abilities:

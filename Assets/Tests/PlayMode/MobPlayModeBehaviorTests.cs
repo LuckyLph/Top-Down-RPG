@@ -220,8 +220,8 @@ public class MobPlayModeBehaviorTests
     }
 
     /// <summary>
-    /// Lethal damage destroys the mob within a frame and spawns a death animation object that removes itself after
-    /// playback.
+    /// Lethal damage destroys the mob within a frame and spawns a death animation object, sorted where the mob stood,
+    /// that removes itself after playback.
     /// </summary>
     [UnityTest]
     public IEnumerator MobInTestlands_DeathSpawnsAnimationAndDestroysMob()
@@ -238,6 +238,7 @@ public class MobPlayModeBehaviorTests
         Assert.That(health, Is.Not.Null);
 
         DamageService damageService = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<DamageService>();
+        float feetY = mob.transform.position.y;
         damageService.ApplyDamage(receiver, health.CurrentHealth);
         yield return null;
 
@@ -246,6 +247,7 @@ public class MobPlayModeBehaviorTests
 
         MobDeathAnimation deathAnimation = Object.FindAnyObjectByType<MobDeathAnimation>();
         Assert.That(deathAnimation, Is.Not.Null, "A death animation object should be spawned when the mob dies.");
+        Assert.That(deathAnimation.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(feetY).Within(1e-3f), "The death animation sorts where the mob stood.");
 
         yield return new WaitForSeconds(1.5f);
         Assert.That(Object.FindAnyObjectByType<MobDeathAnimation>(), Is.Null, "Death animation object should clean itself up after playback.");

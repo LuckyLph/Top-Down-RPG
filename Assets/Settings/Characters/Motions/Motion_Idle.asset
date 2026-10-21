@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db23c0d90694cec4e93589cb00160929, type: 3}
+  m_Name: Motion_Idle
+  m_EditorClassIdentifier: TopDownRPG.Editor::IdleMotion
+  frames: 8
+  framesPerSecond: 4
+  stanceOut: 0.5
+  leftFootForward: 1
+  crouch: 0.3
+  breath: 0.12
+  lean: 2
+  leanSway: 0
+  armOut: 1
+  armSway: 0.05
+  capeFlow: 0.03
+  capeWaves: 1

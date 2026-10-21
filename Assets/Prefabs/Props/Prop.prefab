@@ -80,7 +80,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 771016619
   m_SortingLayer: 2
-  m_SortingOrder: -50
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -108,6 +108,7 @@ MonoBehaviour:
   includeChildRenderers: 1
   sortingOrderMultiplier: 100
   sortingOrderOffset: 0
+  sortingPoint: {fileID: 8954776278319050438}
   useSortingReferenceY: 0
   sortingReferenceY: 0
 --- !u!1 &7729509778616174314

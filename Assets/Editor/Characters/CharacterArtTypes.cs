@@ -196,33 +196,6 @@ public static class CharacterMaterials
 }
 
 /// <summary>
-/// The eight directions a character is drawn in, counterclockwise from east, 45 degrees apart: a sheet's rows from the
-/// top, and the direction part of its slices' names.
-/// </summary>
-public static class CharacterDirections
-{
-    public const int Count = 8;
-
-    private static readonly string[] Names = { "E", "NE", "N", "NW", "W", "SW", "S", "SE" };
-
-    /// <summary>
-    /// The facing of direction <paramref name="index"/> in degrees counterclockwise from east.
-    /// </summary>
-    public static float Angle(int index)
-    {
-        return index * 45f;
-    }
-
-    /// <summary>
-    /// The short name of direction <paramref name="index"/> (E, NE, N, ...).
-    /// </summary>
-    public static string Name(int index)
-    {
-        return Names[index];
-    }
-}
-
-/// <summary>
 /// One clip of a character's sheets: a motion, the weapon drawn with it (none for an unarmed one), and the frame it is
 /// drawn in, its size and the pixel the feet stand on, from the bottom left.
 /// </summary>

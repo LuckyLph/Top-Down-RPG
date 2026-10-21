@@ -12,20 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60f5ef9a1d5048f4f9aae04701108b67, type: 3}
   m_Name: Motion_Sprint
   m_EditorClassIdentifier: TopDownRPG.Editor::GaitMotion
+  gait: 4
   frames: 8
   framesPerSecond: 15
-  duty: 0.32
-  front: 4.4
-  back: -7.4
-  liftBack: {x: -2.5, y: 11}
-  liftFront: {x: 5, y: 7.5}
-  pelvisHeight: 13
+  duty: 0.18
+  front: 6.5
+  back: -8
+  liftBack: {x: -3, y: 11}
+  liftFront: {x: 5.5, y: 8}
+  pelvisHeight: 12.4
   bob: 1.2
   bobRisesMidStance: 0
-  lean: 17
-  twist: 12
-  armSwing: 6.2
+  lean: 18
+  twist: 13
+  armSwing: 6.4
   armHeight: -5.6
   armOut: 1
-  armPump: 1.2
-  capeFlow: 0.9
+  armPump: 1.3
+  capeFlow: 0.95

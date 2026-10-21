@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4281714967186475612}
   - component: {fileID: 3567725046483388587}
-  - component: {fileID: 1571185521030094183}
   - component: {fileID: 21999499808396703}
+  - component: {fileID: 4451734619522619835}
   m_Layer: 9
   m_Name: Visuals
   m_TagString: Untagged
@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 1264398985062822945}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -81,9 +81,9 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 771016619
   m_SortingLayer: 2
-  m_SortingOrder: 125
+  m_SortingOrder: 200
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 1730461896, guid: eda38caffd54eea429e35f7160ef2cb5, type: 3}
+  m_Sprite: {fileID: -619266322, guid: 44bb417b5df3e4a4091e5bdaa774c43f, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -93,28 +93,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!95 &1571185521030094183
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1264398985062822945}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 3febb3f1b54b5a34180fdfc7e90e8998, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &21999499808396703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -131,8 +109,23 @@ MonoBehaviour:
   includeChildRenderers: 1
   sortingOrderMultiplier: 100
   sortingOrderOffset: 0
+  sortingPoint: {fileID: 0}
   useSortingReferenceY: 0
   sortingReferenceY: 0
+--- !u!114 &4451734619522619835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264398985062822945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4595abe46f241f479526a931647ca80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterVisuals
+  animationSet: {fileID: 11400000, guid: 656e3283d7a07964aba0f7374ac4c8ab, type: 2}
+  locomotion: {fileID: 11400000, guid: 86aaee91046a71447b615c29f8ebb254, type: 2}
 --- !u!1 &7676685028584557553
 GameObject:
   m_ObjectHideFlags: 0
@@ -437,8 +430,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13a64077432a2234fa9ae56a969ab8c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerMotor2D
-  walkAnimationSpeed: 0.85
-  animator: {fileID: 1571185521030094183}
+  visuals: {fileID: 4451734619522619835}
 --- !u!114 &8509953176593211654
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -9,9 +9,10 @@ using UnityEngine;
 /// Tests for the character baker (Docs/Animation.md, Phase 1) on the project's rogue recipe, which they only read:
 /// baking gives the same pixels every time; the standing character is the target height; every clip has a row per
 /// direction, fits its frames and has its face's eyes only where the face shows; gaits start with the left foot
-/// planted in front; a two-handed blade puts the left hand on its grip; easing, the two-bone chains and the recipe's
-/// checks behave; and the project's sheets are what the recipe bakes, sliced at 32 pixels per unit with their pivot
-/// on the feet.
+/// planted in front, and a planted foot moves back at the gait's natural speed; the idle keeps both feet planted; a
+/// two-handed blade puts the left hand on its grip; easing, the two-bone chains and the recipe's checks behave; the
+/// project's sheets are what the recipe bakes, sliced at 32 pixels per unit with their pivot on the feet; and the
+/// project's animation set holds every clip's sprites, frame durations, gait and natural speed.
 /// </summary>
 public class CharacterRecipeTests
 {
@@ -122,6 +123,57 @@ public class CharacterRecipeTests
             CharacterPose pose = gait.PoseAt(0, recipe, null);
             Assert.That(pose.LeftFoot.z, Is.EqualTo(recipe.Ankle).Within(1e-4f), gait.name);
             Assert.That(pose.LeftFoot.y, Is.GreaterThan(pose.RightFoot.y), gait.name);
+        }
+    }
+
+    /// <summary>
+    /// While a gait's left foot stays planted from one frame to the next it moves back by the gait's natural speed over
+    /// the frame's duration, at the baker's scale: played at its natural rate a character moving at that speed east
+    /// or west keeps its feet where they stand. The gaits get faster from walk to run to sprint.
+    /// </summary>
+    [Test]
+    public void Gaits_PlantedFootMovesBackAtTheNaturalSpeed()
+    {
+        float previous = 0f;
+        foreach (CharacterGait gaitKind in new[] { CharacterGait.Walk, CharacterGait.Run, CharacterGait.Sprint })
+        {
+            CharacterClip clip = recipe.Clips.First(c => c.Weapon == null && c.Motion.Gait == gaitKind);
+            float natural = CharacterSheetWriter.NaturalSpeed(baker, recipe, clip);
+            Assert.That(natural, Is.GreaterThan(previous), clip.Name);
+            previous = natural;
+            int pairs = 0;
+            for (int frame = 0; frame + 1 < clip.Motion.FrameCount; frame++)
+            {
+                CharacterPose now = clip.Motion.PoseAt(frame, recipe, null);
+                CharacterPose next = clip.Motion.PoseAt(frame + 1, recipe, null);
+                if (now.LeftFoot.z > recipe.Ankle + 1e-4f || next.LeftFoot.z > recipe.Ankle + 1e-4f)
+                {
+                    continue;
+                }
+
+                float unitsPerSecond = (now.LeftFoot.y - next.LeftFoot.y) / clip.Motion.FrameSeconds(frame) * baker.Scale / CharacterSheetWriter.PixelsPerUnit;
+                Assert.That(unitsPerSecond, Is.EqualTo(natural).Within(natural * 1e-3f), $"{clip.Name} frame {frame}");
+                pairs++;
+            }
+
+            Assert.That(pairs, Is.GreaterThan(0), $"{clip.Name} should keep its left foot planted across at least two frames.");
+        }
+    }
+
+    /// <summary>
+    /// The idle keeps both feet planted in every frame and does not travel.
+    /// </summary>
+    [Test]
+    public void Idle_KeepsBothFeetPlanted()
+    {
+        CharacterClip idle = recipe.Clips.First(c => c.Weapon == null && c.Motion.Gait == CharacterGait.Idle);
+        Assert.That(CharacterSheetWriter.NaturalSpeed(baker, recipe, idle), Is.Zero);
+        for (int frame = 0; frame < idle.Motion.FrameCount; frame++)
+        {
+            CharacterPose pose = idle.Motion.PoseAt(frame, recipe, null);
+            CharacterJoints joints = CharacterRig.Solve(recipe, pose, null);
+            Assert.That(joints.LeftAnkle.z, Is.EqualTo(recipe.Ankle).Within(1e-3f), $"frame {frame}");
+            Assert.That(joints.RightAnkle.z, Is.EqualTo(recipe.Ankle).Within(1e-3f), $"frame {frame}");
         }
     }
 
@@ -243,6 +295,47 @@ public class CharacterRecipeTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The project's animation set holds every clip of the recipe in order: its name, its motion's gait, whether it is
+    /// drawn with a weapon, its motion's frame durations, its natural speed, and for every direction and frame the
+    /// sheet's slice of that name. Its locomotion is the unarmed Idle, Walk, Run and Sprint.
+    /// </summary>
+    [Test]
+    public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(recipe));
+        Assert.That(set, Is.Not.Null);
+        Assert.That(set.Clips.Count, Is.EqualTo(recipe.Clips.Count));
+        for (int i = 0; i < recipe.Clips.Count; i++)
+        {
+            CharacterClip clip = recipe.Clips[i];
+            CharacterAnimationClip baked = set.Clips[i];
+            Assert.That(baked.Name, Is.EqualTo(clip.Name));
+            Assert.That(baked.Gait, Is.EqualTo(clip.Motion.Gait), clip.Name);
+            Assert.That(baked.Armed, Is.EqualTo(clip.Weapon != null), clip.Name);
+            Assert.That(baked.IsComplete, Is.True, clip.Name);
+            Assert.That(baked.FrameCount, Is.EqualTo(clip.Motion.FrameCount), clip.Name);
+            Assert.That(baked.NaturalSpeed, Is.EqualTo(CharacterSheetWriter.NaturalSpeed(baker, recipe, clip)).Within(1e-5f), clip.Name);
+            string sheetPath = CharacterSheetWriter.SheetPath(recipe, clip);
+            for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
+            {
+                Assert.That(baked.FrameSeconds(frame), Is.EqualTo(clip.Motion.FrameSeconds(frame)), $"{clip.Name} {frame}");
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    Sprite sprite = baked.SpriteAt(direction, frame);
+                    Assert.That(sprite, Is.Not.Null, $"{clip.Name} {direction} {frame}");
+                    Assert.That(sprite.name, Is.EqualTo(CharacterSheetWriter.SliceName(recipe, clip, direction, frame)));
+                    Assert.That(AssetDatabase.GetAssetPath(sprite), Is.EqualTo(sheetPath));
+                }
+            }
+        }
+
+        Assert.That(set.Locomotion(CharacterGait.Idle).Name, Is.EqualTo("Idle"));
+        Assert.That(set.Locomotion(CharacterGait.Walk).Name, Is.EqualTo("Walk"));
+        Assert.That(set.Locomotion(CharacterGait.Run).Name, Is.EqualTo("Run"));
+        Assert.That(set.Locomotion(CharacterGait.Sprint).Name, Is.EqualTo("Sprint"));
     }
 
     /// <summary>

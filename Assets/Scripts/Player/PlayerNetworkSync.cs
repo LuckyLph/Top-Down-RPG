@@ -4,8 +4,8 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// Replicates a networked player. The owner binds it as the local player, writes its move and facing to owner
-/// network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
+/// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
+/// base move speed, so a slowed or hasted copy shows the same gait) and facing to owner network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
 /// which resolves them. The owner's teleports (arriving at an entry, a waystone included) snap on the other machines
 /// instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
 /// </summary>

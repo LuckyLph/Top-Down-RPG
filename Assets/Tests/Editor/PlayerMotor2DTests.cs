@@ -260,6 +260,7 @@ public class PlayerMotor2DTests
         motor.FixedTick(FixedDelta);
 
         Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.left));
+        Assert.That(motor.Velocity, Is.EqualTo(Vector2.left * Speed), "The copy moves at the replicated share of its own base speed.");
         Assert.That(motor.FacingDirection, Is.EqualTo(Vector2.left));
         Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
 
@@ -269,8 +270,9 @@ public class PlayerMotor2DTests
     }
 
     /// <summary>
-    /// A speed scale slows the body in proportion; a zero scale holds it still without counting as stalled or
-    /// dropping the move order, and the path resumes once the scale is back to one.
+    /// A speed scale slows the body in proportion, and the move reports the actual speed over the base speed, so a
+    /// remote copy shows the slowed gait; a zero scale holds it still without counting as stalled or dropping the move
+    /// order, and the path resumes once the scale is back to one.
     /// </summary>
     [Test]
     public void ASpeedScale_SlowsTheBody_AndZeroHoldsItWithoutStalling()
@@ -281,7 +283,8 @@ public class PlayerMotor2DTests
         motor.SetSpeedScale(0.5f);
         motor.FixedTick(FixedDelta);
         Assert.That(body.linearVelocity, Is.EqualTo(new Vector2(0f, -Speed * 0.5f)));
-        Assert.That(motor.CurrentMove, Is.EqualTo(Vector2.down));
+        Assert.That(motor.CurrentMove, Is.EqualTo(new Vector2(0f, -0.5f)));
+        Assert.That(motor.Velocity, Is.EqualTo(new Vector2(0f, -Speed * 0.5f)));
 
         motor.SetSpeedScale(0f);
         for (int i = 0; i < 5; i++)

@@ -4,8 +4,9 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Sorts a sprite object by its height in the world: sets its sorting order to an offset minus its y times a
-/// multiplier, so lower objects draw in front. Writes a <see cref="SortingGroup"/> when there is one, else every
-/// cached renderer, keeping their relative orders. Runs in edit mode too.
+/// multiplier, so lower objects draw in front. The y is its own, or a sorting point's (the root of a unit or prop whose
+/// sprite sits above where it stands), or a reference set in code. Writes a <see cref="SortingGroup"/> when there is
+/// one, else every cached renderer, keeping their relative orders. Runs in edit mode too.
 /// </summary>
 [DisallowMultipleComponent]
 [ExecuteAlways]
@@ -15,12 +16,19 @@ public class YPositionSorter : MonoBehaviour
     [SerializeField] private bool includeChildRenderers = true;
     [SerializeField, Min(1)] private int sortingOrderMultiplier = 100;
     [SerializeField] private int sortingOrderOffset;
+    [SerializeField, Tooltip("Sorts by this transform's height instead of its own: the root of a unit or prop whose sprite sits above where it stands.")]
+    private Transform sortingPoint;
     [SerializeField] private bool useSortingReferenceY;
     [SerializeField] private float sortingReferenceY;
 
     private Renderer[] cachedRenderers = Array.Empty<Renderer>();
     private int[] cachedOrderOffsets = Array.Empty<int>();
     private int lastAppliedOrder = int.MinValue;
+
+    /// <summary>
+    /// The height it sorts by: the reference set in code, else the sorting point's, else its own.
+    /// </summary>
+    public float SortingY => useSortingReferenceY ? sortingReferenceY : (sortingPoint != null ? sortingPoint.position.y : transform.position.y);
 
     /// <summary>
     /// Caches the sorting group and renderers.
@@ -122,8 +130,7 @@ public class YPositionSorter : MonoBehaviour
     /// </summary>
     private void ApplySortingOrder()
     {
-        float sourceY = useSortingReferenceY ? sortingReferenceY : transform.position.y;
-        int targetOrder = sortingOrderOffset - Mathf.RoundToInt(sourceY * sortingOrderMultiplier);
+        int targetOrder = sortingOrderOffset - Mathf.RoundToInt(SortingY * sortingOrderMultiplier);
         if (targetOrder == lastAppliedOrder)
         {
             return;

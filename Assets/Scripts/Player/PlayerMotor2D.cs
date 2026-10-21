@@ -4,8 +4,8 @@ using VContainer;
 /// <summary>
 /// Moves the player's <see cref="Rigidbody2D"/> along a <see cref="PathFollower2D"/> path on its own navigation, its
 /// world's or the area's (<see cref="PlayerNavigation"/>; a straight line when there is none) at the settings' speed times a speed scale (slows; 0 while stunned or
-/// rooted, which also keeps stall time from growing), tracks facing and stall time, and drives the animator. Remote
-/// copies show the owner's replicated movement instead.
+/// rooted, which also keeps stall time from growing), tracks facing and stall time, and shows the movement on the
+/// character's <see cref="CharacterVisuals"/>. Remote copies show the owner's replicated movement instead.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
@@ -14,14 +14,8 @@ public class PlayerMotor2D : MonoBehaviour
     private const float MovingThreshold = 0.0001f;
     private const float GroundSearchStep = 0.5f;
 
-    [SerializeField, Min(0.1f)] private float walkAnimationSpeed = 0.85f;
-    [SerializeField] private Animator animator;
-
-    private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
-    private static readonly int MoveXHash = Animator.StringToHash("MoveX");
-    private static readonly int MoveYHash = Animator.StringToHash("MoveY");
-    private static readonly int LastMoveXHash = Animator.StringToHash("LastMoveX");
-    private static readonly int LastMoveYHash = Animator.StringToHash("LastMoveY");
+    [SerializeField, Tooltip("The character's visuals, shown moving at the body's velocity and facing.")]
+    private CharacterVisuals visuals;
 
     private readonly PathFollower2D follower = new();
     private Rigidbody2D rb;
@@ -35,7 +29,17 @@ public class PlayerMotor2D : MonoBehaviour
     private bool aiming;
     private float speedScale = 1f;
 
+    /// <summary>
+    /// The move as a share of the settings' move speed: the actual speed over the base speed, so a slowed player
+    /// moves at less than 1 and a hasted one at more.
+    /// </summary>
     public Vector2 CurrentMove => currentMove;
+
+    /// <summary>
+    /// The move in units per second.
+    /// </summary>
+    public Vector2 Velocity => settings != null ? currentMove * settings.MoveSpeed : Vector2.zero;
+
     public Vector2 FacingDirection => facing;
     public bool HasPath => follower.HasPath;
     public bool ReachedDestination => follower.ReachedDestination;
@@ -59,11 +63,11 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Finds the animator and sets the body up for top-down movement: no gravity, no rotation, interpolated.
+    /// Finds the visuals and sets the body up for top-down movement: no gravity, no rotation, interpolated.
     /// </summary>
     private void Awake()
     {
-        ResolveAnimator();
+        ResolveVisuals();
         Rigidbody2D body = Body;
         body.gravityScale = 0f;
         body.freezeRotation = true;
@@ -71,11 +75,11 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Fills an empty animator reference from the children, inactive ones included.
+    /// Fills an empty visuals reference from the children, inactive ones included.
     /// </summary>
     private void OnValidate()
     {
-        ResolveAnimator();
+        ResolveVisuals();
     }
 
     /// <summary>
@@ -87,11 +91,11 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Pushes movement and facing to the animator each frame.
+    /// Shows the movement and facing on the visuals each frame.
     /// </summary>
     private void Update()
     {
-        UpdateAnimator();
+        ShowMovement();
     }
 
     /// <summary>
@@ -153,7 +157,8 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Drops the path and the move direction, and zeroes the body's velocity when this copy simulates movement.
+    /// Drops the path and the move direction, zeroes the body's velocity when this copy simulates movement, and shows
+    /// the player standing (also when the motor stops because it was disabled, as on death).
     /// </summary>
     public void Stop()
     {
@@ -163,6 +168,8 @@ public class PlayerMotor2D : MonoBehaviour
         {
             Body.linearVelocity = Vector2.zero;
         }
+
+        ShowMovement();
     }
 
     /// <summary>
@@ -211,7 +218,7 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows another machine's movement on this copy: the owner's move direction and facing drive the animator.
+    /// Shows another machine's movement on this copy: the owner's move (its speed over the base speed) and facing.
     /// </summary>
     public void ShowRemoteMovement(Vector2 move, Vector2 remoteFacing)
     {
@@ -233,7 +240,7 @@ public class PlayerMotor2D : MonoBehaviour
 
     /// <summary>
     /// One physics step: advances the path at the scaled speed, sets the body's velocity, records the move as a
-    /// fraction of that speed and, unless aiming, faces along it. Does nothing on a remote copy or before
+    /// share of the settings' move speed and, unless aiming, faces along it. Does nothing on a remote copy or before
     /// <see cref="Initialize"/>.
     /// </summary>
     internal void FixedTick(float deltaTime)
@@ -246,7 +253,7 @@ public class PlayerMotor2D : MonoBehaviour
         float speed = settings.MoveSpeed * speedScale;
         Vector2 velocity = follower.Tick(Position, speed, deltaTime);
         Body.linearVelocity = velocity;
-        currentMove = speed > 0f ? velocity / speed : Vector2.zero;
+        currentMove = settings.MoveSpeed > 0f ? velocity / settings.MoveSpeed : Vector2.zero;
         if (!aiming && currentMove.sqrMagnitude > MovingThreshold)
         {
             facing = currentMove.normalized;
@@ -283,34 +290,25 @@ public class PlayerMotor2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Sets the animator's moving flag and move and last-move directions, and plays at the walk animation speed while
-    /// moving.
+    /// Feeds the visuals the move in units per second and the facing.
     /// </summary>
-    private void UpdateAnimator()
+    private void ShowMovement()
     {
-        if (animator == null)
+        if (visuals != null)
         {
-            return;
+            visuals.SetLocomotion(Velocity, facing);
         }
-
-        bool isMoving = currentMove.sqrMagnitude > MovingThreshold;
-        Vector2 animationDirection = isMoving ? currentMove.normalized : facing;
-        animator.SetBool(IsMovingHash, isMoving);
-        animator.SetFloat(MoveXHash, animationDirection.x);
-        animator.SetFloat(MoveYHash, animationDirection.y);
-        animator.SetFloat(LastMoveXHash, facing.x);
-        animator.SetFloat(LastMoveYHash, facing.y);
-        animator.speed = isMoving ? walkAnimationSpeed : 1f;
     }
 
     /// <summary>
-    /// Falls back to the first <see cref="Animator"/> in the children, inactive ones included, when none is assigned.
+    /// Falls back to the first <see cref="CharacterVisuals"/> in the children, inactive ones included, when none is
+    /// assigned.
     /// </summary>
-    private void ResolveAnimator()
+    private void ResolveVisuals()
     {
-        if (animator == null)
+        if (visuals == null)
         {
-            animator = GetComponentInChildren<Animator>(true);
+            visuals = GetComponentInChildren<CharacterVisuals>(true);
         }
     }
 }

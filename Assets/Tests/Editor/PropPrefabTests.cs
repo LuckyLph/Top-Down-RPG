@@ -58,10 +58,10 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Like the player, every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child half a unit
-    /// above the root (it may be nudged sideways to centre the art on the footprint), drawn on the Entities sorting
-    /// layer and sorted with no offset, a sprite, where it has one, pivoted so its base meets the root; the root
-    /// itself draws nothing.
+    /// Every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child half a unit above the root (it
+    /// may be nudged sideways to centre the art on the footprint), drawn on the Entities sorting layer and sorted with
+    /// no offset at the root, its base, as units sort at their feet; a sprite, where it has one, pivoted so its base
+    /// meets the root; the root itself draws nothing.
     /// </summary>
     [Test]
     public void Props_KeepTheirSpriteOnAVisualsChild_HalfAUnitAboveTheirBase()
@@ -85,7 +85,9 @@ public class PropPrefabTests
 
             YPositionSorter sorter = visuals.GetComponent<YPositionSorter>();
             Assert.That(sorter, Is.Not.Null, propPrefab.name);
-            Assert.That(new SerializedObject(sorter).FindProperty("sortingOrderOffset").intValue, Is.Zero, propPrefab.name);
+            SerializedObject sorting = new(sorter);
+            Assert.That(sorting.FindProperty("sortingOrderOffset").intValue, Is.Zero, propPrefab.name);
+            Assert.That(sorting.FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(propPrefab.transform), $"{propPrefab.name} should sort at its base.");
         }
     }
 

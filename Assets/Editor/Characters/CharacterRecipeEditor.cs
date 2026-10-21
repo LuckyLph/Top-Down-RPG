@@ -8,8 +8,8 @@ using UnityEngine;
 /// sheet (a row per direction, east at the top) and, beside it, one direction playing at the motion's frame durations.
 /// The preview is baked again whenever the recipe, the clip's motion or its weapon changes (their serialized settings
 /// are compared on each layout, so undo and edits to the motion or weapon assets show too). Below it: the scale, the
-/// standing height, the frames whose drawing reaches their edge, and Generate, which writes every sheet through
-/// <see cref="CharacterSheetWriter"/> once the inspector is drawn.
+/// standing height, the frames whose drawing reaches their edge, and Generate, which writes every sheet and the
+/// animation set through <see cref="CharacterSheetWriter"/> once the inspector is drawn.
 /// </summary>
 [CustomEditor(typeof(CharacterRecipe))]
 public sealed class CharacterRecipeEditor : Editor
@@ -100,7 +100,7 @@ public sealed class CharacterRecipeEditor : Editor
     }
 
     /// <summary>
-    /// Writes every sheet of <paramref name="recipe"/> and logs them.
+    /// Writes every sheet of <paramref name="recipe"/> and its animation set, and logs them.
     /// </summary>
     private static void GenerateNow(CharacterRecipe recipe)
     {
@@ -112,7 +112,7 @@ public sealed class CharacterRecipeEditor : Editor
         IReadOnlyList<string> paths = CharacterSheetWriter.Generate(recipe);
         if (paths != null)
         {
-            Debug.Log($"Generated {paths.Count} sheets from {recipe.name}: {string.Join(", ", paths)}.", recipe);
+            Debug.Log($"Generated {paths.Count - 1} sheets and the animation set from {recipe.name}: {string.Join(", ", paths)}.", recipe);
         }
     }
 

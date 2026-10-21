@@ -21,6 +21,21 @@ public abstract class CharacterMotion : ScriptableObject
     public virtual int SmearSamples => 24;
 
     /// <summary>
+    /// The locomotion the motion shows: none for an attack.
+    /// </summary>
+    public virtual CharacterGait Gait => CharacterGait.None;
+
+    /// <summary>
+    /// How fast a planted foot moves back under <paramref name="recipe"/>'s body at the motion's natural speed, in rig
+    /// units per second: the speed the character must move at for its feet not to slide. 0 for a motion that does not
+    /// travel.
+    /// </summary>
+    public virtual float GroundSpeed(CharacterRecipe recipe)
+    {
+        return 0f;
+    }
+
+    /// <summary>
     /// The pose of frame <paramref name="frame"/> for <paramref name="recipe"/>'s body holding
     /// <paramref name="weapon"/> (or none).
     /// </summary>

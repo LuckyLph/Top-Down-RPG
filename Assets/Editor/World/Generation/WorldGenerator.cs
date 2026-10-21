@@ -6,7 +6,8 @@ using UnityEngine;
 /// A world's generation settings (Docs/WorldGeneration.md): the <see cref="WorldDefinition"/> it composes, a world seed,
 /// the materials the world lays itself, the sea around the land and its beach, the regions (<see cref="RegionPlacement"/>)
 /// and the gaps between them, the road links between their ports (<see cref="RoadLink"/>), the waystones' plazas and the
-/// gates, the wilds' patches and mobs per chunk, and a record per chunk (<see cref="ChunkRecord"/>).
+/// gates, the wilds' patches and mobs per chunk, a record per chunk (<see cref="ChunkRecord"/>) and the names of the
+/// entries the writer last set on the world.
 /// <see cref="Compose"/> composes the world in memory, the same settings always giving the same
 /// <see cref="WorldComposition"/>. Editor-only data, edited by editor tools only.
 /// </summary>
@@ -187,6 +188,8 @@ public sealed class WorldGenerator : ScriptableObject
     [Header("Chunks")]
     [Tooltip("What the generator keeps per chunk: the written hash, locks, wide allowances and wilds seeds.")]
     [SerializeField] private List<ChunkRecord> chunks = new();
+    [Tooltip("The names of the entries the writer last set first in the world's list; set by the writer, so the next write replaces them and keeps the entries made by hand.")]
+    [SerializeField] private List<string> writtenEntries = new();
 
     public WorldDefinition World => world;
     public int Seed => seed;
@@ -219,6 +222,7 @@ public sealed class WorldGenerator : ScriptableObject
     public float MobDistanceFromEntries => mobDistanceFromEntries;
     public float MobSpacing => mobSpacing;
     public IReadOnlyList<ChunkRecord> Chunks => chunks;
+    public IReadOnlyList<string> WrittenEntries => writtenEntries;
 
     /// <summary>
     /// Composes the world from these settings, in memory (Docs/WorldGeneration.md: Architecture: Composition).
@@ -291,5 +295,30 @@ public sealed class WorldGenerator : ScriptableObject
     {
         chunks.RemoveAll(other => other == null || other.Coords == record.Coords);
         chunks.Add(record);
+    }
+
+    /// <summary>
+    /// Records <paramref name="hash"/> as the written hash of the chunk at <paramref name="coords"/>, adding a record in
+    /// row order when it has none; the writer calls it once it has saved the chunk.
+    /// </summary>
+    internal void SetWrittenHash(Vector2Int coords, string hash)
+    {
+        ChunkRecord record = RecordOf(coords);
+        if (record == null)
+        {
+            record = new ChunkRecord(coords, false, false, 0);
+            int at = chunks.FindIndex(other => other != null && (other.Coords.y > coords.y || (other.Coords.y == coords.y && other.Coords.x > coords.x)));
+            chunks.Insert(at < 0 ? chunks.Count : at, record);
+        }
+
+        record.SetWrittenHash(hash);
+    }
+
+    /// <summary>
+    /// Records <paramref name="names"/> as the entries the writer set on the world.
+    /// </summary>
+    internal void SetWrittenEntries(IEnumerable<string> names)
+    {
+        writtenEntries = new List<string>(names);
     }
 }

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 /// <summary>
 /// Tests for composing a world (Docs/WorldGeneration.md: Testing), on compositions of small worlds of the project's
-/// generators, built in code from unsaved generators and worlds: the Overworld's Phase 0 settings (the six regions on
+/// generators, built in code from unsaved generators and worlds (<see cref="TestWorldGenerators"/>): the Overworld's Phase 0 settings (the six regions on
 /// 5 x 4 chunks and their eight road links), a row of three regions on 6 x 2 chunks, and a Clearing or two on 3 x 2.
 /// The same settings give the same composition, cell for cell and in order, and another seed another one; re-seeding a
 /// region changes only the chunks its cells, road and gates touch and their neighbours, and re-rolling a chunk's wilds
@@ -23,14 +22,9 @@ using Object = UnityEngine.Object;
 /// </summary>
 public class WorldGeneratorTests
 {
-    private const string GeneratorFolder = "Assets/Settings/Generation";
-    private const string MaterialFolder = "Assets/Settings/Terrain/Materials";
-    private const string TerrainStylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
-    private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
-    private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
-    private const string Snowfield = "snowfield";
-    private const string Lakeside = "lakeside";
-    private const string LavaFields = "lavaFields";
+    private const string Snowfield = TestWorldGenerators.Snowfield;
+    private const string Lakeside = TestWorldGenerators.Lakeside;
+    private const string LavaFields = TestWorldGenerators.LavaFields;
 
     private static readonly Vector2Int[] Neighbours4 = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
 
@@ -58,11 +52,10 @@ public class WorldGeneratorTests
         }
     }
 
-    private readonly List<Object> created = new();
+    private TestWorldGenerators generators;
     private WorldGenerator.GroundMaterials materials;
     private TerrainStyle style;
     private TerrainMovementProfile2D profile;
-    private MobController weasel;
     private WorldGenerator overworldGenerator;
     private WorldComposition overworld;
 
@@ -73,11 +66,11 @@ public class WorldGeneratorTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(TerrainStylePath);
-        profile = AssetDatabase.LoadAssetAtPath<TerrainMovementProfile2D>(ProfilePath);
-        weasel = AssetDatabase.LoadAssetAtPath<GameObject>(WeaselPath).GetComponent<MobController>();
-        materials = new WorldGenerator.GroundMaterials(GroundMaterial("Grass"), GroundMaterial("Sand"), GroundMaterial("Ocean"), GroundMaterial("Stone"), GroundMaterial("Gravel"), GroundMaterial("Plaza"), GroundMaterial("Weeds"), GroundMaterial("Meadow"), GroundMaterial("TallGrass"));
-        overworldGenerator = Overworld();
+        generators = new TestWorldGenerators();
+        style = generators.Style;
+        profile = generators.Profile;
+        materials = generators.Materials;
+        overworldGenerator = generators.Overworld();
         overworld = overworldGenerator.Compose();
     }
 
@@ -87,15 +80,7 @@ public class WorldGeneratorTests
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
-        foreach (Object made in created)
-        {
-            if (made != null)
-            {
-                Object.DestroyImmediate(made);
-            }
-        }
-
-        created.Clear();
+        generators.Destroy();
     }
 
     /// <summary>
@@ -600,32 +585,6 @@ public class WorldGeneratorTests
     }
 
     /// <summary>
-    /// The Overworld's Phase 0 settings (Docs/WorldGeneration.md: Behaviour: The Overworld): the six regions at their
-    /// seed 1 layouts on 5 x 4 chunks, the Clearing first, and the eight road links.
-    /// </summary>
-    private WorldGenerator Overworld()
-    {
-        WorldGenerator generator = Generator("Overworld", new Vector2Int(5, 4), null);
-        generator.SetRegions(
-            new RegionPlacement("clearing", Generator("Clearing"), new Vector2Int(86, 124)),
-            new RegionPlacement("villageForest", Generator("VillageForest"), new Vector2Int(200, 126)),
-            new RegionPlacement(Lakeside, Generator("Lakeside"), new Vector2Int(91, 59)),
-            new RegionPlacement(Snowfield, Generator("Snowfield"), new Vector2Int(91, 175)),
-            new RegionPlacement("coast", Generator("Coast"), new Vector2Int(200, 200)),
-            new RegionPlacement(LavaFields, Generator("LavaFields"), new Vector2Int(186, 59)));
-        generator.SetLinks(
-            Link("clearing", PortSide.East, "villageForest", PortSide.West, false, RoadLink.Surface.Stone),
-            Link(Lakeside, PortSide.East, LavaFields, PortSide.West, false, RoadLink.Surface.Stone),
-            Link(Snowfield, PortSide.East, "coast", PortSide.West, false, RoadLink.Surface.Stone),
-            Link("clearing", PortSide.North, Snowfield, PortSide.East, true, RoadLink.Surface.Gravel),
-            Link("clearing", PortSide.South, Lakeside, PortSide.East, true, RoadLink.Surface.Gravel),
-            Link(LavaFields, PortSide.East, "coast", PortSide.East, false, RoadLink.Surface.Stone),
-            Link(Snowfield, PortSide.West, "clearing", PortSide.West, false, RoadLink.Surface.Stone),
-            Link(Lakeside, PortSide.West, "clearing", PortSide.West, false, RoadLink.Surface.Stone));
-        return generator;
-    }
-
-    /// <summary>
     /// A row of the Snowfield, the Lakeside and the Lava Fields across 6 x 2 chunks from the given seeds, the Lava
     /// Fields moved by <paramref name="lavaOffset"/>, with roads from each to the next.
     /// </summary>
@@ -655,43 +614,19 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// An unsaved world generator for an unsaved world <paramref name="name"/> of <paramref name="size"/> chunks, which
-    /// has <paramref name="chunks"/> (all of them when null), with the project's style, profile, materials and mob.
+    /// has <paramref name="chunks"/> (all of them when null).
     /// </summary>
     private WorldGenerator Generator(string name, Vector2Int size, List<Vector2Int> chunks)
     {
-        if (chunks == null)
-        {
-            chunks = new List<Vector2Int>();
-            for (int y = 0; y < size.y; y++)
-            {
-                for (int x = 0; x < size.x; x++)
-                {
-                    chunks.Add(new Vector2Int(x, y));
-                }
-            }
-        }
-
-        WorldDefinition world = WorldDefinition.Create(name, new Vector2Int(8192, 0), size, chunks);
-        created.Add(world);
-        created.Add(world.RootScene);
-        foreach (WorldDefinition.Chunk chunk in world.Chunks)
-        {
-            created.Add(chunk.Scene);
-        }
-
-        WorldGenerator generator = WorldGenerator.Create(world, style, profile, materials, weasel);
-        created.Add(generator);
-        return generator;
+        return generators.Generator(name, size, chunks);
     }
 
     /// <summary>
-    /// The project's area generator <paramref name="name"/> (Generator_name), which the tests only read.
+    /// The project's area generator <paramref name="name"/>, which the tests only read.
     /// </summary>
     private static AreaGenerator Generator(string name)
     {
-        AreaGenerator generator = AssetDatabase.LoadAssetAtPath<AreaGenerator>($"{GeneratorFolder}/Generator_{name}.asset");
-        Assert.That(generator, Is.Not.Null, $"the project's {name} generator");
-        return generator;
+        return TestWorldGenerators.Area(name);
     }
 
     /// <summary>
@@ -699,17 +634,7 @@ public class WorldGeneratorTests
     /// </summary>
     private static RoadLink Link(string from, PortSide fromSide, string to, PortSide toSide, bool toRoad, RoadLink.Surface surface)
     {
-        return new RoadLink(from, fromSide, to, toSide, toRoad, surface, surface == RoadLink.Surface.Gravel ? 2 : 3);
-    }
-
-    /// <summary>
-    /// The project's ground material <paramref name="name"/>.
-    /// </summary>
-    private static TerrainMaterial GroundMaterial(string name)
-    {
-        TerrainMaterial material = AssetDatabase.LoadAssetAtPath<TerrainMaterial>($"{MaterialFolder}/{name}.asset");
-        Assert.That(material, Is.Not.Null, $"the project's {name} material");
-        return material;
+        return TestWorldGenerators.Link(from, fromSide, to, toSide, toRoad, surface);
     }
 
     /// <summary>

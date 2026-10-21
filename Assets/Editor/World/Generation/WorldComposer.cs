@@ -204,7 +204,7 @@ internal sealed class WorldComposer
     private WorldComposer(WorldGenerator generator, Vector2Int sizeInChunks)
     {
         settings = generator;
-        composition = new WorldComposition(sizeInChunks, generator.TerrainStyle.LayerOrder);
+        composition = new WorldComposition(sizeInChunks, generator.TerrainStyle);
         width = composition.Size.x;
         height = composition.Size.y;
         cells = composition.materialBits;
@@ -223,7 +223,7 @@ internal sealed class WorldComposer
         string problem = Problem(generator);
         if (problem != null)
         {
-            WorldComposition failed = new(Vector2Int.zero, Array.Empty<TerrainMaterial>());
+            WorldComposition failed = new(Vector2Int.zero, null);
             failed.Warnings.Add(problem);
             return failed;
         }
@@ -361,6 +361,30 @@ internal sealed class WorldComposer
         {
             ReadOutline(region);
             ReadPorts(region);
+        }
+
+        ListGrounds();
+    }
+
+    /// <summary>
+    /// Lists the base ground materials in the style's order: the wilds' grass and each region's ground, its
+    /// generator's first layer.
+    /// </summary>
+    private void ListGrounds()
+    {
+        uint grounds = grass;
+        foreach (WorldComposition.Region region in composition.Regions)
+        {
+            IReadOnlyList<AreaGenerator.TerrainLayer> layers = region.Generator.TerrainLayers;
+            grounds |= layers.Count > 0 && layers[0] != null ? Bit(layers[0].Material) : 0u;
+        }
+
+        for (int i = 0; i < composition.LayerOrder.Count; i++)
+        {
+            if ((grounds & (1u << i)) != 0)
+            {
+                composition.Grounds.Add(composition.LayerOrder[i]);
+            }
         }
     }
 
@@ -1927,20 +1951,12 @@ internal sealed class WorldComposer
 
     /// <summary>
     /// Lists each chunk's materials, in row order of the chunks: its own cells' and those of its neighbours' border
-    /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order, and hashes its content.
+    /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order, and hashes its content
+    /// (<see cref="ChunkContent"/>).
     /// </summary>
     private void ListChunks()
     {
         Vector2Int size = composition.SizeInChunks;
-        List<WorldComposition.Mob>[] mobsByChunk = new List<WorldComposition.Mob>[size.x * size.y];
-        foreach (WorldComposition.Mob mob in composition.Mobs)
-        {
-            Vector2Int chunk = ChunkCoords.ChunkOf(mob.Cell);
-            int at = chunk.y * size.x + chunk.x;
-            mobsByChunk[at] ??= new List<WorldComposition.Mob>();
-            mobsByChunk[at].Add(mob);
-        }
-
         for (int cy = 0; cy < size.y; cy++)
         {
             for (int cx = 0; cx < size.x; cx++)
@@ -1960,8 +1976,8 @@ internal sealed class WorldComposer
                     }
                 }
 
-                chunk.ContentHash = Hash(chunk, bounds, mobsByChunk[cy * size.x + cx]);
                 composition.Chunks.Add(chunk);
+                chunk.ContentHash = ChunkContent.Of(composition, coords).Hash();
             }
         }
     }
@@ -1985,94 +2001,6 @@ internal sealed class WorldComposer
         }
 
         return mask;
-    }
-
-    /// <summary>
-    /// A 64-bit FNV-1a hash, in hex, of what <paramref name="chunk"/> holds: its material list by name, then for each of
-    /// its own materials its name and the cells of <paramref name="bounds"/> holding it in row order, its raised cells
-    /// and their kinds, and its mobs (<paramref name="mobs"/>, prefab, cell and id).
-    /// </summary>
-    private string Hash(WorldComposition.Chunk chunk, RectInt bounds, List<WorldComposition.Mob> mobs)
-    {
-        ulong hash = 14695981039346656037UL;
-        foreach (TerrainMaterial material in chunk.Materials)
-        {
-            hash = Mix(hash, material.name);
-        }
-
-        for (int i = 0; i < composition.LayerOrder.Count; i++)
-        {
-            uint bit = 1u << i;
-            if ((chunk.OwnMask & bit) == 0)
-            {
-                continue;
-            }
-
-            hash = Mix(hash, composition.LayerOrder[i].name);
-            for (int y = bounds.yMin; y < bounds.yMax; y++)
-            {
-                for (int x = bounds.xMin; x < bounds.xMax; x++)
-                {
-                    if ((cells[y * width + x] & bit) != 0)
-                    {
-                        hash = Mix(hash, (y - bounds.yMin) * bounds.width + x - bounds.xMin);
-                    }
-                }
-            }
-        }
-
-        hash = Mix(hash, "raised");
-        for (int y = bounds.yMin; y < bounds.yMax; y++)
-        {
-            for (int x = bounds.xMin; x < bounds.xMax; x++)
-            {
-                byte kind = raised[y * width + x];
-                if (kind != RaisedGround.Level)
-                {
-                    hash = Mix(Mix(hash, (y - bounds.yMin) * bounds.width + x - bounds.xMin), kind);
-                }
-            }
-        }
-
-        hash = Mix(hash, "mobs");
-        if (mobs != null)
-        {
-            foreach (WorldComposition.Mob mob in mobs)
-            {
-                hash = Mix(Mix(Mix(Mix(hash, mob.Prefab != null ? mob.Prefab.name : string.Empty), mob.Cell.x), mob.Cell.y), mob.Id);
-            }
-        }
-
-        return hash.ToString("x16");
-    }
-
-    /// <summary>
-    /// <paramref name="hash"/> with <paramref name="text"/>'s characters mixed in.
-    /// </summary>
-    private static ulong Mix(ulong hash, string text)
-    {
-        foreach (char character in text)
-        {
-            hash = (hash ^ character) * 1099511628211UL;
-        }
-
-        return (hash ^ 0xff) * 1099511628211UL;
-    }
-
-    /// <summary>
-    /// <paramref name="hash"/> with <paramref name="value"/>'s four bytes mixed in.
-    /// </summary>
-    private static ulong Mix(ulong hash, int value)
-    {
-        unchecked
-        {
-            for (int shift = 0; shift < 32; shift += 8)
-            {
-                hash = (hash ^ (byte)(value >> shift)) * 1099511628211UL;
-            }
-        }
-
-        return hash;
     }
 
     /// <summary>
@@ -2194,7 +2122,7 @@ internal sealed class WorldComposer
                     names.Add(material.name);
                 }
 
-                composition.Warnings.Add($"Chunk {chunk.Coords} lists {chunk.Materials.Count} materials, more than {TerrainControlMap.NarrowLayers}: {string.Join(", ", names)}.");
+                Block($"Chunk {chunk.Coords} lists {chunk.Materials.Count} materials, more than {TerrainControlMap.NarrowLayers}: {string.Join(", ", names)}.");
             }
         }
     }
@@ -2208,13 +2136,13 @@ internal sealed class WorldComposer
     {
         if (composition.DefaultEntry == null)
         {
-            composition.Warnings.Add("The world has no region, so no default entry.");
+            Block("The world has no region, so no default entry.");
             return;
         }
 
         if (settings.MovementProfile == null)
         {
-            composition.Warnings.Add("The world generator has no movement profile, so reachability was not checked.");
+            Block("The world generator has no movement profile, so reachability was not checked.");
             return;
         }
 
@@ -2239,8 +2167,17 @@ internal sealed class WorldComposer
 
         if (cut.Count > 0)
         {
-            composition.Warnings.Add($"{cut.Count} entries and mobs cannot be walked to from {composition.DefaultEntry.Name}: {string.Join(", ", cut.GetRange(0, Mathf.Min(ListedInWarning, cut.Count)))}{(cut.Count > ListedInWarning ? ", ..." : string.Empty)}.");
+            Block($"{cut.Count} entries and mobs cannot be walked to from {composition.DefaultEntry.Name}: {string.Join(", ", cut.GetRange(0, Mathf.Min(ListedInWarning, cut.Count)))}{(cut.Count > ListedInWarning ? ", ..." : string.Empty)}.");
         }
+    }
+
+    /// <summary>
+    /// Adds <paramref name="warning"/> to the warnings and to those that stop a write.
+    /// </summary>
+    private void Block(string warning)
+    {
+        composition.Warnings.Add(warning);
+        composition.BlockingWarnings.Add(warning);
     }
 
     /// <summary>

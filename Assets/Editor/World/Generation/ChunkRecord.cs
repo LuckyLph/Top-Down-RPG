@@ -43,4 +43,12 @@ public sealed class ChunkRecord
     public bool Locked => locked;
     public bool AllowWide => allowWide;
     public int WildsSeed => wildsSeed;
+
+    /// <summary>
+    /// Records <paramref name="hash"/> as the hash of what the writer last wrote into the chunk.
+    /// </summary>
+    internal void SetWrittenHash(string hash)
+    {
+        writtenHash = hash ?? string.Empty;
+    }
 }

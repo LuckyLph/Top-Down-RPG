@@ -5,9 +5,9 @@ using UnityEngine;
 /// A world composed in memory by a <see cref="WorldGenerator"/> (Docs/WorldGeneration.md: Terms), in world-local
 /// cells: for every cell a bit per ground material of the terrain style's layer order, which region owns it (or the
 /// wilds, or the sea) and its raised ground; the regions with their outlines, ports and spawn cells; the roads; the
-/// mobs with their derived ids; the entries (the waystones, the first the default, then the gates); each chunk's
-/// material list and content hash; the warnings; and how long each step took. Plain data, filled by
-/// <see cref="WorldComposer"/>.
+/// mobs with their derived ids; the entries (the waystones, the first the default, then the gates); the base ground
+/// materials; each chunk's material list and content hash; the warnings, and among them those that stop a write; and
+/// how long each step took. Plain data, filled by <see cref="WorldComposer"/>.
 /// </summary>
 public sealed class WorldComposition
 {
@@ -166,7 +166,8 @@ public sealed class WorldComposition
         public uint OwnMask { get; internal set; }
 
         /// <summary>
-        /// A hash of what the chunk holds: its material list, each material's cells, its raised ground and its mobs.
+        /// A hash of what the chunk holds: each material's cells, its raised ground and its mobs
+        /// (<see cref="ChunkContent"/>), which a chunk scene the writer wrote there hashes to as well.
         /// </summary>
         public string ContentHash { get; internal set; }
     }
@@ -194,13 +195,15 @@ public sealed class WorldComposition
     internal readonly byte[] raised;
 
     /// <summary>
-    /// An empty composition of a world of <paramref name="sizeInChunks"/> chunks over the materials of <paramref name="layerOrder"/>, every cell the sea's.
+    /// An empty composition of a world of <paramref name="sizeInChunks"/> chunks drawn with <paramref name="style"/>
+    /// (none for a composition that failed), every cell the sea's.
     /// </summary>
-    internal WorldComposition(Vector2Int sizeInChunks, IReadOnlyList<TerrainMaterial> layerOrder)
+    internal WorldComposition(Vector2Int sizeInChunks, TerrainStyle style)
     {
         SizeInChunks = sizeInChunks;
         Size = sizeInChunks * ChunkCoords.Size;
-        LayerOrder = layerOrder;
+        Style = style;
+        LayerOrder = style != null ? style.LayerOrder : System.Array.Empty<TerrainMaterial>();
         int count = Size.x * Size.y;
         materialBits = new uint[count];
         owners = new short[count];
@@ -210,6 +213,11 @@ public sealed class WorldComposition
     public Vector2Int SizeInChunks { get; }
     public Vector2Int Size { get; }
     public RectInt Bounds => new(0, 0, Size.x, Size.y);
+
+    /// <summary>
+    /// The terrain style the world's chunks draw with.
+    /// </summary>
+    public TerrainStyle Style { get; }
 
     /// <summary>
     /// The materials of the terrain style's layer order, bottom first: bit i of a cell's mask is material i.
@@ -226,8 +234,20 @@ public sealed class WorldComposition
     /// </summary>
     public List<WorldDefinition.Entry> Entries { get; } = new();
 
+    /// <summary>
+    /// The base ground materials, in the style's order: the wilds' grass and each region's ground (its generator's
+    /// first layer), which the writer lists in a chunk's <see cref="AreaTerrain"/> where it lays them.
+    /// </summary>
+    public List<TerrainMaterial> Grounds { get; } = new();
+
     public List<Chunk> Chunks { get; } = new();
     public List<string> Warnings { get; } = new();
+
+    /// <summary>
+    /// The warnings, also in <see cref="Warnings"/>, that stop the writer unless it is asked to write anyway: a chunk
+    /// past 16 materials not allowed wide, and an entry or mob the default entry cannot walk to.
+    /// </summary>
+    public List<string> BlockingWarnings { get; } = new();
     public List<StepTime> StepTimes { get; } = new();
 
     public WorldDefinition.Entry DefaultEntry => Entries.Count > 0 ? Entries[0] : null;

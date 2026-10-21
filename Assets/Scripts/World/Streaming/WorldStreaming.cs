@@ -12,7 +12,9 @@ using VContainer.Unity;
 /// streamer's next load or unload, one at a time: a world's root scene under the Gameplay scope, a chunk under its
 /// world's scope. It also streams the arrival of every trip under way (<see cref="TripArrivals"/>), so a trip's target
 /// world loads while the traveller's screen fades out, and the place the host prepares for a joining player
-/// (<see cref="PrepareAsync"/>), so that player's world is loaded before it spawns there. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
+/// (<see cref="PrepareAsync"/>), so that player's world is loaded before it spawns there; with authority, a saved place
+/// the player can no longer stand on moves to walkable ground once its chunks are up (<see cref="WalkablePlaces"/>), as
+/// the session is entered and as a joining player is prepared for. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
 /// enters and leaves worlds through, and that brings the local player to a trip's entry. In a session it runs the
 /// client's half of the per-chunk handshake (Docs/WorldStreaming.md: Networking): a client reports each chunk ready
 /// once it is loaded, again for the chunks of its new world when its player's trip count changes, and releases each
@@ -36,6 +38,8 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     private readonly TripArrivals arrivals;
     private readonly IChunkHandshake handshake;
     private readonly ISessionStatus sessionStatus;
+    private readonly WalkablePlaces walkablePlaces;
+    private readonly PlayerIds playerIds;
     private readonly float slotSpacing;
     private readonly List<StreamInterest> interests = new();
     private readonly List<StreamInterest> preparations = new();
@@ -46,8 +50,9 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
 
     /// <summary>
     /// Creates the driver with a streamer made from <paramref name="settings"/>, loading through
-    /// <paramref name="sceneLoader"/> with <paramref name="gameplayScope"/> as the parent of every world's scope, and
-    /// placing arriving players <paramref name="gameplaySettings"/>' entry slot spacing apart.
+    /// <paramref name="sceneLoader"/> with <paramref name="gameplayScope"/> as the parent of every world's scope,
+    /// placing arriving players <paramref name="gameplaySettings"/>' entry slot spacing apart, and moving a saved place
+    /// that is no longer walkable through <paramref name="places"/>, keyed by the players' <paramref name="ids"/>.
     /// </summary>
     public WorldStreaming(
         WorldStreamingSettings settings,
@@ -63,12 +68,16 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         TripArrivals arrivals,
         IChunkHandshake chunkHandshake,
         ISessionStatus session,
-        GameplaySettings gameplaySettings)
+        GameplaySettings gameplaySettings,
+        WalkablePlaces places,
+        PlayerIds ids)
     {
         slotSpacing = gameplaySettings != null ? gameplaySettings.EntrySlotSpacing : 0f;
         streamer = settings.CreateStreamer(chunkHandshake);
         handshake = chunkHandshake;
         sessionStatus = session;
+        walkablePlaces = places;
+        playerIds = ids;
         this.sceneLoader = sceneLoader;
         this.gameplayScope = gameplayScope;
         this.worlds = worlds;
@@ -116,8 +125,11 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     /// <summary>
     /// Moves the players this machine moves into <paramref name="world"/> at the world position
     /// <paramref name="position"/>, each on a free slot there (<see cref="EntrySlots"/>), snaps the camera there, and
-    /// completes once the world and the chunks around the local player are loaded. Throws when no local player appears
-    /// within <see cref="MaxFramesWaitingForPlayer"/> frames.
+    /// completes once the world and the chunks around the local player are loaded. With authority, a position the local
+    /// player can no longer stand on (a saved place whose ground changed) then moves them all on to the nearest walkable
+    /// cell or the local player's nearest discovered waystone (<see cref="WalkablePlaces"/>), and it completes once the
+    /// chunks there are loaded too. Throws when no local player appears within
+    /// <see cref="MaxFramesWaitingForPlayer"/> frames.
     /// </summary>
     public async Awaitable EnterAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
     {
@@ -138,49 +150,39 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
             await Awaitable.NextFrameAsync(cancellation);
         }
 
-        IReadOnlyList<PlayerHandle> party = players.Players;
-        for (int i = 0; i < party.Count; i++)
+        PlayerHandle local = localPlayer.Current.Handle;
+        PlaceParty(world, position);
+        await SettleAsync(world, position, cancellation);
+        if (authority.IsAuthoritative && walkablePlaces.TryMove(world, position, playerIds.IdOf(local), out Vector2 moved))
         {
-            if (party[i].Transform != null && party[i].Transform.TryGetComponent(out PlayerController controller) && controller.SimulatesMovement)
-            {
-                playerWorlds.Set(party[i], world);
-                controller.Teleport(EntrySlots.FreeSlot(position, slotSpacing, world, players, playerWorlds, party[i]));
-            }
-        }
-
-        cameraFollow.SnapToTarget();
-        StreamInterest arrival = new(world, position);
-        while (!streamer.IsSettled(arrival))
-        {
-            await Awaitable.NextFrameAsync(cancellation);
+            PlaceParty(world, moved);
+            await SettleAsync(world, moved, cancellation);
         }
     }
 
     /// <summary>
     /// Streams <paramref name="world"/> around <paramref name="position"/> as an interest of its own, with no player
     /// there, until that world and the chunks around the position are loaded, then stops streaming it; the player
-    /// placed there keeps them. Completes at once when no session is streaming, and when the session ends meanwhile.
+    /// placed there keeps them. Returns where to place the player <paramref name="playerId"/>: the position, or, when
+    /// it cannot stand there (a saved place whose ground changed), the nearest walkable cell or its nearest discovered
+    /// waystone (<see cref="WalkablePlaces"/>), streamed the same way. Completes at once, with the position, when no
+    /// session is streaming, and when the session ends meanwhile.
     /// </summary>
-    public async Awaitable PrepareAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
+    public async Awaitable<Vector2> PrepareAsync(WorldDefinition world, Vector2 position, string playerId, CancellationToken cancellation)
     {
         if (world == null)
         {
             throw new ArgumentNullException(nameof(world));
         }
 
-        StreamInterest preparation = new(world, position);
-        preparations.Add(preparation);
-        try
+        await StreamPlaceAsync(world, position, cancellation);
+        if (!active || !authority.IsAuthoritative || !walkablePlaces.TryMove(world, position, playerId, out Vector2 moved))
         {
-            while (active && !streamer.IsSettled(preparation))
-            {
-                await Awaitable.NextFrameAsync(cancellation);
-            }
+            return position;
         }
-        finally
-        {
-            preparations.Remove(preparation);
-        }
+
+        await StreamPlaceAsync(world, moved, cancellation);
+        return moved;
     }
 
     /// <summary>
@@ -290,6 +292,58 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         playerWorlds.Changed -= HandlePlayerWorldChanged;
         disposeCancellation.Cancel();
         disposeCancellation.Dispose();
+    }
+
+    /// <summary>
+    /// Puts every player this machine moves in <paramref name="world"/>, each on a free slot at the world position
+    /// <paramref name="position"/> (<see cref="EntrySlots"/>), and snaps the camera there.
+    /// </summary>
+    private void PlaceParty(WorldDefinition world, Vector2 position)
+    {
+        IReadOnlyList<PlayerHandle> party = players.Players;
+        for (int i = 0; i < party.Count; i++)
+        {
+            if (party[i].Transform != null && party[i].Transform.TryGetComponent(out PlayerController controller) && controller.SimulatesMovement)
+            {
+                playerWorlds.Set(party[i], world);
+                controller.Teleport(EntrySlots.FreeSlot(position, slotSpacing, world, players, playerWorlds, party[i]));
+            }
+        }
+
+        cameraFollow.SnapToTarget();
+    }
+
+    /// <summary>
+    /// Waits until <paramref name="world"/> and the chunks around <paramref name="position"/> are loaded.
+    /// </summary>
+    private async Awaitable SettleAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
+    {
+        StreamInterest arrival = new(world, position);
+        while (!streamer.IsSettled(arrival))
+        {
+            await Awaitable.NextFrameAsync(cancellation);
+        }
+    }
+
+    /// <summary>
+    /// Streams <paramref name="world"/> around <paramref name="position"/> as an interest of its own until it is
+    /// loaded there or no session streams any more, then stops streaming it.
+    /// </summary>
+    private async Awaitable StreamPlaceAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation)
+    {
+        StreamInterest preparation = new(world, position);
+        preparations.Add(preparation);
+        try
+        {
+            while (active && !streamer.IsSettled(preparation))
+            {
+                await Awaitable.NextFrameAsync(cancellation);
+            }
+        }
+        finally
+        {
+            preparations.Remove(preparation);
+        }
     }
 
     /// <summary>

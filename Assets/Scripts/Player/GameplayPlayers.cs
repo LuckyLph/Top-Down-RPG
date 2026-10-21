@@ -9,8 +9,9 @@ using VContainer.Unity;
 /// Gameplay-scope entry point that decides who spawns players: offline it spawns the local player; on the host it
 /// spawns the host's player plus one per joined client, now and as clients join, each where <see cref="PlayerStarts"/>
 /// places it (its saved place by player id, else the starting world's entry), once the host has loaded that world and
-/// the chunks around the place (<see cref="IWorldSession.PrepareAsync"/>); on a client it tells the host this machine
-/// has joined, so the host spawns its player and shows it the players.
+/// the chunks around the place (<see cref="IWorldSession.PrepareAsync"/>, which moves a place the player can no longer
+/// stand on to walkable ground); on a client it tells the host this machine has joined, so the host spawns its player
+/// and shows it the players.
 /// </summary>
 public sealed class GameplayPlayers : IStartable, IDisposable
 {
@@ -110,24 +111,26 @@ public sealed class GameplayPlayers : IStartable, IDisposable
             return;
         }
 
-        if (starts.TryGetStart(session.PlayerIdOf(clientId), out WorldDefinition world, out Vector2 position))
+        string playerId = session.PlayerIdOf(clientId);
+        if (starts.TryGetStart(playerId, out WorldDefinition world, out Vector2 position))
         {
-            _ = SpawnWhenPreparedAsync(clientId, world, position);
+            _ = SpawnWhenPreparedAsync(clientId, playerId, world, position);
         }
     }
 
     /// <summary>
     /// Has the world session load <paramref name="world"/> around <paramref name="position"/> (at once when it already
-    /// is), then spawns <paramref name="clientId"/>'s player there if the client is still joined and has none.
+    /// is), then spawns <paramref name="clientId"/>'s player there, or on the walkable ground the session moved the
+    /// place of <paramref name="playerId"/> to, if the client is still joined and has none.
     /// </summary>
-    private async Awaitable SpawnWhenPreparedAsync(ulong clientId, WorldDefinition world, Vector2 position)
+    private async Awaitable SpawnWhenPreparedAsync(ulong clientId, string playerId, WorldDefinition world, Vector2 position)
     {
         preparing.Add(clientId);
         try
         {
             if (worldSession != null)
             {
-                await worldSession.PrepareAsync(world, position, disposeCancellation.Token);
+                position = await worldSession.PrepareAsync(world, position, playerId, disposeCancellation.Token);
             }
         }
         catch (OperationCanceledException)

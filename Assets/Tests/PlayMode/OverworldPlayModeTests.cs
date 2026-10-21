@@ -10,7 +10,9 @@ using UnityEngine.TestTools;
 /// at the Clearing's waystone, the default entry, and the chunks around it load, link with their loaded neighbours, draw
 /// and spawn a mob per spawn point; the player walks the Clearing's road east out through its east gate, past the
 /// region's outline, and on along the world road across the border into chunk (2, 1); and in each region a player sent
-/// to its waystone discovers it, dies a few cells away and comes back at it after the respawn delay.
+/// to its waystone discovers it, dies a few cells away and comes back at it after the respawn delay. From the menu, with
+/// the project's own starting world (the only tests not pinned to Testlands), a new game, a hosted game with no save and
+/// a joining player the host does not know all start at the Clearing's waystone.
 /// </summary>
 public class OverworldPlayModeTests
 {
@@ -19,6 +21,65 @@ public class OverworldPlayModeTests
     private const int DeathDistance = 4;
     private static readonly Vector2 AcrossTheBorder = new(130.5f, 122.5f);
     private static readonly string[] Regions = { "clearing", "villageForest", "lakeside", "snowfield", "coast", "lavaFields" };
+
+    private InProcessClient client;
+
+    /// <summary>
+    /// Disposes the in-process client when the test started one.
+    /// </summary>
+    [TearDown]
+    public void TearDown()
+    {
+        client?.Dispose();
+        client = null;
+    }
+
+    /// <summary>
+    /// With the project's own Game Scenes, New Game from the menu starts in the Overworld on the Clearing's waystone.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator NewGame_WithTheProjectsStartingWorld_StartsAtTheClearingsWaystone()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu(null, null);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        WorldDefinition world = gameFlow.CurrentWorld;
+        Assert.That(world != null && world.name == "Overworld", Is.True, "New Game starts in the Overworld");
+        Assert.That((Vector2)LocalPlayer().Transform.position, Is.EqualTo(world.EntryPosition("clearing")), "on the Clearing's waystone");
+    }
+
+    /// <summary>
+    /// With the project's own Game Scenes, Host Game with no save starts the host on the Clearing's waystone, and a
+    /// joining player the host does not know spawns there too, on the next entry slot, in the Overworld.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator HostGame_AndAnUnknownJoiningPlayer_WithTheProjectsStartingWorld_StartAtTheClearingsWaystone()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu(null, null);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        WorldDefinition world = gameFlow.CurrentWorld;
+        Vector2 clearing = world.EntryPosition("clearing");
+        Assert.That(world.name, Is.EqualTo("Overworld"), "Host Game starts in the Overworld");
+        Assert.That((Vector2)LocalPlayer().Transform.position, Is.EqualTo(clearing), "the host on the Clearing's waystone");
+
+        PlayerRegistry hostPlayers = SceneBootTestHelper.ResolveFromGameplay<PlayerRegistry>();
+        client = InProcessClient.Start(session, SceneBootTestHelper.ResolveFromGameplay<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendJoined();
+        yield return SceneBootTestHelper.WaitUntil(() => client.LocalPlayer.Current != null && hostPlayers.Players.Count == 2, "the host to spawn the joining player");
+        client.DisableColliders();
+
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        float spacing = SceneBootTestHelper.ResolveFromGameplay<GameplaySettings>().EntrySlotSpacing;
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<PlayerWorlds>().Get(hostCopy.GetComponent<PlayerNetworkSync>().Handle), Is.SameAs(world), "the joining player is in the Overworld");
+        Assert.That(Vector2.Distance(hostCopy.transform.position, clearing), Is.EqualTo(spacing).Within(0.01f), "on the entry slot beside the host, at the Clearing's waystone");
+    }
 
     /// <summary>
     /// Booting into the Overworld puts the player on the Clearing's waystone, the default entry; once the chunks around

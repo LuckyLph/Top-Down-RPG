@@ -104,6 +104,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<ChunkNetworkPrefabs>(Lifetime.Singleton);
         builder.Register<TripArrivals>(Lifetime.Singleton);
         builder.Register<PlayerIds>(Lifetime.Singleton);
+        builder.Register<WalkablePlaces>(Lifetime.Singleton);
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneDiscovery>();
         builder.RegisterEntryPoint<WaystonePopupPresenter>();

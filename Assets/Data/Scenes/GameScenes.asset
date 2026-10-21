@@ -19,5 +19,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3e445269de5de9148a0213aed5a691a5, type: 2}
   - {fileID: 11400000, guid: 45fbe595d915793439142f5a715ea480, type: 2}
   - {fileID: 11400000, guid: 0d18aa60fbd5d154d8c334bdf8890f02, type: 2}
-  startingWorld: {fileID: 11400000, guid: 45fbe595d915793439142f5a715ea480, type: 2}
-  startingWorldEntry: start
+  startingWorld: {fileID: 11400000, guid: 0d18aa60fbd5d154d8c334bdf8890f02, type: 2}
+  startingWorldEntry: clearing

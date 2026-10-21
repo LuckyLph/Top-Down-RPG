@@ -16,16 +16,19 @@ public interface IWorldSession
 
     /// <summary>
     /// Puts the players this machine moves into <paramref name="world"/> at the world position
-    /// <paramref name="position"/> and completes once the world and the chunks around them are loaded.
+    /// <paramref name="position"/> and completes once the world and the chunks around them are loaded. With authority,
+    /// a position the local player can no longer stand on (a saved place whose ground changed) moves them on to walkable
+    /// ground first.
     /// </summary>
     Awaitable EnterAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation);
 
     /// <summary>
     /// Loads <paramref name="world"/> and the chunks around <paramref name="position"/> for this machine's simulation
-    /// without moving anyone, as the host does before spawning a joining player there, and completes once they are
-    /// loaded, or at once when no world session runs.
+    /// without moving anyone, as the host does before spawning the joining player <paramref name="playerId"/> there,
+    /// and completes once they are loaded, or at once when no world session runs. Returns where to place that player:
+    /// the position, or walkable ground near it (loaded too) when the player can no longer stand there.
     /// </summary>
-    Awaitable PrepareAsync(WorldDefinition world, Vector2 position, CancellationToken cancellation);
+    Awaitable<Vector2> PrepareAsync(WorldDefinition world, Vector2 position, string playerId, CancellationToken cancellation);
 
     /// <summary>
     /// Starts a joined client's session: waits for the host to spawn this machine's player and put it in a world, then

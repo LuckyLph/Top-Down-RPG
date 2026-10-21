@@ -7,10 +7,10 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Tests on the committed Overworld (Docs/WorldGeneration.md: Testing), its chunk scenes opened together once for the
 /// fixture beside the test's scene and closed unchanged: each chunk holds what its generator asset composes and its
-/// record says was written there, locked chunks aside, and the world's entries are the composition's; every chunk draws
-/// 16 layers or fewer and together they lay all eighteen materials; no coast map is stale and the world validates; and
-/// on the open chunks' joined navigation every waystone, gate and mob can be walked to from the default entry across
-/// chunk borders.
+/// record says was written there, locked chunks aside, the world's entries are the composition's, and it is the
+/// starting world at its default entry; every chunk draws 16 layers or fewer and together they lay all eighteen
+/// materials; no coast map is stale and the world validates; and on the open chunks' joined navigation every waystone,
+/// gate and mob can be walked to from the default entry across chunk borders.
 /// </summary>
 public class OverworldTests
 {
@@ -55,7 +55,7 @@ public class OverworldTests
     /// The generator asset composes with no warnings; every chunk the world has, locked ones aside, is recorded with its
     /// composed hash and its scene hashes to it, so the asset and the scenes have not drifted apart; the world's entries
     /// start with the composition's, waystones first, which the generator records as the ones it set; and the world is
-    /// listed in Game Scenes.
+    /// listed in Game Scenes as the starting world, at <c>clearing</c>, its default entry.
     /// </summary>
     [Test]
     public void TheChunks_HoldWhatTheGeneratorAssetComposes_AndTheEntriesAreItsEntries()
@@ -84,7 +84,11 @@ public class OverworldTests
 
         Assert.That(world.DefaultEntry.Name, Is.EqualTo("clearing"), "the Clearing's waystone is the default entry");
         Assert.That(generator.WrittenEntries, Is.EqualTo(composition.Entries.ConvertAll(entry => entry.Name)), "the generator records the entries it set");
-        Assert.That(ProjectScenes.LoadGameScenes().Worlds, Has.Member(world), "Game Scenes lists the Overworld");
+        GameScenes gameScenes = ProjectScenes.LoadGameScenes();
+        Assert.That(gameScenes.Worlds, Has.Member(world), "Game Scenes lists the Overworld");
+        Assert.That(gameScenes.StartingWorld == world, Is.True, "the Overworld is the starting world");
+        Assert.That(world.FindEntry(gameScenes.StartingWorldEntry), Is.SameAs(world.DefaultEntry), "games start at its default entry, the Clearing's waystone");
+        Assert.That(gameScenes.StartingWorldEntry, Is.EqualTo("clearing"));
     }
 
     /// <summary>

@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Session tuning registered in the Gameplay scope: how long a dead player waits to respawn, how close a player comes to
-/// a waystone to discover it and what it is shown then, how far apart players arriving at the same entry stand, and how
-/// often a world session saves.
+/// a waystone to discover it and what it is shown then, how far apart players arriving at the same entry stand, how
+/// often a world session saves, and how far a saved place on ground no longer walkable looks for walkable ground.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Gameplay Settings", fileName = "GameplaySettings")]
 public class GameplaySettings : ScriptableObject
@@ -27,12 +27,17 @@ public class GameplaySettings : ScriptableObject
     [SerializeField, Tooltip("Colour of the waystone discovery text.")]
     private Color waystoneDiscoveredColor = new(0.55f, 0.9f, 1f, 1f);
 
+    [Header("Saved places")]
+    [SerializeField, Min(1), Tooltip("A saved place on ground a player can no longer stand on (its world was regenerated or repainted) moves to the nearest walkable cell at most this many cells away (Manhattan distance), or else to the player's nearest discovered waystone. Keep it within the load extents' smaller side (18 cells), the ground loaded around the place.")]
+    private int savedPlaceSearchCells = 16;
+
     public float RespawnDelaySeconds => respawnDelaySeconds;
     public int WaystoneReachCells => waystoneReachCells;
     public string WaystoneDiscoveredText => waystoneDiscoveredText;
     public Color WaystoneDiscoveredColor => waystoneDiscoveredColor;
     public float EntrySlotSpacing => entrySlotSpacing;
     public float AutosaveIntervalSeconds => autosaveIntervalSeconds;
+    public int SavedPlaceSearchCells => savedPlaceSearchCells;
 
     /// <summary>
     /// Builds unsaved settings for tests.

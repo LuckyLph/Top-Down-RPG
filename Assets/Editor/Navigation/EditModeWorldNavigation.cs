@@ -45,6 +45,14 @@ public static class EditModeWorldNavigation
     }
 
     /// <summary>
+    /// The navigation joining <paramref name="world"/>'s open chunks, or null while none of them has joined.
+    /// </summary>
+    public static WorldNavigation NavigationOf(WorldDefinition world)
+    {
+        return world != null && navigations.TryGetValue(world, out WorldNavigation navigation) ? navigation : null;
+    }
+
+    /// <summary>
     /// Brings the joined pages in line with the open chunks now: pages whose chunk went, was disabled or moved leave,
     /// and the chunks open in their world's scenes join.
     /// </summary>

@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23c01d6aa81e27e40b2c24d911191a00, type: 3}
+  m_Name: Overworld
+  m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
+  worldId: 0d18aa60fbd5d154d8c334bdf8890f02
+  rootScene: {fileID: 11400000, guid: dd2f9cc722815d74eb9905c118815f3b, type: 2}
+  origin: {x: 8192, y: 0}
+  sizeInChunks: {x: 5, y: 4}
+  chunks:
+  - coords: {x: 0, y: 0}
+    scene: {fileID: 11400000, guid: 45353d34c731f1b4bbb0f1444fbfe168, type: 2}
+  - coords: {x: 1, y: 0}
+    scene: {fileID: 11400000, guid: 73cc63b2c6535a345bb358ab9ebb6367, type: 2}
+  - coords: {x: 2, y: 0}
+    scene: {fileID: 11400000, guid: 764363e1ac8f2d546a00c8ddfadf2dcd, type: 2}
+  - coords: {x: 3, y: 0}
+    scene: {fileID: 11400000, guid: 04599666abb122a4fba79dffff00c62a, type: 2}
+  - coords: {x: 4, y: 0}
+    scene: {fileID: 11400000, guid: 96f48d2540d60c64487dcf5b3e5879cd, type: 2}
+  - coords: {x: 0, y: 1}
+    scene: {fileID: 11400000, guid: 7e097c583475cce4a88fd55fda036067, type: 2}
+  - coords: {x: 1, y: 1}
+    scene: {fileID: 11400000, guid: cf528c589eee0bf4dbf354e59bdd8706, type: 2}
+  - coords: {x: 2, y: 1}
+    scene: {fileID: 11400000, guid: 5dc660ee94197dc4591437ec3b8540bf, type: 2}
+  - coords: {x: 3, y: 1}
+    scene: {fileID: 11400000, guid: 4b5f6743616753e4fbd701913093bcbb, type: 2}
+  - coords: {x: 4, y: 1}
+    scene: {fileID: 11400000, guid: 32d8b3ac22e11984989b90a6ab1a1500, type: 2}
+  - coords: {x: 0, y: 2}
+    scene: {fileID: 11400000, guid: dce8978489992c346b6eade7655aa789, type: 2}
+  - coords: {x: 1, y: 2}
+    scene: {fileID: 11400000, guid: 4dd026ad5ff02f84d8dcc7bf6efa5150, type: 2}
+  - coords: {x: 2, y: 2}
+    scene: {fileID: 11400000, guid: 87bff374720a07b43ae19f8058f37b0f, type: 2}
+  - coords: {x: 3, y: 2}
+    scene: {fileID: 11400000, guid: 186d2e4e942e3a04aacd9556e1e874d3, type: 2}
+  - coords: {x: 4, y: 2}
+    scene: {fileID: 11400000, guid: cef6fae0ecc5cca4d9d4361f3f5bb8a1, type: 2}
+  - coords: {x: 0, y: 3}
+    scene: {fileID: 11400000, guid: 6e055b83c12b34d44843ca1270fc717d, type: 2}
+  - coords: {x: 1, y: 3}
+    scene: {fileID: 11400000, guid: 37c3dc29645cdac41a57f8a24e3e2864, type: 2}
+  - coords: {x: 2, y: 3}
+    scene: {fileID: 11400000, guid: 26fb91658bce68845b0eb7ca3242750a, type: 2}
+  - coords: {x: 3, y: 3}
+    scene: {fileID: 11400000, guid: 02abd40c32e6b5a49a3ce80fa857e136, type: 2}
+  - coords: {x: 4, y: 3}
+    scene: {fileID: 11400000, guid: 9cdf2c892725359458680f9af18d2864, type: 2}
+  entries:
+  - name: clearing
+    position: {x: 73.5, y: 124.5}
+    waystone: 1
+  - name: villageForest
+    position: {x: 192.5, y: 122.5}
+    waystone: 1
+  - name: lakeside
+    position: {x: 73.5, y: 48.5}
+    waystone: 1
+  - name: snowfield
+    position: {x: 74.5, y: 164.5}
+    waystone: 1
+  - name: coast
+    position: {x: 182.5, y: 186.5}
+    waystone: 1
+  - name: lavaFields
+    position: {x: 166.5, y: 48.5}
+    waystone: 1
+  - name: clearingSouth
+    position: {x: 82, y: 106.5}
+    waystone: 0
+  - name: clearingWest
+    position: {x: 60.5, y: 122.5}
+    waystone: 0
+  - name: clearingEast
+    position: {x: 110.5, y: 122.5}
+    waystone: 0
+  - name: clearingNorth
+    position: {x: 96, y: 141.5}
+    waystone: 0
+  - name: villageForestWest
+    position: {x: 151.5, y: 122.5}
+    waystone: 0
+  - name: lakesideWest
+    position: {x: 60.5, y: 46.5}
+    waystone: 0
+  - name: lakesideEast
+    position: {x: 123.5, y: 46.5}
+    waystone: 0
+  - name: snowfieldEast
+    position: {x: 121.5, y: 163.5}
+    waystone: 0
+  - name: snowfieldWest
+    position: {x: 61.5, y: 163.5}
+    waystone: 0
+  - name: coastEast
+    position: {x: 233.5, y: 188.5}
+    waystone: 0
+  - name: coastWest
+    position: {x: 166.5, y: 188.5}
+    waystone: 0
+  - name: lavaFieldsWest
+    position: {x: 154.5, y: 46.5}
+    waystone: 0
+  - name: lavaFieldsEast
+    position: {x: 218.5, y: 46.5}
+    waystone: 0

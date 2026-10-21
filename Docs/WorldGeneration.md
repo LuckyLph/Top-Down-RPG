@@ -462,11 +462,37 @@ Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before t
 
 ### Phase 4: the Overworld
 
-- [ ] The world created with the World Editor at the first free slot, listed in `GameScenes` but not yet the starting world; its generator asset set from Phase 0's decisions; composed with no warnings, written, its coasts baked, its ids repaired and validated; the scenes checked for churn (a second write changes nothing).
-- [ ] Every region edge, shore, plaza and road join looked at in the editor, in crisp and soft, and signed off.
-- [ ] Tests: `OverworldTests` (EditMode) and `OverworldPlayModeTests` (PlayMode).
+- [x] The world created with the World Editor at the first free slot, listed in `GameScenes` but not yet the starting world; its generator asset set from Phase 0's decisions; composed with no warnings, written, its coasts baked, its ids repaired and validated; the scenes checked for churn (a second write changes nothing).
+- [x] Every region edge, shore, plaza and road join looked at in the editor, in crisp and soft, and signed off.
+- [x] Tests: `OverworldTests` (EditMode) and `OverworldPlayModeTests` (PlayMode).
 - [ ] Multiplayer Play Mode check with 2 and 4 players (steps added to this phase's notes): players spread over regions, a client in a region the host is not in, a late joiner in another region, respawns at different regions' waystones.
-- [ ] Docs: Architecture.md's World and Worlds and streaming (the Overworld), and WorldStreaming.md's Decisions (The first world) and Authoring (Generators).
+- [x] Docs: Architecture.md's World and Worlds and streaming (the Overworld), and WorldStreaming.md's Decisions (The first world) and Authoring (Generators).
+
+Notes (the helper that made the generator asset and the captures, under `Assets/Editor/Spike`, was deleted before the commit):
+
+- **Built.** The world with the World Editor's own steps (`WorldAuthoring.CreateWorld`, `CreateChunk` for each of its 20 chunks, `ListInGameScenes`) at the first free slot, (8192, 0): `Assets/Worlds/Overworld`, its root and chunk scenes in the build list, listed in `GameScenes`, Testlands still the starting world. Its generator, `Assets/Settings/Generation/WorldGenerator_Overworld.asset`: Phase 0's six regions and eight road links (Behaviour: The Overworld), every other setting at its default, composing with no warnings. Written through the window's code path (`WorldGeneratorSession`: Write changed chunks, then the whole-world steps): the 20 chunks in 5.6 s, the steps in 20.3 s (Sync layer lists added nothing in 3.4 s, Bake changed coasts baked 14 maps in 14.2 s, Repair ids changed nothing, Validate found nothing). 48 generated spawn points, 19 entries (the six waystones, `clearing` first, then the 13 gates), every chunk 5 to 14 layers and all eighteen materials laid.
+- **No churn.** A forced rewrite of every chunk followed by the whole-world steps changed none of the world's 115 files (scenes, definitions, coast maps, metas) or the generator asset, and neither did the test runs. Scenes are 1.17 to 1.38 MB (2^20 bytes) each, 24.9 MB in all; coast maps 43 to 121 KB. `GameScenes` gains the world and the build list its 21 scenes; nothing else outside the world's folder and the generator asset changed.
+- **Looks**, rendered in the editor with the chunks open (`TerrainBlendProbe`, one screen pixel per art pixel, animations at 1.5 s), in crisp and soft, 34 spots: the 13 road joins at the ports, the two gravel paths' joins with the roads they end on, the six plazas, the Snowfield's and the Lava Fields' edges with the wilds away from the roads, the west, south, east and north-west shores, both joins with the Coast region's beach and three of the island's corners; and the whole world in 20 chunk renders. Signed off as they are, the two oddities below kept as known gaps for later.
+- **What surprised.**
+  - In the open sea within about 12 cells of the world's top edge, a few wave crests stand on end, running north and south (at cells x 3, 164, 184, 195, 216 and 234), lined up with the bumps of the Coast region's beach to the south: seams in the baked coast maps far from any shore. They lie 20 cells or more from every walkable cell, past the view (10 cells to either side, 5.6 up and down), so no player sees them (Architecture.md's Known gaps).
+  - The step of one row Phase 1 left at the Coast region's joins shows from the beach as a nub of a cell or two of sand poking into the sea at both ends (Known gaps).
+  - One of the Clearing's own Weasels stands 2.5 cells from its road to the east gate; the walk test keeps the mobs deactivated as their chunks load.
+- **Tests.** `OverworldTests`, 4 tests in 2.6 s, with the chunks opened once for the fixture; `OverworldPlayModeTests`, 8 tests in 40 s, the walk out of the Clearing 12.4 s and each region's respawn 4.2 to 4.8 s. `EditModeWorldNavigation` gained `NavigationOf(world)`, the joined navigation `OverworldTests` walks.
+- **Decisions changed**: none.
+
+#### Checking with Multiplayer Play Mode
+
+The Overworld becomes the starting world in Phase 5; until then, for this check, select `Assets/Data/Scenes/GameScenes.asset` and set Starting World to Overworld and Starting World Entry to `clearing`, and set them back to Testlands and `start` afterwards (or `git checkout Assets/Data/Scenes/GameScenes.asset`). Waystones have no art: each lies on its region's road on a small square of plaza, and counts within two cells (world-local cells: `clearing` (73, 124), `villageForest` (192, 122), `lakeside` (73, 48), `snowfield` (74, 164), `coast` (182, 186), `lavaFields` (166, 48)). Every region's road leaves it through a gate onto a world road: the Clearing's east road leads to the Village Forest, its north gravel path to the road from the Snowfield to the Coast, its south gravel path to the road from the Lakeside to the Lava Fields, its west gate to the west road between the Snowfield and the Lakeside, and the Lava Fields' east road runs up the island's east side to the Coast. To die, stand beside a Weasel and let it attack (about eight seconds); every region has some, at least 14 cells from its waystone. Keep the main editor's Console in view: every step should log no error.
+
+1. Start clean (delete `save.json` and `save.Player2.json` to `save.Player4.json`). Activate Player 2, press Play, Host Game in the main editor, Join Game in Player 2: both stand at `clearing`'s plaza on the Clearing's road.
+2. Walk Player 2 east out through the Clearing's east gate, along the world road through the wilds to the Village Forest's street and on to its waystone: "Waystone discovered" floats over Player 2 on Player 2's screen only. The host stays in the Clearing, so Player 2 is in a region the host is not in: its Weasels idle, notice Player 2 and attack it, and Player 2 can kill one, while the host's screen shows only the Clearing.
+3. Walk the host north out through the Clearing's north gate, up the gravel path to the road and west along it into the Snowfield, to its waystone: the host sees its own popup only. The two players are now in two regions over 100 cells apart, and both play on without hitches.
+4. Let Player 2 die beside a Village Forest Weasel: about three seconds later only Player 2 fades out and back in, at the Village Forest's waystone. Let the host die beside a Snowfield Weasel: only the host fades, coming back at the Snowfield's.
+5. Stop Play Mode. Start clean again, activate Player 3 and Player 4 too, press Play, Host Game, and Join Game in Player 2 and Player 3.
+6. Spread them: Player 2 south out through the Clearing's south gate and west along the Lakeside road to the Lakeside's waystone; Player 3 the same way south but east along that road through the Lava Fields' west gate to its waystone; the host north to the road and east along it through the Coast's west gate to the Coast's waystone. Each discovers its own.
+7. Join Game in Player 4, a late joiner: it arrives at `clearing`, where nobody is now, sees the Clearing's Weasels move and fight it, while the others play on in their regions.
+8. Let Player 2 and Player 3 die at about the same time beside their regions' Weasels: each comes back at its own region's waystone, three seconds after its own death; nothing restarts and nobody returns to the menu.
+9. Leave the game on Player 3 (in-game menu, Leave game) and Join Game again: it arrives at its place in the Lava Fields. Stop Play Mode in the main editor, press Play and Continue: the host is back at the Coast. Set `GameScenes` back.
 
 ### Phase 5: the starting world and saves across regenerations
 
@@ -517,8 +543,8 @@ Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before t
     - a write asks once through the answer it is given, writes nothing answered Write past a warning that stops it, writes answered Write anyway with a line per chunk and per step with its time, and asks nothing with nothing to write or with a chunk scene of the world open with unsaved changes; an unsaved untitled scene stops a write that creates chunks.
   - `ChunkedGroundRenderTests`: a 2 x 2 block of generated chunks around a non-grass region's edge, a road crossing it and the shore draws the same per chunk as whole, in crisp and soft.
   - `OverworldTests`, on the committed Overworld:
-    - its chunks match the composition of its generator asset (no drift between the asset and the scenes), locked chunks aside;
-    - every chunk within 16 layers;
+    - its chunks match the composition of its generator asset (no drift between the asset and the scenes), locked chunks aside, and its entries start with the composition's;
+    - every chunk within 16 layers, and all eighteen materials laid;
     - no coast map stale, and `WorldValidation` passes;
     - with every chunk open, `EditModeWorldNavigation` connects every waystone, gate and mob to the default entry across chunk borders.
   - `AreaGenerationTests`, `WorldBrushStrokeTests` and `WorldCoastBakeTests` stay as they are.

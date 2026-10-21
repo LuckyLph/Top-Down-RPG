@@ -68,7 +68,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Hand work | The writer never opens a locked chunk for writing, and refuses, unless forced, a chunk whose content (its ground, its raised ground and its generated spawn points) differs from what it last wrote there (painted by hand since), or, never written, holds any. It replaces only objects under its own roots (`GeneratedMobSpawns` under the chunk's grid, later `GeneratedProps`) and never touches the walls, so hand-placed exits, spawn points, props and walls stay. Regenerating one region needs nothing more: the world is composed again and only the chunks whose content changed are written. |
 | Determinism | One `System.Random` per stream, iteration over ordered lists only, as in the area generators: each region from its own seed, the coast from the world's seed, each road's wander from the world's seed and its link's place in the list, and the wilds per chunk from the world's seed, the chunk's coordinates and its record's wilds seed, so a change in one place moves the wilds of at most the chunks around it, and re-rolling one chunk's wilds moves nothing else. A chunk's patches keep a cell inside its border and its mobs 5 cells, so no chunk's wilds read a neighbour's. |
 | Props | None: the regions lay terrain, raised ground and mobs. A layout's props are skipped with a warning (the project's generator assets lay none). |
-| Tooling | A World Generator window (`Tools/TopDownRPG/World/World Generator`) over the world generator asset: the preview, and writing changed chunks followed by the World Editor's whole-world steps. The World Editor and the Scene Generator stay as they are; the Scene Generator is where a region's generator is tuned on its own. |
+| Tooling | A World Generator window (`Tools/TopDownRPG/World/World Generator`) over the world generator asset: the preview, the chunk grid with each chunk's state, lock and wide allowance, and writing changed chunks, or the selected chunks or every chunk forced, followed by the World Editor's whole-world steps. Its logic sits in a session object the tests and tools drive with the confirmation passed in, so no dialog ever runs under a tool. Chunk scenes of the world open with unsaved changes stop a write. The World Editor and the Scene Generator stay as they are; the Scene Generator is where a region's generator is tuned on its own. |
 | Whole-world steps | They open every chunk scene of the world at once, as now, at every size up to 16 x 16, with no windows of chunks: Phase 0 ran them on 256 chunks (Sync layer lists 12 s, Bake every coast 48 s, Repair ids 12 s, Validate 12 s) with every chunk open in 16.6 GB of the editor's private memory, 31 to 34 MB a chunk, about half of it graphics memory, mostly each chunk renderer's own texture arrays. Windows come only if worlds grow past 16 x 16 or the editor has to run in 16 GB. The writer opens one chunk at a time. |
 | Targets | Composing the Overworld in memory under 1 s (Phase 0: 0.4 to 0.7 s) and a 16 x 16 world under 10 s (4.6 s with 88 regions); writing a chunk that exists under 0.5 s (open, write, save, close: 0.14 s with its coast map baked, 0.43 to 0.48 s without) and under 1 s when it is created (0.35 to 0.53 s); the whole Overworld written, synced, baked, repaired and validated under 30 s once its chunks exist (15 to 19 s) and under a minute the first time (29 s); a 16 x 16 world under 4 minutes from nothing, its first bake included (3 to 3.8 minutes); scenes of 1.5 MB or less per chunk (1.05 to 1.42 MB). Phase 3 records what the tool reaches. |
 | Branch | `feature/world-generation`, from `feature/world-streaming`, moved onto `main` once that branch merges. |
@@ -125,11 +125,11 @@ A player starts on the Clearing's road, inside its clear disc, at its waystone's
 
 In the editor, from the World Generator window:
 
-1. **Compose.** The asset's settings give a composition in memory, previewed one pixel per cell with the chunk grid, each chunk's layer count (red past 16), the regions' outlines, ports, gates, waystones and mobs, and the warnings.
-2. **Write changed chunks.** Every chunk whose composed content differs from its written hash, and which is neither locked nor painted by hand since, is written; the others are reported as unchanged, locked or changed by hand. Missing chunks are created first.
-3. **Then the whole-world steps**, in order: Sync layer lists (covering locked neighbours' border materials), Bake changed coasts, Repair ids (which keeps derived ids, being unique), Validate. The window reports each step's lines and times.
+1. **Compose.** The asset's settings give a composition in memory, composed again 0.4 s after the last change to the generator, its world or its region generators (an inspector edit, an undo), and previewed one pixel per cell with the chunk grid, each chunk's layer count (red past 16, blue when its record allows it wide), the locked chunks hatched, the regions' outlines, ports, gates, waystones and mobs, and the warnings, those that stop a write set apart. A grid of the chunks gives each one's state from its record and its composed hash alone, never opening a scene: unchanged, changed, locked or missing. Chunks are selected there or in the preview, and locked or allowed wide there, with undo; a lock recomposes nothing.
+2. **Write changed chunks.** Every chunk whose composed content differs from its written hash, and which is neither locked nor painted by hand since, is written; the others are reported as unchanged, locked or changed by hand. Missing chunks are created first. **Write selected chunks** and **Write every chunk** are forced: they write the selected chunks or every chunk whatever their records say, unchanged ones and hand work included, but never a locked one. Write selected chunks is how one chunk painted by hand is regenerated without forcing the rest.
+3. **Then the whole-world steps**, in order: Sync layer lists (covering locked neighbours' border materials), Bake changed coasts, Repair ids (which keeps derived ids, being unique), Validate. The window reports each chunk's line and each step's lines and times.
 
-Writing is not an undo step: it spans closed scenes. It asks first, listing the chunks it will write, and git is the way back.
+Writing is not an undo step: it spans closed scenes. It asks first, listing the chunks it will write and the warnings, offering Write anyway when a warning stops it (layer lists, reachability), and git is the way back. A chunk scene of the world open with unsaved changes stops every write until it is saved or closed: the writer and the whole-world steps save the chunk scenes they change, which would save the unsaved work with them. An open chunk scene with no changes is written in place and stays open.
 
 ### Regenerating
 
@@ -167,7 +167,9 @@ All of it is editor-only code in `TopDownRPG.Editor`, under `Assets/Editor/World
 | `PortSide` | The side a port faces (east, north, west, south), with `PortSides.Step`. |
 | `WorldGenerationWriter` | Writes a composition into the world's chunk scenes (below). `WriteChunk(grid, composition, coords)` writes one open chunk and returns the hash it wrote, and is what the tests drive in memory; `Write(generator, composition, chunks, force, despiteWarnings)` opens, writes, saves and closes the chunk scenes one at a time and returns a `ChunkWrite` per chunk (its outcome, its time and a line); `ContentHash(grid, coords, layerOrder)` reads a chunk scene's hash; `RunWorldSteps(world)` runs the whole-world steps after a write. |
 | `ChunkContent` | Internal: what a chunk holds in the written hash's terms (a bit per material for each of its cells, its raised ground, its generated spawn points), read from a composition (`Of`) or from a chunk's grid (`Read`), and its `Hash`, the one hash function the composition's content hashes and the writer's records share. |
-| `WorldGeneratorWindow` | `Tools/TopDownRPG/World/World Generator`. A thin window over the steps above and `WorldAuthoring`'s whole-world steps, as the World Editor is: the asset picker and inspector, the preview, the chunk grid with each chunk's layer count, lock and wide allowance, the warnings, and Write changed chunks, Write selected chunks and Write every chunk, each asking first, then the whole-world steps. Disabled in play mode. Its only standing work is redrawing the preview when the asset changes. |
+| `WorldGeneratorWindow` | `Tools/TopDownRPG/World/World Generator`. A thin window over a `WorldGeneratorSession`, as the World Editor is over `WorldAuthoring`: the asset picker and inspector, the preview (zoomed to fit or by whole pixels a cell, the selected chunks framed, the cell under the pointer described, a click selecting its chunk), the warnings with those that stop a write set apart, the chunk grid with each chunk's state, layer count, lock and wide allowance, and Write changed chunks, Write selected chunks and Write every chunk, each asking first, then the whole-world steps, with the last write's report. Writes, selection changes and composing run after the GUI pass. Disabled in play mode. Its only standing work is following changes to the generator, its world and its region generators, which recompose the world a moment after the last one. |
+| `WorldGeneratorSession` | Internal: what the window works on, apart from its GUI, so tests and tools drive every step without a dialog. One generator's composition, composed again only when what it is made from changes (`SettingsKey`: the generator's settings, of its chunk records only the wide allowances and wilds seeds, its world's size and chunks, its region generators' settings), `RecomposeDelay` (0.4 s) after the last change (`NoteChange`, `FollowRecompose`); each chunk's state (`ChunkState`: unchanged, changed, locked, missing) from its record and its composed hash alone; the `WritePlan` of each button (`Plan`: the chunks it covers and writes, those it creates, the warnings, the problems that stop it); `Write(plan, confirm)`, which asks through the callback it is given (the window's dialog, a test's fixed answer) and runs the whole-world steps after; and `SetLocked`, `SetAllowWide` on the records, with undo. |
+| `WorldGeneratorPreview` | Internal, static: the preview's pixels for a composition (`Pixels`, `Draw` into a texture), one per cell, Phase 1's signed-off look with the locked chunks hatched and counts past 16 blue when allowed wide. |
 
 ### Composition
 
@@ -209,9 +211,9 @@ Only two, both in Phase 5:
 
 1. Create the world in the World Editor: its name, its size in chunks, Create every chunk and List in Game Scenes ticked.
 2. Create its world generator (Create > TopDownRPG > World > World Generator) under `Assets/Settings/Generation` and point it at the world. Add a placement per region (key, generator asset, seed, cell), the road links, and the sea and wilds settings.
-3. Open `Tools/TopDownRPG/World/World Generator`, pick the asset, and move the placements until the preview shows no warnings: every chunk at 16 layers or fewer, every port linked, everything reachable.
-4. Write changed chunks. Each chunk is reported as written, unchanged, locked or changed by hand; then the whole-world steps run.
-5. Look at the result with the World Editor's Open with neighbours. To keep hand work in a chunk, paint it, then lock it in the window before writing again.
+3. Open `Tools/TopDownRPG/World/World Generator`, pick the asset, and move the placements in its Settings until the preview shows no warnings: every chunk at 16 layers or fewer, every port linked, everything reachable. The preview follows each edit a moment later, the warnings that stop a write listed first, and the line under it names the cell under the pointer, which is how a placement's cell is read off.
+4. Save or close any of the world's chunk scenes open with unsaved changes, then Write changed chunks. It asks first, listing the chunks it writes (the missing ones created) and the warnings. Each chunk is reported as written, created, unchanged, locked or changed by hand; then the whole-world steps run, each reported with its time.
+5. Look at the result with the World Editor's Open with neighbours. To keep hand work in a chunk, paint it, then select it in the window's grid or preview and tick Locked before writing again. To regenerate a chunk painted by hand instead, select it and Write selected chunks, which is forced.
 6. Check `git diff` (a second write must change no file), then commit the chunk scenes, their coast maps, the `WorldDefinition` and the generator asset together.
 
 ## Phases
@@ -397,9 +399,66 @@ Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before t
 
 ### Phase 3: the World Generator window
 
-- [ ] `WorldGeneratorWindow`: the preview, the chunk grid with layer counts, locks and wide allowances, the warnings, writing changed, selected or every chunk, then the whole-world steps, with each step's time.
-- [ ] The targets measured on the draft Overworld and a synthetic 16 x 16 world, recorded in the notes.
-- [ ] Docs: Architecture.md's Editor tools, and this file's Generating a world checked against the window.
+- [x] `WorldGeneratorWindow`: the preview, the chunk grid with layer counts, locks and wide allowances, the warnings, writing changed, selected or every chunk, then the whole-world steps, with each step's time.
+- [ ] The targets measured on the draft Overworld and a synthetic 16 x 16 world, recorded in the notes: all of the Overworld's and the 16 x 16 world's composition; the 16 x 16 world written from nothing with its steps, its scene sizes and the memory with every chunk open are left, the memory having been short (see the notes).
+- [x] Docs: Architecture.md's Editor tools, and this file's Generating a world checked against the window.
+
+Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before the commit; editor times are debug code with the editor in the background, through the window's code path, `WorldGeneratorSession`, best of 2 rounds on a fresh scratch world each, the first round in brackets):
+
+- **Built**, in `Assets/Editor/World/Generation` as Architecture: Pieces lists them: `WorldGeneratorWindow`, a thin window over `WorldGeneratorSession`, which holds the logic (the composition and when to compose again, each chunk's state, the `WritePlan` of each button, the write and the whole-world steps after it, the records' locks and wide allowances with undo), and `WorldGeneratorPreview`, the preview's pixels. The writer, the composer and `WorldAuthoring` are unchanged: the window needed no API from them, the states, the plans' checks and the settings key being the session's own. The window's own drawing was compiled but not drawn under a tool (an editor in the background draws no window, and bringing it forward from a script is ruled out); what it calls is what the tests and the measurements ran, and Phase 4 uses the window on the Overworld.
+- **Where things differ from Pieces and Behaviour: Generating** (both updated):
+  - The logic sits in the session and the preview's pixels in their own class, not in the window, so tests and tools drive every step with the answer passed in (`Write(plan, confirm)`) and no dialog ever runs under a tool; the window's dialog is one such callback.
+  - Composing again follows a settings key: the generator's serialized settings without its chunk records and written entries, then of the records only the wide allowances and wilds seeds that are set, the world's id, size and chunks, and each region generator's settings. A change (an inspector edit, an undo, an `ObjectChangeEvents` change to one of those assets, the window gaining focus) is compared against it and recomposes 0.4 s after the last one that changed it. A lock, a write's new hashes and entries, and an undo elsewhere in the editor recompose nothing; a lock only redraws the preview's hatching.
+  - Write selected chunks is forced, like Write every chunk: it is how one chunk painted by hand is regenerated without forcing the rest. Each button hands the writer every chunk it covers, so each gets its line, written, created, unchanged, locked or changed by hand, while the question lists only those it writes.
+  - Chunk scenes of the world open with unsaved changes stop every write, named, until saved or closed (Decisions changed, below).
+  - No progress bar: `EditorUtility.DisplayProgressBar` can come to the front, so the write runs as one call and reports when it ends.
+  - Selecting, zooming and picking another asset apply after the GUI pass, so a pass never draws other controls than it laid out.
+- **The preview** of the Overworld's Phase 0 settings is Phase 1's signed-off one pixel for pixel at 1x and 3x (an image diff of the two found no pixel apart); the locked chunks' hatching (dark diagonal stripes every 8 cells) and the count of a chunk past 16 in blue once allowed wide were signed off with it.
+- **Composing**, `Recompose` as the window runs it (the settings key, `Compose()` with the region generators loaded, each chunk's state), the in-memory Overworld of Phase 0's settings and Phase 1's synthetic 16 x 16 world (the five inland regions repeated on a grid 120 x 88 cells apart, a row of Coasts along the north, roads between neighbours in a row):
+
+  | | Recompose | of it the world's steps | preview drawn | Phase 1 | target |
+  |---|---|---|---|---|---|
+  | the Overworld (5 x 4, 6 regions, 8 roads) | 0.58 s (0.75) | 0.17 s: roads 71 ms, wilds 64, distances 12, checks 10, land and sea 9, chunk lists and hashes 8 | 30 ms | 0.40 s | under 1 s |
+  | a synthetic 16 x 16 (88 regions, 63 roads) | 6.5 s (7.7) | 1.6 s: wilds 0.86, roads 0.25, chunk lists and hashes 0.15, checks 0.14, land and sea 0.10, distances 0.09 | 320 ms | 5.4 s | under 10 s |
+
+  The region generations are the rest (0.40 s and 4.9 s). Both are under their targets, slower than Phase 1 (by 45 % for the Overworld and 20 % for 16 x 16, generations and steps alike) with the machine's commit charge at 96 % during this phase. The synthetic world composes with its 68 warnings, none of them stopping a write. Comparing a change against the settings key takes 1.0 ms for the Overworld and 2.8 ms for the synthetic world.
+- **Writing**, on a scratch Overworld under `Assets/Dev/Worlds` at the first free slot ((8192, 0)), its generator an asset beside it and its world created with no chunks, so the first write creates all 20. Per chunk, the median over the 20 from each write's lines:
+
+  | per chunk | median | what it includes | Phase 2 | target |
+  |---|---|---|---|---|
+  | created and written | 654 ms (669), 512 to 765 | `CreateChunk` 328 to 423 (the scene, its definition, the world's entry, `SaveAssets`), open 7 to 12, write 24 to 240 (filling it, then the renderer's build as the grid comes back, a live coast map for a chunk with ocean), save 112 to 158, close 1 to 3 | 639 ms | under 1 s |
+  | rewritten, forced, nothing changed, coast map baked | 134 ms (150), 113 to 171 | open 26 to 39, write 16 to 52, save 68 to 104 | 155 ms | under 0.5 s |
+  | rewritten after a change, checked first | 182 ms (220), 163 to 243 | open 27 to 57, reading the scene's hash 1 to 4, write 17 to 31, save 113 to 189 | 200 ms | under 0.5 s |
+  | unchanged | not opened | its state, the composed hash compared with its record | | |
+
+  The whole world, `Write(plan, confirm)` from the plan to the report, the whole-world steps included:
+
+  | | the first write | a forced rewrite of every chunk, nothing changed | after the world seed changed |
+  |---|---|---|---|
+  | writing the chunks | 12.8 s (13.5) | 2.8 s (3.1) | 3.8 s (4.6) |
+  | Sync layer lists | 3.5 s | 1.4 s | 1.4 s |
+  | Bake changed coasts | 16.4 s, 14 maps of 692 to 960 ms | 1.5 s, none | 14.0 s, 14 maps |
+  | Repair ids | 1.5 s | 1.5 s | 1.7 s |
+  | Validate | 1.4 s | 1.4 s | 1.6 s |
+  | in all | 35.7 s (39.1) | 8.6 s (9.8) | 22.5 s (23.7) |
+  | target | under a minute | | under 30 s |
+  | Phase 2 | 38 s | its steps 6.0 s | 22 s |
+
+  Every number is under its target and within the noise of Phase 2's.
+- **A 16 x 16 world was not written.** Its whole-world steps open all 256 chunks at once, which needs 8 to 10 GB more of the editor (31 to 40 MB a chunk), and only 7.9 GB of the machine's 32 GB was free, with the commit charge at 39.4 of 40.8 GB. So writing one from nothing with its first bake and the other steps (target under 4 minutes; Phase 0 3 to 3.8 minutes), its scene sizes by kind and the editor's memory with every chunk open (Phase 0: 16.6 GB) are left to measure with the memory free; only its composition is measured above.
+- **Scene sizes** (YAML, in MB of 2^20 bytes as in Phases 0 and 2, about 270 bytes a tile): the Overworld's region and shore chunks 1.20 to 1.38 MB, shore 1.17 to 1.19, region 1.19 to 1.34, as in Phase 2; its coast maps 43 to 121 KB. The Overworld has no chunk of all wilds or all sea; Phase 2's sizes for those stand.
+- **Memory with every chunk open**, the editor's private memory read from outside it: the Overworld's 20 chunks took it from 8.60 to 9.40 GB, 40 MB a chunk (Phase 0: 31 to 34).
+- **What surprised.**
+  - Locking a chunk with no record at first had the world recomposed: the new record changed the serialized settings though the composer reads nothing of it but its wide allowance and wilds seed, so the key now leaves the records out and adds only those two fields.
+  - The Clearing's waystone lies under chunk (1, 1)'s count, which is drawn last; the test picks a waystone clear of the counts. The count stays on top, as in Phase 1's preview.
+  - `Process.PrivateMemorySize64` reads 0 under the editor's Mono, so memory was read from outside the editor between calls that opened and closed the chunks.
+  - `WorldAuthoring.CreateWorld` over an untitled empty scene leaves the new root scene open in its place, unchanged.
+  - Earlier phases' scene sizes are in MB of 2^20 bytes: a chunk of 4096 ocean tiles is 1.10 million bytes, Phase 0's "1.05 MB".
+- **Decisions changed**, with their sections updated (Decisions: Tooling; Behaviour: Generating; Architecture: Pieces):
+  - Chunk scenes of the world open with unsaved changes stop every write until saved or closed: the writer writes into an open chunk and saves it, and the whole-world steps save every chunk scene they change, so unsaved work there would be saved with them, and a chunk's hand-work check would read paint that is not on disk. An open chunk scene with no changes is written in place and stays open.
+  - Write selected chunks is forced.
+  - The window's logic is a session object that tests and tools drive, the preview's pixels a static class.
+- **Tests.** `WorldGeneratorWindowTests`, 5 tests in 3.9 to 4.4 s, about 3.1 s of it the case on disk (a world of one chunk with no region, whose one warning, no default entry, stops a write: created, written and run through the whole-world steps once, then reseeded, then locked, and deleted); the other four run in memory in about 0.2 s on the Overworld's Phase 0 settings on a world lacking chunk (4, 3), composed once for the fixture. With `WorldGenerationWriterTests` and `WorldGeneratorTests`, unchanged, 24 tests passed in 35 s; `ChunkedGroundRenderTests` was not run, the writer being unchanged.
 
 ### Phase 4: the Overworld
 
@@ -450,6 +509,12 @@ Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before t
     - a composition with warnings about layer lists or reachability is refused unless written anyway;
     - a second write changes no file;
     - a written world passes `WorldValidation`, bakes its coasts and keeps its derived ids through Repair ids.
+  - `WorldGeneratorWindowTests`, on the logic the window calls (`WorldGeneratorSession`, `WorldGeneratorPreview`), in memory on the Overworld's Phase 0 settings on a world lacking a chunk, and once on disk on a world of one chunk in a temporary folder, deleted after:
+    - the preview's pixels: a material in its base colour, a linked port, a region's mob and a wilds mob, a waystone and a gate, a chunk's count in black, red past 16 and blue once allowed wide, and a locked chunk's stripes;
+    - the chunk states from the records and the composed hashes alone, opening no scene, and after a write and after a change, a recompose waiting out its delay;
+    - the chunks each button writes: changed skips unchanged and locked chunks, selected and every chunk are forced and take unchanged ones, none takes a locked one;
+    - a lock or a wide allowance set through the session changes only that record, with undo, and a lock recomposes nothing;
+    - a write asks once through the answer it is given, writes nothing answered Write past a warning that stops it, writes answered Write anyway with a line per chunk and per step with its time, and asks nothing with nothing to write or with a chunk scene of the world open with unsaved changes; an unsaved untitled scene stops a write that creates chunks.
   - `ChunkedGroundRenderTests`: a 2 x 2 block of generated chunks around a non-grass region's edge, a road crossing it and the shore draws the same per chunk as whole, in crisp and soft.
   - `OverworldTests`, on the committed Overworld:
     - its chunks match the composition of its generator asset (no drift between the asset and the scenes), locked chunks aside;

@@ -209,7 +209,16 @@ public static class TerrainMaterialWriter
     /// </summary>
     public static byte[] EncodePng(int size, Color32[] pixels)
     {
-        Texture2D texture = new(size, size, TextureFormat.RGBA32, false, true);
+        return EncodePng(size, size, pixels);
+    }
+
+    /// <summary>
+    /// The PNG bytes of a <paramref name="width"/> x <paramref name="height"/> px RGBA texture of
+    /// <paramref name="pixels"/>, rows from the bottom; colour is kept where alpha is 0.
+    /// </summary>
+    public static byte[] EncodePng(int width, int height, Color32[] pixels)
+    {
+        Texture2D texture = new(width, height, TextureFormat.RGBA32, false, true);
         try
         {
             texture.SetPixels32(pixels);

@@ -1,0 +1,327 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d61b5e0c87672147837a02f595f587d, type: 3}
+  m_Name: Recipe_Rogue
+  m_EditorClassIdentifier: TopDownRPG.Editor::CharacterRecipe
+  sheetName: Rogue
+  targetHeight: 46
+  clips:
+  - name: Walk
+    motion: {fileID: 11400000, guid: 35fe15c7221600b448c3572c0bc61762, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Run
+    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Sprint
+    motion: {fileID: 11400000, guid: 0e4c5b5c2cd41a94ea17d05ae95dd3d2, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: RunSword
+    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: RunGreatsword
+    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: RunBow
+    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: SwordSlash
+    motion: {fileID: 11400000, guid: 9f6f96dcf9cbe064190a64b249d6f68b, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: GreatswordCleave
+    motion: {fileID: 11400000, guid: 1efc7f4982c2d26479b2721cf11cd9b1, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: BowShot
+    motion: {fileID: 11400000, guid: 19facfc2e6de46c4a9e20c8a06de277d, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  thigh: 7
+  shin: 7
+  ankle: 1.5
+  upperArm: 5.4
+  forearm: 5
+  torso: 10.5
+  neckToHead: 6.6
+  headRadius: 6.6
+  shoulderHalfWidth: 4.4
+  hipHalfWidth: 2.5
+  torsoRadius: {x: 3.2, y: 3.5}
+  limbThickness: 1
+  handRadius: 1.5
+  bootSize: 1.1
+  hoodSize: 1.08
+  hoodTip: {x: 1.35, y: 0.6}
+  faceTilt: 20
+  opening: {x: 50, y: -6, z: 31}
+  rimShare: 0.3
+  rimTop: 19
+  foreheadShade: 0
+  bangs: {x: 5, y: 7, z: 13, w: 0.05}
+  mask: {x: -18, y: 5, z: 18}
+  eyes: {x: 15, y: -7.5}
+  eyeHeight: 2
+  capeStrips: 5
+  capeHem: 0.45
+  capeLining: 1
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  cloak:
+    outline:
+      serializedVersion: 2
+      rgba: 4278846982
+    shadow:
+      serializedVersion: 2
+      rgba: 4280292372
+    middle:
+      serializedVersion: 2
+      rgba: 4281869860
+    light:
+      serializedVersion: 2
+      rgba: 4286076494
+  hoodInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4278846982
+    shadow:
+      serializedVersion: 2
+      rgba: 4278846982
+    middle:
+      serializedVersion: 2
+      rgba: 4278846982
+    light:
+      serializedVersion: 2
+      rgba: 4278846982
+  face:
+    outline:
+      serializedVersion: 2
+      rgba: 4286753512
+    shadow:
+      serializedVersion: 2
+      rgba: 4286753512
+    middle:
+      serializedVersion: 2
+      rgba: 4286753512
+    light:
+      serializedVersion: 2
+      rgba: 4286753512
+  faceShade:
+    outline:
+      serializedVersion: 2
+      rgba: 4284511416
+    shadow:
+      serializedVersion: 2
+      rgba: 4284511416
+    middle:
+      serializedVersion: 2
+      rgba: 4284511416
+    light:
+      serializedVersion: 2
+      rgba: 4284511416
+  eye:
+    outline:
+      serializedVersion: 2
+      rgba: 4279110158
+    shadow:
+      serializedVersion: 2
+      rgba: 4279110158
+    middle:
+      serializedVersion: 2
+      rgba: 4279110158
+    light:
+      serializedVersion: 2
+      rgba: 4279110158
+  hair:
+    outline:
+      serializedVersion: 2
+      rgba: 4283317820
+    shadow:
+      serializedVersion: 2
+      rgba: 4289895574
+    middle:
+      serializedVersion: 2
+      rgba: 4292659908
+    light:
+      serializedVersion: 2
+      rgba: 4294504684
+  maskColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279633468
+    shadow:
+      serializedVersion: 2
+      rgba: 4280817814
+    middle:
+      serializedVersion: 2
+      rgba: 4281609940
+    light:
+      serializedVersion: 2
+      rgba: 4283592954
+  jerkin:
+    outline:
+      serializedVersion: 2
+      rgba: 4278847498
+    shadow:
+      serializedVersion: 2
+      rgba: 4280557608
+    middle:
+      serializedVersion: 2
+      rgba: 4281742398
+    light:
+      serializedVersion: 2
+      rgba: 4283848804
+  shirt:
+    outline:
+      serializedVersion: 2
+      rgba: 4278846982
+    shadow:
+      serializedVersion: 2
+      rgba: 4280030228
+    middle:
+      serializedVersion: 2
+      rgba: 4281213474
+    light:
+      serializedVersion: 2
+      rgba: 4283711550
+  trousers:
+    outline:
+      serializedVersion: 2
+      rgba: 4278846982
+    shadow:
+      serializedVersion: 2
+      rgba: 4280424986
+    middle:
+      serializedVersion: 2
+      rgba: 4281739818
+    light:
+      serializedVersion: 2
+      rgba: 4284501066
+  boots:
+    outline:
+      serializedVersion: 2
+      rgba: 4278584840
+    shadow:
+      serializedVersion: 2
+      rgba: 4279769634
+    middle:
+      serializedVersion: 2
+      rgba: 4280691254
+    light:
+      serializedVersion: 2
+      rgba: 4282666590
+  bracers:
+    outline:
+      serializedVersion: 2
+      rgba: 4278584840
+    shadow:
+      serializedVersion: 2
+      rgba: 4279571740
+    middle:
+      serializedVersion: 2
+      rgba: 4280361774
+    light:
+      serializedVersion: 2
+      rgba: 4281876046
+  gloves:
+    outline:
+      serializedVersion: 2
+      rgba: 4278715910
+    shadow:
+      serializedVersion: 2
+      rgba: 4279768086
+    middle:
+      serializedVersion: 2
+      rgba: 4280689190
+    light:
+      serializedVersion: 2
+      rgba: 4282268224
+  belt:
+    outline:
+      serializedVersion: 2
+      rgba: 4278716426
+    shadow:
+      serializedVersion: 2
+      rgba: 4279769632
+    middle:
+      serializedVersion: 2
+      rgba: 4280691250
+    light:
+      serializedVersion: 2
+      rgba: 4282271312
+  fittings:
+    outline:
+      serializedVersion: 2
+      rgba: 4281871400
+    shadow:
+      serializedVersion: 2
+      rgba: 4287791224
+    middle:
+      serializedVersion: 2
+      rgba: 4291739318
+    light:
+      serializedVersion: 2
+      rgba: 4294635754
+  sash:
+    outline:
+      serializedVersion: 2
+      rgba: 4279633468
+    shadow:
+      serializedVersion: 2
+      rgba: 4280817814
+    middle:
+      serializedVersion: 2
+      rgba: 4281609940
+    light:
+      serializedVersion: 2
+      rgba: 4283592954
+  lining:
+    outline:
+      serializedVersion: 2
+      rgba: 4279108648
+    shadow:
+      serializedVersion: 2
+      rgba: 4280291440
+    middle:
+      serializedVersion: 2
+      rgba: 4281082026
+    light:
+      serializedVersion: 2
+      rgba: 4282403550
+  daggerGrip:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112222
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035398
+    middle:
+      serializedVersion: 2
+      rgba: 4280826980
+    light:
+      serializedVersion: 2
+      rgba: 4281881730

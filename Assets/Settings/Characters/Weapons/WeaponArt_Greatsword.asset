@@ -1,0 +1,146 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33d28a331fafc6743a51bea128ede51c, type: 3}
+  m_Name: WeaponArt_Greatsword
+  m_EditorClassIdentifier: TopDownRPG.Editor::CharacterWeaponArt
+  kind: 0
+  twoHanded: 1
+  leftGripOffset: 2.7
+  pommel: 4.4
+  guardAt: 1.8
+  guardHalfWidth: 4
+  length: 24
+  bladeRadius: {x: 1.55, y: 0.95}
+  smearInnerShare: {x: 0.72, y: 0.3}
+  halfLength: 9.5
+  brace: 2.2
+  bend: {x: 1.4, y: 4.2}
+  arrowLength: 14
+  carryOffset: {x: -2, y: 3.2, z: -3.4}
+  carrySwing: 0
+  carryDirection: {x: 0.32, y: -0.72, z: 0.62}
+  carryDirectionSwing: {x: 0, y: 0, z: 0}
+  carryTwist: 0.4
+  carryPoles: 1
+  carryRightPole: {x: 0.8, y: -0.2, z: -1}
+  carryLeftPole: {x: -0.8, y: -0.2, z: -1}
+  steel:
+    outline:
+      serializedVersion: 2
+      rgba: 4282134056
+    shadow:
+      serializedVersion: 2
+      rgba: 4288053878
+    middle:
+      serializedVersion: 2
+      rgba: 4292265658
+    light:
+      serializedVersion: 2
+      rgba: 4294768368
+  guard:
+    outline:
+      serializedVersion: 2
+      rgba: 4281871400
+    shadow:
+      serializedVersion: 2
+      rgba: 4287791224
+    middle:
+      serializedVersion: 2
+      rgba: 4291739318
+    light:
+      serializedVersion: 2
+      rgba: 4294635754
+  grip:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112222
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035398
+    middle:
+      serializedVersion: 2
+      rgba: 4280826980
+    light:
+      serializedVersion: 2
+      rgba: 4281881730
+  wood:
+    outline:
+      serializedVersion: 2
+      rgba: 4278982186
+    shadow:
+      serializedVersion: 2
+      rgba: 4280172136
+    middle:
+      serializedVersion: 2
+      rgba: 4281228430
+    light:
+      serializedVersion: 2
+      rgba: 4282678962
+  bowString:
+    outline:
+      serializedVersion: 2
+      rgba: 4290693320
+    shadow:
+      serializedVersion: 2
+      rgba: 4290430148
+    middle:
+      serializedVersion: 2
+      rgba: 4292140766
+    light:
+      serializedVersion: 2
+      rgba: 4293456112
+  shaft:
+    outline:
+      serializedVersion: 2
+      rgba: 4279775302
+    shadow:
+      serializedVersion: 2
+      rgba: 4282413206
+    middle:
+      serializedVersion: 2
+      rgba: 4284388538
+    light:
+      serializedVersion: 2
+      rgba: 4286231764
+  fletching:
+    outline:
+      serializedVersion: 2
+      rgba: 4279242832
+    shadow:
+      serializedVersion: 2
+      rgba: 4280559792
+    middle:
+      serializedVersion: 2
+      rgba: 4281614550
+    light:
+      serializedVersion: 2
+      rgba: 4284116720
+  smear:
+  - serializedVersion: 2
+    rgba: 4294967295
+  - serializedVersion: 2
+    rgba: 4294634710
+  - serializedVersion: 2
+    rgba: 4293708960
+  dust:
+    outline:
+      serializedVersion: 2
+      rgba: 4283459704
+    shadow:
+      serializedVersion: 2
+      rgba: 4286092966
+    middle:
+      serializedVersion: 2
+      rgba: 4288198340
+    light:
+      serializedVersion: 2
+      rgba: 4290434270

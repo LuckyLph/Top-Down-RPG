@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f5ef9a1d5048f4f9aae04701108b67, type: 3}
+  m_Name: Motion_Sprint
+  m_EditorClassIdentifier: TopDownRPG.Editor::GaitMotion
+  frames: 8
+  framesPerSecond: 15
+  duty: 0.32
+  front: 4.4
+  back: -7.4
+  liftBack: {x: -2.5, y: 11}
+  liftFront: {x: 5, y: 7.5}
+  pelvisHeight: 13
+  bob: 1.2
+  bobRisesMidStance: 0
+  lean: 17
+  twist: 12
+  armSwing: 6.2
+  armHeight: -5.6
+  armOut: 1
+  armPump: 1.2
+  capeFlow: 0.9

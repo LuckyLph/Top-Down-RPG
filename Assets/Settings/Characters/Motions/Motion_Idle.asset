@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db23c0d90694cec4e93589cb00160929, type: 3}
   m_Name: Motion_Idle
   m_EditorClassIdentifier: TopDownRPG.Editor::IdleMotion
-  frames: 8
+  frames: 1
   framesPerSecond: 4
   stanceOut: 0.5
   leftFootForward: 1

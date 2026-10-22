@@ -10,8 +10,8 @@ using UnityEngine;
 public sealed class IdleMotion : CharacterMotion
 {
     [Header("Loop")]
-    [Tooltip("Frames in one breath.")]
-    [SerializeField, Range(2, 16)] private int frames = 8;
+    [Tooltip("Frames in one breath; 1 holds the standing pose still.")]
+    [SerializeField, Range(1, 16)] private int frames = 8;
     [Tooltip("Frames per second.")]
     [SerializeField, Min(0.5f)] private float framesPerSecond = 6f;
 

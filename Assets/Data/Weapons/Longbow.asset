@@ -34,7 +34,7 @@ MonoBehaviour:
   projectileSpeed: 18
   projectileRange: 6.5
   projectileRadius: 0.1
-  projectileLaunchDistance: 0.75
+  projectileLaunchDistance: 0.5
   projectileHoming: 1
   projectileVisual: {fileID: 3463214288168290358, guid: 6e9ec06b6836b1441a4cd7df518dc7cb, type: 3}
   attackClip: BowShot

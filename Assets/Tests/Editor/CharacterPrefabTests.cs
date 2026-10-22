@@ -20,6 +20,7 @@ public class CharacterPrefabTests
     private const string SetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
+    private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
     private const string SwordArtPath = "Assets/Settings/Characters/Weapons/WeaponArt_Sword.asset";
     private const string WeaponsFolder = "Assets/Data/Weapons/";
     private const string WeaponArtFolder = "Assets/Settings/Characters/Weapons/";
@@ -47,8 +48,9 @@ public class CharacterPrefabTests
     /// <summary>
     /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the rogue's set through
     /// <see cref="CharacterVisuals"/> (which its motor feeds) with a sprite pivoted on the feet; nothing in the prefab
-    /// is a Mecanim animator; its sorter sorts by its own height, the feet; and the feet collider on the root starts
-    /// within a pixel of the feet and lies within the sprite's width.
+    /// is a Mecanim animator; its sorter sorts by its own height, the feet; the feet collider on the root starts
+    /// within a pixel of the feet and lies within the sprite's width; and neither the player nor the arrow it shoots is
+    /// scaled, so their pixels are the terrain's.
     /// </summary>
     [Test]
     public void ThePlayer_DrawsTheRogueFromItsFeet()
@@ -56,6 +58,15 @@ public class CharacterPrefabTests
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
         Assert.That(player.GetComponentsInChildren<Animator>(true), Is.Empty);
+        foreach (Transform part in player.GetComponentsInChildren<Transform>(true))
+        {
+            Assert.That(part.localScale, Is.EqualTo(Vector3.one), $"{part.name} is not scaled.");
+        }
+
+        foreach (Transform part in AssetDatabase.LoadAssetAtPath<GameObject>(ArrowPath).GetComponentsInChildren<Transform>(true))
+        {
+            Assert.That(part.localScale, Is.EqualTo(Vector3.one), $"The arrow's {part.name} is not scaled.");
+        }
 
         Transform visuals = player.transform.Find("Visuals");
         Assert.That(visuals, Is.Not.Null);

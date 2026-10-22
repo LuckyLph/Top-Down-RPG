@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// Every clip a character's recipe bakes (Docs/Animation.md, Runtime), written beside its sheets by the character
 /// baker's Generate: per clip the sprites by direction and frame, each frame's duration at natural speed, and for a
-/// gait its natural speed. <see cref="CharacterAnimator"/> plays it; runtime code only reads it.
+/// gait its natural speed, and for an attack its contact frame. <see cref="CharacterAnimator"/> plays it; runtime code
+/// only reads it.
 /// </summary>
 public sealed class CharacterAnimationSet : ScriptableObject
 {
@@ -31,6 +32,29 @@ public sealed class CharacterAnimationSet : ScriptableObject
         {
             CharacterAnimationClip clip = clips[i];
             if (clip != null && clip.Gait == gait && !clip.Armed)
+            {
+                return clip;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The first clip named <paramref name="clipName"/>, or null when there is none or the name is empty. Looked up
+    /// when a weapon is equipped, never per frame.
+    /// </summary>
+    public CharacterAnimationClip Find(string clipName)
+    {
+        if (string.IsNullOrEmpty(clipName))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < clips.Count; i++)
+        {
+            CharacterAnimationClip clip = clips[i];
+            if (clip != null && clip.Name == clipName)
             {
                 return clip;
             }

@@ -21,10 +21,11 @@ MonoBehaviour:
   length: 15.5
   bladeRadius: {x: 0.75, y: 0.5}
   smearInnerShare: {x: 0.78, y: 0.3}
-  halfLength: 9.5
-  brace: 2.2
-  bend: {x: 1.4, y: 4.2}
-  arrowLength: 14
+  halfLength: 19
+  brace: 3.2
+  bend: {x: 3.5, y: 8}
+  limbRadius: {x: 1.1, y: 0.6}
+  arrowLength: 18
   carryOffset: {x: 1.4, y: 0.6, z: -7.6}
   carrySwing: 0.5
   carryDirection: {x: -0.15, y: 0.55, z: 0.82}
@@ -62,29 +63,29 @@ MonoBehaviour:
   grip:
     outline:
       serializedVersion: 2
-      rgba: 4279112222
+      rgba: 4278848042
     shadow:
       serializedVersion: 2
-      rgba: 4280035398
+      rgba: 4279769710
     middle:
       serializedVersion: 2
-      rgba: 4280826980
+      rgba: 4280560284
     light:
       serializedVersion: 2
-      rgba: 4281881730
+      rgba: 4282010308
   wood:
     outline:
       serializedVersion: 2
-      rgba: 4278982186
+      rgba: 4278722618
     shadow:
       serializedVersion: 2
-      rgba: 4280172136
+      rgba: 4281100448
     middle:
       serializedVersion: 2
-      rgba: 4281228430
+      rgba: 4283210450
     light:
       serializedVersion: 2
-      rgba: 4282678962
+      rgba: 4286105842
   bowString:
     outline:
       serializedVersion: 2

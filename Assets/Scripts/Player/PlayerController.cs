@@ -8,9 +8,11 @@ using UnityEditor;
 /// <summary>
 /// Wires a player's command source, <see cref="PlayerOrders"/>, <see cref="PlayerMotor2D"/>, weapon and
 /// <see cref="PlayerAbilities"/>: each frame it reads a command, ticks the orders (which start casts) and applies
-/// their motor, facing and swing requests. Feeds the player's status crowd control into the orders and its slow,
-/// stun or root into the motor's speed scale. Remote copies only show replicated movement. Draws gizmos for the
-/// ability side of its orders: the target of a CastWhenInRange approach and a buffered cast.
+/// their motor, facing and swing requests. The weapon's attack hears of the orders the player gives (its cancel
+/// rules), ends on a stun, a cast, a teleport or death, and moves on after the swing; the motor stands still while an
+/// attack runs. Feeds the player's status crowd control into the orders and its slow, stun or root into the motor's
+/// speed scale. Remote copies only show replicated movement. Draws gizmos for the ability side of its orders: the
+/// target of a CastWhenInRange approach and a buffered cast.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerMotor2D))]
@@ -176,7 +178,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Drops the current order and stops moving.
+    /// Drops the current order, ends any attack and stops moving.
     /// </summary>
     public void ClearOrders()
     {
@@ -185,12 +187,18 @@ public class PlayerController : MonoBehaviour
             orders.Clear();
         }
 
+        if (weaponController != null)
+        {
+            weaponController.CancelAttack();
+        }
+
         Motor.Stop();
     }
 
     /// <summary>
-    /// One frame of control: reads a command, scales the motor speed by the status movement scale, ticks the orders
-    /// with the player's state and crowd control, and applies the result. Does nothing on a remote copy.
+    /// One frame of control: reads a command, ticks the orders with the player's state and crowd control, applies the
+    /// result, and scales the motor speed by the status movement scale, or holds it still while an attack runs. Does
+    /// nothing on a remote copy.
     /// </summary>
     internal void Tick()
     {
@@ -203,7 +211,6 @@ public class PlayerController : MonoBehaviour
         PlayerCommand command = commandSource != null ? commandSource.ReadCommand() : default;
         PlayerMotor2D playerMotor = Motor;
         StatusControls controls = statuses != null ? statuses.Controls : StatusControls.None;
-        playerMotor.SetSpeedScale(statuses != null ? statuses.MovementScale : 1f);
         PlayerOrderContext context = new(
             playerMotor.Position,
             clock.Time,
@@ -211,13 +218,17 @@ public class PlayerController : MonoBehaviour
             playerMotor.StalledTime,
             AttackRange(),
             controls);
-        Apply(orders.Tick(command, context));
+        Apply(orders.Tick(command, context), controls);
+        bool attacking = weaponController != null && weaponController.IsAttacking;
+        playerMotor.SetSpeedScale(attacking ? 0f : statuses != null ? statuses.MovementScale : 1f);
     }
 
     /// <summary>
-    /// Forwards an order tick's requests: path to or stop the motor, set or release the aim, and swing the weapon.
+    /// Forwards an order tick's requests: path to or stop the motor and set or release the aim; then tells the weapon's
+    /// attack of the order given (a new order, or the orders asking to move), ends it on a stun or a cast, swings, and
+    /// moves the attack on.
     /// </summary>
-    private void Apply(in PlayerOrderOutput output)
+    private void Apply(in PlayerOrderOutput output, StatusControls controls)
     {
         PlayerMotor2D playerMotor = Motor;
         if (output.Motor == PlayerMotorRequest.MoveTo)
@@ -230,11 +241,26 @@ public class PlayerController : MonoBehaviour
         }
 
         playerMotor.SetAim(output.HasAim, output.AimDirection);
+        if (weaponController == null)
+        {
+            return;
+        }
 
-        if (output.Swing && weaponController != null)
+        if ((controls & StatusControls.Stun) != 0 || orders.Current == PlayerOrderKind.Casting)
+        {
+            weaponController.CancelAttack();
+        }
+        else if (output.Issued != PlayerOrderIssue.None || output.Motor == PlayerMotorRequest.MoveTo)
+        {
+            weaponController.Order(output.Issued == PlayerOrderIssue.Move);
+        }
+
+        if (output.Swing)
         {
             weaponController.TryAttack(output.AimDirection);
         }
+
+        weaponController.Tick();
     }
 
     /// <summary>

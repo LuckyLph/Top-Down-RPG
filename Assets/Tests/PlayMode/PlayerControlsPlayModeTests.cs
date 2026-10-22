@@ -8,7 +8,9 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for the click-to-move controls in Testlands, the booted test world, driven by scripted commands:
-/// pathing, attack orders, attack moves, player overlap, the ability and status HUD, the dev status panel and death.
+/// pathing, attack orders, the attack timeline (the contact frame showing as the hit lands, standing still through the
+/// windup, a move cancelling it, death ending it), attack moves, player overlap, the ability and status HUD, the dev
+/// status panel and death.
 /// </summary>
 public class PlayerControlsPlayModeTests
 {
@@ -135,6 +137,178 @@ public class PlayerControlsPlayModeTests
 
         yield return WaitUntilIdle();
         Assert.That(Vector2.Distance(player.transform.position, goal), Is.LessThan(0.2f), "The player should walk on to the point.");
+    }
+
+    /// <summary>
+    /// An attack order on a mob beside the player swings the sword: the hit lands no sooner than the windup after the
+    /// attack's start, and the frame it lands on shows the attack clip's contact frame in the attack's direction.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AnAttack_ShowsItsContactFrame_WhenItsHitLands()
+    {
+        yield return Boot();
+        MobController mob = PlaceAMobBesideThePlayer(out _);
+        Health mobHealth = mob.GetComponent<Health>();
+        PlayerWeaponController weapon = player.GetComponent<PlayerWeaponController>();
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>();
+        SpriteRenderer renderer = visuals.GetComponent<SpriteRenderer>();
+        CharacterAnimationClip clip = visuals.AnimationSet.Find(weapon.CurrentWeapon.AttackClip);
+        float started = -1f;
+        float landed = -1f;
+        System.Action<int, Vector2, float> onStarted = (_, _, _) => started = started < 0f ? Time.time : started;
+        System.Action<Health.DamageEvent> onDamaged = _ => landed = landed < 0f ? Time.time : landed;
+        weapon.AttackStarted += onStarted;
+        mobHealth.Damaged += onDamaged;
+        try
+        {
+            commands.Click(mob.transform.position, PickMob(mob));
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (landed < 0f)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The attack should land.");
+                yield return null;
+            }
+
+            int direction = visuals.Animator.Direction;
+            yield return null;
+            Assert.That(renderer.sprite, Is.EqualTo(clip.SpriteAt(direction, clip.ContactFrame)), "The frame the hit lands on shows the contact frame.");
+            Assert.That(landed - started, Is.GreaterThanOrEqualTo(weapon.CurrentWeapon.Timeline.Windup - 0.0001f), "The hit lands at contact, not as the attack starts.");
+        }
+        finally
+        {
+            weapon.AttackStarted -= onStarted;
+            mobHealth.Damaged -= onDamaged;
+        }
+    }
+
+    /// <summary>
+    /// The player stands still through an attack's windup even when its target walks out of range (here moved away,
+    /// with a sword whose windup is slow enough to watch), and chases it once the hit has passed.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ThePlayer_StandsStillDuringTheWindup_ThenChases()
+    {
+        yield return Boot();
+        PlayerWeaponController weapon = player.GetComponent<PlayerWeaponController>();
+        PlayerWeapon slowSword = SlowSword(weapon.CurrentWeapon);
+        weapon.Equip(slowSword);
+        MobController mob = PlaceAMobBesideThePlayer(out Vector2 along);
+        Health mobHealth = mob.GetComponent<Health>();
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        try
+        {
+            commands.Click(mob.transform.position, PickMob(mob));
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!weapon.IsAttacking)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The attack should start.");
+                yield return null;
+            }
+
+            Vector2 standing = body.position;
+            MoveMob(mob, standing + along * 3f);
+            int framesInWindup = 0;
+            while (weapon.AttackPhase == AttackPhase.Windup)
+            {
+                Assert.That(Vector2.Distance(body.position, standing), Is.LessThan(0.001f), "The player stands still through the windup.");
+                Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Attack));
+                framesInWindup++;
+                yield return null;
+            }
+
+            Assert.That(framesInWindup, Is.GreaterThan(1));
+            Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealth.MaxHealth), "The mob left the hit area before contact.");
+            deadline = Time.realtimeSinceStartup + 5f;
+            while (Vector2.Distance(body.position, standing) < 0.3f)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The player should chase once the hit has passed.");
+                yield return null;
+            }
+        }
+        finally
+        {
+            Object.Destroy(slowSword);
+        }
+    }
+
+    /// <summary>
+    /// A move click during the windup cancels the attack: the mob takes no damage, the character stops showing the
+    /// attack and the player takes the move order.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AMoveOrder_CancelsTheWindup_AndTheMobTakesNoDamage()
+    {
+        yield return Boot();
+        MobController mob = PlaceAMobBesideThePlayer(out Vector2 along);
+        Health mobHealth = mob.GetComponent<Health>();
+        PlayerWeaponController weapon = player.GetComponent<PlayerWeaponController>();
+        CharacterAnimator animation = player.GetComponentInChildren<CharacterVisuals>().Animator;
+        Vector2 goal = (Vector2)player.transform.position + along * 4f;
+        int cancelled = 0;
+        System.Action<int, Vector2, float> moveAway = (_, _, _) => commands.Click(goal, default);
+        System.Action onCancelled = () => cancelled++;
+        weapon.AttackStarted += moveAway;
+        weapon.AttackCancelled += onCancelled;
+        try
+        {
+            commands.Click(mob.transform.position, PickMob(mob));
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (cancelled == 0)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The move click should cancel the windup.");
+                yield return null;
+            }
+
+            weapon.AttackStarted -= moveAway;
+            Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Move));
+            Assert.That(weapon.IsAttacking, Is.False);
+            yield return null;
+            Assert.That(animation.IsActing, Is.False, "The character stops showing the attack.");
+            yield return new WaitForSeconds(weapon.CurrentWeapon.Timeline.Duration + 0.3f);
+            Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealth.MaxHealth), "Nothing lands.");
+        }
+        finally
+        {
+            weapon.AttackStarted -= moveAway;
+            weapon.AttackCancelled -= onCancelled;
+        }
+    }
+
+    /// <summary>
+    /// A player that dies during an attack's windup ends the attack: nothing lands and the character stops showing it.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator Death_EndsARunningAttack()
+    {
+        yield return Boot();
+        PlayerWeaponController weapon = player.GetComponent<PlayerWeaponController>();
+        PlayerWeapon slowSword = SlowSword(weapon.CurrentWeapon);
+        weapon.Equip(slowSword);
+        MobController mob = PlaceAMobBesideThePlayer(out _);
+        Health mobHealth = mob.GetComponent<Health>();
+        CharacterAnimator animation = player.GetComponentInChildren<CharacterVisuals>().Animator;
+        try
+        {
+            commands.Click(mob.transform.position, PickMob(mob));
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!weapon.IsAttacking)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The attack should start.");
+                yield return null;
+            }
+
+            Health health = player.GetComponent<Health>();
+            health.ApplyDamage(health.MaxHealth);
+            yield return null;
+            Assert.That(weapon.IsAttacking, Is.False);
+            Assert.That(animation.IsActing, Is.False);
+            yield return new WaitForSeconds(slowSword.Timeline.Windup + 0.2f);
+            Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealth.MaxHealth), "Nothing lands.");
+        }
+        finally
+        {
+            Object.Destroy(slowSword);
+        }
     }
 
     /// <summary>
@@ -346,6 +520,67 @@ public class PlayerControlsPlayModeTests
     private MobController MobOfTheStartChunk()
     {
         return SceneQuery.FindFirst<MobController>(startChunk);
+    }
+
+    /// <summary>
+    /// Keeps only the first mob of the start chunk active, with its AI off, and stands it just over half a unit from the
+    /// player toward open ground, within the sword's range; <paramref name="along"/> is that direction.
+    /// </summary>
+    private MobController PlaceAMobBesideThePlayer(out Vector2 along)
+    {
+        MobController mob = MobOfTheStartChunk();
+        Assert.That(mob, Is.Not.Null);
+        foreach (MobController other in Object.FindObjectsByType<MobController>())
+        {
+            other.gameObject.SetActive(other == mob);
+        }
+
+        mob.enabled = false;
+        Vector2 start = player.transform.position;
+        along = (FindClearGoal(start, 4) - start).normalized;
+        MoveMob(mob, start + along * 0.55f);
+        return mob;
+    }
+
+    /// <summary>
+    /// The mob as a click on it picks it.
+    /// </summary>
+    private UnitTarget PickMob(MobController mob)
+    {
+        UnitTarget target = gameplay.Resolve<PointerTargetPicker>().Pick(mob.GetComponent<Collider2D>().bounds.center);
+        Assert.That(target.Health, Is.SameAs(mob.GetComponent<Health>()), "Clicking the mob should pick it.");
+        return target;
+    }
+
+    /// <summary>
+    /// Puts <paramref name="mob"/>'s body and transform at <paramref name="position"/>.
+    /// </summary>
+    private static void MoveMob(MobController mob, Vector2 position)
+    {
+        mob.GetComponent<Rigidbody2D>().position = position;
+        mob.transform.position = position;
+        Physics2D.SyncTransforms();
+    }
+
+    /// <summary>
+    /// A runtime copy of <paramref name="sword"/>'s hit with a windup slow enough to watch frame by frame (0.6 s, then
+    /// 0.1 s of contact and 0.2 s of recovery, a 1 s cooldown), for the test to destroy.
+    /// </summary>
+    private static PlayerWeapon SlowSword(PlayerWeapon sword)
+    {
+        Vector2[] offsets = { sword.HitOffset(Vector2.down), sword.HitOffset(Vector2.up), sword.HitOffset(Vector2.left), sword.HitOffset(Vector2.right) };
+        return PlayerWeapon.Create(
+            "Slow Sword",
+            sword.Damage,
+            1f,
+            sword.HitDistance,
+            offsets,
+            range: sword.AttackRange,
+            size: sword.HitSize,
+            windup: 0.6f,
+            contact: 0.1f,
+            recovery: 0.2f,
+            attackClipName: sword.AttackClip);
     }
 
     /// <summary>

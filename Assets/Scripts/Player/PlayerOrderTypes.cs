@@ -24,6 +24,18 @@ public enum PlayerMotorRequest
 }
 
 /// <summary>
+/// The order a tick's command gave, which the weapon's cancel rules read: none, a move (a move order or Stop: walking
+/// or standing rather than fighting), or any other (an attack order on another unit, an attack move, an ability press
+/// that started a cast or an approach).
+/// </summary>
+public enum PlayerOrderIssue
+{
+    None,
+    Move,
+    Other
+}
+
+/// <summary>
 /// The player's state as <see cref="PlayerOrders"/> sees it on a tick.
 /// </summary>
 public readonly struct PlayerOrderContext
@@ -57,7 +69,8 @@ public readonly struct PlayerOrderContext
 }
 
 /// <summary>
-/// What a tick of <see cref="PlayerOrders"/> asks for: a motor request, a facing direction and whether to swing.
+/// What a tick of <see cref="PlayerOrders"/> asks for: a motor request, a facing direction, whether to swing, and the
+/// order the tick's command gave.
 /// </summary>
 public readonly struct PlayerOrderOutput
 {
@@ -65,13 +78,14 @@ public readonly struct PlayerOrderOutput
     /// Creates an output; <paramref name="destination"/> only matters for <see cref="PlayerMotorRequest.MoveTo"/> and
     /// <paramref name="aimDirection"/> only when <paramref name="hasAim"/> is set.
     /// </summary>
-    public PlayerOrderOutput(PlayerMotorRequest motor, Vector2 destination, bool hasAim, Vector2 aimDirection, bool swing)
+    public PlayerOrderOutput(PlayerMotorRequest motor, Vector2 destination, bool hasAim, Vector2 aimDirection, bool swing, PlayerOrderIssue issued = PlayerOrderIssue.None)
     {
         Motor = motor;
         Destination = destination;
         HasAim = hasAim;
         AimDirection = aimDirection;
         Swing = swing;
+        Issued = issued;
     }
 
     public PlayerMotorRequest Motor { get; }
@@ -79,4 +93,5 @@ public readonly struct PlayerOrderOutput
     public bool HasAim { get; }
     public Vector2 AimDirection { get; }
     public bool Swing { get; }
+    public PlayerOrderIssue Issued { get; }
 }

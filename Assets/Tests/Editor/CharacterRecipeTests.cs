@@ -11,8 +11,9 @@ using UnityEngine;
 /// direction, fits its frames and has its face's eyes only where the face shows; gaits start with the left foot
 /// planted in front, and a planted foot moves back at the gait's natural speed; the idle keeps both feet planted; a
 /// two-handed blade puts the left hand on its grip; easing, the two-bone chains and the recipe's checks behave; the
-/// project's sheets are what the recipe bakes, sliced at 32 pixels per unit with their pivot on the feet; and the
-/// project's animation set holds every clip's sprites, frame durations, gait and natural speed.
+/// project's sheets are what the recipe bakes, sliced at 32 pixels per unit with their pivot on the feet; the baker
+/// writes each attack's contact frame into the set; and the project's animation set holds every clip's sprites, frame
+/// durations, gait, natural speed and contact frame.
 /// </summary>
 public class CharacterRecipeTests
 {
@@ -299,8 +300,9 @@ public class CharacterRecipeTests
 
     /// <summary>
     /// The project's animation set holds every clip of the recipe in order: its name, its motion's gait, whether it is
-    /// drawn with a weapon, its motion's frame durations, its natural speed, and for every direction and frame the
-    /// sheet's slice of that name. Its locomotion is the unarmed Idle, Walk, Run and Sprint.
+    /// drawn with a weapon, its motion's frame durations, its natural speed, its motion's contact frame (none for a
+    /// gait), and for every direction and frame the sheet's slice of that name. Its locomotion is the unarmed Idle, Walk,
+    /// Run and Sprint.
     /// </summary>
     [Test]
     public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
@@ -318,6 +320,8 @@ public class CharacterRecipeTests
             Assert.That(baked.IsComplete, Is.True, clip.Name);
             Assert.That(baked.FrameCount, Is.EqualTo(clip.Motion.FrameCount), clip.Name);
             Assert.That(baked.NaturalSpeed, Is.EqualTo(CharacterSheetWriter.NaturalSpeed(baker, recipe, clip)).Within(1e-5f), clip.Name);
+            Assert.That(baked.ContactFrame, Is.EqualTo(clip.Motion.ContactFrame), clip.Name);
+            Assert.That(baked.HasContact, Is.EqualTo(clip.Motion is KeyedMotion), clip.Name);
             string sheetPath = CharacterSheetWriter.SheetPath(recipe, clip);
             for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
             {
@@ -336,6 +340,34 @@ public class CharacterRecipeTests
         Assert.That(set.Locomotion(CharacterGait.Walk).Name, Is.EqualTo("Walk"));
         Assert.That(set.Locomotion(CharacterGait.Run).Name, Is.EqualTo("Run"));
         Assert.That(set.Locomotion(CharacterGait.Sprint).Name, Is.EqualTo("Sprint"));
+    }
+
+    /// <summary>
+    /// The baker writes each keyed motion's contact frame into the set it builds, so the frames before it are the
+    /// attack's windup and those after it its recovery (the sword's slash: frames 0 to 3, 4, then 5 to 7), and no
+    /// contact frame for a gait or the idle.
+    /// </summary>
+    [Test]
+    public void TheBaker_WritesTheContactFrameIntoTheSet()
+    {
+        CharacterAnimationSet built = CharacterSheetWriter.BuildSet(recipe, baker);
+        try
+        {
+            CharacterAnimationClip slash = built.Find("SwordSlash");
+            KeyedMotion motion = (KeyedMotion)recipe.Clips.First(c => c.Name == "SwordSlash").Motion;
+            Assert.That(slash.ContactFrame, Is.EqualTo(motion.ContactFrame));
+            Assert.That(slash.ContactFrame, Is.EqualTo(4));
+            Assert.That(slash.WindupSeconds, Is.EqualTo(motion.FrameSeconds(0) + motion.FrameSeconds(1) + motion.FrameSeconds(2) + motion.FrameSeconds(3)).Within(1e-6f));
+            Assert.That(slash.RecoverySeconds, Is.EqualTo(motion.FrameSeconds(5) + motion.FrameSeconds(6) + motion.FrameSeconds(7)).Within(1e-6f));
+            Assert.That(built.Find("GreatswordCleave").HasContact, Is.True);
+            Assert.That(built.Find("BowShot").HasContact, Is.True);
+            Assert.That(built.Find("Run").ContactFrame, Is.EqualTo(-1));
+            Assert.That(built.Find("Idle").HasContact, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(built);
+        }
     }
 
     /// <summary>

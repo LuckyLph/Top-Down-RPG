@@ -105,7 +105,7 @@ public static class CharacterSheetWriter
             }
 
             float[] seconds = Enumerable.Range(0, frames).Select(clip.Motion.FrameSeconds).ToArray();
-            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip)));
+            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame));
         }
 
         return CharacterAnimationSet.Create(clips);

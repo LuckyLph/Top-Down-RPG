@@ -1293,6 +1293,32 @@ public class PlayerOrdersTests
     }
 
     /// <summary>
+    /// Each tick reports the order its command gave, which the weapon's cancel rules read: a ground click, a held
+    /// button steering to a new point and Stop are moves; a click on an enemy, an attack move and an ability press that
+    /// starts a cast are other orders; clicking or holding over the enemy already attacked, an empty command and a
+    /// failed press give none.
+    /// </summary>
+    [Test]
+    public void EachTick_ReportsTheOrderItsCommandGave()
+    {
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(0.2f, 0f), distance: 0.1f);
+        caster.Set(0, Ability());
+
+        Assert.That(Tick(Click(new Vector2(3f, 1f))).Issued, Is.EqualTo(PlayerOrderIssue.Move));
+        time = 0.2f;
+        Assert.That(Tick(Hold(new Vector2(4f, 1f))).Issued, Is.EqualTo(PlayerOrderIssue.Move), "A held button steering to a new point.");
+        Assert.That(Tick(default).Issued, Is.EqualTo(PlayerOrderIssue.None));
+        Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy)).Issued, Is.EqualTo(PlayerOrderIssue.Other));
+        Assert.That(Tick(Click(new Vector2(0.2f, 0f), enemy)).Issued, Is.EqualTo(PlayerOrderIssue.None), "The same attack again gives no order.");
+        time = 0.4f;
+        Assert.That(Tick(Hold(new Vector2(0.2f, 0f), enemy)).Issued, Is.EqualTo(PlayerOrderIssue.None));
+        Assert.That(Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true)).Issued, Is.EqualTo(PlayerOrderIssue.Move));
+        Assert.That(Tick(AttackMove(new Vector2(5f, 0f))).Issued, Is.EqualTo(PlayerOrderIssue.Other));
+        Assert.That(Tick(Press(0, Vector2.right)).Issued, Is.EqualTo(PlayerOrderIssue.Other), "A press that starts a cast.");
+        Assert.That(Tick(Press(1, Vector2.right)).Issued, Is.EqualTo(PlayerOrderIssue.None), "A press on an empty slot gives no order.");
+    }
+
+    /// <summary>
     /// Ticks the orders with <paramref name="command"/> and the test's current position, time, motor state and
     /// attack range, with no crowd control.
     /// </summary>

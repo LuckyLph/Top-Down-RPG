@@ -3,9 +3,9 @@ using VContainer;
 
 /// <summary>
 /// Draws a character from its baked <see cref="CharacterAnimationSet"/> on the sprite renderer beside it. Its motor
-/// feeds it the velocity and facing through <see cref="SetLocomotion"/>; each frame, after every motor has moved, it
-/// asks its <see cref="CharacterAnimator"/> for the sprite on the game clock and puts it on the renderer when it
-/// changed. Logs an error without a set or locomotion settings, keeping the sprite it has.
+/// feeds it the velocity and facing through <see cref="SetLocomotion"/>, and its weapon the attacks to play on their
+/// timelines (<see cref="PlayAction"/>); each frame, after every motor has moved, it asks its
+/// <see cref="CharacterAnimator"/> for the sprite on the game clock and puts it on the renderer when it changed. Logs an error without a set or locomotion settings, keeping the sprite it has.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -69,6 +69,44 @@ public class CharacterVisuals : MonoBehaviour
     {
         velocity = moveVelocity;
         facing = moveFacing;
+    }
+
+    /// <summary>
+    /// Plays <paramref name="clip"/>, an attack's clip, from now toward <paramref name="direction"/> stretched to
+    /// <paramref name="timeline"/>; with <paramref name="holdUntilContact"/> (a copy of another machine's attack) its
+    /// windup holds its last frame until <see cref="ReachContact"/>.
+    /// </summary>
+    public void PlayAction(CharacterAnimationClip clip, Vector2 direction, in AttackTimeline timeline, bool holdUntilContact)
+    {
+        CharacterAnimator current = EnsureAnimator();
+        if (current != null)
+        {
+            current.PlayAction(clip, direction, timeline, holdUntilContact);
+        }
+    }
+
+    /// <summary>
+    /// Plays the contact now on an action played until contact.
+    /// </summary>
+    public void ReachContact()
+    {
+        CharacterAnimator current = EnsureAnimator();
+        if (current != null)
+        {
+            current.ReachContact();
+        }
+    }
+
+    /// <summary>
+    /// Ends the playing action at once, if any.
+    /// </summary>
+    public void StopAction()
+    {
+        CharacterAnimator current = EnsureAnimator();
+        if (current != null)
+        {
+            current.StopAction();
+        }
     }
 
     /// <summary>

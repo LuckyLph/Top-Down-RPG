@@ -35,21 +35,6 @@ MonoBehaviour:
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
-  - name: RunSword
-    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
-    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
-    frameSize: {x: 64, y: 64}
-    pivot: {x: 32, y: 12}
-  - name: RunGreatsword
-    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
-    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
-    frameSize: {x: 64, y: 64}
-    pivot: {x: 32, y: 12}
-  - name: RunBow
-    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
-    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
-    frameSize: {x: 64, y: 64}
-    pivot: {x: 32, y: 12}
   - name: SwordSlash
     motion: {fileID: 11400000, guid: 9f6f96dcf9cbe064190a64b249d6f68b, type: 2}
     weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}

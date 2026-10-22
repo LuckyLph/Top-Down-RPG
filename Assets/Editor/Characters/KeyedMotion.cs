@@ -34,7 +34,7 @@ public sealed class KeyedMotion : CharacterMotion
     private readonly List<MotionEffect> frameEffects = new();
 
     public override int FrameCount => frameTimes.Length;
-    public int ContactFrame => contactFrame;
+    public override int ContactFrame => contactFrame;
     public override int SmearSamples => smearSamples;
 
     /// <summary>

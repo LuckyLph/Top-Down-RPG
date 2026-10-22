@@ -7,12 +7,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using VContainer;
 
 /// <summary>
-/// Tests for the player's weapon and HUD: equipping and the weapon icon, the HUD presenter, swings and their
-/// cooldown, the controller's attack orders under crowd control, sword slash hits and placement, and the Main
-/// scope's input asset.
+/// Tests for the player's weapon and HUD: equipping and the weapon icon, the HUD presenter, attacks on their timeline
+/// (the hit at contact, the cooldown, the events the owner replicates), the controller's attack orders under the cancel
+/// rules and crowd control, the hit area <see cref="AttackService"/> resolves, and the Main scope's input asset.
 /// </summary>
 public class PlayerWeaponSystemTests
 {
@@ -22,19 +21,14 @@ public class PlayerWeaponSystemTests
     private GameObject enemyRoot;
 
     /// <summary>
-    /// Disposes the HUD presenter and destroys every slash, the test HUD canvases, the player and enemy roots
-    /// and the control settings the test created.
+    /// Disposes the HUD presenter and destroys the test HUD canvases, the player and enemy roots and the control
+    /// settings the test created.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
         hudPresenter?.Dispose();
         hudPresenter = null;
-
-        foreach (SwordSlashAttack slashAttack in Object.FindObjectsByType<SwordSlashAttack>(FindObjectsInactive.Include))
-        {
-            Object.DestroyImmediate(slashAttack.gameObject);
-        }
 
         foreach (Canvas canvas in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include))
         {
@@ -132,102 +126,142 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// <see cref="PlayerWeaponController.TryAttack"/> swings toward the given direction rather than the facing,
-    /// spawning the slash on that side, and refuses further swings until the weapon cooldown has passed on the
-    /// clock.
+    /// <see cref="PlayerWeaponController.TryAttack"/> starts an attack toward the given direction rather than the
+    /// facing: nothing lands during the windup, the unit in front takes the hit once at contact and the one beside it
+    /// none, and no attack starts while one runs or before the cooldown from its start has passed.
     /// </summary>
     [Test]
-    public void TryAttack_SwingsTowardTheGivenDirection_AndRespectsCooldown()
+    public void TryAttack_HitsAtContact_AndRespectsTheCooldown()
     {
-        root = new GameObject("PlayerRoot");
-        root.transform.position = Vector3.zero;
-
-        root.AddComponent<BoxCollider2D>();
-        root.AddComponent<Rigidbody2D>();
-        PlayerController playerController = root.AddComponent<PlayerController>();
-        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
         ManualClock clock = new();
-        weaponController.Construct(CreateSpawner(), clock);
-
-        weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, spawnDistance: 0.75f));
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
+        weaponController.Equip(CreateTestWeapon("Sword", damage: 2, cooldown: 0.5f, distance: 0.75f));
         playerController.Face(Vector2.up);
+        enemyRoot = new GameObject("EnemyRoot");
+        Health ahead = CreateDamageable("Ahead", new Vector2(0.9f, 0f), enemyRoot.transform).GetComponent<Health>();
+        Health above = CreateDamageable("Above", new Vector2(0f, 1.5f), enemyRoot.transform).GetComponent<Health>();
+        Physics2D.SyncTransforms();
 
-        bool firstAttack = weaponController.TryAttack(new Vector2(3f, 0f));
-        bool secondAttack = weaponController.TryAttack(Vector2.right);
-        SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
-        clock.Advance(0.49f);
-        bool attackBeforeCooldown = weaponController.TryAttack(Vector2.right);
-        clock.Advance(0.01f);
-        bool attackAfterCooldown = weaponController.TryAttack(Vector2.right);
+        Assert.That(weaponController.TryAttack(new Vector2(3f, 0f)), Is.True);
+        Assert.That(weaponController.TryAttack(Vector2.right), Is.False, "An attack is running.");
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Windup));
+        weaponController.Tick();
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        Assert.That(ahead.CurrentHealth, Is.EqualTo(ahead.MaxHealth), "Nothing lands during the windup.");
 
-        Assert.That(firstAttack, Is.True);
-        Assert.That(secondAttack, Is.False);
-        Assert.That(attackBeforeCooldown, Is.False);
-        Assert.That(attackAfterCooldown, Is.True);
-        Assert.That(slashAttack, Is.Not.Null);
-        Assert.That(slashAttack.Direction.x, Is.GreaterThan(0.9f));
-        Assert.That(slashAttack.transform.position.x, Is.GreaterThan(root.transform.position.x));
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Contact));
+        Assert.That(ahead.CurrentHealth, Is.EqualTo(ahead.MaxHealth - 2), "The hit lands at contact.");
+        Assert.That(above.CurrentHealth, Is.EqualTo(above.MaxHealth), "Toward the given direction, not the facing.");
+        weaponController.Tick();
+        clock.Advance(0.25f);
+        weaponController.Tick();
+        Assert.That(ahead.CurrentHealth, Is.EqualTo(ahead.MaxHealth - 2), "Only once.");
+        Assert.That(weaponController.IsAttacking, Is.False);
+
+        clock.Advance(0.0625f);
+        Assert.That(weaponController.TryAttack(Vector2.right), Is.False, "The cooldown runs from the start.");
+        clock.Advance(0.0625f);
+        Assert.That(weaponController.TryAttack(Vector2.right), Is.True);
     }
 
     /// <summary>
-    /// A click on an enemy in range makes the <see cref="PlayerController"/> take an attack order, face the enemy
-    /// and spawn a slash toward it on the same tick.
+    /// A click on an enemy in range makes the <see cref="PlayerController"/> take an attack order, face the enemy and
+    /// start the windup toward it on the same tick, holding the motor still; the enemy takes the hit at contact, and the
+    /// motor moves again once the attack is over.
     /// </summary>
     [Test]
-    public void PlayerController_AttackOrderOnAnEnemyInRange_FacesItAndSwingsTowardIt()
+    public void PlayerController_AttackOrderOnAnEnemyInRange_StartsTheWindup_AndHitsAtContact()
     {
-        root = new GameObject("PlayerRoot");
-        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
-        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        PlayerController playerController = root.AddComponent<PlayerController>();
-        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateSpawner(), new ManualClock());
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
         weaponController.Equip(CreateTestWeapon("Sword"));
-        settings = TestPlayerControlSettings.Create();
-        TestPlayerControlSettings.Assign(playerController, settings);
-        enemyRoot = new GameObject("EnemyRoot");
-        GameObject enemy = CreateDamageable("Enemy", new Vector2(-0.5f, 0f), enemyRoot.transform);
-        enemy.GetComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
-        Physics2D.SyncTransforms();
+        GameObject enemy = CreateEnemyInRange();
+        Health enemyHealth = enemy.GetComponent<Health>();
         FakeCommandSource commands = new();
         playerController.SetCommandSource(commands);
+        PlayerMotor2D motor = root.GetComponent<PlayerMotor2D>();
 
-        commands.Next = new PlayerCommand(
-            enemy.transform.position,
-            new UnitTarget(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy),
-            movePressed: true,
-            moveHeld: true,
-            stopPressed: false);
+        commands.Next = ClickOn(enemy);
         playerController.Tick();
-
-        SwordSlashAttack slashAttack = Object.FindAnyObjectByType<SwordSlashAttack>();
         Assert.That(playerController.CurrentOrder, Is.EqualTo(PlayerOrderKind.Attack));
         Assert.That(playerController.FacingDirection, Is.EqualTo(Vector2.left));
-        Assert.That(slashAttack, Is.Not.Null);
-        Assert.That(slashAttack.Direction.x, Is.LessThan(-0.9f));
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Windup));
+        Assert.That(motor.SpeedScale, Is.Zero, "The motor holds still while the attack runs.");
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
+
+        commands.Next = default;
+        clock.Advance(0.125f);
+        playerController.Tick();
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth - 1), "The hit lands at contact.");
+
+        clock.Advance(0.1875f);
+        playerController.Tick();
+        Assert.That(weaponController.IsAttacking, Is.False);
+        Assert.That(motor.SpeedScale, Is.EqualTo(1f));
     }
 
     /// <summary>
-    /// The <see cref="PlayerController"/> passes its statuses to its orders and motor: a stun refuses orders and
-    /// swings and zeroes the motor speed scale, and a slow scales the motor speed.
+    /// Through the <see cref="PlayerController"/>, a ground click during the windup cancels the attack (nothing lands,
+    /// the cooldown is given back so the next click on the enemy attacks at once), and a ground click during the
+    /// recovery ends it at once, both under the weapon's default cancel rules.
     /// </summary>
     [Test]
-    public void PlayerController_FeedsStatusCrowdControlToItsOrdersAndMotor()
+    public void PlayerController_AMoveClickCancelsTheWindup_AndAnyClickEndsTheRecovery()
     {
-        root = new GameObject("PlayerRoot");
-        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
-        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        PlayerController playerController = root.AddComponent<PlayerController>();
-        StatusEffects statuses = root.AddComponent<StatusEffects>();
-        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateSpawner(), new ManualClock());
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
         weaponController.Equip(CreateTestWeapon("Sword"));
-        settings = TestPlayerControlSettings.Create();
-        TestPlayerControlSettings.Assign(playerController, settings);
-        enemyRoot = new GameObject("EnemyRoot");
-        GameObject enemy = CreateDamageable("Enemy", new Vector2(-0.5f, 0f), enemyRoot.transform);
-        enemy.GetComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
-        Physics2D.SyncTransforms();
+        GameObject enemy = CreateEnemyInRange();
+        Health enemyHealth = enemy.GetComponent<Health>();
+        FakeCommandSource commands = new();
+        playerController.SetCommandSource(commands);
+        int cancelled = 0;
+        weaponController.AttackCancelled += () => cancelled++;
+
+        commands.Next = ClickOn(enemy);
+        playerController.Tick();
+        clock.Advance(0.0625f);
+        commands.Next = new PlayerCommand(new Vector2(5f, 0f), default, movePressed: true, moveHeld: true, stopPressed: false);
+        playerController.Tick();
+        Assert.That(playerController.CurrentOrder, Is.EqualTo(PlayerOrderKind.Move));
+        Assert.That(weaponController.IsAttacking, Is.False, "The move cancels the windup.");
+        Assert.That(cancelled, Is.EqualTo(1));
+        commands.Next = default;
+        clock.Advance(0.25f);
+        playerController.Tick();
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth), "Nothing lands.");
+
+        commands.Next = ClickOn(enemy);
+        playerController.Tick();
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Windup), "The cooldown was given back.");
+        commands.Next = default;
+        clock.Advance(0.25f);
+        playerController.Tick();
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Recovery));
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth - 1));
+        commands.Next = new PlayerCommand(new Vector2(5f, 0f), default, movePressed: true, moveHeld: true, stopPressed: false);
+        playerController.Tick();
+        Assert.That(weaponController.IsAttacking, Is.False, "The click ends the recovery.");
+        Assert.That(cancelled, Is.EqualTo(2));
+    }
+
+    /// <summary>
+    /// The <see cref="PlayerController"/> passes its statuses to its orders, motor and attack: a stun refuses orders
+    /// and swings and zeroes the motor speed scale, a slow scales it, an attack holds it still whatever the slow, and a
+    /// stun during the windup cancels the attack so nothing lands.
+    /// </summary>
+    [Test]
+    public void PlayerController_FeedsStatusCrowdControlToItsOrdersMotorAndAttack()
+    {
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
+        StatusEffects statuses = root.AddComponent<StatusEffects>();
+        weaponController.Equip(CreateTestWeapon("Sword"));
+        GameObject enemy = CreateEnemyInRange();
+        Health enemyHealth = enemy.GetComponent<Health>();
         FakeCommandSource commands = new();
         playerController.SetCommandSource(commands);
         StatusEffectDefinition stun = StatusEffectDefinition.Create("Stun", StatusKind.Debuff, 5f, controls: StatusControls.Stun);
@@ -237,16 +271,11 @@ public class PlayerWeaponSystemTests
         try
         {
             statuses.Set.Apply(stun, null, 1f);
-            commands.Next = new PlayerCommand(
-                enemy.transform.position,
-                new UnitTarget(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy),
-                movePressed: true,
-                moveHeld: true,
-                stopPressed: false);
+            commands.Next = ClickOn(enemy);
             playerController.Tick();
 
             Assert.That(playerController.CurrentOrder, Is.EqualTo(PlayerOrderKind.Idle), "A stunned player takes no orders.");
-            Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Null, "Nor swings.");
+            Assert.That(weaponController.IsAttacking, Is.False, "Nor swings.");
             Assert.That(motor.SpeedScale, Is.Zero);
 
             statuses.Set.Remove(stun);
@@ -254,6 +283,19 @@ public class PlayerWeaponSystemTests
             commands.Next = default;
             playerController.Tick();
             Assert.That(motor.SpeedScale, Is.EqualTo(0.6f).Within(0.0001f));
+
+            commands.Next = ClickOn(enemy);
+            playerController.Tick();
+            Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Windup));
+            Assert.That(motor.SpeedScale, Is.Zero, "The attack holds the motor still.");
+
+            statuses.Set.Apply(stun, null, 1f);
+            commands.Next = default;
+            playerController.Tick();
+            Assert.That(weaponController.IsAttacking, Is.False, "A stun cancels the attack.");
+            clock.Advance(0.25f);
+            playerController.Tick();
+            Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth), "Nothing lands.");
         }
         finally
         {
@@ -263,29 +305,48 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// A local swing raises <see cref="PlayerWeaponController.Attacked"/> (a zero direction swings where the
-    /// player faces), while replaying a remote player's attack spawns the slash without raising it.
+    /// A local attack raises its start (a zero direction attacks where the player faces, at attack speed 1) and, at
+    /// contact, its contact with where the player stands; a recovery cut short by an earlier order raises an early end.
+    /// Replaying another player's attack starts nothing here and raises nothing.
     /// </summary>
     [Test]
-    public void TryAttack_RaisesAttacked_ButRemoteAttacksDoNot()
+    public void TryAttack_RaisesItsStartContactAndEarlyEnd_ButRemoteAttacksDoNot()
     {
-        root = new GameObject("PlayerRoot");
-        root.AddComponent<BoxCollider2D>();
-        root.AddComponent<Rigidbody2D>();
-        PlayerController playerController = root.AddComponent<PlayerController>();
-        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateSpawner(), new ManualClock());
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
         weaponController.Equip(CreateTestWeapon("Sword"));
         playerController.Face(Vector2.up);
-        Vector2? attacked = null;
-        weaponController.Attacked += direction => attacked = direction;
+        Vector2? started = null;
+        float startedSpeed = 0f;
+        Vector2? contactAt = null;
+        int cancelled = 0;
+        weaponController.AttackStarted += (_, direction, speed) =>
+        {
+            started = direction;
+            startedSpeed = speed;
+        };
+        weaponController.AttackContacted += (_, _, position) => contactAt = position;
+        weaponController.AttackCancelled += () => cancelled++;
 
-        weaponController.PlayRemoteAttack(Vector2.left);
-        Assert.That(attacked, Is.Null, "Replaying another player's attack must not be sent back out.");
-        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>().Direction.x, Is.LessThan(-0.9f));
+        weaponController.PlayRemoteAttack(0, Vector2.left, 1f);
+        weaponController.PlayRemoteContact();
+        weaponController.StopRemoteAttack();
+        Assert.That(started, Is.Null, "Replaying another player's attack must not be sent back out.");
+        Assert.That(weaponController.IsAttacking, Is.False);
 
         Assert.That(weaponController.TryAttack(Vector2.zero), Is.True);
-        Assert.That(attacked, Is.EqualTo(Vector2.up), "A zero direction swings where the player faces.");
+        Assert.That(started, Is.EqualTo(Vector2.up), "A zero direction attacks where the player faces.");
+        Assert.That(startedSpeed, Is.EqualTo(1f));
+        root.transform.position = new Vector3(1f, 2f, 0f);
+        clock.Advance(0.125f);
+        weaponController.Tick();
+        Assert.That(contactAt, Is.EqualTo(new Vector2(1f, 2f)));
+        weaponController.Order(false);
+        Assert.That(cancelled, Is.Zero, "An order during the contact waits for the recovery.");
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        Assert.That(cancelled, Is.EqualTo(1));
+        Assert.That(weaponController.IsAttacking, Is.False);
     }
 
     /// <summary>
@@ -336,211 +397,89 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// A slash damages an overlapping target when spawned, refuses to hit the same target again, and never hits
-    /// its owner.
+    /// An attack hits every unit in its area once, each with the weapon's damage, and never the attacker or a unit
+    /// outside it; without authority it hits nothing.
     /// </summary>
     [Test]
-    public void PlayerSlashAttack_DamagesTargetOnlyOnceAndIgnoresOwner()
+    public void AnAttack_HitsEachUnitInItsAreaOnce_AndNeverTheAttacker()
     {
         root = new GameObject("CombatRoot");
-
         GameObject owner = CreateDamageable("Owner", Vector2.zero, root.transform);
-        GameObject target = CreateDamageable("Target", Vector2.right * 0.55f, root.transform);
+        Health first = CreateDamageable("FirstTarget", new Vector2(0.45f, 0.18f), root.transform).GetComponent<Health>();
+        Health second = CreateDamageable("SecondTarget", new Vector2(0.45f, -0.18f), root.transform).GetComponent<Health>();
+        Health behind = CreateDamageable("Behind", new Vector2(-1.2f, 0f), root.transform).GetComponent<Health>();
+        Physics2D.SyncTransforms();
+        PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2, size: new Vector2(1.2f, 1.2f));
 
-        Health ownerHealth = owner.GetComponent<Health>();
-        Health targetHealth = target.GetComponent<Health>();
-        BoxCollider2D ownerCollider = owner.GetComponent<BoxCollider2D>();
-        BoxCollider2D targetCollider = target.GetComponent<BoxCollider2D>();
+        Assert.That(CreateAttackService(new FixedGameAuthority(false)).Resolve(owner.transform, weapon, Vector2.right, Vector2.zero), Is.Zero);
+        Assert.That(first.CurrentHealth, Is.EqualTo(first.MaxHealth), "No authority, no hit.");
 
-        PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 3, hitboxSize: new Vector2(1.2f, 1f));
-        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
-
-        Assert.That(targetHealth.CurrentHealth, Is.EqualTo(targetHealth.MaxHealth - 3));
-        Assert.That(ownerHealth.CurrentHealth, Is.EqualTo(ownerHealth.MaxHealth));
-        Assert.That(slashAttack.TryDamageCollider(targetCollider), Is.False);
-        Assert.That(slashAttack.TryDamageCollider(ownerCollider), Is.False);
-        Assert.That(targetHealth.CurrentHealth, Is.EqualTo(targetHealth.MaxHealth - 3));
+        Assert.That(CreateAttackService().Resolve(owner.transform, weapon, Vector2.right, Vector2.zero), Is.EqualTo(2));
+        Assert.That(first.CurrentHealth, Is.EqualTo(first.MaxHealth - 2));
+        Assert.That(second.CurrentHealth, Is.EqualTo(second.MaxHealth - 2));
+        Assert.That(behind.CurrentHealth, Is.EqualTo(behind.MaxHealth));
+        Assert.That(owner.GetComponent<Health>().CurrentHealth, Is.EqualTo(owner.GetComponent<Health>().MaxHealth));
     }
 
     /// <summary>
-    /// A slash touching a wall collider with no receiver of its own damages nothing, not even another receiver
-    /// that shares the wall's root.
+    /// An attack that only meets a wall collider with no receiver of its own damages nothing, not even another
+    /// receiver that shares the wall's root.
     /// </summary>
     [Test]
-    public void PlayerSlashAttack_HittingWallDoesNotDamageUnrelatedReceiverUnderSameRoot()
+    public void AnAttack_HittingAWall_DoesNotDamageAnUnrelatedReceiverUnderTheSameRoot()
     {
         root = new GameObject("LevelRoot");
-
-        // The enemy is the first receiver under the shared root, which is what a root-wide search would find.
-        GameObject distantEnemy = CreateDamageable("DistantEnemy", Vector2.right * 20f, root.transform);
+        Health distantEnemy = CreateDamageable("DistantEnemy", Vector2.right * 20f, root.transform).GetComponent<Health>();
         GameObject owner = CreateDamageable("Owner", Vector2.zero, root.transform);
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
-        wall.transform.position = Vector2.left * 20f;
-        BoxCollider2D wallCollider = wall.AddComponent<BoxCollider2D>();
+        wall.transform.position = Vector2.right * 0.6f;
+        wall.AddComponent<BoxCollider2D>();
+        Physics2D.SyncTransforms();
 
-        Health enemyHealth = distantEnemy.GetComponent<Health>();
-        Health ownerHealth = owner.GetComponent<Health>();
-        PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2);
-        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
-
-        Assert.That(slashAttack.TryDamageCollider(wallCollider), Is.False);
-        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
-        Assert.That(ownerHealth.CurrentHealth, Is.EqualTo(ownerHealth.MaxHealth));
+        Assert.That(CreateAttackService().Resolve(owner.transform, CreateTestWeapon("Sword", damage: 2), Vector2.right, Vector2.zero), Is.Zero);
+        Assert.That(distantEnemy.CurrentHealth, Is.EqualTo(distantEnemy.MaxHealth));
+        Assert.That(owner.GetComponent<Health>().CurrentHealth, Is.EqualTo(owner.GetComponent<Health>().MaxHealth));
     }
 
     /// <summary>
-    /// One slash damages every target inside its hitbox, each exactly once.
+    /// The hit area's centre is the attacker's position plus its direction's offset (down, up, left, right) and the hit
+    /// distance along the attack, and the area turns with the attack: a narrow, deep area hits the unit straight ahead
+    /// in each direction and not the ones beside it.
     /// </summary>
     [Test]
-    public void PlayerSlashAttack_CanDamageMultipleTargetsOnceEach()
+    public void TheHitArea_LiesAlongTheAttack_FromItsDirectionsOffset()
     {
-        root = new GameObject("CombatRoot");
-
-        GameObject owner = CreateDamageable("Owner", Vector2.zero, root.transform);
-        GameObject firstTarget = CreateDamageable("FirstTarget", new Vector2(0.45f, 0.18f), root.transform);
-        GameObject secondTarget = CreateDamageable("SecondTarget", new Vector2(0.45f, -0.18f), root.transform);
-
-        Health firstHealth = firstTarget.GetComponent<Health>();
-        Health secondHealth = secondTarget.GetComponent<Health>();
-
-        PlayerWeapon weapon = CreateTestWeapon("Sword", damage: 2, hitboxSize: new Vector2(1.2f, 1.2f));
-        CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
-
-        Assert.That(firstHealth.CurrentHealth, Is.EqualTo(firstHealth.MaxHealth - 2));
-        Assert.That(secondHealth.CurrentHealth, Is.EqualTo(secondHealth.MaxHealth - 2));
-    }
-
-    /// <summary>
-    /// A slash spawned with the owner's sprite renderer as anchor keeps its offset from that visual when the
-    /// owner moves.
-    /// </summary>
-    [Test]
-    public void PlayerSlashAttack_FollowsOwnerVisualAnchorForLifetime()
-    {
-        root = new GameObject("CombatRoot");
-
-        GameObject owner = new("Owner");
-        owner.transform.SetParent(root.transform);
-        owner.transform.position = Vector3.zero;
-        owner.AddComponent<BoxCollider2D>();
-        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-
-        GameObject visuals = new("Visuals");
-        visuals.transform.SetParent(owner.transform);
-        visuals.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-        SpriteRenderer spriteRenderer = visuals.AddComponent<SpriteRenderer>();
-
-        PlayerWeapon weapon = CreateTestWeapon("Sword", spawnDistance: 0.55f);
-        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right, spriteRenderer);
-
-        Vector3 initialOffset = slashAttack.transform.position - visuals.transform.position;
-        owner.transform.position += new Vector3(1.25f, 0.4f, 0f);
-
-        slashAttack.Tick(0f);
-
-        Vector3 followedOffset = slashAttack.transform.position - visuals.transform.position;
-        Assert.That(Vector3.Distance(followedOffset, initialOffset), Is.LessThan(0.001f));
-    }
-
-    /// <summary>
-    /// A slash spawns at the weapon's spawn distance along the swing direction plus that direction's spawn
-    /// offset, for each of down, up, left and right.
-    /// </summary>
-    [Test]
-    public void PlayerSlashAttack_UsesDirectionalSpawnOffsets()
-    {
-        root = new GameObject("CombatRoot");
-
-        GameObject owner = new("Owner");
-        owner.transform.SetParent(root.transform);
-        owner.AddComponent<BoxCollider2D>();
-        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-
-        const float spawnDistance = 1f;
-        Vector2[] spawnOffsets =
+        Vector2[] offsets =
         {
             Vector2.up * 0.1f,
             Vector2.up * 0.3f,
             new Vector2(0.2f, 0.15f),
             new Vector2(0.2f, 0.15f)
         };
-        PlayerWeapon weapon = CreateTestWeapon("Sword", spawnDistance: spawnDistance, spawnOffsets: spawnOffsets);
+        PlayerWeapon placed = CreateTestWeapon("Sword", distance: 1f, offsets: offsets);
+        Assert.That(Vector2.Distance(placed.HitCentre(Vector2.one, Vector2.down), new Vector2(1f, 0.1f)), Is.LessThan(0.001f));
+        Assert.That(Vector2.Distance(placed.HitCentre(Vector2.one, Vector2.up), new Vector2(1f, 2.3f)), Is.LessThan(0.001f));
+        Assert.That(Vector2.Distance(placed.HitCentre(Vector2.one, Vector2.left), new Vector2(0.2f, 1.15f)), Is.LessThan(0.001f));
+        Assert.That(Vector2.Distance(placed.HitCentre(Vector2.one, Vector2.right), new Vector2(2.2f, 1.15f)), Is.LessThan(0.001f));
 
-        AssertSpawnPosition(owner.transform, weapon, Vector2.down, new Vector3(0f, -0.9f, 0f));
-        AssertSpawnPosition(owner.transform, weapon, Vector2.up, new Vector3(0f, 1.3f, 0f));
-        AssertSpawnPosition(owner.transform, weapon, Vector2.left, new Vector3(-0.8f, 0.15f, 0f));
-        AssertSpawnPosition(owner.transform, weapon, Vector2.right, new Vector3(1.2f, 0.15f, 0f));
-    }
-
-    /// <summary>
-    /// An eastward slash flips its root's x scale while a westward one does not, and the hitbox sits on that
-    /// root so it mirrors too.
-    /// </summary>
-    [Test]
-    public void PlayerSlashAttack_MirrorsRootWhenFacingEast()
-    {
         root = new GameObject("CombatRoot");
-
         GameObject owner = new("Owner");
         owner.transform.SetParent(root.transform);
-        owner.AddComponent<BoxCollider2D>();
-        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        Health ahead = CreateSmallDamageable("Ahead", new Vector2(1.5f, 0f)).GetComponent<Health>();
+        Health beside = CreateSmallDamageable("Beside", new Vector2(1f, 0.6f)).GetComponent<Health>();
+        Health above = CreateSmallDamageable("Above", new Vector2(0f, 1.5f)).GetComponent<Health>();
+        Physics2D.SyncTransforms();
+        PlayerWeapon narrow = CreateTestWeapon("Spear", damage: 1, distance: 1f, size: new Vector2(0.2f, 2f));
+        AttackService attacks = CreateAttackService();
 
-        PlayerWeapon weapon = CreateTestWeapon("Sword");
-        SwordSlashAttack eastSlash = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
-        SwordSlashAttack westSlash = CreateSpawner().Spawn(owner.transform, weapon, Vector2.left);
-
-        Assert.That(eastSlash.transform.localScale.x, Is.LessThan(0f));
-        Assert.That(westSlash.transform.localScale.x, Is.GreaterThan(0f));
-        Assert.That(eastSlash.Hitbox.transform, Is.SameAs(eastSlash.transform));
-    }
-
-    /// <summary>
-    /// A slash sorts one below the owner's sprite when the swing points mostly up and one above it for every
-    /// other direction.
-    /// </summary>
-    [Test]
-    public void PlayerSlashAttack_DrawsBehindTheOwnerWhenSwingingUp_AndInFrontOtherwise()
-    {
-        root = new GameObject("CombatRoot");
-
-        GameObject owner = new("Owner");
-        owner.transform.SetParent(root.transform);
-        owner.AddComponent<BoxCollider2D>();
-        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        SpriteRenderer ownerRenderer = new GameObject("Visual").AddComponent<SpriteRenderer>();
-        ownerRenderer.transform.SetParent(owner.transform);
-        ownerRenderer.sortingOrder = 10;
-
-        PlayerWeapon weapon = CreateTestWeapon("Sword");
-        SlashSpawner spawner = CreateSpawner();
-
-        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.up, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(9));
-        Assert.That(spawner.Spawn(owner.transform, weapon, new Vector2(0.6f, 0.8f), ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(9));
-        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.down, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
-        Assert.That(spawner.Spawn(owner.transform, weapon, Vector2.left, ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
-        Assert.That(spawner.Spawn(owner.transform, weapon, new Vector2(0.8f, 0.6f), ownerRenderer).SpriteRenderer.sortingOrder, Is.EqualTo(11));
-    }
-
-    /// <summary>
-    /// A freshly spawned slash already shows the first sprite of its animation clip.
-    /// </summary>
-    [Test]
-    public void PlayerSlashAttack_AppliesOpeningSpriteFromAnimationClip()
-    {
-        root = new GameObject("CombatRoot");
-
-        GameObject owner = new("Owner");
-        owner.transform.SetParent(root.transform);
-        owner.AddComponent<BoxCollider2D>();
-        owner.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-
-        PlayerWeapon weapon = CreateTestWeapon("Sword");
-        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner.transform, weapon, Vector2.right);
-
-        Assert.That(slashAttack.SpriteRenderer, Is.Not.Null);
-        Assert.That(slashAttack.SpriteRenderer.sprite, Is.Not.Null);
+        Assert.That(attacks.Resolve(owner.transform, narrow, Vector2.right, Vector2.zero), Is.EqualTo(1));
+        Assert.That(ahead.CurrentHealth, Is.EqualTo(ahead.MaxHealth - 1));
+        Assert.That(beside.CurrentHealth, Is.EqualTo(beside.MaxHealth));
+        Assert.That(above.CurrentHealth, Is.EqualTo(above.MaxHealth));
+        Assert.That(attacks.Resolve(owner.transform, narrow, Vector2.up, Vector2.zero), Is.EqualTo(1));
+        Assert.That(above.CurrentHealth, Is.EqualTo(above.MaxHealth - 1));
+        Assert.That(beside.CurrentHealth, Is.EqualTo(beside.MaxHealth));
     }
 
     /// <summary>
@@ -592,75 +531,93 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// Creates a <see cref="SlashSpawner"/> over an empty container and an authoritative hit service, so slashes
-    /// deal damage.
+    /// Creates an attack service over a hit service under <paramref name="authority"/>, authoritative by default, so
+    /// attacks deal damage.
     /// </summary>
-    private static SlashSpawner CreateSpawner()
+    private static AttackService CreateAttackService(IGameAuthority authority = null)
     {
-        return new SlashSpawner(new ContainerBuilder().Build(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
+        return TestCombat.CreateAttackService(authority ?? FixedGameAuthority.Authoritative);
     }
 
     /// <summary>
-    /// Creates a weapon with the given stats and a test slash prefab that plays the project's slash animation;
-    /// spawn offsets default to zero and the hitbox to 0.9 by 0.9.
+    /// Creates a weapon with the given stats, a timeline of 0.125 s, 0.0625 s and 0.125 s with both cancel rules on,
+    /// zero hit offsets by default and a 0.9 by 0.9 hit area by default.
     /// </summary>
     private static PlayerWeapon CreateTestWeapon(
         string name,
         int damage = 1,
         float cooldown = 0.35f,
-        float spawnDistance = 0.55f,
-        Vector2? hitboxSize = null,
-        Vector2[] spawnOffsets = null,
+        float distance = 0.55f,
+        Vector2? size = null,
+        Vector2[] offsets = null,
         Sprite icon = null)
     {
-        AnimationClip slashAnimation = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/Weapons/Slash.anim");
-        Assert.That(slashAnimation, Is.Not.Null);
-
         return PlayerWeapon.Create(
             name,
             damage,
             cooldown,
-            spawnDistance,
-            spawnOffsets ?? new Vector2[4],
-            CreateTestSlashPrefab(hitboxSize ?? new Vector2(0.9f, 0.9f), slashAnimation),
-            icon);
+            distance,
+            offsets ?? new Vector2[4],
+            icon,
+            size: size ?? new Vector2(0.9f, 0.9f),
+            windup: 0.125f,
+            contact: 0.0625f,
+            recovery: 0.125f);
     }
 
     /// <summary>
-    /// Spawns a slash from <paramref name="owner"/> toward <paramref name="direction"/>, asserts it lands at
-    /// <paramref name="expectedPosition"/>, and destroys it.
+    /// Creates the test player at the origin (a 0.4 by 0.2 collider, a kinematic body, a controller with test control
+    /// settings and a weapon controller), with the controller and the weapon on <paramref name="clock"/> and the weapon
+    /// resolving hits with authority.
     /// </summary>
-    private static void AssertSpawnPosition(Transform owner, PlayerWeapon weapon, Vector2 direction, Vector3 expectedPosition)
+    private PlayerWeaponController CreatePlayer(ManualClock clock, out PlayerController playerController)
     {
-        SwordSlashAttack slashAttack = CreateSpawner().Spawn(owner, weapon, direction);
-        Assert.That(Vector3.Distance(slashAttack.transform.position, expectedPosition), Is.LessThan(0.001f));
-        Object.DestroyImmediate(slashAttack.gameObject);
+        root = new GameObject("PlayerRoot");
+        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        playerController = root.AddComponent<PlayerController>();
+        playerController.Construct(clock);
+        PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
+        weaponController.Construct(CreateAttackService(), clock);
+        settings = TestPlayerControlSettings.Create();
+        TestPlayerControlSettings.Assign(playerController, settings);
+        return weaponController;
     }
 
     /// <summary>
-    /// Builds an inactive in-memory slash prefab: an animator, a trigger hitbox of <paramref name="hitboxSize"/>
-    /// and a <see cref="SwordSlashAttack"/> on the root, with a child sprite renderer as its visual.
+    /// Creates an enemy half a unit left of the origin with a 0.4 by 0.2 collider, within the test weapon's range and
+    /// hit area.
     /// </summary>
-    private static GameObject CreateTestSlashPrefab(Vector2 hitboxSize, AnimationClip slashAnimation)
+    private GameObject CreateEnemyInRange()
     {
-        GameObject root = new("SlashPrefab");
-        root.SetActive(false);
-        Animator animator = root.AddComponent<Animator>();
+        enemyRoot = new GameObject("EnemyRoot");
+        GameObject enemy = CreateDamageable("Enemy", new Vector2(-0.5f, 0f), enemyRoot.transform);
+        enemy.GetComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
+        Physics2D.SyncTransforms();
+        return enemy;
+    }
 
-        BoxCollider2D hitbox = root.AddComponent<BoxCollider2D>();
-        hitbox.isTrigger = true;
-        hitbox.offset = new Vector2(0f, 0.1f);
-        hitbox.size = hitboxSize;
+    /// <summary>
+    /// A click on <paramref name="enemy"/>, which picks it as an enemy target.
+    /// </summary>
+    private static PlayerCommand ClickOn(GameObject enemy)
+    {
+        return new PlayerCommand(
+            enemy.transform.position,
+            new UnitTarget(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy),
+            movePressed: true,
+            moveHeld: true,
+            stopPressed: false);
+    }
 
-        SwordSlashAttack slashAttack = root.AddComponent<SwordSlashAttack>();
-
-        GameObject visual = new("Visual");
-        visual.transform.SetParent(root.transform, false);
-        visual.transform.localScale = Vector3.one * 0.14f;
-        SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-
-        slashAttack.ConfigureReferences(visual.transform, renderer, hitbox, animator, slashAnimation);
-        return root;
+    /// <summary>
+    /// Creates a damageable unit under the test root at <paramref name="position"/> with a 0.1 by 0.1 collider.
+    /// </summary>
+    private GameObject CreateSmallDamageable(string name, Vector2 position)
+    {
+        GameObject unit = CreateDamageable(name, position, root.transform);
+        unit.GetComponent<BoxCollider2D>().size = new Vector2(0.1f, 0.1f);
+        return unit;
     }
 
     /// <summary>

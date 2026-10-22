@@ -23,10 +23,10 @@ MonoBehaviour:
     leftFoot: {x: -3, y: 2.4, z: 1.5}
     rightFoot: {x: 3.2, y: -2.4, z: 1.5}
     leftHand: {x: -5.6, y: 1.6, z: 14.6}
-    rightHand: {x: 5, y: 4.2, z: 15.5}
+    rightHand: {x: 6.2, y: 2.4, z: 16}
     leftPole: {x: -0.3, y: -1, z: -0.5}
     rightPole: {x: 0.6, y: -0.6, z: -0.6}
-    blade: {x: 0.15, y: 0.62, z: 0.77}
+    blade: {x: 0.6, y: 0.2, z: -0.77}
     bowUp: {x: 0, y: 0, z: 1}
     bowAim: {x: 0, y: 1, z: 0}
     draw: 0
@@ -118,10 +118,10 @@ MonoBehaviour:
     leftFoot: {x: -3, y: 2.4, z: 1.5}
     rightFoot: {x: 3.2, y: -2.4, z: 1.5}
     leftHand: {x: -5.6, y: 1.6, z: 14.6}
-    rightHand: {x: 5, y: 4.2, z: 15.5}
+    rightHand: {x: 6.2, y: 2.4, z: 16}
     leftPole: {x: -0.3, y: -1, z: -0.5}
     rightPole: {x: 0.6, y: -0.6, z: -0.6}
-    blade: {x: 0.15, y: 0.62, z: 0.77}
+    blade: {x: 0.6, y: 0.2, z: -0.77}
     bowUp: {x: 0, y: 0, z: 1}
     bowAim: {x: 0, y: 1, z: 0}
     draw: 0

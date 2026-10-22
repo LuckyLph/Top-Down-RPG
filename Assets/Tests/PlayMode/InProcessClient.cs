@@ -156,7 +156,7 @@ public sealed class InProcessClient : IDisposable
         builder.Register<StatusVisualPool>(Lifetime.Singleton).WithParameter(default(Scene));
         builder.RegisterInstance<IClientReadiness>(new ReadyClients());
         builder.Register<AbilityService>(Lifetime.Singleton);
-        builder.Register<SlashSpawner>(Lifetime.Singleton);
+        builder.Register<AttackService>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));

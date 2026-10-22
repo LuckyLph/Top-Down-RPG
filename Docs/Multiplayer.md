@@ -23,7 +23,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Thing | Authority | Replicated to clients as |
 |---|---|---|
 | Player movement and facing | Owning client | Transform + facing/animation state |
-| Player attack | Owning client decides to swing, host resolves hits on mobs | Attack event (every client plays the slash visual) |
+| Player attack | Owning client runs the attack's timeline (start, windup cancels, contact), host resolves its hit at contact around where the owner stood | Start, contact and early-end events (every other machine plays the attack on its copy, visual only) |
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
 | `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
@@ -32,7 +32,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
 | Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
 | Save data | Host | Not replicated. The host (or the single player) saves when any player enters a world, on an autosave timer and as the session ends; a joining player the host knows starts at its saved place. |
-| Visual effects (slashes, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
+| Visual effects (character animation, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
 
@@ -47,7 +47,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 
 | Area | Today | Target |
 |---|---|---|
-| `SwordSlashAttack` | The slash object decides what it hit (damage itself goes through `DamageService`) | Only the host's copy resolves hits; other clients' slashes are visual only |
+| `SwordSlashAttack` | Gone. Each machine's slash used to decide what it hit | Done in [Animation.md](Animation.md)'s Phase 3: only the host resolves an attack's hit, at contact (`AttackService`; a client's contact reaches it as `AttackContactRpc` with the owner's position), and other machines' attacks are visual only |
 | `GameFlow` | Each machine loads its own worlds and chunks; the host decides each player's world | Done in [WorldStreaming.md](WorldStreaming.md)'s Phase 7 |
 
 ## Phases
@@ -59,7 +59,7 @@ Each step ships on its own, keeps single player working, and comes with EditMode
 - [x] Player registry + local player; mob perception picks among players.
 - [x] Runtime player spawning through `resolver.Instantiate`; `AreaEntry` places all registered players.
 - [x] Player command source split out of `PlayerController`.
-- [x] Combat: damage application in one place (`DamageService`); popups driven by `CombatEvents`, death effects by `Health.Died`. Which copy of a slash resolves hits is decided in Phase 3.
+- [x] Combat: damage application in one place (`DamageService`); popups driven by `CombatEvents`, death effects by `Health.Died`. Which machine resolves an attack's hit was settled in Animation.md's Phase 3 (the host, at contact).
 - [x] Mob spawn markers + area mob spawner (replaces in-scene mob instances and the build-callback injection).
 - [x] Per-player death and respawn: a dead player respawns at the area's spawn point after `GameplaySettings.RespawnDelaySeconds` while a teammate is alive; everyone dead at once restarts the area. Replaced in WorldStreaming.md's Phase 9: each player respawns on its own and nothing restarts.
 - [x] Remaining gameplay timers through `IClock`, injected RNG (`IRandom`). Visual-only animations keep `Time.deltaTime`.
@@ -75,7 +75,7 @@ Until Phase 3, a client that joins only connects: it loads the starting area loc
 ### Phase 3: players
 
 - [x] `NetworkObject` on the player prefab, owner-authoritative `NetworkTransform` (x/y only), remote copies kinematic; move and facing replicated so remote animation matches.
-- [x] Attack sent by the owner (`AttackRpc`); every other machine replays the slash; only the host's `DamageService` applies damage (clients apply none).
+- [x] Attack sent by the owner (`AttackRpc`); every other machine replays the slash; only the host's `DamageService` applies damage (clients apply none). Replaced in Animation.md's Phase 3: the owner sends its attack's start, contact and early end, and only the host resolves the hit, at contact.
 - [x] Per-player HUD and camera bound to the local player only, through `LocalPlayerTracker`.
 - [x] Ready handshake: a joining client reports ready once its Gameplay scope can receive spawns; until then the host hides spawned objects from it, then shows them and spawns its player.
 

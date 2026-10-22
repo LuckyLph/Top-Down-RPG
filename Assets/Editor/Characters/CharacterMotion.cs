@@ -26,6 +26,12 @@ public abstract class CharacterMotion : ScriptableObject
     public virtual CharacterGait Gait => CharacterGait.None;
 
     /// <summary>
+    /// The frame an attack lands on, which the runtime pins to the moment its hit resolves; -1 for a motion that is
+    /// not an attack.
+    /// </summary>
+    public virtual int ContactFrame => -1;
+
+    /// <summary>
     /// How fast a planted foot moves back under <paramref name="recipe"/>'s body at the motion's natural speed, in rig
     /// units per second: the speed the character must move at for its feet not to slide. 0 for a motion that does not
     /// travel.

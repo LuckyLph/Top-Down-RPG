@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -6,9 +7,10 @@ using UnityEngine;
 /// <summary>
 /// Tests for how the player and the Weasel prefabs are drawn and sorted (Docs/Animation.md, Rules), on the project's
 /// prefabs and assets, which they only read: the player draws the rogue's baked set from its feet with no Mecanim
-/// animator, its slash anchor on the feet and the sword's slash offsets raised to keep the slash where it was; at the
-/// player's base speed, and chilled, it runs at an unclamped rate so its feet keep up; a sorter with a sorting point
-/// sorts by that point's height, and the Weasel sorts by its feet.
+/// animator, and its weapon plays on those visuals; the sword's hit area is centred half a unit above the feet; the
+/// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
+/// locomotion frames at the feet; at the player's base speed, and chilled, it runs at an unclamped rate so its feet keep up; a sorter
+/// with a sorting point sorts by that point's height, and the Weasel sorts by its feet.
 /// </summary>
 public class CharacterPrefabTests
 {
@@ -16,6 +18,8 @@ public class CharacterPrefabTests
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
     private const string SetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
+    private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
+    private const string SwordArtPath = "Assets/Settings/Characters/Weapons/WeaponArt_Sword.asset";
     private const float OnePixel = 1f / 32f;
 
     private readonly List<Object> created = new();
@@ -58,6 +62,7 @@ public class CharacterPrefabTests
         Assert.That(characterVisuals.AnimationSet, Is.EqualTo(set));
         Assert.That(new SerializedObject(characterVisuals).FindProperty("locomotion").objectReferenceValue, Is.Not.Null);
         Assert.That(new SerializedObject(player.GetComponent<PlayerMotor2D>()).FindProperty("visuals").objectReferenceValue, Is.EqualTo(characterVisuals));
+        Assert.That(new SerializedObject(player.GetComponent<PlayerWeaponController>()).FindProperty("visuals").objectReferenceValue, Is.EqualTo(characterVisuals));
 
         Sprite sprite = visuals.GetComponent<SpriteRenderer>().sprite;
         Assert.That(sprite, Is.EqualTo(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0)));
@@ -73,17 +78,56 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The sword's slashes follow the owner's sprite, now on the feet: each direction's slash offset is half a unit
-    /// higher than it was against the old sprite, centred half a unit up.
+    /// The sword's hit area keeps the old slash's place around the feet: each direction's offset is half a unit higher
+    /// than it was against the old centred sprite.
     /// </summary>
     [Test]
-    public void TheSwordsSlash_StaysHalfAUnitAboveTheFeet()
+    public void TheSwordsHitArea_StaysHalfAUnitAboveTheFeet()
     {
-        PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>("Assets/Data/Weapons/Sword.asset");
-        Assert.That(sword.GetSlashSpawnOffset(Vector2.down), Is.EqualTo(new Vector2(0f, 0.4f)));
-        Assert.That(sword.GetSlashSpawnOffset(Vector2.up), Is.EqualTo(new Vector2(0f, 0.5f)));
-        Assert.That(sword.GetSlashSpawnOffset(Vector2.left), Is.EqualTo(new Vector2(-0.1f, 0.5f)));
-        Assert.That(sword.GetSlashSpawnOffset(Vector2.right), Is.EqualTo(new Vector2(0.1f, 0.5f)));
+        PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(SwordPath);
+        Assert.That(sword.HitOffset(Vector2.down), Is.EqualTo(new Vector2(0f, 0.4f)));
+        Assert.That(sword.HitOffset(Vector2.up), Is.EqualTo(new Vector2(0f, 0.5f)));
+        Assert.That(sword.HitOffset(Vector2.left), Is.EqualTo(new Vector2(-0.1f, 0.5f)));
+        Assert.That(sword.HitOffset(Vector2.right), Is.EqualTo(new Vector2(0.1f, 0.5f)));
+    }
+
+    /// <summary>
+    /// The sword's attack is in the rogue's set with the contact frame its motion keys (frame 4, after a windup of frames
+    /// 0 to 3), and the set holds no carried clips: the weapons only show in their attacks. The attack's 80 px
+    /// frames pivot on the feet like the 64 px locomotion frames: in every direction the first attack frame and the first
+    /// idle frame put the top of the hood at the same height above the feet and the boots within a pixel of each other
+    /// (the sword's own pixels left out, since its first frame holds it low).
+    /// </summary>
+    [Test]
+    public void TheSwordsClips_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
+    {
+        PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(SwordPath);
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
+        CharacterAnimationClip attack = set.Find(sword.AttackClip);
+        CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
+        Assert.That(attack, Is.Not.Null);
+        Assert.That(attack.HasContact, Is.True);
+        Assert.That(attack.ContactFrame, Is.EqualTo(4));
+        foreach (CharacterAnimationClip clip in set.Clips)
+        {
+            Assert.That(clip.Armed, Is.EqualTo(clip.HasContact), $"{clip.Name}: only attacks draw a weapon.");
+        }
+
+        Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+        Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
+        HashSet<Color32> swordColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(SwordArtPath));
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            Sprite attackFrame = attack.SpriteAt(direction, 0);
+            Sprite idleFrame = idle.SpriteAt(direction, 0);
+            Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(80f, 80f)));
+            Assert.That(idleFrame.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
+            OpaqueRows(attackSheet, attackFrame, swordColours, out int attackBottom, out int attackTop);
+            OpaqueRows(idleSheet, idleFrame, swordColours, out int idleBottom, out int idleTop);
+            string name = CharacterDirections.Name(direction);
+            Assert.That(attackTop, Is.EqualTo(idleTop), $"{name}: the hood's top.");
+            Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(1), $"{name}: the boots.");
+        }
     }
 
     /// <summary>
@@ -137,6 +181,65 @@ public class CharacterPrefabTests
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>(WeaselPath);
         YPositionSorter weaselSorter = weasel.transform.Find("Visuals").GetComponent<YPositionSorter>();
         Assert.That(new SerializedObject(weaselSorter).FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(weasel.transform));
+    }
+
+    /// <summary>
+    /// A readable copy of the sheet <paramref name="sprite"/> is cut from, read from its PNG on disk.
+    /// </summary>
+    private static Texture2D LoadSheet(Sprite sprite)
+    {
+        Texture2D sheet = new(2, 2);
+        sheet.LoadImage(File.ReadAllBytes(AssetDatabase.GetAssetPath(sprite.texture)));
+        return sheet;
+    }
+
+    /// <summary>
+    /// Every colour <paramref name="weapon"/>'s art draws its blade, guard, grip, smears and dust in.
+    /// </summary>
+    private static HashSet<Color32> WeaponColours(CharacterWeaponArt weapon)
+    {
+        HashSet<Color32> colours = new();
+        foreach (CharacterMaterial material in System.Enum.GetValues(typeof(CharacterMaterial)))
+        {
+            if (!CharacterMaterials.IsWeapons(material))
+            {
+                continue;
+            }
+
+            ColourRamp ramp = weapon.Ramp(material);
+            colours.Add(ramp.Outline);
+            colours.Add(ramp.Shadow);
+            colours.Add(ramp.Middle);
+            colours.Add(ramp.Light);
+        }
+
+        return colours;
+    }
+
+    /// <summary>
+    /// The lowest and highest rows of <paramref name="frame"/> with an opaque pixel of a colour not in
+    /// <paramref name="ignored"/>, in pixels above its pivot.
+    /// </summary>
+    private static void OpaqueRows(Texture2D sheet, Sprite frame, HashSet<Color32> ignored, out int bottom, out int top)
+    {
+        Rect rect = frame.rect;
+        bottom = int.MaxValue;
+        top = int.MinValue;
+        for (int y = 0; y < (int)rect.height; y++)
+        {
+            for (int x = 0; x < (int)rect.width; x++)
+            {
+                Color32 pixel = sheet.GetPixel((int)rect.x + x, (int)rect.y + y);
+                if (pixel.a > 0 && !ignored.Contains(pixel))
+                {
+                    bottom = Mathf.Min(bottom, y);
+                    top = Mathf.Max(top, y);
+                }
+            }
+        }
+
+        bottom -= Mathf.RoundToInt(frame.pivot.y);
+        top -= Mathf.RoundToInt(frame.pivot.y);
     }
 
     /// <summary>

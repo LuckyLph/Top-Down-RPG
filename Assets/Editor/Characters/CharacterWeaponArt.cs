@@ -36,6 +36,8 @@ public sealed class CharacterWeaponArt : ScriptableObject
     [SerializeField, Min(0f)] private float brace = 2.2f;
     [Tooltip("How far the limbs' tips curl back at rest and fully drawn.")]
     [SerializeField] private Vector2 bend = new(1.4f, 4.2f);
+    [Tooltip("How thick each limb is at the grip and at its tip, in rig units.")]
+    [SerializeField] private Vector2 limbRadius = new(0.85f, 0.45f);
     [Tooltip("The arrow's length.")]
     [SerializeField, Min(1f)] private float arrowLength = 14f;
 
@@ -79,6 +81,7 @@ public sealed class CharacterWeaponArt : ScriptableObject
     public float HalfLength => halfLength;
     public float Brace => brace;
     public Vector2 Bend => bend;
+    public Vector2 LimbRadius => limbRadius;
     public float ArrowLength => arrowLength;
 
     /// <summary>

@@ -18,13 +18,24 @@ MonoBehaviour:
   onHitStatuses: []
   attackCooldown: 0.35
   attackRange: 0.3
-  slashSpawnDistance: 0.55
-  slashSpawnOffsets:
+  windupSeconds: 0.15
+  contactSeconds: 0.05
+  recoverySeconds: 0.15
+  windupCancelledByMove: 1
+  recoveryCancellable: 1
+  hitDistance: 0.65
+  hitOffsets:
   - {x: 0, y: 0.4}
   - {x: 0, y: 0.5}
   - {x: -0.1, y: 0.5}
   - {x: 0.1, y: 0.5}
-  slashPrefab: {fileID: 2237708894164175470, guid: 009c5117978435b41a3efd90ce168f55, type: 3}
+  hitSize: {x: 1.77, y: 1.56}
+  attackClip: SwordSlash
+  carryClips:
+  - IdleSword
+  - WalkSword
+  - RunSword
+  - SprintSword
   hudIcon: {fileID: 5154499244127856136, guid: ebbeb1c067ea7ad46bcd2727188da217, type: 3}
   abilities:
   - {fileID: 11400000, guid: 84cfe8776e8c16044af287ce0cb5bf77, type: 2}

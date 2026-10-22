@@ -3,7 +3,6 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using VContainer;
 
 /// <summary>
 /// Tests for <see cref="PlayerAbilities"/>: slots from the class and weapon, casting and its failures, completion
@@ -417,7 +416,7 @@ public class PlayerAbilitiesTests
         player.AddComponent<Rigidbody2D>();
         health = player.AddComponent<Health>();
         weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(new SlashSpawner(new ContainerBuilder().Build(), TestCombat.CreateHitService(authority)), clock);
+        weapon.Construct(TestCombat.CreateAttackService(authority), clock);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.55f, new Vector2[4], weaponAbilities: weaponAbilities)));
         service = TestCombat.CreateAbilityService(authority);
         service.CastApplied += (_, _) => applied++;

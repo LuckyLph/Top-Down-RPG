@@ -5,9 +5,11 @@ using VContainer;
 
 /// <summary>
 /// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
-/// base move speed, so a slowed or hasted copy shows the same gait) and facing to owner network variables, and sends its swings and cast starts to the other machines and its completed casts to the host,
-/// which resolves them. The owner's teleports (arriving at an entry, a waystone included) snap on the other machines
-/// instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
+/// base move speed, so a slowed or hasted copy shows the same gait) and facing to owner network variables, and sends
+/// its attacks' starts, contacts and early ends and its cast starts to the other machines, which play them on their
+/// copy, and its completed casts to the host; the host resolves a client's contacts and completed casts around where
+/// the owner was. The owner's teleports (arriving at an entry, a waystone included) snap on the other machines instead
+/// of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that movement.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
@@ -53,7 +55,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// The owner binds the player as local and starts relaying its swings, teleports and casts; any other machine
+    /// The owner binds the player as local and starts relaying its attacks, teleports and casts; any other machine
     /// makes the body kinematic without interpolation, binds it as remote and shows the current replicated movement.
     /// Logs an error and does nothing when the prefab was spawned without injection.
     /// </summary>
@@ -71,7 +73,9 @@ public class PlayerNetworkSync : NetworkBehaviour
             controller.Teleported += HandleLocalTeleported;
             if (weapon != null)
             {
-                weapon.Attacked += HandleLocalAttack;
+                weapon.AttackStarted += HandleLocalAttackStarted;
+                weapon.AttackContacted += HandleLocalAttackContacted;
+                weapon.AttackCancelled += HandleLocalAttackCancelled;
             }
 
             if (abilities != null)
@@ -102,7 +106,9 @@ public class PlayerNetworkSync : NetworkBehaviour
         controller.Teleported -= HandleLocalTeleported;
         if (weapon != null)
         {
-            weapon.Attacked -= HandleLocalAttack;
+            weapon.AttackStarted -= HandleLocalAttackStarted;
+            weapon.AttackContacted -= HandleLocalAttackContacted;
+            weapon.AttackCancelled -= HandleLocalAttackCancelled;
         }
 
         if (abilities != null)
@@ -163,22 +169,79 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// Relays a swing the owner made to the other machines.
+    /// Relays the start of an attack the owner made to the other machines.
     /// </summary>
-    private void HandleLocalAttack(Vector2 direction)
+    private void HandleLocalAttackStarted(int attack, Vector2 direction, float attackSpeed)
     {
-        AttackRpc(direction);
+        if (IsSpawned)
+        {
+            AttackStartedRpc((byte)attack, direction, attackSpeed);
+        }
     }
 
     /// <summary>
-    /// Runs on every machine but the owner: plays the owner's swing visual toward <paramref name="direction"/>.
+    /// Runs on every machine but the owner: plays the owner's attack <paramref name="attack"/> toward
+    /// <paramref name="direction"/> at <paramref name="attackSpeed"/>, its windup holding until the contact arrives.
     /// </summary>
     [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
-    private void AttackRpc(Vector2 direction)
+    private void AttackStartedRpc(byte attack, Vector2 direction, float attackSpeed)
     {
         if (weapon != null)
         {
-            weapon.PlayRemoteAttack(direction);
+            weapon.PlayRemoteAttack(attack, direction, attackSpeed);
+        }
+    }
+
+    /// <summary>
+    /// Relays the owner's contact, with where it stood, to the other machines.
+    /// </summary>
+    private void HandleLocalAttackContacted(int attack, Vector2 direction, Vector2 position)
+    {
+        if (IsSpawned)
+        {
+            AttackContactRpc((byte)attack, direction, position);
+        }
+    }
+
+    /// <summary>
+    /// Runs on every machine but the owner: plays the contact of the owner's attack and, on the host, resolves its hit
+    /// around <paramref name="attackerPosition"/>, where the owner stood, rather than around this lagging copy.
+    /// </summary>
+    [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
+    private void AttackContactRpc(byte attack, Vector2 direction, Vector2 attackerPosition)
+    {
+        if (weapon == null)
+        {
+            return;
+        }
+
+        weapon.PlayRemoteContact();
+        if (IsServer)
+        {
+            weapon.ResolveRemoteContact(attack, direction, attackerPosition);
+        }
+    }
+
+    /// <summary>
+    /// Tells the other machines the owner's attack ended early, so their copies stop it.
+    /// </summary>
+    private void HandleLocalAttackCancelled()
+    {
+        if (IsSpawned)
+        {
+            AttackCancelledRpc();
+        }
+    }
+
+    /// <summary>
+    /// Runs on every machine but the owner: stops the owner's attack on the copy.
+    /// </summary>
+    [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
+    private void AttackCancelledRpc()
+    {
+        if (weapon != null)
+        {
+            weapon.StopRemoteAttack();
         }
     }
 

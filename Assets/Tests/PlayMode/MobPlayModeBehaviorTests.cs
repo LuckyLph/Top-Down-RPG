@@ -255,7 +255,7 @@ public class MobPlayModeBehaviorTests
 
     /// <summary>
     /// The HUD shows the player's health text and fill and the equipped weapon icon, and updates after damage; a sword
-    /// attack still deals the weapon's damage to an adjacent mob.
+    /// attack deals the weapon's damage to an adjacent mob at contact, not before its windup is over.
     /// </summary>
     [UnityTest]
     public IEnumerator PlayerInTestlands_HudDisplaysWeaponIconAndHealthAndSlashDamageStillWorks()
@@ -306,20 +306,23 @@ public class MobPlayModeBehaviorTests
         Assert.That(healthFill.fillAmount, Is.EqualTo(expectedFillAfterDamage).Within(0.001f));
         Assert.That(healthFill.fillAmount, Is.LessThan(initialFillAmount));
 
-        Vector3 originalPlayerPosition = player.transform.position;
-        Vector3 originalMobPosition = mob.transform.position;
         int startingHealth = mobHealth.CurrentHealth;
         int expectedDamage = weaponController.CurrentWeapon != null ? weaponController.CurrentWeapon.Damage : 1;
+        float windup = weaponController.CurrentWeapon.Timeline.Windup;
 
-        player.transform.position = mob.transform.position + Vector3.left * 0.45f;
-        weaponController.TryAttack(Vector2.right);
-        yield return null;
+        playerController.Teleport(mob.transform.position + Vector3.left * 0.45f);
+        Assert.That(weaponController.TryAttack(Vector2.right), Is.True);
+        float started = Time.time;
+        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth), "Nothing lands as the attack starts.");
+        float deadline = Time.realtimeSinceStartup + 5f;
+        while (mobHealth.CurrentHealth == startingHealth)
+        {
+            Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The sword attack should land at contact.");
+            yield return null;
+        }
 
+        Assert.That(Time.time - started, Is.GreaterThanOrEqualTo(windup - 0.0001f), "The hit lands at contact, after the windup.");
         Assert.That(mobHealth.CurrentHealth, Is.EqualTo(startingHealth - expectedDamage));
-        Assert.That(Object.FindAnyObjectByType<SwordSlashAttack>(), Is.Not.Null);
-
-        player.transform.position = originalPlayerPosition;
-        mob.transform.position = originalMobPosition;
     }
 
     /// <summary>

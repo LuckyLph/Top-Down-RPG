@@ -74,7 +74,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<HitService>(Lifetime.Singleton);
         builder.Register<StatusVisualPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
         builder.Register<AbilityService>(Lifetime.Singleton);
-        builder.Register<SlashSpawner>(Lifetime.Singleton);
+        builder.Register<AttackService>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
 
         builder.RegisterEntryPoint<GameplayPlayers>().AsSelf();

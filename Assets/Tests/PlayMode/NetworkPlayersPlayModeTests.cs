@@ -1,14 +1,16 @@
 using System.Collections;
 using NUnit.Framework;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
 
 /// <summary>
 /// PlayMode tests for networked players between a host and an in-process client: spawning on readiness,
-/// owner-driven movement under host statuses and how copies animate it (a late joiner included), attacks, disconnects
-/// and late-arriving dead players.
+/// owner-driven movement under host statuses and how copies animate it (a late joiner included), attacks on their
+/// timeline (the copy's windup and contact, the host resolving the hit once around the owner, a cancelled windup),
+/// disconnects and late-arriving dead players.
 /// </summary>
 public class NetworkPlayersPlayModeTests
 {
@@ -115,12 +117,103 @@ public class NetworkPlayersPlayModeTests
         yield return null;
         client.Input.StopPressedThisFrame = false;
 
-        clientOwned.GetComponent<PlayerWeaponController>().TryAttack(Vector2.right);
-        yield return SceneBootTestHelper.WaitUntil(() => HasSlashOwnedBy(hostCopy.transform), "the client's attack to play on the host");
+        StatusEffects ownerStatuses = clientOwned.GetComponent<StatusEffects>();
+        yield return SceneBootTestHelper.WaitUntil(() => ownerStatuses.Controls == StatusControls.None, "the stun to wear off");
+        Assert.That(clientOwned.GetComponent<PlayerWeaponController>().TryAttack(Vector2.right), Is.True);
+        yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the client's attack to play on the host");
 
         client.Manager.Shutdown();
         yield return SceneBootTestHelper.WaitUntil(() => hostPlayers.Players.Count == 1, "the host to drop the disconnected client's player");
         Assert.That(hostLocal.Current, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// A client's attack plays on the host's copy: its windup from the start, held until the owner's contact arrives,
+    /// then its contact. The host resolves the hit exactly once, around where the owner stood (its copy is held five
+    /// units away, its network transform off, so a hit around the copy would miss). A windup the client cancels with a
+    /// move click stops on the copy, and nothing lands. Both machines equip the same slow sword so the windup can be
+    /// watched across the network.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsAttack_PlaysOnTheHostsCopy_AndTheHostResolvesItsHitOnceAroundTheOwner()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.gameObject.SetActive(false);
+        }
+
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerRegistry hostPlayers = gameplay.Resolve<PlayerRegistry>();
+        client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendReady();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostPlayers.Players.Count == 2 && client.Players.Players.Count == 2 && client.LocalPlayer.Current != null,
+            "both sides to see both players");
+        client.DisableColliders();
+
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        PlayerWeaponController ownerWeapon = clientOwned.GetComponent<PlayerWeaponController>();
+        PlayerWeaponController copyWeapon = hostCopy.GetComponent<PlayerWeaponController>();
+        PlayerWeapon slowSword = SlowSword(ownerWeapon.CurrentWeapon);
+        ownerWeapon.Equip(slowSword);
+        copyWeapon.Equip(slowSword);
+        CharacterAnimator copyAnimation = hostCopy.GetComponentInChildren<CharacterVisuals>().Animator;
+        int contactFrame = hostCopy.GetComponentInChildren<CharacterVisuals>().AnimationSet.Find(slowSword.AttackClip).ContactFrame;
+        yield return new WaitForSeconds(0.3f);
+
+        Vector2 owner = clientOwned.transform.position;
+        Health dummy = CreateDummy(owner + new Vector2(0.9f, 0.3f));
+        int hits = 0;
+        dummy.Damaged += _ => hits++;
+        NetworkTransform copyTransform = hostCopy.GetComponent<NetworkTransform>();
+        copyTransform.enabled = false;
+        Vector2 heldAway = owner + Vector2.down * 5f;
+        hostCopy.GetComponent<Rigidbody2D>().position = heldAway;
+        hostCopy.transform.position = heldAway;
+        try
+        {
+            Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
+            yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the client's attack to start on the host's copy");
+            Assert.That(copyAnimation.ActionPhase, Is.EqualTo(AttackPhase.Windup), "The copy plays the windup.");
+            Assert.That(hits, Is.Zero, "Nothing lands before contact.");
+            yield return SceneBootTestHelper.WaitUntil(() => hits > 0, "the host to resolve the client's hit");
+            Assert.That(Vector2.Distance(hostCopy.transform.position, heldAway), Is.LessThan(0.01f), "The host's copy stayed away from the dummy.");
+            yield return SceneBootTestHelper.WaitUntil(
+                () => copyAnimation.ActionPhase == AttackPhase.Contact && copyAnimation.Frame == contactFrame,
+                "the copy to play the contact once it arrives");
+            yield return new WaitForSeconds(0.5f);
+            Assert.That(hits, Is.EqualTo(1), "The host resolves the hit exactly once.");
+            Assert.That(dummy.CurrentHealth, Is.EqualTo(dummy.MaxHealth - slowSword.Damage));
+            yield return SceneBootTestHelper.WaitUntil(() => !copyAnimation.IsActing && !ownerWeapon.IsAttacking, "the attack to end on both machines");
+            yield return new WaitForSeconds(slowSword.AttackCooldown);
+
+            int cancelled = 0;
+            ownerWeapon.AttackCancelled += () => cancelled++;
+            Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
+            yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the second attack to start on the host's copy");
+            client.Input.PointAt(owner + Vector2.left * 3f);
+            client.Input.MovePressedThisFrame = true;
+            yield return null;
+            client.Input.MovePressedThisFrame = false;
+            Assert.That(cancelled, Is.EqualTo(1), "The move click cancels the client's windup.");
+            yield return SceneBootTestHelper.WaitUntil(() => !copyAnimation.IsActing, "the cancel to stop the host's copy");
+            yield return new WaitForSeconds(slowSword.Timeline.Duration);
+            Assert.That(hits, Is.EqualTo(1), "A cancelled windup lands nothing.");
+        }
+        finally
+        {
+            copyTransform.enabled = true;
+            Object.Destroy(dummy.gameObject);
+            Object.Destroy(slowSword);
+        }
     }
 
     /// <summary>
@@ -241,19 +334,41 @@ public class NetworkPlayersPlayModeTests
     }
 
     /// <summary>
-    /// Whether a sword slash rooted on <paramref name="owner"/> exists in the scene.
+    /// A unit on the <c>Enemy</c> layer with a small collider, health and a receiver, standing at
+    /// <paramref name="position"/> in the shared scene; only the host's attack service can hurt it.
     /// </summary>
-    private static bool HasSlashOwnedBy(Transform owner)
+    private static Health CreateDummy(Vector2 position)
     {
-        foreach (SwordSlashAttack slash in Object.FindObjectsByType<SwordSlashAttack>())
-        {
-            if (slash.OwnerRoot == owner)
-            {
-                return true;
-            }
-        }
+        GameObject dummy = new("AttackDummy") { layer = LayerMask.NameToLayer("Enemy") };
+        dummy.transform.position = position;
+        dummy.AddComponent<BoxCollider2D>().size = new Vector2(0.3f, 0.3f);
+        dummy.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        Health health = dummy.AddComponent<Health>();
+        dummy.AddComponent<DamageReceiver>();
+        Physics2D.SyncTransforms();
+        return health;
+    }
 
-        return false;
+    /// <summary>
+    /// A copy of the sword's hit area dealing 2 damage, so a dummy survives several hits, with a windup slow enough to
+    /// watch on another machine (0.6 s, then 0.1 s of contact and 0.2 s of recovery, a 1 s cooldown), for the test to
+    /// destroy.
+    /// </summary>
+    private static PlayerWeapon SlowSword(PlayerWeapon sword)
+    {
+        Vector2[] offsets = { sword.HitOffset(Vector2.down), sword.HitOffset(Vector2.up), sword.HitOffset(Vector2.left), sword.HitOffset(Vector2.right) };
+        return PlayerWeapon.Create(
+            "Slow Sword",
+            2,
+            1f,
+            sword.HitDistance,
+            offsets,
+            range: sword.AttackRange,
+            size: sword.HitSize,
+            windup: 0.6f,
+            contact: 0.1f,
+            recovery: 0.2f,
+            attackClipName: sword.AttackClip);
     }
 
     /// <summary>

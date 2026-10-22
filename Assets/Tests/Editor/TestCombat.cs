@@ -61,4 +61,13 @@ internal static class TestCombat
         DamageService damageService = CreateDamageService(authority, combatEvents);
         return new HitService(damageService, CreateStatusService(damageService, authority, combatEvents));
     }
+
+    /// <summary>
+    /// Creates an attack service over its own hit service under <paramref name="authority"/>, sharing
+    /// <paramref name="combatEvents"/> or fresh events.
+    /// </summary>
+    public static AttackService CreateAttackService(IGameAuthority authority, CombatEvents combatEvents = null)
+    {
+        return new AttackService(authority, CreateHitService(authority, combatEvents), Settings);
+    }
 }

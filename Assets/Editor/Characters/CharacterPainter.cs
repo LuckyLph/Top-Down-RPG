@@ -291,8 +291,8 @@ public sealed class CharacterPainter
     }
 
     /// <summary>
-    /// Draws the bow in the left hand: its limbs curling back further as it is drawn (their tips flicking forward a
-    /// little), the grip, the string from the tips to the nock (pulled to the right hand by the draw, snapping past
+    /// Draws the bow in the left hand: its limbs tapering from the grip to the tips and curling back further as it is
+    /// drawn (their tips flicking forward a little), the grip, the string from the tips to the nock (pulled to the right hand by the draw, snapping past
     /// rest by the kick), and the nocked arrow with its head and fletching. Returns the grip, the aim and the bow's
     /// axis.
     /// </summary>
@@ -318,7 +318,7 @@ public sealed class CharacterPainter
             }
             else
             {
-                float radius = 0.85f - 0.4f * Mathf.Abs(-1f + 2f * (i - 0.5f) / segments);
+                float radius = Mathf.Lerp(weapon.LimbRadius.x, weapon.LimbRadius.y, Mathf.Abs(-1f + 2f * (i - 0.5f) / segments));
                 canvas.Capsule(World(previous), World(point), radius, radius, CharacterMaterial.Wood, CharacterPart.Bow, minRadius: 0.62f);
             }
 

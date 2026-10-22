@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// The player's order state machine: Idle, Move, Attack, AttackMove, CastWhenInRange and Casting, plus at most one
 /// paused order while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and
-/// the player's state into motor requests, a facing direction and swing requests, and starts casts through the
-/// <see cref="IAbilityCaster"/>. Crowd control from statuses arrives in the context: a stun clears every order and
+/// the player's state into motor requests, a facing direction and swing requests, reports the order the command gave
+/// (which the weapon's cancel rules read), and starts casts through the <see cref="IAbilityCaster"/>. Crowd control from statuses arrives in the context: a stun clears every order and
 /// ignores commands, a silence ends a running cast and fails casts, a root fails casts that move the caster. No
 /// engine lookups: targets are queried through <see cref="IUnitQueries"/>.
 /// </summary>
@@ -41,6 +41,7 @@ public sealed class PlayerOrders
     private bool hasAim;
     private Vector2 aimDirection;
     private bool swing;
+    private PlayerOrderIssue issued;
 
     /// <summary>
     /// Creates an idle state machine timed by <paramref name="settings"/>, querying targets through
@@ -71,6 +72,7 @@ public sealed class PlayerOrders
         motorRequest = PlayerMotorRequest.None;
         hasAim = false;
         swing = false;
+        issued = PlayerOrderIssue.None;
 
         if (ApplyControls(command, context))
         {
@@ -110,7 +112,7 @@ public sealed class PlayerOrders
 
         RunCurrent(context);
         fresh = false;
-        return new PlayerOrderOutput(motorRequest, destination, hasAim, hasAim ? aimDirection : Vector2.zero, swing);
+        return new PlayerOrderOutput(motorRequest, destination, hasAim, hasAim ? aimDirection : Vector2.zero, swing, issued);
     }
 
     /// <summary>
@@ -219,6 +221,7 @@ public sealed class PlayerOrders
     /// </summary>
     private void Stop()
     {
+        issued = PlayerOrderIssue.Move;
         DropBuffered(CastOutcome.Cancelled);
         if (current.Kind == PlayerOrderKind.Casting)
         {
@@ -249,6 +252,7 @@ public sealed class PlayerOrders
             DropBuffered(CastOutcome.Cancelled);
         }
 
+        issued = order.Kind == PlayerOrderKind.Move ? PlayerOrderIssue.Move : PlayerOrderIssue.Other;
         if (casting)
         {
             paused = order;
@@ -323,7 +327,10 @@ public sealed class PlayerOrders
             return;
         }
 
-        Begin(slot, ability, aim, context, current);
+        if (Begin(slot, ability, aim, context, current))
+        {
+            issued = PlayerOrderIssue.Other;
+        }
     }
 
     /// <summary>

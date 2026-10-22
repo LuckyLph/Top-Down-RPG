@@ -22,13 +22,13 @@ MonoBehaviour:
     headTurn: 0
     leftFoot: {x: -2.4, y: 2.4, z: 1.5}
     rightFoot: {x: 2.8, y: -2.2, z: 1.5}
-    leftHand: {x: -4.6, y: 5, z: 16.5}
-    rightHand: {x: -0.6, y: 3.4, z: 16.4}
+    leftHand: {x: -3.6, y: 7, z: 20}
+    rightHand: {x: -1, y: 4, z: 20}
     leftPole: {x: -0.6, y: -0.4, z: -0.7}
     rightPole: {x: 0.6, y: -1, z: -0.2}
     blade: {x: 0, y: 1, z: 0}
-    bowUp: {x: -0.1, y: 0.5, z: 0.86}
-    bowAim: {x: 0, y: 0.86, z: -0.5}
+    bowUp: {x: 0.25, y: 0.1, z: 0.96}
+    bowAim: {x: 0, y: 1, z: 0}
     draw: 0
     arrow: 1
     kick: 0
@@ -136,13 +136,13 @@ MonoBehaviour:
     headTurn: 0
     leftFoot: {x: -2.4, y: 2.4, z: 1.5}
     rightFoot: {x: 2.8, y: -2.2, z: 1.5}
-    leftHand: {x: -4.6, y: 5, z: 16.5}
-    rightHand: {x: -0.6, y: 3.4, z: 16.4}
+    leftHand: {x: -3.6, y: 7, z: 20}
+    rightHand: {x: -1, y: 4, z: 20}
     leftPole: {x: -0.6, y: -0.4, z: -0.7}
     rightPole: {x: 0.6, y: -1, z: -0.2}
     blade: {x: 0, y: 1, z: 0}
-    bowUp: {x: -0.1, y: 0.5, z: 0.86}
-    bowAim: {x: 0, y: 0.86, z: -0.5}
+    bowUp: {x: 0.25, y: 0.1, z: 0.96}
+    bowAim: {x: 0, y: 1, z: 0}
     draw: 0
     arrow: 1
     kick: 0

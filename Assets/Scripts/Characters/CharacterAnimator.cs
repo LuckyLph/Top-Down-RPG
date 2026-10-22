@@ -6,7 +6,10 @@ using UnityEngine;
 /// returns the sprite to show. While an action plays (an attack on its timeline, <see cref="PlayAction"/>), the action
 /// layer shows it in the attack's direction and the locomotion layer waits where it was; otherwise the facing snaps to
 /// one of the eight directions with a hysteresis margin and the locomotion layer advances from the speed, resuming
-/// where it was when an action ends. Allocates nothing per update, so EditMode tests drive it on a manual clock.
+/// where it was when an action ends. A hold (<see cref="Hold"/>, a hit-stop) keeps the sprite of its first update on
+/// screen for a while: the action keeps its time underneath and the locomotion layer stands still, so once the hold
+/// ends the action shows the frame for the real time, and the stride goes on where it stopped. Allocates nothing per
+/// update, so EditMode tests drive it on a manual clock.
 /// </summary>
 public sealed class CharacterAnimator
 {
@@ -17,6 +20,8 @@ public sealed class CharacterAnimator
     private float lastTime;
     private bool started;
     private bool showedAction;
+    private bool holdPending;
+    private float holdUntil;
 
     /// <summary>
     /// Builds an animator of <paramref name="set"/>'s clips, picked and paced by <paramref name="settings"/>, on
@@ -38,6 +43,7 @@ public sealed class CharacterAnimator
     public int Frame => action.IsPlaying ? action.Frame : locomotion.Frame;
     public CharacterAnimationClip Clip => action.IsPlaying ? action.Clip : locomotion.Clip;
     public Sprite Sprite { get; private set; }
+    public bool IsHolding { get; private set; }
 
     /// <summary>
     /// Starts <paramref name="clip"/>, an attack's clip, now, toward <paramref name="direction"/> on
@@ -46,6 +52,7 @@ public sealed class CharacterAnimator
     /// </summary>
     public void PlayAction(CharacterAnimationClip clip, Vector2 direction, in AttackTimeline timeline, bool holdUntilContact)
     {
+        IsHolding = false;
         action.Play(clip, CharacterDirections.Nearest(direction), timeline, clock.Time, holdUntilContact);
     }
 
@@ -62,14 +69,56 @@ public sealed class CharacterAnimator
     /// </summary>
     public void StopAction()
     {
+        IsHolding = false;
         action.Stop();
+    }
+
+    /// <summary>
+    /// Holds the sprite the next update shows on screen for <paramref name="seconds"/> on the clock (a hit-stop),
+    /// longer when a hold already runs that long. The action keeps its time underneath: a hold ends early when the
+    /// action reaches its contact, so the contact frame still shows on the update the hit lands, and playing or stopping
+    /// an action ends it. Visual only.
+    /// </summary>
+    public void Hold(float seconds)
+    {
+        if (seconds <= 0f)
+        {
+            return;
+        }
+
+        float until = clock.Time + seconds;
+        if (IsHolding)
+        {
+            holdUntil = Mathf.Max(holdUntil, until);
+            return;
+        }
+
+        IsHolding = true;
+        holdPending = true;
+        holdUntil = until;
+    }
+
+    /// <summary>
+    /// Holds as <see cref="Hold"/> does, but only when the action shows its contact on the next update: an attacker
+    /// whose hit just landed holds its contact frame. Returns whether it holds.
+    /// </summary>
+    public bool HoldContact(float seconds)
+    {
+        if (action.PhaseAt(clock.Time) != AttackPhase.Contact)
+        {
+            return false;
+        }
+
+        Hold(seconds);
+        return true;
     }
 
     /// <summary>
     /// Advances by the clock's time since the last update for a character moving at <paramref name="velocity"/>
     /// (units per second) and facing <paramref name="facing"/>, and returns the sprite to show (null without clips).
     /// The first update snaps to the nearest direction and does not advance. While an action shows the locomotion layer
-    /// stands still, and the first update after it advances it by nothing.
+    /// stands still, and the first update after it advances it by nothing. While a hold runs, after its first update,
+    /// the sprite and direction stay and the locomotion layer stands still.
     /// </summary>
     public Sprite Update(Vector2 velocity, Vector2 facing)
     {
@@ -77,7 +126,23 @@ public sealed class CharacterAnimator
         float deltaTime = started ? Mathf.Max(0f, now - lastTime) : 0f;
         lastTime = now;
         bool resuming = showedAction;
+        AttackPhase before = action.IsPlaying ? action.Phase : AttackPhase.None;
         showedAction = action.Advance(now);
+        if (IsHolding)
+        {
+            bool reachedContact = !holdPending && showedAction && before == AttackPhase.Windup && action.Phase == AttackPhase.Contact;
+            if (now >= holdUntil || reachedContact)
+            {
+                IsHolding = false;
+            }
+            else if (!holdPending && Sprite != null)
+            {
+                return Sprite;
+            }
+
+            holdPending = false;
+        }
+
         if (showedAction)
         {
             started = true;

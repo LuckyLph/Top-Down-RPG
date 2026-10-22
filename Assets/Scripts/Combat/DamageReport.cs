@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// A hit that landed on a unit, as published on <see cref="CombatEvents.DamageApplied"/>: the HP actually removed
-/// (0 for an immune hit), its type and flags, the source (null when replicated from the host) and where its popup
-/// appears.
+/// (0 for an immune hit), its type and flags, the source (on a client, its copy of the source unit the host named, or
+/// null for an immune hit or a source it does not know) and where its popup appears.
 /// </summary>
 public readonly struct DamageReport
 {

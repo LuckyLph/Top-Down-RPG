@@ -110,6 +110,29 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
+    /// Holds the sprite on screen for <paramref name="seconds"/> of game time, a hit-stop (see
+    /// <see cref="CharacterAnimator.Hold"/>).
+    /// </summary>
+    public void Hold(float seconds)
+    {
+        CharacterAnimator current = EnsureAnimator();
+        if (current != null)
+        {
+            current.Hold(seconds);
+        }
+    }
+
+    /// <summary>
+    /// Holds the attack's contact frame for <paramref name="seconds"/> when it shows on the next update; returns
+    /// whether it holds (see <see cref="CharacterAnimator.HoldContact"/>).
+    /// </summary>
+    public bool HoldContact(float seconds)
+    {
+        CharacterAnimator current = EnsureAnimator();
+        return current != null && current.HoldContact(seconds);
+    }
+
+    /// <summary>
     /// Advances the animator and puts its sprite on the renderer when it changed.
     /// </summary>
     internal void Tick()

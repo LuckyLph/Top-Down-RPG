@@ -3,24 +3,26 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// A mob's death reaction: on the first death it turns off the mob's physics and spawns its death animation, then
-/// the authority despawns the network object (or destroys a non-networked mob) while other machines hide the body
-/// until the despawn reaches them.
+/// A mob's death reaction: on the first death it turns off the mob's physics and plays its death effect where it
+/// stood, from the pooled effects, then the authority despawns the network object (or destroys a non-networked mob)
+/// while other machines hide the body until the despawn reaches them.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
 public class DestroyMobOnDeath : MonoBehaviour
 {
-    [SerializeField] private MobDeathAnimation deathAnimationTemplate;
-    [SerializeField] private SpriteRenderer sourceSpriteRenderer;
+    [SerializeField, Tooltip("The death effect played where the mob stood, its feet on the mob's position.")]
+    private EffectPlayer deathEffect;
 
     private Health health;
-    private EffectSpawner effectSpawner;
+    private EffectPool effects;
     private IGameAuthority authority;
     private bool handledDeath;
 
+    public EffectPlayer DeathEffect => deathEffect;
+
     /// <summary>
-    /// Finds the health, death animation template and body sprite renderer when unassigned.
+    /// Finds the health.
     /// </summary>
     private void Awake()
     {
@@ -28,20 +30,12 @@ public class DestroyMobOnDeath : MonoBehaviour
     }
 
     /// <summary>
-    /// Fills in the health, death animation template and body sprite renderer when unassigned.
-    /// </summary>
-    private void OnValidate()
-    {
-        ResolveReferences();
-    }
-
-    /// <summary>
-    /// Injects the spawner the death animation is played through and the authority that decides who removes the mob.
+    /// Injects the pool the death effect plays from and the authority that decides who removes the mob.
     /// </summary>
     [Inject]
-    public void Construct(EffectSpawner spawner, IGameAuthority gameAuthority)
+    public void Construct(EffectPool effectPool, IGameAuthority gameAuthority)
     {
-        effectSpawner = spawner;
+        effects = effectPool;
         authority = gameAuthority;
     }
 
@@ -70,8 +64,8 @@ public class DestroyMobOnDeath : MonoBehaviour
     }
 
     /// <summary>
-    /// Runs once per mob: disables its physics and spawns the death animation; then a non-authoritative machine
-    /// hides the body, while the authority despawns the spawned network object or destroys the game object.
+    /// Runs once per mob: disables its physics and plays the death effect; then a non-authoritative machine hides the
+    /// body, while the authority despawns the spawned network object or destroys the game object.
     /// </summary>
     private void HandleDied(Health _)
     {
@@ -82,7 +76,7 @@ public class DestroyMobOnDeath : MonoBehaviour
 
         handledDeath = true;
         DeathPhysics.Disable(gameObject);
-        SpawnDeathAnimation();
+        PlayDeathEffect();
 
         if (authority != null && !authority.IsAuthoritative)
         {
@@ -100,7 +94,7 @@ public class DestroyMobOnDeath : MonoBehaviour
     }
 
     /// <summary>
-    /// Turns off every renderer under the mob so a client shows only the death animation until the host's despawn
+    /// Turns off every renderer under the mob so a client shows only the death effect until the host's despawn
     /// arrives.
     /// </summary>
     private void HideUntilDespawned()
@@ -112,65 +106,34 @@ public class DestroyMobOnDeath : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawns a copy of the death animation template through the <see cref="EffectSpawner"/>, initialised from the
-    /// body sprite. Skipped without a template, and with a warning when no spawner was injected.
+    /// Plays the death effect from the pool with its feet where the mob stands, sorted there. Skipped without an
+    /// effect, and with a warning when no pool was injected.
     /// </summary>
-    private void SpawnDeathAnimation()
+    private void PlayDeathEffect()
     {
-        if (deathAnimationTemplate == null)
+        if (deathEffect == null)
         {
             return;
         }
 
-        if (effectSpawner == null)
+        if (effects == null)
         {
-            Debug.LogWarning($"{name} was not injected with an {nameof(EffectSpawner)}; skipping its death animation.", this);
+            Debug.LogWarning($"{name} was not injected with an {nameof(EffectPool)}; skipping its death effect.", this);
             return;
         }
 
-        string instanceName = $"{gameObject.name} Death Animation";
-        effectSpawner.Spawn(deathAnimationTemplate, instance =>
-        {
-            instance.name = instanceName;
-            instance.InitializeFrom(sourceSpriteRenderer);
-        });
+        Vector2 feet = transform.position;
+        effects.Play(deathEffect, 0, 0, feet, feet.y);
     }
 
     /// <summary>
-    /// Looks up the sibling <see cref="Health"/>, the child <see cref="MobDeathAnimation"/> template and the first
-    /// child sprite renderer outside that template, each only when not already set.
+    /// Looks up the sibling <see cref="Health"/> when not already set.
     /// </summary>
     private void ResolveReferences()
     {
         if (health == null)
         {
             health = GetComponent<Health>();
-        }
-
-        if (deathAnimationTemplate == null)
-        {
-            deathAnimationTemplate = GetComponentInChildren<MobDeathAnimation>(true);
-        }
-
-        if (sourceSpriteRenderer == null)
-        {
-            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                SpriteRenderer candidate = renderers[i];
-                if (candidate == null)
-                {
-                    continue;
-                }
-
-                if (deathAnimationTemplate != null && candidate.transform.IsChildOf(deathAnimationTemplate.transform))
-                {
-                    continue;
-                }
-
-                sourceSpriteRenderer = candidate;
-                break;
-            }
         }
     }
 }

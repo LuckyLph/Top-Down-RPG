@@ -157,11 +157,26 @@ public class NetworkMobsPlayModeTests
             "the host to respawn the client's player");
         Assert.That(client.LocalPlayer.Current.Controller.enabled, Is.True);
 
-        int deathAnimationsBefore = Object.FindObjectsByType<MobDeathAnimation>().Length;
-        hostDamage.ApplyDamage(hostMob.GetComponent<DamageReceiver>(), hostMobHealth.CurrentHealth, DamageType.True);
-        yield return SceneBootTestHelper.WaitUntil(() => clientMob == null, "the client's mob copy to be despawned by the host");
-        Assert.That(hostMob == null, Is.True);
-        Assert.That(Object.FindObjectsByType<MobDeathAnimation>().Length, Is.GreaterThanOrEqualTo(deathAnimationsBefore + 2), "Both the host and the client should play the death animation.");
+        EffectSprites deathSprites = hostMob.GetComponent<DestroyMobOnDeath>().DeathEffect.Sprites;
+        int deathEffects = 0;
+        System.Action<EffectPlayer> onHostEffect = effect => deathEffects += effect.Sprites == deathSprites ? 1 : 0;
+        System.Action<EffectPlayer> onClientEffect = effect => deathEffects += effect.Sprites == deathSprites ? 1 : 0;
+        EffectPool hostEffects = gameplay.Resolve<EffectPool>();
+        EffectPool clientEffects = client.Resolve<EffectPool>();
+        hostEffects.Played += onHostEffect;
+        clientEffects.Played += onClientEffect;
+        try
+        {
+            hostDamage.ApplyDamage(hostMob.GetComponent<DamageReceiver>(), hostMobHealth.CurrentHealth, DamageType.True);
+            yield return SceneBootTestHelper.WaitUntil(() => clientMob == null, "the client's mob copy to be despawned by the host");
+            Assert.That(hostMob == null, Is.True);
+            Assert.That(deathEffects, Is.EqualTo(2), "Both the host and the client should play the death effect.");
+        }
+        finally
+        {
+            hostEffects.Played -= onHostEffect;
+            clientEffects.Played -= onClientEffect;
+        }
     }
 
     /// <summary>

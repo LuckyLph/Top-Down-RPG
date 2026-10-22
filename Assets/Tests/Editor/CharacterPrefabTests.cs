@@ -48,9 +48,9 @@ public class CharacterPrefabTests
     /// <summary>
     /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the rogue's set through
     /// <see cref="CharacterVisuals"/> (which its motor feeds) with a sprite pivoted on the feet; nothing in the prefab
-    /// is a Mecanim animator; its sorter sorts by its own height, the feet; the feet collider on the root starts
-    /// within a pixel of the feet and lies within the sprite's width; and neither the player nor the arrow it shoots is
-    /// scaled, so their pixels are the terrain's.
+    /// is a Mecanim animator; its sorter sorts by the root, the feet, so a hit's nudge of the sprite never re-sorts it;
+    /// the feet collider on the root starts within a pixel of the feet and lies within the sprite's width; and neither
+    /// the player nor the arrow it shoots is scaled, so their pixels are the terrain's.
     /// </summary>
     [Test]
     public void ThePlayer_DrawsTheRogueFromItsFeet()
@@ -83,7 +83,7 @@ public class CharacterPrefabTests
         Assert.That(sprite.pivot, Is.EqualTo(new Vector2(32f, 12f)));
 
         SerializedObject sorter = new(visuals.GetComponent<YPositionSorter>());
-        Assert.That(sorter.FindProperty("sortingPoint").objectReferenceValue, Is.Null);
+        Assert.That(sorter.FindProperty("sortingPoint").objectReferenceValue, Is.SameAs(player.transform));
         Assert.That(sorter.FindProperty("sortingOrderOffset").intValue, Is.Zero);
 
         BoxCollider2D feet = player.GetComponent<BoxCollider2D>();

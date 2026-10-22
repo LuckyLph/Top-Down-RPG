@@ -39,6 +39,7 @@ public sealed class InProcessClient : IDisposable
     public PlayerRegistry Players { get; }
     public LocalPlayerTracker LocalPlayer { get; }
     public TestInput Input { get; }
+    public RecordingCameraKick CameraKick { get; private set; }
     public List<ChunkId> Released { get; } = new();
     public Dictionary<NetworkObject, ChunkId> HomeChunks { get; } = new();
 
@@ -68,14 +69,16 @@ public sealed class InProcessClient : IDisposable
         TestInput input = new();
         PlayerRegistry players = new();
         LocalPlayerTracker localPlayer = new();
-        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameScenes, new ClientStatus());
+        RecordingCameraKick cameraKick = new();
+        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameScenes, new ClientStatus(), gameplay.Resolve<HitFeedbackSettings>(), cameraKick);
+        container.Resolve<HitFeedbackPresenter>().Start();
 
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
         GameObject clientObject = manager.gameObject;
         clientObject.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port);
         manager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version, playerId ?? Guid.NewGuid().ToString("N"));
         manager.PrefabHandler.AddHandler(playerPrefab, new PersistentCopyHandler(new InjectingNetworkPrefabHandler(playerPrefab, container)));
-        InProcessClient client = new(session, manager, container, players, localPlayer, input);
+        InProcessClient client = new(session, manager, container, players, localPlayer, input) { CameraKick = cameraKick };
         HashSet<NetworkObject> chunkPrefabs = new();
         foreach (MobSpawnPoint spawnPoint in Object.FindObjectsByType<MobSpawnPoint>())
         {
@@ -115,8 +118,10 @@ public sealed class InProcessClient : IDisposable
     /// A client-side container like a real client's Gameplay scope offers player and mob copies: the registry, the
     /// local player, scripted input, combat (projectiles, which nothing ticks here), statuses and abilities, the
     /// players' worlds and trips (with
-    /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, and an empty
-    /// world navigation, so its players walk in straight lines.
+    /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
+    /// world navigation, so its players walk in straight lines, pooled effects and, given
+    /// <paramref name="hitFeedbackSettings"/>, the hit feedback presenter (not started) kicking
+    /// <paramref name="cameraKick"/>.
     /// </summary>
     public static IObjectResolver BuildContainer(
         PlayerRegistry players,
@@ -126,7 +131,9 @@ public sealed class InProcessClient : IDisposable
         PlayerControlSettings controlSettings,
         CombatSettings combatSettings,
         GameScenes gameScenes,
-        ISessionStatus sessionStatus)
+        ISessionStatus sessionStatus,
+        HitFeedbackSettings hitFeedbackSettings = null,
+        ICameraKick cameraKick = null)
     {
         ContainerBuilder builder = new();
         builder.RegisterInstance(players).As<IPlayerRegistry>().AsSelf();
@@ -160,7 +167,14 @@ public sealed class InProcessClient : IDisposable
         builder.Register<AttackService>(Lifetime.Singleton);
         builder.Register<ProjectileVisualPool>(Lifetime.Singleton).WithParameter(default(Scene));
         builder.Register<ProjectileService>(Lifetime.Singleton);
-        builder.Register<EffectSpawner>(Lifetime.Singleton);
+        builder.Register<EffectPool>(Lifetime.Singleton).WithParameter(default(Scene));
+        if (hitFeedbackSettings != null)
+        {
+            builder.RegisterInstance(hitFeedbackSettings);
+            builder.RegisterInstance(cameraKick ?? new RecordingCameraKick());
+            builder.Register<HitFeedbackPresenter>(Lifetime.Singleton);
+        }
+
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
         return builder.Build();

@@ -497,7 +497,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 760a1e629d957b24daceb49f362b62b6, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -780,6 +780,7 @@ GameObject:
   - component: {fileID: 5765872902589839087}
   - component: {fileID: 815592576249426901}
   - component: {fileID: 1483303135460506918}
+  - component: {fileID: 579154297464478171}
   m_Layer: 10
   m_Name: Weasel
   m_TagString: Untagged
@@ -1022,8 +1023,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7fa9a62dfcab51b4b9eac1805c839710, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::DestroyMobOnDeath
-  deathAnimationTemplate: {fileID: 158123815, guid: 696ecf09b29f45f6b5c4b923f3386ba3, type: 3}
-  sourceSpriteRenderer: {fileID: 3812718684653368127}
+  deathEffect: {fileID: 3270815177430100726, guid: 6c8dfd57cedad0d48a4ef5db0249973e, type: 3}
 --- !u!114 &2234016611810678200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1161,3 +1161,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::StatusVisuals
   offset: {x: 0, y: 0, z: 0}
+--- !u!114 &579154297464478171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8304804741037770803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 328d9f7379aca6843aacfa1b393acd8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::HitFeedback
+  body: {fileID: 3812718684653368127}
+  visuals: {fileID: 1303857918171226197}
+  characterVisuals: {fileID: 0}
+  bodyCollider: {fileID: 7645337321817616343}
+  impactHeight: 0.72

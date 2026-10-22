@@ -60,7 +60,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: fa4123329a469f64683f3f95d02c002c, type: 2}
+  - {fileID: 2100000, guid: 760a1e629d957b24daceb49f362b62b6, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -109,7 +109,7 @@ MonoBehaviour:
   includeChildRenderers: 1
   sortingOrderMultiplier: 100
   sortingOrderOffset: 0
-  sortingPoint: {fileID: 0}
+  sortingPoint: {fileID: 1265116254533615008}
   useSortingReferenceY: 0
   sortingReferenceY: 0
 --- !u!114 &4451734619522619835
@@ -152,6 +152,7 @@ GameObject:
   - component: {fileID: 67881486438069074}
   - component: {fileID: 1096586978713402061}
   - component: {fileID: 797424749458075856}
+  - component: {fileID: 7368982944682024960}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -501,3 +502,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerWorldSync
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &7368982944682024960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 328d9f7379aca6843aacfa1b393acd8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::HitFeedback
+  body: {fileID: 3567725046483388587}
+  visuals: {fileID: 4281714967186475612}
+  characterVisuals: {fileID: 4451734619522619835}
+  bodyCollider: {fileID: 8749192272689423348}
+  impactHeight: 0.7

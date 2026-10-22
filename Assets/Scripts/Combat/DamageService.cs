@@ -47,16 +47,17 @@ public sealed class DamageService
     }
 
     /// <summary>
-    /// Applies and publishes a hit the host already resolved, regardless of authority. Used by clients.
+    /// Applies and publishes a hit the host already resolved, regardless of authority, with this machine's copy of its
+    /// <paramref name="source"/> (null when the host named none or this machine does not know it). Used by clients.
     /// </summary>
-    public DamageResult ApplyReplicatedHit(DamageReceiver target, int amount, DamageType type, DamageFlags flags)
+    public DamageResult ApplyReplicatedHit(DamageReceiver target, int amount, DamageType type, DamageFlags flags, GameObject source = null)
     {
         if (target == null || target.Health == null)
         {
             return default;
         }
 
-        return ApplyAndPublish(target, target.Health, new DamageResult(type, amount, Mathf.Max(0, amount), flags), null);
+        return ApplyAndPublish(target, target.Health, new DamageResult(type, amount, Mathf.Max(0, amount), flags), source);
     }
 
     /// <summary>

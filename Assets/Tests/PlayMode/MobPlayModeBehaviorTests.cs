@@ -220,8 +220,8 @@ public class MobPlayModeBehaviorTests
     }
 
     /// <summary>
-    /// Lethal damage destroys the mob within a frame and spawns a death animation object, sorted where the mob stood,
-    /// that removes itself after playback.
+    /// Lethal damage destroys the mob within a frame and plays its pooled death effect where the mob stood, unscaled and
+    /// sorted by its feet, which goes back to the pool after playback.
     /// </summary>
     [UnityTest]
     public IEnumerator MobInTestlands_DeathSpawnsAnimationAndDestroysMob()
@@ -238,19 +238,38 @@ public class MobPlayModeBehaviorTests
         Assert.That(health, Is.Not.Null);
 
         DamageService damageService = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<DamageService>();
-        float feetY = mob.transform.position.y;
+        EffectSprites deathSprites = mob.GetComponent<DestroyMobOnDeath>().DeathEffect.Sprites;
+        Vector2 feet = mob.transform.position;
         damageService.ApplyDamage(receiver, health.CurrentHealth);
+        EffectPlayer deathEffect = FindPlaying(deathSprites);
         yield return null;
 
         Assert.That(health.IsDead, Is.True);
         Assert.That(mob == null, Is.True, "Mob root should be destroyed after death.");
+        Assert.That(deathEffect, Is.Not.Null, "The death effect should play when the mob dies.");
+        Assert.That(Vector2.Distance(deathEffect.transform.position, feet), Is.LessThan(1e-3f), "The death effect stands where the mob stood.");
+        Assert.That(deathEffect.transform.lossyScale, Is.EqualTo(Vector3.one), "The death effect is drawn unscaled.");
+        Assert.That(deathEffect.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(feet.y).Within(1e-3f), "The death effect sorts where the mob stood.");
 
-        MobDeathAnimation deathAnimation = Object.FindAnyObjectByType<MobDeathAnimation>();
-        Assert.That(deathAnimation, Is.Not.Null, "A death animation object should be spawned when the mob dies.");
-        Assert.That(deathAnimation.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(feetY).Within(1e-3f), "The death animation sorts where the mob stood.");
+        yield return new WaitForSeconds(deathSprites.Duration + 0.5f);
+        Assert.That(deathEffect.IsPlaying, Is.False, "The death effect ends after playback and goes back to its pool.");
+        Assert.That(deathEffect.GetComponent<SpriteRenderer>().enabled, Is.False, "A pooled effect is hidden.");
+    }
 
-        yield return new WaitForSeconds(1.5f);
-        Assert.That(Object.FindAnyObjectByType<MobDeathAnimation>(), Is.Null, "Death animation object should clean itself up after playback.");
+    /// <summary>
+    /// The effect playing <paramref name="sprites"/> now, or null.
+    /// </summary>
+    private static EffectPlayer FindPlaying(EffectSprites sprites)
+    {
+        foreach (EffectPlayer effect in Object.FindObjectsByType<EffectPlayer>())
+        {
+            if (effect.IsPlaying && effect.Sprites == sprites)
+            {
+                return effect;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

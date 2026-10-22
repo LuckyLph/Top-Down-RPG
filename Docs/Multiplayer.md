@@ -26,14 +26,14 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Player attack | Owning client runs the attack's timeline (start, windup cancels, contact), host resolves its hit at contact around where the owner stood: a melee hit at once, a projectile's when it reaches a unit | Start, contact and early-end events naming the weapon (every other machine plays the attack on its copy, and flies its projectile from the contact, visual only) |
 | Player's equipped weapon | Owning client | Owner-written `NetworkVariable` (the weapon's index in the weapon catalog); copies and late joiners equip it |
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
-| `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
+| `Health` of players and mobs | Host | Current HP + typed hit (naming its source unit), immune hit and heal events |
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |
 | Player death, respawn and waystone discoveries | Host (discovers for every player, picks the respawn waystone, restores health once the player stands there) | `Health` restore; a respawn is a trip within the player's world through its networked world, its owner moving itself there; a discovery reaches its owner as an RPC for its popup |
 | Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
 | Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
 | Save data | Host | Not replicated. The host (or the single player) saves when any player enters a world, on an autosave timer and as the session ends; a joining player the host knows starts at its saved place. |
-| Visual effects (character animation, projectiles in flight, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
+| Visual effects (character animation, projectiles in flight, hit feedback and impacts, death effects, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
 

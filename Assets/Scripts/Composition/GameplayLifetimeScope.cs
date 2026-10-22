@@ -4,8 +4,9 @@ using VContainer.Unity;
 
 /// <summary>
 /// The composition root of the Gameplay scene, a child of the Main scope and parent of each world's scope:
-/// registers the players, combat (projectiles included), abilities, statuses, HUD, menus, pointer feedback, the world
-/// streaming, the trips between worlds, waystones and respawns, and the saving of world sessions for the session.
+/// registers the players, combat (projectiles included), abilities, statuses, hit feedback and pooled effects, HUD,
+/// menus, pointer feedback, the world streaming, the trips between worlds, waystones and respawns, and the saving of
+/// world sessions for the session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -14,12 +15,13 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private PointerFeedbackLayer pointerFeedbackLayer;
     [SerializeField] private GameplaySettings settings;
     [SerializeField] private CombatSettings combatSettings;
+    [SerializeField] private HitFeedbackSettings hitFeedbackSettings;
     [SerializeField] private WorldStreamingSettings worldStreamingSettings;
 
     /// <summary>
     /// Registers the Gameplay services and entry points and, once built, the player network prefabs. Logs an error
     /// and registers nothing without a parent scope, a player prefab, its control settings or the combat settings;
-    /// skips pointer feedback, with an error, when its layer is missing.
+    /// skips pointer feedback, or hit feedback, with an error, when its layer, or its settings, are missing.
     /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
@@ -77,10 +79,20 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<AttackService>(Lifetime.Singleton);
         builder.Register<ProjectileVisualPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
         builder.RegisterEntryPoint<ProjectileService>().AsSelf();
-        builder.Register<EffectSpawner>(Lifetime.Singleton);
+        builder.Register<EffectPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
 
         builder.RegisterEntryPoint<GameplayPlayers>().AsSelf();
         builder.RegisterEntryPoint<DamagePopupPresenter>();
+        if (hitFeedbackSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(HitFeedbackSettings)}; hits will show no flash, hit-stop, nudge, impact or camera kick.", this);
+        }
+        else
+        {
+            builder.RegisterInstance(hitFeedbackSettings);
+            builder.RegisterEntryPoint<HitFeedbackPresenter>().AsSelf();
+        }
+
         builder.RegisterEntryPoint<GameplayEntryPoint>();
         builder.RegisterEntryPoint<PlayerDeathHandler>();
         builder.RegisterEntryPoint<PlayerHudPresenter>();

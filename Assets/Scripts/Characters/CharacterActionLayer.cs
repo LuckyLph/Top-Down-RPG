@@ -71,6 +71,27 @@ public sealed class CharacterActionLayer
     }
 
     /// <summary>
+    /// The phase the next <see cref="Advance"/> to <paramref name="now"/> shows: none when nothing plays, the windup
+    /// while a copy's windup holds for its contact, and the contact on the first update past the windup.
+    /// </summary>
+    public AttackPhase PhaseAt(float now)
+    {
+        if (!IsPlaying)
+        {
+            return AttackPhase.None;
+        }
+
+        float elapsed = now - startTime;
+        if (holdUntilContact && !contacted && elapsed >= timeline.Windup)
+        {
+            return AttackPhase.Windup;
+        }
+
+        AttackPhase phase = timeline.PhaseAt(elapsed);
+        return !contactShown && phase != AttackPhase.Windup ? AttackPhase.Contact : phase;
+    }
+
+    /// <summary>
     /// Ends the action at once.
     /// </summary>
     public void Stop()

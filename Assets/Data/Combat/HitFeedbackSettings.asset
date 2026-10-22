@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd9ad3037e11e29428e8e2924ea38c6b, type: 3}
+  m_Name: HitFeedbackSettings
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::HitFeedbackSettings
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashSeconds: 0.05
+  immuneFlashSeconds: 0.05
+  periodicFlashAmount: 0.4
+  periodicFlashSeconds: 0.08
+  holdSeconds: 0.08
+  holdAttacker: 1
+  nudgePixels: 0200000001000000
+  nudgeStepSeconds: 0.04
+  pixelsPerUnit: 32
+  impactEffect: {fileID: 3605066721436613676, guid: b39d674133ef84b4dbeaac7d26c2506c, type: 3}
+  kickPixels: 2
+  kickSeconds: 0.12

@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f5968557b0a6fa489e0fd6a9417c3a8, type: 3}
+  m_Name: Impact_Spark
+  m_EditorClassIdentifier: TopDownRPG.Editor::ImpactEffectRecipe
+  sheetName: Impact_Spark
+  frameSeconds: 0.04
+  frameSize: 40
+  directions: 8
+  rays: 6
+  scale: 1
+  outlineShade: 0.55
+  frames:
+  - coreRadius: 2.2
+    rayFrom: 2
+    longRayTip: 4.5
+    shortRayTip: 3.5
+    rayLength: 99
+    hotBack: 0
+    rayShade: 1
+  - coreRadius: 1.4
+    rayFrom: 2.5
+    longRayTip: 8.5
+    shortRayTip: 6
+    rayLength: 99
+    hotBack: 3
+    rayShade: 1
+  - coreRadius: 0
+    rayFrom: 0
+    longRayTip: 10.5
+    shortRayTip: 7.5
+    rayLength: 3.5
+    hotBack: 0
+    rayShade: 2
+  - coreRadius: 0
+    rayFrom: 0
+    longRayTip: 11.5
+    shortRayTip: 8.5
+    rayLength: 0
+    hotBack: 0
+    rayShade: 3
+  palettes:
+  - type: 0
+    hot:
+      serializedVersion: 2
+      rgba: 4294967295
+    light:
+      serializedVersion: 2
+      rgba: 4290442495
+    middle:
+      serializedVersion: 2
+      rgba: 4284532991
+    dark:
+      serializedVersion: 2
+      rgba: 4280839364
+  - type: 1
+    hot:
+      serializedVersion: 2
+      rgba: 4292280319
+    light:
+      serializedVersion: 2
+      rgba: 4283748095
+    middle:
+      serializedVersion: 2
+      rgba: 4280581375
+    dark:
+      serializedVersion: 2
+      rgba: 4279775416
+  - type: 2
+    hot:
+      serializedVersion: 2
+      rgba: 4294967295
+    light:
+      serializedVersion: 2
+      rgba: 4294964430
+    middle:
+      serializedVersion: 2
+      rgba: 4294954108
+    dark:
+      serializedVersion: 2
+      rgba: 4291851320
+  - type: 3
+    hot:
+      serializedVersion: 2
+      rgba: 4294967295
+    light:
+      serializedVersion: 2
+      rgba: 4289002239
+    middle:
+      serializedVersion: 2
+      rgba: 4282440944
+    dark:
+      serializedVersion: 2
+      rgba: 4293159060
+  - type: 4
+    hot:
+      serializedVersion: 2
+      rgba: 4292673520
+    light:
+      serializedVersion: 2
+      rgba: 4286116024
+    middle:
+      serializedVersion: 2
+      rgba: 4282959984
+    dark:
+      serializedVersion: 2
+      rgba: 4280841776
+  - type: 5
+    hot:
+      serializedVersion: 2
+      rgba: 4294967295
+    light:
+      serializedVersion: 2
+      rgba: 4294962412
+    middle:
+      serializedVersion: 2
+      rgba: 4293707976
+    dark:
+      serializedVersion: 2
+      rgba: 4290808458

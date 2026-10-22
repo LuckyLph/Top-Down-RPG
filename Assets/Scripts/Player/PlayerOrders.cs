@@ -480,7 +480,7 @@ public sealed class PlayerOrders
 
     /// <summary>
     /// Walks to an attack move's point and fights on the way. Without a target it takes the living enemy within the
-    /// acquire range that is closest to the point, and engages it like an Attack order until it dies; then it looks
+    /// acquire range, or the weapon's attack range when that is longer (a bow's), that is closest to the point, and engages it like an Attack order until it dies; then it looks
     /// again or walks on. Taking or losing a target restarts the order's movement. With nothing to fight it runs
     /// like a move, ending on arrival or when stuck. A paused attack move runs with <paramref name="act"/> false, so
     /// it moves and takes targets but never swings.
@@ -496,7 +496,7 @@ public sealed class PlayerOrders
 
         if (!order.Target.Exists)
         {
-            order.Target = units.NearestEnemyInRange(order.Destination, settings.AttackMoveAcquireRange);
+            order.Target = units.NearestEnemyInRange(order.Destination, Mathf.Max(settings.AttackMoveAcquireRange, context.AttackRange));
             if (order.Target.Exists)
             {
                 fresh = true;

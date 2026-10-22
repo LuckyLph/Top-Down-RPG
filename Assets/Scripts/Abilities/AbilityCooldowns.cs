@@ -44,6 +44,23 @@ public sealed class AbilityCooldowns
     }
 
     /// <summary>
+    /// The clock time the cooldown of <paramref name="slot"/> ends at; negative infinity when it never ran.
+    /// </summary>
+    public float ReadyTime(int slot)
+    {
+        return readyTimes[slot];
+    }
+
+    /// <summary>
+    /// Makes the cooldown of <paramref name="slot"/> end at clock time <paramref name="readyTime"/>, for a slot that
+    /// takes another ability with a cooldown of its own.
+    /// </summary>
+    public void SetReadyTime(int slot, float readyTime)
+    {
+        readyTimes[slot] = readyTime;
+    }
+
+    /// <summary>
     /// Makes every slot ready immediately.
     /// </summary>
     public void Reset()

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 #if UNITY_EDITOR
@@ -8,8 +9,11 @@ using UnityEditor;
 /// <summary>
 /// The player's six ability slots, built from its <see cref="PlayerClass"/> (Q W E R) and equipped weapon (A S).
 /// Checks and starts casts on the clock-driven cooldowns, hands each started cast to <see cref="AbilityService"/>
-/// and, when it completes, has the service resolve its effect; raises cast events. Which cast runs when is decided by <see cref="PlayerOrders"/>. Draws gizmos for recent
-/// casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
+/// and, when it completes, has the service resolve its effect; raises cast events. Which cast runs when is decided by
+/// <see cref="PlayerOrders"/>. A weapon ability keeps its own cooldown across weapon switches: switching never readies
+/// an ability early, and a new weapon's abilities are not held by the old one's. Replays other machines' casts with
+/// the weapon they were cast with, so a copy that has not heard of a switch yet still plays the right ability. Draws
+/// gizmos for recent casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerAbilities : MonoBehaviour, IAbilityCaster
@@ -45,6 +49,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
     private readonly AbilityDefinition[] slots = new AbilityDefinition[AbilitySlots.Count];
     private readonly AbilityCooldowns cooldowns = new(AbilitySlots.Count);
+    private readonly Dictionary<AbilityDefinition, float> weaponReadyTimes = new();
     private IClock clock = UnityClock.Shared;
     private AbilityService abilityService;
     private Health health;
@@ -275,7 +280,16 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     /// </summary>
     public void PlayRemoteCast(int slot, in CastAim aim)
     {
-        AbilityDefinition ability = GetAbility(slot);
+        PlayRemoteCast(slot, aim, weaponController != null ? weaponController.CurrentWeapon : null);
+    }
+
+    /// <summary>
+    /// <see cref="PlayRemoteCast(int, in CastAim)"/> for a cast made while <paramref name="weapon"/> was equipped on its
+    /// owner's machine: a weapon slot plays that weapon's ability.
+    /// </summary>
+    public void PlayRemoteCast(int slot, in CastAim aim, PlayerWeapon weapon)
+    {
+        AbilityDefinition ability = AbilityFor(slot, weapon);
         if (ability == null || (health != null && health.IsDead))
         {
             return;
@@ -303,7 +317,16 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     /// </summary>
     public void ResolveRemoteCast(int slot, in CastAim aim, Vector2 casterPosition)
     {
-        AbilityDefinition ability = GetAbility(slot);
+        ResolveRemoteCast(slot, aim, casterPosition, weaponController != null ? weaponController.CurrentWeapon : null);
+    }
+
+    /// <summary>
+    /// <see cref="ResolveRemoteCast(int, in CastAim, Vector2)"/> for a cast made while <paramref name="weapon"/> was
+    /// equipped on its owner's machine: a weapon slot resolves that weapon's ability.
+    /// </summary>
+    public void ResolveRemoteCast(int slot, in CastAim aim, Vector2 casterPosition, PlayerWeapon weapon)
+    {
+        AbilityDefinition ability = AbilityFor(slot, weapon);
         if (ability == null || (health != null && health.IsDead))
         {
             return;
@@ -340,16 +363,46 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Rebuilds the six slots from the class and the equipped weapon, raising <see cref="SlotsChanged"/>.
+    /// The ability <paramref name="slot"/> holds with <paramref name="weapon"/> equipped: the class's for Q W E R,
+    /// the weapon's for A and S; null when empty or out of range.
+    /// </summary>
+    public AbilityDefinition AbilityFor(int slot, PlayerWeapon weapon)
+    {
+        if (slot < 0 || slot >= slots.Length)
+        {
+            return null;
+        }
+
+        if (slot < ClassSlotCount)
+        {
+            return playerClass != null ? playerClass.GetAbility(slot) : null;
+        }
+
+        return weapon != null ? weapon.GetAbility(slot - ClassSlotCount) : null;
+    }
+
+    /// <summary>
+    /// Rebuilds the six slots from the class and the equipped weapon, raising <see cref="SlotsChanged"/>. The weapon
+    /// slots' cooldowns follow their abilities: the leaving abilities' are kept and the arriving ones' restored.
     /// </summary>
     public void RebuildSlots()
     {
         PlayerWeapon weapon = weaponController != null ? weaponController.CurrentWeapon : null;
+        for (int i = ClassSlotCount; i < slots.Length; i++)
+        {
+            if (slots[i] != null)
+            {
+                weaponReadyTimes[slots[i]] = cooldowns.ReadyTime(i);
+            }
+        }
+
         for (int i = 0; i < slots.Length; i++)
         {
-            slots[i] = i < ClassSlotCount
-                ? (playerClass != null ? playerClass.GetAbility(i) : null)
-                : (weapon != null ? weapon.GetAbility(i - ClassSlotCount) : null);
+            slots[i] = AbilityFor(i, weapon);
+            if (i >= ClassSlotCount)
+            {
+                cooldowns.SetReadyTime(i, slots[i] != null && weaponReadyTimes.TryGetValue(slots[i], out float readyTime) ? readyTime : float.NegativeInfinity);
+            }
         }
 
         SlotsChanged?.Invoke();

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 752a3ff13d40430ca2350f54e8d65b25, type: 3}
+  m_Name: Longbow
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerWeapon
+  displayName: Longbow
+  damage: 24
+  damageType: 0
+  onHitStatuses: []
+  attackCooldown: 0.8
+  attackRange: 5
+  windupSeconds: 0.35
+  contactSeconds: 0.07
+  recoverySeconds: 0.38
+  windupCancelledByMove: 1
+  recoveryCancellable: 1
+  delivery: 1
+  hitDistance: 0.65
+  hitOffsets:
+  - {x: 0, y: 0.4}
+  - {x: 0, y: 0.5}
+  - {x: -0.1, y: 0.5}
+  - {x: 0.1, y: 0.5}
+  hitSize: {x: 1.77, y: 1.56}
+  projectileSpeed: 18
+  projectileRange: 6.5
+  projectileRadius: 0.1
+  projectileLaunchDistance: 0.75
+  projectileHoming: 1
+  projectileVisual: {fileID: 3463214288168290358, guid: 6e9ec06b6836b1441a4cd7df518dc7cb, type: 3}
+  attackClip: BowShot
+  hudIcon: {fileID: 1919766224, guid: b15754d9f5f59b147880ecf947e00c3f, type: 3}
+  abilities:
+  - {fileID: 11400000, guid: 2788f7efda8b4e84284c30659746b8ed, type: 2}
+  - {fileID: 11400000, guid: 58d7334efc163d64c8579b571ffc23b9, type: 2}

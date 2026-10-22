@@ -416,7 +416,7 @@ public class PlayerAbilitiesTests
         player.AddComponent<Rigidbody2D>();
         health = player.AddComponent<Health>();
         weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(authority), clock);
+        weapon.Construct(TestCombat.CreateAttackService(authority), null, clock);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.55f, new Vector2[4], weaponAbilities: weaponAbilities)));
         service = TestCombat.CreateAbilityService(authority);
         service.CastApplied += (_, _) => applied++;

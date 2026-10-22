@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 752a3ff13d40430ca2350f54e8d65b25, type: 3}
+  m_Name: Greatsword
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerWeapon
+  displayName: Greatsword
+  damage: 48
+  damageType: 0
+  onHitStatuses: []
+  attackCooldown: 0.9
+  attackRange: 0.5
+  windupSeconds: 0.4
+  contactSeconds: 0.06
+  recoverySeconds: 0.44
+  windupCancelledByMove: 1
+  recoveryCancellable: 1
+  delivery: 0
+  hitDistance: 0.85
+  hitOffsets:
+  - {x: 0, y: 0.4}
+  - {x: 0, y: 0.5}
+  - {x: -0.1, y: 0.5}
+  - {x: 0.1, y: 0.5}
+  hitSize: {x: 2.6, y: 1.8}
+  projectileSpeed: 18
+  projectileRange: 6.5
+  projectileRadius: 0.1
+  projectileLaunchDistance: 0.5
+  projectileHoming: 1
+  projectileVisual: {fileID: 0}
+  attackClip: GreatswordCleave
+  hudIcon: {fileID: -2024084140, guid: 9cd7f6d08b7c8ff4fa743a30e5098a4f, type: 3}
+  abilities:
+  - {fileID: 11400000, guid: e71a7e2bae02e514faaeb331f39be8c3, type: 2}
+  - {fileID: 11400000, guid: 944814dcc50ae6b4c8d01cb78ab17d08, type: 2}

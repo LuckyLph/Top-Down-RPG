@@ -23,7 +23,8 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Thing | Authority | Replicated to clients as |
 |---|---|---|
 | Player movement and facing | Owning client | Transform + facing/animation state |
-| Player attack | Owning client runs the attack's timeline (start, windup cancels, contact), host resolves its hit at contact around where the owner stood | Start, contact and early-end events (every other machine plays the attack on its copy, visual only) |
+| Player attack | Owning client runs the attack's timeline (start, windup cancels, contact), host resolves its hit at contact around where the owner stood: a melee hit at once, a projectile's when it reaches a unit | Start, contact and early-end events naming the weapon (every other machine plays the attack on its copy, and flies its projectile from the contact, visual only) |
+| Player's equipped weapon | Owning client | Owner-written `NetworkVariable` (the weapon's index in the weapon catalog); copies and late joiners equip it |
 | Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
 | `Health` of players and mobs | Host | Current HP + typed hit, immune hit and heal events |
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
@@ -32,7 +33,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Runtime terrain edits (`AreaTerrain`) | Host | Per-cell edit list per chunk (`NetworkAreaTerrain`, shown to the clients holding that chunk); each client applies it and its grid follows |
 | Each player's world and trips | Host (a client asks for its trip by RPC naming the exit) | The player's world, trip count and trip entry as a `NetworkVariable` on the player (`PlayerWorldSync`); a client loads its own player's world and fades locally |
 | Save data | Host | Not replicated. The host (or the single player) saves when any player enters a world, on an autosave timer and as the session ends; a joining player the host knows starts at its saved place. |
-| Visual effects (character animation, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
+| Visual effects (character animation, projectiles in flight, death animations, damage popups, camera, HUD) | Each client, locally | Never networked objects |
 
 ## Rules for new code (starting now)
 
@@ -121,7 +122,7 @@ Decision: no Unity Gaming Services for now. Relay has a free tier (50 average mo
 A relay is a transport swap: it replaces how `NetworkSession.StartHost`/`JoinAsync` configure the transport, while the replicated worlds and the per-chunk readiness handshake stay as they are. No connection-method abstraction was added ahead of that, since its shape depends on the transport chosen.
 
 Save data decisions (format version 2 since [WorldStreaming.md](WorldStreaming.md)'s Phase 8; this phase saved the party's area and spawn point, version 1, which is now ignored):
-- What persists: per player id, its world, position (a dead player's is the waystone it respawns at) and discovered waystones; per world visited, a record per chunk of its killed mobs (with when they died, on a world clock that continues across sessions) and runtime terrain edits. Health is restored on respawn and every player starts with the same weapon, so neither is saved yet. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
+- What persists: per player id, its world, position (a dead player's is the waystone it respawns at) and discovered waystones; per world visited, a record per chunk of its killed mobs (with when they died, on a world clock that continues across sessions) and runtime terrain edits. Health is restored on respawn, and the equipped weapon (switched only with the dev panel so far) is not saved: every session starts with the sword. Per-player progression will be added to `GameSaveData` behind a format-version bump when it exists.
 - Where: a local JSON file at `Application.persistentDataPath/save.json`, written by the host (or the single player) only. No Cloud Save, so offline and direct-IP games need no sign-in.
 - When: whenever any player enters a world (the session's start, a trip, a player joining), every `GameplaySettings` autosave interval (60 s of game time), and as the session ends (the menu, the host leaving, quitting).
 - Menu: Continue continues the save offline, the local player at its saved place; New Game starts over in the starting world (replacing the save at its first write); Host Game continues the save when there is one, else starts over.

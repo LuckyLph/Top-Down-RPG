@@ -225,8 +225,8 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// Forwards an order tick's requests: path to or stop the motor and set or release the aim; then tells the weapon's
-    /// attack of the order given (a new order, or the orders asking to move), ends it on a stun or a cast, swings, and
-    /// moves the attack on.
+    /// attack of the order given (a new order, or the orders asking to move), ends it on a stun or a cast, swings at the
+    /// order's target, and moves the attack on.
     /// </summary>
     private void Apply(in PlayerOrderOutput output, StatusControls controls)
     {
@@ -257,7 +257,7 @@ public class PlayerController : MonoBehaviour
 
         if (output.Swing)
         {
-            weaponController.TryAttack(output.AimDirection);
+            weaponController.TryAttack(output.AimDirection, orders.AttackTarget);
         }
 
         weaponController.Tick();

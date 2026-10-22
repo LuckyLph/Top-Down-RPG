@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Rules for resolving hits, the status catalog, and how popups look. Registered in the Gameplay scope.
+/// Rules for resolving hits, the layers area effects and projectiles meet, the status catalog, and how popups look.
+/// Registered in the Gameplay scope.
 /// </summary>
 [CreateAssetMenu(fileName = "CombatSettings", menuName = "TopDownRPG/Combat/Combat Settings")]
 public sealed class CombatSettings : ScriptableObject
@@ -16,6 +17,8 @@ public sealed class CombatSettings : ScriptableObject
 
     [SerializeField, Tooltip("Layers that area effects look for units on.")]
     private LayerMask unitLayers = ~0;
+    [SerializeField, Tooltip("Layers whose colliders stop projectiles, as walls do.")]
+    private LayerMask projectileWallLayers;
 
     [Header("Statuses")]
     [SerializeField, Tooltip("Every status definition; a status is identified on the wire by its index here.")]
@@ -39,6 +42,7 @@ public sealed class CombatSettings : ScriptableObject
     public int MinimumDamage => minimumDamage;
     public StatusEffectCatalog StatusCatalog => statusCatalog;
     public LayerMask UnitLayers => unitLayers;
+    public LayerMask ProjectileWallLayers => projectileWallLayers;
     public Color HealColor => healColor;
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;

@@ -4,8 +4,8 @@ using VContainer.Unity;
 
 /// <summary>
 /// The composition root of the Gameplay scene, a child of the Main scope and parent of each world's scope:
-/// registers the players, combat, abilities, statuses, HUD, menus, pointer feedback, the world streaming, the trips
-/// between worlds, waystones and respawns, and the saving of world sessions for the session.
+/// registers the players, combat (projectiles included), abilities, statuses, HUD, menus, pointer feedback, the world
+/// streaming, the trips between worlds, waystones and respawns, and the saving of world sessions for the session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -75,6 +75,8 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<StatusVisualPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
         builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<AttackService>(Lifetime.Singleton);
+        builder.Register<ProjectileVisualPool>(Lifetime.Singleton).WithParameter(gameObject.scene);
+        builder.RegisterEntryPoint<ProjectileService>().AsSelf();
         builder.Register<EffectSpawner>(Lifetime.Singleton);
 
         builder.RegisterEntryPoint<GameplayPlayers>().AsSelf();

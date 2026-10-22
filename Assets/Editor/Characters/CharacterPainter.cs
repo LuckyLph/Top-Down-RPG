@@ -22,9 +22,10 @@ public readonly struct BladeSample
 /// <summary>
 /// Draws a solved pose of the rogue onto a <see cref="CharacterCanvas"/>, facing a direction, in the order the depth
 /// test needs no help with: legs, torso, belt and its sash, pouch and dagger, arms, mantle, cape (lined), the scarf
-/// around the neck, then the weapon with its smear and effects, and last the hooded head, whose face is placed by
-/// direction (<see cref="DrawHead"/>). Sizes come from the <see cref="CharacterRecipe"/> and the
-/// <see cref="CharacterWeaponArt"/>; the mantle, belt, dagger and scarf are fixed parts of the rogue's outfit.
+/// around the neck, then the weapon with its smear and effects (through a <see cref="WeaponPainter"/>), and last the
+/// hooded head, whose face is placed by direction (<see cref="DrawHead"/>). Sizes come from the
+/// <see cref="CharacterRecipe"/> and the <see cref="CharacterWeaponArt"/>; the mantle, belt, dagger and scarf are fixed
+/// parts of the rogue's outfit.
 /// </summary>
 public sealed class CharacterPainter
 {
@@ -60,29 +61,34 @@ public sealed class CharacterPainter
         DrawBody(pose, joints);
         if (weapon != null && weapon.Kind == WeaponKind.Blade)
         {
+            WeaponPainter painter = new(weapon, canvas, World);
             if (smear != null && smear.Count > 1)
             {
-                DrawSmear(smear);
+                painter.DrawSmear(smear);
             }
 
-            DrawBlade(joints.RightHand, pose.Blade.normalized, joints.ShoulderAxis);
+            painter.DrawBlade(joints.RightHand, pose.Blade.normalized, joints.ShoulderAxis);
             foreach (MotionEffect effect in effects)
             {
                 if (effect.Kind == MotionEffectKind.Dust)
                 {
                     Vector3 tip = joints.RightHand + pose.Blade.normalized * weapon.Length;
-                    DrawDust(new Vector3(tip.x, tip.y, 0f), effect.Size);
+                    painter.DrawDust(new Vector3(tip.x, tip.y, 0f), effect.Size);
                 }
             }
         }
         else if (weapon != null)
         {
-            DrawBow(pose, joints, out Vector3 grip, out Vector3 aim, out Vector3 bowUp);
+            WeaponPainter painter = new(weapon, canvas, World);
+            Vector3 grip = joints.LeftHand;
+            Vector3 bowUp = pose.BowUp.normalized;
+            Vector3 aim = (pose.BowAim - bowUp * Vector3.Dot(pose.BowAim, bowUp)).normalized;
+            painter.DrawBow(grip, bowUp, aim, pose.Draw, pose.Kick, pose.Arrow > 0.5f, joints.RightHand);
             foreach (MotionEffect effect in effects)
             {
                 if (effect.Kind == MotionEffectKind.Release)
                 {
-                    DrawRelease(grip, aim, bowUp);
+                    painter.DrawRelease(grip, aim, bowUp);
                 }
             }
         }
@@ -219,159 +225,6 @@ public sealed class CharacterPainter
             canvas.Capsule(World(top - outward), World(middle - outward), 1.7f, 2.2f * 0.92f, CharacterMaterial.Lining, CharacterPart.Cape);
             canvas.Capsule(World(middle - outward), World(bottom - outward + hemDrop), 2.2f * 0.92f, 2.2f * 0.92f, CharacterMaterial.Lining, CharacterPart.Cape);
         }
-    }
-
-    /// <summary>
-    /// Draws a blade held at <paramref name="hand"/> along <paramref name="direction"/>: the grip down to a pommel,
-    /// the crossguard across it (level when it can be, else along the shoulders) and the tapering blade.
-    /// </summary>
-    private void DrawBlade(Vector3 hand, Vector3 direction, Vector3 shoulderAxis)
-    {
-        Vector3 across = Vector3.Cross(direction, Up);
-        across = across.magnitude < 0.2f ? shoulderAxis.normalized : across.normalized;
-        Vector3 guard = hand + direction * weapon.GuardAt;
-        canvas.Capsule(World(hand - direction * weapon.Pommel), World(guard), 0.6f, 0.6f, CharacterMaterial.Grip, CharacterPart.Weapon, minRadius: 0.6f);
-        canvas.Sphere(World(hand - direction * (weapon.Pommel + 0.4f)), 0.8f, CharacterMaterial.Guard, CharacterPart.Weapon, 0.7f);
-        canvas.Capsule(World(guard - across * weapon.GuardHalfWidth), World(guard + across * weapon.GuardHalfWidth), 0.65f, 0.65f, CharacterMaterial.Guard, CharacterPart.Weapon, minRadius: 0.6f);
-        canvas.Capsule(World(guard + direction * 0.4f), World(hand + direction * weapon.Length), weapon.BladeRadius.x, weapon.BladeRadius.y, CharacterMaterial.Steel, CharacterPart.Weapon, minRadius: 0.62f);
-    }
-
-    /// <summary>
-    /// Draws the area the blade's outer part swept through its samples, oldest first: a band from an inner share of
-    /// the blade to just past its tip, narrowing toward the oldest sample, in three colours from the newest part to the
-    /// oldest.
-    /// </summary>
-    private void DrawSmear(IReadOnlyList<BladeSample> samples)
-    {
-        int count = samples.Count;
-        float start = weapon.GuardAt;
-        for (int i = 0; i + 1 < count; i++)
-        {
-            float share = (i + 0.5f) / (count - 1);
-            CharacterMaterial colour = share > 0.62f ? CharacterMaterial.SmearNew : share > 0.28f ? CharacterMaterial.SmearMiddle : CharacterMaterial.SmearOld;
-            SmearEdge(samples, i, start, out Vector3 innerA, out Vector3 outerA);
-            SmearEdge(samples, i + 1, start, out Vector3 innerB, out Vector3 outerB);
-            canvas.Triangle(innerA, outerA, outerB, colour, CharacterPart.Smear);
-            canvas.Triangle(innerA, outerB, innerB, colour, CharacterPart.Smear);
-        }
-    }
-
-    /// <summary>
-    /// The smear's inner and outer edge at sample <paramref name="index"/>, in the world.
-    /// </summary>
-    private void SmearEdge(IReadOnlyList<BladeSample> samples, int index, float start, out Vector3 inner, out Vector3 outer)
-    {
-        BladeSample sample = samples[index];
-        float age = index / (float)(samples.Count - 1);
-        float share = Mathf.Lerp(weapon.SmearInnerShare.x, weapon.SmearInnerShare.y, age);
-        inner = World(sample.Hand + sample.Direction * (start + (weapon.Length - start) * share));
-        outer = World(sample.Hand + sample.Direction * (weapon.Length + 0.3f));
-    }
-
-    /// <summary>
-    /// Draws a puff of dust on the ground at <paramref name="point"/>, spreading with <paramref name="size"/>.
-    /// </summary>
-    private void DrawDust(Vector3 point, float size)
-    {
-        DustPuff(point, size, 0f, 0f, 1.9f);
-        DustPuff(point, size, 2.2f, 0.9f, 1.5f);
-        DustPuff(point, size, -2f, 1.2f, 1.4f);
-        DustPuff(point, size, 0.8f, -1.8f, 1.3f);
-        DustPuff(point, size, -1f, 2.4f, 1.1f);
-        DustPuff(point, size, 2.8f, -1f, 1f);
-    }
-
-    /// <summary>
-    /// One ball of a dust puff, offset from its middle by (<paramref name="x"/>, <paramref name="y"/>) times its size.
-    /// </summary>
-    private void DustPuff(Vector3 point, float size, float x, float y, float radius)
-    {
-        Vector3 p = point + new Vector3(x * size, y * size, 0.9f * size);
-        canvas.Sphere(World(p), radius * (0.75f + 0.35f * size), CharacterMaterial.Dust, CharacterPart.Effect);
-    }
-
-    /// <summary>
-    /// Draws the bow in the left hand: its limbs tapering from the grip to the tips and curling back further as it is
-    /// drawn (their tips flicking forward a little), the grip, the string from the tips to the nock (pulled to the right hand by the draw, snapping past
-    /// rest by the kick), and the nocked arrow with its head and fletching. Returns the grip, the aim and the bow's
-    /// axis.
-    /// </summary>
-    private void DrawBow(CharacterPose pose, CharacterJoints j, out Vector3 grip, out Vector3 aim, out Vector3 bowUp)
-    {
-        grip = j.LeftHand;
-        bowUp = pose.BowUp.normalized;
-        aim = (pose.BowAim - bowUp * Vector3.Dot(pose.BowAim, bowUp)).normalized;
-        float drawn = Mathf.Clamp01(pose.Draw);
-        float bend = Mathf.Lerp(weapon.Bend.x, weapon.Bend.y, drawn);
-        const int segments = 12;
-        Vector3 previous = Vector3.zero;
-        Vector3 top = Vector3.zero;
-        Vector3 bottom = Vector3.zero;
-        for (int i = 0; i <= segments; i++)
-        {
-            float u = -1f + 2f * i / segments;
-            float curl = bend * u * u - 0.9f * Mathf.Max(Mathf.Abs(u) - 0.8f, 0f) / 0.2f * (pose.Draw < 0.5f ? 1f : 0.4f);
-            Vector3 point = grip + bowUp * (weapon.HalfLength * u) - aim * curl;
-            if (i == 0)
-            {
-                bottom = point;
-            }
-            else
-            {
-                float radius = Mathf.Lerp(weapon.LimbRadius.x, weapon.LimbRadius.y, Mathf.Abs(-1f + 2f * (i - 0.5f) / segments));
-                canvas.Capsule(World(previous), World(point), radius, radius, CharacterMaterial.Wood, CharacterPart.Bow, minRadius: 0.62f);
-            }
-
-            previous = point;
-            top = point;
-        }
-
-        canvas.Capsule(World(grip - bowUp * 1.2f), World(grip + bowUp * 1.2f), 0.95f, 0.95f, CharacterMaterial.Grip, CharacterPart.Bow, minRadius: 0.62f);
-        Vector3 rest = grip - aim * weapon.Brace;
-        Vector3 nock = rest + (j.RightHand - rest) * drawn + aim * (1.4f * pose.Kick);
-        canvas.Capsule(World(top), World(nock), 0.25f, 0.25f, CharacterMaterial.BowString, CharacterPart.Bow, 0.25f, 0.5f);
-        canvas.Capsule(World(nock), World(bottom), 0.25f, 0.25f, CharacterMaterial.BowString, CharacterPart.Bow, 0.25f, 0.5f);
-        if (pose.Arrow <= 0.5f)
-        {
-            return;
-        }
-
-        Vector3 toGrip = grip - nock;
-        Vector3 along = toGrip.magnitude > 1f ? toGrip.normalized : aim;
-        Vector3 head = nock + along * weapon.ArrowLength;
-        canvas.Capsule(World(nock), World(head), 0.3f, 0.3f, CharacterMaterial.Shaft, CharacterPart.Arrow, 0.25f, 0.55f);
-        canvas.Capsule(World(head - along * 0.4f), World(head + along * 1.2f), 0.75f, 0.2f, CharacterMaterial.Steel, CharacterPart.Arrow, minRadius: 0.55f);
-        Vector3 side = Vector3.Cross(along, bowUp).normalized;
-        for (int k = -1; k <= 1; k += 2)
-        {
-            canvas.Capsule(World(nock + along * 0.6f), World(nock + along * 2.6f + side * (0.9f * k)), 0.35f, 0.35f, CharacterMaterial.Fletching, CharacterPart.Arrow, minRadius: 0.5f);
-        }
-    }
-
-    /// <summary>
-    /// Draws an arrow's release at the bow: a burst of four short rays around the grip and a streak along the aim with
-    /// two shorter ones beside it.
-    /// </summary>
-    private void DrawRelease(Vector3 grip, Vector3 aim, Vector3 bowUp)
-    {
-        Vector3 side = Vector3.Cross(aim, bowUp).normalized;
-        DrawRay(grip + aim * 0.8f + bowUp * 1.6f, grip + aim * 1.6f + bowUp * 4.2f, CharacterMaterial.SmearNew, 0.3f, 0.55f);
-        DrawRay(grip + aim * 0.8f - bowUp * 1.6f, grip + aim * 1.6f - bowUp * 4.2f, CharacterMaterial.SmearNew, 0.3f, 0.55f);
-        DrawRay(grip + aim * 0.8f + side * 1.6f, grip + aim * 1.6f + side * 3.8f, CharacterMaterial.SmearNew, 0.3f, 0.55f);
-        DrawRay(grip + aim * 0.8f - side * 1.6f, grip + aim * 1.6f - side * 3.8f, CharacterMaterial.SmearNew, 0.3f, 0.55f);
-        DrawRay(grip + aim * 1.5f, grip + aim * 17f, CharacterMaterial.SmearNew, 0.3f, 0.55f);
-        for (int k = -1; k <= 1; k += 2)
-        {
-            DrawRay(grip + aim * 4f + bowUp * (1.6f * k), grip + aim * 12f + bowUp * (1.6f * k), CharacterMaterial.SmearMiddle, 0.25f, 0.5f);
-        }
-    }
-
-    /// <summary>
-    /// Draws a thin line of an effect from <paramref name="a"/> to <paramref name="b"/>.
-    /// </summary>
-    private void DrawRay(Vector3 a, Vector3 b, CharacterMaterial colour, float radius, float minRadius)
-    {
-        canvas.Capsule(World(a), World(b), radius, radius, colour, CharacterPart.Effect, 0.25f, minRadius);
     }
 
     /// <summary>

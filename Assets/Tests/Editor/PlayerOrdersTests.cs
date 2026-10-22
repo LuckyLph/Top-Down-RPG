@@ -21,6 +21,7 @@ public class PlayerOrdersTests
     private Vector2 position;
     private bool reachedDestination;
     private float stalledTime;
+    private float weaponRange;
 
     /// <summary>
     /// Builds the orders with test control settings, fake units and a fake caster, and resets the simulated
@@ -37,6 +38,7 @@ public class PlayerOrdersTests
         position = Vector2.zero;
         reachedDestination = true;
         stalledTime = 0f;
+        weaponRange = AttackRange;
     }
 
     /// <summary>
@@ -379,6 +381,33 @@ public class PlayerOrdersTests
         Assert.That(inRange.AimDirection, Is.EqualTo(Vector2.right));
         Assert.That(inRange.Swing, Is.True);
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.AttackMove));
+    }
+
+    /// <summary>
+    /// With a long-range weapon (a bow's 5) an attack order chases a farther enemy only until it is within that range,
+    /// then stops and swings, and an attack move takes an enemy within the weapon's range though it lies past the
+    /// acquire range.
+    /// </summary>
+    [Test]
+    public void ALongRangeWeapon_StopsChasingAtItsRange_AndAttackMovesAcquireWithinIt()
+    {
+        weaponRange = 5f;
+        UnitTarget far = CreateUnit(UnitTeam.Enemy, new Vector2(8f, 0f), distance: 7.5f);
+        PlayerOrderOutput chasing = Tick(Click(new Vector2(8f, 0f), far));
+        Assert.That(chasing.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo));
+        Assert.That(chasing.Swing, Is.False);
+
+        units.SetDistance(far, 5f);
+        PlayerOrderOutput inRange = Tick(default);
+        Assert.That(inRange.Motor, Is.EqualTo(PlayerMotorRequest.Stop), "It stops chasing at the weapon's range.");
+        Assert.That(inRange.Swing, Is.True);
+
+        Tick(new PlayerCommand(Vector2.zero, default, movePressed: false, moveHeld: false, stopPressed: true));
+        units.SetDistance(far, 4.5f);
+        Assert.That(4.5f, Is.GreaterThan(settings.AttackMoveAcquireRange));
+        PlayerOrderOutput attackMove = Tick(AttackMove(new Vector2(10f, 0f)));
+        Assert.That(orders.AttackTarget.IsSameUnit(far), Is.True, "An attack move acquires within the weapon's longer range.");
+        Assert.That(attackMove.Swing, Is.True);
     }
 
     /// <summary>
@@ -1324,7 +1353,7 @@ public class PlayerOrdersTests
     /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
-        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange));
+        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange));
     }
 
     /// <summary>
@@ -1333,7 +1362,7 @@ public class PlayerOrdersTests
     /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command, StatusControls controls)
     {
-        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, AttackRange, controls));
+        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange, controls));
     }
 
     /// <summary>

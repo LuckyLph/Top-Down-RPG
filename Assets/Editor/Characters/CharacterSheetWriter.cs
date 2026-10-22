@@ -166,9 +166,10 @@ public static class CharacterSheetWriter
     }
 
     /// <summary>
-    /// Sets the sheet's import settings, without reimporting, and returns whether any changed.
+    /// Sets a sheet's import settings (a point-filtered, uncompressed sprite sheet without mipmaps at
+    /// <see cref="PixelsPerUnit"/>), without reimporting, and returns whether any changed.
     /// </summary>
-    private static bool ApplyImportSettings(TextureImporter importer)
+    public static bool ApplyImportSettings(TextureImporter importer)
     {
         bool changed = importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Multiple
             || !Mathf.Approximately(importer.spritePixelsPerUnit, PixelsPerUnit) || importer.filterMode != FilterMode.Point

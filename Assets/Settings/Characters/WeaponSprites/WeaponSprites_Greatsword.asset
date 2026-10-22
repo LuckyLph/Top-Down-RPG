@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af6500302bd84be4a8ce48ceb5805359, type: 3}
+  m_Name: WeaponSprites_Greatsword
+  m_EditorClassIdentifier: TopDownRPG.Editor::WeaponSpriteRecipe
+  weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+  character: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}
+  iconName: Icon_Greatsword
+  iconSize: 36
+  iconAngle: 45
+  iconMargin: 3
+  iconScale: 0
+  iconDraw: 0
+  iconArrow: 0
+  arrowName: 
+  arrowDirections: 32
+  arrowFrame: 56
+  arrowView: 0

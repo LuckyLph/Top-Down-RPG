@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using TMPro;
@@ -10,8 +11,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Tests for the player's weapon and HUD: equipping and the weapon icon, the HUD presenter, attacks on their timeline
-/// (the hit at contact, the cooldown, the events the owner replicates), the controller's attack orders under the cancel
-/// rules and crowd control, the hit area <see cref="AttackService"/> resolves, and the Main scope's input asset.
+/// (the hit at contact, the cooldown, the events the owner replicates), switching weapons (the attack cancelled, the
+/// weapon slots rebuilt, cooldowns kept), a ranged attack's projectile leaving at contact toward its target, the
+/// controller's attack orders under the cancel rules and crowd control, the hit area <see cref="AttackService"/>
+/// resolves, and the Main scope's input asset.
 /// </summary>
 public class PlayerWeaponSystemTests
 {
@@ -19,6 +22,7 @@ public class PlayerWeaponSystemTests
     private PlayerHudPresenter hudPresenter;
     private PlayerControlSettings settings;
     private GameObject enemyRoot;
+    private readonly List<Object> created = new();
 
     /// <summary>
     /// Disposes the HUD presenter and destroys the test HUD canvases, the player and enemy roots and the control
@@ -52,6 +56,16 @@ public class PlayerWeaponSystemTests
         {
             Object.DestroyImmediate(enemyRoot);
         }
+
+        foreach (Object made in created)
+        {
+            if (made != null)
+            {
+                Object.DestroyImmediate(made);
+            }
+        }
+
+        created.Clear();
     }
 
     /// <summary>
@@ -328,7 +342,7 @@ public class PlayerWeaponSystemTests
         weaponController.AttackContacted += (_, _, position) => contactAt = position;
         weaponController.AttackCancelled += () => cancelled++;
 
-        weaponController.PlayRemoteAttack(0, Vector2.left, 1f);
+        weaponController.PlayRemoteAttack(-1, 0, Vector2.left, 1f);
         weaponController.PlayRemoteContact();
         weaponController.StopRemoteAttack();
         Assert.That(started, Is.Null, "Replaying another player's attack must not be sent back out.");
@@ -483,6 +497,127 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
+    /// Equipping another weapon during the windup cancels the attack (an early end is raised and nothing lands, its
+    /// cooldown given back) and rebuilds the A and S slots from the new weapon. Cooldowns stay sane across switches: an
+    /// attack that landed keeps its cooldown from its start whatever weapon is equipped next, and each weapon ability
+    /// keeps its own, so switching away and back neither readies an ability early nor holds the new weapon's.
+    /// </summary>
+    [Test]
+    public void SwitchingWeapons_CancelsTheAttack_RebuildsTheSlots_AndKeepsCooldowns()
+    {
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out _);
+        PlayerAbilities abilities = root.AddComponent<PlayerAbilities>();
+        abilities.Construct(clock, TestCombat.CreateAbilityService(FixedGameAuthority.Authoritative));
+        AbilityDefinition swordSkill = Track(AbilityDefinition.Create("SwordSkill", cooldown: 2f, targeting: AbilityTargeting.None));
+        AbilityDefinition swordOther = Track(AbilityDefinition.Create("SwordOther", targeting: AbilityTargeting.None));
+        AbilityDefinition heavySkill = Track(AbilityDefinition.Create("HeavySkill", cooldown: 3f, targeting: AbilityTargeting.None));
+        AbilityDefinition heavyOther = Track(AbilityDefinition.Create("HeavyOther", targeting: AbilityTargeting.None));
+        PlayerWeapon sword = Track(CreateTestWeapon("Sword", cooldown: 0.5f, abilities: new[] { swordSkill, swordOther }));
+        PlayerWeapon heavy = Track(CreateTestWeapon("Heavy", cooldown: 1f, abilities: new[] { heavySkill, heavyOther }));
+        weaponController.SetCatalog(Track(WeaponCatalog.Create(sword, heavy)));
+        weaponController.Equip(sword);
+        abilities.Configure(null);
+        Health enemyHealth = CreateEnemyInRange().GetComponent<Health>();
+        int cancelled = 0;
+        int slotsChanged = 0;
+        weaponController.AttackCancelled += () => cancelled++;
+        abilities.SlotsChanged += () => slotsChanged++;
+        Assert.That(abilities.GetAbility(PlayerAbilities.ClassSlotCount), Is.SameAs(swordSkill));
+
+        Assert.That(weaponController.TryAttack(Vector2.left), Is.True);
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        weaponController.Equip(heavy);
+        Assert.That(cancelled, Is.EqualTo(1), "Switching cancels the windup.");
+        Assert.That(weaponController.IsAttacking, Is.False);
+        Assert.That(weaponController.WeaponIndex, Is.EqualTo(1));
+        Assert.That(slotsChanged, Is.EqualTo(1));
+        Assert.That(abilities.GetAbility(PlayerAbilities.ClassSlotCount), Is.SameAs(heavySkill));
+        Assert.That(abilities.GetAbility(PlayerAbilities.ClassSlotCount + 1), Is.SameAs(heavyOther));
+        clock.Advance(0.25f);
+        weaponController.Tick();
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth), "Nothing lands.");
+
+        float heavyStart = clock.Time;
+        Assert.That(weaponController.TryAttack(Vector2.left), Is.True, "The cancelled attack gave its cooldown back.");
+        clock.Advance(0.375f);
+        weaponController.Tick();
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth - 1));
+        Assert.That(weaponController.IsAttacking, Is.False);
+        weaponController.Equip(sword);
+        Assert.That(cancelled, Is.EqualTo(1), "Switching between attacks cancels nothing.");
+        clock.Time = heavyStart + 0.75f;
+        Assert.That(weaponController.TryAttack(Vector2.left), Is.False, "A switch does not ready the attack early.");
+        clock.Time = heavyStart + 1f;
+        Assert.That(weaponController.TryAttack(Vector2.left), Is.True);
+        weaponController.CancelAttack();
+
+        CastAim aim = new(Vector2.zero, Vector2.left, default);
+        Assert.That(abilities.TryCast(PlayerAbilities.ClassSlotCount, aim), Is.EqualTo(CastOutcome.Started));
+        abilities.CompleteCast(PlayerAbilities.ClassSlotCount);
+        Assert.That(abilities.RemainingCooldown(PlayerAbilities.ClassSlotCount), Is.EqualTo(2f).Within(0.0001f));
+        weaponController.Equip(heavy);
+        Assert.That(abilities.RemainingCooldown(PlayerAbilities.ClassSlotCount), Is.Zero, "The new weapon's ability is not held by the old one's.");
+        clock.Advance(0.5f);
+        weaponController.Equip(sword);
+        Assert.That(abilities.RemainingCooldown(PlayerAbilities.ClassSlotCount), Is.EqualTo(1.5f).Within(0.0001f), "Switching back keeps the ability's cooldown.");
+    }
+
+    /// <summary>
+    /// A ranged weapon's attack launches nothing during its windup and, at contact, one projectile from where the
+    /// player stands toward its target (not along the attack's first direction), which then hits the target once.
+    /// </summary>
+    [Test]
+    public void ARangedAttack_LaunchesItsProjectileAtContact_TowardItsTarget()
+    {
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out _);
+        ProjectileService projectiles = new(FixedGameAuthority.Authoritative, TestCombat.CreateHitService(FixedGameAuthority.Authoritative), TestCombat.Settings, clock, null);
+        weaponController.Construct(CreateAttackService(), projectiles, clock);
+        PlayerWeapon bow = Track(PlayerWeapon.Create(
+            "Bow",
+            3,
+            0.5f,
+            0f,
+            new Vector2[4],
+            range: 5f,
+            windup: 0.125f,
+            contact: 0.0625f,
+            recovery: 0.125f,
+            attackClipName: "BowShot",
+            projectile: new ProjectileSpec(10f, 6.5f, 0.1f, 0.5f, true, null)));
+        weaponController.Equip(bow);
+        enemyRoot = new GameObject("EnemyRoot");
+        GameObject enemy = CreateDamageable("Enemy", new Vector2(3f, 1f), enemyRoot.transform);
+        Health enemyHealth = enemy.GetComponent<Health>();
+        Physics2D.SyncTransforms();
+        UnitTarget target = new(enemyHealth, enemy.GetComponent<Collider2D>(), UnitTeam.Enemy);
+        Vector2? landedToward = null;
+        weaponController.AttackContacted += (_, direction, _) => landedToward = direction;
+
+        Assert.That(weaponController.TryAttack(Vector2.right, target), Is.True);
+        Assert.That(weaponController.AttackTarget.IsSameUnit(target), Is.True);
+        weaponController.Tick();
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        Assert.That(projectiles.FlyingCount, Is.Zero, "Nothing leaves during the windup.");
+
+        clock.Advance(0.0625f);
+        weaponController.Tick();
+        Assert.That(projectiles.FlyingCount, Is.EqualTo(1), "The projectile leaves at contact.");
+        Assert.That(landedToward.HasValue, Is.True);
+        Assert.That(Vector2.Dot(landedToward.Value, new Vector2(3f, 1f).normalized), Is.GreaterThan(0.999f), "It leaves toward the target.");
+        for (int i = 0; i < 30; i++)
+        {
+            projectiles.Advance(0.02f);
+        }
+
+        Assert.That(projectiles.FlyingCount, Is.Zero);
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth - 3));
+    }
+
+    /// <summary>
     /// The <see cref="MainLifetimeScope"/> in the Main scene references the project's input action asset, which
     /// is the only one builds use; the scene is opened additively and closed again.
     /// </summary>
@@ -531,6 +666,15 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
+    /// Keeps <paramref name="made"/> for <see cref="TearDown"/> and returns it.
+    /// </summary>
+    private T Track<T>(T made) where T : Object
+    {
+        created.Add(made);
+        return made;
+    }
+
+    /// <summary>
     /// Creates an attack service over a hit service under <paramref name="authority"/>, authoritative by default, so
     /// attacks deal damage.
     /// </summary>
@@ -541,7 +685,7 @@ public class PlayerWeaponSystemTests
 
     /// <summary>
     /// Creates a weapon with the given stats, a timeline of 0.125 s, 0.0625 s and 0.125 s with both cancel rules on,
-    /// zero hit offsets by default and a 0.9 by 0.9 hit area by default.
+    /// zero hit offsets by default, a 0.9 by 0.9 hit area by default and the given abilities.
     /// </summary>
     private static PlayerWeapon CreateTestWeapon(
         string name,
@@ -550,7 +694,8 @@ public class PlayerWeaponSystemTests
         float distance = 0.55f,
         Vector2? size = null,
         Vector2[] offsets = null,
-        Sprite icon = null)
+        Sprite icon = null,
+        AbilityDefinition[] abilities = null)
     {
         return PlayerWeapon.Create(
             name,
@@ -559,6 +704,7 @@ public class PlayerWeaponSystemTests
             distance,
             offsets ?? new Vector2[4],
             icon,
+            weaponAbilities: abilities,
             size: size ?? new Vector2(0.9f, 0.9f),
             windup: 0.125f,
             contact: 0.0625f,
@@ -578,7 +724,7 @@ public class PlayerWeaponSystemTests
         playerController = root.AddComponent<PlayerController>();
         playerController.Construct(clock);
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateAttackService(), clock);
+        weaponController.Construct(CreateAttackService(), null, clock);
         settings = TestPlayerControlSettings.Create();
         TestPlayerControlSettings.Assign(playerController, settings);
         return weaponController;

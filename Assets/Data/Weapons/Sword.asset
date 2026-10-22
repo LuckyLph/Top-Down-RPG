@@ -23,6 +23,7 @@ MonoBehaviour:
   recoverySeconds: 0.15
   windupCancelledByMove: 1
   recoveryCancellable: 1
+  delivery: 0
   hitDistance: 0.65
   hitOffsets:
   - {x: 0, y: 0.4}
@@ -30,13 +31,14 @@ MonoBehaviour:
   - {x: -0.1, y: 0.5}
   - {x: 0.1, y: 0.5}
   hitSize: {x: 1.77, y: 1.56}
+  projectileSpeed: 18
+  projectileRange: 6.5
+  projectileRadius: 0.1
+  projectileLaunchDistance: 0.5
+  projectileHoming: 1
+  projectileVisual: {fileID: 0}
   attackClip: SwordSlash
-  carryClips:
-  - IdleSword
-  - WalkSword
-  - RunSword
-  - SprintSword
-  hudIcon: {fileID: 5154499244127856136, guid: ebbeb1c067ea7ad46bcd2727188da217, type: 3}
+  hudIcon: {fileID: 1394404048, guid: 89e27573c7de7a24e833f0c4928839e4, type: 3}
   abilities:
   - {fileID: 11400000, guid: 84cfe8776e8c16044af287ce0cb5bf77, type: 2}
   - {fileID: 11400000, guid: b715f2eb30885b443ada749c7053547e, type: 2}

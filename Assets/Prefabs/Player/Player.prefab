@@ -307,6 +307,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerController: {fileID: 1451667930681185956}
   startingWeapon: {fileID: 11400000, guid: 5e8290d96f4c4814a5d633d9cb244fc6, type: 2}
+  catalog: {fileID: 11400000, guid: 6b611b252743d6649808b29d858df522, type: 2}
   visuals: {fileID: 4451734619522619835}
 --- !u!114 &932742323194821630
 MonoBehaviour:

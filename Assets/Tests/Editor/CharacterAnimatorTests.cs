@@ -515,7 +515,7 @@ public class CharacterAnimatorTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
         visuals.Construct(clock);
         PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), clock);
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash")));
 
         visuals.SetLocomotion(Vector2.right * RunNatural, Vector2.right);

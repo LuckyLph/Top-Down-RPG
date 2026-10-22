@@ -9,8 +9,9 @@ using UnityEngine;
 /// prefabs and assets, which they only read: the player draws the rogue's baked set from its feet with no Mecanim
 /// animator, and its weapon plays on those visuals; the sword's hit area is centred half a unit above the feet; the
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
-/// locomotion frames at the feet; at the player's base speed, and chilled, it runs at an unclamped rate so its feet keep up; a sorter
-/// with a sorting point sorts by that point's height, and the Weasel sorts by its feet.
+/// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
+/// runs at an unclamped rate so its feet keep up; a sorter with a sorting point sorts by that point's height, and the
+/// Weasel sorts by its feet.
 /// </summary>
 public class CharacterPrefabTests
 {
@@ -20,6 +21,8 @@ public class CharacterPrefabTests
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
     private const string SwordArtPath = "Assets/Settings/Characters/Weapons/WeaponArt_Sword.asset";
+    private const string WeaponsFolder = "Assets/Data/Weapons/";
+    private const string WeaponArtFolder = "Assets/Settings/Characters/Weapons/";
     private const float OnePixel = 1f / 32f;
 
     private readonly List<Object> created = new();
@@ -127,6 +130,42 @@ public class CharacterPrefabTests
             string name = CharacterDirections.Name(direction);
             Assert.That(attackTop, Is.EqualTo(idleTop), $"{name}: the hood's top.");
             Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(1), $"{name}: the boots.");
+        }
+    }
+
+    /// <summary>
+    /// The greatsword's and the longbow's attacks (contact frame 5 each) start where the character stands: in every
+    /// direction their first frame (96 and 80 px, pivoted on the feet) puts the top of the hood within a pixel of the
+    /// idle's and the boots within two, the weapon's own pixels left out. The greatsword's first pose bends its knees,
+    /// sitting the hood a pixel lower in most directions.
+    /// </summary>
+    [Test]
+    public void TheGreatswordAndBowAttacks_LineUpWithTheLocomotionAtTheFeet()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
+        CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
+        Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
+        string[] weapons = { "Greatsword", "Longbow" };
+        string[] arts = { "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        float[] sizes = { 96f, 80f };
+        for (int w = 0; w < weapons.Length; w++)
+        {
+            PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
+            CharacterAnimationClip attack = set.Find(weapon.AttackClip);
+            Assert.That(attack, Is.Not.Null, weapons[w]);
+            Assert.That(attack.ContactFrame, Is.EqualTo(5), weapons[w]);
+            Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+            HashSet<Color32> weaponColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[w] + ".asset"));
+            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            {
+                Sprite attackFrame = attack.SpriteAt(direction, 0);
+                Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])));
+                OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
+                OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
+                string name = $"{weapons[w]} {CharacterDirections.Name(direction)}";
+                Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(1), $"{name}: the hood's top.");
+                Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+            }
         }
     }
 

@@ -2,10 +2,21 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
+/// How a weapon's hit reaches its target at contact: a melee area searched at once, or a projectile that leaves then
+/// (Docs/Animation.md, Phase 4).
+/// </summary>
+public enum AttackDelivery
+{
+    Melee,
+    Projectile
+}
+
+/// <summary>
 /// A weapon the player can equip: the <see cref="Hit"/> each attack deals, the attack's cooldown, range and timeline
-/// (windup, contact and recovery at attack speed 1) with its cancel rules, the area its hit lands on at contact, the
-/// clip of the character's animation set its attack plays (the only frames that draw it), its HUD icon, and the two
-/// abilities it grants (the A and S slots).
+/// (windup, contact and recovery at attack speed 1) with its cancel rules, how its hit lands at contact (the area a
+/// melee weapon searches, or the projectile a ranged one launches), the clip of the character's animation set its
+/// attack plays (the only frames that draw it), its HUD icon, and the two abilities it grants (the A and S slots). A
+/// weapon is named on the wire by its index in the <see cref="WeaponCatalog"/>.
 /// </summary>
 [CreateAssetMenu(fileName = "Player Weapon", menuName = "TopDownRPG/Combat/Player Weapon")]
 public sealed class PlayerWeapon : ScriptableObject
@@ -36,6 +47,8 @@ public sealed class PlayerWeapon : ScriptableObject
     private bool recoveryCancellable = true;
 
     [Header("Hit area")]
+    [SerializeField, Tooltip("Melee: the area below is searched at contact. Projectile: a projectile leaves at contact and hits the first unit it can.")]
+    private AttackDelivery delivery = AttackDelivery.Melee;
     [FormerlySerializedAs("slashSpawnDistance")]
     [SerializeField, Min(0f), Tooltip("How far along the attack's direction the hit area's centre lies from its offset point.")]
     private float hitDistance = 0.65f;
@@ -44,6 +57,20 @@ public sealed class PlayerWeapon : ScriptableObject
     private Vector2[] hitOffsets = new Vector2[DirectionalOffsetCount];
     [SerializeField, Tooltip("The hit area's width across the attack's direction and its depth along it, in units.")]
     private Vector2 hitSize = new(1.77f, 1.56f);
+
+    [Header("Projectile")]
+    [SerializeField, Min(0.1f), Tooltip("How fast the projectile flies, in units per second.")]
+    private float projectileSpeed = 18f;
+    [SerializeField, Min(0f), Tooltip("How far it flies at most from the shooter's feet, in units.")]
+    private float projectileRange = 6.5f;
+    [SerializeField, Min(0.01f), Tooltip("The radius it sweeps as it flies, in units.")]
+    private float projectileRadius = 0.1f;
+    [SerializeField, Min(0f), Tooltip("How far ahead of the shooter's feet it leaves, in units: where the bow is at release.")]
+    private float projectileLaunchDistance = 0.5f;
+    [SerializeField, Tooltip("It turns toward the attack's target as it flies and only hits it; without a living target it flies straight.")]
+    private bool projectileHoming = true;
+    [SerializeField, Tooltip("How it looks in flight on every machine.")]
+    private ProjectileVisual projectileVisual;
 
     [Header("Animation")]
     [SerializeField, Tooltip("The clip of the character's animation set the attack plays, stretched to its timeline. The weapon only shows in it.")]
@@ -63,6 +90,9 @@ public sealed class PlayerWeapon : ScriptableObject
     public AttackTimeline Timeline => new(windupSeconds, Mathf.Max(0.01f, contactSeconds), recoverySeconds);
     public bool WindupCancelledByMove => windupCancelledByMove;
     public bool RecoveryCancellable => recoveryCancellable;
+    public AttackDelivery Delivery => delivery;
+    public bool FiresProjectile => delivery == AttackDelivery.Projectile;
+    public ProjectileSpec Projectile => new(projectileSpeed, projectileRange, projectileRadius, projectileLaunchDistance, projectileHoming, projectileVisual);
     public float HitDistance => Mathf.Max(0f, hitDistance);
     public Vector2 HitSize => new(Mathf.Max(0f, hitSize.x), Mathf.Max(0f, hitSize.y));
     public string AttackClip => attackClip;
@@ -107,7 +137,8 @@ public sealed class PlayerWeapon : ScriptableObject
     /// <summary>
     /// Builds an unsaved, hidden runtime weapon with the given values, for tests that must not touch project assets.
     /// Offsets and abilities are truncated or padded to their fixed counts; the timeline defaults to 0.15 s, 0.05 s and
-    /// 0.15 s with both cancel rules on, the hit area to 0.9 by 0.9, and the attack clip to the sword's.
+    /// 0.15 s with both cancel rules on, the hit area to 0.9 by 0.9, and the attack clip to the sword's. With a
+    /// <paramref name="projectile"/> it fires that projectile instead of searching its area.
     /// </summary>
     public static PlayerWeapon Create(
         string name,
@@ -126,7 +157,8 @@ public sealed class PlayerWeapon : ScriptableObject
         float recovery = 0.15f,
         bool cancelWindupByMove = true,
         bool cancellableRecovery = true,
-        string attackClipName = "SwordSlash")
+        string attackClipName = "SwordSlash",
+        ProjectileSpec? projectile = null)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.displayName = name;
@@ -144,6 +176,18 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.hitOffsets = NormalizeDirectionalOffsets(offsets);
         weapon.hitSize = size ?? new Vector2(0.9f, 0.9f);
         weapon.attackClip = attackClipName;
+        if (projectile.HasValue)
+        {
+            ProjectileSpec spec = projectile.Value;
+            weapon.delivery = AttackDelivery.Projectile;
+            weapon.projectileSpeed = spec.Speed;
+            weapon.projectileRange = spec.Range;
+            weapon.projectileRadius = spec.Radius;
+            weapon.projectileLaunchDistance = spec.LaunchDistance;
+            weapon.projectileHoming = spec.Homing;
+            weapon.projectileVisual = spec.Visual;
+        }
+
         weapon.hudIcon = icon;
         weapon.abilities = AbilitySlotArrays.Resize(weaponAbilities, AbilityCount);
         weapon.hideFlags = HideFlags.HideAndDontSave;

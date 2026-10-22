@@ -113,7 +113,8 @@ public sealed class InProcessClient : IDisposable
 
     /// <summary>
     /// A client-side container like a real client's Gameplay scope offers player and mob copies: the registry, the
-    /// local player, scripted input, combat, statuses and abilities, the players' worlds and trips (with
+    /// local player, scripted input, combat (projectiles, which nothing ticks here), statuses and abilities, the
+    /// players' worlds and trips (with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, and an empty
     /// world navigation, so its players walk in straight lines.
     /// </summary>
@@ -157,6 +158,8 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IClientReadiness>(new ReadyClients());
         builder.Register<AbilityService>(Lifetime.Singleton);
         builder.Register<AttackService>(Lifetime.Singleton);
+        builder.Register<ProjectileVisualPool>(Lifetime.Singleton).WithParameter(default(Scene));
+        builder.Register<ProjectileService>(Lifetime.Singleton);
         builder.Register<EffectSpawner>(Lifetime.Singleton);
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));

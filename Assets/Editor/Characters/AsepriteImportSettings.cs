@@ -5,32 +5,33 @@ using UnityEngine;
 
 /// <summary>
 /// Import postprocessor that keeps the Aseprite importer's own output light for every <c>.aseprite</c> file under
-/// <see cref="AsepriteCharacterRecipe.ArtRoot"/> (Docs/AsepriteCharacters.md, Import settings): Animated Sprite mode,
-/// Merge Frame layer import, hidden layers left out, 32 pixels per unit, point filtering, no mipmaps, no compression,
-/// no model prefab and no animation clips (Mecanim is not used). Its texture and sprites only preview the file in the
-/// Project window; <see cref="AsepriteCharacterWriter"/> reads the file itself, so no pivot is set. Other Aseprite
-/// files are left alone.
+/// <see cref="ArtRoot"/>, the characters', effects' and projectiles' files (Docs/AsepriteCharacters.md, Import
+/// settings): Animated Sprite mode, Merge Frame layer import, hidden layers left out, 32 pixels per unit, point
+/// filtering, no mipmaps, no compression, no model prefab and no animation clips (Mecanim is not used). Its texture and
+/// sprites only preview the file in the Project window; the recipes' writers read the file themselves, so no pivot is
+/// set. Other Aseprite files are left alone.
 /// </summary>
 public sealed class AsepriteImportSettings : AssetPostprocessor
 {
+    public const string ArtRoot = "Assets/Art";
+
     /// <summary>
-    /// Applies the settings to a character's file before it imports.
+    /// Applies the settings to a file under <see cref="ArtRoot"/> before it imports.
     /// </summary>
     void OnPreprocessAsset()
     {
-        if (assetImporter is AsepriteImporter importer && IsCharacterArt(assetPath))
+        if (assetImporter is AsepriteImporter importer && IsProjectArt(assetPath))
         {
             Apply(importer);
         }
     }
 
     /// <summary>
-    /// Whether <paramref name="path"/> lies under <see cref="AsepriteCharacterRecipe.ArtRoot"/>, ignoring case and
-    /// slash direction.
+    /// Whether <paramref name="path"/> lies under <see cref="ArtRoot"/>, ignoring case and slash direction.
     /// </summary>
-    public static bool IsCharacterArt(string path)
+    public static bool IsProjectArt(string path)
     {
-        return path.Replace('\\', '/').StartsWith(AsepriteCharacterRecipe.ArtRoot + "/", StringComparison.OrdinalIgnoreCase);
+        return path.Replace('\\', '/').StartsWith(ArtRoot + "/", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

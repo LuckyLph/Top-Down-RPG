@@ -19,9 +19,9 @@ public static class AsepriteCharacterWriter
     /// Reads and writes every clip of <paramref name="recipe"/>, then its set. Writes nothing when the recipe cannot
     /// generate (<see cref="AsepriteCharacterRecipe.CanGenerate"/>), reporting why.
     /// </summary>
-    public static AsepriteCharacterReport Generate(AsepriteCharacterRecipe recipe)
+    public static AsepriteReport Generate(AsepriteCharacterRecipe recipe)
     {
-        AsepriteCharacterReport report = new();
+        AsepriteReport report = new();
         if (!recipe.CanGenerate(out string problem))
         {
             report.Problems.Add($"{recipe.name}: {problem}");
@@ -62,14 +62,4 @@ public static class AsepriteCharacterWriter
 
         return report;
     }
-}
-
-/// <summary>
-/// What a run of <see cref="AsepriteCharacterWriter.Generate"/> did: the problems found, each naming the file, tag and
-/// frame where it has them, and the paths it wrote (a sheet or the set that changed).
-/// </summary>
-public sealed class AsepriteCharacterReport
-{
-    public List<string> Problems { get; } = new();
-    public List<string> Written { get; } = new();
 }

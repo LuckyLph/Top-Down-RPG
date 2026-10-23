@@ -98,6 +98,46 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
+    /// Writes frames cut from a baked sheet laid out as the effect and weapon sprite writers lay them (rows from the
+    /// bottom, <paramref name="sheetWidth"/> wide, frames of <paramref name="size"/>): <paramref name="rows"/> rows of
+    /// <paramref name="columns"/> frames from row <paramref name="firstRow"/> counted from the top, row after row, on one
+    /// layer, each frame shown <paramref name="milliseconds"/>, each row's frames under the tag
+    /// <paramref name="tagOf"/> names for it (none without it or for null). Docs/AsepriteCharacters.md's Phase 3
+    /// conventions: an impact's variant is its eight rows tagged by direction, the death puff its one row untagged, the
+    /// arrow its one row of a frame per direction.
+    /// </summary>
+    public static AsepriteFileWriter FromSheetRows(Color32[] sheet, int sheetWidth, Vector2Int size, int firstRow, int rows, int columns, int milliseconds, Func<int, string> tagOf = null)
+    {
+        int sheetHeight = sheet.Length / sheetWidth;
+        AsepriteFileWriter writer = new(size.x, size.y);
+        int layer = writer.AddLayer("Body");
+        Color32[] canvas = new Color32[size.x * size.y];
+        for (int row = 0; row < rows; row++)
+        {
+            int first = writer.FrameCount;
+            int bottom = sheetHeight - (firstRow + row + 1) * size.y;
+            for (int column = 0; column < columns; column++)
+            {
+                int frame = writer.AddFrame(milliseconds);
+                for (int y = 0; y < size.y; y++)
+                {
+                    Array.Copy(sheet, (bottom + size.y - 1 - y) * sheetWidth + column * size.x, canvas, y * size.x, size.x);
+                }
+
+                writer.SetImage(layer, frame, canvas);
+            }
+
+            string tag = tagOf?.Invoke(row);
+            if (tag != null)
+            {
+                writer.AddTag(tag, first, writer.FrameCount - 1);
+            }
+        }
+
+        return writer;
+    }
+
+    /// <summary>
     /// Adds an image layer above the others, blended by <paramref name="blendMode"/> (Aseprite's numbers:
     /// <see cref="BlendNormal"/>, <see cref="BlendMultiply"/>, ...) at <paramref name="opacity"/>, at the top level or in
     /// <paramref name="group"/>, and returns its index. A group's layers are added right after it, as the file lists

@@ -21,7 +21,7 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/Animation.md` is the spec for character animation: the character rig and the baker that generates its sprite sheets, the runtime animator, gaits by speed, the attack timeline with its cancel rules, and weapon movesets. Follow it when working on character art, character animation, attack timing or weapon visuals, and tick off its phase checklist as steps land.
 
-`Docs/AsepriteCharacters.md` is the plan for characters drawn by hand in Aseprite and imported into the same animation sets the baker writes: the file and tag conventions, the contact markers, the enforced import settings and the import recipe. Follow it when working on Aseprite files, their import or hand-drawn characters, and tick off its phase checklist as steps land.
+`Docs/AsepriteCharacters.md` is the plan for characters, effects and projectiles drawn by hand in Aseprite and imported into the same animation sets and sprite sets the baker and the effect and weapon sprite writers write: the file and tag conventions, the contact markers, the enforced import settings and the import recipes. Follow it when working on Aseprite files, their import or hand-drawn characters, effects or projectiles, and tick off its phase checklist as steps land.
 
 `Docs/TerrainBlending.md` is the spec for drawing the ground with a blending shader instead of dual-grid tilesets. Follow it when working on ground rendering, terrain materials, the terrain brush or the ground and wall tilesets, and tick off its phase checklist as steps land.
 
@@ -33,7 +33,7 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/WorldGeneration.md` is the plan for generating worlds in the editor: a world generator that composes a world from the area generators' layouts as regions, with wilds, roads and the sea between them, and writes it into the world's chunk scenes, starting with the Overworld, the first world. Follow it when working on world generation, the regions, the Overworld, or regenerating a world without breaking saves or hand work, and tick off its phase checklist as steps land.
 
-Use only art generated in this project (recipes and editor tools) or drawn by hand in Aseprite for it and imported through an Aseprite character recipe (`Docs/AsepriteCharacters.md`); import no third-party art.
+Use only art generated in this project (recipes and editor tools) or drawn by hand in Aseprite for it and imported through an Aseprite recipe (character, effect or projectile; `Docs/AsepriteCharacters.md`); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -14,7 +15,7 @@ using Object = UnityEngine.Object;
 /// writes the set; the inspector previews a clip and generates.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Aseprite Character Recipe", fileName = "AsepriteRecipe")]
-public sealed class AsepriteCharacterRecipe : ScriptableObject
+public sealed class AsepriteCharacterRecipe : ScriptableObject, IAsepriteRecipe
 {
     public const string ArtRoot = "Assets/Art/Characters";
     public const string Extension = ".aseprite";
@@ -29,6 +30,7 @@ public sealed class AsepriteCharacterRecipe : ScriptableObject
     public string CharacterName => characterName;
     public GameObject Character => character;
     public IReadOnlyList<AsepriteClip> Clips => clips;
+    public IEnumerable<string> FilePaths => clips.Where(c => c?.FilePath != null).Select(c => c.FilePath);
 
     /// <summary>
     /// Creates an unsaved recipe for the character <paramref name="name"/> drawn with <paramref name="prefab"/> (or
@@ -124,6 +126,14 @@ public sealed class AsepriteCharacterRecipe : ScriptableObject
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Writes the clips' sheets and the animation set (<see cref="AsepriteCharacterWriter.Generate"/>).
+    /// </summary>
+    public AsepriteReport Generate()
+    {
+        return AsepriteCharacterWriter.Generate(this);
     }
 }
 

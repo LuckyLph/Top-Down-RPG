@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -11,8 +9,9 @@ using UnityEngine;
 /// character's scale in each of the recipe's directions, its tip on each frame's middle, written as one row of frames,
 /// <c>&lt;arrow name&gt;.png</c>, sliced into <c>&lt;arrow name&gt;_&lt;direction&gt;</c> pivoted on the tip, and a
 /// runtime <see cref="DirectionalSprites"/> <c>&lt;arrow name&gt;_Directions.asset</c> beside it. Baking touches no
-/// asset and gives the same pixels for the same recipe; writing skips a file whose bytes did not change, and the set
-/// keeps its GUID.
+/// asset and gives the same pixels for the same recipe; writing goes through <see cref="SpriteSheetFiles"/> (the arrow's
+/// through <see cref="WriteDirections"/>, shared with the projectiles drawn in Aseprite), skips a file whose bytes did
+/// not change, keeps slice IDs by name, and the set keeps its GUID.
 /// </summary>
 public static class WeaponSpriteWriter
 {
@@ -106,7 +105,7 @@ public static class WeaponSpriteWriter
 
         TerrainMaterialWriter.EnsureFolder(Folder);
         List<string> paths = new();
-        string iconPath = $"{Folder}/{recipe.IconName}.png";
+        string iconPath = SheetPath(recipe.IconName);
         int size = recipe.IconSize;
         SpriteSheetFiles.WriteSheet(iconPath, size, size, BakeIcon(recipe), new[] { new SpriteSheetFiles.Slice(recipe.IconName, new Rect(0f, 0f, size, size)) });
         paths.Add(iconPath);
@@ -115,21 +114,59 @@ public static class WeaponSpriteWriter
             return paths;
         }
 
-        string arrowPath = $"{Folder}/{recipe.ArrowName}.png";
         int frame = recipe.ArrowFrame;
-        SpriteSheetFiles.Slice[] slices = Enumerable.Range(0, recipe.ArrowDirections).Select(d => new SpriteSheetFiles.Slice(ArrowSliceName(recipe, d), new Rect(d * frame, 0f, frame, frame))).ToArray();
-        SpriteSheetFiles.WriteSheet(arrowPath, frame * recipe.ArrowDirections, frame, BakeArrow(recipe), slices);
-        paths.Add(arrowPath);
-        paths.Add(WriteDirections(recipe, arrowPath));
+        WriteDirections(recipe.ArrowName, new Vector2Int(frame, frame), new Vector2(0.5f, 0.5f), recipe.ArrowDirections, BakeArrow(recipe));
+        paths.Add(SheetPath(recipe.ArrowName));
+        paths.Add(DirectionsPath(recipe));
         return paths;
     }
 
     /// <summary>
-    /// The name of the arrow's slice for direction <paramref name="direction"/>.
+    /// Writes a thing drawn in <paramref name="count"/> directions, one frame of <paramref name="frameSize"/> each
+    /// counterclockwise from east: <paramref name="pixels"/> (rows from the bottom, one row of frames) at
+    /// <see cref="SheetPath"/> through <see cref="SpriteSheetFiles.WriteSheet"/>, sliced into
+    /// <see cref="DirectionSliceName"/> pivoted at <paramref name="pivot"/> (a share of the frame from its bottom left:
+    /// the arrow's tip), then its <see cref="DirectionalSprites"/> at <see cref="DirectionsPath(string)"/>, keeping its
+    /// GUID. Shared by the bow's baked arrow and the projectiles drawn in Aseprite
+    /// (<see cref="AsepriteProjectileWriter"/>). Returns the paths it wrote: the sheet when it was written or its import
+    /// settings or slices changed, the set when it was created or changed.
     /// </summary>
-    public static string ArrowSliceName(WeaponSpriteRecipe recipe, int direction)
+    public static IReadOnlyList<string> WriteDirections(string sheetName, Vector2Int frameSize, Vector2 pivot, int count, Color32[] pixels)
     {
-        return $"{recipe.ArrowName}_{direction}";
+        TerrainMaterialWriter.EnsureFolder(Folder);
+        string sheetPath = SheetPath(sheetName);
+        SpriteSheetFiles.Slice[] slices = Enumerable.Range(0, count).Select(d => new SpriteSheetFiles.Slice(DirectionSliceName(sheetName, d), new Rect(d * frameSize.x, 0f, frameSize.x, frameSize.y), pivot)).ToArray();
+        List<string> written = new();
+        if (SpriteSheetFiles.WriteSheet(sheetPath, frameSize.x * count, frameSize.y, pixels, slices))
+        {
+            written.Add(sheetPath);
+        }
+
+        Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheetPath);
+        Sprite[] ordered = slices.Select(s => sprites.TryGetValue(s.Name, out Sprite sprite) ? sprite : null).ToArray();
+        string directionsPath = DirectionsPath(sheetName);
+        if (SpriteSheetFiles.WriteAsset(directionsPath, DirectionalSprites.Create(ordered)))
+        {
+            written.Add(directionsPath);
+        }
+
+        return written;
+    }
+
+    /// <summary>
+    /// The path of the sheet named <paramref name="sheetName"/>: an icon, or the frames of a thing drawn in directions.
+    /// </summary>
+    public static string SheetPath(string sheetName)
+    {
+        return $"{Folder}/{sheetName}.png";
+    }
+
+    /// <summary>
+    /// The name of the slice for direction <paramref name="direction"/> of the sheet named <paramref name="sheetName"/>.
+    /// </summary>
+    public static string DirectionSliceName(string sheetName, int direction)
+    {
+        return $"{sheetName}_{direction}";
     }
 
     /// <summary>
@@ -137,7 +174,15 @@ public static class WeaponSpriteWriter
     /// </summary>
     public static string DirectionsPath(WeaponSpriteRecipe recipe)
     {
-        return $"{Folder}/{recipe.ArrowName}_Directions.asset";
+        return DirectionsPath(recipe.ArrowName);
+    }
+
+    /// <summary>
+    /// The path of the direction set of the sheet named <paramref name="sheetName"/>.
+    /// </summary>
+    public static string DirectionsPath(string sheetName)
+    {
+        return $"{Folder}/{sheetName}_Directions.asset";
     }
 
     /// <summary>
@@ -248,41 +293,5 @@ public static class WeaponSpriteWriter
         }
 
         return minX > maxX ? new RectInt(0, 0, 0, 0) : new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
-    }
-
-    /// <summary>
-    /// Writes the arrow's direction set over the sliced sheet at <paramref name="sheetPath"/>: creates it, or copies
-    /// the new set over it when it differs, keeping its GUID. Returns its path.
-    /// </summary>
-    private static string WriteDirections(WeaponSpriteRecipe recipe, string sheetPath)
-    {
-        Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(sheetPath).OfType<Sprite>().ToDictionary(s => s.name);
-        Sprite[] ordered = new Sprite[recipe.ArrowDirections];
-        for (int direction = 0; direction < ordered.Length; direction++)
-        {
-            sprites.TryGetValue(ArrowSliceName(recipe, direction), out ordered[direction]);
-        }
-
-        string path = DirectionsPath(recipe);
-        string setName = Path.GetFileNameWithoutExtension(path);
-        DirectionalSprites fresh = DirectionalSprites.Create(ordered);
-        fresh.name = setName;
-        DirectionalSprites current = AssetDatabase.LoadAssetAtPath<DirectionalSprites>(path);
-        if (current == null)
-        {
-            AssetDatabase.CreateAsset(fresh, path);
-            return path;
-        }
-
-        if (EditorJsonUtility.ToJson(current) != EditorJsonUtility.ToJson(fresh))
-        {
-            EditorUtility.CopySerialized(fresh, current);
-            current.name = setName;
-            EditorUtility.SetDirty(current);
-            AssetDatabase.SaveAssetIfDirty(current);
-        }
-
-        Object.DestroyImmediate(fresh);
-        return path;
     }
 }

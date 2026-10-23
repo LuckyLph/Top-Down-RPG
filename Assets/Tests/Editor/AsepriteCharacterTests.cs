@@ -458,7 +458,7 @@ public class AsepriteCharacterTests
         AsepriteCharacterRecipe recipe = AsepriteCharacterRecipe.Create(Character, AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath), clips);
         created.Add(recipe);
 
-        AsepriteCharacterReport report = AsepriteCharacterWriter.Generate(recipe);
+        AsepriteReport report = AsepriteCharacterWriter.Generate(recipe);
 
         Assert.That(report.Problems, Is.Empty);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(Character));
@@ -488,7 +488,7 @@ public class AsepriteCharacterTests
             }
         }
 
-        AsepriteCharacterReport again = AsepriteCharacterWriter.Generate(recipe);
+        AsepriteReport again = AsepriteCharacterWriter.Generate(recipe);
         Assert.That(again.Written, Is.Empty);
         Assert.That(again.Problems, Is.Empty);
     }
@@ -510,7 +510,7 @@ public class AsepriteCharacterTests
         string sheetPath = CharacterSheetWriter.SheetPath(Character, "Run");
         Object file = Import(RunFile(sheet), "Run");
 
-        AsepriteCharacterReport first = AsepriteCharacterWriter.Generate(Recipe(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath), Character, new AsepriteClip(file, CharacterGait.Run, false, naturalSpeed, run.Pivot)));
+        AsepriteReport first = AsepriteCharacterWriter.Generate(Recipe(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath), Character, new AsepriteClip(file, CharacterGait.Run, false, naturalSpeed, run.Pivot)));
         Assert.That(first.Problems.Count, Is.EqualTo(13), string.Join("\n", first.Problems));
         Assert.That(first.Problems.All(p => p.StartsWith("Player plays ", StringComparison.Ordinal)), Is.True, string.Join("\n", first.Problems));
         Dictionary<string, long> ids = SpriteIds(sheetPath);
@@ -541,7 +541,7 @@ public class AsepriteCharacterTests
     /// <paramref name="frames"/> frames, each slice drawn before keeps its sprite ID, and the set's run points at the
     /// sheet's slices by direction and frame.
     /// </summary>
-    private static void AssertKeepsIds(AsepriteCharacterReport report, Dictionary<string, long> ids, string sheetPath, int frames, string edit)
+    private static void AssertKeepsIds(AsepriteReport report, Dictionary<string, long> ids, string sheetPath, int frames, string edit)
     {
         Assert.That(report.Problems, Is.Empty, edit);
         Dictionary<string, long> now = SpriteIds(sheetPath);

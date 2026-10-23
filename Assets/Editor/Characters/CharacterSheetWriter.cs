@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.U2D.Sprites;
 using UnityEngine;
 
 /// <summary>
@@ -19,8 +17,9 @@ using UnityEngine;
 /// by gait frame), each frame's duration at natural speed, its gait, whether it is armed, its contact (release) frame
 /// and a gait's natural speed (<see cref="NaturalSpeed"/>); the asset keeps its GUID and is saved only when it changed.
 /// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
-/// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) is shared with
-/// <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn clips the same way.
+/// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) goes through
+/// <see cref="SpriteSheetFiles"/> and is shared with <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn
+/// clips the same way.
 /// </summary>
 public static class CharacterSheetWriter
 {
@@ -58,43 +57,27 @@ public static class CharacterSheetWriter
 
     /// <summary>
     /// Writes one clip's sheet, <paramref name="pixels"/> (rows from the bottom) of <paramref name="columns"/> frames of
-    /// <paramref name="frameSize"/> a row and a row per direction, at <see cref="SheetPath(string, string)"/> when its
-    /// bytes changed, imports it at <see cref="PixelsPerUnit"/> and slices it into
-    /// <see cref="SliceName(string, string, int, int)"/> at <see cref="CharacterSheet.FrameRect"/> with the pivot on the
-    /// <paramref name="feet"/> pixel, keeping existing slices' IDs. A sheet already imported gets its new slices before
-    /// its new pixels import, so a sheet that lost frames never imports with slices past its edge. Returns whether the
-    /// file was written or its import settings or slices changed; an unchanged sheet is neither rewritten nor
-    /// reimported.
+    /// <paramref name="frameSize"/> a row and a row per direction, at <see cref="SheetPath(string, string)"/> through
+    /// <see cref="SpriteSheetFiles.WriteSheet"/>, sliced into <see cref="SliceName(string, string, int, int)"/> at
+    /// <see cref="CharacterSheet.FrameRect"/> with the pivot on the <paramref name="feet"/> pixel, keeping existing
+    /// slices' IDs and removing the others. Returns whether the file was written or its import settings or slices
+    /// changed; an unchanged sheet is neither rewritten nor reimported.
     /// </summary>
     public static bool WriteSheet(string sheetName, string clipName, Vector2Int frameSize, Vector2Int feet, int columns, Color32[] pixels)
     {
         TerrainMaterialWriter.EnsureFolder(FolderOf(sheetName));
-        string path = SheetPath(sheetName, clipName);
-        int width = columns * frameSize.x;
-        int height = CharacterDirections.Count * frameSize.y;
-        byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
-        bool imported = AssetImporter.GetAtPath(path) != null;
-        bool written = !imported || !File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(png);
-        if (written)
+        Vector2 pivot = SpriteSheetFiles.Slice.PivotOn(feet, frameSize);
+        List<SpriteSheetFiles.Slice> slices = new();
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
         {
-            File.WriteAllBytes(path, png);
+            for (int frame = 0; frame < columns; frame++)
+            {
+                RectInt rect = CharacterSheet.FrameRect(direction, frame, frameSize);
+                slices.Add(new SpriteSheetFiles.Slice(SliceName(sheetName, clipName, direction, frame), new Rect(rect.x, rect.y, rect.width, rect.height), pivot));
+            }
         }
 
-        if (!imported)
-        {
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-        }
-
-        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
-        bool changed = ApplyImportSettings(importer);
-        changed |= FitMaxSize(importer, Mathf.Max(width, height));
-        changed |= Slice(importer, sheetName, clipName, frameSize, feet, columns);
-        if (written || changed)
-        {
-            importer.SaveAndReimport();
-        }
-
-        return written || changed;
+        return SpriteSheetFiles.WriteSheet(SheetPath(sheetName, clipName), columns * frameSize.x, CharacterDirections.Count * frameSize.y, pixels, slices);
     }
 
     /// <summary>
@@ -103,7 +86,7 @@ public static class CharacterSheetWriter
     /// </summary>
     public static Sprite[] SheetSprites(string sheetName, string clipName, int columns)
     {
-        Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(SheetPath(sheetName, clipName)).OfType<Sprite>().ToDictionary(s => s.name);
+        Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(SheetPath(sheetName, clipName));
         Sprite[] ordered = new Sprite[CharacterDirections.Count * columns];
         for (int direction = 0; direction < CharacterDirections.Count; direction++)
         {
@@ -169,26 +152,7 @@ public static class CharacterSheetWriter
     /// </summary>
     public static bool WriteSet(string path, CharacterAnimationSet fresh)
     {
-        string setName = Path.GetFileNameWithoutExtension(path);
-        fresh.name = setName;
-        CharacterAnimationSet existing = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(path);
-        if (existing == null)
-        {
-            AssetDatabase.CreateAsset(fresh, path);
-            return true;
-        }
-
-        bool changed = EditorJsonUtility.ToJson(existing) != EditorJsonUtility.ToJson(fresh);
-        if (changed)
-        {
-            EditorUtility.CopySerialized(fresh, existing);
-            existing.name = setName;
-            EditorUtility.SetDirty(existing);
-            AssetDatabase.SaveAssetIfDirty(existing);
-        }
-
-        Object.DestroyImmediate(fresh);
-        return changed;
+        return SpriteSheetFiles.WriteAsset(path, fresh);
     }
 
     /// <summary>
@@ -258,85 +222,5 @@ public static class CharacterSheetWriter
         importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.sRGBTexture = true;
         return changed;
-    }
-
-    /// <summary>
-    /// Raises the import's maximum size to the smallest one that holds a sheet of <paramref name="side"/> pixels, its
-    /// longer side, when it is smaller, without reimporting; returns whether it changed. Smaller sheets keep theirs.
-    /// </summary>
-    private static bool FitMaxSize(TextureImporter importer, int side)
-    {
-        if (importer.maxTextureSize >= side)
-        {
-            return false;
-        }
-
-        int size = importer.maxTextureSize;
-        while (size < side)
-        {
-            size *= 2;
-        }
-
-        importer.maxTextureSize = size;
-        return true;
-    }
-
-    /// <summary>
-    /// Gives the sheet one slice per direction and frame, named <see cref="SliceName(string, string, int, int)"/>, at its
-    /// frame's rect with a custom pivot on the <paramref name="feet"/> pixel, through the sprite editor's data provider
-    /// so existing slices keep their IDs, and removes any other slice, without reimporting. Returns whether any slice
-    /// changed, was added or removed.
-    /// </summary>
-    private static bool Slice(TextureImporter importer, string sheetName, string clipName, Vector2Int frameSize, Vector2Int feet, int columns)
-    {
-        SpriteDataProviderFactories factories = new();
-        factories.Init();
-        ISpriteEditorDataProvider provider = factories.GetSpriteEditorDataProviderFromObject(importer);
-        provider.InitSpriteEditorDataProvider();
-        List<SpriteRect> existing = provider.GetSpriteRects().ToList();
-        ISpriteNameFileIdDataProvider fileIds = provider.GetDataProvider<ISpriteNameFileIdDataProvider>();
-        List<SpriteNameFileIdPair> pairs = fileIds.GetNameFileIdPairs().ToList();
-        Vector2 pivot = new(feet.x / (float)frameSize.x, feet.y / (float)frameSize.y);
-        List<SpriteRect> rects = new();
-        bool changed = false;
-        for (int direction = 0; direction < CharacterDirections.Count; direction++)
-        {
-            for (int frame = 0; frame < columns; frame++)
-            {
-                string name = SliceName(sheetName, clipName, direction, frame);
-                SpriteRect slice = existing.FirstOrDefault(r => r.name == name);
-                if (slice == null)
-                {
-                    slice = new SpriteRect { name = name, spriteID = GUID.Generate() };
-                    pairs.Add(new SpriteNameFileIdPair(name, slice.spriteID));
-                    changed = true;
-                }
-
-                RectInt frameRect = CharacterSheet.FrameRect(direction, frame, frameSize);
-                Rect wanted = new(frameRect.x, frameRect.y, frameRect.width, frameRect.height);
-                if (slice.rect != wanted || slice.alignment != SpriteAlignment.Custom || slice.pivot != pivot || slice.border != Vector4.zero)
-                {
-                    slice.rect = wanted;
-                    slice.alignment = SpriteAlignment.Custom;
-                    slice.pivot = pivot;
-                    slice.border = Vector4.zero;
-                    changed = true;
-                }
-
-                rects.Add(slice);
-            }
-        }
-
-        changed |= rects.Count != existing.Count;
-        if (!changed)
-        {
-            return false;
-        }
-
-        HashSet<string> kept = new(rects.Select(r => r.name));
-        provider.SetSpriteRects(rects.ToArray());
-        fileIds.SetNameFileIdPairs(pairs.Where(p => kept.Contains(p.name)).ToList());
-        provider.Apply();
-        return true;
     }
 }

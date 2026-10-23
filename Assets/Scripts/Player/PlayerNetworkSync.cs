@@ -7,7 +7,8 @@ using VContainer;
 /// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
 /// base move speed, so a slowed or hasted copy shows the same gait), facing and equipped weapon (its
 /// <see cref="WeaponCatalog"/> index) to owner network variables, and sends its attacks' starts, contacts and early
-/// ends and its cast starts to the other machines, which play them on their copy, and its completed casts to the host.
+/// ends and its cast starts and cancels to the other machines, which play them on their copy, and its completed casts to
+/// the host.
 /// Attack and cast messages name the weapon they were made with, so they play and land right even before a weapon
 /// switch reaches a machine. Every machine but the owner lands a contact around where the owner stood: only the host
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
@@ -90,6 +91,7 @@ public class PlayerNetworkSync : NetworkBehaviour
             if (abilities != null)
             {
                 abilities.CastStarted += HandleLocalCast;
+                abilities.CastEnded += HandleLocalCastEnded;
                 abilities.CastCompleted += HandleLocalCastCompleted;
             }
 
@@ -127,6 +129,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (abilities != null)
         {
             abilities.CastStarted -= HandleLocalCast;
+            abilities.CastEnded -= HandleLocalCastEnded;
             abilities.CastCompleted -= HandleLocalCastCompleted;
         }
 
@@ -266,6 +269,30 @@ public class PlayerNetworkSync : NetworkBehaviour
     {
         bool hasTarget = TryReference(cast.Aim.Target.Health, out NetworkObjectReference target);
         CastRpc(cast.Slot, CurrentWeaponIndex(), cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
+    }
+
+    /// <summary>
+    /// Tells the other machines the owner's cast was cancelled (a stun, a silence, death, a teleport), so their copies
+    /// stop it; a completed cast sends nothing here.
+    /// </summary>
+    private void HandleLocalCastEnded(int slot, bool completed)
+    {
+        if (!completed && IsSpawned)
+        {
+            CastCancelledRpc();
+        }
+    }
+
+    /// <summary>
+    /// Runs on every machine but the owner: stops the owner's cast on the copy, which will never complete.
+    /// </summary>
+    [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
+    private void CastCancelledRpc()
+    {
+        if (abilities != null)
+        {
+            abilities.StopRemoteCast();
+        }
     }
 
     /// <summary>

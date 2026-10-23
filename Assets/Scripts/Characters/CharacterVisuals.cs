@@ -3,8 +3,9 @@ using VContainer;
 
 /// <summary>
 /// Draws a character from its baked <see cref="CharacterAnimationSet"/> on the sprite renderer beside it. Its motor
-/// feeds it the velocity and facing through <see cref="SetLocomotion"/>, and its weapon the attacks to play on their
-/// timelines (<see cref="PlayAction"/>); each frame, after every motor has moved, it asks its
+/// feeds it the velocity and facing through <see cref="SetLocomotion"/>, its weapon the attacks to play on their
+/// timelines (<see cref="PlayAction"/>) and its abilities the casts (<see cref="PlayCast"/>); each frame, after every
+/// motor has moved, it asks its
 /// <see cref="CharacterAnimator"/> for the sprite on the game clock and puts it on the renderer when it changed. Logs an error without a set or locomotion settings, keeping the sprite it has.
 /// </summary>
 [DisallowMultipleComponent]
@@ -86,7 +87,23 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays the contact now on an action played until contact.
+    /// Plays <paramref name="clip"/>, a cast's clip, from now on <paramref name="timeline"/>, toward
+    /// <paramref name="direction"/> (the current direction when zero), turning with the facing when
+    /// <paramref name="followsFacing"/>; <paramref name="movingClip"/> shows while the character moves, and a positive
+    /// <paramref name="channelBeat"/> makes a long cast a channel; with <paramref name="untilRelease"/> the release
+    /// waits for <see cref="ReachContact"/> (see <see cref="CharacterAnimator.PlayCast"/>).
+    /// </summary>
+    public void PlayCast(CharacterAnimationClip clip, CharacterAnimationClip movingClip, Vector2 direction, bool followsFacing, in AttackTimeline timeline, float channelBeat, bool untilRelease)
+    {
+        CharacterAnimator current = EnsureAnimator();
+        if (current != null)
+        {
+            current.PlayCast(clip, movingClip, direction, followsFacing, timeline, channelBeat, untilRelease);
+        }
+    }
+
+    /// <summary>
+    /// Plays the contact (a cast's release) now on an action played until contact.
     /// </summary>
     public void ReachContact()
     {
@@ -98,14 +115,14 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Ends the playing action at once, if any.
+    /// Ends the playing action at once when it is of <paramref name="kind"/>.
     /// </summary>
-    public void StopAction()
+    public void StopAction(CharacterActionKind kind)
     {
         CharacterAnimator current = EnsureAnimator();
         if (current != null)
         {
-            current.StopAction();
+            current.StopAction(kind);
         }
     }
 

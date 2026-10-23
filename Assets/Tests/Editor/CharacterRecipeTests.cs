@@ -12,8 +12,10 @@ using UnityEngine;
 /// planted in front, and a planted foot moves back at the gait's natural speed; the idle keeps both feet planted; a
 /// two-handed blade puts the left hand on its grip; easing, the two-bone chains and the recipe's checks behave; the
 /// project's sheets are what the recipe bakes, sliced at 32 pixels per unit with their pivot on the feet; the baker
-/// writes each attack's contact frame into the set; and the project's animation set holds every clip's sprites, frame
-/// durations, gait, natural speed and contact frame.
+/// writes each attack's contact frame and each cast's release frame into the set; the project's animation set holds
+/// every clip's sprites, frame durations, gait, natural speed, contact frame and gait frames; every cast has its release
+/// frame and a weapon only where chosen, the class casts' light shows only in them, and a cast drawn over the run keeps
+/// the run's legs and the cast's arms.
 /// </summary>
 public class CharacterRecipeTests
 {
@@ -62,7 +64,7 @@ public class CharacterRecipeTests
     public void Bake_SameRecipe_GivesTheSameBytes()
     {
         CharacterBaker again = new(recipe);
-        foreach (CharacterClip clip in recipe.Clips.Where(c => c.Name == "Run" || c.Name == "SwordSlash"))
+        foreach (CharacterClip clip in recipe.Clips.Where(c => c.Name == "Run" || c.Name == "SwordSlash" || c.Name == "CastMend" || c.Name == "CastWhirlRun"))
         {
             CharacterSheet first = sheets[clip.Name];
             CharacterSheet second = again.Bake(clip);
@@ -300,9 +302,9 @@ public class CharacterRecipeTests
 
     /// <summary>
     /// The project's animation set holds every clip of the recipe in order: its name, its motion's gait, whether it is
-    /// drawn with a weapon, its motion's frame durations, its natural speed, its motion's contact frame (none for a
-    /// gait), and for every direction and frame the sheet's slice of that name. Its locomotion is the unarmed Idle, Walk,
-    /// Run and Sprint.
+    /// drawn with a weapon, its motion's frame durations, its natural speed, its motion's contact (release) frame (none
+    /// for a gait), the gait frames it is drawn over (none but for a cast over the run), and for every direction, gait
+    /// frame and frame the sheet's slice of that column. Its locomotion is the unarmed Idle, Walk, Run and Sprint.
     /// </summary>
     [Test]
     public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
@@ -318,20 +320,26 @@ public class CharacterRecipeTests
             Assert.That(baked.Gait, Is.EqualTo(clip.Motion.Gait), clip.Name);
             Assert.That(baked.Armed, Is.EqualTo(clip.Weapon != null), clip.Name);
             Assert.That(baked.IsComplete, Is.True, clip.Name);
-            Assert.That(baked.FrameCount, Is.EqualTo(clip.Motion.FrameCount), clip.Name);
+            int gaitFrames = clip.Motion.GaitFrames;
+            int frames = clip.Motion.FrameCount / Mathf.Max(1, gaitFrames);
+            Assert.That(baked.GaitFrames, Is.EqualTo(gaitFrames), clip.Name);
+            Assert.That(baked.FrameCount, Is.EqualTo(frames), clip.Name);
             Assert.That(baked.NaturalSpeed, Is.EqualTo(CharacterSheetWriter.NaturalSpeed(baker, recipe, clip)).Within(1e-5f), clip.Name);
             Assert.That(baked.ContactFrame, Is.EqualTo(clip.Motion.ContactFrame), clip.Name);
-            Assert.That(baked.HasContact, Is.EqualTo(clip.Motion is KeyedMotion), clip.Name);
+            Assert.That(baked.HasContact, Is.EqualTo(clip.Motion.ContactFrame >= 0), clip.Name);
             string sheetPath = CharacterSheetWriter.SheetPath(recipe, clip);
-            for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
+            for (int frame = 0; frame < frames; frame++)
             {
                 Assert.That(baked.FrameSeconds(frame), Is.EqualTo(clip.Motion.FrameSeconds(frame)), $"{clip.Name} {frame}");
                 for (int direction = 0; direction < CharacterDirections.Count; direction++)
                 {
-                    Sprite sprite = baked.SpriteAt(direction, frame);
-                    Assert.That(sprite, Is.Not.Null, $"{clip.Name} {direction} {frame}");
-                    Assert.That(sprite.name, Is.EqualTo(CharacterSheetWriter.SliceName(recipe, clip, direction, frame)));
-                    Assert.That(AssetDatabase.GetAssetPath(sprite), Is.EqualTo(sheetPath));
+                    for (int gaitFrame = 0; gaitFrame < Mathf.Max(1, gaitFrames); gaitFrame++)
+                    {
+                        Sprite sprite = baked.SpriteAt(direction, frame, gaitFrame);
+                        Assert.That(sprite, Is.Not.Null, $"{clip.Name} {direction} {gaitFrame} {frame}");
+                        Assert.That(sprite.name, Is.EqualTo(CharacterSheetWriter.SliceName(recipe, clip, direction, gaitFrame * frames + frame)));
+                        Assert.That(AssetDatabase.GetAssetPath(sprite), Is.EqualTo(sheetPath));
+                    }
                 }
             }
         }
@@ -345,7 +353,8 @@ public class CharacterRecipeTests
     /// <summary>
     /// The baker writes each keyed motion's contact frame into the set it builds, so the frames before it are the
     /// attack's windup and those after it its recovery (the sword's slash: frames 0 to 3, 4, then 5 to 7), and no
-    /// contact frame for a gait or the idle.
+    /// contact frame for a gait or the idle; a cast's release frame likewise (Bolt's frame 4, the instant Leap's first),
+    /// and a cast over the run keeps the cast's eight frames and release over the run's eight frames.
     /// </summary>
     [Test]
     public void TheBaker_WritesTheContactFrameIntoTheSet()
@@ -363,11 +372,152 @@ public class CharacterRecipeTests
             Assert.That(built.Find("BowShot").HasContact, Is.True);
             Assert.That(built.Find("Run").ContactFrame, Is.EqualTo(-1));
             Assert.That(built.Find("Idle").HasContact, Is.False);
+            Assert.That(built.Find("CastBolt").ContactFrame, Is.EqualTo(4));
+            Assert.That(built.Find("CastLeap").ContactFrame, Is.Zero, "An instant cast releases on its first frame.");
+            CharacterAnimationClip smiteRun = built.Find("CastSmiteRun");
+            Assert.That(smiteRun.GaitFrames, Is.EqualTo(8));
+            Assert.That(smiteRun.FrameCount, Is.EqualTo(built.Find("CastSmite").FrameCount));
+            Assert.That(smiteRun.ContactFrame, Is.EqualTo(built.Find("CastSmite").ContactFrame));
+            Assert.That(smiteRun.Gait, Is.EqualTo(CharacterGait.None), "A cast over the run is not locomotion.");
         }
         finally
         {
             Object.DestroyImmediate(built);
         }
+    }
+
+    /// <summary>
+    /// Every cast clip (Docs/Animation.md, Phase 5) has its release frame among its own frames, as its motion says, and
+    /// shows a weapon only where chosen: the class casts are drawn unarmed in every frame, the weapon casts with their
+    /// weapon, which shows on their first frame facing south.
+    /// </summary>
+    [Test]
+    public void EveryCast_HasItsReleaseFrame_AndItsWeaponOnlyWhereChosen()
+    {
+        Dictionary<string, string> weapons = new()
+        {
+            { "CastBolt", null }, { "CastLeap", null }, { "CastMend", null }, { "CastSmite", null }, { "CastSmiteRun", null },
+            { "CastWhirl", "WeaponArt_Sword" }, { "CastWhirlRun", "WeaponArt_Sword" }, { "CastLunge", "WeaponArt_Sword" },
+            { "CastSweep", "WeaponArt_Greatsword" }, { "CastCharge", "WeaponArt_Greatsword" },
+            { "CastVolley", "WeaponArt_Bow" }, { "CastRoll", "WeaponArt_Bow" }
+        };
+        Assert.That(recipe.Clips.Where(c => c.Name.StartsWith("Cast")).Select(c => c.Name), Is.EquivalentTo(weapons.Keys));
+        foreach (KeyValuePair<string, string> entry in weapons)
+        {
+            CharacterClip clip = recipe.Clips.First(c => c.Name == entry.Key);
+            int frames = clip.Motion.FrameCount / Mathf.Max(1, clip.Motion.GaitFrames);
+            Assert.That(clip.Motion.ContactFrame, Is.InRange(0, frames - 1), clip.Name);
+            Assert.That(clip.Weapon != null ? clip.Weapon.name : null, Is.EqualTo(entry.Value), clip.Name);
+            if (clip.Weapon != null)
+            {
+                Assert.That(WeaponPixels(baker.Render(clip, South, 0)), Is.GreaterThan(0), $"{clip.Name} shows its weapon on its first frame.");
+                continue;
+            }
+
+            for (int frame = 0; frame < frames; frame++)
+            {
+                foreach (int direction in new[] { South, CharacterDirections.East, North })
+                {
+                    Assert.That(WeaponPixels(baker.Render(clip, direction, frame)), Is.Zero, $"{clip.Name} {direction} {frame} is unarmed.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The class casts that throw a light (Bolt, Mend, Smite and Smite over the run) draw it on their release frame and
+    /// on the last gather frame; no other clip has a light.
+    /// </summary>
+    [Test]
+    public void TheCastLight_ShowsInTheClassCasts_AndNowhereElse()
+    {
+        string[] lit = { "CastBolt", "CastMend", "CastSmite", "CastSmiteRun" };
+        foreach (CharacterClip clip in recipe.Clips)
+        {
+            bool hasLight = Enumerable.Range(0, clip.Motion.FrameCount).Any(f => clip.Motion.EffectsOn(f).Any(e => e.IsLight));
+            Assert.That(hasLight, Is.EqualTo(lit.Contains(clip.Name)), clip.Name);
+        }
+
+        foreach (string name in lit)
+        {
+            CharacterClip clip = recipe.Clips.First(c => c.Name == name);
+            int release = clip.Motion.ContactFrame;
+            int atRelease = 0;
+            int gathering = 0;
+            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            {
+                atRelease += LightPixels(baker.Render(clip, direction, release));
+                gathering += LightPixels(baker.Render(clip, direction, release - 1));
+            }
+
+            Assert.That(atRelease, Is.GreaterThan(0), $"{name} lights its release.");
+            Assert.That(gathering, Is.GreaterThan(0), $"{name} gathers its light.");
+        }
+    }
+
+    /// <summary>
+    /// A cast drawn over the run keeps the run's legs and the cast's arms: in every run frame and cast frame its feet,
+    /// pelvis and cape's ripple are the run's, and its hands sit where the cast's do relative to the shoulders.
+    /// </summary>
+    [Test]
+    public void ACastOverTheRun_KeepsTheRunsLegs_AndTheCastsArms()
+    {
+        OverGaitMotion motion = (OverGaitMotion)recipe.Clips.First(c => c.Name == "CastSmiteRun").Motion;
+        KeyedMotion cast = motion.Upper;
+        GaitMotion run = motion.Legs;
+        Assert.That(motion.GaitFrames, Is.EqualTo(run.FrameCount));
+        Assert.That(motion.FrameCount, Is.EqualTo(cast.FrameCount * run.FrameCount));
+        Assert.That(motion.ContactFrame, Is.EqualTo(cast.ContactFrame));
+        for (int g = 0; g < run.FrameCount; g++)
+        {
+            CharacterPose legs = run.PoseAt(g, recipe, null);
+            for (int f = 0; f < cast.FrameCount; f++)
+            {
+                CharacterPose pose = motion.PoseAt(g * cast.FrameCount + f, recipe, null);
+                CharacterPose upper = cast.PoseAt(f, recipe, null);
+                string at = $"run frame {g}, cast frame {f}";
+                Assert.That(pose.LeftFoot, Is.EqualTo(legs.LeftFoot), at);
+                Assert.That(pose.RightFoot, Is.EqualTo(legs.RightFoot), at);
+                Assert.That(pose.PelvisHeight, Is.EqualTo(legs.PelvisHeight), at);
+                Assert.That(pose.CapePhase, Is.EqualTo(legs.CapePhase), at);
+                Assert.That(pose.Twist, Is.EqualTo(upper.Twist), at);
+                Vector3 shoulders = ShoulderMiddle(pose);
+                Vector3 upperShoulders = ShoulderMiddle(upper);
+                Assert.That(Vector3.Distance(pose.RightHand - shoulders, upper.RightHand - upperShoulders), Is.LessThan(1e-3f), at);
+                Assert.That(Vector3.Distance(pose.LeftHand - shoulders, upper.LeftHand - upperShoulders), Is.LessThan(1e-3f), at);
+            }
+        }
+    }
+
+    /// <summary>
+    /// How many of <paramref name="canvas"/>'s pixels are the weapon's or its smears' and dust.
+    /// </summary>
+    private static int WeaponPixels(CharacterCanvas canvas)
+    {
+        int count = 0;
+        foreach (CharacterMaterial material in System.Enum.GetValues(typeof(CharacterMaterial)))
+        {
+            count += CharacterMaterials.IsWeapons(material) ? canvas.Count(material) : 0;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// How many of <paramref name="canvas"/>'s pixels are a cast's light.
+    /// </summary>
+    private static int LightPixels(CharacterCanvas canvas)
+    {
+        return canvas.Count(CharacterMaterial.LightRim) + canvas.Count(CharacterMaterial.LightGlow) + canvas.Count(CharacterMaterial.LightCore);
+    }
+
+    /// <summary>
+    /// The point between <paramref name="pose"/>'s shoulders once solved for the recipe's body.
+    /// </summary>
+    private Vector3 ShoulderMiddle(CharacterPose pose)
+    {
+        CharacterJoints joints = CharacterRig.Solve(recipe, pose, null);
+        return (joints.LeftShoulder + joints.RightShoulder) * 0.5f;
     }
 
     /// <summary>

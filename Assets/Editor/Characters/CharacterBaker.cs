@@ -44,7 +44,8 @@ public sealed class CharacterSheet
 /// set once so the standing character (<see cref="CharacterRig.StandingPose"/>, facing south) is the recipe's target
 /// height, outline included. Each frame is posed by its clip's motion, solved by <see cref="CharacterRig"/>, drawn by
 /// <see cref="CharacterPainter"/> onto a <see cref="CharacterCanvas"/> of the clip's frame size with the feet on its
-/// pivot, and shaded with the recipe's and the weapon's colours. The same recipe always gives the same pixels.
+/// pivot, and shaded with the recipe's, the weapon's and the motion's light colours. The same recipe always gives the
+/// same pixels.
 /// </summary>
 public sealed class CharacterBaker
 {
@@ -84,7 +85,7 @@ public sealed class CharacterBaker
         {
             for (int frame = 0; frame < frames; frame++)
             {
-                Color32[] colours = Shade(Render(clip, direction, frame), clip.Weapon);
+                Color32[] colours = Shade(Render(clip, direction, frame), clip.Weapon, clip.Motion.Light);
                 if (TouchesEdge(colours, size))
                 {
                     atEdge.Add($"{CharacterDirections.Name(direction)} {frame}");
@@ -117,7 +118,7 @@ public sealed class CharacterBaker
             smear = new List<BladeSample>(count);
             for (int i = 0; i < count; i++)
             {
-                CharacterPose sample = motion.PoseAtTime(Mathf.Lerp(span.From, span.To, i / (float)(count - 1)), recipe, weapon);
+                CharacterPose sample = motion.SmearPoseAt(frame, Mathf.Lerp(span.From, span.To, i / (float)(count - 1)), recipe, weapon);
                 smear.Add(new BladeSample(CharacterRig.Solve(recipe, sample, weapon).RightHand, sample.Blade.normalized));
             }
         }
@@ -131,10 +132,27 @@ public sealed class CharacterBaker
     /// </summary>
     public Color32[] Shade(CharacterCanvas canvas, CharacterWeaponArt weapon)
     {
+        return Shade(canvas, weapon, default);
+    }
+
+    /// <summary>
+    /// The colours of a drawn frame, with the recipe's colours for the character, <paramref name="weapon"/>'s for the
+    /// weapon and its effects, and <paramref name="light"/> for a cast's light: its rim, glow and core each flat in
+    /// the light's shadow, middle and light colours, outlined in its outline colour.
+    /// </summary>
+    public Color32[] Shade(CharacterCanvas canvas, CharacterWeaponArt weapon, ColourRamp light)
+    {
         ColourRamp[] ramps = new ColourRamp[CharacterMaterials.Count];
         for (int i = 0; i < ramps.Length; i++)
         {
             CharacterMaterial material = (CharacterMaterial)i;
+            if (CharacterMaterials.IsLight(material))
+            {
+                Color32 tone = material == CharacterMaterial.LightRim ? light.Shadow : material == CharacterMaterial.LightGlow ? light.Middle : light.Light;
+                ramps[i] = new ColourRamp(light.Outline, tone, tone, tone);
+                continue;
+            }
+
             ramps[i] = CharacterMaterials.IsWeapons(material) ? (weapon != null ? weapon.Ramp(material) : default) : recipe.Ramp(material);
         }
 

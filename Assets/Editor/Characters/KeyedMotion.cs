@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// An editor-only keyed motion, such as an attack: poses at times from 0 to 1, each eased into the next, sampled at
-/// the frames' times. A frame can carry a smear (the area the blade's outer part swept over a span of motion time,
-/// sampled <see cref="smearSamples"/> times) and effects. The contact frame is when the attack lands; the runtime pins
-/// it to the moment the hit resolves. Frame durations only pace the inspector's preview: the runtime stretches each
-/// phase of an attack to its timeline.
+/// An editor-only keyed motion, such as an attack or a cast: poses at times from 0 to 1, each eased into the next,
+/// sampled at the frames' times. A frame can carry a smear (the area the blade's outer part swept over a span of motion
+/// time, sampled <see cref="smearSamples"/> times) and effects, among them a cast's light in the motion's light colours.
+/// The contact frame is when the attack lands or the cast releases; the runtime pins it to the moment the hit resolves
+/// or the cast completes. Frame durations pace the inspector's preview and keep each phase's proportions: the runtime
+/// stretches each phase to its timeline (a channelling cast plays its gather at their pace).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Keyed Motion", fileName = "Motion_Keyed")]
 public sealed class KeyedMotion : CharacterMotion
@@ -18,7 +19,7 @@ public sealed class KeyedMotion : CharacterMotion
     [SerializeField] private float[] frameTimes = Array.Empty<float>();
     [Tooltip("How long each frame shows in the inspector's preview, in milliseconds.")]
     [SerializeField] private int[] frameMilliseconds = Array.Empty<int>();
-    [Tooltip("The frame the attack lands on.")]
+    [Tooltip("The frame the attack lands on, or the cast releases on.")]
     [SerializeField, Min(0)] private int contactFrame;
     [Tooltip("The hips turn by each key's hip twist; otherwise they turn a third against the shoulders.")]
     [SerializeField] private bool hipsFollowKeys;
@@ -28,14 +29,17 @@ public sealed class KeyedMotion : CharacterMotion
     [SerializeField] private List<MotionSmear> smears = new();
     [Tooltip("How many poses a smear samples across its span.")]
     [SerializeField, Range(2, 64)] private int smearSamples = 24;
-    [Tooltip("Effects drawn on frames: dust where the blade's tip meets the ground, an arrow's release.")]
+    [Tooltip("Effects drawn on frames: dust where the blade's tip meets the ground, an arrow's release, a cast's light.")]
     [SerializeField] private List<MotionEffect> effects = new();
+    [Tooltip("The colours of a cast's light, darkest first: its outline, rim, glow and core.")]
+    [SerializeField] private ColourRamp light;
 
     private readonly List<MotionEffect> frameEffects = new();
 
     public override int FrameCount => frameTimes.Length;
     public override int ContactFrame => contactFrame;
     public override int SmearSamples => smearSamples;
+    public override ColourRamp Light => light;
 
     /// <summary>
     /// The preview duration of <paramref name="frame"/>, 0.1 s when none is set.

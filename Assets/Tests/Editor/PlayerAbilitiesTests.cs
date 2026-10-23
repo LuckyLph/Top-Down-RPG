@@ -150,9 +150,9 @@ public class PlayerAbilitiesTests
     [Test]
     public void CompleteAndCancel_EndOnlyTheRunningSlot_AndOnlyACompletedCastResolves()
     {
-        List<int> ended = new();
+        List<(int, bool)> ended = new();
         List<AbilityCast> completed = new();
-        abilities.CastEnded += ended.Add;
+        abilities.CastEnded += (slot, done) => ended.Add((slot, done));
         abilities.CastCompleted += completed.Add;
         abilities.TryCast(1, new CastAim(Vector2.one, Vector2.up, default));
 
@@ -160,7 +160,7 @@ public class PlayerAbilitiesTests
         abilities.CompleteCast(1);
         abilities.CompleteCast(1);
 
-        Assert.That(ended, Is.EqualTo(new[] { 1 }));
+        Assert.That(ended, Is.EqualTo(new[] { (1, true) }));
         Assert.That(completed.Count, Is.EqualTo(1));
         Assert.That(completed[0].Aim.Point, Is.EqualTo(Vector2.one), "The completed cast keeps the aim it started with.");
         Assert.That(resolved, Is.EqualTo(1));
@@ -170,7 +170,7 @@ public class PlayerAbilitiesTests
         abilities.TryCast(1, default);
         abilities.CancelCast(1);
         abilities.CancelCast(1);
-        Assert.That(ended, Is.EqualTo(new[] { 1, 1 }));
+        Assert.That(ended, Is.EqualTo(new[] { (1, true), (1, false) }), "A cancelled cast ends without completing.");
         Assert.That(completed.Count, Is.EqualTo(1), "A cancelled cast does not complete.");
         Assert.That(resolved, Is.EqualTo(1), "Nor resolve its effect.");
         Assert.That(abilities.IsCasting, Is.False);
@@ -233,6 +233,35 @@ public class PlayerAbilitiesTests
     }
 
     /// <summary>
+    /// A copy hears of the owner's casts for its visuals: a replayed cast raises RemoteCastStarted with its slot,
+    /// ability and aim, even when its unit target did not resolve here (it is then not applied), but not for an empty
+    /// slot or a caster seen as dead; the owner's cancel raises RemoteCastCancelled.
+    /// </summary>
+    [Test]
+    public void ACopy_HearsOfTheOwnersCastsAndCancels_ForItsVisuals()
+    {
+        abilities.Configure(Track(PlayerClass.Create("Unit", Track(AbilityDefinition.Create("Smite", targeting: AbilityTargeting.Unit)))));
+        List<AbilityCast> started = new();
+        int cancelled = 0;
+        abilities.RemoteCastStarted += started.Add;
+        abilities.RemoteCastCancelled += () => cancelled++;
+
+        abilities.PlayRemoteCast(0, new CastAim(Vector2.one, Vector2.up, default));
+        abilities.PlayRemoteCast(3, default);
+        Assert.That(started.Count, Is.EqualTo(1), "An empty slot plays nothing.");
+        Assert.That(started[0].Slot, Is.Zero);
+        Assert.That(started[0].Aim.Direction, Is.EqualTo(Vector2.up));
+        Assert.That(applied, Is.Zero, "Its target did not resolve here, so it is not applied.");
+
+        abilities.StopRemoteCast();
+        Assert.That(cancelled, Is.EqualTo(1));
+
+        health.ApplyDamage(health.MaxHealth);
+        abilities.PlayRemoteCast(0, new CastAim(Vector2.one, Vector2.up, default));
+        Assert.That(started.Count, Is.EqualTo(1), "A caster seen as dead plays nothing.");
+    }
+
+    /// <summary>
     /// Through <see cref="PlayerOrders"/>, clearing the orders on death ends a running cast, and the next press is
     /// blocked only by the ability's cooldown, never by a leaked cast.
     /// </summary>
@@ -245,7 +274,7 @@ public class PlayerAbilitiesTests
         List<CastOutcome> failures = new();
         int ended = 0;
         abilities.CastFailed += (_, reason) => failures.Add(reason);
-        abilities.CastEnded += _ => ended++;
+        abilities.CastEnded += (_, _) => ended++;
         PlayerCommand press = new(Vector2.right, default, false, false, false, abilitySlot: 0);
 
         orders.Tick(press, new PlayerOrderContext(Vector2.zero, clock.Time, true, 0f, 0.3f));

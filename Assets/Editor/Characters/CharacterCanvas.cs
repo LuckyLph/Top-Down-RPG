@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// One frame of a character being drawn. World points (x east, y north, z up, in rig units) are projected through an
 /// orthographic camera pitched <see cref="ViewPitch"/> degrees down, the game's 3/4 view, at <see cref="Scale"/> pixels
-/// per rig unit, with the pivot pixel at the world origin. Spheres and triangles are drawn straight onto the pixel grid
-/// with a depth test, each pixel keeping its depth, material, part and surface normal; <see cref="Shade"/> then turns
+/// per rig unit, with the pivot pixel at the world origin. Spheres, triangles, flat discs and single dots are drawn
+/// straight onto the pixel grid with a depth test, each pixel keeping its depth, material, part and surface normal; <see cref="Shade"/> then turns
 /// them into colours: flat ramps, a light colour only where the surface faces the light strongly, inner lines where a
 /// nearer part overlaps a farther one, and an outline around everything. Pixels are stored rows from the bottom.
 /// </summary>
@@ -194,6 +194,62 @@ public sealed class CharacterCanvas
                 normal[i] = new Vector3(dx / r, dy / r, -dz / r);
             }
         }
+    }
+
+    /// <summary>
+    /// Draws a flat disc facing the camera, <paramref name="radius"/> pixels around where <paramref name="world"/>
+    /// lands and at its depth: each pixel whose centre lies inside it and in front of what is there.
+    /// </summary>
+    public void Disc(Vector3 world, float radius, CharacterMaterial value, CharacterPart owner)
+    {
+        Vector3 centre = Project(world);
+        float r2 = radius * radius;
+        int x0 = Mathf.Max(Mathf.FloorToInt(centre.x + Pivot.x - radius - 1f), 0);
+        int x1 = Mathf.Min(Mathf.CeilToInt(centre.x + Pivot.x + radius + 1f), Width);
+        int y0 = Mathf.Max(Mathf.FloorToInt(centre.y + Pivot.y - radius - 1f), 0);
+        int y1 = Mathf.Min(Mathf.CeilToInt(centre.y + Pivot.y + radius + 1f), Height);
+        for (int y = y0; y < y1; y++)
+        {
+            float dy = y + 0.5f - Pivot.y - centre.y;
+            for (int x = x0; x < x1; x++)
+            {
+                float dx = x + 0.5f - Pivot.x - centre.x;
+                if (dx * dx + dy * dy <= r2)
+                {
+                    Put(y * Width + x, centre.z, value, owner);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws the one pixel <paramref name="world"/> falls in, at its depth, when it is inside the frame and in front of
+    /// what is there.
+    /// </summary>
+    public void Dot(Vector3 world, CharacterMaterial value, CharacterPart owner)
+    {
+        Vector2Int pixel = PixelOf(world);
+        if (Contains(pixel.x, pixel.y))
+        {
+            Put(pixel.y * Width + pixel.x, Project(world).z, value, owner);
+        }
+    }
+
+    /// <summary>
+    /// Gives pixel <paramref name="index"/> a flat surface facing the camera at <paramref name="z"/> when that is in
+    /// front of what is there.
+    /// </summary>
+    private void Put(int index, float z, CharacterMaterial value, CharacterPart owner)
+    {
+        if (z >= depth[index])
+        {
+            return;
+        }
+
+        depth[index] = z;
+        material[index] = (int)value;
+        part[index] = (int)owner;
+        normal[index] = new Vector3(0f, 0f, -1f);
     }
 
     /// <summary>

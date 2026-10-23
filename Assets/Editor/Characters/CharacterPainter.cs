@@ -22,10 +22,11 @@ public readonly struct BladeSample
 /// <summary>
 /// Draws a solved pose of the rogue onto a <see cref="CharacterCanvas"/>, facing a direction, in the order the depth
 /// test needs no help with: legs, torso, belt and its sash, pouch and dagger, arms, mantle, cape (lined), the scarf
-/// around the neck, then the weapon with its smear and effects (through a <see cref="WeaponPainter"/>), and last the
-/// hooded head, whose face is placed by direction (<see cref="DrawHead"/>). Sizes come from the
-/// <see cref="CharacterRecipe"/> and the <see cref="CharacterWeaponArt"/>; the mantle, belt, dagger and scarf are fixed
-/// parts of the rogue's outfit.
+/// around the neck, then the weapon with its smear and effects (through a <see cref="WeaponPainter"/>), the hooded
+/// head, whose face is placed by direction (<see cref="DrawHead"/>), and last a cast's light at the casting hands
+/// (<see cref="DrawLight"/>), just in front of each hand so the body hides it when the hand is behind it. Sizes come
+/// from the <see cref="CharacterRecipe"/> and the <see cref="CharacterWeaponArt"/>; the mantle, belt, dagger and scarf
+/// are fixed parts of the rogue's outfit.
 /// </summary>
 public sealed class CharacterPainter
 {
@@ -94,6 +95,13 @@ public sealed class CharacterPainter
         }
 
         DrawHead(joints);
+        foreach (MotionEffect effect in effects)
+        {
+            if (effect.IsLight)
+            {
+                DrawLights(effect, joints);
+            }
+        }
     }
 
     /// <summary>
@@ -102,6 +110,98 @@ public sealed class CharacterPainter
     private Vector3 World(Vector3 local)
     {
         return local.x * right + local.y * forward + local.z * Up;
+    }
+
+    /// <summary>
+    /// Draws a cast's light <paramref name="effect"/> at the hands it names.
+    /// </summary>
+    private void DrawLights(MotionEffect effect, CharacterJoints j)
+    {
+        switch (effect.Hands)
+        {
+            case CastHands.Left:
+                DrawLight(effect, j.LeftHand);
+                break;
+            case CastHands.Both:
+                DrawLight(effect, j.LeftHand);
+                DrawLight(effect, j.RightHand);
+                break;
+            case CastHands.Between:
+                DrawLight(effect, (j.LeftHand + j.RightHand) * 0.5f);
+                break;
+            default:
+                DrawLight(effect, j.RightHand);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Draws a cast's light just in front of <paramref name="hand"/>, flat to the camera, sized in pixels: a gathering
+    /// glow (a rim, a glow and a core, growing with the effect's size, the share of the gather done), a star of eight
+    /// rays on the release, a ring broken in four after it, or four sparks drifting out.
+    /// </summary>
+    private void DrawLight(MotionEffect effect, Vector3 hand)
+    {
+        Vector3 centre = World(hand) - CharacterCanvas.ViewForward * (recipe.HandRadius + 0.3f);
+        Vector3 nearer = -CharacterCanvas.ViewForward * (0.01f / canvas.Scale);
+        float size = effect.Size;
+        switch (effect.Kind)
+        {
+            case MotionEffectKind.Gather:
+                float radius = 0.6f + 1.6f * Mathf.Clamp01(size);
+                canvas.Disc(centre, radius + 0.6f, CharacterMaterial.LightRim, CharacterPart.Effect);
+                canvas.Disc(centre + nearer, radius, CharacterMaterial.LightGlow, CharacterPart.Effect);
+                canvas.Disc(centre + nearer * 2f, Mathf.Max(0.5f, radius - 1f), CharacterMaterial.LightCore, CharacterPart.Effect);
+                break;
+            case MotionEffectKind.Burst:
+                for (int ray = 0; ray < 8; ray++)
+                {
+                    float angle = ray * Mathf.PI / 4f;
+                    float length = (ray % 2 == 0 ? 6f : 3.5f) * size;
+                    for (float t = 0f; t <= length; t += 0.5f)
+                    {
+                        CharacterMaterial tone = t < length * 0.6f ? CharacterMaterial.LightGlow : CharacterMaterial.LightRim;
+                        canvas.Dot(centre + OnScreen(Mathf.Cos(angle) * t, Mathf.Sin(angle) * t), tone, CharacterPart.Effect);
+                    }
+                }
+
+                canvas.Disc(centre + nearer, 2.2f * size, CharacterMaterial.LightRim, CharacterPart.Effect);
+                canvas.Disc(centre + nearer * 2f, 1.6f * size, CharacterMaterial.LightGlow, CharacterPart.Effect);
+                canvas.Disc(centre + nearer * 3f, 0.9f * size, CharacterMaterial.LightCore, CharacterPart.Effect);
+                break;
+            case MotionEffectKind.Ring:
+                for (int degrees = 0; degrees < 360; degrees += 5)
+                {
+                    if (degrees / 45 % 2 == 1)
+                    {
+                        continue;
+                    }
+
+                    float angle = degrees * Mathf.Deg2Rad;
+                    foreach (float ring in new[] { 3.2f * size, 3.8f * size })
+                    {
+                        canvas.Dot(centre + OnScreen(Mathf.Cos(angle) * ring, Mathf.Sin(angle) * ring), CharacterMaterial.LightGlow, CharacterPart.Effect);
+                    }
+                }
+
+                break;
+            case MotionEffectKind.Sparks:
+                foreach (float angle in new[] { 0.6f, 2.2f, 3.9f, 5.4f })
+                {
+                    canvas.Disc(centre + OnScreen(Mathf.Cos(angle) * 5f * size, Mathf.Sin(angle) * 5f * size), 0.8f, CharacterMaterial.LightRim, CharacterPart.Effect);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The world offset that moves a point <paramref name="right"/> pixels right and <paramref name="up"/> pixels up on
+    /// the screen, keeping its depth.
+    /// </summary>
+    private Vector3 OnScreen(float right, float up)
+    {
+        return (CharacterCanvas.ViewRight * right + CharacterCanvas.ViewUp * up) / canvas.Scale;
     }
 
     /// <summary>

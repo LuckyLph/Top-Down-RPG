@@ -15,8 +15,10 @@ using UnityEngine;
 /// removed. Every sheet is baked before any file is written; a sheet whose bytes did not change is not rewritten, and
 /// one whose import settings and slices did not change either is not reimported. Then it writes the runtime
 /// <see cref="CharacterAnimationSet"/>, <c>&lt;sheet name&gt;_AnimationSet.asset</c> beside the sheets: per clip its
-/// sprites by direction and frame, each frame's duration at natural speed, its gait, whether it is armed, and a gait's
-/// natural speed (<see cref="NaturalSpeed"/>); the asset keeps its GUID and is saved only when it changed.
+/// sprites by direction and frame (and gait frame, for a motion drawn over a gait, whose sheet columns run gait frame
+/// by gait frame), each frame's duration at natural speed, its gait, whether it is armed, its contact (release) frame
+/// and a gait's natural speed (<see cref="NaturalSpeed"/>); the asset keeps its GUID and is saved only when it changed.
+/// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
 /// </summary>
 public static class CharacterSheetWriter
 {
@@ -53,6 +55,7 @@ public static class CharacterSheetWriter
 
             TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
             bool changed = ApplyImportSettings(importer);
+            changed |= FitMaxSize(importer, Mathf.Max(sheet.Width, sheet.Height));
             changed |= Slice(importer, recipe, sheet);
             if (written || changed)
             {
@@ -94,18 +97,20 @@ public static class CharacterSheetWriter
         foreach (CharacterClip clip in recipe.Clips)
         {
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(SheetPath(recipe, clip)).OfType<Sprite>().ToDictionary(s => s.name);
-            int frames = clip.Motion.FrameCount;
-            Sprite[] ordered = new Sprite[CharacterDirections.Count * frames];
+            int columns = clip.Motion.FrameCount;
+            int gaitFrames = clip.Motion.GaitFrames;
+            int frames = columns / Mathf.Max(1, gaitFrames);
+            Sprite[] ordered = new Sprite[CharacterDirections.Count * columns];
             for (int direction = 0; direction < CharacterDirections.Count; direction++)
             {
-                for (int frame = 0; frame < frames; frame++)
+                for (int column = 0; column < columns; column++)
                 {
-                    sprites.TryGetValue(SliceName(recipe, clip, direction, frame), out ordered[direction * frames + frame]);
+                    sprites.TryGetValue(SliceName(recipe, clip, direction, column), out ordered[direction * columns + column]);
                 }
             }
 
             float[] seconds = Enumerable.Range(0, frames).Select(clip.Motion.FrameSeconds).ToArray();
-            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame));
+            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames));
         }
 
         return CharacterAnimationSet.Create(clips);
@@ -182,6 +187,27 @@ public static class CharacterSheetWriter
         importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.sRGBTexture = true;
         return changed;
+    }
+
+    /// <summary>
+    /// Raises the import's maximum size to the smallest one that holds a sheet of <paramref name="side"/> pixels, its
+    /// longer side, when it is smaller, without reimporting; returns whether it changed. Smaller sheets keep theirs.
+    /// </summary>
+    private static bool FitMaxSize(TextureImporter importer, int side)
+    {
+        if (importer.maxTextureSize >= side)
+        {
+            return false;
+        }
+
+        int size = importer.maxTextureSize;
+        while (size < side)
+        {
+            size *= 2;
+        }
+
+        importer.maxTextureSize = size;
+        return true;
     }
 
     /// <summary>

@@ -28,3 +28,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 51f49cd362e199047af95ee552cb3345, type: 2}
   heal: 0
   areaRadius: 0.35
+  castClip: CastBolt
+  movingCastClip: 
+  releaseSeconds: 0.06
+  followThroughSeconds: 0.24
+  channelBeat: 0

@@ -206,7 +206,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] Checked in Multiplayer Play Mode: the host and a client attack-move into the same pack.
 
 ### Later
-- Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine. Started by [DamageAndStatusEffects.md](DamageAndStatusEffects.md) Phase 5: every targeting mode can carry a `Hit`, a heal and an area, resolved on the host when the cast completes (Bolt, Whirl, Smite and Mend use them). Abilities that move the caster (Leap, Lunge) and cast visuals are still to come.
+- Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine. Started by [DamageAndStatusEffects.md](DamageAndStatusEffects.md) Phase 5: every targeting mode can carry a `Hit`, a heal and an area, resolved on the host when the cast completes (Bolt, Whirl, Smite and Mend use them). Cast visuals came with [Animation.md](Animation.md)'s Phase 5: every ability plays its cast clip on every machine (its gather as long as the cast time, its release when the cast completes, a follow-through), the class casts with a light at the hand and the Continue casts drawn over the run. Abilities that move the caster (Leap, Lunge, Charge, Roll) are still to come; they cast standing in their own poses meanwhile.
 - Class selection; replicating the loadout (a content catalog of classes and weapons, identified by GUID); saving each player's class in `GameSaveData` behind a version bump.
 - Optional cast modes (indicator on hold, click to confirm) as a player setting, with the same choice for attack move (LoL's default: the key arms it and a left click gives it).
 - A gamepad scheme.

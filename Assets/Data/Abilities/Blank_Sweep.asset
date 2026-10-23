@@ -27,3 +27,8 @@ MonoBehaviour:
     statuses: []
   heal: 0
   areaRadius: 2
+  castClip: CastSweep
+  movingCastClip: 
+  releaseSeconds: 0.06
+  followThroughSeconds: 0.24
+  channelBeat: 0

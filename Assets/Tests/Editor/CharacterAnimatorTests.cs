@@ -12,8 +12,11 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// each boundary; switching gaits keeps the phase while starting and stopping restart it; the playback rate is speed
 /// over natural speed, clamped; a missing gait shows the nearest slower one; an attack's phases play their frames stretched to the timeline at any attack speed, its contact frame
 /// showing exactly when the attack state reaches contact; a copy's windup holds until contact; locomotion resumes
-/// where it was after an action; updates allocate nothing once warm; the visuals put the sprite on their renderer, and
-/// the weapon plays its attack on them while the character stands and runs unarmed.
+/// where it was after an action; a cast's gather stretches to its cast time with its release on the update it completes
+/// (instantly for an instant cast), a long cast channels, a cancel stops it, a Continue cast while running keeps the
+/// legs' gait and phase under its upper body, moving cuts a standing cast's follow-through but never its release, and a
+/// hold ends at the release; updates allocate nothing once warm; the visuals put the sprite on their renderer, and the
+/// weapon plays its attack on them while the character stands and runs unarmed.
 /// </summary>
 public class CharacterAnimatorTests
 {
@@ -21,6 +24,7 @@ public class CharacterAnimatorTests
     private const float RunNatural = 4f;
     private const float SprintNatural = 5.6f;
     private const int Contact = 4;
+    private const int CastRelease = 4;
 
     private readonly List<Object> created = new();
     private ManualClock clock;
@@ -43,7 +47,10 @@ public class CharacterAnimatorTests
             Clip("Walk", CharacterGait.Walk, 8, 0.125f, WalkNatural),
             Clip("Run", CharacterGait.Run, 8, 0.1f, RunNatural),
             Clip("Sprint", CharacterGait.Sprint, 8, 0.075f, SprintNatural),
-            AttackClip("Slash")
+            AttackClip("Slash"),
+            CastClip("Cast", 0),
+            CastClip("CastRun", 8),
+            FlourishClip("Flourish")
         }));
     }
 
@@ -361,7 +368,7 @@ public class CharacterAnimatorTests
         animator.ReachContact();
         animator.Update(Vector2.zero, Vector2.down);
         Assert.That(animator.Frame, Is.EqualTo(Contact), "An early contact cuts the windup short.");
-        animator.StopAction();
+        animator.StopAction(CharacterActionKind.Attack);
         animator.Update(Vector2.zero, Vector2.down);
         Assert.That(animator.IsActing, Is.False);
         Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
@@ -425,15 +432,293 @@ public class CharacterAnimatorTests
         animator.PlayAction(set.Find("Slash"), Vector2.right, new AttackTimeline(0.25f, 0.125f, 0.25f), false);
         clock.Advance(0.1f);
         animator.Update(running, Vector2.right);
-        animator.StopAction();
+        animator.StopAction(CharacterActionKind.Attack);
         clock.Advance(0.1f);
         animator.Update(running, Vector2.right);
         Assert.That(animator.Phase, Is.EqualTo(0.475f).Within(1e-4f), "A stopped action resumes it too.");
     }
 
     /// <summary>
+    /// For cast times of 0.15, 0.25, 0.5 and 1 s from uneven starts, driven at 60 Hz half a step out of phase with the
+    /// cast's start (so no update falls on the cast time itself), a cast shows its gather frames in order, stretched to
+    /// the cast time, and its release frame on exactly the first update past its cast time, then its follow-through, and
+    /// ends. The owner's casts do not rely on the clock alone: their orders say when they complete.
+    /// </summary>
+    [Test]
+    public void ACast_ShowsItsReleaseFrame_OnTheUpdateItCompletes_AtAnyCastTime()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        foreach (float castTime in new[] { 0.15f, 0.25f, 0.5f, 1f })
+        {
+            foreach (float start in new[] { 0.013f, 2.9f })
+            {
+                clock.Time = start;
+                CharacterAnimator animator = new(set, settings, clock);
+                animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(castTime, 0.06f, 0.24f), 0f, false);
+                clock.Advance(0.5f / 60f);
+                bool completed = false;
+                int lastGather = 0;
+                for (int step = 0; step < 120 && !completed; step++)
+                {
+                    completed = clock.Time - start >= castTime;
+                    animator.Update(Vector2.zero, Vector2.right);
+                    Assert.That(animator.Frame == CastRelease, Is.EqualTo(completed), $"{castTime} s from {start} at step {step}");
+                    if (!completed)
+                    {
+                        Assert.That(animator.Frame, Is.GreaterThanOrEqualTo(lastGather), "The gather plays forward.");
+                        lastGather = animator.Frame;
+                    }
+
+                    clock.Advance(1f / 60f);
+                }
+
+                Assert.That(completed, Is.True);
+                Assert.That(lastGather, Is.EqualTo(CastRelease - 1), $"{castTime} s: the gather reaches its last frame.");
+                Assert.That(animator.ActionKind, Is.EqualTo(CharacterActionKind.Cast));
+                clock.Advance(0.06f);
+                animator.Update(Vector2.zero, Vector2.right);
+                Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Recovery), "The follow-through plays after the release.");
+                clock.Advance(0.25f);
+                animator.Update(Vector2.zero, Vector2.right);
+                Assert.That(animator.IsActing, Is.False);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The owner's cast, played until its release, holds its last gather frame however late the completion comes, and
+    /// shows the release on the update it is reached, so it never shows before the orders complete the cast.
+    /// </summary>
+    [Test]
+    public void TheOwnersCast_ShowsItsRelease_WhenItsCompletionIsReached()
+    {
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(set.Find("Cast"), null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.3f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Frame, Is.EqualTo(CastRelease - 1), "Past its cast time, the gather waits for the completion.");
+        animator.ReachContact();
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Frame, Is.EqualTo(CastRelease));
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Contact));
+    }
+
+    /// <summary>
+    /// An instant cast shows its release frame (a flourish's first) on the update it starts, then its follow-through.
+    /// </summary>
+    [Test]
+    public void AnInstantCast_ShowsItsReleaseOnItsFirstUpdate()
+    {
+        CharacterAnimationClip flourish = set.Find("Flourish");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.down);
+        animator.PlayCast(flourish, null, Vector2.down, false, new AttackTimeline(0f, 0.06f, 0.3f), 0f, false);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Frame, Is.EqualTo(0));
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Contact));
+        Assert.That(animator.Sprite, Is.SameAs(flourish.SpriteAt(CharacterDirections.South, 0)));
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Recovery));
+        Assert.That(animator.Frame, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// With a channel beat, a cast longer than its clip's gather (0.35 s) plays the gather at its natural pace, then
+    /// shows its last two gather frames in turn, a beat each, until the release on time; a cast shorter than the gather
+    /// stretches it as without a beat.
+    /// </summary>
+    [Test]
+    public void ALongCast_WithAChannelBeat_GathersAtItsNaturalPace_ThenChannels()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.right);
+        float start = clock.Time;
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(1f, 0.06f, 0.24f), 0.1f, false);
+        float[] times = { 0.05f, 0.1f, 0.2f, 0.3f, 0.36f, 0.46f, 0.56f, 0.66f, 0.99f, 1f };
+        int[] frames = { 0, 1, 2, 3, 2, 3, 2, 3, 2, 4 };
+        for (int i = 0; i < times.Length; i++)
+        {
+            clock.Time = start + times[i];
+            animator.Update(Vector2.zero, Vector2.right);
+            Assert.That(animator.Frame, Is.EqualTo(frames[i]), $"at {times[i]} s");
+        }
+
+        clock.Time = 10f;
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0.1f, false);
+        clock.Time = 10.2f;
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Frame, Is.EqualTo(3), "A cast shorter than the gather stretches it.");
+    }
+
+    /// <summary>
+    /// Stopping a cast ends it at once, and locomotion resumes where it was; stopping an attack leaves a cast playing,
+    /// and stopping a cast leaves an attack playing.
+    /// </summary>
+    [Test]
+    public void StoppingACast_EndsItAtOnce_AndOnlyACast()
+    {
+        CharacterAnimator animator = new(set, settings, clock);
+        Vector2 running = Vector2.right * RunNatural;
+        animator.Update(running, Vector2.right);
+        clock.Advance(0.3f);
+        animator.Update(running, Vector2.right);
+        float phase = animator.Phase;
+
+        animator.PlayCast(set.Find("Cast"), null, Vector2.right, false, new AttackTimeline(1f, 0.06f, 0.24f), 0f, false);
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.StopAction(CharacterActionKind.Attack);
+        Assert.That(animator.IsActing, Is.True, "Stopping an attack leaves the cast.");
+        animator.StopAction(CharacterActionKind.Cast);
+        clock.Advance(0.1f);
+        animator.Update(running, Vector2.right);
+        Assert.That(animator.IsActing, Is.False);
+        Assert.That(animator.Gait, Is.EqualTo(CharacterGait.Run));
+        Assert.That(animator.Phase, Is.EqualTo(phase).Within(1e-4f), "The run resumes where it was.");
+
+        animator.PlayAction(set.Find("Slash"), Vector2.right, new AttackTimeline(0.25f, 0.125f, 0.25f), false);
+        animator.StopAction(CharacterActionKind.Cast);
+        Assert.That(animator.IsActing, Is.True, "Stopping a cast leaves the attack.");
+    }
+
+    /// <summary>
+    /// A Continue cast while running shows its clip drawn over the run, the run's frame picked by the locomotion
+    /// layer's phase, which keeps advancing at the run's rate so the legs keep their gait and stride; standing, it shows
+    /// the standing clip; after it the run goes on from where the legs were.
+    /// </summary>
+    [Test]
+    public void AContinueCast_WhileRunning_KeepsTheLegsGaitAndPhase()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        CharacterAnimationClip castRun = set.Find("CastRun");
+        CharacterAnimator animator = new(set, settings, clock);
+        Vector2 running = Vector2.up * RunNatural;
+        animator.Update(running, Vector2.up);
+        clock.Advance(0.23f);
+        animator.Update(running, Vector2.up);
+        animator.PlayCast(cast, castRun, Vector2.zero, true, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, false);
+        float phase = animator.Phase;
+        for (int step = 0; step < 40; step++)
+        {
+            clock.Advance(0.02f);
+            animator.Update(running, Vector2.up);
+            phase = Mathf.Repeat(phase + 0.02f / 0.8f, 1f);
+            Assert.That(animator.Gait, Is.EqualTo(CharacterGait.Run), $"step {step}");
+            Assert.That(animator.Phase, Is.EqualTo(phase).Within(1e-4f), $"step {step}: the legs keep their stride.");
+            if (!animator.IsActing)
+            {
+                break;
+            }
+
+            Assert.That(animator.ShowsMovingCast, Is.True);
+            Assert.That(animator.Clip, Is.SameAs(castRun));
+            Assert.That(animator.Sprite, Is.SameAs(castRun.SpriteAt(CharacterDirections.North, animator.Frame, (int)(animator.Phase * 8f) % 8)), $"step {step}");
+        }
+
+        Assert.That(animator.IsActing, Is.False, "The cast ended while running.");
+        clock.Advance(0.02f);
+        animator.Update(running, Vector2.up);
+        Assert.That(animator.Phase, Is.EqualTo(Mathf.Repeat(phase + 0.02f / 0.8f, 1f)).Within(1e-4f), "The run goes on without a pause.");
+
+        animator.PlayCast(cast, castRun, Vector2.zero, true, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, false);
+        clock.Advance(0.05f);
+        animator.Update(Vector2.zero, Vector2.up);
+        Assert.That(animator.ShowsMovingCast, Is.False);
+        Assert.That(animator.Sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, animator.Frame)), "Standing shows the standing clip.");
+    }
+
+    /// <summary>
+    /// Moving during the gather keeps a cast without a moving clip; moving on the update the release first shows still
+    /// shows it; moving after that cuts the follow-through, and the run shows at once.
+    /// </summary>
+    [Test]
+    public void Moving_CutsAStandingCastsFollowThrough_ButNeverItsRelease()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        CharacterAnimator animator = new(set, settings, clock);
+        Vector2 running = Vector2.right * RunNatural;
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, false);
+        clock.Advance(0.1f);
+        animator.Update(running, Vector2.right);
+        Assert.That(animator.IsActing, Is.True, "Moving during the gather keeps the cast.");
+        clock.Advance(0.15f);
+        animator.Update(running, Vector2.right);
+        Assert.That(animator.Frame, Is.EqualTo(CastRelease), "The release shows on its update even while moving.");
+        clock.Advance(0.02f);
+        animator.Update(running, Vector2.right);
+        Assert.That(animator.IsActing, Is.False, "Moving after the release cuts the cast.");
+        Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Run)));
+
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, false);
+        clock.Advance(0.3f);
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(0.05f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Recovery), "Standing, the follow-through plays.");
+    }
+
+    /// <summary>
+    /// A cast aimed nowhere turns with the facing (keeping its direction within the margin); an aimed cast keeps its
+    /// aim whatever the facing; a cast with no direction starts in the current one.
+    /// </summary>
+    [Test]
+    public void ACastAimedNowhere_TurnsWithTheFacing_AndAnAimedOneKeepsItsAim()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.left);
+        animator.PlayCast(cast, null, Vector2.zero, true, new AttackTimeline(0.5f, 0.06f, 0.24f), 0f, false);
+        animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.Direction, Is.EqualTo(CharacterDirections.West), "It starts facing the current way.");
+        clock.Advance(0.05f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Direction, Is.EqualTo(CharacterDirections.South), "It turns with the facing.");
+
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.5f, 0.06f, 0.24f), 0f, false);
+        clock.Advance(0.05f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Direction, Is.EqualTo(CharacterDirections.East), "An aimed cast keeps its aim.");
+    }
+
+    /// <summary>
+    /// A hold during a cast's gather ends when the release is reached, so the release shows on the update the cast
+    /// completes; a hold taken at the release (the caster's own hit) holds the release frame.
+    /// </summary>
+    [Test]
+    public void AHold_EndsAtTheRelease_AndACastersHitHoldsTheRelease()
+    {
+        CharacterAnimationClip cast = set.Find("Cast");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.2f);
+        animator.Hold(0.08f);
+        animator.Update(Vector2.zero, Vector2.right);
+        int held = animator.Frame;
+        clock.Advance(0.05f);
+        animator.ReachContact();
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.IsHolding, Is.False, "The release ends the hold.");
+        Assert.That(animator.Frame, Is.EqualTo(CastRelease));
+        Assert.That(held, Is.LessThan(CastRelease));
+
+        animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        animator.ReachContact();
+        Assert.That(animator.HoldContact(0.08f), Is.True, "The caster's own hit holds its release.");
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(0.07f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.East, CastRelease)), "Held past the release's 60 ms.");
+    }
+
+    /// <summary>
     /// Once warm, updating with changing speeds, facings and gaits, playing, reaching the contact of and stopping
-    /// attacks allocates no managed memory.
+    /// attacks and casts (standing, over the run, channelling) allocates no managed memory.
     /// </summary>
     [Test]
     public void Update_DoesNotAllocate_OnceWarm()
@@ -457,7 +742,15 @@ public class CharacterAnimatorTests
                 }
                 else if (i % 20 == 18)
                 {
-                    animator.StopAction();
+                    animator.StopAction(CharacterActionKind.Attack);
+                }
+                else if (i % 20 == 5)
+                {
+                    animator.PlayCast(set.Find("Cast"), set.Find("CastRun"), Facing(i * 17f), i % 40 == 5, new AttackTimeline(0.6f, 0.06f, 0.24f), 0.1f, i % 3 == 0);
+                }
+                else if (i % 20 == 9)
+                {
+                    animator.StopAction(CharacterActionKind.Cast);
                 }
 
                 animator.Update(Facing(i * 17f) * speeds[i % speeds.Length], Facing(i * 17f));
@@ -582,6 +875,26 @@ public class CharacterAnimatorTests
     {
         float[] frameSeconds = { 0.25f, 0.125f, 0.0625f, 0.0625f, 0.125f, 0.125f, 0.0625f, 0.0625f };
         return CharacterAnimationClip.Create(name, CharacterGait.None, true, Sprites(name, frameSeconds.Length), frameSeconds, 0f, Contact);
+    }
+
+    /// <summary>
+    /// A cast clip of eight frames with its release on frame 4: a gather of 0.09, 0.09, 0.09 and 0.08 s (0.35 s), a
+    /// release of 0.09 s and a follow-through of 0.09, 0.1 and 0.1 s at natural speed, drawn over
+    /// <paramref name="gaitFrames"/> gait frames (0 for standing), each sprite its own.
+    /// </summary>
+    private CharacterAnimationClip CastClip(string name, int gaitFrames)
+    {
+        float[] frameSeconds = { 0.09f, 0.09f, 0.09f, 0.08f, 0.09f, 0.09f, 0.1f, 0.1f };
+        return CharacterAnimationClip.Create(name, CharacterGait.None, false, Sprites(name, frameSeconds.Length * Mathf.Max(1, gaitFrames)), frameSeconds, 0f, CastRelease, gaitFrames);
+    }
+
+    /// <summary>
+    /// An instant cast's flourish: five frames, the release first.
+    /// </summary>
+    private CharacterAnimationClip FlourishClip(string name)
+    {
+        float[] frameSeconds = { 0.08f, 0.07f, 0.09f, 0.1f, 0.1f };
+        return CharacterAnimationClip.Create(name, CharacterGait.None, false, Sprites(name, frameSeconds.Length), frameSeconds, 0f, 0);
     }
 
     /// <summary>

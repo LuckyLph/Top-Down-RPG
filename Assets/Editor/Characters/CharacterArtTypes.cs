@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// What a pixel of a character frame is made of. Each material is drawn in its own <see cref="ColourRamp"/>: the
 /// character's from its <see cref="CharacterRecipe"/>, the weapon's and the effects' from its
-/// <see cref="CharacterWeaponArt"/>. <see cref="CharacterMaterials"/> says which are flat and which draw no outline.
+/// <see cref="CharacterWeaponArt"/>, and a cast's light (its rim, glow and core) from the motion's light colours.
+/// <see cref="CharacterMaterials"/> says which are flat and which draw no outline.
 /// </summary>
 public enum CharacterMaterial
 {
@@ -36,7 +37,10 @@ public enum CharacterMaterial
     SmearNew,
     SmearMiddle,
     SmearOld,
-    Dust
+    Dust,
+    LightRim,
+    LightGlow,
+    LightCore
 }
 
 /// <summary>
@@ -93,13 +97,29 @@ public enum WeaponKind
 }
 
 /// <summary>
-/// An effect drawn on a frame of a keyed motion: dust where the blade's tip meets the ground, or the flash and streak
-/// of an arrow leaving the bow.
+/// An effect drawn on a frame of a keyed motion: dust where the blade's tip meets the ground, the flash and streak of
+/// an arrow leaving the bow, or a cast's light at the casting hands: a glow growing through the gather (its size the
+/// share of the gather done), a star on the release, then a ring breaking up and a few sparks.
 /// </summary>
 public enum MotionEffectKind
 {
     Dust,
-    Release
+    Release,
+    Gather,
+    Burst,
+    Ring,
+    Sparks
+}
+
+/// <summary>
+/// Where a cast's light shows: at the right hand, the left, both, or between them.
+/// </summary>
+public enum CastHands
+{
+    Right,
+    Left,
+    Both,
+    Between
 }
 
 /// <summary>
@@ -139,16 +159,24 @@ public static class CharacterMaterials
 
     /// <summary>
     /// Whether the weapon's art gives <paramref name="material"/> its colours: the weapon's own materials, the smears
-    /// and the dust. The recipe gives the others.
+    /// and the dust. The motion gives a cast's light, the recipe the others.
     /// </summary>
     public static bool IsWeapons(CharacterMaterial material)
     {
-        return material >= CharacterMaterial.Steel;
+        return material >= CharacterMaterial.Steel && material <= CharacterMaterial.Dust;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="material"/> is part of a cast's light, coloured by the motion.
+    /// </summary>
+    public static bool IsLight(CharacterMaterial material)
+    {
+        return material >= CharacterMaterial.LightRim;
     }
 
     /// <summary>
     /// Whether <paramref name="material"/> is drawn in its middle tone whatever its surface faces: the face, the inside
-    /// of the hood, the eyes and the smears.
+    /// of the hood, the eyes, the smears and a cast's light.
     /// </summary>
     public static bool IsFlat(CharacterMaterial material)
     {
@@ -161,6 +189,9 @@ public static class CharacterMaterials
             case CharacterMaterial.SmearNew:
             case CharacterMaterial.SmearMiddle:
             case CharacterMaterial.SmearOld:
+            case CharacterMaterial.LightRim:
+            case CharacterMaterial.LightGlow:
+            case CharacterMaterial.LightCore:
                 return true;
             default:
                 return false;
@@ -267,7 +298,8 @@ public struct MotionSmear
 }
 
 /// <summary>
-/// An effect drawn on frame <see cref="Frame"/> of a keyed motion, at a size (dust spreads with it).
+/// An effect drawn on frame <see cref="Frame"/> of a keyed motion, at a size (dust spreads with it; a cast's gathering
+/// glow grows with it, as the share of the gather done), and for a cast's light, at which hands.
 /// </summary>
 [Serializable]
 public struct MotionEffect
@@ -275,18 +307,28 @@ public struct MotionEffect
     [SerializeField, Min(0)] private int frame;
     [SerializeField] private MotionEffectKind kind;
     [SerializeField, Min(0.1f)] private float size;
+    [Tooltip("For a cast's light: the hands it shows at.")]
+    [SerializeField] private CastHands hands;
 
     /// <summary>
-    /// Creates an effect of <paramref name="effectKind"/> on <paramref name="frameIndex"/>.
+    /// Creates an effect of <paramref name="effectKind"/> on <paramref name="frameIndex"/>, a cast's light at
+    /// <paramref name="castHands"/>.
     /// </summary>
-    public MotionEffect(int frameIndex, MotionEffectKind effectKind, float effectSize)
+    public MotionEffect(int frameIndex, MotionEffectKind effectKind, float effectSize, CastHands castHands = CastHands.Right)
     {
         frame = frameIndex;
         kind = effectKind;
         size = effectSize;
+        hands = castHands;
     }
 
     public int Frame => frame;
     public MotionEffectKind Kind => kind;
     public float Size => size;
+    public CastHands Hands => hands;
+
+    /// <summary>
+    /// Whether the effect is part of a cast's light.
+    /// </summary>
+    public bool IsLight => kind >= MotionEffectKind.Gather;
 }

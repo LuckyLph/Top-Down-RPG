@@ -95,6 +95,14 @@ public sealed class CharacterLocomotionLayer
     }
 
     /// <summary>
+    /// Whether <paramref name="speed"/> picks a gait other than idle from the current one: whether the character moves.
+    /// </summary>
+    public bool WouldMove(float speed)
+    {
+        return settings != null && Pick(Gait, speed, settings) != CharacterGait.Idle;
+    }
+
+    /// <summary>
     /// The current frame's sprite facing <paramref name="direction"/>, or null without a clip.
     /// </summary>
     public Sprite SpriteFacing(int direction)

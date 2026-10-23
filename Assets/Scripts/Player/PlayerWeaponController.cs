@@ -128,7 +128,7 @@ public class PlayerWeaponController : MonoBehaviour
         CancelAttack();
         if (visuals != null)
         {
-            visuals.StopAction();
+            visuals.StopAction(CharacterActionKind.Attack);
         }
     }
 
@@ -156,7 +156,7 @@ public class PlayerWeaponController : MonoBehaviour
         CancelAttack();
         if (visuals != null)
         {
-            visuals.StopAction();
+            visuals.StopAction(CharacterActionKind.Attack);
         }
 
         CharacterAnimationClip clip = ClipFor(weapon);
@@ -326,7 +326,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (visuals != null)
         {
-            visuals.StopAction();
+            visuals.StopAction(CharacterActionKind.Attack);
         }
     }
 
@@ -398,7 +398,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (visuals != null)
         {
-            visuals.StopAction();
+            visuals.StopAction(CharacterActionKind.Attack);
         }
 
         AttackCancelled?.Invoke();

@@ -12,8 +12,9 @@ using UnityEditor;
 /// and, when it completes, has the service resolve its effect; raises cast events. Which cast runs when is decided by
 /// <see cref="PlayerOrders"/>. A weapon ability keeps its own cooldown across weapon switches: switching never readies
 /// an ability early, and a new weapon's abilities are not held by the old one's. Replays other machines' casts with
-/// the weapon they were cast with, so a copy that has not heard of a switch yet still plays the right ability. Draws
-/// gizmos for recent casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
+/// the weapon they were cast with, so a copy that has not heard of a switch yet still plays the right ability, and
+/// raises events for a copy's casts starting and being cancelled, which only its visuals hear. Draws gizmos for recent
+/// casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerAbilities : MonoBehaviour, IAbilityCaster
@@ -59,8 +60,25 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     private int nextRecentCast;
 
     public event Action<AbilityCast> CastStarted;
-    public event Action<int> CastEnded;
+
+    /// <summary>
+    /// Raised when the running cast ends: its slot, and whether it completed (false when it was cancelled).
+    /// </summary>
+    public event Action<int, bool> CastEnded;
+
     public event Action<AbilityCast> CastCompleted;
+
+    /// <summary>
+    /// Raised on a copy when another machine's cast for this player starts here (<see cref="PlayRemoteCast(int, in CastAim, PlayerWeapon)"/>),
+    /// for its visuals.
+    /// </summary>
+    public event Action<AbilityCast> RemoteCastStarted;
+
+    /// <summary>
+    /// Raised on a copy when the owner's cast was cancelled (<see cref="StopRemoteCast"/>), for its visuals.
+    /// </summary>
+    public event Action RemoteCastCancelled;
+
     public event Action<int, CastOutcome> CastFailed;
     public event Action SlotsChanged;
 
@@ -228,7 +246,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Ends the running cast in <paramref name="slot"/> as finished: raises <see cref="CastEnded"/> and
+    /// Ends the running cast in <paramref name="slot"/> as finished: raises <see cref="CastEnded"/> (completed) and
     /// <see cref="CastCompleted"/> and has the <see cref="AbilityService"/> resolve its effect (only the authority
     /// applies it; a client's owner forwards the completion to the host).
     /// </summary>
@@ -242,7 +260,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         AbilityCast cast = runningCast;
         runningSlot = -1;
         runningCast = default;
-        CastEnded?.Invoke(slot);
+        CastEnded?.Invoke(slot, true);
         CastCompleted?.Invoke(cast);
         if (abilityService != null)
         {
@@ -251,7 +269,8 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Ends the running cast in <paramref name="slot"/> early, without its effect: raises <see cref="CastEnded"/>.
+    /// Ends the running cast in <paramref name="slot"/> early, without its effect: raises <see cref="CastEnded"/> (not
+    /// completed).
     /// </summary>
     public void CancelCast(int slot)
     {
@@ -262,7 +281,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
         runningSlot = -1;
         runningCast = default;
-        CastEnded?.Invoke(slot);
+        CastEnded?.Invoke(slot, false);
     }
 
     /// <summary>
@@ -285,7 +304,8 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
     /// <summary>
     /// <see cref="PlayRemoteCast(int, in CastAim)"/> for a cast made while <paramref name="weapon"/> was equipped on its
-    /// owner's machine: a weapon slot plays that weapon's ability.
+    /// owner's machine: a weapon slot plays that weapon's ability. Raises <see cref="RemoteCastStarted"/> for any cast
+    /// of a living caster, whether or not its unit target resolved here.
     /// </summary>
     public void PlayRemoteCast(int slot, in CastAim aim, PlayerWeapon weapon)
     {
@@ -295,18 +315,27 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
             return;
         }
 
+        AbilityCast cast = new(slot, ability, aim);
+        RemoteCastStarted?.Invoke(cast);
         Health target = aim.Target.Health;
         if (ability.Targeting == AbilityTargeting.Unit && (target == null || target.IsDead))
         {
             return;
         }
 
-        AbilityCast cast = new(slot, ability, aim);
         RecordCast(cast, true);
         if (abilityService != null)
         {
             abilityService.Apply(this, cast);
         }
+    }
+
+    /// <summary>
+    /// On a copy, the owner's cast was cancelled: raises <see cref="RemoteCastCancelled"/>.
+    /// </summary>
+    public void StopRemoteCast()
+    {
+        RemoteCastCancelled?.Invoke();
     }
 
     /// <summary>

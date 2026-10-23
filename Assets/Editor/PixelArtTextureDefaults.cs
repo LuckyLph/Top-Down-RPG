@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Import postprocessor that enforces pixel art settings on every texture under Assets/Sprites: sprite type, 32 pixels
-/// per unit, point filtering, no mipmaps or NPOT scaling, and uncompressed RGBA32 on each platform.
+/// per unit, point filtering, no mipmaps or NPOT scaling, and uncompressed RGBA32 on each platform, each platform's
+/// maximum size at least the default one's (so a sheet raised past 2048 pixels is not scaled down).
 /// </summary>
 public sealed class PixelArtTextureDefaults : AssetPostprocessor
 {
@@ -132,7 +133,7 @@ public sealed class PixelArtTextureDefaults : AssetPostprocessor
 
     /// <summary>
     /// Makes <paramref name="platformName"/> uncompressed, overriding it to RGBA32 on every platform except the
-    /// default one, and returns whether anything changed.
+    /// default one with a maximum size no smaller than the default one's, and returns whether anything changed.
     /// </summary>
     private static bool SetPlatformCompression(TextureImporter importer, string platformName)
     {
@@ -155,6 +156,12 @@ public sealed class PixelArtTextureDefaults : AssetPostprocessor
         if (settings.overridden && settings.format != TextureImporterFormat.RGBA32)
         {
             settings.format = TextureImporterFormat.RGBA32;
+            changed = true;
+        }
+
+        if (settings.overridden && settings.maxTextureSize < importer.maxTextureSize)
+        {
+            settings.maxTextureSize = importer.maxTextureSize;
             changed = true;
         }
 

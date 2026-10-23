@@ -21,6 +21,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/Animation.md` is the spec for character animation: the character rig and the baker that generates its sprite sheets, the runtime animator, gaits by speed, the attack timeline with its cancel rules, and weapon movesets. Follow it when working on character art, character animation, attack timing or weapon visuals, and tick off its phase checklist as steps land.
 
+`Docs/AsepriteCharacters.md` is the plan for characters drawn by hand in Aseprite and imported into the same animation sets the baker writes: the file and tag conventions, the contact markers, the enforced import settings and the import recipe. Follow it when working on Aseprite files, their import or hand-drawn characters, and tick off its phase checklist as steps land.
+
 `Docs/TerrainBlending.md` is the spec for drawing the ground with a blending shader instead of dual-grid tilesets. Follow it when working on ground rendering, terrain materials, the terrain brush or the ground and wall tilesets, and tick off its phase checklist as steps land.
 
 `Docs/TerrainTypes.md` is the plan for the next ground materials (dirt, dry grass, meadow, tall grass, planks, plaza, shallows, ocean, lava, snow, ice, raised ground), 16 ground layers per area and per-area layer sets. Follow it when adding a terrain type, changing how many or which layers an area uses, and tick off its phase checklist as steps land.

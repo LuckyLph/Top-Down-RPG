@@ -13,9 +13,9 @@ using Object = UnityEngine.Object;
 /// contact frame; layers draw as Aseprite draws them (normal blending at the cel's and layer's opacity, hidden layers
 /// and hidden groups left out, linked cels and their user data followed); every validation rule reports a broken file
 /// naming the file, tag and frame; the import settings are enforced under Assets/Art/Characters only; the recipe
-/// refuses what it cannot write; the inspector reads a clip again when its file changes; the clips a prefab plays are
-/// listed; the rogue's baked clips written as files and
-/// generated give sheets byte for byte the baked ones and a set equal to the baked one, and generating again writes
+/// refuses what it cannot write; the inspector reads a clip again when its file changes; saving files regenerates the
+/// recipe using them, once, and no other; the clips a prefab plays are listed; the rogue's baked clips written as files
+/// and generated give sheets byte for byte the baked ones and a set equal to the baked one, and generating again writes
 /// nothing; and generating after a frame is added, the directions are moved within the file, a layer is added or the
 /// canvas is resized keeps the ID of every slice still drawn. Imported files and generated sheets live in folders of
 /// their own, deleted after each test.
@@ -23,6 +23,7 @@ using Object = UnityEngine.Object;
 public class AsepriteCharacterTests
 {
     private const string Character = "AsepriteTest";
+    private const string OtherCharacter = "AsepriteOther";
     private const string ArtFolder = AsepriteCharacterRecipe.ArtRoot + "/" + Character;
     private const string OutsideFolder = "Assets/Tests/AsepriteOutside";
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
@@ -61,6 +62,7 @@ public class AsepriteCharacterTests
 
         tempFolders.Clear();
         AssetDatabase.DeleteAsset(CharacterSheetWriter.FolderOf(Character));
+        AssetDatabase.DeleteAsset(CharacterSheetWriter.FolderOf(OtherCharacter));
         AssetDatabase.DeleteAsset(OutsideFolder);
         if (createdArtFolder != null)
         {
@@ -338,6 +340,54 @@ public class AsepriteCharacterTests
         File.SetLastWriteTimeUtc(path, File.GetLastWriteTimeUtc(path).AddSeconds(2));
         inspector.RebuildIfChanged(recipe);
         StringAssert.Contains("marked contact, but a run has no contact frame", inspector.PreviewProblem);
+    }
+
+    /// <summary>
+    /// Saving two files of a character in one import queues its recipe once; running the queue regenerates that recipe
+    /// alone, its set taking the files' new durations, while another character's recipe, whose file was not saved, is
+    /// neither queued nor rewritten.
+    /// </summary>
+    [Test]
+    public void SavingFiles_RegeneratesTheRecipeUsingThem_Once()
+    {
+        AsepriteRegeneration.Flush();
+        Object run = Import(Clip(), "Run");
+        Object walk = Import(Clip(), "Walk");
+        Object other = ImportAs(Clip(), $"{OtherCharacter}_Run");
+        string recipePath = $"{ArtFolder}/{Character}_Recipe.asset";
+        AsepriteCharacterRecipe recipe = AsepriteCharacterRecipe.Create(Character, null, new[] { new AsepriteClip(run, CharacterGait.Run, false, 4f, SmallFeet), new AsepriteClip(walk, CharacterGait.Walk, false, 2f, SmallFeet) });
+        AssetDatabase.CreateAsset(recipe, recipePath);
+        AsepriteCharacterRecipe otherRecipe = AsepriteCharacterRecipe.Create(OtherCharacter, null, new[] { new AsepriteClip(other, CharacterGait.Run, false, 4f, SmallFeet) });
+        AssetDatabase.CreateAsset(otherRecipe, $"{ArtFolder}/{OtherCharacter}_Recipe.asset");
+        Assert.That(AsepriteCharacterWriter.Generate(recipe).Problems, Is.Empty);
+        Assert.That(AsepriteCharacterWriter.Generate(otherRecipe).Problems, Is.Empty);
+        AsepriteRegeneration.Flush();
+        string otherSheet = CharacterSheetWriter.SheetPath(OtherCharacter, "Run");
+        DateTime otherWritten = File.GetLastWriteTimeUtc(otherSheet);
+        string otherSet = CharacterSheetWriter.SetPath(OtherCharacter);
+        DateTime otherSetWritten = File.GetLastWriteTimeUtc(otherSet);
+
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            Clip(millisecondsOf: (d, f) => 70).Write(AssetDatabase.GetAssetPath(run));
+            Clip(millisecondsOf: (d, f) => 60).Write(AssetDatabase.GetAssetPath(walk));
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(run), ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(walk), ImportAssetOptions.ForceUpdate);
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        Assert.That(AsepriteRegeneration.Queued, Is.EqualTo(new[] { recipePath }));
+        Assert.That(AsepriteRegeneration.Flush(), Is.EqualTo(new[] { recipePath }));
+        Assert.That(AsepriteRegeneration.Queued, Is.Empty);
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(Character));
+        Assert.That(set.Find("Run").FrameSeconds(0), Is.EqualTo(0.07f));
+        Assert.That(set.Find("Walk").FrameSeconds(0), Is.EqualTo(0.06f));
+        Assert.That(File.GetLastWriteTimeUtc(otherSheet), Is.EqualTo(otherWritten));
+        Assert.That(File.GetLastWriteTimeUtc(otherSet), Is.EqualTo(otherSetWritten));
     }
 
     /// <summary>
@@ -711,8 +761,17 @@ public class AsepriteCharacterTests
     /// </summary>
     private Object Import(AsepriteFileWriter writer, string clip)
     {
+        return ImportAs(writer, $"{Character}_{clip}");
+    }
+
+    /// <summary>
+    /// Writes <paramref name="writer"/>'s file as <paramref name="name"/> in the test character's art folder under
+    /// Assets/Art/Characters, imports it and returns its main asset.
+    /// </summary>
+    private Object ImportAs(AsepriteFileWriter writer, string name)
+    {
         EnsureArtFolder();
-        string path = $"{ArtFolder}/{Character}_{clip}.aseprite";
+        string path = $"{ArtFolder}/{name}.aseprite";
         writer.Write(path);
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
         return AssetDatabase.LoadMainAssetAtPath(path);

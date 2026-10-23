@@ -12,7 +12,7 @@ public class OptionsMenuPlayModeTests
 {
     /// <summary>
     /// Opening options hides the menu buttons and selects the first binding row; Back restores the buttons with
-    /// Options selected. The screen lists three section headers and nine rows.
+    /// Options selected. The screen lists the Character header and its Look row, three section headers and nine rows.
     /// </summary>
     [UnityTest]
     public IEnumerator MainMenuOptions_ReplaceTheButtons_AndBackBringsThemBackWithOptionsSelected()
@@ -24,7 +24,7 @@ public class OptionsMenuPlayModeTests
 
         Assert.That(options, Is.Not.Null, "The main menu has an options screen.");
         Assert.That(options.IsShown, Is.False);
-        Assert.That(options.RowsContainer.childCount, Is.EqualTo(12), "Three section headers and nine rows.");
+        Assert.That(options.RowsContainer.childCount, Is.EqualTo(14), "The Character header and its Look row, three section headers and nine rows.");
 
         menu.OpenOptions();
         yield return null;

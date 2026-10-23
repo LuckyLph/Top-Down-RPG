@@ -1564,6 +1564,7 @@ MonoBehaviour:
   confirmPanel: {fileID: 2987944112813385320}
   confirmYesButton: {fileID: 8382667931523857069}
   confirmNoButton: {fileID: 6818143165243078286}
+  looks: {fileID: 11400000, guid: 7ee68ec85e15d1d41aba52af430bb49e, type: 2}
 --- !u!1 &6955804362817374433
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="PlayerBinder"/> binding local and remote players into the registry and the local player
-/// tracker, plus the damage service's authority check.
+/// tracker, the local player drawing the look its settings choose and a remote one keeping its own, plus the damage
+/// service's authority check.
 /// </summary>
 public class PlayerBinderTests
 {
@@ -61,6 +62,41 @@ public class PlayerBinderTests
         Assert.That(localPlayer.Current.Controller, Is.SameAs(controller));
         Assert.That(controller.SimulatesMovement, Is.True);
         Assert.That((Vector2)controller.transform.position, Is.EqualTo(new Vector2(4f, -2f)));
+    }
+
+    /// <summary>
+    /// Binding the local player has its look follow the local settings, offline as online: it draws the look they
+    /// choose and each later choice; a remote player bound keeps the look it has.
+    /// </summary>
+    [Test]
+    public void BindLocal_DrawsTheLookTheSettingsChoose()
+    {
+        CharacterLocomotionSettings locomotion = CharacterLocomotionSettings.Create(0.1f, 2.4f, 5.6f, 0.1f, 0.5f, 1.5f, 8f);
+        CharacterAnimationSet rogue = CharacterAnimationSet.Create(new CharacterAnimationClip[0]);
+        CharacterAnimationSet bandit = CharacterAnimationSet.Create(new CharacterAnimationClip[0]);
+        CharacterLookCatalog looks = CharacterLookCatalog.Create(new CharacterLook("Rogue", rogue, locomotion), new CharacterLook("Bandit", bandit, locomotion));
+        try
+        {
+            UserSettings settings = new(new MemorySaveStore());
+            settings.SetCharacterLook("Bandit");
+            CharacterVisuals local = CreateLookingPlayer(looks, settings, rogue, locomotion, out PlayerController localPlayerController);
+            CharacterVisuals remote = CreateLookingPlayer(looks, settings, rogue, locomotion, out PlayerController remoteController);
+
+            binder.BindLocal(localPlayerController);
+            binder.BindRemote(remoteController);
+
+            Assert.That(local.AnimationSet, Is.EqualTo(bandit));
+            Assert.That(remote.AnimationSet, Is.EqualTo(rogue));
+            settings.SetCharacterLook("Rogue");
+            Assert.That(local.AnimationSet, Is.EqualTo(rogue));
+        }
+        finally
+        {
+            Object.DestroyImmediate(looks);
+            Object.DestroyImmediate(rogue);
+            Object.DestroyImmediate(bandit);
+            Object.DestroyImmediate(locomotion);
+        }
     }
 
     /// <summary>
@@ -129,6 +165,24 @@ public class PlayerBinderTests
         PlayerController controller = playerObject.AddComponent<PlayerController>();
         playerObject.AddComponent<Health>();
         return controller;
+    }
+
+    /// <summary>
+    /// Creates a player whose look over <paramref name="looks"/> reads <paramref name="settings"/>, drawn with
+    /// <paramref name="set"/> on visuals under it, and returns the visuals.
+    /// </summary>
+    private CharacterVisuals CreateLookingPlayer(CharacterLookCatalog looks, UserSettings settings, CharacterAnimationSet set, CharacterLocomotionSettings locomotion, out PlayerController controller)
+    {
+        controller = CreatePlayer();
+        GameObject child = new("Visuals");
+        child.transform.SetParent(controller.transform, false);
+        child.AddComponent<SpriteRenderer>();
+        CharacterVisuals visuals = child.AddComponent<CharacterVisuals>();
+        visuals.SetLook(set, locomotion);
+        PlayerLook look = controller.gameObject.AddComponent<PlayerLook>();
+        look.Configure(looks, visuals);
+        look.Construct(settings);
+        return visuals;
     }
 
     /// <summary>

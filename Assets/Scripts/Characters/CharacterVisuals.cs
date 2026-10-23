@@ -7,6 +7,8 @@ using VContainer;
 /// timelines (<see cref="PlayAction"/>) and its abilities the casts (<see cref="PlayCast"/>); each frame, after every
 /// motor has moved, it asks its
 /// <see cref="CharacterAnimator"/> for the sprite on the game clock and puts it on the renderer when it changed. Logs an error without a set or locomotion settings, keeping the sprite it has.
+/// A player's look (<see cref="SetLook"/>) swaps the set and settings; the weapon and the casts look their clips up
+/// again in the new set.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -26,6 +28,7 @@ public class CharacterVisuals : MonoBehaviour
     private Sprite shown;
 
     public CharacterAnimationSet AnimationSet => animationSet;
+    public CharacterLocomotionSettings Locomotion => locomotion;
 
     /// <summary>
     /// The animator, built on first use; null without a set or settings.
@@ -60,6 +63,24 @@ public class CharacterVisuals : MonoBehaviour
     {
         clock = gameClock ?? UnityClock.Shared;
         animator = null;
+    }
+
+    /// <summary>
+    /// Draws the character with <paramref name="set"/> at <paramref name="settings"/> from now on: the animator is built
+    /// again on the next use, so an action showing stops and the gait starts over. Nothing changes when either is
+    /// missing or both are the ones drawn.
+    /// </summary>
+    public void SetLook(CharacterAnimationSet set, CharacterLocomotionSettings settings)
+    {
+        if (set == null || settings == null || (set == animationSet && settings == locomotion))
+        {
+            return;
+        }
+
+        animationSet = set;
+        locomotion = settings;
+        animator = null;
+        shown = null;
     }
 
     /// <summary>

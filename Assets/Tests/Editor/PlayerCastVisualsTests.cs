@@ -7,9 +7,10 @@ using UnityEngine;
 /// Tests for <see cref="PlayerCastVisuals"/> (Docs/Animation.md, Phase 5) on a player built in the test, with
 /// <see cref="PlayerOrders"/> running its casts on a manual clock: the owner's cast shows its release frame on exactly
 /// the tick its orders complete it, at several cast times and instantly; a Continue cast while running shows its clip
-/// over the run; a cancelled cast, a copy's cancelled cast and a disabled player stop the clip at once; ending an attack
-/// leaves a cast playing; and casting plays out the same in gameplay (casts, completions, failures, cooldowns and
-/// effects) with the visuals as without them.
+/// over the run; after a look change the attack and the cast play the new set's clips, a cast whose set has no clip over
+/// the run standing; a cancelled cast, a copy's cancelled cast and a disabled player stop the clip at once; ending an
+/// attack leaves a cast playing; and casting plays out the same in gameplay (casts, completions, failures, cooldowns
+/// and effects) with the visuals as without them.
 /// </summary>
 public class PlayerCastVisualsTests
 {
@@ -161,6 +162,42 @@ public class PlayerCastVisualsTests
         abilities.StopRemoteCast();
         visuals.Tick();
         Assert.That(visuals.Animator.IsActing, Is.False);
+    }
+
+    /// <summary>
+    /// After the visuals take another set (the player's look changed), the weapon's attack and the cast play that set's
+    /// clips; the set has no clip over the run, so the Continue cast plays standing while the player moves, and nothing
+    /// is logged for the missing clip.
+    /// </summary>
+    [Test]
+    public void ALookChange_PlaysTheNewSetsClips_AndACastWithoutItsRunClipStanding()
+    {
+        CreatePlayer(Ability("Whirl", 0.3f, AbilityTargeting.None, CastMovement.Continue, "CastRun"), true);
+        Assert.That(weapon.TryAttack(Vector2.right), Is.True);
+        visuals.Tick();
+        Assert.That(visuals.Animator.Clip, Is.SameAs(set.Find("Slash")));
+        weapon.CancelAttack();
+
+        CharacterAnimationSet other = Track(CharacterAnimationSet.Create(new[]
+        {
+            Clip("Idle", CharacterGait.Idle, 1, 0, -1, 0f),
+            Clip("Run", CharacterGait.Run, 8, 0, -1, 4f),
+            Clip("Slash", CharacterGait.None, 8, 0, 4, 0f),
+            Clip("Cast", CharacterGait.None, 8, 0, Release, 0f)
+        }));
+        visuals.SetLook(other, locomotion);
+        clock.Advance(1f);
+        Assert.That(weapon.TryAttack(Vector2.right), Is.True);
+        visuals.Tick();
+        Assert.That(visuals.Animator.Clip, Is.SameAs(other.Find("Slash")), "The attack plays the new set's clip.");
+        weapon.CancelAttack();
+
+        Assert.That(abilities.TryCast(0, new CastAim(Vector2.zero, Vector2.zero, default)), Is.EqualTo(CastOutcome.Started));
+        visuals.SetLocomotion(Vector2.right * 4f, Vector2.right);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.True);
+        Assert.That(visuals.Animator.Clip, Is.SameAs(other.Find("Cast")), "The cast plays the new set's standing clip.");
+        Assert.That(visuals.Animator.ShowsMovingCast, Is.False);
     }
 
     /// <summary>

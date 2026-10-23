@@ -11,14 +11,17 @@ using UnityEngine;
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
 /// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
-/// casts; a sorter with a sorting point sorts by that point's height, and the Weasel sorts by its feet; the Weasels draw
-/// the Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
+/// casts; its look comes from the project's catalog, whose first look is the rogue it is drawn as and whose every look
+/// holds every clip it plays, standing, walking and running clips included; a sorter with a sorting point sorts by that
+/// point's height, and the Weasel sorts by its feet; the Weasels draw the Weasel's baked set from their feet with no
+/// Mecanim animator, their config's attack clip in it.
 /// </summary>
 public class CharacterPrefabTests
 {
     private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
     private const string SetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
     private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
@@ -44,6 +47,53 @@ public class CharacterPrefabTests
         }
 
         created.Clear();
+    }
+
+    /// <summary>
+    /// The player's look draws on its visuals from the project's catalog of looks, whose first, the rogue, is the set and
+    /// locomotion the prefab is drawn with; every look of it holds a complete clip for every clip the player plays (its
+    /// class's and weapons' casts and its weapons' attacks) and complete standing, walking and running clips, at 32
+    /// pixels per unit and pivoted on the feet, with locomotion settings.
+    /// </summary>
+    [Test]
+    public void ThePlayersLooks_HoldEveryClipItPlays()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        PlayerLook look = player.GetComponent<PlayerLook>();
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        Assert.That(look, Is.Not.Null);
+        SerializedObject serialized = new(look);
+        Assert.That(serialized.FindProperty("catalog").objectReferenceValue, Is.EqualTo(looks));
+        Assert.That(serialized.FindProperty("visuals").objectReferenceValue, Is.EqualTo(visuals));
+        Assert.That(looks.Count, Is.GreaterThanOrEqualTo(2));
+        Assert.That(looks.Get(0).AnimationSet, Is.EqualTo(visuals.AnimationSet), "The first look is the prefab's own.");
+        Assert.That(looks.Get(0).Locomotion, Is.EqualTo(visuals.Locomotion));
+
+        IReadOnlyList<(string Clip, string Need)> needs = CharacterClipNeeds.Of(player);
+        Assert.That(needs.Count, Is.EqualTo(13));
+        for (int i = 0; i < looks.Count; i++)
+        {
+            CharacterLook characterLook = looks.Get(i);
+            Assert.That(characterLook.AnimationSet, Is.Not.Null, characterLook.Name);
+            Assert.That(characterLook.Locomotion, Is.Not.Null, characterLook.Name);
+            Assert.That(looks.IndexOf(characterLook.Name), Is.EqualTo(i), $"{characterLook.Name}: names are unique.");
+            foreach ((string clipName, string need) in needs)
+            {
+                CharacterAnimationClip clip = characterLook.AnimationSet.Find(clipName);
+                Assert.That(clip, Is.Not.Null, $"{characterLook.Name} lacks {clipName} for {need}.");
+                Assert.That(clip.IsComplete && clip.HasContact, Is.True, $"{characterLook.Name}: {clipName}");
+            }
+
+            foreach (CharacterGait gait in new[] { CharacterGait.Idle, CharacterGait.Walk, CharacterGait.Run })
+            {
+                CharacterAnimationClip clip = characterLook.AnimationSet.Locomotion(gait);
+                Assert.That(clip != null && clip.IsComplete, Is.True, $"{characterLook.Name}: {gait}");
+                Sprite sprite = clip.SpriteAt(CharacterDirections.South, 0);
+                Assert.That(sprite.pixelsPerUnit, Is.EqualTo(32f), $"{characterLook.Name}: {gait}");
+                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(32f, 12f)), $"{characterLook.Name}: {gait}");
+            }
+        }
     }
 
     /// <summary>

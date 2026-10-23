@@ -5,8 +5,9 @@ using VContainer;
 
 /// <summary>
 /// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
-/// base move speed, so a slowed or hasted copy shows the same gait), facing and equipped weapon (its
-/// <see cref="WeaponCatalog"/> index) to owner network variables, and sends its attacks' starts, contacts and early
+/// base move speed, so a slowed or hasted copy shows the same gait), facing, equipped weapon (its
+/// <see cref="WeaponCatalog"/> index) and look (its <see cref="CharacterLookCatalog"/> index, which binding it makes
+/// follow the local settings) to owner network variables, and sends its attacks' starts, contacts and early
 /// ends and its cast starts and cancels to the other machines, which play them on their copy, and its completed casts to
 /// the host.
 /// Attack and cast messages name the weapon they were made with, so they play and land right even before a weapon
@@ -14,7 +15,7 @@ using VContainer;
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
 /// client's completed casts there. The owner's teleports (arriving at an entry, a waystone included) snap on the other
 /// machines instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that
-/// movement and equips the replicated weapon, a late joiner included.
+/// movement, equips the replicated weapon and shows the replicated look, a late joiner included.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
@@ -22,13 +23,16 @@ public class PlayerNetworkSync : NetworkBehaviour
 {
     private const float ChangeThreshold = 0.01f;
     private const int NoWeapon = -1;
+    private const int NoLook = -1;
 
     private readonly NetworkVariable<Vector2> move = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<Vector2> facing = new(Vector2.down, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<int> equippedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private readonly NetworkVariable<int> look = new(NoLook, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     private PlayerController controller;
     private PlayerWeaponController weapon;
+    private PlayerLook playerLook;
     private PlayerAbilities abilities;
     private Rigidbody2D body;
     private NetworkTransform networkTransform;
@@ -42,12 +46,13 @@ public class PlayerNetworkSync : NetworkBehaviour
     internal PlayerHandle Handle => handle;
 
     /// <summary>
-    /// Caches the controller, weapon, abilities, body and network transform on this player.
+    /// Caches the controller, weapon, look, abilities, body and network transform on this player.
     /// </summary>
     private void Awake()
     {
         controller = GetComponent<PlayerController>();
         weapon = GetComponent<PlayerWeaponController>();
+        playerLook = GetComponent<PlayerLook>();
         abilities = GetComponent<PlayerAbilities>();
         body = GetComponent<Rigidbody2D>();
         networkTransform = GetComponent<NetworkTransform>();
@@ -63,10 +68,11 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// The owner binds the player as local, writes its weapon and starts relaying its weapon switches, attacks,
-    /// teleports and casts; any other machine makes the body kinematic without interpolation, binds it as remote, shows
-    /// the current replicated movement and equips the replicated weapon, following it from then on. Logs an error and
-    /// does nothing when the prefab was spawned without injection.
+    /// The owner binds the player as local (which shows the look the local settings choose), writes its weapon and
+    /// look, and starts relaying its weapon switches, look changes, attacks, teleports and casts; any other machine
+    /// makes the body kinematic without interpolation, binds it as remote, shows the current replicated movement, equips
+    /// the replicated weapon and shows the replicated look, following them from then on. Logs an error and does nothing
+    /// when the prefab was spawned without injection.
     /// </summary>
     public override void OnNetworkSpawn()
     {
@@ -87,6 +93,12 @@ public class PlayerNetworkSync : NetworkBehaviour
                 weapon.AttackCancelled += HandleLocalAttackCancelled;
                 weapon.EquippedWeaponChanged += HandleLocalWeaponChanged;
                 WriteWeapon();
+            }
+
+            if (playerLook != null)
+            {
+                playerLook.Chosen += HandleLocalLookChosen;
+                HandleLocalLookChosen(playerLook.Index);
             }
 
             if (abilities != null)
@@ -110,6 +122,11 @@ public class PlayerNetworkSync : NetworkBehaviour
         controller.ShowRemoteMovement(move.Value, facing.Value);
         equippedWeapon.OnValueChanged += HandleWeaponReplicated;
         EquipReplicatedWeapon(equippedWeapon.Value);
+        look.OnValueChanged += HandleLookReplicated;
+        if (playerLook != null)
+        {
+            playerLook.Show(look.Value);
+        }
     }
 
     /// <summary>
@@ -127,6 +144,13 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
 
         equippedWeapon.OnValueChanged -= HandleWeaponReplicated;
+        look.OnValueChanged -= HandleLookReplicated;
+        if (playerLook != null)
+        {
+            playerLook.Chosen -= HandleLocalLookChosen;
+            playerLook.StopFollowing();
+        }
+
         if (abilities != null)
         {
             abilities.CastStarted -= HandleLocalCast;
@@ -371,6 +395,29 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (IsSpawned && IsOwner && index != NoWeapon && !unchanged)
         {
             equippedWeapon.Value = index;
+        }
+    }
+
+    /// <summary>
+    /// On the owner, writes the catalog index of the look the local settings chose when it differs from what the other
+    /// machines know (-1, the copies' own look, until the first look shows).
+    /// </summary>
+    private void HandleLocalLookChosen(int index)
+    {
+        if (IsSpawned && IsOwner && index != look.Value)
+        {
+            look.Value = index;
+        }
+    }
+
+    /// <summary>
+    /// On the other machines, shows the look the owner chose; the unwritten value keeps the copy's own.
+    /// </summary>
+    private void HandleLookReplicated(int previous, int current)
+    {
+        if (playerLook != null)
+        {
+            playerLook.Show(current);
         }
     }
 

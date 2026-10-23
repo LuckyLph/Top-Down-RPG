@@ -47,7 +47,7 @@ public class GameMenuControllerTests
         menuInput = new FakeMenuInput();
         session = new FakeSessionStatus();
         menus = new MenuStack(menuInput);
-        options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null));
+        options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null), new UserSettings(new MemorySaveStore()));
         options.Start();
         controller = new GameMenuController(menuView, options, menus, inputGate, timeFreeze, gameFlow, session, new UISelection(null));
         controller.Start();

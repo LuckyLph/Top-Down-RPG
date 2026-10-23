@@ -1,0 +1,102 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d75b3b2f9ef2e74cb1de362e57e8ce8, type: 3}
+  m_Name: AsepriteRecipe_Bandit
+  m_EditorClassIdentifier: TopDownRPG.Editor::AsepriteCharacterRecipe
+  characterName: Bandit
+  character: {fileID: 7676685028584557553, guid: 98634c8fe8b1e2d4eb7405d93135d8d7, type: 3}
+  clips:
+  - file: {fileID: -8328923581568760697, guid: d2b818aa497317b4cb29575cd178cc86, type: 3}
+    gait: 1
+    armed: 0
+    naturalSpeed: 0
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 87315a41296183748b3c21fea8c01bca, type: 3}
+    gait: 2
+    armed: 0
+    naturalSpeed: 1.0219594
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 2c8d573aa7aac7b4593df5e185d258ac, type: 3}
+    gait: 3
+    armed: 0
+    naturalSpeed: 4.2271957
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 7039ad6e17bad7f45a57c436fabc2fce, type: 3}
+    gait: 4
+    armed: 0
+    naturalSpeed: 5.613035
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: fdd4cff3ac730e34a82533cb81f0c413, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}
+  - file: {fileID: -8328923581568760697, guid: 891c3e57559628548b55a405ee86627c, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 48, y: 28}
+  - file: {fileID: -8328923581568760697, guid: a629820e446c91142a22c3e415e52936, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}
+  - file: {fileID: -8328923581568760697, guid: c615e013e8653ac458658b1d631bb671, type: 3}
+    gait: 0
+    armed: 0
+    naturalSpeed: 0
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: d06d5c039e053774eb385e9ce0a26d84, type: 3}
+    gait: 0
+    armed: 0
+    naturalSpeed: 0
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 234b5f7d6076d0c44a4da5a31d62895d, type: 3}
+    gait: 0
+    armed: 0
+    naturalSpeed: 0
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 533a980fce2b7cf4cba42be190b5e3e1, type: 3}
+    gait: 0
+    armed: 0
+    naturalSpeed: 0
+    feet: {x: 32, y: 12}
+  - file: {fileID: -8328923581568760697, guid: 8cbee503df7c5344296920a8b02ab517, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}
+  - file: {fileID: -8328923581568760697, guid: db4fc469295bed14fb9c7e2b49d2fe14, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}
+  - file: {fileID: -8328923581568760697, guid: 4ef6ddebf54434f47add176bf9db2b9c, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 48, y: 28}
+  - file: {fileID: -8328923581568760697, guid: 4cce30a82c341364f8548364ba0e86cd, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 48, y: 28}
+  - file: {fileID: -8328923581568760697, guid: 879a7f74fb145af4b95ff61ce5783ee4, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}
+  - file: {fileID: -8328923581568760697, guid: 4751e5085cee32b4d8300e3463ce531b, type: 3}
+    gait: 0
+    armed: 1
+    naturalSpeed: 0
+    feet: {x: 40, y: 22}

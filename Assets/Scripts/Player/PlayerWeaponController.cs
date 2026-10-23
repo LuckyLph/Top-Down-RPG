@@ -35,6 +35,7 @@ public class PlayerWeaponController : MonoBehaviour
     private PlayerWeapon currentWeapon;
     private CharacterAnimationClip attackClip;
     private CharacterAnimationClip[] catalogClips;
+    private CharacterAnimationSet clipsFrom;
     private Health health;
     private float attackSpeed = 1f;
     private UnitTarget attackTarget;
@@ -241,7 +242,7 @@ public class PlayerWeaponController : MonoBehaviour
         attackTarget = target;
         if (visuals != null)
         {
-            visuals.PlayAction(attackClip, attackDirection, timeline, false);
+            visuals.PlayAction(ClipFor(currentWeapon), attackDirection, timeline, false);
         }
 
         AttackStarted?.Invoke(OnlyAttack, attackDirection, attackSpeed);
@@ -427,13 +428,22 @@ public class PlayerWeaponController : MonoBehaviour
 
     /// <summary>
     /// The attack clip of <paramref name="weapon"/> in the character's set: the equipped weapon's, a catalog weapon's
-    /// looked up once and kept, or another's looked up by name.
+    /// looked up once and kept, or another's looked up by name. The clips kept are forgotten once the visuals draw
+    /// another set (the player's look changed).
     /// </summary>
     private CharacterAnimationClip ClipFor(PlayerWeapon weapon)
     {
         if (weapon == null)
         {
             return null;
+        }
+
+        CharacterAnimationSet set = visuals != null ? visuals.AnimationSet : null;
+        if (!ReferenceEquals(set, clipsFrom))
+        {
+            clipsFrom = set;
+            attackClip = null;
+            catalogClips = null;
         }
 
         if (weapon == currentWeapon && attackClip != null)

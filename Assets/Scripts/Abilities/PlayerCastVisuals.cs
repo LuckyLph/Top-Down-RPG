@@ -10,7 +10,8 @@ using UnityEngine;
 /// gather waits for the cast to complete, so the release frame shows on exactly the update its orders complete it; a
 /// copy plays on its own clock from the cast message. A cancelled cast stops its clip at once; a completed one plays
 /// its release and follow-through on. Visual only: nothing in gameplay reads it. Clips are looked up by name in the
-/// character's set on an ability's first cast and kept.
+/// character's set on an ability's first cast and kept until the character draws another set (its look changed); a
+/// set without an ability's clip over the run plays that cast standing.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerAbilities))]
@@ -23,6 +24,7 @@ public class PlayerCastVisuals : MonoBehaviour
     private CharacterVisuals visuals;
 
     private readonly Dictionary<AbilityDefinition, CastClips> clips = new();
+    private CharacterAnimationSet clipsFrom;
 
     /// <summary>
     /// Finds the abilities and the visuals when unassigned, and fails loudly without visuals.
@@ -144,26 +146,33 @@ public class PlayerCastVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// The clips <paramref name="ability"/> names, looked up in the character's set the first time and kept; logs an
-    /// error for a name the set lacks.
+    /// The clips <paramref name="ability"/> names, looked up in the character's set the first time and kept until the
+    /// visuals draw another set (the player's look changed); logs an error when the set lacks the standing clip. A set
+    /// without the clip drawn over the run (a character drawn by hand) plays the cast standing.
     /// </summary>
     private CastClips ClipsFor(AbilityDefinition ability)
     {
+        if (!ReferenceEquals(visuals.AnimationSet, clipsFrom))
+        {
+            clipsFrom = visuals.AnimationSet;
+            clips.Clear();
+        }
+
         if (clips.TryGetValue(ability, out CastClips found))
         {
             return found;
         }
 
-        found = new CastClips(FindClip(ability, ability.CastClip), FindClip(ability, ability.MovingCastClip));
+        found = new CastClips(FindClip(ability, ability.CastClip, true), FindClip(ability, ability.MovingCastClip, false));
         clips[ability] = found;
         return found;
     }
 
     /// <summary>
     /// The clip named <paramref name="clipName"/> in the character's set, or null for an empty name; logs an error when
-    /// the set has no such clip.
+    /// the set has no such clip and it is <paramref name="required"/>.
     /// </summary>
-    private CharacterAnimationClip FindClip(AbilityDefinition ability, string clipName)
+    private CharacterAnimationClip FindClip(AbilityDefinition ability, string clipName, bool required)
     {
         if (string.IsNullOrEmpty(clipName) || visuals.AnimationSet == null)
         {
@@ -171,7 +180,7 @@ public class PlayerCastVisuals : MonoBehaviour
         }
 
         CharacterAnimationClip clip = visuals.AnimationSet.Find(clipName);
-        if (clip == null)
+        if (clip == null && required)
         {
             Debug.LogError($"{name}'s {nameof(CharacterAnimationSet)} has no clip '{clipName}' for {ability.DisplayName}.", this);
         }

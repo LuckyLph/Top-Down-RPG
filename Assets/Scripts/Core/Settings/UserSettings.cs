@@ -3,7 +3,8 @@ using UnityEngine;
 using VContainer;
 
 /// <summary>
-/// The local machine's preferences, read once when created and written on every change, and this install's player id
+/// The local machine's preferences, read once when created and written on every change: the key binding overrides, the
+/// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -16,6 +17,7 @@ public sealed class UserSettings
     private readonly ISaveStore store;
     private string inputBindingOverrides = string.Empty;
     private string playerId = string.Empty;
+    private string characterLook = string.Empty;
     private bool isReadOnly;
 
     /// <summary>
@@ -27,8 +29,16 @@ public sealed class UserSettings
         Load();
     }
 
+    /// <summary>
+    /// Raised when <see cref="SetCharacterLook"/> changes the look.
+    /// </summary>
+    public event Action CharacterLookChanged;
+
     /// <summary>The key binding overrides as written by the Input System, or an empty string for the defaults.</summary>
     public string InputBindingOverrides => inputBindingOverrides;
+
+    /// <summary>The name of the look the local player is drawn with, or an empty string for the player's own.</summary>
+    public string CharacterLook => characterLook;
 
     /// <summary>
     /// This install's player id, which a joining client sends the host. The first read makes a new GUID and writes the
@@ -61,11 +71,29 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Keeps <paramref name="lookName"/> as the look the local player is drawn with, writes the file unless it came from
+    /// a newer build, and raises <see cref="CharacterLookChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetCharacterLook(string lookName)
+    {
+        string look = lookName ?? string.Empty;
+        if (look == characterLook)
+        {
+            return false;
+        }
+
+        characterLook = look;
+        bool written = Write();
+        CharacterLookChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
     /// Writes every setting to the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook).ToJson());
     }
 
     /// <summary>
@@ -100,5 +128,6 @@ public sealed class UserSettings
 
         inputBindingOverrides = data.InputBindingOverrides;
         playerId = data.PlayerId;
+        characterLook = data.CharacterLook;
     }
 }

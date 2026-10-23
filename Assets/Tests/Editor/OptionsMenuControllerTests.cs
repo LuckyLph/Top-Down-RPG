@@ -6,7 +6,8 @@ using UnityEngine.InputSystem.Controls;
 
 /// <summary>
 /// Tests for <see cref="OptionsMenuController"/> on the real options menu prefab and project input actions: the
-/// binding rows, Back and close handling, interactive rebinding, per-row reset and reset all with confirmation.
+/// Character section's Look row over the project's looks, the binding rows, Back and close handling, interactive
+/// rebinding, per-row reset and reset all with confirmation.
 /// </summary>
 public class OptionsMenuControllerTests : InputTestFixture
 {
@@ -23,6 +24,7 @@ public class OptionsMenuControllerTests : InputTestFixture
     private FakeMenuInput menuInput;
     private MenuStack menus;
     private OptionsMenuController controller;
+    private UserSettings settings;
     private Keyboard keyboard;
     private int closedCount;
 
@@ -40,7 +42,8 @@ public class OptionsMenuControllerTests : InputTestFixture
         view = Object.Instantiate(AssetDatabase.LoadAssetAtPath<OptionsMenuView>(OptionsMenuPath));
         menuInput = new FakeMenuInput();
         menus = new MenuStack(menuInput);
-        controller = new OptionsMenuController(view, bindings, menus, new UISelection(null));
+        settings = new UserSettings(new MemorySaveStore());
+        controller = new OptionsMenuController(view, bindings, menus, new UISelection(null), settings);
         controller.Start();
         closedCount = 0;
     }
@@ -58,22 +61,50 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// Starting builds nine binding rows under three section headers, labelled with each action and its current
-    /// binding, and leaves the screen hidden.
+    /// Starting builds the Character section's Look row, then nine binding rows under three section headers, labelled
+    /// with each action and its current binding, and leaves the screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
         Assert.That(view.IsShown, Is.False);
         Assert.That(controller.RowCount, Is.EqualTo(9));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(12), "Three section headers and nine rows.");
-        Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(14), "The Character header and its Look row, three section headers and nine rows.");
+        Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
+        Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
+        Assert.That(view.RowsContainer.GetChild(2).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
         Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
         Assert.That(controller.GetRow(AttackMoveRow).BindingText.text, Is.EqualTo("A"));
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(controller.GetRow(8).Label.text, Is.EqualTo("Weapon ability 2"));
+    }
+
+    /// <summary>
+    /// The Look row shows the look the local settings name (the first, the rogue, by default); its button keeps the
+    /// project's next look in the settings, after the last the first again, and its reset the first; the row follows a
+    /// change made elsewhere.
+    /// </summary>
+    [Test]
+    public void TheLookRow_ShowsAndCyclesTheSettingsLook()
+    {
+        KeyBindingRowView row = controller.LookRow;
+        Assert.That(row.Label.text, Is.EqualTo(OptionsMenuController.LookLabel));
+        Assert.That(row.BindingText.text, Is.EqualTo("Rogue"));
+
+        controller.Open(null);
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.CharacterLook, Is.EqualTo("Bandit"));
+        Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.CharacterLook, Is.EqualTo("Rogue"), "After the last look, the first.");
+
+        settings.SetCharacterLook("Bandit");
+        Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
+        row.ResetButton.onClick.Invoke();
+        Assert.That(settings.CharacterLook, Is.EqualTo("Rogue"));
+        Assert.That(row.BindingText.text, Is.EqualTo("Rogue"));
     }
 
     /// <summary>

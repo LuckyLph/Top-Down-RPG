@@ -1,44 +1,55 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer.Unity;
 
 /// <summary>
-/// Drives the <see cref="OptionsMenuView"/>: builds a row per rebindable action of <see cref="InputBindings"/> under
-/// its section, rebinds a row when its binding is selected (listening starts on the next tick, so the click itself is
-/// never captured), names the action that moved on a swap, resets one row or all of them after a confirmation, and
-/// closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back closes the confirmation, or else the
-/// screen, and does nothing while a rebind is pending or listening (the rebind itself takes Escape as cancel).
+/// Drives the <see cref="OptionsMenuView"/>: when the view names a catalog of more than one look, a Character section
+/// first with a Look row whose button shows the look of the local settings and moves to the next one, its reset going
+/// back to the first (Docs/AsepriteCharacters.md, Phase 2); then a row per rebindable action of
+/// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
+/// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
+/// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
+/// closes the confirmation, or else the screen, and does nothing while a rebind is pending or listening (the rebind
+/// itself takes Escape as cancel).
 /// </summary>
 public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, IMenuLayer
 {
     public const string ListeningPromptFormat = "Press a key or mouse button for {0}.\nEsc to cancel.";
     public const string MovedNoticeFormat = "{0} moved to {1}.";
     public const string ResetAllNotice = "All controls are back to their defaults.";
+    public const string CharacterSection = "Character";
+    public const string LookLabel = "Look";
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
     private readonly MenuStack menus;
     private readonly UISelection selection;
+    private readonly UserSettings settings;
     private readonly List<KeyBindingRowView> rows = new();
+    private KeyBindingRowView lookRow;
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
 
     /// <summary>
-    /// Creates a closed options controller that edits <paramref name="bindings"/> through <paramref name="view"/>.
+    /// Creates a closed options controller that edits <paramref name="bindings"/> and the look kept in
+    /// <paramref name="settings"/> through <paramref name="view"/>.
     /// </summary>
-    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection)
+    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection, UserSettings settings)
     {
         this.view = view;
         this.bindings = bindings;
         this.menus = menus;
         this.selection = selection;
+        this.settings = settings;
     }
 
     public bool IsOpen => view.IsShown;
     public bool IsListening => listeningRow >= 0;
     internal int RowCount => rows.Count;
+    internal KeyBindingRowView LookRow => lookRow;
 
     /// <summary>
     /// The row built for the rebindable action at <paramref name="index"/>, in <see cref="InputBindings"/> order.
@@ -49,14 +60,16 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Hides the screen, builds a section header for each new section and a labelled row per rebindable action,
-    /// wires the buttons, and keeps the rows' binding labels in sync with <see cref="InputBindings.BindingsChanged"/>.
+    /// Hides the screen, builds the Look row, then a section header for each new section and a labelled row per
+    /// rebindable action, wires the buttons, and keeps the rows' labels in sync with
+    /// <see cref="InputBindings.BindingsChanged"/> and <see cref="UserSettings.CharacterLookChanged"/>.
     /// </summary>
     public void Start()
     {
         view.SetShown(false);
         view.HideListening();
         view.SetConfirmShown(false);
+        BuildLookRow();
 
         string section = null;
         for (int i = 0; i < bindings.Count; i++)
@@ -91,6 +104,11 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public void Dispose()
     {
         bindings.BindingsChanged -= RefreshRows;
+        if (lookRow != null)
+        {
+            settings.CharacterLookChanged -= RefreshLook;
+        }
+
         menus.Remove(this);
         if (IsListening)
         {
@@ -282,6 +300,61 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         view.SetNotice(swappedWith != null
             ? string.Format(MovedNoticeFormat, bindings.GetDisplayName(swappedWith), bindings.GetLabel(swappedWith))
             : string.Empty);
+    }
+
+    /// <summary>
+    /// Builds the Character section's Look row when the view names a catalog of more than one look.
+    /// </summary>
+    private void BuildLookRow()
+    {
+        CharacterLookCatalog looks = view.Looks;
+        if (looks == null || looks.Count < 2 || settings == null)
+        {
+            return;
+        }
+
+        view.AddSectionHeader(CharacterSection);
+        lookRow = view.AddRow();
+        lookRow.SetLabel(LookLabel);
+        lookRow.BindingButton.onClick.AddListener(NextLook);
+        lookRow.ResetButton.onClick.AddListener(ResetLook);
+        settings.CharacterLookChanged += RefreshLook;
+        RefreshLook();
+    }
+
+    /// <summary>
+    /// The catalog index of the look the local settings name, the first for an empty or unknown name.
+    /// </summary>
+    private int LookIndex => Mathf.Max(0, view.Looks.IndexOf(settings.CharacterLook));
+
+    /// <summary>
+    /// Look button: keeps the catalog's next look, after the last the first. Ignored while listening or confirming.
+    /// </summary>
+    private void NextLook()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetCharacterLook(view.Looks.Get((LookIndex + 1) % view.Looks.Count).Name);
+        }
+    }
+
+    /// <summary>
+    /// Look reset button: keeps the catalog's first look. Ignored while listening or confirming.
+    /// </summary>
+    private void ResetLook()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetCharacterLook(view.Looks.Get(0).Name);
+        }
+    }
+
+    /// <summary>
+    /// Shows the look the local settings name on the Look row's button.
+    /// </summary>
+    private void RefreshLook()
+    {
+        lookRow.SetBinding(view.Looks.Get(LookIndex).Name);
     }
 
     /// <summary>

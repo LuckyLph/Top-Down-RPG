@@ -154,6 +154,7 @@ GameObject:
   - component: {fileID: 797424749458075856}
   - component: {fileID: 7368982944682024960}
   - component: {fileID: 3243973846254597510}
+  - component: {fileID: 8349417306256648232}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -533,4 +534,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerCastVisuals
   abilities: {fileID: 8509953176593211654}
+  visuals: {fileID: 4451734619522619835}
+--- !u!114 &8349417306256648232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36637d08316d0404f9bd4a41c425f612, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerLook
+  catalog: {fileID: 11400000, guid: 7ee68ec85e15d1d41aba52af430bb49e, type: 2}
   visuals: {fileID: 4451734619522619835}

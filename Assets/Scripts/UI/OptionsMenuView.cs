@@ -3,9 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Passive options screen: a panel with the Controls rows, Reset all and Back, a notice line, a listening panel that
-/// blocks clicks while a rebind waits for input, and a confirmation for Reset all. The component stays on an active
-/// object and shows or hides its panel.
+/// Passive options screen: a panel with the rows (the Character section's Look row from the catalog of looks it names,
+/// then the Controls rows), Reset all and Back, a notice line, a listening panel that blocks clicks while a rebind waits
+/// for input, and a confirmation for Reset all. The component stays on an active object and shows or hides its panel.
 /// </summary>
 [DisallowMultipleComponent]
 public class OptionsMenuView : MonoBehaviour
@@ -22,11 +22,14 @@ public class OptionsMenuView : MonoBehaviour
     [SerializeField] private GameObject confirmPanel;
     [SerializeField] private Button confirmYesButton;
     [SerializeField] private Button confirmNoButton;
+    [SerializeField, Tooltip("The looks a player can choose in the Character section; none hides the section.")]
+    private CharacterLookCatalog looks;
 
     public Button ResetAllButton => resetAllButton;
     public Button BackButton => backButton;
     public Button ConfirmYesButton => confirmYesButton;
     public Button ConfirmNoButton => confirmNoButton;
+    public CharacterLookCatalog Looks => looks;
     public bool IsShown => panel != null && panel.activeSelf;
     public bool IsListeningShown => listeningPanel != null && listeningPanel.activeSelf;
     public bool IsConfirmShown => confirmPanel != null && confirmPanel.activeSelf;

@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Hooks a spawned player into the Gameplay scope: the local player gets the local command source, simulates its own
-/// movement, joins the registry and becomes the tracked local player; a remote copy only joins the registry and shows
+/// movement, draws the look the local settings choose (<see cref="PlayerLook.FollowLocalChoice"/>), offline and online
+/// alike, joins the registry and becomes the tracked local player; a remote copy only joins the registry and shows
 /// replicated movement. Placing a player is the world session's (its start, trips and respawns).
 /// </summary>
 public sealed class PlayerBinder
@@ -22,13 +23,18 @@ public sealed class PlayerBinder
     }
 
     /// <summary>
-    /// Binds <paramref name="controller"/> as this machine's player: drives it from local input, registers it and
-    /// publishes it as the local player. Returns its registry handle.
+    /// Binds <paramref name="controller"/> as this machine's player: drives it from local input, has it follow the
+    /// local settings' look, registers it and publishes it as the local player. Returns its registry handle.
     /// </summary>
     public PlayerHandle BindLocal(PlayerController controller)
     {
         controller.SetCommandSource(localCommands);
         controller.SetSimulatesMovement(true);
+        if (controller.TryGetComponent(out PlayerLook look))
+        {
+            look.FollowLocalChoice();
+        }
+
         LocalPlayer local = new(controller);
         players.Add(local.Handle);
         localPlayer.Assign(local);

@@ -119,9 +119,9 @@ public sealed class InProcessClient : IDisposable
     /// local player, scripted input, combat (projectiles, which nothing ticks here), statuses and abilities, the
     /// players' worlds and trips (with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
-    /// world navigation, so its players walk in straight lines, pooled effects and, given
-    /// <paramref name="hitFeedbackSettings"/>, the hit feedback presenter (not started) kicking
-    /// <paramref name="cameraKick"/>.
+    /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
+    /// own player follows) and, given <paramref name="hitFeedbackSettings"/>, the hit feedback presenter (not started)
+    /// kicking <paramref name="cameraKick"/>.
     /// </summary>
     public static IObjectResolver BuildContainer(
         PlayerRegistry players,
@@ -177,6 +177,7 @@ public sealed class InProcessClient : IDisposable
 
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
+        builder.RegisterInstance(new UserSettings(new MemorySaveStore()));
         return builder.Build();
     }
 

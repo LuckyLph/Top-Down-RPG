@@ -447,8 +447,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1303857918171226197}
   - component: {fileID: 3812718684653368127}
-  - component: {fileID: 4059769949860889493}
   - component: {fileID: 8984248577405446426}
+  - component: {fileID: 5795732450276423472}
   m_Layer: 10
   m_Name: Visuals
   m_TagString: Untagged
@@ -465,7 +465,7 @@ Transform:
   m_GameObject: {fileID: 3466301763760670461}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.72, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -520,7 +520,7 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: -53
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -446140185052492750, guid: 91682e858a683a44082d578547521b8c, type: 3}
+  m_Sprite: {fileID: -989036254, guid: 38991457b8248704e91fb619ae8e00b6, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -530,28 +530,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!95 &4059769949860889493
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3466301763760670461}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: e5ce47b6ad392894ebddc94249b3303f, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &8984248577405446426
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -571,6 +549,20 @@ MonoBehaviour:
   sortingPoint: {fileID: 931880215613968322}
   useSortingReferenceY: 0
   sortingReferenceY: 0
+--- !u!114 &5795732450276423472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3466301763760670461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4595abe46f241f479526a931647ca80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterVisuals
+  animationSet: {fileID: 11400000, guid: a3e2557dee3a3294592a87f0908c7230, type: 2}
+  locomotion: {fileID: 11400000, guid: 09dc43fdd79bcaa44b6365ebaf274854, type: 2}
 --- !u!1 &4037611303412391985
 GameObject:
   m_ObjectHideFlags: 0
@@ -892,11 +884,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobMotor2D
   moveSpeed: 2
   acceleration: 20
-  spriteRenderer: {fileID: 3812718684653368127}
-  animator: {fileID: 4059769949860889493}
-  walkAnimationSpeed: 0.425
-  useHorizontalFlip: 0
-  attackAnimationDuration: 0.18
+  visuals: {fileID: 5795732450276423472}
 --- !u!114 &2123914094877944818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1175,6 +1163,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::HitFeedback
   body: {fileID: 3812718684653368127}
   visuals: {fileID: 1303857918171226197}
-  characterVisuals: {fileID: 0}
+  characterVisuals: {fileID: 5795732450276423472}
   bodyCollider: {fileID: 7645337321817616343}
-  impactHeight: 0.72
+  impactHeight: 0.65

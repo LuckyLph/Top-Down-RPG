@@ -10,8 +10,10 @@ using UnityEditor;
 /// <summary>
 /// A mob's brain: initializes its sibling components from its <see cref="MobConfig"/>, owns the six
 /// <see cref="IMobState"/>s and the <see cref="MobSeparation2D"/>, and runs the state machine from Update and
-/// FixedUpdate. States reach the mob's components, config and attack-range checks through it.
-/// <see cref="MobNetworkSync"/> disables it on clients, so the AI never runs there.
+/// FixedUpdate, ticking the <see cref="MeleeDamageDealer"/>'s attack timeline each frame and playing the attacks it
+/// starts and cancels on the <see cref="MobMotor2D"/>. A stun cancels a running attack; the mob holds still through
+/// one. States reach the mob's components, config and attack-range checks through it. <see cref="MobNetworkSync"/>
+/// disables it on clients, so the AI never runs there.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -91,6 +93,28 @@ public class MobController : MonoBehaviour
         if (currentState == null)
         {
             ChangeState(MobStateId.Idle);
+        }
+    }
+
+    /// <summary>
+    /// Plays the damage dealer's attacks on the motor while the brain runs.
+    /// </summary>
+    private void OnEnable()
+    {
+        CacheComponents();
+        damageDealer.AttackStarted += HandleAttackStarted;
+        damageDealer.AttackCancelled += HandleAttackCancelled;
+    }
+
+    /// <summary>
+    /// Stops playing the damage dealer's attacks.
+    /// </summary>
+    private void OnDisable()
+    {
+        if (damageDealer != null)
+        {
+            damageDealer.AttackStarted -= HandleAttackStarted;
+            damageDealer.AttackCancelled -= HandleAttackCancelled;
         }
     }
 
@@ -180,8 +204,9 @@ public class MobController : MonoBehaviour
     }
 
     /// <summary>
-    /// Per-frame step: ticks perception with <paramref name="dt"/> (clamped at 0), then the current state unless the
-    /// mob is stunned. Public so tests can drive the brain.
+    /// Per-frame step: ticks perception with <paramref name="dt"/> (clamped at 0), moves the running attack on (a stun
+    /// cancels it instead), then ticks the current state unless the mob is stunned. Public so tests can drive the
+    /// brain.
     /// </summary>
     public void TickStateMachine(float dt)
     {
@@ -189,21 +214,26 @@ public class MobController : MonoBehaviour
 
         deltaTime = Mathf.Max(0f, dt);
         perception.Tick(deltaTime);
-        if (!IsStunned)
+        if (IsStunned)
         {
-            currentState?.Tick();
+            damageDealer.CancelAttack();
+            return;
         }
+
+        damageDealer.Tick();
+        currentState?.Tick();
     }
 
     /// <summary>
-    /// Physics step: sets the motor's speed scale from the statuses, senses neighbours, fixed-ticks the current state
-    /// (or stops the motor while stunned), then adds the separation steering and steps the motor.
+    /// Physics step: sets the motor's speed scale from the statuses (0 while an attack runs, so the mob holds still
+    /// through it), senses neighbours, fixed-ticks the current state (or stops the motor while stunned), then adds the
+    /// separation steering and steps the motor.
     /// </summary>
     public void FixedTickStateMachine()
     {
         EnsureInitialized();
 
-        motor.SetSpeedScale(statuses != null ? statuses.MovementScale : 1f);
+        motor.SetSpeedScale(damageDealer.IsAttacking ? 0f : statuses != null ? statuses.MovementScale : 1f);
         separation.Sense(motor.Position);
         if (IsStunned)
         {
@@ -240,6 +270,22 @@ public class MobController : MonoBehaviour
         currentState?.Exit();
         currentState = nextState;
         currentState.Enter();
+    }
+
+    /// <summary>
+    /// Plays an attack the damage dealer just started on the motor, toward its locked direction on its timeline.
+    /// </summary>
+    private void HandleAttackStarted(Vector2 direction)
+    {
+        motor.PlayAttack(direction, damageDealer.Timeline, false);
+    }
+
+    /// <summary>
+    /// Stops showing an attack the damage dealer cancelled.
+    /// </summary>
+    private void HandleAttackCancelled()
+    {
+        motor.StopAttack();
     }
 
     /// <summary>

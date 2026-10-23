@@ -28,7 +28,18 @@ public class MobConfig : ScriptableObject
     [SerializeField, Min(0)] private int attackDamage = 1;
     [SerializeField] private DamageType attackDamageType = DamageType.Physical;
     [SerializeField] private StatusEffectDefinition[] attackStatuses = new StatusEffectDefinition[0];
-    [SerializeField, Min(0f)] private float attackInterval = 0.75f;
+    [SerializeField, Min(0f), Tooltip("The attack's cooldown, from its start. An attack that ends before its contact gives it back.")]
+    private float attackInterval = 0.75f;
+    [SerializeField, Min(0f), Tooltip("The attack's windup, its telegraph: the mob holds still, its direction locked, and a player who leaves its area before contact takes nothing.")]
+    private float attackWindup = 0.45f;
+    [SerializeField, Min(0.01f), Tooltip("The attack's contact, from the moment its hit resolves.")]
+    private float attackContact = 0.05f;
+    [SerializeField, Min(0f), Tooltip("The attack's recovery after its contact; the mob still holds still.")]
+    private float attackRecovery = 0.25f;
+    [SerializeField, Tooltip("The attack's area at contact: its width across the attack and its depth along it, from the edge of the mob's collider. Every unit in it is hit, under the faction rules.")]
+    private Vector2 attackArea = new(1f, 0.75f);
+    [SerializeField, Tooltip("The attack's clip in the mob's character animation set.")]
+    private string attackClip = "";
 
     [Header("Crowd")]
     [SerializeField, Min(0f), Tooltip("Mobs closer than this (center to center) steer apart; 0 disables separation.")]
@@ -75,6 +86,9 @@ public class MobConfig : ScriptableObject
     public DamageType AttackDamageType => attackDamageType;
     public IReadOnlyList<StatusEffectDefinition> AttackStatuses => attackStatuses;
     public float AttackInterval => attackInterval;
+    public AttackTimeline AttackTimeline => new(attackWindup, Mathf.Max(0.01f, attackContact), attackRecovery);
+    public Vector2 AttackArea => attackArea;
+    public string AttackClip => attackClip;
     public float SeparationRadius => separationRadius;
     public float SeparationStrength => separationStrength;
     public float CrowdWaitDistance => crowdWaitDistance;
@@ -115,6 +129,11 @@ public class MobConfig : ScriptableObject
         DamageType? attackDamageType = null,
         StatusEffectDefinition[] attackStatuses = null,
         float? attackInterval = null,
+        float? attackWindup = null,
+        float? attackContact = null,
+        float? attackRecovery = null,
+        Vector2? attackArea = null,
+        string attackClip = null,
         float? patrolRoamRadius = null,
         Vector2? idleDurationRange = null,
         float? repathInterval = null,
@@ -135,6 +154,11 @@ public class MobConfig : ScriptableObject
         config.attackDamageType = attackDamageType ?? config.attackDamageType;
         config.attackStatuses = attackStatuses ?? config.attackStatuses;
         config.attackInterval = attackInterval ?? config.attackInterval;
+        config.attackWindup = attackWindup ?? config.attackWindup;
+        config.attackContact = attackContact ?? config.attackContact;
+        config.attackRecovery = attackRecovery ?? config.attackRecovery;
+        config.attackArea = attackArea ?? config.attackArea;
+        config.attackClip = attackClip ?? config.attackClip;
         config.patrolRoamRadius = patrolRoamRadius ?? config.patrolRoamRadius;
         config.idleDurationRange = idleDurationRange ?? config.idleDurationRange;
         config.repathInterval = repathInterval ?? config.repathInterval;

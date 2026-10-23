@@ -42,8 +42,9 @@ public sealed class CharacterSheet
 /// <summary>
 /// Draws a <see cref="CharacterRecipe"/>'s clips without touching an asset. The scale, in pixels per rig unit, is
 /// set once so the standing character (<see cref="CharacterRig.StandingPose"/>, facing south) is the recipe's target
-/// height, outline included. Each frame is posed by its clip's motion, solved by <see cref="CharacterRig"/>, drawn by
-/// <see cref="CharacterPainter"/> onto a <see cref="CharacterCanvas"/> of the clip's frame size with the feet on its
+/// height, outline included: estimated from its height at one pixel per unit, then moved in steps of half a percent
+/// while rounding leaves it a pixel off. Each frame is posed by its clip's motion, solved by <see cref="CharacterRig"/>, drawn by
+/// the recipe's <see cref="CharacterPainter"/> onto a <see cref="CharacterCanvas"/> of the clip's frame size with the feet on its
 /// pivot, and shaded with the recipe's, the weapon's and the motion's light colours. The same recipe always gives the
 /// same pixels.
 /// </summary>
@@ -51,6 +52,8 @@ public sealed class CharacterBaker
 {
     private const int MeasureSize = 200;
     private const float SouthDegrees = 270f;
+    private const float ScaleStep = 0.005f;
+    private const int ScaleSteps = 40;
 
     private static readonly List<MotionEffect> NoEffects = new();
 
@@ -64,12 +67,26 @@ public sealed class CharacterBaker
         recipe = characterRecipe;
         int rows = FilledRows(RenderPose(CharacterRig.StandingPose(recipe), null, SouthDegrees, new Vector2Int(MeasureSize, MeasureSize), new Vector2Int(MeasureSize / 2, MeasureSize / 4), null, NoEffects, 1f));
         Scale = (recipe.TargetHeight - 2f) / Mathf.Max(rows, 1);
+        int height = StandingHeight();
+        int target = recipe.TargetHeight;
+        for (int step = 0; step < ScaleSteps && height != target; step++)
+        {
+            float next = Scale * (height < target ? 1f + ScaleStep : 1f - ScaleStep);
+            int nextHeight = StandingHeightAt(next);
+            if ((height < target) != (nextHeight < target) && Mathf.Abs(nextHeight - target) > Mathf.Abs(height - target))
+            {
+                break;
+            }
+
+            Scale = next;
+            height = nextHeight;
+        }
     }
 
     /// <summary>
     /// Pixels per rig unit.
     /// </summary>
-    public float Scale { get; }
+    public float Scale { get; private set; }
 
     /// <summary>
     /// Draws every frame of <paramref name="clip"/> in every direction as its sheet.
@@ -164,7 +181,16 @@ public sealed class CharacterBaker
     /// </summary>
     public int StandingHeight()
     {
-        CharacterCanvas canvas = RenderPose(CharacterRig.StandingPose(recipe), null, SouthDegrees, new Vector2Int(MeasureSize, MeasureSize), new Vector2Int(MeasureSize / 2, MeasureSize / 4), null, NoEffects, Scale);
+        return StandingHeightAt(Scale);
+    }
+
+    /// <summary>
+    /// How many pixels tall the standing character is, outline included, at <paramref name="scale"/> pixels per rig
+    /// unit.
+    /// </summary>
+    private int StandingHeightAt(float scale)
+    {
+        CharacterCanvas canvas = RenderPose(CharacterRig.StandingPose(recipe), null, SouthDegrees, new Vector2Int(MeasureSize, MeasureSize), new Vector2Int(MeasureSize / 2, MeasureSize / 4), null, NoEffects, scale);
         return FilledRows(canvas) + 2;
     }
 
@@ -176,7 +202,7 @@ public sealed class CharacterBaker
     {
         CharacterCanvas canvas = new(size.x, size.y, pivot, scale);
         CharacterJoints joints = CharacterRig.Solve(recipe, pose, weapon);
-        new CharacterPainter(recipe, weapon, canvas).Paint(facing, pose, joints, smear, effects);
+        recipe.CreatePainter(weapon, canvas).Paint(facing, pose, joints, smear, effects);
         return canvas;
     }
 

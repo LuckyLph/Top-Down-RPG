@@ -27,6 +27,13 @@ public enum CharacterMaterial
     Sash,
     Lining,
     DaggerGrip,
+    Fur,
+    FurLight,
+    FurDark,
+    Nose,
+    EarInside,
+    Wraps,
+    WrapsBand,
     Steel,
     Guard,
     Grip,
@@ -71,7 +78,11 @@ public enum CharacterPart
     Bow,
     Arrow,
     Smear,
-    Effect
+    Effect,
+    LeftEar,
+    RightEar,
+    Snout,
+    Tail
 }
 
 /// <summary>
@@ -176,12 +187,13 @@ public static class CharacterMaterials
 
     /// <summary>
     /// Whether <paramref name="material"/> is drawn in its middle tone whatever its surface faces: the face, the inside
-    /// of the hood, the eyes, the smears and a cast's light.
+    /// of the hood, the eyes, the inside of the ears, the smears and a cast's light.
     /// </summary>
     public static bool IsFlat(CharacterMaterial material)
     {
         switch (material)
         {
+            case CharacterMaterial.EarInside:
             case CharacterMaterial.HoodInside:
             case CharacterMaterial.Face:
             case CharacterMaterial.FaceShade:

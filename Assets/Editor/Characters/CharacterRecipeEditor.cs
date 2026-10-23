@@ -11,7 +11,7 @@ using UnityEngine;
 /// standing height, the frames whose drawing reaches their edge, and Generate, which writes every sheet and the
 /// animation set through <see cref="CharacterSheetWriter"/> once the inspector is drawn.
 /// </summary>
-[CustomEditor(typeof(CharacterRecipe))]
+[CustomEditor(typeof(CharacterRecipe), true)]
 public sealed class CharacterRecipeEditor : Editor
 {
     private const float PlayScale = 3f;

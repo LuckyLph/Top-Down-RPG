@@ -657,7 +657,7 @@ public class StatusEffectTests
 
     /// <summary>
     /// A mob's <see cref="MeleeDamageDealer"/> applies the attack statuses from its <see cref="MobConfig"/> to
-    /// the player it hits.
+    /// the player its attack hits at contact.
     /// </summary>
     [Test]
     public void MeleeDamageDealer_AppliesTheConfiguredStatuses()
@@ -668,12 +668,13 @@ public class StatusEffectTests
         DamageReceiver mob = Unit("Mob", Faction.Mobs);
         DamageReceiver player = Unit("Player", Faction.Players);
         MeleeDamageDealer dealer = mob.gameObject.AddComponent<MeleeDamageDealer>();
+        TestCombat.StandInReach(player);
         Services services = new(true);
-        dealer.Construct(new ManualClock(), services.Hits);
+        ManualClock clock = new();
+        dealer.Construct(clock, TestCombat.CreateAttackService(FixedGameAuthority.Authoritative, services.Hits));
         dealer.Initialize(config);
-        dealer.ResetCooldown();
 
-        Assert.That(dealer.TryDealDamage(player.transform), Is.True);
+        Assert.That(TestCombat.Strike(dealer, clock, player.transform), Is.True);
         Assert.That(player.Statuses.GetStacks(poison), Is.EqualTo(1));
     }
 

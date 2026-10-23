@@ -11,7 +11,8 @@ using UnityEngine;
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
 /// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
-/// casts; a sorter with a sorting point sorts by that point's height, and the Weasel sorts by its feet.
+/// casts; a sorter with a sorting point sorts by that point's height, and the Weasel sorts by its feet; the Weasels draw
+/// the Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
 /// </summary>
 public class CharacterPrefabTests
 {
@@ -291,6 +292,48 @@ public class CharacterPrefabTests
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>(WeaselPath);
         YPositionSorter weaselSorter = weasel.transform.Find("Visuals").GetComponent<YPositionSorter>();
         Assert.That(new SerializedObject(weaselSorter).FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(weasel.transform));
+    }
+
+    /// <summary>
+    /// The Weasel and the stress test's Weasel draw the Weasel's baked set (Docs/Animation.md, Phase 7): no Mecanim
+    /// animator anywhere in them; a <c>Visuals</c> child on the root, the feet, with <see cref="CharacterVisuals"/> on
+    /// the Weasel's set and locomotion settings and a sprite pivoted on the feet; the motor feeding those visuals and
+    /// the hit feedback holding through them; and each one's config naming an attack clip the set holds, with its
+    /// contact frame, on the Weasel's timeline.
+    /// </summary>
+    [Test]
+    public void TheWeasels_DrawTheBakedWeaselFromTheirFeet()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>("Assets/Sprites/Characters/Weasel/Weasel_AnimationSet.asset");
+        CharacterLocomotionSettings locomotion = AssetDatabase.LoadAssetAtPath<CharacterLocomotionSettings>("Assets/Data/Characters/Locomotion_Weasel.asset");
+        Assert.That(set, Is.Not.Null);
+        Assert.That(locomotion, Is.Not.Null);
+        foreach (string path in new[] { WeaselPath, "Assets/Dev/StressTest/Weasel_StressTest.prefab" })
+        {
+            GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            Assert.That(weasel.GetComponentsInChildren<Animator>(true), Is.Empty, path);
+            Transform visuals = weasel.transform.Find("Visuals");
+            Assert.That(visuals.localPosition, Is.EqualTo(Vector3.zero), path);
+            CharacterVisuals character = visuals.GetComponent<CharacterVisuals>();
+            Assert.That(character, Is.Not.Null, path);
+            SerializedObject serialized = new(character);
+            Assert.That(serialized.FindProperty("animationSet").objectReferenceValue, Is.EqualTo(set), path);
+            Assert.That(serialized.FindProperty("locomotion").objectReferenceValue, Is.EqualTo(locomotion), path);
+            Assert.That(new SerializedObject(weasel.GetComponent<MobMotor2D>()).FindProperty("visuals").objectReferenceValue, Is.EqualTo(character), path);
+            Assert.That(new SerializedObject(weasel.GetComponent<HitFeedback>()).FindProperty("characterVisuals").objectReferenceValue, Is.EqualTo(character), path);
+            Sprite sprite = visuals.GetComponent<SpriteRenderer>().sprite;
+            Assert.That(sprite, Is.EqualTo(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0)), path);
+            Assert.That(sprite.pivot, Is.EqualTo(new Vector2(32f, 12f)), path);
+
+            MobConfig config = weasel.GetComponent<MobController>().Config;
+            CharacterAnimationClip attack = set.Find(config.AttackClip);
+            Assert.That(attack, Is.Not.Null, path);
+            Assert.That(attack.HasContact, Is.True, path);
+            Assert.That(config.AttackTimeline.Windup, Is.EqualTo(0.45f).Within(1e-5f), path);
+            Assert.That(config.AttackTimeline.Contact, Is.EqualTo(0.05f).Within(1e-5f), path);
+            Assert.That(config.AttackTimeline.Recovery, Is.EqualTo(0.25f).Within(1e-5f), path);
+            Assert.That(config.AttackArea, Is.EqualTo(new Vector2(1f, 0.75f)), path);
+        }
     }
 
     /// <summary>

@@ -29,6 +29,11 @@ MonoBehaviour:
   attackDamageType: 0
   attackStatuses: []
   attackInterval: 0.75
+  attackWindup: 0.45
+  attackContact: 0.05
+  attackRecovery: 0.25
+  attackArea: {x: 1, y: 0.75}
+  attackClip: DaggerSlash
   separationRadius: 0.8
   separationStrength: 4
   crowdWaitDistance: 2

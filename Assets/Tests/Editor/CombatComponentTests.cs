@@ -184,11 +184,11 @@ public class CombatComponentTests
     }
 
     /// <summary>
-    /// The melee dealer finds the receiver above a hit child transform, refuses a second hit inside its attack
-    /// interval and hits again once the interval has passed.
+    /// The melee dealer starts its attack on the receiver above a child transform, lands it at contact, refuses another
+    /// inside its attack interval and starts again once the interval has passed.
     /// </summary>
     [Test]
-    public void MeleeDamageDealer_RespectsImmediateCooldownAndFindsReceiverOnRoot()
+    public void MeleeDamageDealer_RespectsItsCooldownAndFindsReceiverOnRoot()
     {
         root = new GameObject("DealerRoot");
         GameObject attacker = new("Attacker");
@@ -199,22 +199,23 @@ public class CombatComponentTests
         target.transform.SetParent(root.transform);
         Health health = target.AddComponent<Health>();
         target.AddComponent<DamageReceiver>();
+        TestCombat.StandInReach(target.transform);
 
         GameObject visuals = new("Visuals");
-        visuals.transform.SetParent(target.transform);
+        visuals.transform.SetParent(target.transform, false);
 
         ManualClock clock = new();
-        dealer.Construct(clock, TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
-        dealer.ResetCooldown();
+        dealer.Construct(clock, TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
 
-        bool firstHit = dealer.TryDealDamage(visuals.transform);
-        bool secondHit = dealer.TryDealDamage(visuals.transform);
-        clock.Advance(dealer.AttackInterval);
-        bool hitAfterInterval = dealer.TryDealDamage(visuals.transform);
+        bool first = TestCombat.Strike(dealer, clock, visuals.transform);
+        bool second = dealer.TryStartAttack(visuals.transform);
+        clock.Advance(dealer.AttackInterval - dealer.Timeline.Windup);
+        dealer.Tick();
+        bool afterInterval = TestCombat.Strike(dealer, clock, visuals.transform);
 
-        Assert.That(firstHit, Is.True);
-        Assert.That(secondHit, Is.False);
-        Assert.That(hitAfterInterval, Is.True);
+        Assert.That(first, Is.True);
+        Assert.That(second, Is.False);
+        Assert.That(afterInterval, Is.True);
         Assert.That(health.CurrentHealth, Is.EqualTo(8));
     }
 
@@ -232,7 +233,8 @@ public class CombatComponentTests
     }
 
     /// <summary>
-    /// Hitting a target with no receiver fails and does not damage a sibling object's receiver under the same root.
+    /// An attack on a target with no receiver does not start, and does not damage a sibling object's receiver under the
+    /// same root.
     /// </summary>
     [Test]
     public void MeleeDamageDealer_DoesNotDamageSiblingReceiver_WhenTargetHasNoReceiver()
@@ -250,18 +252,18 @@ public class CombatComponentTests
         GameObject wall = new("Wall");
         wall.transform.SetParent(root.transform);
 
-        dealer.Construct(new ManualClock(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
-        dealer.ResetCooldown();
+        dealer.Construct(new ManualClock(), TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
 
-        Assert.That(dealer.TryDealDamage(wall.transform), Is.False);
+        Assert.That(dealer.TryStartAttack(wall.transform), Is.False);
+        Assert.That(dealer.IsAttacking, Is.False);
         Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth));
     }
 
     /// <summary>
-    /// A melee dealer that was never injected with a <see cref="HitService"/> logs an error and deals no damage.
+    /// A melee dealer that was never injected with an <see cref="AttackService"/> logs an error and starts no attack.
     /// </summary>
     [Test]
-    public void MeleeDamageDealer_WithoutDamageService_LogsErrorAndDealsNoDamage()
+    public void MeleeDamageDealer_WithoutAttackService_LogsErrorAndStartsNothing()
     {
         root = new GameObject("DealerRoot");
         MeleeDamageDealer dealer = root.AddComponent<MeleeDamageDealer>();
@@ -269,10 +271,9 @@ public class CombatComponentTests
         target.transform.SetParent(root.transform);
         Health health = target.AddComponent<Health>();
         target.AddComponent<DamageReceiver>();
-        dealer.ResetCooldown();
 
-        LogAssert.Expect(LogType.Error, "MeleeDamageDealer was not injected with a HitService.");
-        Assert.That(dealer.TryDealDamage(target.transform), Is.False);
+        LogAssert.Expect(LogType.Error, "MeleeDamageDealer was not injected with an AttackService.");
+        Assert.That(dealer.TryStartAttack(target.transform), Is.False);
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
     }
 

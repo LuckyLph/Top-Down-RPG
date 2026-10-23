@@ -88,7 +88,7 @@ public class HitFeedbackTests
     }
 
     /// <summary>
-    /// A direct hit flashes the struck unit white and holds its sprite for the hit-stop, nudges its sprite two whole
+    /// A direct hit flashes the struck unit white and holds its animation for the hit-stop, nudges its sprite two whole
     /// pixels away from the source, then one, then back, and plays the impact of its damage type facing along the hit
     /// where the line from the source to the unit's middle enters its collider, raised to its impact height and sorted
     /// with its feet; each starts whole on the frame it starts. The attacker, not in an attack, does not hold.
@@ -96,11 +96,9 @@ public class HitFeedbackTests
     [Test]
     public void ADirectHit_FlashesHoldsAndNudgesTheUnit_AndPlaysItsImpactWhereItCameIn()
     {
-        DamageReceiver attacker = CreateUnit("Attacker", Vector2.zero, Faction.Players, true);
-        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0.2f), Faction.Mobs, false);
+        DamageReceiver attacker = CreateUnit("Attacker", Vector2.zero, Faction.Players);
+        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0.2f), Faction.Mobs);
         HitFeedback struck = target.GetComponent<HitFeedback>();
-        Sprite shown = struck.Body.sprite;
-        Sprite next = CreateSprite("Next");
 
         damage.ApplyDamage(target, 1, DamageType.Fire, attacker.gameObject);
 
@@ -123,21 +121,25 @@ public class HitFeedbackTests
         Assert.That(Cross(ground, body.center), Is.EqualTo(0f).Within(1e-4f), "It lies on the line from the source to the unit's middle.");
         Assert.That(impact.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(0.2f).Within(1e-4f), "It sorts with the struck unit's feet.");
 
+        CharacterVisuals animated = target.GetComponentInChildren<CharacterVisuals>();
+        animated.Tick();
         struck.Tick(0f);
-        struck.Body.sprite = next;
+        clock.Advance(0.04f);
+        animated.Tick();
         struck.Tick(0.04f);
-        Assert.That(struck.Body.sprite, Is.SameAs(shown), "The hold keeps the sprite showing when it was hit.");
+        Assert.That(struck.IsHolding, Is.True, "The animation holds through the hit-stop.");
         Assert.That(struck.IsFlashing, Is.True);
         AssertOffset(struck, 1, 0);
-        struck.Body.sprite = next;
+        clock.Advance(0.02f);
+        animated.Tick();
         struck.Tick(0.02f);
-        Assert.That(struck.Body.sprite, Is.SameAs(shown));
+        Assert.That(struck.IsHolding, Is.True);
         Assert.That(struck.IsFlashing, Is.False, "The flash lasts its time.");
         AssertOffset(struck, 1, 0);
-        struck.Body.sprite = next;
+        clock.Advance(0.03f);
+        animated.Tick();
         struck.Tick(0.03f);
-        Assert.That(struck.Body.sprite, Is.SameAs(next), "The hold lets go after its time.");
-        Assert.That(struck.IsHolding, Is.False);
+        Assert.That(struck.IsHolding, Is.False, "The hold lets go after its time.");
         AssertOffset(struck, 0, 0);
         Assert.That(target.transform.position, Is.EqualTo(new Vector3(0.9f, 0.2f, 0f)), "The body never moves.");
     }
@@ -152,7 +154,7 @@ public class HitFeedbackTests
     {
         DamageReceiver attacker = CreatePlayer("Local", Vector2.zero);
         localPlayer.Assign(new LocalPlayer(attacker.GetComponent<PlayerController>()));
-        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0f), Faction.Mobs, false);
+        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0f), Faction.Mobs);
         target.SetProfile(Track(CombatProfile.Create(Faction.Mobs, DamageTypeMask.Frost)));
         HitFeedback struck = target.GetComponent<HitFeedback>();
 
@@ -177,8 +179,8 @@ public class HitFeedbackTests
     {
         DamageReceiver local = CreatePlayer("Local", Vector2.zero);
         DamageReceiver other = CreatePlayer("Other", new Vector2(5f, 0f));
-        DamageReceiver mob = CreateUnit("Mob", new Vector2(0.9f, 0f), Faction.Mobs, false);
-        DamageReceiver otherMob = CreateUnit("OtherMob", new Vector2(5.9f, 0f), Faction.Mobs, false);
+        DamageReceiver mob = CreateUnit("Mob", new Vector2(0.9f, 0f), Faction.Mobs);
+        DamageReceiver otherMob = CreateUnit("OtherMob", new Vector2(5.9f, 0f), Faction.Mobs);
         localPlayer.Assign(new LocalPlayer(local.GetComponent<PlayerController>()));
 
         damage.ApplyDamage(mob, 1, DamageType.Physical, local.gameObject);
@@ -302,7 +304,7 @@ public class HitFeedbackTests
     {
         DamageReceiver attacker = CreatePlayer("Local", Vector2.zero);
         localPlayer.Assign(new LocalPlayer(attacker.GetComponent<PlayerController>()));
-        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0f), Faction.Mobs, false);
+        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0f), Faction.Mobs);
         HitFeedback struck = target.GetComponent<HitFeedback>();
         EffectPlayer last = null;
         effects.Played -= played.Add;
@@ -431,9 +433,9 @@ public class HitFeedbackTests
 
     /// <summary>
     /// The player and the Weasel show hits: their hit feedback flashes the body renderer under their root through the
-    /// flash shader, nudges that renderer's transform (never the root) and lands impacts on the root's collider; the
-    /// player holds through its character visuals and sorts by its root, so a nudge never changes its sorting; the
-    /// Weasel's death plays the pooled death puff; the settings' impact has a variant per damage type.
+    /// flash shader, nudges that renderer's transform (never the root), lands impacts on the root's collider and holds
+    /// through their character visuals, and each sorts by its root, so a nudge never changes its sorting; the Weasel's
+    /// death plays the pooled death puff; the settings' impact has a variant per damage type.
     /// </summary>
     [Test]
     public void TheShippedUnitsAndSettings_AreWiredForHitFeedback()
@@ -451,12 +453,9 @@ public class HitFeedbackTests
             Assert.That(visuals, Is.SameAs(body.transform), path);
             Assert.That(visuals, Is.Not.SameAs(prefab.transform), path);
             Assert.That(serialized.FindProperty("bodyCollider").objectReferenceValue, Is.SameAs(prefab.GetComponent<Collider2D>()), path);
+            Assert.That(serialized.FindProperty("characterVisuals").objectReferenceValue, Is.EqualTo(prefab.GetComponentInChildren<CharacterVisuals>()), path);
+            Assert.That(new SerializedObject(prefab.GetComponentInChildren<YPositionSorter>()).FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(prefab.transform), path);
         }
-
-        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
-        SerializedObject playerFeedback = new(player.GetComponent<HitFeedback>());
-        Assert.That(playerFeedback.FindProperty("characterVisuals").objectReferenceValue, Is.SameAs(player.GetComponentInChildren<CharacterVisuals>()));
-        Assert.That(new SerializedObject(player.GetComponentInChildren<YPositionSorter>()).FindProperty("sortingPoint").objectReferenceValue, Is.SameAs(player.transform));
 
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Mobs/Weasel.prefab");
         EffectPlayer death = weasel.GetComponent<DestroyMobOnDeath>().DeathEffect;
@@ -489,9 +488,9 @@ public class HitFeedbackTests
         }
 
         clock = time;
-        DamageReceiver attacker = CreateUnit("Attacker", Vector2.zero, Faction.Players, true);
-        DamageReceiver near = CreateUnit("Near", new Vector2(0.9f, 0f), Faction.Mobs, false, 1000);
-        DamageReceiver far = CreateUnit("Far", new Vector2(4f, 0f), Faction.Mobs, false, 1000);
+        DamageReceiver attacker = CreateUnit("Attacker", Vector2.zero, Faction.Players);
+        DamageReceiver near = CreateUnit("Near", new Vector2(0.9f, 0f), Faction.Mobs, 1000);
+        DamageReceiver far = CreateUnit("Far", new Vector2(4f, 0f), Faction.Mobs, 1000);
         HitFeedback[] units = { attacker.GetComponent<HitFeedback>(), near.GetComponent<HitFeedback>(), far.GetComponent<HitFeedback>() };
         CharacterVisuals visuals = attacker.GetComponentInChildren<CharacterVisuals>();
         AttackState state = new(time);
@@ -578,10 +577,10 @@ public class HitFeedbackTests
 
     /// <summary>
     /// A unit of <paramref name="faction"/> at <paramref name="position"/>: health (<paramref name="maxHealth"/>), a
-    /// receiver, the Weasel's footprint collider and a sprite child its hit feedback flashes and nudges, raised 0.72 like
-    /// the Weasel's, or on the feet with character visuals on the manual clock when <paramref name="character"/>.
+    /// receiver, the Weasel's footprint collider and a sprite child on its feet with character visuals on the manual
+    /// clock, which its hit feedback flashes, nudges and holds.
     /// </summary>
-    private DamageReceiver CreateUnit(string name, Vector2 position, Faction faction, bool character, int maxHealth = 100)
+    private DamageReceiver CreateUnit(string name, Vector2 position, Faction faction, int maxHealth = 100)
     {
         GameObject unit = Track(new GameObject(name));
         unit.transform.position = position;
@@ -596,19 +595,14 @@ public class HitFeedbackTests
         body.offset = new Vector2(0f, 0.15f);
         GameObject sprite = new("Visuals");
         sprite.transform.SetParent(unit.transform, false);
-        sprite.transform.localPosition = character ? Vector3.zero : new Vector3(0f, 0.72f, 0f);
         SpriteRenderer renderer = sprite.AddComponent<SpriteRenderer>();
         renderer.sprite = CreateSprite(name);
-        CharacterVisuals visuals = null;
-        if (character)
-        {
-            visuals = sprite.AddComponent<CharacterVisuals>();
-            SerializedObject serialized = new(visuals);
-            serialized.FindProperty("animationSet").objectReferenceValue = set;
-            serialized.FindProperty("locomotion").objectReferenceValue = locomotion;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            visuals.Construct(clock);
-        }
+        CharacterVisuals visuals = sprite.AddComponent<CharacterVisuals>();
+        SerializedObject serialized = new(visuals);
+        serialized.FindProperty("animationSet").objectReferenceValue = set;
+        serialized.FindProperty("locomotion").objectReferenceValue = locomotion;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        visuals.Construct(clock);
 
         unit.AddComponent<HitFeedback>().Configure(renderer, sprite.transform, visuals, body, 0.7f);
         Physics2D.SyncTransforms();
@@ -621,7 +615,7 @@ public class HitFeedbackTests
     /// </summary>
     private DamageReceiver CreatePlayer(string name, Vector2 position)
     {
-        DamageReceiver player = CreateUnit(name, position, Faction.Players, true);
+        DamageReceiver player = CreateUnit(name, position, Faction.Players);
         player.gameObject.AddComponent<PlayerController>();
         return player;
     }

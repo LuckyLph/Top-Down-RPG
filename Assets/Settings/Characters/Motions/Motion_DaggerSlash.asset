@@ -1,0 +1,164 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b9a1372f36dc8d4fb5066fa2487f2e3, type: 3}
+  m_Name: Motion_DaggerSlash
+  m_EditorClassIdentifier: TopDownRPG.Editor::KeyedMotion
+  keys:
+  - time: 0
+    easing: 0
+    pelvisHeight: 11.09
+    lean: 8
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.8, y: 1.2, z: 1.4}
+    rightFoot: {x: 2.9, y: -1.2, z: 1.4}
+    leftHand: {x: -5.2, y: 1, z: 11.49}
+    rightHand: {x: 5.6, y: 1.6, z: 11.99}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 0.6, y: -0.6, z: -0.6}
+    blade: {x: 0.35, y: 0.45, z: -0.82}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  - time: 0.3
+    easing: 1
+    pelvisHeight: 10.29
+    lean: -4
+    twist: 38
+    hipTwist: 0
+    headTurn: -6
+    leftFoot: {x: -2.8, y: 3, z: 1.4}
+    rightFoot: {x: 3.2, y: -2.2, z: 1.4}
+    leftHand: {x: -4.4, y: 6.8, z: 16.49}
+    rightHand: {x: 9, y: -2.6, z: 20.49}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 1, y: 0.2, z: -0.6}
+    blade: {x: 0.35, y: -0.2, z: 0.92}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  - time: 0.42
+    easing: 2
+    pelvisHeight: 9.99
+    lean: -6
+    twist: 44
+    hipTwist: 0
+    headTurn: -8
+    leftFoot: {x: -2.8, y: 3.4, z: 1.4}
+    rightFoot: {x: 3.2, y: -2.6, z: 1.4}
+    leftHand: {x: -4.2, y: 7.2, z: 16.99}
+    rightHand: {x: 8.8, y: -3.6, z: 20.99}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 1, y: 0.2, z: -0.6}
+    blade: {x: 0.4, y: -0.3, z: 0.87}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  - time: 0.5
+    easing: 1
+    pelvisHeight: 10.19
+    lean: 20
+    twist: -30
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.8, y: 5.4, z: 1.4}
+    rightFoot: {x: 3.2, y: -2.8, z: 1.4}
+    leftHand: {x: -5.6, y: -1.5, z: 12.99}
+    rightHand: {x: -2.2, y: 8.6, z: 15.99}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 0.6, y: -0.5, z: -0.6}
+    blade: {x: -0.7, y: 0.7, z: -0.12}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  - time: 0.64
+    easing: 0
+    pelvisHeight: 10.39
+    lean: 16
+    twist: -40
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.8, y: 5.4, z: 1.4}
+    rightFoot: {x: 3.2, y: -2.8, z: 1.4}
+    leftHand: {x: -5.8, y: -2.2, z: 12.49}
+    rightHand: {x: -6, y: 4.4, z: 12.99}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 0.3, y: -0.3, z: -1}
+    blade: {x: -0.85, y: 0.05, z: -0.52}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  - time: 1
+    easing: 0
+    pelvisHeight: 11.09
+    lean: 8
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.8, y: 1.2, z: 1.4}
+    rightFoot: {x: 2.9, y: -1.2, z: 1.4}
+    leftHand: {x: -5.2, y: 1, z: 11.49}
+    rightHand: {x: 5.6, y: 1.6, z: 11.99}
+    leftPole: {x: -0.3, y: -1, z: -0.5}
+    rightPole: {x: 0.6, y: -0.6, z: -0.6}
+    blade: {x: 0.35, y: 0.45, z: -0.82}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+  frameTimes:
+  - 0
+  - 0.15
+  - 0.3
+  - 0.42
+  - 0.5
+  - 0.6
+  - 0.76
+  - 0.9
+  frameMilliseconds: 460000005a000000b4000000a0000000460000005a0000006400000064000000
+  contactFrame: 4
+  hipsFollowKeys: 0
+  capeFlow: 0.2
+  smears:
+  - frame: 4
+    from: 0.42
+    to: 0.5
+  - frame: 5
+    from: 0.5
+    to: 0.58
+  smearSamples: 24
+  effects: []
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0

@@ -344,7 +344,7 @@ public class ChunkMobSpawnerTests
         builder.RegisterInstance<IPlayerRegistry>(new PlayerRegistry());
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<IClock>(new ManualClock());
-        builder.RegisterInstance(TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
+        builder.RegisterInstance(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
         ChunkMobSpawner spawner = new(
             builder.Build(),
             new ChunkIdentity(world, coords ?? Chunk),
@@ -424,7 +424,7 @@ public class ChunkMobSpawnerTests
     {
         ContainerBuilder builder = new();
         builder.RegisterInstance<IClock>(new ManualClock { Time = time });
-        builder.RegisterInstance(TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
+        builder.RegisterInstance(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
         return builder.Build();
     }
 
@@ -435,8 +435,6 @@ public class ChunkMobSpawnerTests
     private float ClockOf(NetworkObject instance)
     {
         created.Add(instance.gameObject);
-        MeleeDamageDealer dealer = instance.GetComponent<MeleeDamageDealer>();
-        dealer.ResetCooldown(readyImmediately: false);
-        return dealer.NextAttackTime - dealer.AttackInterval;
+        return instance.GetComponent<MeleeDamageDealer>().Clock.Time;
     }
 }

@@ -107,7 +107,7 @@ public class CharacterRecipeTests
     {
         CharacterClip walk = recipe.Clips.First(c => c.Name == "Walk");
 
-        Assert.That(baker.Render(walk, South, 0).Count(CharacterMaterial.Eye), Is.EqualTo(2 * recipe.EyeHeight));
+        Assert.That(baker.Render(walk, South, 0).Count(CharacterMaterial.Eye), Is.EqualTo(2 * ((RogueRecipe)recipe).EyeHeight));
         Assert.That(baker.Render(walk, North, 0).Count(CharacterMaterial.Eye), Is.Zero);
         Assert.That(baker.Render(walk, North, 0).Count(CharacterMaterial.Face), Is.Zero);
     }

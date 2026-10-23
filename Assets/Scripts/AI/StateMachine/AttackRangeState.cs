@@ -1,9 +1,8 @@
-using UnityEngine;
-
 /// <summary>
-/// Mob state while its target is within melee reach: stands still facing the target and attacks whenever the damage
-/// dealer's cooldown allows. Leaves for Chase once the target moves past the exit buffer, and for Search or Return
-/// when the target is lost.
+/// Mob state while its target is within melee reach: stands still facing the target and starts an attack whenever the
+/// damage dealer's cooldown allows (Docs/Animation.md, Phase 7). A running attack plays out its windup, contact and
+/// recovery toward the direction it locked, the mob holding still and deciding nothing meanwhile; then it leaves for
+/// Chase once the target moved past the exit buffer, and for Search or Return when the target is lost.
 /// </summary>
 public class AttackRangeState : MobStateBase
 {
@@ -26,12 +25,17 @@ public class AttackRangeState : MobStateBase
     }
 
     /// <summary>
-    /// Goes to Search when the target is lost but hidden within the lose distance, to Return when it is lost
-    /// otherwise, gives up at the leash when the target or the mob is beyond it, and goes to Chase when the target left
-    /// attack range; else attacks.
+    /// Waits while an attack runs. Then goes to Search when the target is lost but hidden within the lose distance, to
+    /// Return when it is lost otherwise, gives up at the leash when the target or the mob is beyond it, and goes to
+    /// Chase when the target left attack range; else attacks.
     /// </summary>
     public override void Tick()
     {
+        if (DamageDealer.IsAttacking)
+        {
+            return;
+        }
+
         if (!Perception.HasDetectedTarget || Perception.CurrentTarget == null)
         {
             Brain.ChangeState(Perception.IsTargetHiddenInRange ? MobStateId.Search : MobStateId.Return);
@@ -62,7 +66,16 @@ public class AttackRangeState : MobStateBase
     }
 
     /// <summary>
-    /// Faces the target and, when the damage dealer lands a hit, plays the attack animation toward it.
+    /// Cancels an attack still running when the state is left from outside (a rebuild), since its transitions wait for
+    /// it.
+    /// </summary>
+    public override void Exit()
+    {
+        DamageDealer.CancelAttack();
+    }
+
+    /// <summary>
+    /// Faces the target and starts an attack on it when the damage dealer's cooldown allows.
     /// </summary>
     private void TryAttackCurrentTarget()
     {
@@ -72,11 +85,6 @@ public class AttackRangeState : MobStateBase
         }
 
         Motor.FaceTowards(Perception.CurrentTarget.position);
-
-        Vector2 attackDirection = Perception.CurrentTarget.position - Brain.transform.position;
-        if (DamageDealer.TryDealDamage(Perception.CurrentTarget))
-        {
-            Motor.PlayAttackAnimation(attackDirection);
-        }
+        DamageDealer.TryStartAttack(Perception.CurrentTarget);
     }
 }

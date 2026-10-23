@@ -180,6 +180,89 @@ public class NetworkMobsPlayModeTests
     }
 
     /// <summary>
+    /// The host's mob attacks reach a client (Docs/Animation.md, Phase 7): a client joining while the mob attacks the
+    /// host's player sees no attack replayed, then each next one on its copy: the windup, its frames before the contact
+    /// frame until the host's contact arrives, then the contact frame; a stun on the host mid-windup stops the copy's
+    /// attack at once, though the copy would otherwise hold its windup until a contact.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AHostsMobAttacks_PlayOnTheClientsCopy_FromTheNextStart()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        yield return null;
+
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        DamageService hostDamage = gameplay.Resolve<DamageService>();
+        GameObject hostPlayer = GameObject.FindGameObjectWithTag("Player");
+        DamageReceiver hostPlayerReceiver = hostPlayer.GetComponent<DamageReceiver>();
+        MobController hostMob = Object.FindAnyObjectByType<MobController>();
+        MeleeDamageDealer hostDealer = hostMob.GetComponent<MeleeDamageDealer>();
+        int hostStarts = 0;
+        int hostContacts = 0;
+        hostDealer.AttackStarted += _ => hostStarts++;
+        hostDealer.AttackContacted += () => hostContacts++;
+
+        Vector3 nextToTheMob = hostMob.transform.position + Vector3.right * 0.7f;
+        hostPlayer.transform.position = nextToTheMob;
+        hostPlayer.GetComponent<Rigidbody2D>().position = nextToTheMob;
+        yield return SceneBootTestHelper.WaitUntil(() => hostDealer.IsAttacking, "the host's mob to attack the host's player");
+
+        client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendReady();
+        MobController clientMob = null;
+        yield return SceneBootTestHelper.WaitUntil(() => (clientMob = FindCopyManagedBy(client.Manager, hostMob)) != null, "the client to receive the host's mob");
+        client.DisableColliders();
+        CharacterVisuals copy = clientMob.GetComponentInChildren<CharacterVisuals>();
+        int startsBeforeTheCopy = hostStarts;
+        Assert.That(copy.Animator.IsActing, Is.False, "A late joiner sees no attack replayed.");
+
+        for (int attack = 0; attack < 2; attack++)
+        {
+            hostDamage.ApplyHeal(hostPlayerReceiver, 1000);
+            int startsBefore = Mathf.Max(hostStarts, startsBeforeTheCopy);
+            yield return SceneBootTestHelper.WaitUntil(() => hostStarts > startsBefore && copy.Animator.IsActing && copy.Animator.Frame < copy.Animator.Clip.ContactFrame, "the next attack to start on the host and play its windup on the client's copy");
+            Assert.That(copy.Animator.Clip.Name, Is.EqualTo("DaggerSlash"));
+            int contactsBefore = hostContacts;
+            bool showedContact = false;
+            float giveUp = Time.realtimeSinceStartup + 3f;
+            while (!showedContact && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return new WaitForEndOfFrame();
+                if (!copy.Animator.IsActing)
+                {
+                    continue;
+                }
+
+                if (copy.Animator.Frame == copy.Animator.Clip.ContactFrame)
+                {
+                    showedContact = true;
+                    Assert.That(hostContacts, Is.GreaterThan(contactsBefore), "The copy shows its contact only once the host's has landed.");
+                }
+                else if (hostContacts == contactsBefore)
+                {
+                    Assert.That(copy.Animator.Frame, Is.LessThan(copy.Animator.Clip.ContactFrame), "Before the host's contact the copy shows its windup.");
+                }
+            }
+
+            Assert.That(showedContact, Is.True, "The copy shows the contact frame.");
+        }
+
+        hostDamage.ApplyHeal(hostPlayerReceiver, 1000);
+        int startsBeforeStun = hostStarts;
+        yield return SceneBootTestHelper.WaitUntil(() => hostStarts > startsBeforeStun && hostDealer.Phase == AttackPhase.Windup && copy.Animator.IsActing && copy.Animator.Frame < copy.Animator.Clip.ContactFrame, "the next windup on the host and the client's copy");
+        StatusEffectService hostStatuses = gameplay.Resolve<StatusEffectService>();
+        Assert.That(hostStatuses.Apply(hostMob.GetComponent<DamageReceiver>(), SceneBootTestHelper.FindStatus("Stun")), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return SceneBootTestHelper.WaitUntil(() => !copy.Animator.IsActing, "the stun to stop the attack on the client's copy");
+        Assert.That(hostDealer.IsAttacking, Is.False);
+    }
+
+    /// <summary>
     /// The spawned copy of <paramref name="original"/> (the same network object) that belongs to
     /// <paramref name="manager"/>, or null.
     /// </summary>

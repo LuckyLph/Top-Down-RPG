@@ -11,7 +11,9 @@ using VContainer.Unity;
 
 /// <summary>
 /// PlayMode tests for mobs in Testlands, the booted test world: detection, spawning through the chunk scopes, melee
-/// attacks and their pacing, deaths on both sides, and the player HUD.
+/// attacks and their pacing, the Weasel's baked animation (its run and its attack, the contact frame showing as its hit
+/// lands), dodging its windup by stepping out of reach, a stun stopping its windup, deaths on both sides, and the player
+/// HUD.
 /// </summary>
 public class MobPlayModeBehaviorTests
 {
@@ -135,7 +137,7 @@ public class MobPlayModeBehaviorTests
         int hit = brain.GetComponent<MeleeDamageDealer>().DamageAmount;
 
         player.transform.position = brain.transform.position + Vector3.right * 0.1f;
-        yield return WaitForHealthChange(health, startingHealth - hit, 30);
+        yield return WaitForHealthChange(health, startingHealth - hit, 2f);
 
         Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - hit));
 
@@ -174,7 +176,7 @@ public class MobPlayModeBehaviorTests
         int hit = brain.GetComponent<MeleeDamageDealer>().DamageAmount;
 
         player.transform.position = brain.transform.position + Vector3.right * 0.1f;
-        yield return WaitForHealthChange(health, startingHealth - hit, 30);
+        yield return WaitForHealthChange(health, startingHealth - hit, 2f);
         Assert.That(health.CurrentHealth, Is.EqualTo(startingHealth - hit));
 
         yield return new WaitForSeconds(0.2f);
@@ -184,6 +186,110 @@ public class MobPlayModeBehaviorTests
         Assert.That(health.CurrentHealth, Is.LessThanOrEqualTo(startingHealth - 2 * hit), "Health should drop again after the configured attack interval.");
 
         player.transform.position = originalPlayerPosition;
+    }
+
+    /// <summary>
+    /// The Weasel draws its baked set (Docs/Animation.md, Phase 7): chasing a player it runs, and in reach it plays its
+    /// dagger attack, whose contact frame shows on the frame its hit lands on the player.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator TheWeasel_RunsAndAttacksFromItsBakedSet_ItsContactFrameShowingAsItsHitLands()
+    {
+        yield return SceneBootTestHelper.BootIntoTestlands();
+        yield return null;
+
+        MobController brain = KeepOneMobActive();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+        CharacterVisuals visuals = brain.GetComponentInChildren<CharacterVisuals>();
+        SpriteRenderer body = visuals.GetComponent<SpriteRenderer>();
+        Assert.That(visuals, Is.Not.Null);
+
+        MovePlayer(player, brain.transform.position + Vector3.right * 3f);
+        yield return WaitForSecondsUntil(() => visuals.Animator.Gait == CharacterGait.Run, 2f);
+        Assert.That(visuals.Animator.Gait, Is.EqualTo(CharacterGait.Run), "The chasing Weasel runs.");
+        Assert.That(SpriteName(body.sprite), Does.StartWith("Weasel_Run_"));
+
+        int hitFrame = -1;
+        System.Action<Health.DamageEvent> onDamaged = _ => hitFrame = Time.frameCount;
+        health.Damaged += onDamaged;
+        try
+        {
+            float give = Time.realtimeSinceStartup + 4f;
+            while (hitFrame < 0 && Time.realtimeSinceStartup < give)
+            {
+                yield return new WaitForEndOfFrame();
+                if (hitFrame < 0 && visuals.Animator.IsActing)
+                {
+                    Assert.That(visuals.Animator.Frame, Is.LessThan(visuals.Animator.Clip.ContactFrame), "Before its hit lands the Weasel shows its windup.");
+                }
+            }
+
+            Assert.That(hitFrame, Is.GreaterThan(0), "The Weasel's hit lands.");
+            Assert.That(visuals.Animator.IsActing, Is.True);
+            CharacterAnimationClip clip = visuals.Animator.Clip;
+            Assert.That(clip.Name, Is.EqualTo("DaggerSlash"));
+            Assert.That(visuals.Animator.Frame, Is.EqualTo(clip.ContactFrame), "The contact frame shows on the frame the hit lands.");
+            Assert.That(body.sprite == clip.SpriteAt(visuals.Animator.Direction, clip.ContactFrame), Is.True, "The renderer shows the contact frame.");
+        }
+        finally
+        {
+            health.Damaged -= onDamaged;
+        }
+    }
+
+    /// <summary>
+    /// A player who steps out of the Weasel's reach during its windup takes nothing from that attack.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator APlayerSteppingOutOfReachMidWindup_TakesNoDamage()
+    {
+        yield return SceneBootTestHelper.BootIntoTestlands();
+        yield return null;
+
+        MobController brain = KeepOneMobActive();
+        MeleeDamageDealer dealer = brain.GetComponent<MeleeDamageDealer>();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+
+        MovePlayer(player, brain.transform.position + Vector3.right * 0.7f);
+        yield return WaitForSecondsUntil(() => dealer.Phase == AttackPhase.Windup, 3f);
+        Assert.That(dealer.Phase, Is.EqualTo(AttackPhase.Windup));
+        int before = health.CurrentHealth;
+        MovePlayer(player, brain.transform.position + Vector3.right * 3f);
+        yield return WaitForSecondsUntil(() => dealer.Phase != AttackPhase.Windup, 1f);
+        yield return WaitFrames(2);
+
+        Assert.That(dealer.Phase, Is.Not.EqualTo(AttackPhase.Windup), "The windup ran out.");
+        Assert.That(health.CurrentHealth, Is.EqualTo(before), "Out of reach at contact, the player takes nothing.");
+    }
+
+    /// <summary>
+    /// A stun during the Weasel's windup stops its attack at once, on screen too, and nothing lands.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AStunnedWeasel_StopsItsWindup()
+    {
+        yield return SceneBootTestHelper.BootIntoTestlands();
+        yield return null;
+
+        MobController brain = KeepOneMobActive();
+        MeleeDamageDealer dealer = brain.GetComponent<MeleeDamageDealer>();
+        CharacterVisuals visuals = brain.GetComponentInChildren<CharacterVisuals>();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        Health health = player.GetComponent<Health>();
+        StatusEffectService statuses = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container.Resolve<StatusEffectService>();
+
+        MovePlayer(player, brain.transform.position + Vector3.right * 0.7f);
+        yield return WaitForSecondsUntil(() => dealer.Phase == AttackPhase.Windup && visuals.Animator.IsActing, 3f);
+        int before = health.CurrentHealth;
+        Assert.That(statuses.Apply(brain.GetComponent<DamageReceiver>(), SceneBootTestHelper.FindStatus("Stun")), Is.EqualTo(StatusApplyOutcome.Landed));
+        yield return WaitFrames(2);
+
+        Assert.That(dealer.IsAttacking, Is.False, "The stun cancels the attack.");
+        Assert.That(visuals.Animator.IsActing, Is.False, "The Weasel stops showing it.");
+        yield return new WaitForSeconds(dealer.Timeline.Windup);
+        Assert.That(health.CurrentHealth, Is.EqualTo(before), "Nothing lands.");
     }
 
     /// <summary>
@@ -206,11 +312,12 @@ public class MobPlayModeBehaviorTests
         Assert.That(health, Is.Not.Null);
 
         player.transform.position = brain.transform.position + Vector3.right * 0.1f;
-        yield return WaitForHealthChange(health, health.CurrentHealth - 1, 30);
+        yield return WaitForHealthChange(health, health.CurrentHealth - 1, 2f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange));
 
         health.ApplyDamage(health.CurrentHealth);
         yield return WaitFrames(2);
+        yield return WaitForSecondsUntil(() => brain.CurrentStateId != MobStateId.AttackRange, 1.5f);
 
         Assert.That(health.IsDead, Is.True);
         Assert.That(playerController.enabled, Is.False, "Player movement should stop on death.");
@@ -417,13 +524,47 @@ public class MobPlayModeBehaviorTests
 
     /// <summary>
     /// Yields frames until <paramref name="health"/> is at or below <paramref name="expectedHealth"/>, giving up
-    /// silently after <paramref name="maxFrames"/> frames; callers assert the result.
+    /// silently after <paramref name="maxSeconds"/> seconds; callers assert the result.
     /// </summary>
-    private static IEnumerator WaitForHealthChange(Health health, int expectedHealth, int maxFrames)
+    private static IEnumerator WaitForHealthChange(Health health, int expectedHealth, float maxSeconds)
     {
-        for (int i = 0; i < maxFrames && health.CurrentHealth > expectedHealth; i++)
+        yield return WaitForSecondsUntil(() => health.CurrentHealth <= expectedHealth, maxSeconds);
+    }
+
+    /// <summary>
+    /// Yields frames until <paramref name="condition"/> holds, giving up silently after <paramref name="maxSeconds"/>
+    /// seconds; callers assert the result.
+    /// </summary>
+    private static IEnumerator WaitForSecondsUntil(System.Func<bool> condition, float maxSeconds)
+    {
+        float giveUp = Time.realtimeSinceStartup + maxSeconds;
+        while (!condition() && Time.realtimeSinceStartup < giveUp)
         {
             yield return null;
         }
+    }
+
+    /// <summary>
+    /// Puts the player's body and transform at <paramref name="position"/>.
+    /// </summary>
+    private static void MovePlayer(GameObject player, Vector3 position)
+    {
+        player.transform.position = position;
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.position = position;
+            body.linearVelocity = Vector2.zero;
+        }
+
+        Physics2D.SyncTransforms();
+    }
+
+    /// <summary>
+    /// The name of <paramref name="sprite"/>, or empty without one.
+    /// </summary>
+    private static string SpriteName(Sprite sprite)
+    {
+        return sprite != null ? sprite.name : string.Empty;
     }
 }

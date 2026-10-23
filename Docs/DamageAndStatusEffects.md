@@ -117,7 +117,7 @@ Sources say what they deal through a `Hit`: amount, damage type and the statuses
 
 ### Crowd control on mobs (host)
 
-- Stun: `MobController` stops the motor and skips the state tick while stunned; the state machine resumes in the same state.
+- Stun: `MobController` stops the motor and skips the state tick while stunned, and cancels a running attack, its cooldown given back when its hit had not landed (Animation.md's Phase 7); the state machine resumes in the same state.
 - Root: states tick, but path following yields no velocity; a mob in attack range keeps attacking.
 - Slow: `MobMotor2D` multiplies its move speed.
 - States read the controls through the brain, like their other inputs, so they stay free of engine lookups.

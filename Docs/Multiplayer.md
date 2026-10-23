@@ -25,7 +25,7 @@ Plan for taking the game from single player to online co-op. [Architecture.md](A
 | Player movement and facing | Owning client | Transform + facing/animation state |
 | Player attack | Owning client runs the attack's timeline (start, windup cancels, contact), host resolves its hit at contact around where the owner stood: a melee hit at once, a projectile's when it reaches a unit | Start, contact and early-end events naming the weapon (every other machine plays the attack on its copy, and flies its projectile from the contact, visual only) |
 | Player's equipped weapon | Owning client | Owner-written `NetworkVariable` (the weapon's index in the weapon catalog); copies and late joiners equip it |
-| Mob AI, movement, attacks | Host | Transform + compact state (animation state, facing, attacking) |
+| Mob AI, movement, attacks | Host (runs each attack's timeline, holding the mob still, and resolves its hit at contact in the area ahead of it) | Transform + move (its actual velocity over its move speed) and facing (`MobNetworkSync`) + attack start (which attack, its direction), contact and early-end events; every client plays the attack on its copy, visual only, a late joiner from the next start |
 | `Health` of players and mobs | Host | Current HP + typed hit (naming its source unit), immune hit and heal events |
 | Status effects on players and mobs | Host (applies, ticks, expires; holds a loading client's player) | Status list per unit (`NetworkStatusEffects`) + blocked-status events |
 | Spawning/despawning players and mobs | Host | NGO spawn/despawn |

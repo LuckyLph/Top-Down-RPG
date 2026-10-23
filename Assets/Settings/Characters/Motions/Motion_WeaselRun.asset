@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f5ef9a1d5048f4f9aae04701108b67, type: 3}
+  m_Name: Motion_WeaselRun
+  m_EditorClassIdentifier: TopDownRPG.Editor::GaitMotion
+  gait: 3
+  frames: 8
+  framesPerSecond: 16
+  duty: 0.4
+  front: 6.4
+  back: -7.51
+  liftBack: {x: -1.5, y: 6.5}
+  liftFront: {x: 2.5, y: 4.5}
+  pelvisHeight: 13.2
+  bob: 0.8
+  bobRisesMidStance: 0
+  lean: 16
+  twist: 10
+  armSwing: 4.2
+  armHeight: -6.2
+  armOut: 1.2
+  armPump: 1.1
+  capeFlow: 0.5

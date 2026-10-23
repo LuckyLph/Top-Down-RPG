@@ -70,4 +70,50 @@ internal static class TestCombat
     {
         return new AttackService(authority, CreateHitService(authority, combatEvents), Settings);
     }
+
+    /// <summary>
+    /// Creates an attack service over <paramref name="hits"/> under <paramref name="authority"/>.
+    /// </summary>
+    public static AttackService CreateAttackService(IGameAuthority authority, HitService hits)
+    {
+        return new AttackService(authority, hits, Settings);
+    }
+
+    /// <summary>
+    /// Gives <paramref name="unit"/> a kinematic body and a unit-sized collider and stands it
+    /// <paramref name="distance"/> to the right of the origin, inside the attack area of a mob's melee dealer standing
+    /// there without a collider of its own.
+    /// </summary>
+    public static void StandInReach(Component unit, float distance = 0.6f)
+    {
+        unit.transform.position = new Vector3(distance, 0f, 0f);
+        if (!unit.TryGetComponent(out BoxCollider2D _))
+        {
+            unit.gameObject.AddComponent<BoxCollider2D>();
+        }
+
+        if (!unit.TryGetComponent(out Rigidbody2D body))
+        {
+            body = unit.gameObject.AddComponent<Rigidbody2D>();
+        }
+
+        body.bodyType = RigidbodyType2D.Kinematic;
+        Physics2D.SyncTransforms();
+    }
+
+    /// <summary>
+    /// Starts <paramref name="dealer"/>'s attack on <paramref name="target"/>, then plays its windup on
+    /// <paramref name="clock"/> and ticks it, so its contact lands. Returns whether the attack started.
+    /// </summary>
+    public static bool Strike(MeleeDamageDealer dealer, ManualClock clock, Transform target)
+    {
+        if (!dealer.TryStartAttack(target))
+        {
+            return false;
+        }
+
+        clock.Advance(dealer.Timeline.Windup);
+        dealer.Tick();
+        return true;
+    }
 }

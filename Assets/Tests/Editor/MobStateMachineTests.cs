@@ -20,6 +20,7 @@ public class MobStateMachineTests
     private PlayerHandle playerHandle;
     private PlayerRegistry players;
     private readonly IRandom random = new SystemRandom(1234);
+    private ManualClock clock;
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
     // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
@@ -95,8 +96,9 @@ public class MobStateMachineTests
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange));
 
         player.position = new Vector3(50f, 0f, 0f);
+        clock.Advance(config.AttackTimeline.Duration);
         brain.TickStateMachine(0.1f);
-        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return));
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Return), "Once its attack played out.");
 
         brain.TickStateMachine(0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
@@ -427,8 +429,11 @@ public class MobStateMachineTests
         Assert.That(brain.Motor.CurrentMoveSpeed, Is.Zero);
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        GiveThePlayerABody();
         brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
+        Assert.That(brain.DamageDealer.IsAttacking, Is.True, "A rooted mob starts its attack in range.");
+        ReachContact();
         Assert.That(playerHealth.CurrentHealth, Is.LessThan(playerHealth.MaxHealth));
     }
 
@@ -451,7 +456,8 @@ public class MobStateMachineTests
     }
 
     /// <summary>
-    /// Entering attack range hits once, and later ticks inside the attack interval deal no further damage.
+    /// Entering attack range starts an attack whose hit lands once at contact, not before, and later ticks inside the
+    /// attack interval deal no further damage.
     /// </summary>
     [Test]
     public void AttackRangeState_DoesNotApplyDamageEveryTick_WhileOnCooldown()
@@ -459,14 +465,18 @@ public class MobStateMachineTests
         SetupWorld();
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        GiveThePlayerABody();
         brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
-        int healthAfterEnter = playerHealth.CurrentHealth;
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth), "Nothing lands before contact.");
 
+        ReachContact();
+        int healthAfterContact = playerHealth.CurrentHealth;
+        clock.Advance(0.1f);
         brain.TickStateMachine(0.1f);
 
-        Assert.That(healthAfterEnter, Is.EqualTo(9));
-        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterEnter));
+        Assert.That(healthAfterContact, Is.EqualTo(9));
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterContact));
     }
 
     /// <summary>
@@ -476,22 +486,91 @@ public class MobStateMachineTests
     [Test]
     public void AttackRangeState_DoesNotResetCooldown_WhenTargetLeavesAndReentersRange()
     {
-        SetupWorld();
+        SetupWorld(attackInterval: 2f);
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        GiveThePlayerABody();
         brain.Perception.Tick(0f);
         brain.ChangeState(MobStateId.AttackRange);
+        ReachContact();
         int healthAfterFirstHit = playerHealth.CurrentHealth;
         Assert.That(healthAfterFirstHit, Is.EqualTo(9));
 
+        clock.Advance(config.AttackTimeline.Contact + config.AttackTimeline.Recovery);
         player.position = new Vector3(3f, 0f, 0f);
+        Physics2D.SyncTransforms();
         brain.TickStateMachine(0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
 
         player.position = new Vector3(0.5f, 0f, 0f);
+        Physics2D.SyncTransforms();
         brain.TickStateMachine(0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange));
+        ReachContact();
         Assert.That(playerHealth.CurrentHealth, Is.EqualTo(healthAfterFirstHit), "Re-entering range must not bypass the attack interval.");
+    }
+
+    /// <summary>
+    /// A running attack keeps the mob in attack range, holding still, even after its target left the range; once the
+    /// attack's recovery is over, the mob chases.
+    /// </summary>
+    [Test]
+    public void AttackRangeState_PlaysTheAttackOut_BeforeChasingATargetThatLeft()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        GiveThePlayerABody();
+        brain.Perception.Tick(0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        player.position = new Vector3(3f, 0f, 0f);
+        Physics2D.SyncTransforms();
+
+        clock.Advance(0.2f);
+        brain.TickStateMachine(0.2f);
+        brain.FixedTickStateMachine();
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.AttackRange), "The windup plays out.");
+        Assert.That(brain.Motor.CurrentMoveSpeed, Is.Zero, "The mob holds still through its attack.");
+
+        ReachContact();
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth), "The player left the area before contact.");
+
+        clock.Advance(config.AttackTimeline.Contact + config.AttackTimeline.Recovery);
+        brain.TickStateMachine(0.1f);
+        brain.FixedTickStateMachine();
+        Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Chase));
+        Assert.That(brain.Motor.CurrentMoveSpeed, Is.EqualTo(brain.Motor.MoveSpeed));
+    }
+
+    /// <summary>
+    /// A stun during the windup cancels the attack: nothing lands, the cooldown is given back, and the mob attacks
+    /// again as soon as the stun ends.
+    /// </summary>
+    [Test]
+    public void AStunInTheWindup_CancelsTheAttack_AndGivesItsCooldownBack()
+    {
+        SetupWorld();
+
+        player.position = new Vector3(0.5f, 0f, 0f);
+        GiveThePlayerABody();
+        brain.Perception.Tick(0f);
+        brain.ChangeState(MobStateId.AttackRange);
+        int cancelled = 0;
+        brain.DamageDealer.AttackCancelled += () => cancelled++;
+        StatusEffectDefinition stun = Status("Stun", controls: StatusControls.Stun);
+        brain.GetComponent<StatusEffects>().Set.Apply(stun, null, 1f);
+
+        clock.Advance(0.2f);
+        brain.TickStateMachine(0.2f);
+        Assert.That(brain.DamageDealer.IsAttacking, Is.False);
+        Assert.That(cancelled, Is.EqualTo(1));
+        clock.Advance(config.AttackTimeline.Windup);
+        brain.TickStateMachine(0.1f);
+        Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth), "Nothing lands.");
+
+        brain.GetComponent<StatusEffects>().Set.Remove(stun);
+        brain.TickStateMachine(0.1f);
+        Assert.That(brain.DamageDealer.IsAttacking, Is.True, "Its cooldown was given back, so it attacks again at once.");
     }
 
     /// <summary>
@@ -611,7 +690,8 @@ public class MobStateMachineTests
     }
 
     /// <summary>
-    /// A mob in attack range loses its target and leaves the attack state once the target dies.
+    /// A mob in attack range loses its target and leaves the attack state once the target dies and the attack it had
+    /// started played out.
     /// </summary>
     [Test]
     public void AttackRangeState_StopsAttacking_WhenTargetDies()
@@ -623,6 +703,7 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.AttackRange);
         playerHealth.ApplyDamage(playerHealth.MaxHealth);
 
+        clock.Advance(config.AttackTimeline.Duration);
         brain.TickStateMachine(0.1f);
 
         Assert.That(playerHealth.IsDead, Is.True);
@@ -1088,8 +1169,9 @@ public class MobStateMachineTests
     /// <paramref name="leashCells"/>, which only a mob given a home uses) and the mob under test at
     /// <paramref name="spawnPosition"/> (the origin by default).
     /// </summary>
-    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f, int leashCells = 8)
+    private void SetupWorld(Vector3? spawnPosition = null, bool addHorizontalBarrier = false, IReadOnlyList<Vector3Int> blockedCells = null, float patrolRoamRadius = 2f, int leashCells = 8, float attackInterval = 0.75f)
     {
+        clock = new ManualClock();
         root = new GameObject("MobStateMachineTestRoot");
         Grid grid = root.AddComponent<Grid>();
 
@@ -1155,7 +1237,7 @@ public class MobStateMachineTests
             attackStopDistance: 1f,
             attackExitBuffer: 0.25f,
             attackDamage: 1,
-            attackInterval: 0.75f,
+            attackInterval: attackInterval,
             repathInterval: 0.1f,
             patrolRoamRadius: patrolRoamRadius,
             leashCells: leashCells);
@@ -1174,8 +1256,28 @@ public class MobStateMachineTests
     }
 
     /// <summary>
+    /// Gives the player a body collider on the Player layer, so a mob's attack area at contact finds it.
+    /// </summary>
+    private void GiveThePlayerABody()
+    {
+        player.gameObject.layer = LayerMask.NameToLayer("Player");
+        player.gameObject.AddComponent<BoxCollider2D>().size = new Vector2(0.35f, 0.15f);
+        player.gameObject.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+        Physics2D.SyncTransforms();
+    }
+
+    /// <summary>
+    /// Plays the running attack's windup on the clock and ticks the brain, so its contact lands.
+    /// </summary>
+    private void ReachContact()
+    {
+        clock.Advance(config.AttackTimeline.Windup);
+        brain.TickStateMachine(0f);
+    }
+
+    /// <summary>
     /// Creates a fully wired mob at <paramref name="position"/>, configured with the shared config, grid, player
-    /// registry and random source, and an authoritative melee hit service.
+    /// registry and random source, and an authoritative attack service on the test's manual clock.
     /// </summary>
     private MobController CreateMob(Vector3 position)
     {
@@ -1198,7 +1300,7 @@ public class MobStateMachineTests
         mob.AddComponent<MobPatrolAnchor>();
         MobController mobBrain = mob.AddComponent<MobController>();
 
-        mob.GetComponent<MeleeDamageDealer>().Construct(UnityClock.Shared, TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
+        mob.GetComponent<MeleeDamageDealer>().Construct(clock, TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
         mobBrain.Configure(config, navGrid, players, random);
         Physics2D.SyncTransforms();
         return mobBrain;

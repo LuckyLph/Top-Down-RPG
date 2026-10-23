@@ -4,11 +4,11 @@ using UnityEngine;
 /// <summary>
 /// How a unit shows the hits it takes and lands (Docs/Animation.md, Phase 6), played by
 /// <see cref="HitFeedbackPresenter"/> from the hits each machine learns of. Its body sprite flashes through a property
-/// block on its flash-capable material (<c>TopDownRPG/Sprite Lit Flash</c>); its animation holds, through its
-/// <see cref="CharacterVisuals"/> when it has them, or else, for a sprite Mecanim animates, by keeping the sprite on
-/// screen; and the transform holding the sprite is nudged by whole pixels away from the hit and back, while the body and
-/// its colliders stay put. Visual only, timed on <see cref="Time.deltaTime"/>, each from the frame it starts; nothing
-/// shows while the unit is disabled (dead), and disabling puts everything back. Allocates nothing.
+/// block on its flash-capable material (<c>TopDownRPG/Sprite Lit Flash</c>); its animation holds through its
+/// <see cref="CharacterVisuals"/>; and the transform holding the sprite is nudged by whole pixels away from the hit and
+/// back, while the body and its colliders stay put. Visual only, timed on <see cref="Time.deltaTime"/>, each from the
+/// frame it starts; nothing shows while the unit is disabled (dead), and disabling puts everything back. Allocates
+/// nothing.
 /// </summary>
 [DisallowMultipleComponent]
 public class HitFeedback : MonoBehaviour
@@ -20,7 +20,7 @@ public class HitFeedback : MonoBehaviour
     private SpriteRenderer body;
     [SerializeField, Tooltip("The transform holding the body's sprite, nudged by whole pixels; never the root, so the body and its colliders stay put.")]
     private Transform visuals;
-    [SerializeField, Tooltip("The character animator's visuals, which hold the animation; empty for a sprite Mecanim animates, which holds by keeping its sprite.")]
+    [SerializeField, Tooltip("The character animator's visuals, which hold the animation.")]
     private CharacterVisuals characterVisuals;
     [SerializeField, Tooltip("The body's collider: an impact lands where the line from the hit's source to its middle enters it.")]
     private Collider2D bodyCollider;
@@ -37,9 +37,6 @@ public class HitFeedback : MonoBehaviour
     private bool nudgeFresh;
     private int nudgePixelsPerUnit = 32;
     private bool nudging;
-    private Sprite heldSprite;
-    private float holdLeft;
-    private bool holdFresh;
 
     public float ImpactHeight => impactHeight;
     public SpriteRenderer Body => body;
@@ -61,7 +58,7 @@ public class HitFeedback : MonoBehaviour
     /// <summary>
     /// Whether the unit's animation holds now.
     /// </summary>
-    internal bool IsHolding => characterVisuals != null ? characterVisuals.Animator != null && characterVisuals.Animator.IsHolding : holdLeft > 0f;
+    internal bool IsHolding => characterVisuals != null && characterVisuals.Animator != null && characterVisuals.Animator.IsHolding;
 
     /// <summary>
     /// Whether the unit shows hits now: enabled on an active object (a dead player's is disabled).
@@ -69,14 +66,14 @@ public class HitFeedback : MonoBehaviour
     private bool IsShowing => enabled && gameObject.activeInHierarchy;
 
     /// <summary>
-    /// Keeps the sprite's rest place and fails loudly on a missing renderer or transform, or a material that cannot
-    /// flash.
+    /// Keeps the sprite's rest place and fails loudly on a missing renderer, transform or character visuals, or a
+    /// material that cannot flash.
     /// </summary>
     private void Awake()
     {
-        if (body == null || visuals == null)
+        if (body == null || visuals == null || characterVisuals == null)
         {
-            Debug.LogError($"{name} needs its body renderer and the transform holding it to show hits.", this);
+            Debug.LogError($"{name} needs its body renderer, the transform holding it and its character visuals to show hits.", this);
             return;
         }
 
@@ -88,7 +85,7 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>
-    /// Moves the flash, nudge and hold on once the frame's animation has run.
+    /// Moves the flash and nudge on once the frame's animation has run.
     /// </summary>
     private void LateUpdate()
     {
@@ -127,40 +124,23 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>
-    /// Holds the animation for <paramref name="seconds"/> (a hit-stop): through the character animator, or by keeping
-    /// the sprite showing now. Nothing while disabled.
+    /// Holds the animation for <paramref name="seconds"/> (a hit-stop) through the character animator. Nothing while
+    /// disabled.
     /// </summary>
     public void Hold(float seconds)
     {
-        if (!IsShowing || seconds <= 0f)
+        if (!IsShowing || seconds <= 0f || characterVisuals == null)
         {
             return;
         }
 
         HoldCount++;
-        if (characterVisuals != null)
-        {
-            characterVisuals.Hold(seconds);
-            return;
-        }
-
-        if (body == null)
-        {
-            return;
-        }
-
-        if (holdLeft <= 0f)
-        {
-            heldSprite = body.sprite;
-        }
-
-        holdLeft = Mathf.Max(holdLeft, seconds);
-        holdFresh = true;
+        characterVisuals.Hold(seconds);
     }
 
     /// <summary>
     /// Holds the attack's contact frame for <paramref name="seconds"/> when the character shows it on its next update
-    /// (an attacker whose hit just landed); returns whether it holds. A sprite Mecanim animates never holds this way.
+    /// (an attacker whose hit just landed); returns whether it holds.
     /// </summary>
     public bool HoldContact(float seconds)
     {
@@ -233,8 +213,8 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>
-    /// Moves the flash, nudge and hold on by <paramref name="deltaTime"/> seconds; one started since the last tick
-    /// shows this frame whole.
+    /// Moves the flash and nudge on by <paramref name="deltaTime"/> seconds; one started since the last tick shows this
+    /// frame whole.
     /// </summary>
     internal void Tick(float deltaTime)
     {
@@ -276,27 +256,6 @@ public class HitFeedback : MonoBehaviour
                 PlaceNudge(step);
             }
         }
-
-        if (holdLeft > 0f)
-        {
-            if (holdFresh)
-            {
-                holdFresh = false;
-            }
-            else
-            {
-                holdLeft -= deltaTime;
-            }
-
-            if (holdLeft > 0f && heldSprite != null && body != null)
-            {
-                body.sprite = heldSprite;
-            }
-            else if (holdLeft <= 0f)
-            {
-                heldSprite = null;
-            }
-        }
     }
 
     /// <summary>
@@ -336,7 +295,7 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>
-    /// Ends the flash, the nudge and the hold at once.
+    /// Ends the flash and the nudge at once.
     /// </summary>
     private void Restore()
     {
@@ -351,7 +310,5 @@ public class HitFeedback : MonoBehaviour
         }
 
         nudging = false;
-        holdLeft = 0f;
-        heldSprite = null;
     }
 }

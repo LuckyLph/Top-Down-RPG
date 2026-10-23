@@ -403,8 +403,8 @@ public class DamageResolutionTests
     }
 
     /// <summary>
-    /// A melee hit on an immune target counts as an attack and starts the cooldown, so it is reported once rather
-    /// than every frame.
+    /// A melee attack on an immune target lands as an attack (reported once, as immune) and its cooldown runs from its
+    /// start, so the next one waits for it.
     /// </summary>
     [Test]
     public void MeleeDamageDealer_ImmuneTarget_StartsTheCooldown()
@@ -412,21 +412,21 @@ public class DamageResolutionTests
         DamageReceiver attacker = CreateUnit("Attacker", Profile(Faction.Mobs));
         MeleeDamageDealer dealer = attacker.gameObject.AddComponent<MeleeDamageDealer>();
         DamageReceiver target = CreateUnit("Target", Profile(Faction.Players, DamageTypeMask.Physical));
+        TestCombat.StandInReach(target);
         CombatEvents events = new();
         int reports = 0;
         events.DamageApplied += _ => reports++;
         ManualClock clock = new();
-        dealer.Construct(clock, TestCombat.CreateHitService(FixedGameAuthority.Authoritative, events));
-        dealer.ResetCooldown();
+        dealer.Construct(clock, TestCombat.CreateAttackService(FixedGameAuthority.Authoritative, events));
 
-        Assert.That(dealer.TryDealDamage(target.transform), Is.True, "An immune hit still lands as an attack.");
-        Assert.That(dealer.TryDealDamage(target.transform), Is.False, "So it waits for its cooldown instead of reporting Immune every frame.");
+        Assert.That(TestCombat.Strike(dealer, clock, target.transform), Is.True, "An immune hit still lands as an attack.");
+        Assert.That(dealer.TryStartAttack(target.transform), Is.False, "So it waits for its cooldown instead of reporting Immune every frame.");
         Assert.That(reports, Is.EqualTo(1));
         Assert.That(target.Health.CurrentHealth, Is.EqualTo(target.Health.MaxHealth));
     }
 
     /// <summary>
-    /// A melee dealer initialised from a <see cref="MobConfig"/> deals its configured damage type, which the
+    /// A melee dealer initialised from a <see cref="MobConfig"/> deals its configured damage type at contact, which the
     /// target's resistance to that type reduces.
     /// </summary>
     [Test]
@@ -437,11 +437,12 @@ public class DamageResolutionTests
         DamageReceiver attacker = CreateUnit("Attacker", null);
         MeleeDamageDealer dealer = attacker.gameObject.AddComponent<MeleeDamageDealer>();
         DamageReceiver target = CreateUnit("Target", Profile(Faction.Players, DamageTypeMask.None, new DamageResistance(DamageType.Poison, 50)));
-        dealer.Construct(new ManualClock(), TestCombat.CreateHitService(FixedGameAuthority.Authoritative));
+        TestCombat.StandInReach(target);
+        ManualClock clock = new();
+        dealer.Construct(clock, TestCombat.CreateAttackService(FixedGameAuthority.Authoritative));
         dealer.Initialize(config);
-        dealer.ResetCooldown();
 
-        dealer.TryDealDamage(target.transform);
+        TestCombat.Strike(dealer, clock, target.transform);
 
         Assert.That(dealer.DamageType, Is.EqualTo(DamageType.Poison));
         Assert.That(target.Health.CurrentHealth, Is.EqualTo(target.Health.MaxHealth - 5));

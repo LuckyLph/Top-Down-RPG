@@ -1,0 +1,212 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24fc06d61af43a34790e96e7dbc47db4, type: 3}
+  m_Name: Recipe_Weasel
+  m_EditorClassIdentifier: TopDownRPG.Editor::WeaselRecipe
+  sheetName: Weasel
+  targetHeight: 42
+  clips:
+  - name: Idle
+    motion: {fileID: 11400000, guid: 1fe102bc56fd92642b0484213dca2f56, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Walk
+    motion: {fileID: 11400000, guid: 385d8c65e3aa922439519ea8f0a0c49d, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Run
+    motion: {fileID: 11400000, guid: 9a2fc3e5bd7afb745aa67a3346ad215c, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: DaggerSlash
+    motion: {fileID: 11400000, guid: c18ac20a36375bd4eb11144ac61d1d72, type: 2}
+    weapon: {fileID: 11400000, guid: c55cd52c91cf8ee419bcdfb89bf771e2, type: 2}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  thigh: 5.2
+  shin: 5
+  ankle: 1.4
+  upperArm: 4.6
+  forearm: 4.4
+  torso: 9.5
+  neckToHead: 5.4
+  headRadius: 6.3
+  shoulderHalfWidth: 4.5
+  hipHalfWidth: 2.7
+  torsoRadius: {x: 4.3, y: 3.7}
+  limbThickness: 1.05
+  handRadius: 1.5
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  pawSize: 1
+  faceTilt: 20
+  snoutLength: 1.12
+  snoutRadius: {x: 0.56, y: 0.34}
+  snoutDrop: 22
+  noseRadius: 0.85
+  chin: {x: -30, y: 60}
+  earLength: 0.62
+  earRadius: 1.7
+  earPlace: 42
+  earSpread: 18
+  earBack: 0.1
+  earInsideFacing: 0.3
+  earring: 1
+  band: {x: -14, y: 6}
+  bandTails: 3.5
+  eyes: {x: 20, y: -4}
+  eyeHeight: 1
+  bellyFacing: 0.35
+  forearmWraps: 0.7
+  shinWraps: 0.6
+  wrapBands: 2
+  tailLength: 12
+  tailRadius: {x: 1.6, y: 2.1, z: 0.9}
+  tailDroop: 70
+  tailCurl: 130
+  tailSway: 1.5
+  tailLift: 25
+  tailTip: 0
+  fur:
+    outline:
+      serializedVersion: 2
+      rgba: 4279769640
+    shadow:
+      serializedVersion: 2
+      rgba: 4282798184
+    middle:
+      serializedVersion: 2
+      rgba: 4284774034
+    light:
+      serializedVersion: 2
+      rgba: 4286881982
+  furLight:
+    outline:
+      serializedVersion: 2
+      rgba: 4281612360
+    shadow:
+      serializedVersion: 2
+      rgba: 4288457402
+    middle:
+      serializedVersion: 2
+      rgba: 4290958046
+    light:
+      serializedVersion: 2
+      rgba: 4293193974
+  furDark:
+    outline:
+      serializedVersion: 2
+      rgba: 4278848014
+    shadow:
+      serializedVersion: 2
+      rgba: 4280163878
+    middle:
+      serializedVersion: 2
+      rgba: 4281085498
+    light:
+      serializedVersion: 2
+      rgba: 4282533974
+  nose:
+    outline:
+      serializedVersion: 2
+      rgba: 4278716426
+    shadow:
+      serializedVersion: 2
+      rgba: 4279505432
+    middle:
+      serializedVersion: 2
+      rgba: 4280294952
+    light:
+      serializedVersion: 2
+      rgba: 4282926676
+  earInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4281478746
+    shadow:
+      serializedVersion: 2
+      rgba: 4286611652
+    middle:
+      serializedVersion: 2
+      rgba: 4287928022
+    light:
+      serializedVersion: 2
+      rgba: 4289508072
+  eye:
+    outline:
+      serializedVersion: 2
+      rgba: 4278586900
+    shadow:
+      serializedVersion: 2
+      rgba: 4283487994
+    middle:
+      serializedVersion: 2
+      rgba: 4283487994
+    light:
+      serializedVersion: 2
+      rgba: 4283487994
+  bandColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279633468
+    shadow:
+      serializedVersion: 2
+      rgba: 4280817814
+    middle:
+      serializedVersion: 2
+      rgba: 4281609940
+    light:
+      serializedVersion: 2
+      rgba: 4283592954
+  wraps:
+    outline:
+      serializedVersion: 2
+      rgba: 4280816142
+    shadow:
+      serializedVersion: 2
+      rgba: 4286069288
+    middle:
+      serializedVersion: 2
+      rgba: 4289354302
+    light:
+      serializedVersion: 2
+      rgba: 4292250734
+  wrapsBand:
+    outline:
+      serializedVersion: 2
+      rgba: 4278852156
+    shadow:
+      serializedVersion: 2
+      rgba: 4280177320
+    middle:
+      serializedVersion: 2
+      rgba: 4281105112
+    light:
+      serializedVersion: 2
+      rgba: 4283608308
+  fittings:
+    outline:
+      serializedVersion: 2
+      rgba: 4278725702
+    shadow:
+      serializedVersion: 2
+      rgba: 4280187050
+    middle:
+      serializedVersion: 2
+      rgba: 4282168034
+    light:
+      serializedVersion: 2
+      rgba: 4286767866

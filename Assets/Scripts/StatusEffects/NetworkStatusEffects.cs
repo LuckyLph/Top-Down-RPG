@@ -141,7 +141,7 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
     /// Runs on clients: publishes the host's block of the status at <paramref name="catalogIndex"/> for the Immune
     /// popup.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void BlockedRpc(ushort catalogIndex)
     {
         if (statusService != null && catalog != null)

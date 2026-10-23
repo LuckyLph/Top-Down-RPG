@@ -10,9 +10,10 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// <summary>
 /// Tests for hit feedback (Docs/Animation.md, Phase 6): <see cref="HitFeedbackPresenter"/> reacting to
 /// <see cref="CombatEvents.DamageApplied"/> (a direct hit flashing, holding and nudging the struck unit away from its
-/// source and playing its type's impact where it came in; an immune hit's grey flash and a tick's wash with nothing
-/// else; the camera kicking only for the local player's hits); the character animator's hold (an attacker holding its
-/// contact frame and its next attack still showing contact at contact, a hold in the windup ending at contact);
+/// source and playing its type's impact where it came in; an immune hit's grey flash, an immune tick's included, and a
+/// tick's wash with nothing else; the camera kicking only for the local player's hits); the character animator's hold
+/// (an attacker holding its contact frame and its next attack still showing contact at contact, a hold in the windup
+/// ending at contact, and an attacker held in its windup holding its contact frame when its hit lands);
 /// hit-stop changing nothing in gameplay (attack phases and ready times, health, projectile flight); the flash, nudge,
 /// hold, impact and kick allocating nothing once warm; the camera kick easing back; the effect recipes baking what is
 /// written; and the shipped units and settings being wired for it.
@@ -146,8 +147,9 @@ public class HitFeedbackTests
 
     /// <summary>
     /// An immune hit only flashes the unit in the immune colour, and a damage-over-time tick only washes it part of the
-    /// way toward its damage type's colour: neither holds, nudges, plays an impact or kicks the camera, even for the
-    /// local player's hits.
+    /// way toward its damage type's colour, unless the unit is immune to the tick, which flashes it in the immune colour
+    /// as its popup reads Immune: none holds, nudges, plays an impact or kicks the camera, even for the local player's
+    /// hits.
     /// </summary>
     [Test]
     public void ImmuneHitsFlashGrey_AndTicksWashTowardTheirType_WithNothingElse()
@@ -167,6 +169,12 @@ public class HitFeedbackTests
         Assert.That(struck.FlashCount, Is.EqualTo(2));
         Assert.That(struck.FlashColor, Is.EqualTo(TestCombat.Settings.GetColor(DamageType.Fire)));
         Assert.That(struck.FlashAmount, Is.EqualTo(settings.PeriodicFlashAmount));
+        AssertNothingElse(struck);
+
+        damage.ApplyPeriodicDamage(target, 1, DamageType.Frost, attacker.gameObject, 1f);
+        Assert.That(struck.FlashCount, Is.EqualTo(3));
+        Assert.That(struck.FlashColor, Is.EqualTo(TestCombat.Settings.ImmuneColor), "A tick the unit is immune to.");
+        Assert.That(struck.FlashAmount, Is.EqualTo(1f));
         AssertNothingElse(struck);
     }
 
@@ -278,6 +286,49 @@ public class HitFeedbackTests
         Assert.That(contacted, Is.True);
         Assert.That(animator.Sprite, Is.SameAs(slash.SpriteAt(CharacterDirections.West, Contact)), "The contact frame shows as the hit lands.");
         Assert.That(animator.IsHolding, Is.False);
+    }
+
+    /// <summary>
+    /// A unit struck during its own windup, whose hit then lands at its contact and asks it to hold its contact frame
+    /// (as the presenter does, before that frame's update), holds the contact frame for the whole hit-stop from then,
+    /// rather than letting go as its attack reaches contact.
+    /// </summary>
+    [Test]
+    public void AnAttackerHeldInItsWindup_HoldsItsContactFrame_WhenItsHitLands()
+    {
+        const float hold = 0.08f;
+        CharacterAnimationClip slash = set.Find("Slash");
+        Sprite contact = slash.SpriteAt(CharacterDirections.West, Contact);
+        CharacterAnimator animator = new(set, locomotion, clock);
+        AttackState state = new(clock);
+        Assert.That(state.TryStart(0, Vector2.left, Sword, 0.35f, true, true), Is.True);
+        animator.PlayAction(slash, Vector2.left, Sword, false);
+        animator.Update(Vector2.zero, Vector2.left);
+        clock.Advance(0.1f);
+        animator.Hold(hold);
+        animator.Update(Vector2.zero, Vector2.left);
+        float contactedAt = -1f;
+        for (int step = 0; step < 20 && contactedAt < 0f; step++)
+        {
+            clock.Advance(Step);
+            if ((state.Advance() & AttackStep.Contact) != 0)
+            {
+                contactedAt = clock.Time;
+                Assert.That(animator.HoldContact(hold), Is.True, "Its hit lands as its contact frame is next.");
+            }
+
+            animator.Update(Vector2.zero, Vector2.left);
+        }
+
+        Assert.That(contactedAt, Is.GreaterThan(0f));
+        Assert.That(animator.Sprite, Is.SameAs(contact), "The contact frame shows as the hit lands.");
+        while (clock.Time + Step < contactedAt + hold)
+        {
+            clock.Advance(Step);
+            animator.Update(Vector2.zero, Vector2.left);
+            Assert.That(animator.IsHolding, Is.True, $"{clock.Time - contactedAt:0.000} s after contact.");
+            Assert.That(animator.Sprite, Is.SameAs(contact), $"Held {clock.Time - contactedAt:0.000} s after contact.");
+        }
     }
 
     /// <summary>

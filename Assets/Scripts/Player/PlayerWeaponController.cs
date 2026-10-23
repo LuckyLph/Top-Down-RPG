@@ -49,9 +49,10 @@ public class PlayerWeaponController : MonoBehaviour
 
     /// <summary>
     /// Raised on the machine running the attack at contact, as its hit resolves or its projectile leaves: which attack,
-    /// the direction it lands toward (a projectile's toward its target) and where the player stands.
+    /// the direction it lands toward (a projectile's toward its target), where the player stands and the unit the
+    /// attack was aimed at (none without one), even when the same update also ended the attack.
     /// </summary>
-    public event Action<int, Vector2, Vector2> AttackContacted;
+    public event Action<int, Vector2, Vector2, UnitTarget> AttackContacted;
 
     /// <summary>
     /// Raised on the machine running the attack when one ends before its timeline does: a cancelled windup, a recovery
@@ -159,10 +160,18 @@ public class PlayerWeaponController : MonoBehaviour
             visuals.StopAction(CharacterActionKind.Attack);
         }
 
-        CharacterAnimationClip clip = ClipFor(weapon);
-        currentWeapon = weapon;
-        attackClip = clip;
-        EquippedWeaponChanged?.Invoke(currentWeapon);
+        Switch(weapon);
+    }
+
+    /// <summary>
+    /// On a copy, makes <paramref name="weapon"/> the current weapon as the owner switched to it, leaving the attack the
+    /// copy shows alone: the owner's switch already sent the cancel of the attack it ended, and an attack it started
+    /// after the switch, which names its weapon, can arrive before the switch does.
+    /// </summary>
+    public void EquipOnCopy(PlayerWeapon weapon)
+    {
+        ResolveReferences();
+        Switch(weapon);
     }
 
     /// <summary>
@@ -281,7 +290,7 @@ public class PlayerWeaponController : MonoBehaviour
             Vector2 position = transform.position;
             Vector2 direction = ContactDirection(currentWeapon, attack.Direction, position, attackTarget);
             Land(currentWeapon, direction, position, attackTarget);
-            AttackContacted?.Invoke(attack.Attack, direction, position);
+            AttackContacted?.Invoke(attack.Attack, direction, position, attackTarget);
         }
 
         if ((step & AttackStep.CutShort) != 0)
@@ -389,6 +398,18 @@ public class PlayerWeaponController : MonoBehaviour
         {
             attackService.Resolve(transform, weapon, direction, position);
         }
+    }
+
+    /// <summary>
+    /// Makes <paramref name="weapon"/> the current weapon with its attack clip and raises
+    /// <see cref="EquippedWeaponChanged"/>.
+    /// </summary>
+    private void Switch(PlayerWeapon weapon)
+    {
+        CharacterAnimationClip clip = ClipFor(weapon);
+        currentWeapon = weapon;
+        attackClip = clip;
+        EquippedWeaponChanged?.Invoke(currentWeapon);
     }
 
     /// <summary>

@@ -69,8 +69,8 @@ public readonly struct PlayerOrderContext
 }
 
 /// <summary>
-/// What a tick of <see cref="PlayerOrders"/> asks for: a motor request, a facing direction, whether to swing, and the
-/// order the tick's command gave.
+/// What a tick of <see cref="PlayerOrders"/> asks for: a motor request, a facing direction, whether to swing, the
+/// order the tick's command gave, and whether a cast started on the tick (an instant one has also completed by its end).
 /// </summary>
 public readonly struct PlayerOrderOutput
 {
@@ -78,7 +78,7 @@ public readonly struct PlayerOrderOutput
     /// Creates an output; <paramref name="destination"/> only matters for <see cref="PlayerMotorRequest.MoveTo"/> and
     /// <paramref name="aimDirection"/> only when <paramref name="hasAim"/> is set.
     /// </summary>
-    public PlayerOrderOutput(PlayerMotorRequest motor, Vector2 destination, bool hasAim, Vector2 aimDirection, bool swing, PlayerOrderIssue issued = PlayerOrderIssue.None)
+    public PlayerOrderOutput(PlayerMotorRequest motor, Vector2 destination, bool hasAim, Vector2 aimDirection, bool swing, PlayerOrderIssue issued = PlayerOrderIssue.None, bool castStarted = false)
     {
         Motor = motor;
         Destination = destination;
@@ -86,6 +86,7 @@ public readonly struct PlayerOrderOutput
         AimDirection = aimDirection;
         Swing = swing;
         Issued = issued;
+        CastStarted = castStarted;
     }
 
     public PlayerMotorRequest Motor { get; }
@@ -94,4 +95,5 @@ public readonly struct PlayerOrderOutput
     public Vector2 AimDirection { get; }
     public bool Swing { get; }
     public PlayerOrderIssue Issued { get; }
+    public bool CastStarted { get; }
 }

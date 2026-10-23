@@ -4,7 +4,8 @@ using UnityEngine;
 /// The player's order state machine: Idle, Move, Attack, AttackMove, CastWhenInRange and Casting, plus at most one
 /// paused order while a cast runs and at most one buffered cast. Each tick it turns a <see cref="PlayerCommand"/> and
 /// the player's state into motor requests, a facing direction and swing requests, reports the order the command gave
-/// (which the weapon's cancel rules read), and starts casts through the <see cref="IAbilityCaster"/>. Crowd control from statuses arrives in the context: a stun clears every order and
+/// (which the weapon's cancel rules read), and starts casts through the <see cref="IAbilityCaster"/>, reporting the
+/// ticks a cast started on (a cast ends an attack, and an instant one is over by the tick's end). Crowd control from statuses arrives in the context: a stun clears every order and
 /// ignores commands, a silence ends a running cast and fails casts, a root fails casts that move the caster. No
 /// engine lookups: targets are queried through <see cref="IUnitQueries"/>.
 /// </summary>
@@ -42,6 +43,7 @@ public sealed class PlayerOrders
     private Vector2 aimDirection;
     private bool swing;
     private PlayerOrderIssue issued;
+    private bool castStarted;
 
     /// <summary>
     /// Creates an idle state machine timed by <paramref name="settings"/>, querying targets through
@@ -73,6 +75,7 @@ public sealed class PlayerOrders
         hasAim = false;
         swing = false;
         issued = PlayerOrderIssue.None;
+        castStarted = false;
 
         if (ApplyControls(command, context))
         {
@@ -112,7 +115,7 @@ public sealed class PlayerOrders
 
         RunCurrent(context);
         fresh = false;
-        return new PlayerOrderOutput(motorRequest, destination, hasAim, hasAim ? aimDirection : Vector2.zero, swing, issued);
+        return new PlayerOrderOutput(motorRequest, destination, hasAim, hasAim ? aimDirection : Vector2.zero, swing, issued, castStarted);
     }
 
     /// <summary>
@@ -403,6 +406,7 @@ public sealed class PlayerOrders
             return false;
         }
 
+        castStarted = true;
         paused = toPause;
         current = Order.Casting(slot);
         castAbility = ability;

@@ -163,7 +163,7 @@ public class MobNetworkSync : NetworkBehaviour
     /// <paramref name="direction"/> on this copy, on the timeline of its own config, its windup holding until the
     /// contact arrives. Visual only.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void AttackStartedRpc(byte attack, Vector2 direction)
     {
         if (attack == OnlyAttack && dealer != null)
@@ -175,7 +175,7 @@ public class MobNetworkSync : NetworkBehaviour
     /// <summary>
     /// Runs on every client but not on the host: plays the contact of the attack this copy shows, from now.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void AttackContactRpc()
     {
         motor.ShowAttackContact();
@@ -184,7 +184,7 @@ public class MobNetworkSync : NetworkBehaviour
     /// <summary>
     /// Runs on every client but not on the host: stops the attack this copy shows, which ended early on the host.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void AttackEndedRpc()
     {
         motor.StopAttack();

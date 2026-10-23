@@ -55,7 +55,7 @@ public class WeaponsPlayModeTests
         }
 
         float contactTime = -1f;
-        System.Action<int, Vector2, Vector2> onContact = (_, _, _) => contactTime = contactTime < 0f ? Time.time : contactTime;
+        System.Action<int, Vector2, Vector2, UnitTarget> onContact = (_, _, _, _) => contactTime = contactTime < 0f ? Time.time : contactTime;
         weapon.AttackContacted += onContact;
         CharacterAnimator animation = player.GetComponentInChildren<CharacterVisuals>().Animator;
         try
@@ -112,7 +112,7 @@ public class WeaponsPlayModeTests
         int flyingAtContact = -1;
         int hits = 0;
         System.Action<int, Vector2, float> onStarted = (_, _, _) => startedAt = startedAt < 0f ? playerBody.Distance(mobBody).distance : startedAt;
-        System.Action<int, Vector2, Vector2> onContact = (_, _, _) => flyingAtContact = flyingAtContact < 0 ? projectiles.FlyingCount : flyingAtContact;
+        System.Action<int, Vector2, Vector2, UnitTarget> onContact = (_, _, _, _) => flyingAtContact = flyingAtContact < 0 ? projectiles.FlyingCount : flyingAtContact;
         System.Action<Health.DamageEvent> onDamaged = _ => hits++;
         weapon.AttackStarted += onStarted;
         weapon.AttackContacted += onContact;
@@ -160,7 +160,7 @@ public class WeaponsPlayModeTests
         int contacts = 0;
         System.Action<int, Vector2, float> moveAway = (_, _, _) => commands.Click(start + new Vector2(-4f, 0f), default);
         System.Action onCancelled = () => cancelled++;
-        System.Action<int, Vector2, Vector2> onContact = (_, _, _) => contacts++;
+        System.Action<int, Vector2, Vector2, UnitTarget> onContact = (_, _, _, _) => contacts++;
         weapon.AttackStarted += moveAway;
         weapon.AttackCancelled += onCancelled;
         weapon.AttackContacted += onContact;

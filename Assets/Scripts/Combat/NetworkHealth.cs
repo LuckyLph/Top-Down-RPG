@@ -120,7 +120,7 @@ public class NetworkHealth : NetworkBehaviour
     /// death) with this client's copy of its source when it names one this client has, then syncs HP to
     /// <paramref name="healthAfter"/> if it still differs.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void HitRpc(int amount, DamageType type, DamageFlags flags, int healthAfter, NetworkObjectReference source, bool hasSource)
     {
         if (damageService != null)
@@ -150,7 +150,7 @@ public class NetworkHealth : NetworkBehaviour
     /// Clients: replays the server's heal through <see cref="DamageService.ApplyReplicatedHeal"/>, then syncs HP to
     /// <paramref name="healthAfter"/> if it still differs.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void HealedRpc(int amount, int healthAfter)
     {
         if (damageService != null)
@@ -167,7 +167,7 @@ public class NetworkHealth : NetworkBehaviour
     /// <summary>
     /// Clients: refills the unit's HP, raising <see cref="Health.Restored"/> so revive reactions run.
     /// </summary>
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
     private void RestoredRpc()
     {
         health.Restore();

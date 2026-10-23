@@ -11,12 +11,14 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// directions and keeps it until a margin past the boundary; the gait follows the speed bands with hysteresis around
 /// each boundary; switching gaits keeps the phase while starting and stopping restart it; the playback rate is speed
 /// over natural speed, clamped; a missing gait shows the nearest slower one; an attack's phases play their frames stretched to the timeline at any attack speed, its contact frame
-/// showing exactly when the attack state reaches contact; a copy's windup holds until contact; locomotion resumes
+/// showing exactly when the attack state reaches contact; a copy's windup holds until contact, and a contact reached
+/// shows on its update at any time on the clock; locomotion resumes
 /// where it was after an action; a cast's gather stretches to its cast time with its release on the update it completes
 /// (instantly for an instant cast), a long cast channels, a cancel stops it, a Continue cast while running keeps the
 /// legs' gait and phase under its upper body, moving cuts a standing cast's follow-through but never its release, and a
-/// hold ends at the release; updates allocate nothing once warm; the visuals put the sprite on their renderer, and the
-/// weapon plays its attack on them while the character stands and runs unarmed.
+/// hold ends at the release; updates allocate nothing once warm; the visuals put the sprite on their renderer, the
+/// weapon plays its attack on them while the character stands and runs unarmed, and a copy's attack plays on through
+/// a switch to its weapon that arrives after it.
 /// </summary>
 public class CharacterAnimatorTests
 {
@@ -372,6 +374,43 @@ public class CharacterAnimatorTests
         animator.Update(Vector2.zero, Vector2.down);
         Assert.That(animator.IsActing, Is.False);
         Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
+    }
+
+    /// <summary>
+    /// A copy's attack and the owner's cast, played until contact, show their contact frame on the update the contact
+    /// is reached, and hold it when asked then, at any windup and any time on the clock: late in a session, taking the
+    /// windup off the clock's value rounds (at 20 s, 20 minus 0.3 and back left 0.29999924), which must not leave the
+    /// action in its windup.
+    /// </summary>
+    [Test]
+    public void AReachedContact_ShowsOnItsUpdate_AtAnyTimeOnTheClock()
+    {
+        CharacterAnimationClip slash = set.Find("Slash");
+        CharacterAnimationClip cast = set.Find("Cast");
+        foreach (float windup in new[] { 0.15f, 0.3f, 0.35f, 0.45f })
+        {
+            foreach (float contactAt in new[] { 5f, 10f, 20f, 300f, 1234.5f })
+            {
+                clock.Time = contactAt - windup - 0.1f;
+                CharacterAnimator copy = new(set, settings, clock);
+                copy.Update(Vector2.zero, Vector2.right);
+                copy.PlayAction(slash, Vector2.right, new AttackTimeline(windup, 0.05f, 0.15f), true);
+                CharacterAnimator owner = new(set, settings, clock);
+                owner.Update(Vector2.zero, Vector2.right);
+                owner.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(windup, 0.06f, 0.24f), 0f, true);
+                clock.Time = contactAt;
+                copy.ReachContact();
+                owner.ReachContact();
+                Assert.That(copy.HoldContact(0.08f), Is.True, $"A copy's {windup} s windup reaching contact at {contactAt} s holds it.");
+                Assert.That(owner.HoldContact(0.08f), Is.True, $"A {windup} s cast completing at {contactAt} s holds its release.");
+                copy.Update(Vector2.zero, Vector2.right);
+                owner.Update(Vector2.zero, Vector2.right);
+                Assert.That(copy.Frame, Is.EqualTo(Contact), $"A copy's {windup} s windup reaching contact at {contactAt} s.");
+                Assert.That(copy.ActionPhase, Is.EqualTo(AttackPhase.Contact));
+                Assert.That(owner.Frame, Is.EqualTo(CastRelease), $"A {windup} s cast completing at {contactAt} s.");
+                Assert.That(owner.ActionPhase, Is.EqualTo(AttackPhase.Contact));
+            }
+        }
     }
 
     /// <summary>
@@ -797,18 +836,7 @@ public class CharacterAnimatorTests
     [Test]
     public void AWeapon_PlaysItsAttackOnTheVisuals_AndOnlyThere()
     {
-        GameObject player = Track(new GameObject("Player"));
-        GameObject child = new("Visuals");
-        child.transform.SetParent(player.transform, false);
-        SpriteRenderer renderer = child.AddComponent<SpriteRenderer>();
-        CharacterVisuals visuals = child.AddComponent<CharacterVisuals>();
-        SerializedObject serialized = new(visuals);
-        serialized.FindProperty("animationSet").objectReferenceValue = set;
-        serialized.FindProperty("locomotion").objectReferenceValue = settings;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        visuals.Construct(clock);
-        PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash")));
 
         visuals.SetLocomotion(Vector2.right * RunNatural, Vector2.right);
@@ -828,6 +856,56 @@ public class CharacterAnimatorTests
         weapon.CancelAttack();
         visuals.Tick();
         Assert.That(renderer.sprite, Is.SameAs(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0)), "A cancelled attack stops showing, and the character stands unarmed.");
+    }
+
+    /// <summary>
+    /// On a copy, the owner's switch to a weapon arriving after an attack made with it (its message overtook the switch)
+    /// leaves that attack playing, while equipping a weapon on the machine running the attack stops what it shows.
+    /// </summary>
+    [Test]
+    public void ASwitchReachingACopy_LeavesItsAttackPlaying()
+    {
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out _);
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash"));
+        PlayerWeapon heavy = Track(PlayerWeapon.Create("Heavy", 2, 1f, 0.5f, new Vector2[4], windup: 0.375f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash"));
+        weapon.SetCatalog(Track(WeaponCatalog.Create(sword, heavy)));
+        weapon.Equip(sword);
+
+        weapon.PlayRemoteAttack(1, 0, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.ActionKind, Is.EqualTo(CharacterActionKind.Attack));
+        weapon.EquipOnCopy(heavy);
+        visuals.Tick();
+        Assert.That(weapon.CurrentWeapon, Is.SameAs(heavy));
+        Assert.That(visuals.Animator.IsActing, Is.True, "The copy's attack plays on through the switch it overtook.");
+        weapon.PlayRemoteContact();
+        visuals.Tick();
+        Assert.That(visuals.Animator.Frame, Is.EqualTo(Contact));
+
+        weapon.Equip(sword);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.False, "Equipping where the attack runs ends what it shows.");
+    }
+
+    /// <summary>
+    /// A tracked player with a weapon controller on the test clock, resolving hits with authority, and its visuals on a
+    /// child playing the test set: <paramref name="visuals"/> and their <paramref name="renderer"/>.
+    /// </summary>
+    private PlayerWeaponController CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer)
+    {
+        GameObject player = Track(new GameObject("Player"));
+        GameObject child = new("Visuals");
+        child.transform.SetParent(player.transform, false);
+        renderer = child.AddComponent<SpriteRenderer>();
+        visuals = child.AddComponent<CharacterVisuals>();
+        SerializedObject serialized = new(visuals);
+        serialized.FindProperty("animationSet").objectReferenceValue = set;
+        serialized.FindProperty("locomotion").objectReferenceValue = settings;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        visuals.Construct(clock);
+        PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        return weapon;
     }
 
     /// <summary>

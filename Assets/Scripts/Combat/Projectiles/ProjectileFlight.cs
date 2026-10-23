@@ -15,16 +15,18 @@ public enum ProjectileOutcome
 /// <summary>
 /// One projectile in flight (Docs/Animation.md, Phase 4), free of engine lookups so EditMode tests drive it with fake
 /// queries. It flies from where it was launched at its speed, and each step stops it at the nearest wall or unit it
-/// can hit, or once it has flown its range. It never hits its shooter, a dead unit or a unit of its shooter's faction
-/// (it flies through teammates); a homing projectile with a living target turns toward the target before each step
-/// and hits only it, and one without a target, or whose target died or is gone, flies straight and hits the first
-/// unit it can. Reused by <see cref="ProjectileService"/>'s pool: <see cref="Launch"/> resets it.
+/// can hit, or once it has flown its range. It never hits its shooter, a dead unit or a unit of the faction its shooter
+/// had at launch (it flies through teammates, even once its shooter is gone); a homing projectile with a living target
+/// turns toward the target before each step and hits only it, and one without a target, or whose target died or is
+/// gone, flies straight and hits the first unit it can. Reused by <see cref="ProjectileService"/>'s pool:
+/// <see cref="Launch"/> resets it.
 /// </summary>
 public sealed class ProjectileFlight
 {
     private const float MinStep = 1e-5f;
 
     private DamageReceiver shooterUnit;
+    private Faction shooterFaction;
     private Transform shooterRoot;
     private Health targetHealth;
     private Collider2D targetCollider;
@@ -54,6 +56,7 @@ public sealed class ProjectileFlight
     {
         Source = source;
         shooterUnit = sourceUnit;
+        shooterFaction = sourceUnit != null ? sourceUnit.Faction : Faction.None;
         shooterRoot = source != null ? source.transform : null;
         Spec = spec;
         Hit = hit;
@@ -126,6 +129,7 @@ public sealed class ProjectileFlight
     {
         Source = null;
         shooterUnit = null;
+        shooterFaction = Faction.None;
         shooterRoot = null;
         targetHealth = null;
         targetCollider = null;
@@ -136,7 +140,7 @@ public sealed class ProjectileFlight
 
     /// <summary>
     /// Whether the projectile may stop at <paramref name="unit"/>: not its shooter or a part of it, alive, not of the
-    /// shooter's faction, and, while it homes, its target.
+    /// faction its shooter had at launch, and, while it homes, its target.
     /// </summary>
     private bool CanHit(DamageReceiver unit, bool homing)
     {
@@ -146,7 +150,7 @@ public sealed class ProjectileFlight
         }
 
         Health health = unit.Health;
-        if (health == null || health.IsDead || CombatFactions.SameFaction(shooterUnit, unit))
+        if (health == null || health.IsDead || CombatFactions.SameFaction(shooterFaction, unit))
         {
             return false;
         }

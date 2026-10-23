@@ -117,26 +117,13 @@ public sealed class CharacterAnimator
     /// </summary>
     public void Hold(float seconds)
     {
-        if (seconds <= 0f)
-        {
-            return;
-        }
-
-        float until = clock.Time + seconds;
-        if (IsHolding)
-        {
-            holdUntil = Mathf.Max(holdUntil, until);
-            return;
-        }
-
-        IsHolding = true;
-        holdPending = true;
-        holdUntil = until;
+        Hold(seconds, false);
     }
 
     /// <summary>
     /// Holds as <see cref="Hold"/> does, but only when the action shows its contact (a cast's release) on the next
-    /// update: an attacker or caster whose hit just landed holds that frame. Returns whether it holds.
+    /// update: an attacker or caster whose hit just landed holds that frame, even when a hold was already running (it
+    /// was struck in its windup), which would otherwise end as the action reaches contact. Returns whether it holds.
     /// </summary>
     public bool HoldContact(float seconds)
     {
@@ -145,7 +132,7 @@ public sealed class CharacterAnimator
             return false;
         }
 
-        Hold(seconds);
+        Hold(seconds, true);
         return true;
     }
 
@@ -228,6 +215,30 @@ public sealed class CharacterAnimator
         actionMovedLegs = false;
         Sprite = locomotion.SpriteFacing(Direction);
         return Sprite;
+    }
+
+    /// <summary>
+    /// Starts a hold of <paramref name="seconds"/>, or lengthens the one running; with <paramref name="retake"/> a
+    /// running hold also takes the sprite of the next update again and holds it from there.
+    /// </summary>
+    private void Hold(float seconds, bool retake)
+    {
+        if (seconds <= 0f)
+        {
+            return;
+        }
+
+        float until = clock.Time + seconds;
+        if (IsHolding)
+        {
+            holdUntil = Mathf.Max(holdUntil, until);
+            holdPending |= retake;
+            return;
+        }
+
+        IsHolding = true;
+        holdPending = true;
+        holdUntil = until;
     }
 
     /// <summary>

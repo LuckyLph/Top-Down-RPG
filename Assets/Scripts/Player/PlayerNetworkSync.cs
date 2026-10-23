@@ -34,6 +34,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     private NetworkTransform networkTransform;
     private PlayerBinder binder;
     private PlayerHandle handle;
+    private int castWeaponIndex = NoWeapon;
 
     /// <summary>
     /// The player's registry handle on this machine once it is bound, else null.
@@ -212,11 +213,11 @@ public class PlayerNetworkSync : NetworkBehaviour
     /// <summary>
     /// Relays the owner's contact, with the weapon, where it stood and the attack's target, to the other machines.
     /// </summary>
-    private void HandleLocalAttackContacted(int attack, Vector2 direction, Vector2 position)
+    private void HandleLocalAttackContacted(int attack, Vector2 direction, Vector2 position, UnitTarget attackTarget)
     {
         if (IsSpawned)
         {
-            bool hasTarget = TryReference(weapon.AttackTarget.Health, out NetworkObjectReference target);
+            bool hasTarget = TryReference(attackTarget.Health, out NetworkObjectReference target);
             AttackContactRpc(weapon.WeaponIndex, (byte)attack, direction, position, target, hasTarget);
         }
     }
@@ -263,12 +264,14 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// Relays a cast the owner started, with its aim and any networked target, to the other machines.
+    /// Relays a cast the owner started, with its aim, any networked target and the weapon equipped as it started, to
+    /// the other machines, and remembers that weapon for its completion.
     /// </summary>
     private void HandleLocalCast(AbilityCast cast)
     {
+        castWeaponIndex = CurrentWeaponIndex();
         bool hasTarget = TryReference(cast.Aim.Target.Health, out NetworkObjectReference target);
-        CastRpc(cast.Slot, CurrentWeaponIndex(), cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
+        CastRpc(cast.Slot, castWeaponIndex, cast.Aim.Point, cast.Aim.Direction, target, hasTarget);
     }
 
     /// <summary>
@@ -296,8 +299,8 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// On a client owner, sends a completed cast and the owner's position to the host to resolve; the host resolves
-    /// its own casts locally.
+    /// On a client owner, sends a completed cast, the weapon it started with (a running cast keeps its ability across
+    /// a weapon switch) and the owner's position to the host to resolve; the host resolves its own casts locally.
     /// </summary>
     private void HandleLocalCastCompleted(AbilityCast cast)
     {
@@ -307,7 +310,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
 
         bool hasTarget = TryReference(cast.Aim.Target.Health, out NetworkObjectReference target);
-        CastCompletedRpc(cast.Slot, CurrentWeaponIndex(), cast.Aim.Point, cast.Aim.Direction, target, hasTarget, transform.position);
+        CastCompletedRpc(cast.Slot, castWeaponIndex, cast.Aim.Point, cast.Aim.Direction, target, hasTarget, transform.position);
     }
 
     /// <summary>
@@ -380,8 +383,9 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// Equips the catalog's weapon at <paramref name="index"/> on this copy when it differs from the copy's; the
-    /// unwritten value, the owner's starting weapon, keeps the copy's.
+    /// Equips the catalog's weapon at <paramref name="index"/> on this copy when it differs from the copy's, leaving
+    /// the attack the copy shows alone (see <see cref="PlayerWeaponController.EquipOnCopy"/>); the unwritten value, the
+    /// owner's starting weapon, keeps the copy's.
     /// </summary>
     private void EquipReplicatedWeapon(int index)
     {
@@ -393,7 +397,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         PlayerWeapon replicated = weapon.Catalog.Get(index);
         if (replicated != null && replicated != weapon.CurrentWeapon)
         {
-            weapon.Equip(replicated);
+            weapon.EquipOnCopy(replicated);
         }
     }
 

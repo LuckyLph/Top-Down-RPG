@@ -41,7 +41,7 @@ public class HitFeedbackPlayModeTests
         EffectPool effects = gameplay.Resolve<EffectPool>();
         Shown shown = new(settings, struck, attacker);
         float contactTime = -1f;
-        System.Action<int, Vector2, Vector2> onContact = (_, _, _) => contactTime = contactTime < 0f ? Time.time : contactTime;
+        System.Action<int, Vector2, Vector2, UnitTarget> onContact = (_, _, _, _) => contactTime = contactTime < 0f ? Time.time : contactTime;
         weapon.AttackContacted += onContact;
         effects.Played += shown.Record;
         try

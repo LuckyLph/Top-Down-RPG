@@ -12,9 +12,10 @@ using UnityEngine.UI;
 /// <summary>
 /// Tests for the player's weapon and HUD: equipping and the weapon icon, the HUD presenter, attacks on their timeline
 /// (the hit at contact, the cooldown, the events the owner replicates), switching weapons (the attack cancelled, the
-/// weapon slots rebuilt, cooldowns kept), a ranged attack's projectile leaving at contact toward its target, the
-/// controller's attack orders under the cancel rules and crowd control, the hit area <see cref="AttackService"/>
-/// resolves, and the Main scope's input asset.
+/// weapon slots rebuilt, cooldowns kept), a ranged attack's projectile leaving at contact toward its target, a contact
+/// naming its target even as it ends its attack, the controller's attack orders under the cancel rules, crowd control
+/// and casts (instant ones included), the hit area <see cref="AttackService"/> resolves, and the Main scope's input
+/// asset.
 /// </summary>
 public class PlayerWeaponSystemTests
 {
@@ -319,6 +320,83 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
+    /// A cast pressed during an attack order's windup ends the attack through the <see cref="PlayerController"/>,
+    /// whatever its cast time, an instant one (over by the end of the tick it starts on) included: the attack is
+    /// cancelled and its hit never lands at its contact, and the order swings again once the cast is over, landing one
+    /// hit from that new attack.
+    /// </summary>
+    [TestCase(0f)]
+    [TestCase(0.25f)]
+    public void PlayerController_ACastEndsTheAttack_WhateverItsCastTime(float castTime)
+    {
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out PlayerController playerController);
+        weaponController.Equip(Track(CreateTestWeapon("Sword")));
+        PlayerAbilities abilities = root.AddComponent<PlayerAbilities>();
+        abilities.Construct(clock, TestCombat.CreateAbilityService(FixedGameAuthority.Authoritative));
+        abilities.Configure(Track(PlayerClass.Create("Test", Track(AbilityDefinition.Create("Leap", castTime: castTime, targeting: AbilityTargeting.None)))));
+        GameObject enemy = CreateEnemyInRange();
+        Health enemyHealth = enemy.GetComponent<Health>();
+        FakeCommandSource commands = new();
+        playerController.SetCommandSource(commands);
+        int started = 0;
+        int cancelled = 0;
+        weaponController.AttackStarted += (_, _, _) => started++;
+        weaponController.AttackCancelled += () => cancelled++;
+
+        commands.Next = ClickOn(enemy);
+        playerController.Tick();
+        commands.Next = default;
+        Assert.That(weaponController.AttackPhase, Is.EqualTo(AttackPhase.Windup));
+        clock.Advance(0.0625f);
+        playerController.Tick();
+        commands.Next = new PlayerCommand(enemy.transform.position, default, false, false, false, abilitySlot: 0);
+        playerController.Tick();
+        commands.Next = default;
+        Assert.That(cancelled, Is.EqualTo(1), "The cast ends the windup.");
+
+        clock.Advance(0.0625f);
+        playerController.Tick();
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth), "The cancelled attack's hit never lands at its contact.");
+        while (enemyHealth.CurrentHealth == enemyHealth.MaxHealth && clock.Time < 1f)
+        {
+            clock.Advance(0.0625f);
+            playerController.Tick();
+        }
+
+        Assert.That(enemyHealth.CurrentHealth, Is.EqualTo(enemyHealth.MaxHealth - 1), "The order swings again once the cast is over.");
+        Assert.That(started, Is.EqualTo(2), "The hit that lands is the new attack's.");
+    }
+
+    /// <summary>
+    /// An attack's contact reports the unit it was aimed at even when one update jumps past the whole attack, ending it
+    /// as it lands, so its contact message still names its target.
+    /// </summary>
+    [Test]
+    public void AContactEndingItsAttack_StillReportsItsTarget()
+    {
+        ManualClock clock = new();
+        PlayerWeaponController weaponController = CreatePlayer(clock, out _);
+        weaponController.Equip(Track(CreateTestWeapon("Sword")));
+        GameObject enemy = CreateEnemyInRange();
+        UnitTarget target = new(enemy.GetComponent<Health>(), enemy.GetComponent<Collider2D>(), UnitTeam.Enemy);
+        UnitTarget reported = default;
+        int contacts = 0;
+        weaponController.AttackContacted += (_, _, _, aimedAt) =>
+        {
+            contacts++;
+            reported = aimedAt;
+        };
+
+        Assert.That(weaponController.TryAttack(Vector2.left, target), Is.True);
+        clock.Advance(1f);
+        weaponController.Tick();
+        Assert.That(contacts, Is.EqualTo(1));
+        Assert.That(weaponController.IsAttacking, Is.False, "The update ended the attack as it landed.");
+        Assert.That(reported.IsSameUnit(target), Is.True, "Its contact still names its target.");
+    }
+
+    /// <summary>
     /// A local attack raises its start (a zero direction attacks where the player faces, at attack speed 1) and, at
     /// contact, its contact with where the player stands; a recovery cut short by an earlier order raises an early end.
     /// Replaying another player's attack starts nothing here and raises nothing.
@@ -339,7 +417,7 @@ public class PlayerWeaponSystemTests
             started = direction;
             startedSpeed = speed;
         };
-        weaponController.AttackContacted += (_, _, position) => contactAt = position;
+        weaponController.AttackContacted += (_, _, position, _) => contactAt = position;
         weaponController.AttackCancelled += () => cancelled++;
 
         weaponController.PlayRemoteAttack(-1, 0, Vector2.left, 1f);
@@ -594,7 +672,7 @@ public class PlayerWeaponSystemTests
         Physics2D.SyncTransforms();
         UnitTarget target = new(enemyHealth, enemy.GetComponent<Collider2D>(), UnitTeam.Enemy);
         Vector2? landedToward = null;
-        weaponController.AttackContacted += (_, direction, _) => landedToward = direction;
+        weaponController.AttackContacted += (_, direction, _, _) => landedToward = direction;
 
         Assert.That(weaponController.TryAttack(Vector2.right, target), Is.True);
         Assert.That(weaponController.AttackTarget.IsSameUnit(target), Is.True);

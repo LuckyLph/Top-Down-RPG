@@ -19,7 +19,15 @@ public static class CombatFactions
     /// </summary>
     public static bool SameFaction(DamageReceiver source, DamageReceiver target)
     {
-        Faction sourceFaction = source != null ? source.Faction : Faction.None;
+        return SameFaction(source != null ? source.Faction : Faction.None, target);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="target"/> is on <paramref name="sourceFaction"/>, a source's faction captured
+    /// earlier (a projectile's shooter's at launch), which blocks hostile effects; never for no faction.
+    /// </summary>
+    public static bool SameFaction(Faction sourceFaction, DamageReceiver target)
+    {
         return sourceFaction != Faction.None && sourceFaction == target.Faction;
     }
 

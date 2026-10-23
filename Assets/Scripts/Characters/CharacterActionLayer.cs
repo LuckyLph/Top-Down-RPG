@@ -22,6 +22,7 @@ public sealed class CharacterActionLayer
     private float startTime;
     private bool holdUntilContact;
     private bool contacted;
+    private float contactTime;
     private float channelFrom;
     private float channelBeat;
 
@@ -95,7 +96,8 @@ public sealed class CharacterActionLayer
 
     /// <summary>
     /// Plays the contact from <paramref name="now"/> on an action played until contact, cutting its windup short or
-    /// ending its hold; does nothing otherwise, or once it has reached contact.
+    /// ending its hold; does nothing otherwise, or once it has reached contact. The contact and recovery are timed from
+    /// <paramref name="now"/> itself, so the next update shows the contact whatever the clock's value.
     /// </summary>
     public void ReachContact(float now)
     {
@@ -105,7 +107,7 @@ public sealed class CharacterActionLayer
         }
 
         contacted = true;
-        startTime = now - timeline.Windup;
+        contactTime = now;
     }
 
     /// <summary>
@@ -127,7 +129,7 @@ public sealed class CharacterActionLayer
             return AttackPhase.None;
         }
 
-        float elapsed = now - startTime;
+        float elapsed = ElapsedAt(now);
         if (holdUntilContact && !contacted && elapsed >= timeline.Windup)
         {
             return AttackPhase.Windup;
@@ -167,7 +169,7 @@ public sealed class CharacterActionLayer
             return false;
         }
 
-        float elapsed = now - startTime;
+        float elapsed = ElapsedAt(now);
         int contactFrame = clip.ContactFrame;
         if (holdUntilContact && !contacted && elapsed >= timeline.Windup)
         {
@@ -201,6 +203,15 @@ public sealed class CharacterActionLayer
                 Stop();
                 return false;
         }
+    }
+
+    /// <summary>
+    /// How far into its timeline the action is at <paramref name="now"/>: the time since its start, or, once
+    /// <see cref="ReachContact"/> played its contact, the windup and the time since then (never short of the windup).
+    /// </summary>
+    private float ElapsedAt(float now)
+    {
+        return contacted ? timeline.Windup + Mathf.Max(0f, now - contactTime) : now - startTime;
     }
 
     /// <summary>

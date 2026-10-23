@@ -1348,6 +1348,28 @@ public class PlayerOrdersTests
     }
 
     /// <summary>
+    /// Each tick reports whether a cast started on it, for the controller to end the attack it started in: an instant
+    /// cast, over by the tick's end, and a timed one do; the timed cast's later ticks, the tick it completes on and a
+    /// failed press do not.
+    /// </summary>
+    [Test]
+    public void EachTick_ReportsWhetherACastStartedOnIt()
+    {
+        caster.Set(0, Ability());
+        caster.Set(1, Ability(0.5f));
+
+        Assert.That(Tick(Press(0, Vector2.right)).CastStarted, Is.True, "An instant cast.");
+        Assert.That(orders.Current, Is.Not.EqualTo(PlayerOrderKind.Casting), "It is over by the end of its tick.");
+        Assert.That(Tick(Press(1, Vector2.right)).CastStarted, Is.True, "A timed cast.");
+        time = 0.2f;
+        Assert.That(Tick(default).CastStarted, Is.False, "Its later ticks.");
+        time = 0.6f;
+        Assert.That(Tick(default).CastStarted, Is.False, "The tick it completes on.");
+        Assert.That(caster.Completed, Is.EqualTo(2));
+        Assert.That(Tick(Press(2, Vector2.right)).CastStarted, Is.False, "A press on an empty slot.");
+    }
+
+    /// <summary>
     /// Ticks the orders with <paramref name="command"/> and the test's current position, time, motor state and
     /// attack range, with no crowd control.
     /// </summary>

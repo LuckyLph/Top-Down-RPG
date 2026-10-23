@@ -8,10 +8,10 @@ using VContainer.Unity;
 /// <see cref="NetworkHealth"/>, whose hits name their source. A direct hit flashes the struck unit, holds its
 /// animation (and the attacker's contact frame, when the hit lands while it shows), nudges it away from the source by
 /// whole pixels, plays the impact effect of its damage type where it came in, and kicks the camera along the
-/// hit when the local player landed or took it. An immune hit only flashes in the immune colour, and a damage-over-time
-/// tick only washes the unit toward its damage type's colour. Directions come from where this machine shows the source
-/// and the target. Visual only: nothing here changes gameplay or goes over the network. Allocates nothing once its
-/// effects are warm.
+/// hit when the local player landed or took it. An immune hit, a tick included, only flashes in the immune colour (as
+/// its popup reads Immune), and a damage-over-time tick only washes the unit toward its damage type's colour.
+/// Directions come from where this machine shows the source and the target. Visual only: nothing here changes gameplay
+/// or goes over the network. Allocates nothing once its effects are warm.
 /// </summary>
 public sealed class HitFeedbackPresenter : IStartable, IDisposable
 {
@@ -59,8 +59,8 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Shows <paramref name="report"/>: a tick's wash, an immune hit's flash, or a direct hit's flash, holds, nudge and
-    /// camera kick, then its impact.
+    /// Shows <paramref name="report"/>: an immune hit's flash (an immune tick's too), a tick's wash, or a direct hit's
+    /// flash, holds, nudge and camera kick, then its impact.
     /// </summary>
     internal void Show(DamageReport report)
     {
@@ -71,21 +71,21 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         }
 
         HitFeedback struck = target.TryGetComponent(out HitFeedback found) ? found : null;
-        if ((report.Flags & DamageFlags.Periodic) != 0)
-        {
-            if (struck != null)
-            {
-                struck.Flash(combatSettings.GetColor(report.Type), settings.PeriodicFlashAmount, settings.PeriodicFlashSeconds);
-            }
-
-            return;
-        }
-
         if (report.IsImmune)
         {
             if (struck != null)
             {
                 struck.Flash(combatSettings.ImmuneColor, 1f, settings.ImmuneFlashSeconds);
+            }
+
+            return;
+        }
+
+        if ((report.Flags & DamageFlags.Periodic) != 0)
+        {
+            if (struck != null)
+            {
+                struck.Flash(combatSettings.GetColor(report.Type), settings.PeriodicFlashAmount, settings.PeriodicFlashSeconds);
             }
 
             return;

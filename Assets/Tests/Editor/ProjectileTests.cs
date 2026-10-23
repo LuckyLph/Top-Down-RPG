@@ -8,7 +8,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// <summary>
 /// Tests for projectiles (Docs/Animation.md, Phase 4): <see cref="ProjectileService"/> and
 /// <see cref="ProjectileFlight"/> over fake queries (the first unit only, walls, the maximum range, the faction rules,
-/// homing on a target and flying on straight once it is gone, nothing landing without authority, the launch distance),
+/// even once the shooter is gone, homing on a target and flying on straight once it is gone, nothing landing without
+/// authority, the launch distance),
 /// pooled flights and visuals allocating nothing once warm, <see cref="PhysicsProjectileQueries"/> against real
 /// colliders, and <see cref="DirectionalSprites"/>.
 /// </summary>
@@ -126,6 +127,26 @@ public class ProjectileTests
         FlyFor(service, 1f);
 
         Assert.That(teammate.Health.CurrentHealth, Is.EqualTo(teammate.Health.MaxHealth));
+        Assert.That(enemy.Health.CurrentHealth, Is.EqualTo(enemy.Health.MaxHealth - 5));
+    }
+
+    /// <summary>
+    /// A projectile whose shooter is gone in flight (a player who left) keeps its shooter's faction: it still flies
+    /// through the shooter's teammates and stops at the first enemy.
+    /// </summary>
+    [Test]
+    public void AProjectileWhoseShooterIsGone_StillFliesThroughItsTeammates()
+    {
+        DamageReceiver teammate = CreateUnit("Teammate", new Vector2(2f, 0f), Faction.Players);
+        DamageReceiver enemy = CreateUnit("Enemy", new Vector2(3f, 0f), Faction.Mobs);
+        ProjectileService service = CreateService(FixedGameAuthority.Authoritative);
+
+        service.Launch(shooter, Spec(false), new Hit(5, DamageType.Physical, null), Vector2.zero, Vector2.right, default);
+        Object.DestroyImmediate(shooter);
+        FlyFor(service, 1f);
+
+        Assert.That(service.FlyingCount, Is.Zero);
+        Assert.That(teammate.Health.CurrentHealth, Is.EqualTo(teammate.Health.MaxHealth), "It flies through the gone shooter's teammate.");
         Assert.That(enemy.Health.CurrentHealth, Is.EqualTo(enemy.Health.MaxHealth - 5));
     }
 
@@ -455,14 +476,14 @@ public class ProjectileTests
         }
 
         /// <summary>
-        /// Every unit and wall the moving circle meets within the step.
+        /// Every unit still there and every wall the moving circle meets within the step.
         /// </summary>
         public void Cast(Vector2 origin, Vector2 direction, float distance, float radius, List<ProjectileContact> results)
         {
             results.Clear();
             for (int i = 0; i < units.Count; i++)
             {
-                if (TryMeet(origin, direction, distance, units[i].transform.position, unitRadii[i] + radius, out float at))
+                if (units[i] != null && TryMeet(origin, direction, distance, units[i].transform.position, unitRadii[i] + radius, out float at))
                 {
                     results.Add(new ProjectileContact(at, units[i]));
                 }

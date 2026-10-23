@@ -8,13 +8,15 @@ using VContainer;
 /// <summary>
 /// PlayMode tests for cast animation online (Docs/Animation.md, Phase 5) between a host and an in-process client: a
 /// client's cast plays on the host's copy and shows its release when the host resolves the cast; a client's cast
-/// interrupted mid-way stops the host's copy before its release and never resolves; and the host's cast plays on the
-/// client's copy of the host's player.
+/// interrupted mid-way stops the host's copy before its release and never resolves; a client switching weapons mid-cast
+/// has the host resolve the ability it cast; and the host's cast plays on the client's copy of the host's player.
 /// </summary>
 public class NetworkCastsPlayModeTests
 {
     private const int BoltSlot = 0;
     private const int MendSlot = 2;
+    private const int WeaponSlot = PlayerAbilities.ClassSlotCount;
+    private const int GreatswordIndex = 1;
 
     private InProcessClient client;
 
@@ -120,6 +122,41 @@ public class NetworkCastsPlayModeTests
         Assert.That(released, Is.False, "The copy never shows a release for a cast that never completes.");
         yield return new WaitForSeconds(0.6f);
         Assert.That(resolved, Is.Zero, "The interrupted cast never resolves.");
+    }
+
+    /// <summary>
+    /// A client switching to the greatsword in the middle of its sword's Whirl has the host resolve Whirl, the ability
+    /// it cast, rather than the greatsword's ability in that slot: a running cast keeps its ability across a switch.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsSwitchMidCast_ResolvesTheAbilityItCast()
+    {
+        yield return HostAndJoin();
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(gameplay.Resolve<PlayerRegistry>(), client.Manager.LocalClientId);
+        PlayerAbilities copyAbilities = hostCopy.GetComponent<PlayerAbilities>();
+        PlayerWeaponController ownerWeapon = clientOwned.GetComponent<PlayerWeaponController>();
+        AbilityDefinition cast = clientOwned.GetComponent<PlayerAbilities>().GetAbility(WeaponSlot);
+        Assert.That(ownerWeapon.Catalog.Get(GreatswordIndex).GetAbility(0), Is.Not.SameAs(cast), "The greatsword has another ability in the slot.");
+        AbilityDefinition resolved = null;
+        gameplay.Resolve<AbilityService>().CastResolved += (caster, done) =>
+        {
+            if (caster == copyAbilities && done.Slot == WeaponSlot && resolved == null)
+            {
+                resolved = done.Ability;
+            }
+        };
+
+        client.Input.PointAt((Vector2)clientOwned.transform.position + Vector2.right * 3f);
+        client.Input.AbilityPressedThisFrame = WeaponSlot;
+        yield return null;
+        client.Input.AbilityPressedThisFrame = -1;
+        Assert.That(clientOwned.CurrentOrder, Is.EqualTo(PlayerOrderKind.Casting), "The client casts its sword's ability.");
+        Assert.That(ownerWeapon.EquipFromCatalog(GreatswordIndex), Is.True);
+
+        yield return SceneBootTestHelper.WaitUntil(() => resolved != null, "the host to resolve the client's cast");
+        Assert.That(resolved, Is.SameAs(cast), "The host resolves the ability the client cast.");
     }
 
     /// <summary>

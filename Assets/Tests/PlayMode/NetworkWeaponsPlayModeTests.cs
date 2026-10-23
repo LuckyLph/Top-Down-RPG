@@ -8,9 +8,10 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for weapons online (Docs/Animation.md, Phase 4) between a host and an in-process client: a client's
-/// weapon switch reaching the host's copy (its weapon, its weapon abilities and the clip its attacks play), a client's
-/// arrow resolving exactly once on the host from where the owner stood, and a client joining after the host switched
-/// weapons seeing the host's current weapon.
+/// weapon switch reaching the host's copy (its weapon, its weapon abilities and the clip its attacks play), an attack
+/// made on the frame of a switch playing out on the host's copy whichever arrives first, a client's arrow resolving
+/// exactly once on the host from where the owner stood, and a client joining after the host switched weapons seeing
+/// the host's current weapon.
 /// </summary>
 public class NetworkWeaponsPlayModeTests
 {
@@ -56,6 +57,50 @@ public class NetworkWeaponsPlayModeTests
         Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
         yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the client's attack to play on the host's copy");
         Assert.That(copyAnimation.Clip.Name, Is.EqualTo(greatsword.AttackClip), "The copy plays the greatsword's attack.");
+    }
+
+    /// <summary>
+    /// A client switching to the greatsword and attacking on the same frame plays the greatsword's attack on the host's
+    /// copy through its contact, the switch arriving after the attack's message or before it: the attack's message goes
+    /// out at once, the switch (a network variable) on the next network tick, and its arrival must not stop the attack.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsAttackRightAfterASwitch_PlaysOutOnTheHostsCopy()
+    {
+        yield return HostAndJoin();
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(gameplay.Resolve<PlayerRegistry>(), client.Manager.LocalClientId);
+        PlayerWeaponController ownerWeapon = clientOwned.GetComponent<PlayerWeaponController>();
+        PlayerWeaponController copyWeapon = hostCopy.GetComponent<PlayerWeaponController>();
+        CharacterAnimator copyAnimation = hostCopy.GetComponentInChildren<CharacterVisuals>().Animator;
+        PlayerWeapon greatsword = ownerWeapon.Catalog.Get(GreatswordIndex);
+        bool ownerContacted = false;
+        System.Action<int, Vector2, Vector2, UnitTarget> onContact = (_, _, _, _) => ownerContacted = true;
+        ownerWeapon.AttackContacted += onContact;
+        try
+        {
+            Assert.That(ownerWeapon.EquipFromCatalog(GreatswordIndex), Is.True);
+            Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
+            yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the client's attack to play on the host's copy");
+            Assert.That(copyAnimation.Clip.Name, Is.EqualTo(greatsword.AttackClip));
+
+            bool contactShown = false;
+            for (float until = Time.time + 2f; Time.time < until && !contactShown;)
+            {
+                yield return null;
+                Assert.That(copyAnimation.IsActing, Is.True, $"The copy's attack plays on (the switch {(copyWeapon.CurrentWeapon == greatsword ? "arrived" : "has not arrived")}).");
+                contactShown = copyAnimation.ActionPhase == AttackPhase.Contact;
+            }
+
+            Assert.That(ownerContacted, Is.True);
+            Assert.That(contactShown, Is.True, "The copy shows the attack's contact.");
+            Assert.That(copyWeapon.CurrentWeapon, Is.SameAs(greatsword), "The switch reached the copy.");
+        }
+        finally
+        {
+            ownerWeapon.AttackContacted -= onContact;
+        }
     }
 
     /// <summary>

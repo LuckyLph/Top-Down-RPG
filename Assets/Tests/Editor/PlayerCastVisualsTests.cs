@@ -66,34 +66,39 @@ public class PlayerCastVisualsTests
     }
 
     /// <summary>
-    /// At cast times of 0 (instant), 0.15, 0.25, 0.5 and 1 s, driven at 60 Hz through the orders, the player shows its
-    /// cast's release frame on exactly the tick its cast completes, and the gather before it, toward its aim.
+    /// At cast times of 0 (instant), 0.15, 0.25, 0.3, 0.35, 0.45, 0.5 and 1 s, cast early and late in a session (where
+    /// the clock's values round differently), driven at 60 Hz through the orders, the player shows its cast's release
+    /// frame on exactly the tick its cast completes, and the gather before it, toward its aim.
     /// </summary>
     [Test]
     public void TheOwnersCast_ShowsItsRelease_OnTheTickItsOrdersCompleteIt()
     {
         CharacterAnimationClip cast = set.Find("Cast");
-        foreach (float castTime in new[] { 0f, 0.15f, 0.25f, 0.5f, 1f })
+        foreach (float start in new[] { 0f, 20f, 300f })
         {
-            CreatePlayer(Ability("Bolt", castTime), true);
-            bool completed = false;
-            abilities.CastCompleted += _ => completed = true;
-            Tick(Press(0));
-            for (int step = 0; step < 120; step++)
+            foreach (float castTime in new[] { 0f, 0.15f, 0.25f, 0.3f, 0.35f, 0.45f, 0.5f, 1f })
             {
-                bool shows = spriteRenderer.sprite == cast.SpriteAt(CharacterDirections.East, Release);
-                Assert.That(shows, Is.EqualTo(completed), $"{castTime} s at step {step}");
-                Assert.That(visuals.Animator.IsActing, Is.True, $"{castTime} s at step {step}");
-                if (completed)
+                clock.Time = start;
+                CreatePlayer(Ability("Bolt", castTime), true);
+                bool completed = false;
+                abilities.CastCompleted += _ => completed = true;
+                Tick(Press(0));
+                for (int step = 0; step < 120; step++)
                 {
-                    break;
+                    bool shows = spriteRenderer.sprite == cast.SpriteAt(CharacterDirections.East, Release);
+                    Assert.That(shows, Is.EqualTo(completed), $"{castTime} s from {start} s at step {step}");
+                    Assert.That(visuals.Animator.IsActing, Is.True, $"{castTime} s from {start} s at step {step}");
+                    if (completed)
+                    {
+                        break;
+                    }
+
+                    clock.Advance(Step);
+                    Tick(default);
                 }
 
-                clock.Advance(Step);
-                Tick(default);
+                Assert.That(completed, Is.True, $"{castTime} s from {start} s");
             }
-
-            Assert.That(completed, Is.True, $"{castTime} s");
         }
     }
 

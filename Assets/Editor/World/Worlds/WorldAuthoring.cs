@@ -59,8 +59,9 @@ public static class WorldAuthoring
     /// chunks across, with no chunks yet: its folder, root scene (a <see cref="WorldLifetimeScope"/>, and a
     /// <see cref="WorldLighting"/> holding a white Global Light 2D at 0.85), the scene's definition and the world's
     /// definition, in <see cref="WorldsFolder"/> or another <paramref name="parentFolder"/> (a dev world's, under
-    /// <see cref="SceneBuildValidator.DevFolder"/>, stays out of the build list). Leaves the scenes open as they were.
-    /// Throws when the folder already exists.
+    /// <see cref="SceneBuildValidator.DevFolder"/>, stays out of the build list). Leaves the scenes open as they were,
+    /// with their unsaved changes, but for a clean untitled scene, which it closes. Throws, making nothing, when the
+    /// folder already exists or an untitled scene with unsaved changes is open.
     /// </summary>
     public static WorldDefinition CreateWorld(string worldName, Vector2Int origin, Vector2Int sizeInChunks, string parentFolder = WorldsFolder)
     {
@@ -70,6 +71,7 @@ public static class WorldAuthoring
             throw new System.InvalidOperationException($"{folder} already exists.");
         }
 
+        RefuseBesideUnsavedUntitledScene();
         EnsureFolder(folder);
         string rootPath = $"{folder}/World_{worldName}.unity";
         Scene scene = NewWorkScene();
@@ -98,8 +100,9 @@ public static class WorldAuthoring
     /// Creates the chunk at <paramref name="coords"/> of <paramref name="world"/>: a scene with a
     /// <see cref="ChunkLifetimeScope"/> and a grid at the world's origin with its <see cref="WorldChunk"/> and a terrain
     /// renderer drawing one empty grass layer (<see cref="SetUpGround"/>), its definition, its entry in the world and its
-    /// place in the build list (none for a dev world). Returns the scene path. Throws when the chunk lies outside the
-    /// world or already has a scene.
+    /// place in the build list (none for a dev world). Returns the scene path. Leaves the scenes open as they were, with
+    /// their unsaved changes, but for a clean untitled scene, which it closes. Throws, making nothing, when the chunk
+    /// lies outside the world or already has a scene, or an untitled scene with unsaved changes is open.
     /// </summary>
     public static string CreateChunk(WorldDefinition world, Vector2Int coords)
     {
@@ -113,6 +116,7 @@ public static class WorldAuthoring
             throw new System.InvalidOperationException($"{world.name} already has a chunk at {coords}.");
         }
 
+        RefuseBesideUnsavedUntitledScene();
         string folder = $"{Path.GetDirectoryName(AssetDatabase.GetAssetPath(world)).Replace('\\', '/')}/Chunks";
         EnsureFolder(folder);
         string path = $"{folder}/{ChunkSceneName(world, coords)}.unity";
@@ -1260,20 +1264,39 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// A new empty scene to build a world's or chunk's scene in: opened beside the open scenes, or in their place when
-    /// one of them is an unsaved untitled scene, which Unity does not allow a new scene beside.
+    /// A new empty scene to build a world's or chunk's scene in, opened beside the open scenes, which keep their unsaved
+    /// changes. Unity allows no new scene beside an untitled one, so a clean untitled scene is closed first, or replaced
+    /// when it is the only scene open (<see cref="RefuseBesideUnsavedUntitledScene"/> has refused a changed one).
     /// </summary>
     private static Scene NewWorkScene()
     {
-        for (int i = 0; i < SceneManager.sceneCount; i++)
+        for (int i = SceneManager.sceneCount - 1; i >= 0 && SceneManager.sceneCount > 1; i--)
         {
-            if (string.IsNullOrEmpty(SceneManager.GetSceneAt(i).path))
+            Scene open = SceneManager.GetSceneAt(i);
+            if (string.IsNullOrEmpty(open.path))
             {
-                return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                EditorSceneManager.CloseScene(open, true);
             }
         }
 
-        return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        bool onlyUntitled = SceneManager.sceneCount == 1 && string.IsNullOrEmpty(SceneManager.GetSceneAt(0).path);
+        return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, onlyUntitled ? NewSceneMode.Single : NewSceneMode.Additive);
+    }
+
+    /// <summary>
+    /// Throws, before anything is made, when an untitled scene with unsaved changes is open: a new scene cannot open
+    /// beside it, and replacing it would lose them.
+    /// </summary>
+    private static void RefuseBesideUnsavedUntitledScene()
+    {
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene open = SceneManager.GetSceneAt(i);
+            if (string.IsNullOrEmpty(open.path) && open.isDirty)
+            {
+                throw new System.InvalidOperationException("An untitled scene with unsaved changes is open, and a new scene cannot open beside it; save or close it first.");
+            }
+        }
     }
 
     /// <summary>

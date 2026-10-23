@@ -46,6 +46,37 @@ public sealed class FileSaveStore : ISaveStore
     }
 
     /// <summary>
+    /// Copies the file to <c>.bak</c> beside it, or <c>.bak2</c>, <c>.bak3</c> and on when those exist; true with no copy
+    /// when there is no file. Logs an error and returns false when the disk refuses.
+    /// </summary>
+    public bool KeepCopy(out string copy)
+    {
+        copy = null;
+        if (!File.Exists(filePath))
+        {
+            return true;
+        }
+
+        string candidate = filePath + ".bak";
+        for (int number = 2; File.Exists(candidate); number++)
+        {
+            candidate = $"{filePath}.bak{number}";
+        }
+
+        try
+        {
+            File.Copy(filePath, candidate);
+            copy = candidate;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+        {
+            Debug.LogError($"Could not keep a copy of the save file '{filePath}': {exception.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Creates the folder if needed, writes <paramref name="contents"/> to the temporary file and swaps it in for the
     /// save. Logs an error and returns false when the disk refuses.
     /// </summary>

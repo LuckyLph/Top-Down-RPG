@@ -5,9 +5,9 @@ using UnityEngine;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// Tests for trips between worlds on one machine: <see cref="LocalTripAuthority"/>'s checks (the exit in the player's
-/// world, the player at it, a listed target, the target's entry with the default as a fallback) and what an approved
-/// trip does (the arrival held for streaming, the player put in the target world, the approval raised);
+/// Tests for trips between worlds on one machine: <see cref="LocalTripAuthority"/>'s checks (a living player, the exit
+/// in the player's world, the player at it, a listed target, the target's entry with the default as a fallback) and
+/// what an approved trip does (the arrival held for streaming, the player put in the target world, the approval raised);
 /// <see cref="WorldExits"/>' lookups; <see cref="ExitTriggerGuard"/>'s protection against firing again;
 /// <see cref="TripArrivals"/> streaming an arrival until the player reaches it; the time freeze leaving trips alone;
 /// <see cref="NetworkTripAuthority"/> approving on the host and sending a client's request to it; and the players'
@@ -132,6 +132,31 @@ public class WorldTripTests
 
         Stand(home, 31.5f, 31.5f);
         Assert.That(authority.TryApprove(new TripRequest(player, exit.Id), out _, out _), Is.True);
+    }
+
+    /// <summary>
+    /// A dead player standing at an exit is refused (its machine may not know yet that it died, and it travels only to
+    /// the waystone it respawns at), changing nothing; once restored it goes.
+    /// </summary>
+    [Test]
+    public void ADeadPlayer_IsRefused_AndGoesOnceRestored()
+    {
+        WorldExit exit = PlaceExit(home, new Vector2Int(30, 30), away, "start", Vector2Int.one);
+        GameObject body = Track(new GameObject("Mortal"));
+        Health health = body.AddComponent<Health>();
+        PlayerHandle mortal = new(body.transform, health);
+        registry.Add(mortal);
+        playerWorlds.Set(mortal, home);
+        body.transform.position = home.ToWorld(new Vector2(30.5f, 30.5f));
+        health.ApplyDamage(health.MaxHealth);
+
+        Assert.That(authority.TryApprove(new TripRequest(mortal, exit.Id), out _, out string refusal), Is.False);
+        Assert.That(refusal, Does.Contain("dead"));
+        Assert.That(playerWorlds.Get(mortal), Is.SameAs(home));
+        Assert.That(arrivals.IsHeld(mortal), Is.False);
+
+        health.Restore();
+        Assert.That(authority.TryApprove(new TripRequest(mortal, exit.Id), out _, out _), Is.True);
     }
 
     /// <summary>

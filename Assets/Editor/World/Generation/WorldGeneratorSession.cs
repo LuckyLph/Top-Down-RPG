@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -25,8 +24,6 @@ internal sealed class WorldGeneratorSession
     private const int ChunksInQuestion = 40;
     private const int WarningsInQuestion = 8;
 
-    private static readonly Regex Records = new("\"chunks\":\\[[^\\]]*\\]");
-    private static readonly Regex Entries = new("\"writtenEntries\":\\[[^\\]]*\\]");
 
     /// <summary>
     /// A chunk's state in the chunk grid: unchanged (its composed hash is its record's), changed (it is not, or the
@@ -529,8 +526,8 @@ internal sealed class WorldGeneratorSession
     internal string SettingsKey()
     {
         string json = EditorJsonUtility.ToJson(Generator);
-        json = Records.Replace(json, "\"chunks\":[]");
-        json = Entries.Replace(json, "\"writtenEntries\":[]");
+        json = EmptyArray(json, "chunks");
+        json = EmptyArray(json, "writtenEntries");
         StringBuilder key = new(json);
         foreach (ChunkRecord record in Generator.Chunks)
         {
@@ -564,6 +561,53 @@ internal sealed class WorldGeneratorSession
         }
 
         return key.ToString();
+    }
+
+    /// <summary>
+    /// <paramref name="json"/> with the array the first field named <paramref name="field"/> holds emptied, whatever
+    /// arrays and strings it nests (each chunk record's spawn point ids).
+    /// </summary>
+    private static string EmptyArray(string json, string field)
+    {
+        string start = $"\"{field}\":[";
+        int at = json.IndexOf(start, StringComparison.Ordinal);
+        if (at < 0)
+        {
+            return json;
+        }
+
+        int open = at + start.Length - 1;
+        int depth = 0;
+        bool quoted = false;
+        for (int i = open; i < json.Length; i++)
+        {
+            char c = json[i];
+            if (quoted)
+            {
+                if (c == '\\')
+                {
+                    i++;
+                }
+                else if (c == '"')
+                {
+                    quoted = false;
+                }
+            }
+            else if (c == '"')
+            {
+                quoted = true;
+            }
+            else if (c == '[')
+            {
+                depth++;
+            }
+            else if (c == ']' && --depth == 0)
+            {
+                return json.Substring(0, open + 1) + json.Substring(i);
+            }
+        }
+
+        return json;
     }
 
     /// <summary>

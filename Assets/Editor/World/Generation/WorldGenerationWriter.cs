@@ -74,14 +74,18 @@ public static class WorldGenerationWriter
     /// The missing chunks are created first (<see cref="WorldAuthoring.CreateChunk"/>). A locked chunk is never opened,
     /// and a chunk whose composed hash equals its record is skipped without being opened. Each other chunk is opened
     /// (or used as it is when its scene is open), refused when it no longer hashes to its record (to an empty chunk's
-    /// hash when it has none), written (<see cref="WriteChunk"/>), saved, recorded and closed. With
-    /// <paramref name="force"/> every listed chunk but the locked ones is written whatever its record says. The
-    /// generated entries then go first in the world's list, in the composition's order, before the entries made by
-    /// hand, and the generator (when it is an asset) and the world are saved. Refuses, with an error and writing nothing,
-    /// in play mode, for a composition of another world, for a composition with warnings about layer lists or
-    /// reachability (<see cref="WorldComposition.BlockingWarnings"/>) unless <paramref name="despiteWarnings"/>, for a
-    /// world that is no asset, and while chunks are to be created and an untitled scene has unsaved changes (creating a
-    /// chunk would replace it).
+    /// hash when it has none), written (<see cref="WriteChunk"/>), saved, recorded with the ids of the generated spawn
+    /// points it wrote, and closed; one whose scene cannot be saved fails and is not recorded. With
+    /// <paramref name="force"/> every listed chunk but the locked ones is written whatever its record says. A composed
+    /// mob whose id a chunk keeping its content (locked, not listed, refused or failed) still holds by its record is left
+    /// out of the chunk it moved to, so the world never holds two mobs of one id; a chunk written before such a chunk was
+    /// refused is written again without them. The generated entries then go first in the world's list, in the
+    /// composition's order, before the entries made by hand, each moving only once the chunk under its new place holds
+    /// the composition's ground, and the generator (when it is an asset) and the world are saved. Refuses, with an
+    /// error and writing nothing, in play mode, for a composition of another world, for a composition with warnings
+    /// about layer lists or reachability (<see cref="WorldComposition.BlockingWarnings"/>) unless
+    /// <paramref name="despiteWarnings"/>, for a world that is no asset, and while chunks are to be created and an
+    /// untitled scene has unsaved changes (a new chunk scene cannot open beside it).
     /// </summary>
     public static List<ChunkWrite> Write(WorldGenerator generator, WorldComposition composition, IEnumerable<Vector2Int> chunks, bool force, bool despiteWarnings = false)
     {
@@ -91,7 +95,7 @@ public static class WorldGenerationWriter
         List<Vector2Int> missing = problem == null ? Missing(generator, targets) : null;
         if (problem == null && missing.Count > 0 && HasUnsavedUntitledScene())
         {
-            problem = $"{generator.World.name}: {missing.Count} chunks are to be created and an untitled scene has unsaved changes, which creating a chunk would replace; save or close it first.";
+            problem = $"{generator.World.name}: {missing.Count} chunks are to be created and an untitled scene has unsaved changes, beside which a new chunk scene cannot open; save or close it first.";
         }
 
         if (problem != null)
@@ -115,14 +119,27 @@ public static class WorldGenerationWriter
             }
 
             string emptyHash = ChunkContent.EmptyHash(composition.LayerOrder);
+            Dictionary<string, List<Vector2Int>> holders = RecordedHolders(generator);
+            Dictionary<Vector2Int, Outcome> outcomes = new();
             foreach (Vector2Int coords in targets)
             {
-                ChunkWrite result = WriteOne(generator, composition, coords, force, created, emptyHash);
-                generatorChanged |= result.Outcome == Outcome.Written || result.Outcome == Outcome.Created;
+                ChunkWrite result = WriteOne(generator, composition, coords, force, created, emptyHash, LeftOut(generator, composition, coords, holders, targets, outcomes));
+                outcomes[coords] = result.Outcome;
                 results.Add(result);
             }
 
-            generatorChanged |= SetEntries(generator, composition);
+            foreach (Vector2Int coords in targets)
+            {
+                if (IsWritten(outcomes[coords]) && HoldsKeptIds(generator, coords, holders, targets, outcomes))
+                {
+                    ChunkWrite again = WriteOne(generator, composition, coords, true, created, emptyHash, LeftOut(generator, composition, coords, holders, targets, outcomes));
+                    outcomes[coords] = again.Outcome;
+                    results[results.FindIndex(result => result.Coords == coords)] = again;
+                }
+            }
+
+            generatorChanged |= results.Exists(result => IsWritten(result.Outcome));
+            generatorChanged |= SetEntries(generator, composition, outcomes);
         }
         finally
         {
@@ -161,9 +178,11 @@ public static class WorldGenerationWriter
     /// raised tilemap is set up and written (<see cref="AreaGroundSetup.SetUpRaised"/>), with the tiles of the region
     /// owning each cell, or removed when the chunk has no raised ground. The spawn points under the grid's
     /// <see cref="GeneratedMobSpawnsName"/> (made when missing) become the chunk's mobs in order, each at its cell's
-    /// centre with its prefab and its derived id set as it is made; every object outside that root stays.
+    /// centre with its prefab and its derived id set as it is made, but for the mobs whose ids are in
+    /// <paramref name="leaveOut"/> (another chunk keeping its content still holds them), in which case the hash returned
+    /// is the one read back from the grid; every object outside that root stays.
     /// </summary>
-    public static string WriteChunk(Grid grid, WorldComposition composition, Vector2Int coords)
+    public static string WriteChunk(Grid grid, WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut = null)
     {
         string problem = ChunkProblem(grid, composition, coords);
         if (problem == null && !grid.TryGetComponent(out AreaTerrain _))
@@ -196,7 +215,7 @@ public static class WorldGenerationWriter
             Tilemap[] tilemaps = WriteGround(grid, composition, coords, layers, changes);
             ListGrounds(grid, composition, coords, layers, tilemaps);
             WriteRaised(grid, raisedCells, raisedTiles, changes);
-            WriteMobSpawns(grid, composition, coords);
+            WriteMobSpawns(grid, composition, coords, leaveOut);
         }
         finally
         {
@@ -213,7 +232,9 @@ public static class WorldGenerationWriter
         }
 
         EditorSceneManager.MarkSceneDirty(scene);
-        return composition.ChunkAt(coords).ContentHash;
+        return MobsOf(composition, coords, leaveOut).Count < MobsOf(composition, coords, null).Count
+            ? ContentHash(grid, coords, composition.LayerOrder)
+            : composition.ChunkAt(coords).ContentHash;
     }
 
     /// <summary>
@@ -372,9 +393,11 @@ public static class WorldGenerationWriter
     }
 
     /// <summary>
-    /// Writes, or leaves, the chunk at <paramref name="coords"/> for <see cref="Write"/>, and reports it.
+    /// Writes, or leaves, the chunk at <paramref name="coords"/> for <see cref="Write"/>, and reports it, leaving out
+    /// the mobs of <paramref name="leftOut"/> (by id, with the chunk still holding each). A chunk whose scene could not
+    /// be saved fails and is not recorded, so the next write tries it again.
     /// </summary>
-    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, Dictionary<Vector2Int, double> created, string emptyHash)
+    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, Dictionary<Vector2Int, double> created, string emptyHash, Dictionary<string, Vector2Int> leftOut)
     {
         WorldDefinition world = generator.World;
         string name = WorldAuthoring.ChunkSceneName(world, coords);
@@ -430,19 +453,25 @@ public static class WorldGenerationWriter
             }
             else if (grid != null)
             {
-                string written = WriteChunk(grid, composition, coords);
+                string written = WriteChunk(grid, composition, coords, leftOut.Keys);
                 write = Lap(watch);
                 if (written == null)
                 {
                     detail = "not written; see the console.";
                 }
+                else if (!EditorSceneManager.SaveScene(scene))
+                {
+                    save = Lap(watch);
+                    detail = opened
+                        ? "written, but its scene could not be saved (is the file read-only?); not recorded, so the next write tries it again."
+                        : "written, but its scene could not be saved (is the file read-only?): the open scene holds the write unsaved, and it is not recorded.";
+                }
                 else
                 {
-                    EditorSceneManager.SaveScene(scene);
                     save = Lap(watch);
-                    generator.SetWrittenHash(coords, written);
+                    generator.SetWrittenHash(coords, written, MobsOf(composition, coords, leftOut.Keys).ConvertAll(mob => mob.Id));
                     outcome = isNew ? Outcome.Created : Outcome.Written;
-                    detail = Describe(grid, composition, coords, generator.RecordOf(coords));
+                    detail = Describe(grid, composition, coords, generator.RecordOf(coords), leftOut);
                 }
             }
         }
@@ -466,16 +495,169 @@ public static class WorldGenerationWriter
     }
 
     /// <summary>
-    /// What a written chunk holds, for its line: its layers (past 16 noted when it is not allowed wide) and its
-    /// generated spawn points.
+    /// What a written chunk holds, for its line: its layers (past 16 noted when it is not allowed wide), its generated
+    /// spawn points, and the ones <paramref name="leftOut"/> with the chunks still holding them.
     /// </summary>
-    private static string Describe(Grid grid, WorldComposition composition, Vector2Int coords, ChunkRecord record)
+    private static string Describe(Grid grid, WorldComposition composition, Vector2Int coords, ChunkRecord record, Dictionary<string, Vector2Int> leftOut)
     {
         int layers = grid.TryGetComponent(out TerrainBlendRenderer renderer) ? renderer.Layers.Count : 0;
-        RectInt bounds = ChunkCoords.Bounds(coords);
-        int mobs = composition.Mobs.FindAll(mob => bounds.Contains(mob.Cell)).Count;
+        int mobs = MobsOf(composition, coords, leftOut.Keys).Count;
         string past = layers > TerrainControlMap.NarrowLayers && (record == null || !record.AllowWide) ? $", past {TerrainControlMap.NarrowLayers}: it draws in the wide variant" : string.Empty;
-        return $"{layers} layers{past}, {mobs} generated spawn points.";
+        if (leftOut.Count == 0)
+        {
+            return $"{layers} layers{past}, {mobs} generated spawn points.";
+        }
+
+        List<string> holders = new();
+        foreach (Vector2Int holder in leftOut.Values)
+        {
+            string name = $"chunk {holder}";
+            if (!holders.Contains(name))
+            {
+                holders.Add(name);
+            }
+        }
+
+        return $"{layers} layers{past}, {mobs} generated spawn points; {leftOut.Count} left out, their ids still in {string.Join(", ", holders)}, which keeps its content: they are written here once it no longer holds them.";
+    }
+
+    /// <summary>
+    /// The composition's mobs in the chunk at <paramref name="coords"/>, in order, but for those whose ids are in
+    /// <paramref name="leaveOut"/> (none left out when null).
+    /// </summary>
+    private static List<WorldComposition.Mob> MobsOf(WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut)
+    {
+        RectInt bounds = ChunkCoords.Bounds(coords);
+        return composition.Mobs.FindAll(mob => bounds.Contains(mob.Cell) && (leaveOut == null || !leaveOut.Contains(mob.Id)));
+    }
+
+    /// <summary>
+    /// Every generated spawn point id the generator's records say a chunk holds, with the chunks recorded holding it.
+    /// </summary>
+    private static Dictionary<string, List<Vector2Int>> RecordedHolders(WorldGenerator generator)
+    {
+        Dictionary<string, List<Vector2Int>> holders = new();
+        foreach (ChunkRecord record in generator.Chunks)
+        {
+            if (record == null)
+            {
+                continue;
+            }
+
+            foreach (string id in record.MobIds)
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    continue;
+                }
+
+                if (!holders.TryGetValue(id, out List<Vector2Int> chunks))
+                {
+                    chunks = new List<Vector2Int>();
+                    holders.Add(id, chunks);
+                }
+
+                chunks.Add(record.Coords);
+            }
+        }
+
+        return holders;
+    }
+
+    /// <summary>
+    /// The composed mobs of the chunk at <paramref name="coords"/> to leave out, by id, each with the chunk holding it:
+    /// those another chunk's record says it holds while that chunk keeps its content through this write
+    /// (<see cref="Keeps"/>), as written, the world would hold two mobs of one id. A chunk to be written later in the
+    /// pass counts as giving its mobs up; <see cref="Write"/> writes again a chunk that turns out to share an id with one
+    /// refused or failed after it.
+    /// </summary>
+    private static Dictionary<string, Vector2Int> LeftOut(WorldGenerator generator, WorldComposition composition, Vector2Int coords, Dictionary<string, List<Vector2Int>> holders, List<Vector2Int> targets, Dictionary<Vector2Int, Outcome> outcomes)
+    {
+        Dictionary<string, Vector2Int> leftOut = new();
+        if (!Inside(generator.World, coords))
+        {
+            return leftOut;
+        }
+
+        foreach (WorldComposition.Mob mob in MobsOf(composition, coords, null))
+        {
+            if (string.IsNullOrEmpty(mob.Id) || !holders.TryGetValue(mob.Id, out List<Vector2Int> chunks))
+            {
+                continue;
+            }
+
+            foreach (Vector2Int holder in chunks)
+            {
+                if (holder != coords && Keeps(generator, holder, targets, outcomes))
+                {
+                    leftOut[mob.Id] = holder;
+                    break;
+                }
+            }
+        }
+
+        return leftOut;
+    }
+
+    /// <summary>
+    /// Whether the chunk at <paramref name="coords"/>, written in this pass, holds a generated spawn point id a chunk
+    /// keeping its content holds too.
+    /// </summary>
+    private static bool HoldsKeptIds(WorldGenerator generator, Vector2Int coords, Dictionary<string, List<Vector2Int>> holders, List<Vector2Int> targets, Dictionary<Vector2Int, Outcome> outcomes)
+    {
+        ChunkRecord record = generator.RecordOf(coords);
+        if (record == null)
+        {
+            return false;
+        }
+
+        foreach (string id in record.MobIds)
+        {
+            if (holders.TryGetValue(id, out List<Vector2Int> chunks) && chunks.Exists(holder => holder != coords && Keeps(generator, holder, targets, outcomes)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the chunk at <paramref name="coords"/> keeps what it holds through this write: it is locked, not to be
+    /// written, or was refused or failed.
+    /// </summary>
+    private static bool Keeps(WorldGenerator generator, Vector2Int coords, List<Vector2Int> targets, Dictionary<Vector2Int, Outcome> outcomes)
+    {
+        ChunkRecord record = generator.RecordOf(coords);
+        if ((record != null && record.Locked) || !targets.Contains(coords))
+        {
+            return true;
+        }
+
+        return outcomes.TryGetValue(coords, out Outcome outcome) && !IsWritten(outcome) && outcome != Outcome.Unchanged;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="outcome"/> wrote the chunk.
+    /// </summary>
+    private static bool IsWritten(Outcome outcome)
+    {
+        return outcome == Outcome.Written || outcome == Outcome.Created;
+    }
+
+    /// <summary>
+    /// Whether the chunk at <paramref name="coords"/> holds the composition's ground once this write is done: written
+    /// or unchanged in it, or, outside it, not locked and recorded as holding the composed content.
+    /// </summary>
+    private static bool HoldsComposedGround(WorldGenerator generator, WorldComposition composition, Vector2Int coords, Dictionary<Vector2Int, Outcome> outcomes)
+    {
+        if (outcomes.TryGetValue(coords, out Outcome outcome))
+        {
+            return IsWritten(outcome) || outcome == Outcome.Unchanged;
+        }
+
+        ChunkRecord record = generator.RecordOf(coords);
+        return Inside(generator.World, coords) && record != null && !record.Locked && record.WrittenHash == composition.ChunkAt(coords).ContentHash;
     }
 
     /// <summary>
@@ -722,12 +904,12 @@ public static class WorldGenerationWriter
     /// chunk at <paramref name="coords"/>, in the composition's order: the spawn points already there are reused in
     /// order, so an unchanged one keeps its place in the scene file, the others made, the rest destroyed, and each named
     /// after its prefab, scope and ordinal, at its cell's centre, with its prefab and its derived id set through its
-    /// serialized object. The root is made when missing and destroyed when the chunk has no mobs.
+    /// serialized object; the mobs whose ids are in <paramref name="leaveOut"/> are left out. The root is made when
+    /// missing and destroyed when the chunk has no mobs.
     /// </summary>
-    private static void WriteMobSpawns(Grid grid, WorldComposition composition, Vector2Int coords)
+    private static void WriteMobSpawns(Grid grid, WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut)
     {
-        RectInt bounds = ChunkCoords.Bounds(coords);
-        List<WorldComposition.Mob> mobs = composition.Mobs.FindAll(mob => bounds.Contains(mob.Cell));
+        List<WorldComposition.Mob> mobs = MobsOf(composition, coords, leaveOut);
         Transform root = grid.transform.Find(GeneratedMobSpawnsName);
         List<MobSpawnPoint> existing = new();
         if (root != null)
@@ -785,12 +967,38 @@ public static class WorldGenerationWriter
 
     /// <summary>
     /// Records the composition's entries first in the world's list (<see cref="MergeEntries"/>) and their names on the
-    /// generator, changing neither when it already holds them. Returns whether the generator changed.
+    /// generator, changing neither when it already holds them. An entry whose place lies in a chunk that does not hold
+    /// the composition's ground after this write (<see cref="HoldsComposedGround"/>: locked, refused, failed or not
+    /// written) stays where the world has it, or waits when the world has none yet, with a warning: it would stand on
+    /// ground that is not there. Returns whether the generator changed.
     /// </summary>
-    private static bool SetEntries(WorldGenerator generator, WorldComposition composition)
+    private static bool SetEntries(WorldGenerator generator, WorldComposition composition, Dictionary<Vector2Int, Outcome> outcomes)
     {
         WorldDefinition world = generator.World;
-        List<WorldDefinition.Entry> merged = MergeEntries(world.Entries, composition.Entries, generator.WrittenEntries);
+        List<WorldDefinition.Entry> generated = new();
+        List<string> held = new();
+        foreach (WorldDefinition.Entry entry in composition.Entries)
+        {
+            if (HoldsComposedGround(generator, composition, ChunkCoords.ChunkOf(ChunkCoords.CellOf(entry.Position)), outcomes))
+            {
+                generated.Add(entry);
+                continue;
+            }
+
+            held.Add(entry.Name);
+            WorldDefinition.Entry current = FindEntry(world.Entries, entry.Name);
+            if (current != null)
+            {
+                generated.Add(current);
+            }
+        }
+
+        if (held.Count > 0)
+        {
+            Debug.LogWarning($"{world.name}: the entries {string.Join(", ", held)} stay where they were, or wait to be made, until the chunks under their composed places are written.", generator);
+        }
+
+        List<WorldDefinition.Entry> merged = MergeEntries(world.Entries, generated, generator.WrittenEntries);
         bool same = merged.Count == world.Entries.Count;
         for (int i = 0; same && i < merged.Count; i++)
         {
@@ -803,7 +1011,7 @@ public static class WorldGenerationWriter
             world.SetEntries(merged.ToArray());
         }
 
-        List<string> names = composition.Entries.ConvertAll(entry => entry.Name);
+        List<string> names = generated.ConvertAll(entry => entry.Name);
         bool recorded = names.Count == generator.WrittenEntries.Count;
         for (int i = 0; recorded && i < names.Count; i++)
         {
@@ -816,6 +1024,22 @@ public static class WorldGenerationWriter
         }
 
         return !recorded;
+    }
+
+    /// <summary>
+    /// The entry of <paramref name="entries"/> named <paramref name="entryName"/>, or null.
+    /// </summary>
+    private static WorldDefinition.Entry FindEntry(IReadOnlyList<WorldDefinition.Entry> entries, string entryName)
+    {
+        foreach (WorldDefinition.Entry entry in entries)
+        {
+            if (entry != null && entry.Name == entryName)
+            {
+                return entry;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

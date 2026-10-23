@@ -196,14 +196,15 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Whether <paramref name="spawnPoint"/> spawns its mob as the chunk loads: unless the chunk's record says its mob
-    /// was killed and stays dead, by its config's respawn rule at the world clock's time now. A spawn point without a
+    /// Whether <paramref name="spawnPoint"/> spawns its mob as the chunk loads: unless the world's state says its mob
+    /// was killed and stays dead, by its config's respawn rule at the world clock's time now, whichever chunk's record
+    /// holds the death (a regenerated world can move a spawn point to another chunk). A spawn point without a
     /// persistent id always spawns.
     /// </summary>
     private bool ShouldSpawn(MobSpawnPoint spawnPoint)
     {
         string id = IdOf(spawnPoint);
-        if (id == null || !worldState.TryGetChunk(identity.Coords, out ChunkState chunk))
+        if (id == null || !worldState.TryFindMobDeath(id, identity.Coords, out ChunkState chunk))
         {
             return true;
         }
@@ -223,8 +224,9 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
     }
 
     /// <summary>
-    /// Records a killed mob's death in the chunk's record at the world clock's time, by its spawn point's id; warns for
-    /// a spawn point without one, whose mob comes back whenever the chunk loads.
+    /// Records a killed mob's death in the chunk's record at the world clock's time, by its spawn point's id, dropping
+    /// an older death of that id another chunk held; warns for a spawn point without one, whose mob comes back whenever
+    /// the chunk loads.
     /// </summary>
     private void HandleMobDied(Health health)
     {
@@ -242,7 +244,7 @@ public sealed class ChunkMobSpawner : IPostStartable, IDisposable
             return;
         }
 
-        worldState.Chunk(identity.Coords).RecordMobDeath(id, sessionSave.Time);
+        worldState.RecordMobDeath(identity.Coords, id, sessionSave.Time);
     }
 
     /// <summary>

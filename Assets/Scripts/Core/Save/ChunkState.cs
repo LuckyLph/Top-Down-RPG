@@ -38,6 +38,14 @@ public sealed class ChunkState
     }
 
     /// <summary>
+    /// Forgets the death of the mob of <paramref name="mobId"/>; false when it had none here.
+    /// </summary>
+    public bool ForgetMobDeath(string mobId)
+    {
+        return !string.IsNullOrEmpty(mobId) && deadMobs.Remove(mobId);
+    }
+
+    /// <summary>
     /// The game time the mob of <paramref name="mobId"/> died at; false when it has no recorded death.
     /// </summary>
     public bool TryGetMobDeath(string mobId, out double time)

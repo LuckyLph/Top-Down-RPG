@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// What a world generator keeps about one chunk of its world (Docs/WorldGeneration.md: Architecture): the hash of what
-/// the writer last wrote there, whether the writer leaves it alone, whether it may draw past 16 layers in the
-/// renderer's wide variant, and a seed that re-rolls its wilds alone.
+/// the writer last wrote there and the ids of the generated spawn points it wrote, whether the writer leaves it alone,
+/// whether it may draw past 16 layers in the renderer's wide variant, and a seed that re-rolls its wilds alone.
 /// </summary>
 [Serializable]
 public sealed class ChunkRecord
@@ -13,6 +14,8 @@ public sealed class ChunkRecord
     [SerializeField] private Vector2Int coords;
     [Tooltip("Hash of what the writer last wrote into the chunk; set by the writer.")]
     [SerializeField] private string writtenHash = string.Empty;
+    [Tooltip("The ids of the generated spawn points the writer last wrote into the chunk; set by the writer.")]
+    [SerializeField] private List<string> mobIds = new();
     [Tooltip("The writer never writes the chunk, so hand work in it stays.")]
     [SerializeField] private bool locked;
     [Tooltip("The chunk may list more than 16 materials, drawn by the renderer's slower wide variant.")]
@@ -40,15 +43,18 @@ public sealed class ChunkRecord
 
     public Vector2Int Coords => coords;
     public string WrittenHash => writtenHash;
+    public IReadOnlyList<string> MobIds => mobIds;
     public bool Locked => locked;
     public bool AllowWide => allowWide;
     public int WildsSeed => wildsSeed;
 
     /// <summary>
-    /// Records <paramref name="hash"/> as the hash of what the writer last wrote into the chunk.
+    /// Records <paramref name="hash"/> as the hash of what the writer last wrote into the chunk, and
+    /// <paramref name="ids"/> (none when null) as the ids of the generated spawn points it wrote.
     /// </summary>
-    internal void SetWrittenHash(string hash)
+    internal void SetWrittenHash(string hash, IEnumerable<string> ids = null)
     {
         writtenHash = hash ?? string.Empty;
+        mobIds = ids != null ? new List<string>(ids) : new List<string>();
     }
 }

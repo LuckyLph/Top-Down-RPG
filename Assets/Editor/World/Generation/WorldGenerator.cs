@@ -298,10 +298,11 @@ public sealed class WorldGenerator : ScriptableObject
     }
 
     /// <summary>
-    /// Records <paramref name="hash"/> as the written hash of the chunk at <paramref name="coords"/>, adding a record in
-    /// row order when it has none; the writer calls it once it has saved the chunk.
+    /// Records <paramref name="hash"/> as the written hash of the chunk at <paramref name="coords"/>, and
+    /// <paramref name="mobIds"/> (none when null) as the ids of the generated spawn points written there, adding a
+    /// record in row order when it has none; the writer calls it once it has saved the chunk.
     /// </summary>
-    internal void SetWrittenHash(Vector2Int coords, string hash)
+    internal void SetWrittenHash(Vector2Int coords, string hash, IEnumerable<string> mobIds = null)
     {
         ChunkRecord record = RecordOf(coords);
         if (record == null)
@@ -311,7 +312,7 @@ public sealed class WorldGenerator : ScriptableObject
             chunks.Insert(at < 0 ? chunks.Count : at, record);
         }
 
-        record.SetWrittenHash(hash);
+        record.SetWrittenHash(hash, mobIds);
     }
 
     /// <summary>

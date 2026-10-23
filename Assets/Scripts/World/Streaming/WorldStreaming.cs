@@ -17,8 +17,9 @@ using VContainer.Unity;
 /// the session is entered and as a joining player is prepared for. It is the <see cref="IWorldSession"/> <see cref="GameFlow"/>
 /// enters and leaves worlds through, and that brings the local player to a trip's entry. In a session it runs the
 /// client's half of the per-chunk handshake (Docs/WorldStreaming.md: Networking): a client reports each chunk ready
-/// once it is loaded, again for the chunks of its new world when its player's trip count changes, and releases each
-/// chunk before unloading it, waiting for the host; the host's streamer keeps every chunk a client holds.
+/// once it is loaded, again for the chunks of its new world when its player's trip count changes (but not the one it
+/// is releasing), and releases each chunk before unloading it, waiting for the host; the host's streamer keeps every
+/// chunk a client holds.
 /// </summary>
 public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisposable
 {
@@ -47,6 +48,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     private bool active;
     private PlayerHandle reportedPlayer;
     private int reportedTrip;
+    private ChunkId releasing;
 
     /// <summary>
     /// Creates the driver with a streamer made from <paramref name="settings"/>, loading through
@@ -465,7 +467,16 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
             return;
         }
 
-        await handshake.ReleaseChunkAsync(ChunkId.Of(world, coords), cancellation);
+        releasing = ChunkId.Of(world, coords);
+        try
+        {
+            await handshake.ReleaseChunkAsync(releasing, cancellation);
+        }
+        finally
+        {
+            releasing = default;
+        }
+
         if (!worlds.TryGet(world, out loaded) || !loaded.Chunks.TryGetValue(coords, out Scene scene))
         {
             return;
@@ -486,7 +497,9 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
 
     /// <summary>
     /// When the local player's trip count changes, reports again every loaded chunk of its new world with the new count:
-    /// a chunk kept from an earlier visit is up here, and its report from before the trip may have been ignored.
+    /// a chunk kept from an earlier visit is up here, and its report from before the trip may have been ignored. A chunk
+    /// whose release waits for the host is left out: it unloads once the host acknowledges, and is reported as it loads
+    /// again; reported now, the host would hold it and show it its objects as it goes.
     /// </summary>
     private void HandlePlayerWorldChanged(PlayerHandle player, WorldDefinition world)
     {
@@ -507,7 +520,11 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
 
         foreach (Vector2Int coords in loaded.Chunks.Keys)
         {
-            handshake.ReportChunkReady(trip, ChunkId.Of(world, coords));
+            ChunkId chunk = ChunkId.Of(world, coords);
+            if (!chunk.Equals(releasing))
+            {
+                handshake.ReportChunkReady(trip, chunk);
+            }
         }
     }
 

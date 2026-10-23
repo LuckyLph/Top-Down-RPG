@@ -225,11 +225,18 @@ public sealed class PathFollower2D
 
     /// <summary>
     /// After the grid changed: keeps the path when every remaining segment can still be walked, otherwise rebuilds it
-    /// from <paramref name="position"/> toward the same goal. False when no path is left.
+    /// from <paramref name="position"/> toward the same goal, and drops it when it cannot be rebuilt (no route left, or
+    /// no navigation left at all, as a world's last page goes). False when no path is left.
     /// </summary>
     private bool RevalidatePath(Vector2 position)
     {
         pathGridVersion = navigation.Version;
+        if (!IsConfigured)
+        {
+            Clear();
+            return false;
+        }
+
         if (IsRemainingPathWalkable(position))
         {
             return true;

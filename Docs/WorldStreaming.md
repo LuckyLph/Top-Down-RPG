@@ -650,6 +650,18 @@ Testlands' waystones have no art: `start` is on the road where every new player 
 7. Kill Player 2 and, while it is dead, Join Game in Player 3: Player 3 sees Player 2 lying dead, then come back at its waystone.
 8. Stop Play Mode in the main editor, press Play and click Continue: the host's discovered `north` is kept (die near it: it respawns there). In Player 2, New Game and walking to `north` writes the discovery to `save.Player2.json` only.
 
+### Review fixes (after the merge into main)
+
+A review of Phases 1 to 9 on `main` found these, fixed with tests on `feature/character-animation`:
+- **A world whose root scene fails to load no longer hangs the game.** `ChunkStreamer.IsSettled` accepted the failed world but waited for chunks it never tries (it loads no chunk of a world that is not loaded), so entering, arriving or preparing a joining player there waited forever with the screen faded out, and every later transition was refused. A failed world now counts as settled.
+- **A chunk being released is neither reported nor stood on.** When the local player's trip count changed, a client reported every loaded chunk again, including one whose release still waited for the host's acknowledgement; the host then held it again and showed it its objects while the client unloaded it (destroy errors on the copies, a chunk held for good, its mobs invisible to that client when it came back). The release in flight is now skipped (it is reported as it loads again), and a player arriving around a chunk being unloaded is not settled until the chunk has loaded again, rather than fading in on ground about to go.
+- **Deaths follow their spawn point's id across the world.** A mob's death was recorded and looked up only in the record of the chunk holding its spawn point, so a regeneration moving a spawn point (with its derived id) to another chunk brought the mob back. `WorldState.TryFindMobDeath` now finds a death in any chunk's record, the home chunk's first, and recording one drops the same id elsewhere.
+- **A save this build cannot read is kept.** Host Game treated a malformed save, or one from a newer build, like no save, and its first save replaced it. `GameSave` now keeps a copy (`save.json.bak`, numbered after the first) before the first write over a save it cannot read, and writes nothing when the copy fails.
+- **Creating a world or a chunk keeps the open scenes.** With any untitled scene open it replaced every open scene without asking to save. It now closes only a clean untitled scene, and refuses, making nothing, beside an untitled scene with unsaved changes.
+- **A dead player cannot take an exit.** The host approved trips for players it had just seen die; `LocalTripAuthority.TryApprove` refuses them (respawns go through `Send`).
+- **The palette's Add the layer relinks a chunk.** A layer added with it was not in the neighbours' skirts until the chunks were reopened.
+- **A path over unloaded ground is dropped.** A follower whose navigation emptied kept walking its old waypoints; it drops the path when it cannot rebuild it.
+
 ### Later: world generation (its own plan)
 
 - A world generator.

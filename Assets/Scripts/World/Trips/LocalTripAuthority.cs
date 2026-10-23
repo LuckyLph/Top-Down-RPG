@@ -5,7 +5,8 @@ using UnityEngine;
 /// <summary>
 /// The trip's checks, offline and on the host (Docs/WorldStreaming.md: Travelling between worlds); in play
 /// <see cref="NetworkTripAuthority"/> sends requests here, from this machine or over the network. For each request it
-/// checks that the exit is loaded in the player's world, that the player stands at it (within <see cref="ReachCells"/>
+/// checks that the player is alive (its machine may not know yet that it died), that the exit is loaded in the player's
+/// world, that the player stands at it (within <see cref="ReachCells"/>
 /// of its cells, where the request says its machine has it, or else where its body is) and that it leads to a listed
 /// world with an entry (an unknown entry name falls back to the default entry, with a warning). Then it prepares the
 /// trip, holding the arrival in <see cref="TripArrivals"/> so the target world and the chunks around the entry start
@@ -65,6 +66,12 @@ public sealed class LocalTripAuthority : ITripAuthority
         if (player == null || player.Transform == null)
         {
             refusal = "the player is gone.";
+            return false;
+        }
+
+        if (player.Health != null && player.Health.IsDead)
+        {
+            refusal = "the player is dead; it travels only to the waystone it respawns at.";
             return false;
         }
 

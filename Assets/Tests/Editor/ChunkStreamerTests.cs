@@ -5,8 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="ChunkStreamer"/>: worlds and chunks load around the players nearest first, one action at a
-/// time, unload past the hysteresis, an empty world waits out its grace before going, and a chunk another machine holds
-/// never unloads until released.
+/// time, unload past the hysteresis, an empty world waits out its grace before going, a chunk another machine holds
+/// never unloads until released, and a player is settled only on loaded ground (a world that failed to load counting as
+/// done, a chunk being unloaded as not).
 /// </summary>
 public class ChunkStreamerTests
 {
@@ -201,6 +202,52 @@ public class ChunkStreamerTests
         Assert.That(Drain(streamer), Is.EqualTo(new[] { "LoadChunk A (1, 0)" }), "The failed chunk is not tried again.");
         Assert.That(streamer.IsSettled(player), Is.True);
         Assert.That(streamer.IsChunkLoaded(world, new Vector2Int(0, 0)), Is.False);
+    }
+
+    /// <summary>
+    /// A world whose root scene failed to load counts as settled, so whoever waits for it goes on; none of its chunks is
+    /// tried, and it is not tried again while it stays recorded.
+    /// </summary>
+    [Test]
+    public void IsSettled_WhenTheWorldFailedToLoad_WithNoChunkTried()
+    {
+        WorldDefinition world = World("A", Vector2Int.zero, 2);
+        ChunkStreamer streamer = Streamer();
+        StreamInterest player = new(world, new Vector2(60.5f, 30.5f));
+        streamer.SetInterests(new[] { player }, 0f);
+
+        Assert.That(streamer.TryNext(out StreamAction load), Is.True);
+        Assert.That(load.Kind, Is.EqualTo(StreamActionKind.LoadWorld));
+        streamer.Complete(false);
+
+        Assert.That(streamer.IsSettled(player), Is.True, "Nothing more will load there.");
+        Assert.That(Drain(streamer), Is.Empty, "Neither the world nor its chunks are tried.");
+    }
+
+    /// <summary>
+    /// A chunk being unloaded still counts as loaded until its unload completes, but a player arriving around it is not
+    /// settled meanwhile (a trip back as a world's grace runs out): only once the chunk has gone and loaded again.
+    /// </summary>
+    [Test]
+    public void IsSettled_WaitsForAChunkBeingUnloaded_ToLoadAgain()
+    {
+        WorldDefinition world = World("A", Vector2Int.zero, 4);
+        ChunkStreamer streamer = Streamer();
+        StreamInterest near = new(world, new Vector2(70.5f, 30.5f));
+        streamer.SetInterests(new[] { near }, 0f);
+        Drain(streamer);
+        streamer.SetInterests(new[] { new StreamInterest(world, new Vector2(100.5f, 30.5f)) }, 1f);
+        Assert.That(streamer.TryNext(out StreamAction unload), Is.True);
+        Assert.That(unload.ToString(), Is.EqualTo("UnloadChunk A (0, 0)"));
+
+        streamer.SetInterests(new[] { near }, 2f);
+        Assert.That(streamer.IsChunkLoaded(world, Vector2Int.zero), Is.True, "It counts as loaded until its unload completes.");
+        Assert.That(streamer.IsSettled(near), Is.False, "Not while it unloads.");
+
+        streamer.Complete(true);
+        Assert.That(streamer.IsSettled(near), Is.False, "Not while it is gone.");
+        Assert.That(Drain(streamer), Is.EqualTo(new[] { "LoadChunk A (0, 0)" }));
+        Assert.That(streamer.IsSettled(near), Is.True);
     }
 
     /// <summary>

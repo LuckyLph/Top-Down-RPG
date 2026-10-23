@@ -11,4 +11,11 @@ public interface ISaveStore
     /// Replaces the stored text with <paramref name="contents"/>; returns whether it was written.
     /// </summary>
     bool Write(string contents);
+
+    /// <summary>
+    /// Keeps a copy of what is stored, whether it can be read or not, beside it under a name no copy has yet, before
+    /// something replaces it: <paramref name="copy"/> names it, or is null when nothing is stored. Returns false when
+    /// the copy could not be made.
+    /// </summary>
+    bool KeepCopy(out string copy);
 }

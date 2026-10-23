@@ -213,8 +213,9 @@ public sealed class ChunkStreamer
     }
 
     /// <summary>
-    /// Whether <paramref name="interest"/>'s world and every chunk within its load extents are loaded (chunks that
-    /// failed to load count as done), so a player placed there stands on loaded ground.
+    /// Whether <paramref name="interest"/>'s world and every chunk within its load extents are loaded, none of them
+    /// being unloaded, so a player placed there stands on loaded ground. Chunks that failed to load count as done, and
+    /// so does a world whose root scene failed to load, whose chunks are never tried: whoever waits for it goes on.
     /// </summary>
     public bool IsSettled(StreamInterest interest)
     {
@@ -224,17 +225,31 @@ public sealed class ChunkStreamer
             return false;
         }
 
+        if (record.Failed)
+        {
+            return true;
+        }
+
         scratch.Clear();
         AddLoadChunks(interest, scratch);
         foreach (Vector2Int chunk in scratch)
         {
-            if (!record.Chunks.Contains(chunk) && !record.FailedChunks.Contains(chunk))
+            if ((!record.Chunks.Contains(chunk) && !record.FailedChunks.Contains(chunk)) || IsUnloading(record.World, chunk))
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Whether the running action unloads the chunk at <paramref name="chunk"/> of <paramref name="world"/>, which
+    /// still counts as loaded until it completes.
+    /// </summary>
+    private bool IsUnloading(WorldDefinition world, Vector2Int chunk)
+    {
+        return pending.HasValue && pending.Value.Kind == StreamActionKind.UnloadChunk && pending.Value.World == world && pending.Value.Chunk == chunk;
     }
 
     /// <summary>

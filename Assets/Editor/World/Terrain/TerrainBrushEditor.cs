@@ -161,7 +161,8 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// <summary>
     /// Adds <paramref name="material"/>'s ground layer to the area of <paramref name="target"/>, a ground layer, at its
     /// place in the style's layer order (<see cref="GroundLayerMigration.AddLayer(Grid, TerrainMaterial)"/>, one undo
-    /// step), and returns its tilemap; null, after logging why, when it cannot be added.
+    /// step), and returns its tilemap; null, after logging why, when it cannot be added. On a chunk of a world it links
+    /// the chunk with its neighbours again (<see cref="WorldChunk.RefreshLinks"/>), so their skirts read the new layer.
     /// </summary>
     internal static Tilemap AddMissingLayer(GameObject target, TerrainMaterial material)
     {
@@ -171,7 +172,13 @@ public class TerrainBrushEditor : DualGridBrushEditor
             return null;
         }
 
-        return GroundLayerMigration.AddLayer(renderer.GetComponent<Grid>(), material);
+        Tilemap added = GroundLayerMigration.AddLayer(renderer.GetComponent<Grid>(), material);
+        if (added != null && renderer.TryGetComponent(out WorldChunk chunk))
+        {
+            chunk.RefreshLinks();
+        }
+
+        return added;
     }
 
     /// <summary>

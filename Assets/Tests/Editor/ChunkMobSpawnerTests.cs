@@ -10,7 +10,8 @@ using VContainer;
 /// <summary>
 /// Tests for <see cref="ChunkMobSpawner"/> and <see cref="ChunkNetworkPrefabs"/>: a chunk's mobs spawned offline and on
 /// the host with their home chunk, despawned when the chunk unloads or its scope goes, spawn points without a prefab,
-/// a killed mob recorded in its world's state and skipped as its chunk loads until its respawn delay has passed, and
+/// a killed mob recorded in its world's state and skipped as its chunk loads until its respawn delay has passed, also
+/// when a regeneration moved its spawn point to another chunk, and
 /// on a client each mob prefab registered once however many chunks list it, each copy arriving in its chunk.
 /// </summary>
 public class ChunkMobSpawnerTests
@@ -194,6 +195,40 @@ public class ChunkMobSpawnerTests
         Assert.That(late.Mobs.Count, Is.EqualTo(2), "The killed weasel comes back once its delay has passed; the boss stays dead.");
         Assert.That(chunk.TryGetMobDeath("weasel-killed", out _), Is.False, "A mob that came back is forgotten.");
         Assert.That(chunk.TryGetMobDeath("boss", out _), Is.True);
+    }
+
+    /// <summary>
+    /// A mob killed in one chunk whose spawn point a regeneration moved, with its id, into another chunk stays dead as
+    /// that chunk loads; killed there again, its death moves to that chunk's record.
+    /// </summary>
+    [Test]
+    public void AKilledMob_StaysDead_WhenARegenerationMovedItsSpawnPointToAnotherChunk()
+    {
+        MobController boss = CreateMobTemplate(networked: false, MobConfig.Create(respawns: false));
+        MobController weasel = CreateMobTemplate(networked: false, MobConfig.Create(respawnDelaySeconds: 100f));
+        weasel.gameObject.AddComponent<Health>();
+        MobSpawnPoint moved = CreateSpawnPoint("MobSpawn_Moved", boss, LocalToWorld(70.5f, 10.5f), "region-boss");
+        MobSpawnPoint movedWeasel = CreateSpawnPoint("MobSpawn_MovedWeasel", weasel, LocalToWorld(80.5f, 10.5f), "region-weasel");
+        WorldState state = sessionSave.WorldOf(world.WorldId);
+        state.Chunk(Vector2Int.zero).RecordMobDeath("region-boss", 0d);
+        state.Chunk(Vector2Int.zero).RecordMobDeath("region-weasel", 0d);
+        gameClock.Time = 150f;
+
+        ChunkMobSpawner spawner = CreateSpawner(new[] { moved, movedWeasel }, new FakeNetworkObjects(), new WorldNavigation(new NavigationPagePool()));
+        spawner.PostStart();
+        Assert.That(spawner.Mobs.Count, Is.EqualTo(1), "The boss killed in chunk (0, 0) stays dead in chunk (1, 0); the weasel's delay has passed.");
+        Assert.That((Vector2)spawner.Mobs[0].transform.position, Is.EqualTo((Vector2)movedWeasel.transform.position));
+        Assert.That(state.Chunk(Vector2Int.zero).TryGetMobDeath("region-weasel", out _), Is.False, "The weasel that came back is forgotten.");
+
+        Health health = spawner.Mobs[0].GetComponent<Health>();
+        health.ApplyDamage(health.MaxHealth);
+        state.Chunk(Vector2Int.zero).RecordMobDeath("region-weasel", 10d);
+        Assert.That(state.TryFindMobDeath("region-weasel", Chunk, out ChunkState holder), Is.True);
+        Assert.That(holder.Coords, Is.EqualTo(Chunk), "Its home chunk's record is looked at first.");
+        state.RecordMobDeath(Chunk, "region-weasel", 160d);
+        Assert.That(state.Chunk(Vector2Int.zero).TryGetMobDeath("region-weasel", out _), Is.False, "A death recorded at home drops the one another chunk held.");
+        Assert.That(state.Chunk(Chunk).TryGetMobDeath("region-weasel", out double diedAt), Is.True);
+        Assert.That(diedAt, Is.EqualTo(160d));
     }
 
     /// <summary>

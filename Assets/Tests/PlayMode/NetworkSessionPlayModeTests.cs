@@ -12,7 +12,8 @@ using UnityEditor;
 /// <summary>
 /// PlayMode tests for <see cref="NetworkSession"/> hosting and joining from the main menu: hosting the starting world,
 /// a joined client following an in-process host into the world it is placed in, reporting and releasing chunks, taking
-/// a trip the host sends, losing the host mid-join and mid-trip, join refusals, version checks and join timeouts.
+/// a trip the host sends (also while a chunk's release waits for the host), losing the host mid-join and mid-trip, join
+/// refusals, version checks and join timeouts.
 /// </summary>
 public class NetworkSessionPlayModeTests
 {
@@ -129,6 +130,53 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
         Assert.That(session.IsActive, Is.False);
         Assert.That(saveStore.WriteCount, Is.Zero, "A joined client never saves.");
+    }
+
+    /// <summary>
+    /// A trip reaching the client while it waits for the host to acknowledge the release of a chunk (a trip back into a
+    /// world as its grace runs out) does not report that chunk ready again, nor lands the player on it: the chunk goes
+    /// once the host acknowledges, then loads again and is reported for the new trip, and only then does the client
+    /// arrive.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ATripDuringAChunksRelease_ReportsTheChunkOnlyOnceItHasLoadedAgain()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveStore());
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        WorldDefinition testlands = gameFlow.Scenes.StartingWorld;
+        Vector2 entry = testlands.ToWorld(testlands.FindEntry("start").Position);
+        remoteHost = StartRemoteHost(session, gameFlow.Scenes);
+        remoteHost.SpawnWorld = testlands;
+        remoteHost.SpawnPosition = entry;
+        Object.FindAnyObjectByType<MainMenuController>().JoinGame();
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInGame && !gameFlow.IsTransitioning, "the client to load the world it was placed in");
+        ChunkId start = ChunkId.Of(testlands, Vector2Int.zero);
+        yield return SceneBootTestHelper.WaitUntil(() => remoteHost.Ready.Contains((0, start)), "the client to report its first chunk ready for trip 0");
+        Worlds worlds = SceneBootTestHelper.ResolveFromGameplay<Worlds>();
+        LocalPlayer local = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
+
+        remoteHost.HeldAcknowledgements.Add(start);
+        local.Controller.Teleport(testlands.ToWorld(new Vector2(100.5f, 100.5f)));
+        yield return SceneBootTestHelper.WaitUntil(() => remoteHost.Releasing.Contains(start), "the client to release the chunk it walked away from");
+        PlayerController hostCopy = remoteHost.PlayerOf(remoteHost.LastClientId);
+        remoteHost.PlayerWorlds.Travel(hostCopy.GetComponent<PlayerNetworkSync>().Handle, testlands, "start");
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(local.Transform.position, entry) < 1f, "the client to bring its player to the entry");
+        for (int frame = 0; frame < 30; frame++)
+        {
+            yield return null;
+        }
+
+        Assert.That(remoteHost.Ready.Contains((1, start)), Is.False, "The chunk being released is not reported for the trip.");
+        Assert.That(gameFlow.IsTransitioning, Is.True, "The client waits for the ground at the entry to load again.");
+
+        remoteHost.Acknowledge(remoteHost.LastClientId, start);
+        yield return SceneBootTestHelper.WaitUntil(() => remoteHost.Ready.Contains((1, start)), "the chunk to load again and be reported for the trip");
+        yield return SceneBootTestHelper.WaitUntil(() => !gameFlow.IsTransitioning, "the client to arrive");
+        Assert.That(worlds.TryGet(testlands, out LoadedWorld loaded) && loaded.Chunks.ContainsKey(Vector2Int.zero), Is.True, "The client stands on its loaded chunk.");
+
+        remoteHost.Manager.Shutdown();
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
     }
 
     /// <summary>

@@ -319,6 +319,27 @@ public class WorldNavigationTests
     }
 
     /// <summary>
+    /// Unloading every page of a world a path runs over (the world emptying as its last chunk goes) drops the path on
+    /// the follower's next tick, partial or not, rather than walking it over unloaded cells.
+    /// </summary>
+    [Test]
+    public void UnloadingEveryPage_DropsTheFollowersPath()
+    {
+        layout = OpenLayout();
+        WorldNavigation world = CreateWorld(new NavigationPagePool(), new Vector2Int(0, 0), new Vector2Int(1, 0));
+        PathFollower2D partial = new();
+        partial.Configure(world, null, new PathFollowerSettings2D(0.1f, 0.1f));
+        Vector2 start = new(10.5f, 10.5f);
+        Assert.That(partial.BuildPath(start, new Vector2(100.5f, 20.5f), allowPartial: true), Is.True);
+
+        RemoveChunk(world, new Vector2Int(1, 0));
+        RemoveChunk(world, new Vector2Int(0, 0));
+
+        Assert.That(partial.Tick(start, 5f, 0.02f), Is.EqualTo(Vector2.zero));
+        Assert.That(partial.HasPath, Is.False, "No navigation is left to walk the path on.");
+    }
+
+    /// <summary>
     /// A tile painted on a chunk's raised tilemap at its border reaches the neighbouring page: lowering the plateau's
     /// edge cell puts a cliff side on the raised cell across the border.
     /// </summary>

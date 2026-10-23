@@ -153,6 +153,25 @@ public class WorldBrushStrokeTests
     }
 
     /// <summary>
+    /// The palette's Add the layer button on a chunk (<see cref="TerrainBrushEditor.AddMissingLayer"/>) links the chunk
+    /// with its neighbours again: chunk (0, 0), which already draws sand, reads sand painted on the new sand layer of
+    /// chunk (1, 0) within its skirt.
+    /// </summary>
+    [Test]
+    public void AddingAMissingLayerOnAChunk_GivesTheNeighboursSkirtItsCells()
+    {
+        Tilemap added = TerrainBrushEditor.AddMissingLayer(Layer(new Vector2Int(1, 0), grass).gameObject, sand);
+        Assert.That(added, Is.Not.Null);
+
+        added.SetTile(new Vector3Int(65, 10, 0), sandTile);
+
+        TerrainBlendRenderer west = chunks[Vector2Int.zero].GetComponent<TerrainBlendRenderer>();
+        int sandIndex = new List<TerrainMaterial>(west.BuiltMaterials).IndexOf(sand);
+        Assert.That(sandIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(west.ControlMap.GetCell(new Vector3Int(65, 10, 0)) & (1u << sandIndex), Is.Not.Zero, "Chunk (0, 0)'s skirt shows the sand.");
+    }
+
+    /// <summary>
     /// Erasing grass across the border at y = 64 empties the cells on both chunks' grass layers.
     /// </summary>
     [Test]

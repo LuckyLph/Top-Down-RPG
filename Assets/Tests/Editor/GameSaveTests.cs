@@ -7,8 +7,9 @@ using UnityEngine.TestTools;
 /// <summary>
 /// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/>, <see cref="SessionSave"/>, <see cref="FileSaveStore"/>
 /// and <see cref="InstanceFiles"/>: the version 2 save keyed by player id and world id round trips, older, newer and
-/// unreadable saves are ignored with a warning, the world clock continues from the saved time, the save file is written
-/// safely, and a Multiplayer Play Mode virtual player keeps files of its own.
+/// unreadable saves are ignored with a warning and kept as a copy before the first write replaces them, the world clock
+/// continues from the saved time, the save file is written safely, and a Multiplayer Play Mode virtual player keeps
+/// files of its own.
 /// </summary>
 public class GameSaveTests
 {
@@ -185,6 +186,61 @@ public class GameSaveTests
 
         LogAssert.Expect(LogType.Warning, new Regex("format version 0"));
         Assert.That(new GameSave(new MemorySaveStore { Contents = "{}" }).TryLoad(out _), Is.False);
+    }
+
+    /// <summary>
+    /// The first write over a stored save this build cannot read (one that does not parse, or of a newer format
+    /// version) keeps a copy of it first, with a warning, and the next writes keep none; a save this build reads, or
+    /// nothing stored, is written over with no copy.
+    /// </summary>
+    [Test]
+    public void WritingOverASaveThisBuildCannotRead_KeepsACopyOfItFirst()
+    {
+        SessionSave session = new(new ManualClock());
+        session.SetPlace(Alice, WorldA, Vector2.one);
+        string newer = new GameSaveData(0d, new GameSaveData.Player[0], new GameSaveData.World[0]).ToJson()
+            .Replace($"\"version\": {GameSaveData.CurrentVersion}", $"\"version\": {GameSaveData.CurrentVersion + 1}");
+        foreach (string unreadable in new[] { "{ not json", newer })
+        {
+            MemorySaveStore store = new() { Contents = unreadable };
+            GameSave save = new(store);
+
+            LogAssert.Expect(LogType.Warning, new Regex("was kept as 'copy 1'"));
+            Assert.That(save.Write(session.ToData()), Is.True);
+            Assert.That(store.KeptCopies, Is.EqualTo(new[] { unreadable }), "The unreadable save is kept before it is replaced.");
+            Assert.That(save.Write(session.ToData()), Is.True);
+            Assert.That(store.KeptCopies.Count, Is.EqualTo(1), "Writing over its own save keeps no copy.");
+            Assert.That(store.WriteCount, Is.EqualTo(2));
+        }
+
+        MemorySaveStore readable = new() { Contents = session.ToData().ToJson() };
+        MemorySaveStore empty = new();
+        Assert.That(new GameSave(readable).Write(session.ToData()), Is.True);
+        Assert.That(new GameSave(empty).Write(session.ToData()), Is.True);
+        Assert.That(readable.KeptCopies, Is.Empty, "A save this build reads is written over, as a new game does.");
+        Assert.That(empty.KeptCopies, Is.Empty);
+    }
+
+    /// <summary>
+    /// The file store keeps a copy of the save beside it, numbered after the first, and none when there is no file.
+    /// </summary>
+    [Test]
+    public void FileSaveStore_KeepsNumberedCopies()
+    {
+        string path = Path.Combine(CreateTempDirectory(), FileSaveStore.DefaultFileName);
+        FileSaveStore store = new(path);
+        Assert.That(store.KeepCopy(out string none), Is.True);
+        Assert.That(none, Is.Null);
+
+        store.Write("first");
+        Assert.That(store.KeepCopy(out string copy), Is.True);
+        store.Write("second");
+        Assert.That(store.KeepCopy(out string second), Is.True);
+
+        Assert.That(copy, Is.EqualTo(path + ".bak"));
+        Assert.That(second, Is.EqualTo(path + ".bak2"));
+        Assert.That(File.ReadAllText(copy), Is.EqualTo("first"));
+        Assert.That(File.ReadAllText(second), Is.EqualTo("second"));
     }
 
     /// <summary>

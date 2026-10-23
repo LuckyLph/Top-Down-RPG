@@ -22,7 +22,10 @@ using Object = UnityEngine.Object;
 /// hash follows paint on any layer and the generated spawn points, and nothing else; objects outside the generated root
 /// and entries made by hand stay; a locked chunk is never opened, an unchanged one is skipped without being opened, one
 /// changed by hand is refused unless forced; a second write changes no file; and the written world validates, bakes
-/// its coasts and keeps its derived ids through Repair ids.
+/// its coasts and keeps its derived ids through Repair ids; an entry moves only once the chunk under its new place is
+/// written; a mob whose id a chunk keeping its content still holds is left out of the chunk it moved to, also when that
+/// chunk is refused after it in the same write. Creating a chunk keeps the open scenes' unsaved changes and refuses
+/// beside an untitled scene with some.
 /// </summary>
 public class WorldGenerationWriterTests
 {
@@ -280,6 +283,43 @@ public class WorldGenerationWriterTests
     }
 
     /// <summary>
+    /// On disk, creating a chunk (as a write does for a missing one) closes a clean untitled scene and keeps every other
+    /// open scene with its unsaved changes, and beside an untitled scene with unsaved changes it refuses, making nothing.
+    /// </summary>
+    [Test]
+    public void CreatingAChunk_KeepsTheOpenScenesChanges_AndRefusesBesideAnUnsavedUntitledScene()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        Assert.That(AssetDatabase.IsValidFolder(DiskFolder), Is.False, $"{DiskFolder} is left over from an earlier run");
+        Assert.That(WorldLayout.TryFindFreeOrigin(new Vector2Int(2, 1), WorldLayout.AllWorlds(), out Vector2Int origin), Is.True, "a free slot");
+        WorldDefinition world = WorldAuthoring.CreateWorld(DiskWorldName, origin, new Vector2Int(2, 1), DiskFolder);
+        Scene root = EditorSceneManager.OpenScene($"{DiskFolder}/{DiskWorldName}/World_{DiskWorldName}.unity", OpenSceneMode.Additive);
+        Assert.That(SceneManager.sceneCount, Is.EqualTo(1), "The world's scene replaced the clean untitled one, the only scene open.");
+        SceneManager.MoveGameObjectToScene(new GameObject("Unsaved"), root);
+        EditorSceneManager.MarkSceneDirty(root);
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+
+        WorldAuthoring.CreateChunk(world, Vector2Int.zero);
+
+        Assert.That(world.HasChunk(Vector2Int.zero), Is.True);
+        Assert.That(root.isLoaded && root.isDirty, Is.True, "The open scene keeps its unsaved changes.");
+        Assert.That(Array.Exists(root.GetRootGameObjects(), gameObject => gameObject.name == "Unsaved"), Is.True);
+        Assert.That(SceneManager.sceneCount, Is.EqualTo(1), "The clean untitled scene was closed, and the new chunk's scene too.");
+
+        Scene untitled = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.MoveGameObjectToScene(new GameObject("Unsaved too"), untitled);
+        EditorSceneManager.MarkSceneDirty(untitled);
+        Vector2Int east = new(1, 0);
+
+        Assert.Throws<InvalidOperationException>(() => WorldAuthoring.CreateChunk(world, east));
+
+        Assert.That(world.HasChunk(east), Is.False, "Nothing was made.");
+        Assert.That(File.Exists($"{DiskFolder}/{DiskWorldName}/Chunks/{WorldAuthoring.ChunkSceneName(world, east)}.unity"), Is.False);
+        Assert.That(untitled.isLoaded && untitled.isDirty, Is.True, "The untitled scene keeps its changes.");
+        Assert.That(root.isLoaded && root.isDirty, Is.True);
+    }
+
+    /// <summary>
     /// On disk, a Clearing on a 2 x 2 world created with no chunks and an entry made by hand: the first write creates
     /// and writes every chunk, records its hash, puts the Clearing's waystone first and keeps the hand-made entry after
     /// it, and with the whole-world steps the world validates, every coast map is baked and fresh, and Repair ids
@@ -345,6 +385,7 @@ public class WorldGenerationWriterTests
 
         files = Snapshot();
         opened.Clear();
+        Vector2 clearingBefore = world.FindEntry(TestWorldGenerators.Clearing).Position;
         List<WorldGenerationWriter.ChunkWrite> third = WatchingOpens(opened, () => WorldGenerationWriter.Write(generator, reseeded, null, false));
         Assert.That(OutcomeOf(third, locked), Is.EqualTo(WorldGenerationWriter.Outcome.Locked), "the locked chunk");
         Assert.That(opened, Has.None.EndsWith(SceneFileOf(world, locked)), "the locked chunk is not opened");
@@ -357,11 +398,145 @@ public class WorldGenerationWriterTests
         Assert.That(afterThird[ScenePathOf(world, painted)], Is.EqualTo(files[ScenePathOf(world, painted)]), "the refused chunk's scene is unchanged");
         Assert.That(HandSpawnPointIdIn(world, withHandWork), Is.EqualTo(handId), "the hand-made spawn point stays, with its id");
         Assert.That(new List<WorldDefinition.Entry>(world.Entries).ConvertAll(entry => entry.Name), Is.EqualTo(new[] { TestWorldGenerators.Clearing, "camp" }), "the entries after a rewrite");
+        Vector2 clearingComposed = reseeded.Entries.Find(entry => entry.Name == TestWorldGenerators.Clearing).Position;
+        Vector2Int under = ChunkCoords.ChunkOf(ChunkCoords.CellOf(clearingComposed));
+        WorldGenerationWriter.Outcome underOutcome = OutcomeOf(third, under);
+        bool groundWritten = underOutcome == WorldGenerationWriter.Outcome.Written || underOutcome == WorldGenerationWriter.Outcome.Unchanged;
+        Assert.That(world.FindEntry(TestWorldGenerators.Clearing).Position, Is.EqualTo(groundWritten ? clearingComposed : clearingBefore), $"the Clearing's entry moves only once chunk {under} under its new place is written ({underOutcome})");
 
         List<WorldGenerationWriter.ChunkWrite> forced = WorldGenerationWriter.Write(generator, reseeded, new[] { painted }, true);
         Assert.That(OutcomeOf(forced, painted), Is.EqualTo(WorldGenerationWriter.Outcome.Written), "the painted chunk, forced");
         Assert.That(ReadChunk(world, painted, grid => LayerOf(grid, TestWorldGenerators.GroundMaterial("Grass")).GetTile(handCell) == null), Is.True, "the hand paint is gone");
         Assert.That(ReadChunk(world, painted, grid => WorldGenerationWriter.ContentHash(grid, painted, reseeded.LayerOrder)), Is.EqualTo(reseeded.ChunkAt(painted).ContentHash), "the forced chunk holds the composition");
+    }
+
+    /// <summary>
+    /// On disk, a composed mob whose id another chunk keeping its content still holds by its record (as when a
+    /// regeneration moved it out of a chunk since locked) is left out of the chunk it moved to, which is recorded with
+    /// what it holds and says so, until that chunk no longer holds it; and a chunk written before such a chunk is refused
+    /// in the same write is written again without the mob, so the world never holds two mobs of one id.
+    /// </summary>
+    [Test]
+    public void AMobWhoseIdAKeptChunkStillHolds_IsLeftOutOfTheChunkItMovedTo()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        Assert.That(AssetDatabase.IsValidFolder(DiskFolder), Is.False, $"{DiskFolder} is left over from an earlier run");
+        Assert.That(WorldLayout.TryFindFreeOrigin(new Vector2Int(2, 2), WorldLayout.AllWorlds(), out Vector2Int origin), Is.True, "a free slot");
+        WorldDefinition world = WorldAuthoring.CreateWorld(DiskWorldName, origin, new Vector2Int(2, 2), DiskFolder);
+        WorldGenerator generator = perTest.For(world);
+        generator.SetRegions(new RegionPlacement(TestWorldGenerators.Clearing, TestWorldGenerators.Area("Clearing"), new Vector2Int(64, 64)));
+        WorldComposition composition = generator.Compose();
+        Vector2Int last = new(1, 1);
+        Vector2Int[] early = { new(0, 0), new(1, 0), new(0, 1) };
+        int withMobs = Array.FindIndex(early, coords => ComposedIds(composition, coords).Count > 0);
+        Assert.That(withMobs, Is.GreaterThanOrEqualTo(0), "a chunk before the last one has generated mobs");
+        Vector2Int moved = early[withMobs];
+        string id = ComposedIds(composition, moved)[0];
+        List<Vector2Int> others = new() { Vector2Int.zero, new Vector2Int(1, 0), new Vector2Int(0, 1), last };
+        others.Remove(moved);
+        Assert.That(WorldGenerationWriter.Write(generator, composition, others, false).ConvertAll(result => result.Outcome), Is.All.EqualTo(WorldGenerationWriter.Outcome.Created));
+        List<string> keptIds = new(generator.RecordOf(last).MobIds);
+
+        HoldAs(generator, last, "a hash its scene does not have", keptIds, id, locked: false);
+        List<WorldGenerationWriter.ChunkWrite> refusedAfter = WorldGenerationWriter.Write(generator, composition, null, false);
+        Assert.That(OutcomeOf(refusedAfter, moved), Is.EqualTo(WorldGenerationWriter.Outcome.Created));
+        Assert.That(OutcomeOf(refusedAfter, last), Is.EqualTo(WorldGenerationWriter.Outcome.ChangedByHand));
+        Assert.That(refusedAfter.Find(result => result.Coords == moved).Line, Does.Contain("left out").And.Contain($"chunk {last}"), "Written again once the chunk after it was refused.");
+        Assert.That(GeneratedIdsIn(world, moved), Has.No.Member(id));
+        Assert.That(generator.RecordOf(moved).MobIds, Has.No.Member(id));
+        Assert.That(generator.RecordOf(moved).WrittenHash, Is.EqualTo(ReadChunk(world, moved, grid => WorldGenerationWriter.ContentHash(grid, moved, composition.LayerOrder))).And.Not.EqualTo(composition.ChunkAt(moved).ContentHash));
+
+        WorldGenerationWriter.Write(generator, composition, new[] { last }, true);
+        HoldAs(generator, last, generator.RecordOf(last).WrittenHash, new List<string>(generator.RecordOf(last).MobIds), id, locked: true);
+        List<WorldGenerationWriter.ChunkWrite> locked = WorldGenerationWriter.Write(generator, composition, new[] { moved }, false);
+        Assert.That(OutcomeOf(locked, moved), Is.EqualTo(WorldGenerationWriter.Outcome.Written), "Not refused: its scene holds what was recorded.");
+        Assert.That(GeneratedIdsIn(world, moved), Has.No.Member(id), "Still left out while the locked chunk holds it.");
+
+        HoldAs(generator, last, generator.RecordOf(last).WrittenHash, keptIds, null, locked: false);
+        List<WorldGenerationWriter.ChunkWrite> released = WorldGenerationWriter.Write(generator, composition, new[] { moved }, false);
+        Assert.That(OutcomeOf(released, moved), Is.EqualTo(WorldGenerationWriter.Outcome.Written));
+        Assert.That(GeneratedIdsIn(world, moved), Has.Member(id), "Written in once no other chunk holds it.");
+        Assert.That(generator.RecordOf(moved).WrittenHash, Is.EqualTo(composition.ChunkAt(moved).ContentHash));
+    }
+
+    /// <summary>
+    /// On disk, after the Clearing moves, writing only a chunk other than the one under its entry's new place leaves the
+    /// entry where it was, with a warning; writing the chunk under it moves the entry there.
+    /// </summary>
+    [Test]
+    public void AnEntry_MovesOnlyOnceTheChunkUnderItsNewPlaceIsWritten()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        Assert.That(AssetDatabase.IsValidFolder(DiskFolder), Is.False, $"{DiskFolder} is left over from an earlier run");
+        Assert.That(WorldLayout.TryFindFreeOrigin(new Vector2Int(2, 2), WorldLayout.AllWorlds(), out Vector2Int origin), Is.True, "a free slot");
+        WorldDefinition world = WorldAuthoring.CreateWorld(DiskWorldName, origin, new Vector2Int(2, 2), DiskFolder);
+        WorldGenerator generator = perTest.For(world);
+        generator.SetRegions(new RegionPlacement(TestWorldGenerators.Clearing, TestWorldGenerators.Area("Clearing"), new Vector2Int(64, 64)));
+        WorldGenerationWriter.Write(generator, generator.Compose(), null, false);
+        Vector2 before = world.FindEntry(TestWorldGenerators.Clearing).Position;
+
+        generator.SetRegions(new RegionPlacement(TestWorldGenerators.Clearing, TestWorldGenerators.Area("Clearing"), new Vector2Int(60, 60)));
+        WorldComposition moved = generator.Compose();
+        Assert.That(moved.BlockingWarnings, Is.Empty, "nothing stops the write");
+        Vector2 after = moved.Entries.Find(entry => entry.Name == TestWorldGenerators.Clearing).Position;
+        Assert.That(after, Is.Not.EqualTo(before), "the entry moves with the Clearing");
+        Vector2Int under = ChunkCoords.ChunkOf(ChunkCoords.CellOf(after));
+        Vector2Int other = under == Vector2Int.zero ? Vector2Int.one : Vector2Int.zero;
+
+        LogAssert.Expect(LogType.Warning, new Regex("stay where they were"));
+        List<WorldGenerationWriter.ChunkWrite> elsewhere = WorldGenerationWriter.Write(generator, moved, new[] { other }, false);
+        Assert.That(OutcomeOf(elsewhere, other), Is.EqualTo(WorldGenerationWriter.Outcome.Written));
+        Assert.That(world.FindEntry(TestWorldGenerators.Clearing).Position, Is.EqualTo(before), $"chunk {under}, under the new place, still holds the old ground");
+
+        WorldGenerationWriter.Write(generator, moved, new[] { under }, false);
+        Assert.That(world.FindEntry(TestWorldGenerators.Clearing).Position, Is.EqualTo(after), "the entry moves once its ground is written");
+    }
+
+    /// <summary>
+    /// Records the chunk at <paramref name="coords"/> as written with <paramref name="hash"/> and holding
+    /// <paramref name="ids"/> and <paramref name="extraId"/> (when given), locked or not.
+    /// </summary>
+    private static void HoldAs(WorldGenerator generator, Vector2Int coords, string hash, List<string> ids, string extraId, bool locked)
+    {
+        generator.SetRecord(new ChunkRecord(coords, locked, false, 0));
+        List<string> held = new(ids);
+        if (extraId != null)
+        {
+            held.Add(extraId);
+        }
+
+        generator.SetWrittenHash(coords, hash, held);
+    }
+
+    /// <summary>
+    /// The ids of the composition's mobs in the chunk at <paramref name="coords"/>, in order.
+    /// </summary>
+    private static List<string> ComposedIds(WorldComposition composition, Vector2Int coords)
+    {
+        RectInt bounds = ChunkCoords.Bounds(coords);
+        return composition.Mobs.FindAll(mob => bounds.Contains(mob.Cell)).ConvertAll(mob => mob.Id);
+    }
+
+    /// <summary>
+    /// The ids of the generated spawn points the chunk at <paramref name="coords"/> of <paramref name="world"/> holds on
+    /// disk.
+    /// </summary>
+    private static List<string> GeneratedIdsIn(WorldDefinition world, Vector2Int coords)
+    {
+        return ReadChunk(world, coords, grid =>
+        {
+            Transform root = grid.transform.Find(WorldGenerationWriter.GeneratedMobSpawnsName);
+            List<string> ids = new();
+            if (root != null)
+            {
+                foreach (PersistentId persistent in root.GetComponentsInChildren<PersistentId>(true))
+                {
+                    ids.Add(persistent.Id);
+                }
+            }
+
+            return ids;
+        });
     }
 
     /// <summary>

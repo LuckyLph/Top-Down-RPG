@@ -8,6 +8,7 @@
     "Unity.2D.Tilemap.Extras",
     "Unity.2D.Tilemap.Extras.Editor",
     "Unity.2D.Sprite.Editor",
+    "Unity.2D.Aseprite.Editor",
     "Unity.RenderPipelines.Universal.2D.Runtime"
   ],
   "includePlatforms": [

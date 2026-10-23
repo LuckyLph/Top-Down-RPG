@@ -140,7 +140,7 @@ public abstract class CharacterRecipe : ScriptableObject
     /// Whether <paramref name="value"/> starts with a letter and holds only letters, digits and, when
     /// <paramref name="underscores"/>, underscores.
     /// </summary>
-    private static bool IsName(string value, bool underscores)
+    internal static bool IsName(string value, bool underscores)
     {
         if (string.IsNullOrEmpty(value) || !char.IsLetter(value[0]))
         {

@@ -8,13 +8,18 @@ using UnityEngine;
 /// <summary>
 /// Writes <c>.aseprite</c> files from the published file format (github.com/aseprite/aseprite, docs/ase-file-specs.md),
 /// so tests need no hand-drawn art (Docs/AsepriteCharacters.md, Phase 0): a 32-bit RGBA canvas, layers (visible or
-/// hidden), frames with their own durations in whole milliseconds, a cel per layer and frame compressed with zlib as
-/// Aseprite saves it, with an optional user data text, and forward tags. Pixels and cel positions are given as the file
-/// stores them: from the top left, row by row from the top.
+/// hidden, with a blend mode and an opacity) and layer groups, frames with their own durations in whole milliseconds,
+/// a cel per layer and frame compressed with zlib as Aseprite saves it, with an opacity and an optional user data text,
+/// or linked to the cel of another frame, and tags playing in any of Aseprite's directions. Pixels and cel positions
+/// are given as the file stores them: from the top left, row by row from the top.
 /// </summary>
 public sealed class AsepriteFileWriter
 {
     public const string ContactMarker = "contact";
+    public const int BlendNormal = 0;
+    public const int BlendMultiply = 1;
+    public const int LoopForward = 0;
+    public const int LoopReverse = 1;
 
     private const int HeaderBytes = 128;
     private const ushort FileMagic = 0xA5E0;
@@ -23,15 +28,18 @@ public sealed class AsepriteFileWriter
     private const ushort CelChunk = 0x2005;
     private const ushort TagsChunk = 0x2018;
     private const ushort UserDataChunk = 0x2020;
+    private const ushort LinkedCel = 1;
     private const ushort CompressedImage = 2;
+    private const ushort NormalLayer = 0;
+    private const ushort GroupLayer = 1;
     private const ushort LayerVisible = 1;
     private const ushort LayerEditable = 2;
     private const uint LayerOpacityValid = 1;
     private const uint UserDataHasText = 1;
 
-    private readonly List<(string Name, bool Visible)> layers = new();
+    private readonly List<Layer> layers = new();
     private readonly List<int> frameMilliseconds = new();
-    private readonly List<(string Name, int From, int To)> tags = new();
+    private readonly List<(string Name, int From, int To, int Loop)> tags = new();
     private readonly Dictionary<(int Layer, int Frame), Cel> cels = new();
 
     /// <summary>
@@ -90,11 +98,24 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
-    /// Adds a normal layer above the others, blended normally at full opacity, and returns its index.
+    /// Adds an image layer above the others, blended by <paramref name="blendMode"/> (Aseprite's numbers:
+    /// <see cref="BlendNormal"/>, <see cref="BlendMultiply"/>, ...) at <paramref name="opacity"/>, at the top level or in
+    /// <paramref name="group"/>, and returns its index. A group's layers are added right after it, as the file lists
+    /// them.
     /// </summary>
-    public int AddLayer(string name, bool visible = true)
+    public int AddLayer(string name, bool visible = true, int blendMode = BlendNormal, byte opacity = 255, int group = -1)
     {
-        layers.Add((name, visible));
+        layers.Add(new Layer(name, visible, NormalLayer, blendMode, opacity, LevelIn(group)));
+        return layers.Count - 1;
+    }
+
+    /// <summary>
+    /// Adds a layer group above the others, blended normally at <paramref name="opacity"/>, at the top level or in
+    /// <paramref name="group"/>, and returns its index.
+    /// </summary>
+    public int AddGroup(string name, bool visible = true, byte opacity = 255, int group = -1)
+    {
+        layers.Add(new Layer(name, visible, GroupLayer, BlendNormal, opacity, LevelIn(group)));
         return layers.Count - 1;
     }
 
@@ -113,29 +134,31 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
-    /// Adds a forward tag named <paramref name="name"/> over frames <paramref name="from"/> to <paramref name="to"/>,
-    /// both included.
+    /// Adds a tag named <paramref name="name"/> over frames <paramref name="from"/> to <paramref name="to"/>, both
+    /// included, playing in <paramref name="loop"/> (Aseprite's numbers: <see cref="LoopForward"/>,
+    /// <see cref="LoopReverse"/>, 2 ping-pong, 3 ping-pong reverse).
     /// </summary>
-    public void AddTag(string name, int from, int to)
+    public void AddTag(string name, int from, int to, int loop = LoopForward)
     {
         if (from < 0 || to < from || to >= frameMilliseconds.Count)
         {
             throw new ArgumentOutOfRangeException(nameof(from), $"Tag {name} over frames {from} to {to} is outside the {frameMilliseconds.Count} frames.");
         }
 
-        tags.Add((name, from, to));
+        tags.Add((name, from, to, loop));
     }
 
     /// <summary>
     /// Sets the cel of <paramref name="layer"/> on <paramref name="frame"/>: <paramref name="pixels"/> over
     /// <paramref name="rect"/>, its position from the canvas's top left (it may reach past the canvas, as a cel can in
-    /// Aseprite), with <paramref name="userData"/> as its user data text when given.
+    /// Aseprite), at <paramref name="opacity"/>, with <paramref name="userData"/> as its user data text when given.
     /// </summary>
-    public void SetCel(int layer, int frame, RectInt rect, Color32[] pixels, string userData = null)
+    public void SetCel(int layer, int frame, RectInt rect, Color32[] pixels, string userData = null, byte opacity = 255)
     {
-        if (layer < 0 || layer >= layers.Count || frame < 0 || frame >= frameMilliseconds.Count)
+        CheckCel(layer, frame);
+        if (layers[layer].Type != NormalLayer)
         {
-            throw new ArgumentOutOfRangeException(nameof(layer), $"Layer {layer} or frame {frame} does not exist.");
+            throw new ArgumentException($"Layer {layer} is a group, which holds no cels.", nameof(layer));
         }
 
         if (rect.width < 1 || rect.height < 1 || pixels == null || pixels.Length != rect.width * rect.height)
@@ -143,7 +166,23 @@ public sealed class AsepriteFileWriter
             throw new ArgumentException($"A cel of {rect.width} x {rect.height} pixels needs as many pixels.", nameof(pixels));
         }
 
-        cels[(layer, frame)] = new Cel(rect, (Color32[])pixels.Clone(), userData);
+        cels[(layer, frame)] = new Cel(rect, (Color32[])pixels.Clone(), userData, opacity, -1);
+    }
+
+    /// <summary>
+    /// Makes the cel of <paramref name="layer"/> on <paramref name="frame"/> a link to its cel on
+    /// <paramref name="linkedFrame"/>, which must be set and not itself a link: the two share their image, place,
+    /// opacity and user data, and Aseprite writes that user data only after the cel linked to.
+    /// </summary>
+    public void SetLinkedCel(int layer, int frame, int linkedFrame)
+    {
+        CheckCel(layer, frame);
+        if (!cels.TryGetValue((layer, linkedFrame), out Cel linked) || linked.LinkedFrame >= 0)
+        {
+            throw new ArgumentException($"Frame {linkedFrame} of layer {layer} has no cel of its own to link to.", nameof(linkedFrame));
+        }
+
+        cels[(layer, frame)] = new Cel(linked.Rect, null, null, linked.Opacity, linkedFrame);
     }
 
     /// <summary>
@@ -215,9 +254,9 @@ public sealed class AsepriteFileWriter
             List<byte[]> chunks = new();
             if (frame == 0)
             {
-                foreach ((string name, bool visible) in layers)
+                foreach (Layer layer in layers)
                 {
-                    chunks.Add(Chunk(LayerChunk, body => WriteLayer(body, name, visible)));
+                    chunks.Add(Chunk(LayerChunk, body => WriteLayer(body, layer)));
                 }
 
                 if (tags.Count > 0)
@@ -293,34 +332,34 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
-    /// Writes a layer chunk's data: a normal layer at the top level, editable, visible or hidden, blended normally at
-    /// full opacity.
+    /// Writes a layer chunk's data: an image layer or a group at its child level, editable, visible or hidden, with
+    /// its blend mode and opacity.
     /// </summary>
-    private static void WriteLayer(BinaryWriter body, string name, bool visible)
+    private static void WriteLayer(BinaryWriter body, Layer layer)
     {
-        body.Write((ushort)(LayerEditable | (visible ? LayerVisible : 0)));
+        body.Write((ushort)(LayerEditable | (layer.Visible ? LayerVisible : 0)));
+        body.Write(layer.Type);
+        body.Write((ushort)layer.ChildLevel);
         body.Write((ushort)0);
         body.Write((ushort)0);
-        body.Write((ushort)0);
-        body.Write((ushort)0);
-        body.Write((ushort)0);
-        body.Write((byte)255);
+        body.Write((ushort)layer.BlendMode);
+        body.Write(layer.Opacity);
         body.Write(new byte[3]);
-        WriteString(body, name);
+        WriteString(body, layer.Name);
     }
 
     /// <summary>
-    /// Writes the tags chunk's data: every tag forward, without a repeat count.
+    /// Writes the tags chunk's data: every tag with its loop direction, without a repeat count.
     /// </summary>
     private void WriteTags(BinaryWriter body)
     {
         body.Write((ushort)tags.Count);
         body.Write(new byte[8]);
-        foreach ((string name, int from, int to) in tags)
+        foreach ((string name, int from, int to, int loop) in tags)
         {
             body.Write((ushort)from);
             body.Write((ushort)to);
-            body.Write((byte)0);
+            body.Write((byte)loop);
             body.Write((ushort)0);
             body.Write(new byte[6]);
             body.Write(new byte[3]);
@@ -330,17 +369,23 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
-    /// Writes a cel chunk's data: a compressed image at full opacity on its layer's own depth.
+    /// Writes a cel chunk's data on its layer's own depth: a link to another frame's cel, or a compressed image.
     /// </summary>
     private static void WriteCel(BinaryWriter body, int layer, Cel cel)
     {
         body.Write((ushort)layer);
         body.Write((short)cel.Rect.x);
         body.Write((short)cel.Rect.y);
-        body.Write((byte)255);
-        body.Write(CompressedImage);
+        body.Write(cel.Opacity);
+        body.Write(cel.LinkedFrame >= 0 ? LinkedCel : CompressedImage);
         body.Write((short)0);
         body.Write(new byte[5]);
+        if (cel.LinkedFrame >= 0)
+        {
+            body.Write((ushort)cel.LinkedFrame);
+            return;
+        }
+
         body.Write((ushort)cel.Rect.width);
         body.Write((ushort)cel.Rect.height);
         byte[] raw = new byte[cel.Pixels.Length * 4];
@@ -424,19 +469,77 @@ public sealed class AsepriteFileWriter
     }
 
     /// <summary>
-    /// One cel: where it lies from the canvas's top left, its pixels row by row from the top, and its user data text.
+    /// The child level of a layer added in <paramref name="group"/> (-1 for the top level): one below the group's.
+    /// </summary>
+    private int LevelIn(int group)
+    {
+        if (group < 0)
+        {
+            return 0;
+        }
+
+        if (group >= layers.Count || layers[group].Type != GroupLayer)
+        {
+            throw new ArgumentException($"Layer {group} is not a group.", nameof(group));
+        }
+
+        return layers[group].ChildLevel + 1;
+    }
+
+    /// <summary>
+    /// Throws when <paramref name="layer"/> or <paramref name="frame"/> does not exist.
+    /// </summary>
+    private void CheckCel(int layer, int frame)
+    {
+        if (layer < 0 || layer >= layers.Count || frame < 0 || frame >= frameMilliseconds.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(layer), $"Layer {layer} or frame {frame} does not exist.");
+        }
+    }
+
+    /// <summary>
+    /// One layer: its name, whether it shows, its type (an image layer or a group), blend mode, opacity and child
+    /// level.
+    /// </summary>
+    private readonly struct Layer
+    {
+        public Layer(string name, bool visible, ushort type, int blendMode, byte opacity, int childLevel)
+        {
+            Name = name;
+            Visible = visible;
+            Type = type;
+            BlendMode = blendMode;
+            Opacity = opacity;
+            ChildLevel = childLevel;
+        }
+
+        public string Name { get; }
+        public bool Visible { get; }
+        public ushort Type { get; }
+        public int BlendMode { get; }
+        public byte Opacity { get; }
+        public int ChildLevel { get; }
+    }
+
+    /// <summary>
+    /// One cel: where it lies from the canvas's top left, its pixels row by row from the top, its user data text and
+    /// opacity, or the frame whose cel it links to (-1 for none).
     /// </summary>
     private readonly struct Cel
     {
-        public Cel(RectInt rect, Color32[] pixels, string userData)
+        public Cel(RectInt rect, Color32[] pixels, string userData, byte opacity, int linkedFrame)
         {
             Rect = rect;
             Pixels = pixels;
             UserData = userData;
+            Opacity = opacity;
+            LinkedFrame = linkedFrame;
         }
 
         public RectInt Rect { get; }
         public Color32[] Pixels { get; }
         public string UserData { get; }
+        public byte Opacity { get; }
+        public int LinkedFrame { get; }
     }
 }

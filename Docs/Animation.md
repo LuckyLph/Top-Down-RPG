@@ -31,7 +31,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 | Topic | Decision |
 |---|---|
-| Art | A character rig generated in the editor: a 3D skeleton whose body parts are drawn as shaded shapes straight onto the pixel grid through the game's 3/4 camera, baked into sprite sheets by an editor recipe tool. No hand-drawn or third-party art. |
+| Art | A character rig generated in the editor: a 3D skeleton whose body parts are drawn as shaded shapes straight onto the pixel grid through the game's 3/4 camera, baked into sprite sheets by an editor recipe tool. No hand-drawn or third-party art; characters drawn by hand in Aseprite came later as a second way, imported into the same sheets and sets ([AsepriteCharacters.md](AsepriteCharacters.md)). |
 | Directions | 8, each rendered from the rig; none is a mirror of another. |
 | Size | The body fits 32 x 48 px (about 18 x 46 px, 1.45 cells tall). Frames are 64 x 64 px, or larger for clips whose weapon reaches further (80 x 80 px for the sword's slash and the bow's release, 96 x 96 px for the greatsword's cleave), with the pivot at the feet. |
 | Pixel density | 32 px per unit, as the terrain, props and the Pixel Perfect Camera. One pixel the rig draws is one game pixel; sprites import at 32 PPU. Character sprites are never scaled or rotated at runtime. |
@@ -125,7 +125,7 @@ Animation is never replicated; every machine derives it from replicated gameplay
 
 - Animation never decides gameplay: no animation events drive hits, and a dropped frame changes nothing.
 - Character sprites are never scaled or rotated at runtime; new directions are baked.
-- Every character frame comes from the baker. Change the look or a motion in its recipe and generate again.
+- Every character frame comes from the baker, or from an Aseprite file imported through its recipe ([AsepriteCharacters.md](AsepriteCharacters.md)). Change the look or a motion in its recipe, or the drawing in its file, and generate again.
 - A frame's pivot is the character's feet, so `YPositionSorter` sorts characters by where they stand.
 - A weapon only shows in the clips that use it (its attacks and its own abilities' casts); standing, moving and casting a class ability the character is unarmed. Its first and last frames show it at full length from the front, since they are where it appears and goes.
 

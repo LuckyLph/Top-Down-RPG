@@ -11,7 +11,8 @@
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime",
     "Unity.2D.Tilemap.Extras",
-    "Unity.2D.Tilemap.Editor"
+    "Unity.2D.Tilemap.Editor",
+    "Unity.2D.Aseprite.Editor"
   ],
   "includePlatforms": [
     "Editor"

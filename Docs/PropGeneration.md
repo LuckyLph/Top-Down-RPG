@@ -38,20 +38,20 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Decisions
 
-Proposals to confirm; the ones about the look are settled on previews in Phase 0.
+The look, the scope (Non-goals), the layout and the shadows were settled in Phase 0, on previews (its notes say what was compared and why); the rest are proposals, confirmed as their phases land.
 
 | Topic | Decision |
 |---|---|
-| Art | Drawn by code in the editor through the characters' 3/4 canvas: trunks and branches as tapering capsules, crowns as clusters of leaf clumps (small spheres, so each clump catches the light on its top-left and the crown reads as scalloped masses), rocks as squashed spheres or faceted solids, shaded in four-colour ramps lit from the top left with an outline in each ramp's darkest colour, as the characters are. Small plants (blades, reeds, fern fronds, mushroom caps) are thin capsules, discs and dots on the same canvas. One renderer for everything keeps the light, outlines and pixel density the characters', and gives a prop's look from every side for free if one is ever needed. |
-| The canvas | `CharacterCanvas` becomes a canvas of material ids with a table saying which are flat and which are outlined, shared by the characters and the props; the characters' frames come out byte for byte the same (`CharacterRecipeTests` already compares them with the project's sheets). Props add what they need to it: ellipsoids (spheres squashed or stretched along an axis), triangles shaded by their own normal (faceted rock and basalt), per-material surface patterns (bark grooves, stone speckles and cracks, wood rings), and a cover material taken where a surface faces up (snow on pines and rocks, moss, ash). |
+| Art | Drawn by code in the editor through the characters' 3/4 canvas. Trunks and branches are tapering capsules. Broadleaf crowns and bushes are clusters of leaf clumps of three sizes: spheres whose normals lean toward the whole crown's, so each clump catches the light on its top left while the crown is lit as one mass, over a core one tone darker. Pines are five tiers hanging under their apex, with branch tips along each lower edge and needle streaks. Dead and charred trees are bare, twisted and three forks deep. Rocks are faceted (convex solids cut by random planes), and basalt spires are stacked crags. Everything is shaded as the characters are: three tones (shadow, middle, light) and no highlight, at the characters' light thresholds, with an outline in each ramp's darkest colour and inner lines between parts (clumps, tiers, limbs, lumps). Thin parts (twigs, reed blades, fern stems) are unlined, as the bow string is. Small plants (blades, reeds, fern fronds, mushroom caps) are thin capsules, discs, dots and small flattened ellipsoids on the same canvas. One renderer for everything keeps the characters' light, outlines and pixel density, and gives a prop's look from every side for free if one is ever needed. Settled in Phase 0. |
+| The canvas | `CharacterCanvas` becomes a canvas of material ids with a table saying which are flat and which are outlined, shared by the characters and the props; the characters' frames come out byte for byte the same (`CharacterRecipeTests` already compares them with the project's sheets). Props add what they need to it, each used by the Phase 0 previews: ellipsoids at any orientation; convex solids (an intersection of half-spaces, each pixel shaded by the face its view ray enters) for faceted rocks, crags and columns, instead of triangles; fields ray-marched along each pixel's view ray, their gradient the normal, for a pine's tiers and a stump with its flared foot and broken top, with a material per pixel from its position and normal (a stump's cut end); a normal blended toward an envelope's (crowns); points under the ground hidden, so rocks, roots and trunks sink into it; each pixel's world position and world normal, kept for covers and patterns; per-material surface patterns (bark grooves, stone speckles, wood rings, needle streaks, basalt joints), a tone offset (a crown's darker core) and a tone by height (blades); and a cover material taken where the world normal faces up past a threshold, broken up by value noise (snow on pines, rocks and stumps; moss; ash). |
 | Recipes | Editor-only ScriptableObjects under `Assets/Settings/Props/`, one abstract `PropRecipe` (the prop's name, its category folder, a seed, the variant count, the frame size and base pixel, blocking or walk-through, the palette as a ramp per material, an optional cover) with a kind per shape: `TreeRecipe` (trunk, branching, a crown that is round, conical as a pine, or bare as a dead tree), `BushRecipe`, `RockRecipe` (lumps, flatness, facets, height, so boulders and spires too), `WoodRecipe` (stumps, fallen logs, driftwood) and `PlantRecipe` (ferns, reeds, cattails, beach grass, mushrooms). |
-| Looks per terrain | A look is a recipe asset: the same kind with the palette and cover of the terrain it stands on (`Rock_Grey` with moss for the woods, `Rock_Sand` for the beach, `Rock_Snow` capped with snow, `Boulder_Basalt` for the lava fields). Palettes are chosen against each terrain's albedo and previewed on it, never on a blank background. |
+| Looks per terrain | A look is a recipe asset: the same kind with the palette and cover of the terrain it stands on (`Rock_Grey` with moss for the woods, `Rock_Sand` for the beach, `Rock_Snow` capped with snow, `Boulder_Basalt` for the lava fields). Palettes are chosen against each terrain's albedo and previewed on it, never on a blank background. Phase 0 chose the first looks' palettes and covers (its notes list the ramps): snow past 0.55 on pines and 0.75 on rocks and stumps, moss past 0.8, ash past 0.7. |
 | Variants | Each recipe bakes `variantCount` variants (4 by default) from its seed, each its own prefab, so scatter layers, which pick a random prefab per try, mix them. A recipe's count only grows: lowering it is refused while a prefab of a dropped variant exists, since placed props reference it. |
 | Output | Through `SpriteSheetFiles`: `Assets/Sprites/Props/<Name>.png`, the variants in one row, sliced into `<Name>_<variant>` pivoted on the base pixel, keeping slice IDs; and `Assets/Prefabs/Props/<Category>/<Name>_<variant>.prefab`, a variant of `Prop` or `BlockingProp`, created once and updated in place afterwards, so its GUID and every placed instance stay. Categories: `Trees`, `Bushes`, `Rocks`, `Wood`, `Plants`, which the Prop Placement window lists. |
-| Layout | Props take the units' layout: the sprite pivots on the prop's base pixel (the middle of a trunk's foot, the middle of a rock's base) and `Visuals` sits on the root, where the player's and the Weasel's do since Animation.md's Phase 2. The bases move `Visuals` from half a unit up to the root; nothing uses them yet. Roots, a log's far end or a shadow may then reach below the base, and a prop sorts exactly at its foot. |
+| Layout | Props take the units' layout: the sprite pivots on the prop's base pixel (the middle of a trunk's foot, the middle of a rock's base) and `Visuals` sits on the root, where the player's and the Weasel's do since Animation.md's Phase 2. The bases move `Visuals` from half a unit up to the root; nothing uses them yet. Roots, a log's far end or a shadow may then reach below the base (the Phase 0 bakes reach 5 to 8 px below it with their roots and outline), and a prop sorts exactly at its foot. Confirmed in Phase 0. |
 | Footprint | Measured from the drawing, not set by hand: the box around what touches the ground (a trunk's foot and root flare, a rock's or bush's lower body), in whole pixels, as the `BlockingProp` collider; `PropGridSnapping` then centres it on the fewest whole cells, as for any prop. Trees, rocks, boulders, spires, stumps, logs and bushes block; plants, small stumps and small stones are walked through. |
-| Size | 32 px a unit, as everything; a recipe's sizes are in cells. Starting points against the 46 px (1.45 cells) rogue, settled in Phase 0: a broadleaf tree 3 to 4 cells tall and 2.5 wide on a one-cell trunk, a pine 3.5 to 4.5 tall and 2 wide, a dead tree 2.5 to 3.5, a bush 1 to 1.3, a rock 0.6 to 1.2, a boulder 1.5 to 2, a spire 2 to 3 tall on one cell, a stump 0.7, a log 1.5 to 2 long, plants 0.4 to 1. A forest edge at a spacing of 2 cells then closes into one canopy. |
-| Shadows | Settled in Phase 0 among none (as the characters have none), a shadow drawn into the prop's sprite, and a shadow sprite of its own drawn on the ground under every unit; the last is the recommendation if props need one, since a shadow in the sprite sorts with the prop and darkens a unit standing in it from behind. |
+| Size | 32 px a unit, as everything; a recipe's sizes are in cells, heights on screen from the base. Settled in Phase 0 against the 46 px (1.45 cells) rogue, keeping the plan's starting points: a broadleaf tree 3 to 4 cells tall and 2.5 wide on a one-cell trunk, a pine 3.5 to 4.5 tall and 2 wide, a dead tree 2.5 to 3.5, a bush 1 to 1.3, a rock 0.6 to 1.2 (its lumps included), a boulder 1.5 to 2, a spire 2 to 3 tall on one cell, a stump 0.7, a log 1.5 to 2 long, plants 0.4 to 1. A forest edge at a spacing of 2 cells closes into one canopy in which each tree still reads. |
+| Shadows | A shadow sprite of its own, drawn on the ground under every unit: a hard ellipse of black at 35% under the crown or body, shifted a little east, away from the light. A shadow drawn into the prop's sprite sorts with the prop and darkens a unit standing in it behind the prop; with no shadow, trees stand on the grass rather than in it. Units keep having none. Settled in Phase 0; the recipe bakes the shadow with the prop (Phase 1). |
 | Light | Lit like units (`SpriteLit`) by each world's Global Light 2D; nothing glows. |
 | In play | Props never move, so they sort once: a static mode on `YPositionSorter` (applied when enabled and in the editor, no `LateUpdate`), and the prop sheets packed in one Sprite Atlas so a forest draws in few batches. A tall prop hiding the local player fades while it does, on that machine only. Settled and measured in Phase 4. |
 | Hand-drawn props | Later: an Aseprite prop recipe reading a file through `AsepriteClipReader` and writing the same sheet and prefabs ([AsepriteCharacters.md](AsepriteCharacters.md)). |
@@ -71,14 +71,14 @@ What each terrain gets, from what the generators' scatter layers already ask for
 | Dry grass, tall grass: patches in the Lakeside and the Village Forest | `Bush_Dry` (straw and brown) | yes |
 | Snow: the Snowfield; its edge, pines, rocks and stumps, small stumps | `Pine_Snow`, `PineSmall_Snow`, `Tree_DeadSnow`, `Rock_Snow`, `Boulder_Snow`, `Stump_Snow`, `StumpSmall_Snow` (walked through) | yes, small stump no |
 | Ice: the Snowfield's shore rocks | `Rock_Snow` (as above); ice shards Later | yes |
-| Dirt as scorched earth: the Lava Fields; scorched edge, dead trees, lava rocks, spires and boulders, stumps | `Tree_Charred` (twisted, bare, ash cover), `Spire_Basalt` (faceted columns), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred` (walked through) | yes, small stump no |
+| Dirt as scorched earth: the Lava Fields; scorched edge, dead trees, lava rocks, spires and boulders, stumps | `Tree_Charred` (twisted, bare, ash cover), `Spire_Basalt` (a stacked crag), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred` (walked through) | yes, small stump no |
 | Gravel, stone, plaza, planks, shallows, water, ocean, lava | none: paths and water stay clear, as the generators already keep them | |
 
 ## How it works
 
 1. A recipe asset (`Assets/Settings/Props/Tree_Broadleaf.asset`) holds a kind's shape settings, a seed, a variant count, the palette and cover of its look, its frame size and base pixel, and whether it blocks.
 2. Its inspector bakes every variant in memory and shows them on a strip of each terrain the look is for (the terrain's own albedo, at the worlds' 0.85 light), beside the rogue's idle frame for scale, at 1x and 3x, with the footprint's cells outlined. Changing a setting bakes again.
-3. Baking a variant seeds a `System.Random` from the recipe's seed and the variant's index, builds the shape in world units (trunk, branches, crown clumps; lumps; blades), rasterises it through the 3/4 canvas at 32 px a unit with the base on the base pixel, applies the cover and patterns, shades it in the look's ramps, and measures the footprint from the pixels whose ground contact the shape marks.
+3. Baking a variant seeds a `System.Random` from the recipe's seed and the variant's index, builds the shape in world units (trunk, branches, crown clumps; lumps; blades), rasterises it through the 3/4 canvas at 32 px a unit with the base on the base pixel, applies the cover and patterns, shades it in the look's ramps, measures the footprint from the pixels whose ground contact the shape marks, and draws its shadow.
 4. Generate writes the sheet through `SpriteSheetFiles` (an unchanged sheet is not rewritten) and creates or updates one prefab per variant: a variant of `Prop` or `BlockingProp`, its sprite the variant's slice, its collider the footprint. Nothing that did not change is saved.
 5. The area generators' scatter layers list the prefabs for their terrain; generating an area places them as they placed the borrowed ones, and the world generator writes the regions' props and the wilds' forest into the chunk scenes under `GeneratedProps`.
 6. In play a prop sorts once at its base, draws from the props' atlas, and fades while it hides the local player.
@@ -89,14 +89,99 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 0: the look
 
-- [ ] Previews baked in the editor from throwaway code (a temporary file in the test assembly, not kept) and composed on the in-game terrain at the worlds' 0.85 light beside the rogue, written to `Recordings/Props/`: a broadleaf tree, a pine with snow, a charred tree, a bush, a grey rock, a basalt spire, a stump, reeds and a fern.
-- [ ] Compared and chosen: crown styles (leaf clumps of a few sizes, one smooth mass, clumps with a dithered edge), outline or not and its colour, three or four tones, sizes against the rogue and the cells, the cover's threshold, shadows (none, in the sprite, a sprite on the ground), and a forest edge at a spacing of 2 cells.
-- [ ] Decisions above updated with what was chosen, and the notes recorded here.
+- [x] Previews baked in the editor from throwaway code (a temporary file in the test assembly, not kept) and composed on the in-game terrain at the worlds' 0.85 light beside the rogue, written to `Recordings/Props/`: a broadleaf tree, a pine with snow, a charred tree, a bush, a grey rock, a basalt spire, a stump, reeds and a fern.
+- [x] Compared and chosen: crown styles (leaf clumps of a few sizes, one smooth mass, clumps with a dithered edge), outline or not and its colour, three or four tones, sizes against the rogue and the cells, the cover's threshold, shadows (none, in the sprite, a sprite on the ground), and a forest edge at a spacing of 2 cells.
+- [x] Decisions above updated with what was chosen, and the notes recorded here.
+
+Phase 0 notes:
+- **How the previews were made.** Throwaway code in the test assembly (`PropLookTemp`, deleted afterwards) baked every preview in memory. It was a copy of the canvas extended as The canvas row lists, at 32 px a unit with the base at the world's origin. Each preview was composed in PIL on its in-game terrain: the material's albedo tiled at one texel a pixel, with terrain and props both at the worlds' 0.85 light, beside the rogue's committed idle frame facing south. Every sheet comes at 1x and at 3x; the 3x has the cells drawn faintly, each footprint and the cells it snaps to. Each prop is shown in two or three variants from different seeds. All of it is in `Recordings/Props/` (each `_1x.png` and `_3x.png`):
+  - the chosen looks together: `final_looks`;
+  - every subject on its terrain: `q0_subjects`;
+  - the comparisons: `q1a_crowns`, `q1b_pines`, `q1c_bare`, `q2_outlines`, `q2b_thin`, `q3_tones`, `q4_sizes`, `q4_edges`, `q5_snow`, `q5_moss_ash`, `q6_shadows`, `q7_rocks`, `q8_palettes_woods` and `q8_palettes_others`.
+- **Crowns.** Compared:
+  - leaf clumps of a few sizes;
+  - one smooth mass (a body and seven lobes, their normals 80% the crown's);
+  - clumps with a dithered edge (tones checkered within 0.07 of each threshold, every other edge pixel removed).
+
+  Chosen: clumps. The mass reads as a lollipop at 1x, the dither reads as noise, and nothing else in the game is dithered. How a broadleaf crown is built:
+  - an envelope ellipsoid 2.5 cells wide, 2.25 deep and 2.45 tall, its top on screen at the tree's height (2.4 cells of crown over 1.1 of trunk);
+  - a core ellipsoid 0.3 cells inside it, one tone darker, which shows between the clumps;
+  - 26 clumps of three sizes (0.28, 0.39 and 0.5 cells in radius, ±8%) on the core's surface, only where it faces the camera, each clump its own part so inner lines scallop the crown;
+  - each clump's normal blended 45% toward the envelope's, so the crown is lit as one mass from the top left.
+
+  A bush is built the same way, with 12 clumps of 0.15 to 0.27 cells set at 78 to 95% of the core's radius so few stick out. The trunk is a capsule from 0.16 to 0.1 cells in radius, with four root capsules splayed on the ground and three branches into the crown.
+- **Pines.** Compared tiers with branch tips and needle streaks, smooth tiers, and seven narrower tiers. Chosen: the first. Smooth tiers look like stacked lampshades, and seven tiers blur together at 1x. How a pine is built:
+  - five tiers, each a field: under its apex the radius is R·u^0.6, where u is the depth below the apex over the tier's height, so a tier's top is flat and its edge steep;
+  - radii from half the pine's width at the bottom to 0.32 of that at the top; each tier is 1.25 radii tall (the top one 1.6 times pointier), and the tier bottoms are evenly spaced from just above the trunk to under the top tier;
+  - each lower edge cut in 7 to 9 teeth whose tips hang 0.14 cells lower and reach 12% further out;
+  - radial needle streaks one tone darker; each tier its own part.
+- **Bare branching** (the charred tree, and the snow's dead tree later). Compared twisted and three forks deep, gnarled (thicker, two deep), and finer (four deep). Chosen: twisted, three deep. Gnarled reads as broken posts and finer as fuzz at 1x. How a tree is built:
+  - each limb is a chain of tapering capsules in segments of 0.16 cells, each segment turned by a random jitter of 0.3 and pulled 35% back toward the limb's aim;
+  - the trunk is 0.42 of the height, 0.15 to 0.09 cells in radius, and stays within about 30 degrees of up;
+  - each limb forks into two (three at 30%) at 22 to 42 degrees, each fork 0.54 to 0.72 of its length, with a side branch at 22% per segment;
+  - twigs under 1.1 px in radius are unlined.
+- **Outlines.** Compared:
+  - none;
+  - the ramp's darkest colour with inner lines;
+  - the same without inner lines;
+  - one near-black (18, 14, 22) with inner lines.
+
+  Chosen: the ramp's darkest with inner lines, the characters' rule and gap (2.6 px). Without an outline, crowns and bushes melt into the grass along their lower edge. Without inner lines, crowns flatten and a forest's back rows merge into one mass. The single near-black is harsher than the characters' outlines. Thin parts (twigs, reed blades, fern stems) are unlined, as the bow string is: lined, a 1 px twig becomes 3 px of dark.
+- **Tones.** Compared three and four tones, each with and without a highlight past 0.86. Chosen: three tones (shadow, middle, light, beside the outline) at the characters' thresholds of 0.28 and 0.64, with no highlight. A fourth tone (under 0.15) barely shows at 1x and runs into the outline, and a highlight puts a gloss on crowns and rocks that nothing else in the game has.
+- **Sizes.** The plan's numbers hold. Measured on screen from the base:
+  - broadleaf: 3.4 to 3.6 cells tall and 2.7 to 2.8 wide with its clumps and outline, on a footprint of 18 to 23 by 9 to 11 px (one cell);
+  - pine: 4.1 by 2.5;
+  - charred tree: 2.9 to 3.0;
+  - bush: 1.1 by 1.25;
+  - crag: 2.5 by 1.1, on one cell;
+  - stump: 0.56 by 0.9;
+  - fern: 0.45 by 1;
+  - reeds: 0.8.
+
+  A rock set 1.1 wide came out 1.5 wide on two cells with its two side lumps, so a rock's size has to count its lumps. Edges of broadleaf trees and of pines, placed at least 2 cells apart in a band 4 cells deep, close into a canopy in which each tree still reads.
+- **Covers.** A pixel takes the cover where its world normal's up component, plus value noise (6 per cell, ±0.15 to ±0.2), passes a threshold.
+  - Snow: compared 0.45, 0.55 and 0.65 on pines, and 0.65, 0.75 and 0.85 on rocks and stumps. Chosen: 0.55 and 0.75. At 0.45 the pines turn into white blobs on the snow, and at 0.65 they keep hardly any. Rocks need the higher threshold because a rounded top faces up almost everywhere.
+  - `Rock_Snow` needs a darker, cooler stone than `Rock_Grey` for its cap to show.
+  - Moss: compared none, past 0.8 and past 0.65. Ash: compared none, past 0.7 and past 0.5. Chosen: moss past 0.8 (a cap) and ash past 0.7 (a dusting on the upper side of the limbs). Lower, moss covers half a rock and ash turns the tree grey.
+  - Ash on basalt was tried and dropped: the flat tops became pale caps that read as snow.
+- **Shadows.** Compared none, a shadow drawn into the prop's sprite, and a shadow sprite of its own on the ground, with the rogue beside, behind and in front of a tree. Chosen: a sprite of its own on the ground, under every unit. A shadow in the sprite sorts with the prop and darkens a unit standing in it behind the prop (the rogue's boots). With no shadow, trees stand on the grass rather than in it. The previews drew a hard ellipse of black at 35%:
+  - across, 0.42 of the sprite's width (0.4 for pines, 0.26 for bare trees, about half for bushes, rocks and stumps), and a third of that tall;
+  - shifted east, away from the light, by about a twelfth of the width.
+
+  Overlapping shadows in a forest darken each other, which looked right.
+- **Rocks.** Compared round rocks (squashed spheres with lumps) and faceted rocks (convex solids of 14 random planes leaning up, each cut at 88 to 100% of the ellipsoid's reach, with a flattened top). Chosen: faceted. Round rocks read as eggs, domes or snowballs.
+- **Basalt.** Compared columns (hexagonal prisms, the middle one tallest, tops tilted), a single tapered spire, and a stacked crag. Chosen: the crag:
+  - three six-sided frustums, 0.42, 0.33 and 0.25 of the height, each about a quarter narrower than the one below and offset a little;
+  - their tops tilted, the last one pointed;
+  - a smaller spire beside it.
+
+  The single spire reads as a smooth cone. The columns are striking but look like organ pipes at this size; they could become a look of their own.
+- **Palettes.** Each was compared three ways on its terrain. All three read at 1x, and none vanishes as the Bandit's first green cloak did. The olive crowns stood out on the grass but looked sickly as a forest; the darkest options (deep blue-green crowns, burnt brown wood, warm dark basalt, straw reeds) sank into their ground. Chosen ramps (outline, shadow, middle, light):
+
+  | Look | Material | Ramp |
+  |---|---|---|
+  | `Tree_Broadleaf` | leaves | `0f2a22`, `1f4f38`, `33753f`, `6ea24a` (teal-green) |
+  | trees and stumps | bark | `1e140e`, `3e2a1c`, `604230`, `8a6644` |
+  | `Bush_Green` | leaves | `12301c`, `2a5e34`, `438a3e`, `86b850` (lighter than the trees, so bushes under them separate) |
+  | `Rock_Grey` | stone | `26282e`, `5e626c`, `868a92`, `b4b6b4` (neutral; the warm grey compared, `2e2a26`, `6a645c`, `928a7e`, `bcb4a4`, suits `Rock_Sand`) |
+  | `Rock_Grey` | moss | `1c3412`, `3e6a24`, `5e8e30`, `92b648` |
+  | `Stump_Oak` | cut end | `3a2618`, `9a7048`, `c09464`, `e0bc86` |
+  | `Fern` | fronds | `133a18`, `2f7a2c`, `52a03a`, `92c856` (yellow-green, apart from both the grass and the trees) |
+  | `Pine_Snow` | needles | `0a1e22`, `173d3d`, `245b4f`, `3f7f62` (blue-green, apart from the broadleaf) |
+  | snow covers | snow | `5a6a8c`, `a9b8d6`, `d6e0f0`, `f6f9ff` |
+  | `Rock_Snow` | stone | `1c2028`, `464e5e`, `646e80`, `8c96a8` |
+  | `Tree_Charred` | wood | `0c0909`, `211b1a`, `3a302d`, `5e504a` (warm charcoal) |
+  | `Tree_Charred` | ash | `2c2826`, `5e5854`, `867f78`, `ada59b` |
+  | `Spire_Basalt` | basalt | `100e18`, `34303e`, `524c5e`, `7a7488` (purple-grey) |
+  | `Reeds` | blades | `2e3a14`, `5c7a2c`, `8ca23c`, `c6c464` (yellow-green) |
+- **Bake times.** Props of capsules, ellipsoids and convex solids took 5 to 60 ms each (16 ms median) on a 360 px canvas, most of it shading the whole canvas. Pines took 0.43 to 0.86 s (0.59 s on average) because their five tiers are ray-marched. The 248 previews baked in 25 s, 21 s of it the 35 pines. Phase 1 can make the tiers an analytic surface, or march them in larger steps and refine.
+- **Canvas features Phase 1 needs that the plan did not list** (The canvas row and Phase 1's first box now name them): convex solids instead of faceted triangles; ray-marched fields; a material per pixel from position and normal; envelope normals; the ground hidden; world positions and normals per pixel; tone offsets; tones by height. The baker also needs cropping to the drawing with the base pixel kept, and a footprint measured from the pixels of ground-contact materials lower than 0.12 cells.
+- **Scope and layout confirmed.** No crafted, changing or animated props for now, so no campsites (Non-goals). Props move to the units' layout (Layout).
 
 ### Phase 1: the prop baker and the woods' core
 
-- [ ] The canvas shared by characters and props (material ids and their table; ellipsoids, faceted triangles, patterns, cover), the characters' sheets unchanged byte for byte.
-- [ ] `PropRecipe` with `TreeRecipe`, `BushRecipe`, `RockRecipe` and `WoodRecipe`; the writer (sheet, prefabs created or updated in place, footprints measured); the bases moved to the units' layout; the inspector with its previews on the terrain and Generate.
+- [ ] The canvas shared by characters and props (material ids and their table; ellipsoids, convex solids, ray-marched fields, envelope normals, the ground hidden, world positions and normals, patterns, tone offsets and tones by height, cover), the characters' sheets unchanged byte for byte.
+- [ ] `PropRecipe` with `TreeRecipe`, `BushRecipe`, `RockRecipe` and `WoodRecipe`; the writer (sheet, shadow sprites, prefabs created or updated in place, footprints measured); the bases moved to the units' layout, with a shadow renderer drawing under the units; the inspector with its previews on the terrain and Generate.
 - [ ] The woods' looks generated: `Tree_Broadleaf`, `Tree_BroadleafSmall`, `Bush_Green`, `Rock_Grey`, `Boulder_Grey`, `Stump_Oak`.
 - [ ] They show in the Prop Placement window and pass `PropPrefabTests`; placed by hand in Testlands, they block their cells and sort with the player walking around them.
 
@@ -109,7 +194,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 - [ ] Covers in use: snow on the Snowfield's looks, ash on the Lava Fields'.
 - [ ] Conical and bare crowns: `Pine_Snow`, `PineSmall_Snow`, `Tree_DeadSnow`, `Tree_Charred`.
-- [ ] `Rock_Snow`, `Boulder_Snow`, `Stump_Snow`, `StumpSmall_Snow`; `Spire_Basalt` (faceted), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred`.
+- [ ] `Rock_Snow`, `Boulder_Snow`, `Stump_Snow`, `StumpSmall_Snow`; `Spire_Basalt` (a stacked crag), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred`.
 
 ### Phase 4: props in play
 
@@ -159,6 +244,5 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 ## Open questions
 
 - Whether a dense forest of GameObjects costs too much once whole regions are loaded. If Phase 4's measurements say so, the forest edge's trees could be drawn by one renderer per chunk instead, sorted per tree.
-- Whether props need shadows at all, given that units have none (Phase 0).
 - Fade or silhouette for a unit hidden behind a prop (Phase 4).
 - Sorting range: `YPositionSorter` writes `-round(y * 100)` into a 16-bit sorting order, which runs out about 327 units from y = 0. The Overworld reaches 256, but a world 16 chunks tall would stop sorting past its sixth chunk row. This is not a prop matter, but a forest in such a world would show it first.

@@ -47,9 +47,9 @@ The look, the scope (Non-goals), the layout and the shadows were settled in Phas
 | Recipes | Editor-only ScriptableObjects under `Assets/Settings/Props/`, one abstract `PropRecipe` (the prop's name, its category folder, a seed, the variant count, the frame size and base pixel, blocking or walk-through, the palette as a ramp per material, an optional cover) with a kind per shape: `TreeRecipe` (trunk, branching, a crown that is round, conical as a pine, or bare as a dead tree), `BushRecipe`, `RockRecipe` (lumps, flatness, facets, height, so boulders and spires too), `WoodRecipe` (stumps, fallen logs, driftwood) and `PlantRecipe` (ferns, reeds, cattails, beach grass, mushrooms). |
 | Looks per terrain | A look is a recipe asset: the same kind with the palette and cover of the terrain it stands on (`Rock_Grey` with moss for the woods, `Rock_Sand` for the beach, `Rock_Snow` capped with snow, `Boulder_Basalt` for the lava fields). Palettes are chosen against each terrain's albedo and previewed on it, never on a blank background. Phase 0 chose the first looks' palettes and covers (its notes list the ramps): snow past 0.55 on pines and 0.75 on rocks and stumps, moss past 0.8, ash past 0.7. |
 | Variants | Each recipe bakes `variantCount` variants (4 by default) from its seed, each its own prefab, so scatter layers, which pick a random prefab per try, mix them. A recipe's count only grows: lowering it is refused while a prefab of a dropped variant exists, since placed props reference it. |
-| Output | Through `SpriteSheetFiles`: `Assets/Sprites/Props/<Name>.png`, the variants in one row, sliced into `<Name>_<variant>` pivoted on the base pixel, keeping slice IDs; and `Assets/Prefabs/Props/<Category>/<Name>_<variant>.prefab`, a variant of `Prop` or `BlockingProp`, created once and updated in place afterwards, so its GUID and every placed instance stay. Categories: `Trees`, `Bushes`, `Rocks`, `Wood`, `Plants`, which the Prop Placement window lists. |
-| Layout | Props take the units' layout: the sprite pivots on the prop's base pixel (the middle of a trunk's foot, the middle of a rock's base) and `Visuals` sits on the root, where the player's and the Weasel's do since Animation.md's Phase 2. The bases move `Visuals` from half a unit up to the root; nothing uses them yet. Roots, a log's far end or a shadow may then reach below the base (the Phase 0 bakes reach 5 to 8 px below it with their roots and outline), and a prop sorts exactly at its foot. Confirmed in Phase 0. |
-| Footprint | Measured from the drawing, not set by hand: the box around what touches the ground (a trunk's foot and root flare, a rock's or bush's lower body), in whole pixels, as the `BlockingProp` collider; `PropGridSnapping` then centres it on the fewest whole cells, as for any prop. Trees, rocks, boulders, spires, stumps, logs and bushes block; plants, small stumps and small stones are walked through. |
+| Output | Through `SpriteSheetFiles`: `Assets/Sprites/Props/<Name>.png`, the variants in one row over a row of their shadows, sliced into `<Name>_<variant>` pivoted on the base pixel and `<Name>_<variant>_Shadow` pivoted on the shadow frame's base pixel, keeping slice IDs; and `Assets/Prefabs/Props/<Category>/<Name>_<variant>.prefab`, a variant of `Prop` or `BlockingProp`, created once and updated in place afterwards, so its GUID and every placed instance stay. Categories: `Trees`, `Bushes`, `Rocks`, `Wood`, `Plants`, which the Prop Placement window lists. |
+| Layout | Props take the units' layout: the sprite pivots on the prop's base pixel (the middle of a trunk's foot, the middle of a rock's base) and `Visuals` sits on the root, where the player's and the Weasel's do since Animation.md's Phase 2. The bases moved `Visuals` from half a unit up to the root in Phase 1 and gained a `Shadow` child drawing the shadow on the ground. Roots, a log's far end or a shadow may then reach below the base (the Phase 0 bakes reach 5 to 8 px below it with their roots and outline), and a prop sorts exactly at its foot. Confirmed in Phase 0. |
+| Footprint | Measured from the drawing, not set by hand: the box around what touches the ground (a trunk's foot and root flare, a rock's or bush's lower body), in whole pixels, as the `BlockingProp` collider; `PropGridSnapping` then centres it on the fewest whole cells, as for any prop. Since Phase 1 the box lies evenly about the base (its rows mirrored above it, its columns widened), so a snapped root lands on whole pixels. Trees, rocks, boulders, spires, stumps, logs and bushes block; plants, small stumps and small stones are walked through. |
 | Size | 32 px a unit, as everything; a recipe's sizes are in cells, heights on screen from the base. Settled in Phase 0 against the 46 px (1.45 cells) rogue, keeping the plan's starting points: a broadleaf tree 3 to 4 cells tall and 2.5 wide on a one-cell trunk, a pine 3.5 to 4.5 tall and 2 wide, a dead tree 2.5 to 3.5, a bush 1 to 1.3, a rock 0.6 to 1.2 (its lumps included), a boulder 1.5 to 2, a spire 2 to 3 tall on one cell, a stump 0.7, a log 1.5 to 2 long, plants 0.4 to 1. A forest edge at a spacing of 2 cells closes into one canopy in which each tree still reads. |
 | Shadows | A shadow sprite of its own, drawn on the ground under every unit: a hard ellipse of black at 35% under the crown or body, shifted a little east, away from the light. A shadow drawn into the prop's sprite sorts with the prop and darkens a unit standing in it behind the prop; with no shadow, trees stand on the grass rather than in it. Units keep having none. Settled in Phase 0; the recipe bakes the shadow with the prop (Phase 1). |
 | Light | Lit like units (`SpriteLit`) by each world's Global Light 2D; nothing glows. |
@@ -145,7 +145,7 @@ Phase 0 notes:
   - Moss: compared none, past 0.8 and past 0.65. Ash: compared none, past 0.7 and past 0.5. Chosen: moss past 0.8 (a cap) and ash past 0.7 (a dusting on the upper side of the limbs). Lower, moss covers half a rock and ash turns the tree grey.
   - Ash on basalt was tried and dropped: the flat tops became pale caps that read as snow.
 - **Shadows.** Compared none, a shadow drawn into the prop's sprite, and a shadow sprite of its own on the ground, with the rogue beside, behind and in front of a tree. Chosen: a sprite of its own on the ground, under every unit. A shadow in the sprite sorts with the prop and darkens a unit standing in it behind the prop (the rogue's boots). With no shadow, trees stand on the grass rather than in it. The previews drew a hard ellipse of black at 35%:
-  - across, 0.42 of the sprite's width (0.4 for pines, 0.26 for bare trees, about half for bushes, rocks and stumps), and a third of that tall;
+  - a half width of 0.42 of the sprite's width (0.4 for pines, 0.26 for bare trees, about half for bushes, rocks and stumps), and a half height of about a third of that;
   - shifted east, away from the light, by about a twelfth of the width.
 
   Overlapping shadows in a forest darken each other, which looked right.
@@ -180,10 +180,50 @@ Phase 0 notes:
 
 ### Phase 1: the prop baker and the woods' core
 
-- [ ] The canvas shared by characters and props (material ids and their table; ellipsoids, convex solids, ray-marched fields, envelope normals, the ground hidden, world positions and normals, patterns, tone offsets and tones by height, cover), the characters' sheets unchanged byte for byte.
-- [ ] `PropRecipe` with `TreeRecipe`, `BushRecipe`, `RockRecipe` and `WoodRecipe`; the writer (sheet, shadow sprites, prefabs created or updated in place, footprints measured); the bases moved to the units' layout, with a shadow renderer drawing under the units; the inspector with its previews on the terrain and Generate.
-- [ ] The woods' looks generated: `Tree_Broadleaf`, `Tree_BroadleafSmall`, `Bush_Green`, `Rock_Grey`, `Boulder_Grey`, `Stump_Oak`.
+- [x] The canvas shared by characters and props (material ids and their table; ellipsoids, convex solids, ray-marched fields, envelope normals, the ground hidden, world positions and normals, patterns, tone offsets and tones by height, cover), the characters' sheets unchanged byte for byte.
+- [x] `PropRecipe` with `TreeRecipe`, `BushRecipe`, `RockRecipe` and `WoodRecipe`; the writer (sheet, shadow sprites, prefabs created or updated in place, footprints measured); the bases moved to the units' layout, with a shadow renderer drawing under the units; the inspector with its previews on the terrain and Generate.
+- [x] The woods' looks generated: `Tree_Broadleaf`, `Tree_BroadleafSmall`, `Bush_Green`, `Rock_Grey`, `Boulder_Grey`, `Stump_Oak`.
 - [ ] They show in the Prop Placement window and pass `PropPrefabTests`; placed by hand in Testlands, they block their cells and sort with the player walking around them.
+
+Phase 1 notes:
+- **The canvas.** `ArtCanvas` (`Assets/Editor/Art/`) took over `CharacterCanvas`'s drawing and shading with material and part ids and a table of `ArtMaterial`s: a `ColourRamp`, flat or not, outlined or not, a pattern, a tone offset, a tone height and a cover. The ramp keeps its four colours (outline, shadow, middle, light), since Phase 0 chose three tones.
+  - `CharacterCanvas` is now a subclass with the characters' enums as ids and typed overloads of the calls the painters use, so no painter changed. Its `Shade` builds the table from `CharacterMaterials` and hides nothing under the ground.
+  - The character, Weasel, weapon and Aseprite tests (80, among them the byte-for-byte checks against the project's sheets) pass unchanged.
+  - Patterns so far: `Bark`, `Speckle` and `Rings`. The pines' needle streaks and the crags' joints come with their looks in Phase 3. The tone by height is in already, for Phase 2's blades.
+- **Recipes.** `TreeRecipe` draws the round crown only, and `WoodRecipe` a stump only; conical and bare crowns come in Phase 3, logs and driftwood in Phase 2. The crown and the roots are shared serializable settings (`PropCrown`, `PropRoots`), and every recipe's defaults are its Phase 0 look.
+  - `RockRecipe`'s width counts its lumps: a body of 0.42 of the width, and lumps of 0.15 to 0.22 of it set 0.22 to 0.3 of it to either side along the rock's turn.
+  - Each lump now lies inside an octagon around its ellipsoid before the random planes cut it. Without it, a side the planes missed left the solid unbounded there, and two of the first rock bakes ran to their frame's edge.
+- **Footprints.** Measured as planned, but laid evenly about the base: the rows mirrored from the lowest ground-touching pixel to as far above the base, the columns widened to the farther side.
+  - An odd-width box centred on its cells would put the root on a half pixel; this way the root lands on whole pixels.
+  - `PropPrefabTests`' rule that a footprint starts at its root became "around the root and under the sprite".
+  - `Bush_Green` counts surfaces up to 0.3 cells as touching the ground. At 0.12, one variant's footprint was 12 x 2 px. Bushes 1.2 wide block two cells, one of them a single cell.
+- **Shadows.** The shadow sprites lie in the prop's own sheet, in a row under the variants, each in a frame as wide as the variant's and tall enough for the widest shadow, pivoted on the base.
+  - The base prefabs gained a `Shadow` child on the root: unsorted, drawing on the `Terrain` sorting layer at order 5, over the ground (0) and under status auras (9), move markers and walls (10). No sorting layer was added.
+  - Each look's shadow shares are Phase 0's: the trees' 0.42, the bush's 0.5, the rocks' 0.52, the stump's 0.55.
+- **The looks, measured from their assets** (four variants each, previewed on the grass):
+
+  | Look | Tall | Wide | Footprint | Blocks |
+  |---|---|---|---|---|
+  | `Tree_Broadleaf` | 3.5 to 3.6 | 2.5 to 2.8 | 20 to 26 x 10 to 12 px | 1 cell |
+  | `Tree_BroadleafSmall` (2.6 tall, crown 1.8 x 1.7, trunk 0.12, 16 clumps of 0.22 to 0.38) | 2.7 | 1.75 to 2.0 | 16 to 18 x 8 to 10 px | 1 cell |
+  | `Bush_Green` | 1.0 to 1.1 | 1.1 to 1.2 | 26 to 38 x 2 to 12 px | 1 or 2 cells |
+  | `Rock_Grey` | 0.7 | 0.9 to 1.0 | 26 to 32 x 12 to 14 px | 1 cell |
+  | `Boulder_Grey` (1.8 wide, 1.2 tall, three lumps) | 1.2 to 1.3 | 1.3 to 1.7 | 40 to 54 x 20 to 24 px | 2 cells |
+  | `Stump_Oak` | 0.5 to 0.56 | 0.84 to 0.91 | 26 to 28 x 12 px | 1 cell |
+- **Bake times, in the editor.** Each look's four variants baked in 52 ms (`Tree_Broadleaf`), 22 ms (`Tree_BroadleafSmall`), 9 ms (`Bush_Green`), 27 ms (`Rock_Grey`), 72 ms (`Boulder_Grey`) and 149 ms (`Stump_Oak`, a ray-marched field).
+  - A first Generate (sheet, import, slices, four prefabs) took 0.46 to 0.74 s a look.
+  - Generating again unchanged took 8 to 146 ms and wrote nothing.
+- **Testlands.** Chunk (0, 0) holds 22 of the 24 variants (all but two boulders) on the grass south of the road by the `start` entry, in rows 28 and 33, under its new `Props` root. They were placed through `PropGridSnapping` as the Prop Placement window places, and the window lists all 24 prefabs under Bushes, Rocks, Trees and Wood.
+  - On the chunk's navigation grid, each blocks exactly the cells it snapped to.
+  - Rendered through the game's pipeline (`TerrainBlendProbe`), with the rogue's idle frame and a `YPositionSorter`, as units sort, standing behind, beside and in front of trees, rocks, boulders and stumps: each sorts by where it stands, and the shadows lie on the ground under the stand-ins.
+  - The chunk was saved with all four chunks open. With only its own open, the walls' dual-grid render tiles along its border were written as well.
+  - While the editor does not tick, the props keep their prefab's sorting order of 0 until the next editor update. So the scene was saved first, and the render applied the sorters afterwards (Architecture.md, Known gaps: saving after touching a prop's renderer).
+  - The PlayMode tests that boot into Testlands and move the player and the mobs around the start chunk (`PlayerControlsPlayModeTests`, `MobPlayModeBehaviorTests`, 24) pass with the props there.
+- **Previews.** In `Recordings/Props/` (gitignored):
+  - `phase1_woods_1x.png` and `phase1_woods_3x.png`: the six looks on the grass, from their assets, with their shadows;
+  - `testlands_render_1x.png`, `testlands_render_3x.png` and `testlands_render_trees_4x.png`: the in-editor render with the stand-ins;
+  - `inspector_strip_tree.png`: the inspector's strip of `Tree_Broadleaf`.
+- **Still to check by hand,** for the last box: in play in Testlands, walk behind, beside and in front of the trees, and into the bushes, rocks and stumps. Each should block its cells, sort with the player as it walks around it, and draw its shadow under the player.
 
 ### Phase 2: forest floor and shores
 

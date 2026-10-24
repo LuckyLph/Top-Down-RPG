@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b61831a3418a1447b4b467396888e44, type: 3}
+  m_Name: Tree_Broadleaf
+  m_EditorClassIdentifier: TopDownRPG.Editor::TreeRecipe
+  propName: Tree_Broadleaf
+  category: 0
+  seed: 11
+  variantCount: 4
+  frameSize: {x: 104, y: 136}
+  basePixel: {x: 52, y: 10}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.42
+  shadowFlatness: 0.34
+  shadowShift: 0.08
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  height: 3.5
+  crownWidth: 2.5
+  crownHeight: 2.4
+  crownDepth: 0.9
+  crownWander: {x: 0.08, y: 0.05}
+  trunkRadius: 0.16
+  trunkTaper: 0.62
+  branches: 3
+  roots:
+    count: 4
+    reach: {x: 2, y: 2.7}
+    thickness: {x: 0.55, y: 0.2}
+    rise: 1.2
+  crown:
+    clumps: 26
+    clumpRadius: {x: 0.28, y: 0.5}
+    blend: 0.45
+    shell: {x: 0.88, y: 1.02}
+  bark:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035902
+    middle:
+      serializedVersion: 2
+      rgba: 4281352800
+    light:
+      serializedVersion: 2
+      rgba: 4282672778
+  barkGrooves: 16
+  leaves:
+    outline:
+      serializedVersion: 2
+      rgba: 4280429071
+    shadow:
+      serializedVersion: 2
+      rgba: 4281880351
+    middle:
+      serializedVersion: 2
+      rgba: 4282348851
+    light:
+      serializedVersion: 2
+      rgba: 4283081326

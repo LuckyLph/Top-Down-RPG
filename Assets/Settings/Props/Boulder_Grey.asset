@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44836177053e9ac43a40c07574ff434a, type: 3}
+  m_Name: Boulder_Grey
+  m_EditorClassIdentifier: TopDownRPG.Editor::RockRecipe
+  propName: Boulder_Grey
+  category: 2
+  seed: 51
+  variantCount: 4
+  frameSize: {x: 72, y: 64}
+  basePixel: {x: 36, y: 20}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.52
+  shadowFlatness: 0.34
+  shadowShift: 0.05
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  width: 1.8
+  height: 1.2
+  depth: {x: 0.7, y: 0.9}
+  sink: 0.3
+  facets: 14
+  cut: {x: 0.88, y: 1}
+  top: {x: 0.86, y: 0.98}
+  lumps: 3
+  stone:
+    outline:
+      serializedVersion: 2
+      rgba: 4281215014
+    shadow:
+      serializedVersion: 2
+      rgba: 4285293150
+    middle:
+      serializedVersion: 2
+      rgba: 4287793798
+    light:
+      serializedVersion: 2
+      rgba: 4290033332
+  speckles: 0.1
+  moss: 1
+  mossColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279383068
+    shadow:
+      serializedVersion: 2
+      rgba: 4280576574
+    middle:
+      serializedVersion: 2
+      rgba: 4281372254
+    light:
+      serializedVersion: 2
+      rgba: 4282955410
+  mossFacing: 0.8
+  mossNoise: 0.4
+  mossNoiseScale: 6

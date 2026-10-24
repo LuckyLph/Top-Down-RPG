@@ -8,8 +8,9 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
-/// <c>Visuals</c> child holding the sprite and its sorter), the footprints of blocking props, and how a placed prop
-/// blocks navigation.
+/// <c>Visuals</c> child on it holding the sprite pivoted on the base and its sorter, and a <c>Shadow</c> child drawing
+/// the shadow on the ground under every unit), the footprints of blocking props, and how a placed prop blocks
+/// navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -17,7 +18,9 @@ public class PropPrefabTests
     private const string PropPath = PropsFolder + "/Prop.prefab";
     private const string BlockingPropPath = PropsFolder + "/BlockingProp.prefab";
     private const string VisualsName = "Visuals";
-    private const float VisualsHeight = 0.5f;
+    private const string ShadowName = "Shadow";
+    private const string ShadowSortingLayer = "Terrain";
+    private const int ShadowSortingOrder = 5;
     private const float OnePixel = 1f / 32f;
 
     private readonly List<Object> created = new();
@@ -58,21 +61,19 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child half a unit above the root (it
-    /// may be nudged sideways to centre the art on the footprint), drawn on the Entities sorting layer and sorted with
-    /// no offset at the root, its base, as units sort at their feet; a sprite, where it has one, pivoted so its base
-    /// meets the root; the root itself draws nothing.
+    /// Every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child on the root, as units do,
+    /// drawn on the Entities sorting layer and sorted with no offset at the root, its base, as units sort at their feet;
+    /// a sprite, where it has one, pivoted on its base, so the root lies inside it; the root itself draws nothing.
     /// </summary>
     [Test]
-    public void Props_KeepTheirSpriteOnAVisualsChild_HalfAUnitAboveTheirBase()
+    public void Props_KeepTheirSpriteOnAVisualsChild_AtTheirBase()
     {
         int obstacles = LayerMask.NameToLayer("Obstacles");
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
             Assert.That(propPrefab.GetComponent<Renderer>(), Is.Null, $"{propPrefab.name}'s root draws nothing.");
-            Transform visuals = Visuals(propPrefab);
-            Assert.That(visuals.localPosition.y, Is.EqualTo(VisualsHeight), propPrefab.name);
-            Assert.That(visuals.localPosition.z, Is.Zero, propPrefab.name);
+            Transform visuals = Child(propPrefab, VisualsName);
+            Assert.That(visuals.localPosition, Is.EqualTo(Vector3.zero), $"{propPrefab.name}'s visuals should sit on its root.");
             Assert.That(visuals.gameObject.layer, Is.Not.EqualTo(obstacles), $"{propPrefab.name}'s visuals must be on a layer the camera draws.");
 
             SpriteRenderer renderer = visuals.GetComponent<SpriteRenderer>();
@@ -80,7 +81,7 @@ public class PropPrefabTests
             Assert.That(renderer.sortingLayerName, Is.EqualTo("Entities"), propPrefab.name);
             if (renderer.sprite != null)
             {
-                Assert.That(VisualsHeight + renderer.sprite.bounds.min.y, Is.EqualTo(0f).Within(0.001f), $"{propPrefab.name}'s sprite should stand on the root.");
+                AssertContainsRoot(renderer.sprite.bounds, $"{propPrefab.name}'s sprite should be pivoted on its base.");
             }
 
             YPositionSorter sorter = visuals.GetComponent<YPositionSorter>();
@@ -92,9 +93,36 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// A blocking prop's root is on the Obstacles layer and holds its only collider, a solid box starting within a
-    /// pixel of the root and, where it has a sprite, lying within the sprite's width as drawn, like the feet collider
-    /// on the player's root (it may be off centre, to follow the art); a walk-through prop has no collider at all.
+    /// Every prop has a <c>Shadow</c> child on its root, on a layer the camera draws, whose sprite renderer draws on the
+    /// ground (the Terrain sorting layer, over the ground and under auras, markers and walls) and so under every unit,
+    /// sorted by nothing; its sprite, where it has one, pivoted on the base.
+    /// </summary>
+    [Test]
+    public void Props_DrawTheirShadowOnTheGround_UnderEveryUnit()
+    {
+        int obstacles = LayerMask.NameToLayer("Obstacles");
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            Transform shadow = Child(propPrefab, ShadowName);
+            Assert.That(shadow.localPosition, Is.EqualTo(Vector3.zero), propPrefab.name);
+            Assert.That(shadow.gameObject.layer, Is.Not.EqualTo(obstacles), $"{propPrefab.name}'s shadow must be on a layer the camera draws.");
+            Assert.That(shadow.GetComponent<YPositionSorter>(), Is.Null, $"{propPrefab.name}'s shadow is not sorted.");
+
+            SpriteRenderer renderer = shadow.GetComponent<SpriteRenderer>();
+            Assert.That(renderer, Is.Not.Null, propPrefab.name);
+            Assert.That(renderer.sortingLayerName, Is.EqualTo(ShadowSortingLayer), propPrefab.name);
+            Assert.That(renderer.sortingOrder, Is.EqualTo(ShadowSortingOrder), propPrefab.name);
+            if (renderer.sprite != null)
+            {
+                AssertContainsRoot(renderer.sprite.bounds, $"{propPrefab.name}'s shadow should be pivoted on its base.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A blocking prop's root is on the Obstacles layer and holds its only collider, a solid box around the root and,
+    /// where it has a sprite, lying within the sprite as drawn, like the feet collider on the player's root; a
+    /// walk-through prop has no collider at all.
     /// </summary>
     [Test]
     public void BlockingProps_HaveAFootprintAtTheirBase_AndOthersNoCollider()
@@ -118,19 +146,20 @@ public class PropPrefabTests
             Assert.That(footprint.isTrigger, Is.False, propPrefab.name);
             Assert.That(footprint.size.x, Is.GreaterThan(0f), propPrefab.name);
             Assert.That(footprint.size.y, Is.GreaterThan(0f), propPrefab.name);
-            Assert.That(footprint.offset.y - footprint.size.y * 0.5f, Is.EqualTo(0f).Within(OnePixel), $"{propPrefab.name}'s footprint should start at its base.");
+            Bounds box = new(footprint.offset, footprint.size);
+            AssertContainsRoot(box, $"{propPrefab.name}'s footprint should lie around its base.");
 
-            Transform visuals = Visuals(propPrefab);
-            Sprite art = visuals.GetComponent<SpriteRenderer>().sprite;
+            Sprite art = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>().sprite;
             if (art == null)
             {
                 continue;
             }
 
-            float spriteLeft = visuals.localPosition.x + art.bounds.min.x;
-            float spriteRight = visuals.localPosition.x + art.bounds.max.x;
-            Assert.That(footprint.offset.x - footprint.size.x * 0.5f, Is.GreaterThanOrEqualTo(spriteLeft - OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
-            Assert.That(footprint.offset.x + footprint.size.x * 0.5f, Is.LessThanOrEqualTo(spriteRight + OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
+            Bounds drawn = art.bounds;
+            Assert.That(box.min.x, Is.GreaterThanOrEqualTo(drawn.min.x - OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
+            Assert.That(box.max.x, Is.LessThanOrEqualTo(drawn.max.x + OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
+            Assert.That(box.min.y, Is.GreaterThanOrEqualTo(drawn.min.y - OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
+            Assert.That(box.max.y, Is.LessThanOrEqualTo(drawn.max.y + OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
         }
     }
 
@@ -168,13 +197,24 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// The <c>Visuals</c> child of <paramref name="propPrefab"/>, failing the test when it has none.
+    /// The child named <paramref name="childName"/> of <paramref name="propPrefab"/>, failing the test when it has none.
     /// </summary>
-    private static Transform Visuals(GameObject propPrefab)
+    private static Transform Child(GameObject propPrefab, string childName)
     {
-        Transform visuals = propPrefab.transform.Find(VisualsName);
-        Assert.That(visuals, Is.Not.Null, $"{propPrefab.name} should have a {VisualsName} child.");
-        return visuals;
+        Transform child = propPrefab.transform.Find(childName);
+        Assert.That(child, Is.Not.Null, $"{propPrefab.name} should have a {childName} child.");
+        return child;
+    }
+
+    /// <summary>
+    /// Asserts that <paramref name="bounds"/>, in the root's space, hold the root within a pixel.
+    /// </summary>
+    private static void AssertContainsRoot(Bounds bounds, string message)
+    {
+        Assert.That(bounds.min.x, Is.LessThanOrEqualTo(OnePixel), message);
+        Assert.That(bounds.max.x, Is.GreaterThanOrEqualTo(-OnePixel), message);
+        Assert.That(bounds.min.y, Is.LessThanOrEqualTo(OnePixel), message);
+        Assert.That(bounds.max.y, Is.GreaterThanOrEqualTo(-OnePixel), message);
     }
 
     /// <summary>

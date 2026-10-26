@@ -2,9 +2,22 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// A stump: a short trunk whose foot flares into the ground, its outline bulging in a few lobes and its broken top
-/// tilted and jagged, drawn as a field marched along the view rays; its cut end (where the surface faces up) is wood
-/// with rings around the middle, the rest bark, with roots splayed over the ground (<see cref="PropRoots"/>).
+/// The shapes a <see cref="WoodRecipe"/> draws.
+/// </summary>
+public enum WoodForm
+{
+    Stump,
+    Log
+}
+
+/// <summary>
+/// Dead wood on the ground, drawn as a field marched along the view rays. A stump: a short trunk whose foot flares into
+/// the ground, its outline bulging in a few lobes and its broken top tilted and jagged; its cut end (where the surface
+/// faces up) is wood with rings around the middle, the rest bark, with roots splayed over the ground
+/// (<see cref="PropRoots"/>). A log: a fallen trunk lying sunk a little into the ground, turned from lying east and
+/// west, bowed and tapering, its broken ends (where the surface faces along it) wood with rings around its axis, its
+/// bark grooved along it, with a few branch stubs; a fallen log, or driftwood in bleached colours. Either can take a
+/// cover where it faces up (moss, later snow).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Wood Recipe", fileName = "Stump_Oak")]
 public sealed class WoodRecipe : PropRecipe
@@ -14,6 +27,15 @@ public sealed class WoodRecipe : PropRecipe
     private const float BoundsReach = 1.6f;
     private const float BoundsBelow = 0.05f;
     private const float BoundsAbove = 0.12f;
+    private const float StubSpan = 0.3f;
+    private const float StubStart = 0.6f;
+    private const float StubLean = 0.4f;
+    private const float StubFoot = 0.4f;
+    private const float StubTip = 0.28f;
+    private const float KnotWaves = 7f;
+
+    [Tooltip("A stump standing on its roots, or a log lying on the ground.")]
+    [SerializeField] private WoodForm form = WoodForm.Stump;
 
     [Header("Stump (cells)")]
     [Tooltip("The stump's radius above its flare.")]
@@ -34,19 +56,61 @@ public sealed class WoodRecipe : PropRecipe
     [SerializeField, Range(0f, 1f)] private float cutFacing = 0.72f;
     [SerializeField] private PropRoots roots = new(4, new Vector2(1.2f, 1.62f), new Vector2(0.33f, 0.12f), 0.72f);
 
+    [Header("Log (cells)")]
+    [Tooltip("The log's length.")]
+    [SerializeField, Min(0.1f)] private float length = 1.6f;
+    [Tooltip("The log's radius at its thick end.")]
+    [SerializeField, Min(0.02f)] private float logRadius = 0.2f;
+    [Tooltip("Its radius at its thin end, as a share of its thick end's.")]
+    [SerializeField, Range(0.2f, 1f)] private float taper = 0.85f;
+    [Tooltip("How far it may turn from lying east and west, in radians either way.")]
+    [SerializeField, Range(0f, 1.5f)] private float turn = 0.9f;
+    [Tooltip("How far its middle bows out sideways from a straight line, in cells: the least and most.")]
+    [SerializeField] private Vector2 bend = new(0f, 0.06f);
+    [Tooltip("How much of its radius lies under the ground.")]
+    [SerializeField, Range(0f, 0.8f)] private float sink = 0.2f;
+    [Tooltip("How much its girth swells and narrows along it, as a share of its radius.")]
+    [SerializeField, Range(0f, 0.3f)] private float knots = 0.04f;
+    [Tooltip("How far its broken ends reach in and out around them.")]
+    [SerializeField, Min(0f)] private float endJag = 0.03f;
+    [Tooltip("Its broken ends are where the surface faces along it past this.")]
+    [SerializeField, Range(0f, 1f)] private float endFacing = 0.7f;
+    [Tooltip("How many branch stubs stick out of it.")]
+    [SerializeField, Min(0)] private int stubs = 1;
+    [Tooltip("How far a stub sticks out past the bark: the shortest and longest.")]
+    [SerializeField] private Vector2 stubLength = new(0.1f, 0.2f);
+
     [Header("Colours")]
     [SerializeField] private ColourRamp bark = Ramp(0x1e140e, 0x3e2a1c, 0x604230, 0x8a6644);
-    [Tooltip("The bark's grooves per cell around the stump.")]
+    [Tooltip("The bark's grooves per cell around the wood.")]
     [SerializeField, Min(1f)] private float barkGrooves = 16f;
     [SerializeField] private ColourRamp cutEnd = Ramp(0x3a2618, 0x9a7048, 0xc09464, 0xe0bc86);
     [Tooltip("The cut end's rings per cell from its middle.")]
     [SerializeField, Min(1f)] private float rings = 11f;
 
+    [Header("Cover")]
+    [Tooltip("Whether a cover (moss) lies on the wood where it faces up.")]
+    [SerializeField] private bool cover;
+    [SerializeField] private ColourRamp coverColours = Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648);
+    [Tooltip("The cover lies where the surface faces up past this.")]
+    [SerializeField, Range(-1f, 1f)] private float coverFacing = 0.85f;
+    [Tooltip("How much noise breaks up the cover's edge: the noise's full range.")]
+    [SerializeField, Range(0f, 2f)] private float coverNoise = 0.5f;
+    [Tooltip("The cover noise's cycles per cell.")]
+    [SerializeField, Min(0.1f)] private float coverNoiseScale = 6f;
+
     /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
     {
-        int barkId = drawing.AddMaterial(new ArtMaterial(bark, pattern: ArtPattern.Bark, patternScale: barkGrooves), true);
-        int endId = drawing.AddMaterial(new ArtMaterial(cutEnd, pattern: ArtPattern.Rings, patternScale: rings), false);
+        int coverId = cover ? drawing.AddMaterial(new ArtMaterial(coverColours), true) : -1;
+        if (form == WoodForm.Log)
+        {
+            DrawLog(drawing, coverId);
+            return;
+        }
+
+        int barkId = drawing.AddMaterial(Wood(bark, ArtPattern.Bark, barkGrooves, coverId, Vector3.zero, Vector3.zero), true);
+        int endId = drawing.AddMaterial(Wood(cutEnd, ArtPattern.Rings, rings, coverId, Vector3.zero, Vector3.zero), false);
         float tilt = drawing.Range(-slant, slant);
         float phase = drawing.Range(0f, 10f);
         Func<Vector3, float> field = q =>
@@ -63,5 +127,82 @@ public sealed class WoodRecipe : PropRecipe
         int part = drawing.NewPart();
         drawing.Canvas.Field(field, new Bounds((min + max) * 0.5f, max - min), (position, surfaceNormal) => surfaceNormal.z > cutFacing ? endId : barkId, part);
         roots.Draw(drawing, radius, barkId, part);
+    }
+
+    /// <summary>
+    /// Draws a log lying across the base, its middle on it, with its stubs, in one part; its thick end lies either way.
+    /// </summary>
+    private void DrawLog(PropDrawing drawing, int coverId)
+    {
+        float angle = drawing.Range(-turn, turn);
+        Vector3 along = new(Mathf.Cos(angle), Mathf.Sin(angle), 0f);
+        if (drawing.Random.NextDouble() < 0.5)
+        {
+            along = -along;
+        }
+
+        Vector3 side = new(-along.y, along.x, 0f);
+        Vector3 centre = new(0f, 0f, logRadius * (1f - sink));
+        float bow = drawing.Range(bend) * (drawing.Random.NextDouble() < 0.5 ? -1f : 1f);
+        float phase = drawing.Range(0f, 10f);
+        float half = length * 0.5f;
+        int barkId = drawing.AddMaterial(Wood(bark, ArtPattern.Bark, barkGrooves, coverId, centre, along), true);
+        int endId = drawing.AddMaterial(Wood(cutEnd, ArtPattern.Rings, rings, coverId, centre, along), true);
+        Func<Vector3, float> field = q =>
+        {
+            Vector3 d = q - centre;
+            float u = Vector3.Dot(d, along);
+            float s = Vector3.Dot(d, side) - Bow(u, half, bow);
+            float r = Girth(u, half, phase);
+            float around = Mathf.Atan2(d.z, s);
+            float end = half + endJag * (ArtNoise.Value(new Vector3(around * JagWaves + phase, u > 0f ? 0.5f : 7.5f, 0.5f)) - 0.5f) * 2f;
+            return Mathf.Max(Mathf.Sqrt(s * s + d.z * d.z) - r, Mathf.Abs(u) - end);
+        };
+        float reachAlong = half + endJag;
+        float reachAcross = logRadius * (1f + knots) + Mathf.Abs(bow);
+        Vector3 extent = new(Mathf.Abs(along.x) * reachAlong + Mathf.Abs(side.x) * reachAcross, Mathf.Abs(along.y) * reachAlong + Mathf.Abs(side.y) * reachAcross, 0f);
+        Vector3 min = new(-extent.x, -extent.y, -BoundsBelow);
+        Vector3 max = new(extent.x, extent.y, centre.z + reachAcross + BoundsAbove);
+        int part = drawing.NewPart();
+        drawing.Canvas.Field(field, new Bounds((min + max) * 0.5f, max - min), (position, surfaceNormal) => Mathf.Abs(Vector3.Dot(surfaceNormal, along)) > endFacing ? endId : barkId, part);
+        for (int k = 0; k < stubs; k++)
+        {
+            float u = drawing.Range(-StubSpan, StubSpan) * length;
+            float lift = drawing.Range(0f, Mathf.PI);
+            Vector3 direction = (side * Mathf.Cos(lift) + Vector3.forward * Mathf.Sin(lift) + along * drawing.Range(-StubLean, StubLean)).normalized;
+            float r = Girth(u, half, phase);
+            Vector3 foot = centre + along * u + side * Bow(u, half, bow) + direction * r * StubStart;
+            Vector3 tip = foot + direction * (r * (1f - StubStart) + drawing.Range(stubLength));
+            drawing.Canvas.Capsule(foot, tip, r * StubFoot, r * StubTip, barkId, part);
+        }
+    }
+
+    /// <summary>
+    /// How far the log's middle line lies sideways at <paramref name="u"/> along it, bowed by <paramref name="bow"/> in
+    /// the middle and straight at its ends <paramref name="half"/> from it.
+    /// </summary>
+    private static float Bow(float u, float half, float bow)
+    {
+        float t = u / half;
+        return bow * (1f - t * t);
+    }
+
+    /// <summary>
+    /// The log's radius at <paramref name="u"/> along it: tapering from its thick end to its thin one, swelling and
+    /// narrowing by its knots.
+    /// </summary>
+    private float Girth(float u, float half, float phase)
+    {
+        float t = Mathf.Clamp01((u + half) / (2f * half));
+        return logRadius * Mathf.Lerp(1f, taper, t) * (1f + knots * Mathf.Sin(u * KnotWaves + phase));
+    }
+
+    /// <summary>
+    /// A wood material in <paramref name="ramp"/> with its pattern, taking the cover (or none, for -1), its pattern in the
+    /// frame of <paramref name="axis"/> through <paramref name="origin"/> (or the world's, for zero).
+    /// </summary>
+    private ArtMaterial Wood(ColourRamp ramp, ArtPattern pattern, float scale, int coverId, Vector3 origin, Vector3 axis)
+    {
+        return new ArtMaterial(ramp, pattern: pattern, patternScale: scale, cover: coverId, coverThreshold: coverFacing, coverNoise: coverNoise, coverNoiseScale: coverNoiseScale, patternOrigin: origin, patternAxis: axis);
     }
 }

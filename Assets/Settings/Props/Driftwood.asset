@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc10e75a8a8fd6747817ea25edde596c, type: 3}
+  m_Name: Driftwood
+  m_EditorClassIdentifier: TopDownRPG.Editor::WoodRecipe
+  propName: Driftwood
+  category: 3
+  seed: 171
+  variantCount: 4
+  frameSize: {x: 68, y: 40}
+  basePixel: {x: 34, y: 14}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.45
+  shadowFlatness: 0.3
+  shadowShift: 0.04
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
+  form: 1
+  radius: 0.27
+  height: 0.42
+  flare: 0.4
+  flareHeight: 0.06
+  jag: 0.08
+  slant: 0.1
+  wobble: 0.05
+  cutFacing: 0.72
+  roots:
+    count: 4
+    reach: {x: 1.2, y: 1.62}
+    thickness: {x: 0.33, y: 0.12}
+    rise: 0.72
+  length: 1.6
+  logRadius: 0.14
+  taper: 0.5
+  turn: 0.6
+  bend: {x: 0.04, y: 0.12}
+  sink: 0.3
+  knots: 0.08
+  endJag: 0.04
+  endFacing: 0.75
+  stubs: 2
+  stubLength: {x: 0.12, y: 0.25}
+  bark:
+    outline:
+      serializedVersion: 2
+      rgba: 4281349690
+    shadow:
+      serializedVersion: 2
+      rgba: 4285167228
+    middle:
+      serializedVersion: 2
+      rgba: 4287668392
+    light:
+      serializedVersion: 2
+      rgba: 4290169554
+  barkGrooves: 26
+  cutEnd:
+    outline:
+      serializedVersion: 2
+      rgba: 4282008650
+    shadow:
+      serializedVersion: 2
+      rgba: 4287405220
+    middle:
+      serializedVersion: 2
+      rgba: 4289379524
+    light:
+      serializedVersion: 2
+      rgba: 4291550436
+  rings: 14
+  cover: 0
+  coverColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279383068
+    shadow:
+      serializedVersion: 2
+      rgba: 4280576574
+    middle:
+      serializedVersion: 2
+      rgba: 4281372254
+    light:
+      serializedVersion: 2
+      rgba: 4282955410
+  coverFacing: 0.75
+  coverNoise: 0.4
+  coverNoiseScale: 6

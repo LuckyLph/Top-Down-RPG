@@ -4,8 +4,8 @@ using UnityEngine;
 /// <summary>
 /// A faceted rock (Docs/PropGeneration.md, Phase 0 notes): a body and a few smaller lumps leaning on its sides, each a
 /// convex solid inside an octagon around its ellipsoid, cut by random planes leaning up and flattened on top, sunk
-/// partly into the ground, in speckled stone
-/// with an optional moss cover where it faces up. Its width counts its lumps, so rocks and boulders are this one kind.
+/// partly into the ground, in speckled stone with an optional moss cover where it faces up. Its width counts its lumps,
+/// so rocks and boulders are this one kind; scattered, its lumps are small stones lying apart around a middle one.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Rock Recipe", fileName = "Rock_Grey")]
 public sealed class RockRecipe : PropRecipe
@@ -23,6 +23,8 @@ public sealed class RockRecipe : PropRecipe
     private const float BottomDepth = 0.6f;
     private const float BoundsMargin = 1.2f;
     private const int BoundingSides = 8;
+    private const float MiddleStone = 1.2f;
+    private const float ScatterJitter = 0.4f;
 
     [Header("Size (cells)")]
     [Tooltip("The rock's width, its lumps included.")]
@@ -41,8 +43,12 @@ public sealed class RockRecipe : PropRecipe
     [SerializeField] private Vector2 cut = new(0.88f, 1f);
     [Tooltip("Where each lump's flattened top lies, as a share of its height radius above its middle: the lowest and highest.")]
     [SerializeField] private Vector2 top = new(0.86f, 0.98f);
-    [Tooltip("How many smaller lumps lean on its sides.")]
+    [Tooltip("How many smaller lumps lean on its sides, or lie around it when scattered.")]
     [SerializeField, Min(0)] private int lumps = 2;
+    [Tooltip("Whether its lumps lie apart as small stones around a middle one a little larger, instead of leaning on a body.")]
+    [SerializeField] private bool scattered;
+    [Tooltip("How far from the middle each scattered stone lies, as a share of half the width: the nearest and farthest.")]
+    [SerializeField] private Vector2 scatter = new(0.5f, 0.8f);
 
     [Header("Colours")]
     [SerializeField] private ColourRamp stone = Ramp(0x26282e, 0x5e626c, 0x868a92, 0xb4b6b4);
@@ -66,6 +72,12 @@ public sealed class RockRecipe : PropRecipe
         int mossId = moss ? drawing.AddMaterial(new ArtMaterial(mossColours), true) : -1;
         int stoneId = drawing.AddMaterial(new ArtMaterial(stone, pattern: ArtPattern.Speckle, patternScale: speckles, cover: mossId, coverThreshold: mossFacing, coverNoise: mossNoise, coverNoiseScale: mossNoiseScale), true);
         float turn = drawing.Range(0f, Mathf.PI);
+        if (scattered)
+        {
+            Scatter(drawing, turn, stoneId);
+            return;
+        }
+
         float bodyHalf = width * BodyShare;
         Lump(drawing, Vector3.zero, bodyHalf, bodyHalf * drawing.Range(depth), height, turn, stoneId);
         for (int k = 0; k < lumps; k++)
@@ -73,6 +85,24 @@ public sealed class RockRecipe : PropRecipe
             float side = (k % 2 == 0 ? 1f : -1f) * drawing.Range(LumpSpread) * width;
             Vector3 offset = new(Mathf.Cos(turn) * side, Mathf.Sin(turn) * side * LumpDepthSide + drawing.Range(LumpDrift) * width, 0f);
             Lump(drawing, offset, width * drawing.Range(LumpWidth), width * drawing.Range(LumpDepth), height * drawing.Range(LumpHeight), turn + drawing.Range(-LumpTurn, LumpTurn), stoneId);
+        }
+    }
+
+    /// <summary>
+    /// Draws the lumps as small stones: one in the middle, a little larger than the others, and the rest around it at
+    /// even turns from <paramref name="turn"/>, jittered, each at the scatter's distance.
+    /// </summary>
+    private void Scatter(PropDrawing drawing, float turn, int material)
+    {
+        float middle = width * drawing.Range(LumpWidth) * MiddleStone;
+        Lump(drawing, Vector3.zero, middle, middle * drawing.Range(depth), height, turn, material);
+        for (int k = 0; k < lumps; k++)
+        {
+            float angle = turn + k * 2f * Mathf.PI / lumps + drawing.Range(-ScatterJitter, ScatterJitter);
+            float distance = drawing.Range(scatter) * width * 0.5f;
+            Vector3 offset = new(Mathf.Cos(angle) * distance, Mathf.Sin(angle) * distance, 0f);
+            float half = width * drawing.Range(LumpWidth);
+            Lump(drawing, offset, half, half * drawing.Range(depth), height * drawing.Range(LumpHeight), drawing.Range(0f, Mathf.PI), material);
         }
     }
 

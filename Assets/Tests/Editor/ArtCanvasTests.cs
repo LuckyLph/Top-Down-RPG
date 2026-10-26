@@ -5,7 +5,8 @@ using UnityEngine;
 /// Tests for the shared canvas's prop primitives and shading (Docs/PropGeneration.md, The canvas): an ellipsoid with
 /// equal axes covers what a sphere covers, facing the same ways; a convex cube shows its top and front faces with their
 /// own normals; a marched field of a sphere matches the sphere; the ground hides what lies under it; a cover is taken
-/// only where the surface faces up past its threshold; and a tone offset darkens by one tone. The characters' frames
+/// only where the surface faces up past its threshold; a tone offset darkens by one tone; and a pattern read in a frame
+/// of its own moves with the frame's origin. The characters' frames
 /// staying byte for byte the same is checked by the character, Weasel and weapon tests against the project's sheets.
 /// </summary>
 public class ArtCanvasTests
@@ -200,6 +201,52 @@ public class ArtCanvasTests
         }
 
         Assert.That(sawLight, Is.True);
+    }
+
+    /// <summary>
+    /// Rings on a flat disc facing the camera, read in a frame on the up axis through the world's origin, fall where the
+    /// world's fall; on the same disc three pixels east, read from an origin three pixels east, they fall as they did.
+    /// </summary>
+    [Test]
+    public void Shade_PatternFrame_MovesThePatternWithItsOrigin()
+    {
+        Vector3 shift = new(3f / Scale, 0f, 0f);
+        ArtCanvas here = Canvas();
+        here.Disc(new Vector3(0f, 0f, 1.2f), 12f, 0, 0);
+        ArtCanvas there = Canvas();
+        there.Disc(new Vector3(0f, 0f, 1.2f) + shift, 12f, 0, 0);
+        Color32[] world = here.Shade(new[] { Ringed(Vector3.zero, Vector3.zero) }, 0.64f, 0.28f, 2.6f);
+        Color32[] same = here.Shade(new[] { Ringed(Vector3.zero, Vector3.forward) }, 0.64f, 0.28f, 2.6f);
+        Color32[] moved = there.Shade(new[] { Ringed(shift, Vector3.forward) }, 0.64f, 0.28f, 2.6f);
+
+        Assert.That(same, Is.EqualTo(world));
+        int compared = 0, ringed = 0;
+        for (int y = 1; y < Size - 1; y++)
+        {
+            for (int x = 1; x < Size - 4; x++)
+            {
+                if (!here.IsFilled(x - 1, y) || !here.IsFilled(x + 1, y) || !here.IsFilled(x, y - 1) || !here.IsFilled(x, y + 1) || !there.IsFilled(x + 3, y))
+                {
+                    continue;
+                }
+
+                compared++;
+                ringed += world[y * Size + x].r != Red.Middle.r ? 1 : 0;
+                Assert.That(moved[y * Size + x + 3], Is.EqualTo(world[y * Size + x]), $"pixel {x}, {y}");
+            }
+        }
+
+        Assert.That(compared, Is.GreaterThan(200));
+        Assert.That(ringed, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// A flat red material ringed around the up axis, its pattern in the frame of <paramref name="axis"/> through
+    /// <paramref name="origin"/> (the world's, for a zero axis).
+    /// </summary>
+    private static ArtMaterial Ringed(Vector3 origin, Vector3 axis)
+    {
+        return new ArtMaterial(Red, flat: true, pattern: ArtPattern.Rings, patternScale: 4f, patternOrigin: origin, patternAxis: axis);
     }
 
     /// <summary>

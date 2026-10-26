@@ -1,0 +1,108 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a57cb68d934f7e469246665adc31293, type: 3}
+  m_Name: Bush_Willow
+  m_EditorClassIdentifier: TopDownRPG.Editor::BushRecipe
+  propName: Bush_Willow
+  category: 1
+  seed: 151
+  variantCount: 4
+  frameSize: {x: 60, y: 68}
+  basePixel: {x: 30, y: 10}
+  blocking: 1
+  contactHeight: 0.3
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.5
+  shadowFlatness: 0.34
+  shadowShift: 0.06
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: f08ad5a4cb6d89f4787061b4414b5e13, type: 2}
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  width: 1.3
+  height: 1.3
+  depth: 0.85
+  lift: 0.85
+  crown:
+    clumps: 12
+    clumpRadius: {x: 0.15, y: 0.26}
+    blend: 0.45
+    shell: {x: 0.8, y: 0.95}
+    stretch: 1.4
+  flowers:
+    count: 0
+    colours:
+    - petal:
+        serializedVersion: 2
+        rgba: 4292274924
+      heart:
+        serializedVersion: 2
+        rgba: 4282433256
+    - petal:
+        serializedVersion: 2
+        rgba: 4283092720
+      heart:
+        serializedVersion: 2
+        rgba: 4280844484
+    - petal:
+        serializedVersion: 2
+        rgba: 4289759970
+      heart:
+        serializedVersion: 2
+        rgba: 4293055734
+    - petal:
+        serializedVersion: 2
+        rgba: 4292771980
+      heart:
+        serializedVersion: 2
+        rgba: 4288078060
+  twigs:
+    count: 0
+    reach: {x: 0.08, y: 0.2}
+    thickness: {x: 0.025, y: 0.01}
+  strands:
+    count: 48
+    start: {x: -0.5, y: 0.8}
+    end: {x: 0.02, y: 0.25}
+    thickness: {x: 0.03, y: 0.015}
+  leaves:
+    outline:
+      serializedVersion: 2
+      rgba: 4280954902
+    shadow:
+      serializedVersion: 2
+      rgba: 4283063866
+    middle:
+      serializedVersion: 2
+      rgba: 4284779102
+    light:
+      serializedVersion: 2
+      rgba: 4287674522
+  leafPattern: 0
+  leafPatternScale: 16
+  twigColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035902
+    middle:
+      serializedVersion: 2
+      rgba: 4281352800
+    light:
+      serializedVersion: 2
+      rgba: 4282672778

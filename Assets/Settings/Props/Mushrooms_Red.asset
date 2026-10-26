@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4dcf1907674de7489f42700c2739de7, type: 3}
+  m_Name: Mushrooms_Red
+  m_EditorClassIdentifier: TopDownRPG.Editor::PlantRecipe
+  propName: Mushrooms_Red
+  category: 4
+  seed: 91
+  variantCount: 4
+  frameSize: {x: 40, y: 40}
+  basePixel: {x: 20, y: 10}
+  blocking: 0
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.5
+  shadowFlatness: 0.4
+  shadowShift: 0.05
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 2
+  fronds:
+    count: 8
+    reach: {x: 0.36, y: 0.5}
+    rise: {x: 0.2, y: 0.28}
+    tipHeight: 0.03
+    leaflets: 7
+    leafletLength: {x: 0.12, y: 0.04}
+    leafletWidth: 0.03
+    stemRadius: 0.016
+  blades:
+    count: 12
+    tuft: 0.08
+    height: {x: 0.5, y: 0.8}
+    lean: {x: 0.1, y: 0.4}
+    droop: 0
+    thickness: {x: 0.035, y: 0.012}
+    heads: 0
+    headLength: {x: 0.14, y: 0.18}
+    headRadius: 0.04
+    headAt: 0.85
+  caps:
+    count: {x: 1, y: 3}
+    spread: 0.17
+    capRadius: {x: 0.1, y: 0.16}
+    flatness: 0.65
+    stemHeight: {x: 0.14, y: 0.26}
+    stemRadius: 0.3
+    lean: 0.3
+    spots: 3
+  main:
+    outline:
+      serializedVersion: 2
+      rgba: 4279111226
+    shadow:
+      serializedVersion: 2
+      rgba: 4279901834
+    middle:
+      serializedVersion: 2
+      rgba: 4280825024
+    light:
+      serializedVersion: 2
+      rgba: 4283065576
+  second:
+    outline:
+      serializedVersion: 2
+      rgba: 4281351754
+    shadow:
+      serializedVersion: 2
+      rgba: 4287145140
+    middle:
+      serializedVersion: 2
+      rgba: 4289382612
+    light:
+      serializedVersion: 2
+      rgba: 4291355372
+  spots:
+    serializedVersion: 2
+    rgba: 4292405488

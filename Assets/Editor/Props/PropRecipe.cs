@@ -17,8 +17,8 @@ public enum PropCategory
 /// and category, a seed and how many variants to bake, the frame each variant is drawn in and the base pixel it stands
 /// on, whether it blocks, the shading, its shadow and the terrains its inspector previews it on. Each kind of prop is a
 /// kind of recipe holding its shape and palette and drawing a variant onto a <see cref="PropDrawing"/>: trees
-/// (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks (<see cref="RockRecipe"/>) and wood
-/// (<see cref="WoodRecipe"/>). <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe
+/// (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks (<see cref="RockRecipe"/>), wood
+/// (<see cref="WoodRecipe"/>) and plants (<see cref="PlantRecipe"/>). <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe
 /// always giving the same pixels; <see cref="PropWriter"/> writes the sheet and a prefab per variant.
 /// </summary>
 public abstract class PropRecipe : ScriptableObject

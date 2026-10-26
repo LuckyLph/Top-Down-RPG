@@ -638,11 +638,12 @@ public class ArtCanvas
 
     /// <summary>
     /// How many tones <paramref name="art"/>'s pattern moves pixel <paramref name="index"/>: bark one darker in its
-    /// grooves, stone one darker or lighter on its speckles, a cut end one darker on its rings.
+    /// grooves, stone one darker or lighter on its speckles, a cut end one darker on its rings, read in the material's
+    /// pattern frame when it has one.
     /// </summary>
     private int PatternOffset(ArtMaterial art, int index)
     {
-        Vector3 p = worldPosition[index];
+        Vector3 p = art.HasPatternFrame ? art.PatternRotation * (worldPosition[index] - art.PatternOrigin) : worldPosition[index];
         switch (art.Pattern)
         {
             case ArtPattern.Bark:

@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// A surface pattern an <see cref="ArtMaterial"/> draws over its shading, each pixel one tone darker or lighter by
-/// where it lies in the world: bark's vertical grooves, stone's speckles, and the rings of a cut end around the world's
-/// up axis.
+/// where it lies in the world: bark's grooves along the up axis, stone's speckles, and the rings of a cut end around the
+/// up axis. A material with a pattern frame reads the axis as its own (a fallen log's).
 /// </summary>
 public enum ArtPattern
 {
@@ -17,7 +17,9 @@ public enum ArtPattern
 /// How an <see cref="ArtCanvas"/> draws one material id: its <see cref="ColourRamp"/>, whether it is flat (always its
 /// middle tone) and outlined, a surface pattern, a tone offset (a crown's core one tone darker), a height over which
 /// its tone rises from shadow to light (thin blades, lit by how high they reach rather than where they face), and a
-/// cover: another material taken where the surface faces up past a threshold, broken up by value noise.
+/// cover: another material taken where the surface faces up past a threshold, broken up by value noise. Its pattern
+/// reads world positions as they are, or in a frame of its own: around an axis through an origin, which takes the up
+/// axis's place.
 /// </summary>
 public sealed class ArtMaterial
 {
@@ -26,9 +28,12 @@ public sealed class ArtMaterial
     /// unit across, the share of speckled pixels, or the rings per unit; <paramref name="cover"/> is the id of the
     /// material taken where the world normal's up component plus noise of <paramref name="coverNoise"/> (its full range)
     /// at <paramref name="coverNoiseScale"/> cycles per unit passes <paramref name="coverThreshold"/>, or -1 for none.
+    /// A <paramref name="patternAxis"/> other than zero puts the pattern in the frame of that axis through
+    /// <paramref name="patternOrigin"/>, its grooves along it and its rings around it.
     /// </summary>
     public ArtMaterial(ColourRamp ramp, bool flat = false, bool outlined = true, ArtPattern pattern = ArtPattern.None, float patternScale = 1f,
-        int toneOffset = 0, float toneHeight = 0f, int cover = -1, float coverThreshold = 1f, float coverNoise = 0f, float coverNoiseScale = 1f)
+        int toneOffset = 0, float toneHeight = 0f, int cover = -1, float coverThreshold = 1f, float coverNoise = 0f, float coverNoiseScale = 1f,
+        Vector3 patternOrigin = default, Vector3 patternAxis = default)
     {
         Ramp = ramp;
         Flat = flat;
@@ -41,6 +46,9 @@ public sealed class ArtMaterial
         CoverThreshold = coverThreshold;
         CoverNoise = coverNoise;
         CoverNoiseScale = coverNoiseScale;
+        HasPatternFrame = patternAxis != Vector3.zero;
+        PatternOrigin = patternOrigin;
+        PatternRotation = HasPatternFrame ? Quaternion.FromToRotation(patternAxis, Vector3.forward) : Quaternion.identity;
     }
 
     public ColourRamp Ramp { get; }
@@ -48,6 +56,9 @@ public sealed class ArtMaterial
     public bool Outlined { get; }
     public ArtPattern Pattern { get; }
     public float PatternScale { get; }
+    public bool HasPatternFrame { get; }
+    public Vector3 PatternOrigin { get; }
+    public Quaternion PatternRotation { get; }
     public int ToneOffset { get; }
     public float ToneHeight { get; }
     public int Cover { get; }

@@ -5,10 +5,12 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the prop baker (Docs/PropGeneration.md, Testing): each kind of recipe bakes the same pixels for the same
-/// seed and different ones for different variants; every variant of every recipe asset keeps its drawing inside its
-/// frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame; its shadow
-/// is an ellipse of the recipe's opacity inside its frame; and a recipe refuses names and frames it cannot bake.
+/// Tests for the prop baker (Docs/PropGeneration.md, Testing): each kind and form of recipe bakes the same pixels for
+/// the same seed and different ones for different variants; every variant of every recipe asset keeps its drawing
+/// inside its frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame;
+/// its shadow is an ellipse of the recipe's opacity inside its frame; a bush's flowers only recolour its crown, in one
+/// colour a variant; a log lies across its base with its broken ends showing; and a recipe refuses names and frames it
+/// cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
@@ -34,16 +36,26 @@ public class PropRecipeTests
     }
 
     /// <summary>
-    /// Every kind of recipe, baked twice from the same seed, gives the same pixels and shadow; another variant index
+    /// Every kind and form of recipe (its <paramref name="setting"/>, an enum or a flag, set to
+    /// <paramref name="value"/>), baked twice from the same seed, gives the same pixels and shadow; another variant index
     /// gives other pixels.
     /// </summary>
-    [TestCase(typeof(TreeRecipe))]
-    [TestCase(typeof(BushRecipe))]
-    [TestCase(typeof(RockRecipe))]
-    [TestCase(typeof(WoodRecipe))]
-    public void Bake_SameSeed_GivesTheSamePixels_AndOtherVariantsOthers(System.Type kind)
+    [TestCase(typeof(TreeRecipe), null, 0)]
+    [TestCase(typeof(BushRecipe), null, 0)]
+    [TestCase(typeof(RockRecipe), null, 0)]
+    [TestCase(typeof(RockRecipe), "scattered", 1)]
+    [TestCase(typeof(WoodRecipe), null, 0)]
+    [TestCase(typeof(WoodRecipe), "form", (int)WoodForm.Log)]
+    [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Fern)]
+    [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Blades)]
+    [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Mushrooms)]
+    public void Bake_SameSeed_GivesTheSamePixels_AndOtherVariantsOthers(System.Type kind, string setting, int value)
     {
         PropRecipe recipe = Track((PropRecipe)ScriptableObject.CreateInstance(kind));
+        if (setting != null)
+        {
+            Set(recipe, setting, value);
+        }
 
         PropVariant first = PropBaker.Bake(recipe, 0);
         PropVariant again = PropBaker.Bake(recipe, 0);
@@ -120,6 +132,62 @@ public class PropRecipeTests
     }
 
     /// <summary>
+    /// A bush's flowers only recolour pixels of its crown: every pixel of each variant is the flowerless bush's or one
+    /// of at most two new colours (a petal and a heart), and some are.
+    /// </summary>
+    [Test]
+    public void Flowers_RecolourOnlyTheCrown_InOneColourAVariant()
+    {
+        BushRecipe plain = Track(ScriptableObject.CreateInstance<BushRecipe>());
+        BushRecipe flowering = Track(ScriptableObject.CreateInstance<BushRecipe>());
+        Set(flowering, "flowers.count", 12);
+
+        for (int i = 0; i < flowering.VariantCount; i++)
+        {
+            Color32[] without = PropBaker.Bake(plain, i).Pixels;
+            Color32[] with = PropBaker.Bake(flowering, i).Pixels;
+            HashSet<Color32> leaves = new(without);
+            HashSet<Color32> added = new();
+            for (int p = 0; p < with.Length; p++)
+            {
+                if (!with[p].Equals(without[p]))
+                {
+                    Assert.That(without[p].a, Is.EqualTo(255), $"variant {i}, pixel {p}: a flower outside the crown");
+                    Assert.That(leaves.Contains(with[p]), Is.False, $"variant {i}, pixel {p}");
+                    added.Add(with[p]);
+                }
+            }
+
+            Assert.That(added.Count, Is.InRange(1, 2), $"variant {i}");
+        }
+    }
+
+    /// <summary>
+    /// A log lies across its base on the ground, its footprint wider than tall, and its broken ends show in the cut
+    /// end's material on some of its variants.
+    /// </summary>
+    [Test]
+    public void Log_LiesAcrossItsBase_WithItsBrokenEndsShowing()
+    {
+        WoodRecipe recipe = Track(ScriptableObject.CreateInstance<WoodRecipe>());
+        Set(recipe, "form", (int)WoodForm.Log);
+
+        int ends = 0;
+        for (int i = 0; i < recipe.VariantCount; i++)
+        {
+            RectInt footprint = PropBaker.Bake(recipe, i).Footprint;
+            Assert.That(footprint.width, Is.GreaterThan(footprint.height), $"variant {i}");
+
+            ArtCanvas canvas = PropBaker.Render(recipe, i, out PropDrawing drawing);
+            Assert.That(drawing.Materials.Count, Is.EqualTo(2));
+            Assert.That(canvas.CountId(0), Is.GreaterThan(0), $"variant {i}'s bark");
+            ends += canvas.CountId(1);
+        }
+
+        Assert.That(ends, Is.GreaterThan(0));
+    }
+
+    /// <summary>
     /// A recipe refuses a name that is not letters, digits and underscores starting with a letter, and a frame too
     /// small or with its base pixel outside it.
     /// </summary>
@@ -155,6 +223,29 @@ public class PropRecipeTests
             .Select(AssetDatabase.LoadAssetAtPath<PropRecipe>)
             .Where(r => r != null)
             .ToList();
+    }
+
+    /// <summary>
+    /// Sets <paramref name="recipe"/>'s integer, enum or flag <paramref name="setting"/> to <paramref name="value"/>.
+    /// </summary>
+    private static void Set(PropRecipe recipe, string setting, int value)
+    {
+        SerializedObject settings = new(recipe);
+        SerializedProperty property = settings.FindProperty(setting);
+        switch (property.propertyType)
+        {
+            case SerializedPropertyType.Boolean:
+                property.boolValue = value != 0;
+                break;
+            case SerializedPropertyType.Enum:
+                property.enumValueIndex = value;
+                break;
+            default:
+                property.intValue = value;
+                break;
+        }
+
+        settings.ApplyModifiedPropertiesWithoutUndo();
     }
 
     /// <summary>

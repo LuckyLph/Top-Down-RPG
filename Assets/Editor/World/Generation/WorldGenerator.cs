@@ -115,6 +115,30 @@ public sealed class WorldGenerator : ScriptableObject
         public int Reach => reach;
     }
 
+    /// <summary>
+    /// Where in a chunk's wilds a <see cref="WildsScatter"/> places its props.
+    /// </summary>
+    public enum WildsZone
+    {
+        Edge,
+        Grove,
+        Open
+    }
+
+    /// <summary>
+    /// Props the wilds scatter per chunk (<see cref="AreaGenerator.PropScatter"/>: a label, the prefabs, the most placed
+    /// in a chunk and their spacing) over one part of the chunk's wilds: along the outlines of the regions whose ground is
+    /// the wilds' grass, in its groves, or on the rest of its open ground.
+    /// </summary>
+    [Serializable]
+    public sealed class WildsScatter : AreaGenerator.PropScatter
+    {
+        [Tooltip("Edge: the wilds within the edge reach of the outline of a region whose ground is the wilds' grass. Grove: the chunk's grove patches. Open: the rest.")]
+        [SerializeField] private WildsZone zone;
+
+        public WildsZone Zone => zone;
+    }
+
     [Header("World")]
     [Tooltip("The world this generator composes, which gives its size in chunks, the chunks it has and its id.")]
     [SerializeField] private WorldDefinition world;
@@ -185,6 +209,18 @@ public sealed class WorldGenerator : ScriptableObject
     [Tooltip("Smallest distance in cells between a wilds mob and any other mob, the regions' included.")]
     [SerializeField, Min(0f)] private float mobSpacing = 10f;
 
+    [Header("Wilds props")]
+    [Tooltip("Grove patches per chunk, laid after the mobs: where Grove layers place their props.")]
+    [SerializeField] private Patches groves = new(1, 1, new Vector2(4f, 7f), 6);
+    [Tooltip("How many cells out from the outline of a region whose ground is the wilds' grass Edge layers place their props.")]
+    [SerializeField, Min(1)] private int edgeReach = 3;
+    [Tooltip("Cells a blocking prop of the wilds keeps from a road, a plaza and the beach.")]
+    [SerializeField, Min(0)] private int propPathClearance = 2;
+    [Tooltip("Cells every prop of the wilds keeps from a waystone or a gate.")]
+    [SerializeField, Min(0f)] private float propEntryClearance = 4f;
+    [Tooltip("The wilds' scatter layers per chunk, placed in this order: earlier layers take the room first.")]
+    [SerializeField] private List<WildsScatter> wildsProps = new();
+
     [Header("Chunks")]
     [Tooltip("What the generator keeps per chunk: the written hash, locks, wide allowances and wilds seeds.")]
     [SerializeField] private List<ChunkRecord> chunks = new();
@@ -221,6 +257,11 @@ public sealed class WorldGenerator : ScriptableObject
     public int MobsPerChunk => mobsPerChunk;
     public float MobDistanceFromEntries => mobDistanceFromEntries;
     public float MobSpacing => mobSpacing;
+    public Patches Groves => groves;
+    public int EdgeReach => edgeReach;
+    public int PropPathClearance => propPathClearance;
+    public float PropEntryClearance => propEntryClearance;
+    public IReadOnlyList<WildsScatter> WildsProps => wildsProps;
     public IReadOnlyList<ChunkRecord> Chunks => chunks;
     public IReadOnlyList<string> WrittenEntries => writtenEntries;
 

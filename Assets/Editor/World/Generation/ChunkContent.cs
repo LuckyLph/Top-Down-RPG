@@ -1,15 +1,18 @@
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
 /// What a chunk holds in the terms of its written hash (Docs/WorldGeneration.md: Architecture: Writing): a bit per
-/// ground material of the terrain style's layer order for each of its cells, its raised ground, and the spawn points
-/// under its generated root (prefab, cell and id, in order). It is read either from a composition (what the writer
-/// writes there) or from a chunk's grid (what its scene holds now), and both give the same <see cref="Hash"/> for a
-/// chunk just written. Empty layers, the walls and every object outside the generated root count for nothing, so the
-/// layers a chunk's <see cref="AreaTerrain"/> keeps or a layer sync adds change no hash, while paint on any ground
-/// layer, empty or not, on the raised ground, or a change to a generated spawn point does.
+/// ground material of the terrain style's layer order for each of its cells, its raised ground, the spawn points under
+/// its generated root (prefab, cell and id, in order) and the props under its generated props' root (prefab and
+/// position to the pixel, in order). It is read either from a composition (what the writer writes there) or from a
+/// chunk's grid (what its scene holds now), and both give the same <see cref="Hash"/> for a chunk just written. Empty
+/// layers, the walls and every object outside the generated roots count for nothing, so the layers a chunk's
+/// <see cref="AreaTerrain"/> keeps, a layer sync adds or a prop placed by hand under the scene's own Props root change
+/// no hash, while paint on any ground layer, empty or not, on the raised ground, or a change to a generated spawn point
+/// or prop does.
 /// </summary>
 internal sealed class ChunkContent
 {
@@ -33,6 +36,25 @@ internal sealed class ChunkContent
         public string Id { get; }
     }
 
+    /// <summary>
+    /// A generated prop as the hash reads it: its prefab's name and its root's place on the grid, in pixels.
+    /// </summary>
+    private readonly struct PropPlace
+    {
+        /// <summary>
+        /// A prop of the prefab named <paramref name="prefab"/> whose root stands <paramref name="pixels"/> from the
+        /// grid's origin.
+        /// </summary>
+        public PropPlace(string prefab, Vector2Int pixels)
+        {
+            Prefab = prefab;
+            Pixels = pixels;
+        }
+
+        public string Prefab { get; }
+        public Vector2Int Pixels { get; }
+    }
+
     private const ulong Offset = 14695981039346656037UL;
     private const ulong Prime = 1099511628211UL;
 
@@ -41,6 +63,7 @@ internal sealed class ChunkContent
     private readonly uint[] masks = new uint[ChunkCoords.Size * ChunkCoords.Size];
     private readonly byte[] raised = new byte[ChunkCoords.Size * ChunkCoords.Size];
     private readonly List<SpawnPoint> spawnPoints = new();
+    private readonly List<PropPlace> props = new();
     private readonly List<string> unlisted = new();
 
     /// <summary>
@@ -54,7 +77,8 @@ internal sealed class ChunkContent
 
     /// <summary>
     /// What the chunk at <paramref name="coords"/> of <paramref name="composition"/> holds: its cells' materials and
-    /// raised ground, and its mobs in the composition's order.
+    /// raised ground, and its mobs and props in the composition's order, each prop where the writer stands its root
+    /// (<see cref="RootOf"/>).
     /// </summary>
     public static ChunkContent Of(WorldComposition composition, Vector2Int coords)
     {
@@ -76,14 +100,39 @@ internal sealed class ChunkContent
             }
         }
 
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            if (prop.Chunk == coords)
+            {
+                content.props.Add(new PropPlace(prop.Prefab != null ? prop.Prefab.name : string.Empty, Pixels(RootOf(prop))));
+            }
+        }
+
         return content;
+    }
+
+    /// <summary>
+    /// Where the writer stands <paramref name="prop"/>'s root, in cells from the grid's origin: a blocking prop's
+    /// footprint centred on its cells and standing on the bottom edge of the lowest
+    /// (<see cref="PropGridSnapping.RootOnCells"/> on cells of one unit), a walk-through prop at its point in its cell,
+    /// to the pixel.
+    /// </summary>
+    public static Vector2 RootOf(WorldComposition.Prop prop)
+    {
+        if (prop.Blocks && PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+        {
+            return new Vector2(prop.Cell.x + prop.Covered.x * 0.5f - footprint.center.x, prop.Cell.y - footprint.yMin);
+        }
+
+        return PropGridSnapping.SnapToPixels(prop.Cell + prop.Offset);
     }
 
     /// <summary>
     /// What the chunk grid <paramref name="grid"/>, the chunk at <paramref name="coords"/>, holds now over the materials
     /// of <paramref name="order"/>: the cells of its terrain renderer's ground layers and raised tilemap inside its
-    /// bounds, and the spawn points under its generated root (<see cref="WorldGenerationWriter.GeneratedMobSpawnsName"/>)
-    /// in hierarchy order. A painted layer of a material the order does not list is named, so it changes the hash.
+    /// bounds, the spawn points under its generated root (<see cref="WorldGenerationWriter.GeneratedMobSpawnsName"/>)
+    /// and the props under its generated props' root (<see cref="WorldGenerationWriter.GeneratedPropsName"/>), each in
+    /// hierarchy order. A painted layer of a material the order does not list is named, so it changes the hash.
     /// </summary>
     public static ChunkContent Read(Grid grid, Vector2Int coords, IReadOnlyList<TerrainMaterial> order)
     {
@@ -121,13 +170,26 @@ internal sealed class ChunkContent
             }
         }
 
+        Transform propsRoot = grid.transform.Find(WorldGenerationWriter.GeneratedPropsName);
+        if (propsRoot != null)
+        {
+            Vector3 origin = grid.CellToWorld(Vector3Int.zero);
+            foreach (Transform prop in propsRoot)
+            {
+                GameObject source = PrefabUtility.GetCorrespondingObjectFromSource(prop.gameObject);
+                Vector2 local = new((prop.position.x - origin.x) / grid.cellSize.x, (prop.position.y - origin.y) / grid.cellSize.y);
+                content.props.Add(new PropPlace(source != null ? source.name : prop.name, Pixels(local)));
+            }
+        }
+
         return content;
     }
 
     /// <summary>
     /// A 64-bit FNV-1a hash, in hex: for each material of the layer order with cells in the chunk, its name and the
     /// local index of each such cell in row order; then each raised cell's index and kind; then each spawn point's
-    /// prefab name, cell and id; then the names of painted materials the order does not list.
+    /// prefab name, cell and id; then, when it has any, each prop's prefab name and place in pixels, so a chunk without
+    /// props hashes as it did before props were written; then the names of painted materials the order does not list.
     /// </summary>
     public string Hash()
     {
@@ -169,6 +231,15 @@ internal sealed class ChunkContent
         foreach (SpawnPoint point in spawnPoints)
         {
             hash = Mix(Mix(Mix(Mix(hash, point.Prefab), point.Cell.x), point.Cell.y), point.Id);
+        }
+
+        if (props.Count > 0)
+        {
+            hash = Mix(hash, "props");
+            foreach (PropPlace prop in props)
+            {
+                hash = Mix(Mix(Mix(hash, prop.Prefab), prop.Pixels.x), prop.Pixels.y);
+            }
         }
 
         foreach (string material in unlisted)
@@ -214,6 +285,14 @@ internal sealed class ChunkContent
 
             masks[cell] |= 1u << index;
         }
+    }
+
+    /// <summary>
+    /// <paramref name="cells"/>, a place in cells, in whole pixels.
+    /// </summary>
+    private static Vector2Int Pixels(Vector2 cells)
+    {
+        return new Vector2Int(Mathf.RoundToInt(cells.x * PropGridSnapping.PixelsPerUnit), Mathf.RoundToInt(cells.y * PropGridSnapping.PixelsPerUnit));
     }
 
     /// <summary>

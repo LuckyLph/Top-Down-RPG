@@ -32,7 +32,7 @@ public sealed class TestAreaGenerator : AreaGenerator
     /// <summary>
     /// A layout filling cell (i, 0) of each layer i, whatever the seed; it has no scatter layers.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed, bool scatter)
+    public override AreaLayout Generate(int layoutSeed)
     {
         AreaLayout layout = new(layers);
         for (int i = 0; i < layers.Count; i++)

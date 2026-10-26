@@ -6,8 +6,10 @@ using UnityEngine;
 /// Tests for <see cref="WorldValidation"/> on a chunk built in memory: chunk (1, 0) of a world at (2048, 0), owning
 /// cells (64, 0) to (127, 63). Spawn points, mob spawn points and walk-through props on its cells pass and those past
 /// its border are refused by name; a blocking prop whose footprint crosses the border is refused and one inside it
-/// passes, by the cells the navigation would block; a mob spawn point without a <see cref="PersistentId"/>, an id not
-/// set and an id two objects share are refused, naming every object holding it.
+/// passes, by the cells the navigation would block, under the scene's Props root or the grid's generated props' root
+/// alike; a mob spawn point without a <see cref="PersistentId"/>, an id not set and an id two objects share are refused,
+/// naming every object holding it. The Prop Placement window finds the chunk under a point, refuses a footprint across
+/// its border as the validation does, and counts the generated props a selection holds.
 /// </summary>
 public class WorldValidationTests
 {
@@ -96,6 +98,56 @@ public class WorldValidationTests
         Assert.That(WorldValidation.FootprintInside(chunk.GetComponent<Grid>(), rock.transform.position, new Rect(footprint.offset - footprint.size * 0.5f, footprint.size), chunk.Cells, out BoundsInt blocked), Is.True);
         Assert.That(blocked.xMin, Is.EqualTo(64));
         Assert.That(blocked.xMax, Is.EqualTo(66));
+    }
+
+    /// <summary>
+    /// A blocking prop under the grid's generated props' root, as world generation writes one, is checked as one under
+    /// the scene's Props root: across the western border it is refused, a cell east it passes.
+    /// </summary>
+    [Test]
+    public void AGeneratedPropWhoseFootprintCrossesTheBorder_IsRefusedToo()
+    {
+        Transform generated = new GameObject(WorldGenerationWriter.GeneratedPropsName).transform;
+        generated.SetParent(chunk.transform, false);
+        GameObject rock = Track(new GameObject("Generated rock"));
+        rock.transform.SetParent(generated, false);
+        BoxCollider2D footprint = rock.AddComponent<BoxCollider2D>();
+        footprint.size = new Vector2(1.8f, 0.8f);
+        footprint.offset = new Vector2(0f, 0.4f);
+        rock.transform.position = new Vector3(2048f + 64f, 20f, 0f);
+
+        List<string> problems = WorldValidation.ValidateChunk(chunk);
+        Assert.That(problems.Count, Is.EqualTo(1));
+        Assert.That(problems[0], Does.Contain("Generated rock").And.Contain("crossing its chunk's border"));
+
+        rock.transform.position = new Vector3(2048f + 65f, 20f, 0f);
+        Assert.That(WorldValidation.ValidateChunk(chunk), Is.Empty);
+    }
+
+    /// <summary>
+    /// The Prop Placement window places in the chunk whose cells hold the pointer, none past them; it refuses a
+    /// footprint crossing that chunk's border and a walk-through prop rooted past it, as the validation would; and it
+    /// counts the selected objects that are, or lie inside, props under a grid's generated props' root.
+    /// </summary>
+    [Test]
+    public void ThePropPlacementWindow_PlacesInTheChunkUnderThePointer_InsideItsBorder_AndCountsGeneratedProps()
+    {
+        List<WorldChunk> chunks = new() { chunk };
+        Assert.That(PropPlacementWindow.OwningChunk(chunks, new Vector2(2048f + 100.5f, 10.5f)) == chunk, Is.True, "a point on the chunk's cells");
+        Assert.That(PropPlacementWindow.OwningChunk(chunks, new Vector2(2048f + 63.5f, 10.5f)) == null, Is.True, "a point on the chunk to its west");
+        Rect footprint = new(-0.9f, 0f, 1.8f, 0.8f);
+        Assert.That(PropPlacementWindow.FitsChunk(chunk, new Vector3(2048f + 64f, 20f, 0f), true, footprint), Is.False, "a footprint across the western border");
+        Assert.That(PropPlacementWindow.FitsChunk(chunk, new Vector3(2048f + 65f, 20f, 0f), true, footprint), Is.True, "a footprint a cell east");
+        Assert.That(PropPlacementWindow.FitsChunk(chunk, new Vector3(2048f + 63.5f, 20f, 0f), false, default), Is.False, "a walk-through prop rooted past the border");
+
+        Transform generated = new GameObject(WorldGenerationWriter.GeneratedPropsName).transform;
+        generated.SetParent(chunk.transform, false);
+        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Rocks/Stones_Small_0.prefab");
+        GameObject written = Track((GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab));
+        written.transform.SetParent(generated, false);
+        GameObject placed = Track((GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab));
+        placed.transform.SetParent(props, false);
+        Assert.That(PropPlacementWindow.GeneratedPropsIn(new[] { written, written.transform.GetChild(0).gameObject, placed }), Is.EqualTo(2), "the generated prop and its child count; the prop placed by hand does not");
     }
 
     /// <summary>

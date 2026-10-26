@@ -15,10 +15,13 @@ using UnityEngine;
 /// meets the world's sea and its beach the world's beach; every land cell has ground, the sea ring is ocean and the
 /// beach lies between them all round; every chunk lists its own and its neighbours' strips' materials in the style's
 /// order, within 16 or warned about unless allowed wide, and the Overworld lays all eighteen; every waystone, gate and
-/// mob is reachable from the default entry, every port is linked and the roads and gates lie on walkable wilds; the
-/// wilds' patches meet only grass and the wilds' mobs keep their distances from the entries and every other mob; and the
+/// mob is reachable from the default entry around the props' footprints, every port is linked and the roads and gates
+/// lie on walkable wilds; the wilds' patches meet only grass and the wilds' mobs keep their distances from the entries
+/// and every other mob; each region's props are its layout's, moved, but those that would cross a chunk's border or
+/// stand on or beside its plaza; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
+/// beach, the entries, the mobs and each other's footprints, and edge trees only beside regions of grass; and the
 /// derived ids are unique, in the format of the editor's random ids, and stay the same through re-seeding, moving,
-/// re-rolling and composing again.
+/// re-rolling and composing again. The generators carry the wilds' prop settings of the project's Overworld generator.
 /// </summary>
 public class WorldGeneratorTests
 {
@@ -85,7 +88,7 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// The same settings, in two generators, give the same composition cell for cell and in order (materials, owners,
-    /// raised ground, mobs and their ids, entries, roads, chunk lists and hashes, warnings), over two world seeds and two
+    /// raised ground, mobs and their ids, entries, roads, props, chunk lists and hashes, warnings), over two world seeds and two
     /// region seeds; another world seed or another region seed gives another one.
     /// </summary>
     [Test]
@@ -179,10 +182,11 @@ public class WorldGeneratorTests
     }
 
     /// <summary>
-    /// Each region of the Overworld owns exactly its generator's seed layout's ground moved by its cell, the layout
-    /// laid without its scatter layers' props as the world lays it, and each of its cells holds exactly the layout's
-    /// materials there, plus plaza within the plaza's radius of its spawn cell; its raised ground, its ramps, its mobs
-    /// (in order) and its spawn cell are the layout's, moved.
+    /// Each region of the Overworld owns exactly its generator's seed layout's ground moved by its cell, and each of its
+    /// cells holds exactly the layout's materials there, plus plaza within the plaza's radius of its spawn cell; its
+    /// raised ground, its ramps, its mobs (in order) and its spawn cell are the layout's, moved; and its props are the
+    /// layout's props moved, in order, but each blocking prop whose footprint would cross a chunk's border and each prop
+    /// on its plaza (a walk-through prop beside it too), which are left out.
     /// </summary>
     [Test]
     public void EachRegion_IsItsGeneratorsLayoutMovedByItsCell_PlusOnlyItsPlaza()
@@ -191,7 +195,7 @@ public class WorldGeneratorTests
         float radius = overworldGenerator.PlazaRadius;
         foreach (WorldComposition.Region region in overworld.Regions)
         {
-            AreaLayout layout = region.Generator.Generate(region.Seed, false);
+            AreaLayout layout = region.Generator.Generate(region.Seed);
             Dictionary<Vector3Int, uint> masks = new(CellComparer.Instance);
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {
@@ -229,6 +233,39 @@ public class WorldGeneratorTests
             }
 
             Assert.That(region.SpawnCell, Is.EqualTo(new Vector2Int(layout.SpawnCell.x, layout.SpawnCell.y) + region.Cell), $"{region.Key}'s spawn");
+            List<WorldComposition.Prop> props = overworld.Props.FindAll(prop => prop.Scope == region.Key);
+            int next = 0;
+            int left = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                Vector2Int cell = new Vector2Int(prop.Cell.x, prop.Cell.y) + region.Cell;
+                Vector2Int covered = PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint) ? PropGridSnapping.CellsCovered(footprint, Vector2.one) : Vector2Int.zero;
+                if (next < props.Count && props[next].Prefab == prop.Prefab && props[next].Cell == cell && props[next].Offset == prop.Offset)
+                {
+                    Assert.That(props[next].Covered, Is.EqualTo(covered), $"{region.Key}'s prop at {cell} covers its footprint's cells");
+                    next++;
+                    continue;
+                }
+
+                left++;
+                Vector2Int far = cell + Vector2Int.Max(covered, Vector2Int.one) - Vector2Int.one;
+                bool crosses = ChunkCoords.ChunkOf(cell) != ChunkCoords.ChunkOf(far);
+                int reach = covered == Vector2Int.zero ? 1 : 0;
+                bool onPlaza = false;
+                for (int dy = -reach; dy <= far.y - cell.y + reach; dy++)
+                {
+                    for (int dx = -reach; dx <= far.x - cell.x + reach; dx++)
+                    {
+                        Vector2Int near = cell + new Vector2Int(dx, dy);
+                        onPlaza |= overworld.RegionAt(near) == region.Index && overworld.Has(near, materials.Plaza);
+                    }
+                }
+
+                Assert.That(crosses || onPlaza, Is.True, $"{region.Key}'s {prop.Prefab.name} at {cell} is left out, neither across a chunk's border nor on its plaza");
+            }
+
+            Assert.That(next, Is.EqualTo(props.Count), $"{region.Key}'s props are its layout's, in order");
+            Assert.That(left, Is.LessThan(layout.Props.Count / 20 + 2), $"{region.Key} leaves out only a few props");
         }
     }
 
@@ -427,8 +464,8 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// In the Overworld every waystone, gate and mob can be walked to from the default entry (the Clearing's waystone)
-    /// over 4-connected walkable cells, off the cliff faces and up the ramps only; every port is linked; every road cell
-    /// lies on the wilds and is walkable, and every gate stands on its road.
+    /// over 4-connected walkable cells, off the cliff faces and the props' footprints and up the ramps only; every port
+    /// is linked; every road cell lies on the wilds and is walkable, and every gate stands on its road.
     /// </summary>
     [Test]
     public void EveryWaystoneGateAndMob_IsReachable_EveryPortIsLinked_AndTheRoadsAndGatesAreWalkable()
@@ -553,6 +590,114 @@ public class WorldGeneratorTests
     }
 
     /// <summary>
+    /// The Overworld's wilds lay props, each of a chunk's own scope and inside it, a cell from its border: on the wilds'
+    /// grass and its patches, beside a region at the nearest; a blocking prop more than the props' path clearance from
+    /// every road and beach cell, on cells no other prop takes and with no other footprint beside it; a walk-through prop
+    /// off the tall grass and more than a step from every road and beach cell, in a cell no other prop takes; and every
+    /// prop at least the entry clearance from every waystone and gate and more than a cell from every mob.
+    /// </summary>
+    [Test]
+    public void TheWildsProps_StandOnTheWildsGrassInsideTheirChunks_ClearOfThePathsTheEntriesTheMobsAndEachOther()
+    {
+        uint grassy = (1u << overworld.IndexOf(materials.Grass)) | (1u << overworld.IndexOf(materials.Weeds)) | (1u << overworld.IndexOf(materials.Meadow)) | (1u << overworld.IndexOf(materials.TallGrass));
+        uint tall = 1u << overworld.IndexOf(materials.TallGrass);
+        uint paths = (1u << overworld.IndexOf(materials.Stone)) | (1u << overworld.IndexOf(materials.Gravel)) | (1u << overworld.IndexOf(materials.Plaza)) | (1u << overworld.IndexOf(materials.Sand));
+        Dictionary<Vector2Int, int> taken = new();
+        for (int i = 0; i < overworld.Props.Count; i++)
+        {
+            foreach (Vector2Int cell in CellsOf(overworld.Props[i]))
+            {
+                Assert.That(taken.TryAdd(cell, i), Is.True, $"{cell} holds two props");
+            }
+        }
+
+        List<WorldComposition.Prop> wilds = overworld.Props.FindAll(prop => prop.Scope.StartsWith("wilds_", StringComparison.Ordinal));
+        Assert.That(wilds.FindAll(prop => prop.Blocks).Count, Is.GreaterThan(100), "the wilds lay blocking props");
+        Assert.That(wilds.FindAll(prop => !prop.Blocks).Count, Is.GreaterThan(20), "the wilds lay walk-through props");
+        int clearance = overworldGenerator.PropPathClearance;
+        foreach (WorldComposition.Prop prop in wilds)
+        {
+            Vector2Int chunk = prop.Chunk;
+            Assert.That(prop.Scope, Is.EqualTo($"wilds_{chunk.x}_{chunk.y}"), $"the prop at {prop.Cell} is its chunk's");
+            RectInt inside = ChunkCoords.Bounds(chunk);
+            inside = new RectInt(inside.xMin + 1, inside.yMin + 1, inside.width - 2, inside.height - 2);
+            List<Vector2Int> cells = CellsOf(prop);
+            int reach = prop.Blocks ? clearance : 1;
+            foreach (Vector2Int cell in cells)
+            {
+                Expect(inside.Contains(cell), $"the wilds prop at {prop.Cell} covers {cell}, outside its chunk or on its border");
+                Expect(overworld.RegionAt(cell) == WorldComposition.Wilds && (overworld.MaskAt(cell) & ~grassy) == 0, $"the wilds prop at {prop.Cell} covers {cell}, off the wilds' grass");
+                Expect(prop.Blocks || (overworld.MaskAt(cell) & tall) == 0, $"the wilds plant at {prop.Cell} stands on tall grass");
+                for (int dy = -reach; dy <= reach; dy++)
+                {
+                    for (int dx = -reach; dx <= reach; dx++)
+                    {
+                        Vector2Int near = cell + new Vector2Int(dx, dy);
+                        Expect((overworld.MaskAt(near) & paths) == 0 || overworld.RegionAt(near) >= 0, $"the wilds prop at {prop.Cell} within {reach} of a path or the beach at {near}");
+                        Expect(Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) > 1 || !overworld.Mobs.Exists(mob => mob.Cell == near), $"the wilds prop at {prop.Cell} beside the mob at {near}");
+                    }
+                }
+
+                foreach (WorldDefinition.Entry entry in overworld.Entries)
+                {
+                    Expect(Vector2.Distance(cell + new Vector2(0.5f, 0.5f), entry.Position) >= overworldGenerator.PropEntryClearance, $"the wilds prop at {prop.Cell} near {entry.Name}");
+                }
+
+                if (prop.Blocks)
+                {
+                    foreach (Vector2Int step in Neighbours4)
+                    {
+                        Vector2Int beside = cell + step;
+                        Expect(cells.Contains(beside) || !taken.TryGetValue(beside, out int other) || !overworld.Props[other].Blocks, $"the wilds prop at {prop.Cell} beside the footprint at {beside}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// With only the wilds' Edge layer, a row of the Snowfield, the Lakeside and the Lava Fields gets edge trees beside
+    /// the Lakeside, whose ground is grass, and none within the edge reach of the snow or the scorched earth.
+    /// </summary>
+    [Test]
+    public void EdgeTrees_GrowOnlyBesideTheRegionsOfGrass()
+    {
+        WorldGenerator generator = Row(1, 1, 1, 1, Vector2Int.zero);
+        SerializedObject settings = new(generator);
+        SerializedProperty layers = settings.FindProperty("wildsProps");
+        for (int i = layers.arraySize - 1; i >= 0; i--)
+        {
+            if (layers.GetArrayElementAtIndex(i).FindPropertyRelative("zone").enumValueIndex != (int)WorldGenerator.WildsZone.Edge)
+            {
+                layers.DeleteArrayElementAtIndex(i);
+            }
+        }
+
+        Assert.That(layers.arraySize, Is.GreaterThan(0), "the Overworld's generator has an Edge layer");
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        WorldComposition row = generator.Compose();
+        int reach = generator.EdgeReach;
+        int besideLakeside = 0;
+        foreach (WorldComposition.Prop prop in row.Props.FindAll(prop => prop.Scope.StartsWith("wilds_", StringComparison.Ordinal)))
+        {
+            string nearest = null;
+            for (int dy = -reach; dy <= reach && nearest == null; dy++)
+            {
+                for (int dx = -reach; dx <= reach && nearest == null; dx++)
+                {
+                    int owner = row.RegionAt(prop.Cell + new Vector2Int(dx, dy));
+                    nearest = owner >= 0 ? row.Regions[owner].Key : null;
+                }
+            }
+
+            Assert.That(nearest, Is.EqualTo(Lakeside), $"the edge prop at {prop.Cell} grows beside {nearest ?? "no region"}");
+            besideLakeside++;
+        }
+
+        Assert.That(besideLakeside, Is.GreaterThan(20), "edge trees beside the Lakeside");
+    }
+
+    /// <summary>
     /// The Overworld's mob ids are unique, 32 lower-case hex digits like the editor's random ids, and derived from the
     /// world's id, their scope and their ordinal; the derivation is fixed (saves name mobs by it); and a region's mob
     /// keeps its id when the region is re-seeded or moved, a chunk's wilds mob when its wilds are re-rolled, and every
@@ -587,11 +732,11 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// A row of the Snowfield, the Lakeside and the Lava Fields across 6 x 2 chunks from the given seeds, the Lava
-    /// Fields moved by <paramref name="lavaOffset"/>, with roads from each to the next.
+    /// Fields moved by <paramref name="lavaOffset"/>, with roads from each to the next and the wilds' props.
     /// </summary>
     private WorldGenerator Row(int worldSeed, int snowfieldSeed, int lakesideSeed, int lavaFieldsSeed, Vector2Int lavaOffset)
     {
-        WorldGenerator generator = Generator("Row", new Vector2Int(6, 2), null);
+        WorldGenerator generator = TestWorldGenerators.WithWildsProps(Generator("Row", new Vector2Int(6, 2), null));
         generator.SetSeed(worldSeed);
         generator.SetRegions(
             new RegionPlacement(Snowfield, Generator("Snowfield"), snowfieldSeed, new Vector2Int(68, 64)),
@@ -653,6 +798,24 @@ public class WorldGeneratorTests
                 {
                     cells.Add(new Vector2Int(x, y));
                 }
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// The cells <paramref name="prop"/>'s footprint covers, or the cell it stands in.
+    /// </summary>
+    private static List<Vector2Int> CellsOf(WorldComposition.Prop prop)
+    {
+        List<Vector2Int> cells = new();
+        Vector2Int size = prop.Blocks ? prop.Covered : Vector2Int.one;
+        for (int dy = 0; dy < size.y; dy++)
+        {
+            for (int dx = 0; dx < size.x; dx++)
+            {
+                cells.Add(prop.Cell + new Vector2Int(dx, dy));
             }
         }
 
@@ -751,6 +914,12 @@ public class WorldGeneratorTests
             Assert.That(b.Roads[i].Cells, Is.EqualTo(a.Roads[i].Cells), $"{label}: road {i}'s cells");
         }
 
+        Assert.That(b.Props.Count, Is.EqualTo(a.Props.Count), $"{label}: props");
+        for (int i = 0; i < a.Props.Count; i++)
+        {
+            Assert.That((b.Props[i].Prefab, b.Props[i].Cell, b.Props[i].Offset, b.Props[i].Covered, b.Props[i].Scope), Is.EqualTo((a.Props[i].Prefab, a.Props[i].Cell, a.Props[i].Offset, a.Props[i].Covered, a.Props[i].Scope)), $"{label}: prop {i}");
+        }
+
         Assert.That(b.Chunks.ConvertAll(chunk => chunk.ContentHash), Is.EqualTo(a.Chunks.ConvertAll(chunk => chunk.ContentHash)), $"{label}: chunk hashes");
         for (int i = 0; i < a.Chunks.Count; i++)
         {
@@ -806,14 +975,23 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// The cells 4-connected to <paramref name="start"/> over cells whose top material is walkable, off the cliff
-    /// faces the style's cliff height covers whole, stepping between raised and level ground only where
-    /// <see cref="RaisedGround.CanCross"/> allows.
+    /// faces the style's cliff height covers whole and the props' footprints, stepping between raised and level ground
+    /// only where <see cref="RaisedGround.CanCross"/> allows.
     /// </summary>
     private HashSet<Vector2Int> Reachable(WorldComposition composition, bool[] walkable, Vector2Int start)
     {
         int faceRows = RaisedGround.RowsCovered(style.CliffHeight / TerrainStyle.PixelsPerCell);
         CompositionKinds kinds = new(composition);
-        bool Open(Vector2Int cell) => composition.Contains(cell) && walkable[WorldComposition.TopIndex(composition.MaskAt(cell))]
+        HashSet<Vector2Int> footprints = new();
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            if (prop.Blocks)
+            {
+                footprints.UnionWith(CellsOf(prop));
+            }
+        }
+
+        bool Open(Vector2Int cell) => composition.Contains(cell) && !footprints.Contains(cell) && walkable[WorldComposition.TopIndex(composition.MaskAt(cell))]
             && (composition.RaisedAt(cell) == RaisedGround.Level || !RaisedGround.IsOnFace(kinds, new Vector3Int(cell.x, cell.y, 0), faceRows));
         HashSet<Vector2Int> reached = new();
         Assert.That(Open(start), Is.True, $"the start {start} is walkable");

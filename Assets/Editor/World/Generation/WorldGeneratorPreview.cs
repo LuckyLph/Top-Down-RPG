@@ -6,7 +6,8 @@ using UnityEngine;
 /// material, a shade darker for each earlier material of the style's order sharing that colour, the world's weeds and
 /// meadow tinted apart from its grass, whose colour they share; raised ground darker and ramps lighter; the chunk borders
 /// darkened; the locked chunks hatched; the regions' outlines lighter and their ports magenta (orange while no link
-/// uses them); the mobs red (the wilds' pink); the waystones cyan crosses and the gates yellow ones; and each chunk's
+/// uses them); the blocking props' footprints dark green and the walk-through props light green, as the Scene
+/// Generator's map draws them; the mobs red (the wilds' pink); the waystones cyan crosses and the gates yellow ones; and each chunk's
 /// layer count in a 3 x 5 digit font by its top-left corner, black, red past 16 unless its record allows it wide, and
 /// blue past 16 when it does.
 /// </summary>
@@ -21,6 +22,8 @@ internal static class WorldGeneratorPreview
     public static readonly Color32 CountColour = new(0, 0, 0, 255);
     public static readonly Color32 PastNarrowColour = new(255, 0, 0, 255);
     public static readonly Color32 WideColour = new(40, 80, 255, 255);
+    public static readonly Color32 FootprintColour = new(24, 66, 30, 255);
+    public static readonly Color32 PlantColour = new(150, 206, 110, 255);
 
     private static readonly Color32 WeedsColour = new(96, 128, 30, 255);
     private static readonly Color32 MeadowColour = new(150, 196, 84, 255);
@@ -66,6 +69,18 @@ internal static class WorldGeneratorPreview
         }
 
         DrawRegions(composition, pixels);
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            Vector2Int size = prop.Blocks ? prop.Covered : Vector2Int.one;
+            for (int dy = 0; dy < size.y; dy++)
+            {
+                for (int dx = 0; dx < size.x; dx++)
+                {
+                    Put(pixels, width, height, prop.Cell.x + dx, prop.Cell.y + dy, prop.Blocks ? FootprintColour : PlantColour);
+                }
+            }
+        }
+
         foreach (WorldComposition.Mob mob in composition.Mobs)
         {
             Put(pixels, width, height, mob.Cell.x, mob.Cell.y, composition.RegionAt(mob.Cell) == WorldComposition.Wilds ? WildsMobColour : MobColour);

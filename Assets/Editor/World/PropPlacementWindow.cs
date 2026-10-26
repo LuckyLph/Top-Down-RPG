@@ -5,11 +5,16 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Editor window for placing props in the open area scene. It shows a palette of the prop prefabs; while one is picked,
-/// each click in the Scene view places it with its root snapped by <see cref="PropGridSnapping"/>, under the scene's
-/// <c>Props</c> object, with undo. A preview shows the sprite and, for a blocking prop, the cells it will block, in
-/// red when another obstacle (a prop or a wall) already covers them, where placing is refused. Escape stops placing.
-/// The same snapping is available for props already in a scene through Snap Selected Props To Grid.
+/// Editor window for placing props in the open area scene, or in the open chunks of a world. It shows a palette of the
+/// prop prefabs; while one is picked, each click in the Scene view places it with its root snapped by
+/// <see cref="PropGridSnapping"/>, under the <c>Props</c> object of the scene it goes in, with undo. In a world that is
+/// the scene of the open chunk whose cells hold the pointer, so a prop placed by hand stands in its own chunk, beside
+/// the props world generation wrote under the chunk grid's <see cref="WorldGenerationWriter.GeneratedPropsName"/>,
+/// which the writer leaves alone. A preview shows the sprite and, for a blocking prop, the cells it will block, in red
+/// when another obstacle (a prop, generated or not, or a wall) already covers them or, in a world, when they cross the
+/// chunk's border, where placing is refused. Escape stops placing. The same snapping is available for props already in
+/// a scene through Snap Selected Props To Grid; while the selection holds generated props, a note says that changing
+/// them is hand work, which the next write of their chunk refuses unless the chunk is locked or the write forced.
 /// </summary>
 public sealed class PropPlacementWindow : EditorWindow
 {
@@ -37,6 +42,7 @@ public sealed class PropPlacementWindow : EditorWindow
     private GameObject picked;
     private SpriteRenderer preview;
     private NavigationGrid2D cachedGrid;
+    private List<WorldChunk> cachedChunks;
 
     /// <summary>
     /// Opens the prop placement window.
@@ -93,13 +99,23 @@ public sealed class PropPlacementWindow : EditorWindow
     private void OnGUI()
     {
         NavigationGrid2D grid = AreaGrid();
-        if (grid == null)
+        if (OpenChunks().Count > 0)
+        {
+            EditorGUILayout.LabelField("World", $"{OpenChunks().Count} chunks open: each prop goes in the chunk under the pointer");
+        }
+        else if (grid == null)
         {
             EditorGUILayout.HelpBox("Open an area scene: props are placed in the scene that holds a NavigationGrid2D.", MessageType.Info);
         }
         else
         {
             EditorGUILayout.LabelField("Area", grid.gameObject.scene.name);
+        }
+
+        int generated = GeneratedPropsIn(Selection.gameObjects);
+        if (generated > 0)
+        {
+            EditorGUILayout.HelpBox($"{generated} selected props were written by world generation (under {WorldGenerationWriter.GeneratedPropsName}). Moving or deleting them is hand work: the next write refuses their chunk unless it is locked or the write forced. Props placed here go under the chunk's Props object instead and are kept.", MessageType.Warning);
         }
 
         using (new EditorGUILayout.HorizontalScope())
@@ -203,7 +219,9 @@ public sealed class PropPlacementWindow : EditorWindow
             return;
         }
 
-        NavigationGrid2D navigation = AreaGrid();
+        Vector2 pointer = HandleUtility.GUIPointToWorldRay(current.mousePosition).origin;
+        WorldChunk chunk = OwningChunk(OpenChunks(), pointer);
+        NavigationGrid2D navigation = chunk != null ? chunk.GetComponent<NavigationGrid2D>() : AreaGrid();
         GridLayout grid = navigation != null ? navigation.GetComponentInParent<GridLayout>() : null;
         if (grid == null)
         {
@@ -217,10 +235,9 @@ public sealed class PropPlacementWindow : EditorWindow
         }
 
         view.wantsMouseMove = true;
-        Vector2 pointer = HandleUtility.GUIPointToWorldRay(current.mousePosition).origin;
         Vector3 root = PropGridSnapping.Snap(grid, pointer, picked);
         bool hasFootprint = PropGridSnapping.TryGetFootprint(picked, out Rect footprint);
-        bool taken = hasFootprint && IsTaken(root, footprint, navigation.ObstacleLayers);
+        bool taken = (hasFootprint && IsTaken(root, footprint, navigation.ObstacleLayers)) || (chunk != null && !FitsChunk(chunk, root, hasFootprint, footprint));
         ShowPreview(root);
 
         switch (current.type)
@@ -446,11 +463,77 @@ public sealed class PropPlacementWindow : EditorWindow
     }
 
     /// <summary>
-    /// Forgets the cached grid so the next lookup finds it again.
+    /// Forgets the cached grid and chunks so the next lookup finds them again.
     /// </summary>
     private void ForgetGrid()
     {
         cachedGrid = null;
+        cachedChunks = null;
+    }
+
+    /// <summary>
+    /// The world chunks of the open scenes. Cached until the hierarchy changes.
+    /// </summary>
+    private List<WorldChunk> OpenChunks()
+    {
+        cachedChunks ??= new List<WorldChunk>(FindObjectsByType<WorldChunk>(FindObjectsInactive.Include));
+        return cachedChunks;
+    }
+
+    /// <summary>
+    /// The chunk of <paramref name="chunks"/> whose cells hold <paramref name="point"/>, or null.
+    /// </summary>
+    internal static WorldChunk OwningChunk(IReadOnlyList<WorldChunk> chunks, Vector2 point)
+    {
+        foreach (WorldChunk chunk in chunks)
+        {
+            if (chunk == null || !chunk.TryGetComponent(out Grid grid))
+            {
+                continue;
+            }
+
+            Vector3Int cell = grid.WorldToCell(point);
+            if (chunk.Cells.Contains(new Vector2Int(cell.x, cell.y)))
+            {
+                return chunk;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether a prop rooted at <paramref name="root"/> stays in <paramref name="chunk"/>'s cells: the cell under its root
+    /// for a walk-through prop, every cell <paramref name="footprint"/> blocks when <paramref name="blocks"/>, by the rule
+    /// <see cref="WorldValidation"/> checks.
+    /// </summary>
+    internal static bool FitsChunk(WorldChunk chunk, Vector3 root, bool blocks, Rect footprint)
+    {
+        Grid grid = chunk.GetComponent<Grid>();
+        if (blocks)
+        {
+            return WorldValidation.FootprintInside(grid, root, footprint, chunk.Cells, out _);
+        }
+
+        Vector3Int cell = grid.WorldToCell(root);
+        return chunk.Cells.Contains(new Vector2Int(cell.x, cell.y));
+    }
+
+    /// <summary>
+    /// How many of <paramref name="selection"/> are props world generation wrote, or lie inside one: prop instances
+    /// under a grid's <see cref="WorldGenerationWriter.GeneratedPropsName"/>.
+    /// </summary>
+    internal static int GeneratedPropsIn(IEnumerable<GameObject> selection)
+    {
+        int count = 0;
+        foreach (GameObject selected in selection)
+        {
+            GameObject prop = selected != null ? PrefabUtility.GetOutermostPrefabInstanceRoot(selected) : null;
+            Transform parent = prop != null ? prop.transform.parent : null;
+            count += parent != null && parent.name == WorldGenerationWriter.GeneratedPropsName && parent.parent != null && parent.parent.TryGetComponent(out Grid _) ? 1 : 0;
+        }
+
+        return count;
     }
 
     /// <summary>

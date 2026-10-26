@@ -17,10 +17,12 @@ using Object = UnityEngine.Object;
 /// <see cref="WorldAuthoring.CreateChunk"/> builds them (<see cref="TestWorldGenerators"/>); and once on disk, a Clearing
 /// on a 2 x 2 world written by <see cref="WorldGenerationWriter.Write"/> into chunk scenes it creates in a temporary
 /// folder under <c>Assets/Dev</c>, deleted after. Each chunk lists its own and its neighbours' strips' materials in the
-/// style's order, each layer holding exactly its composed cells and tile, with its raised ground and its mobs under its
-/// generated root with derived ids the id watcher keeps; its <see cref="AreaTerrain"/> is only appended to; the written
-/// hash follows paint on any layer and the generated spawn points, and nothing else; objects outside the generated root
-/// and entries made by hand stay; a locked chunk is never opened, an unchanged one is skipped without being opened, one
+/// style's order, each layer holding exactly its composed cells and tile, with its raised ground, its mobs under its
+/// generated root with derived ids the id watcher keeps and its props under its generated props' root where the
+/// composition puts them; its <see cref="AreaTerrain"/> is only appended to; the written hash follows paint on any layer,
+/// the generated spawn points and the generated props, and nothing else; objects outside the generated roots (props
+/// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances; a locked chunk is
+/// never opened, an unchanged one is skipped without being opened, one
 /// changed by hand is refused unless forced; a second write changes no file; and the written world validates, bakes
 /// its coasts and keeps its derived ids through Repair ids; an entry moves only once the chunk under its new place is
 /// written; a mob whose id a chunk keeping its content still holds is left out of the chunk it moved to, also when that
@@ -87,8 +89,9 @@ public class WorldGenerationWriterTests
     /// its <see cref="AreaTerrain"/> lists, in the style's order, each a child of the grid at its place with its
     /// navigation priority and terrain type, holding exactly its material's composed cells of the chunk with its tile;
     /// its raised tilemap holds the composed raised cells and ramps; its mobs stand under its generated root at their
-    /// cells' centres with their prefabs and derived ids, which the id watcher keeps; the grid is active again and the
-    /// chunk read back hashes as it was composed.
+    /// cells' centres with their prefabs and derived ids, which the id watcher keeps; its props stand under its generated
+    /// props' root, of their prefabs and where the composition puts them; the grid is active again and the chunk read
+    /// back hashes as it was composed.
     /// </summary>
     [Test]
     public void WriteChunk_LaysTheChunksList_EachLayerHoldingExactlyItsComposedCells_WithItsRaisedGroundAndMobs()
@@ -96,6 +99,7 @@ public class WorldGenerationWriterTests
         Vector2Int plateau = ChunkCoords.ChunkOf(FirstRaisedCell(RaisedGround.Ramp));
         Vector2Int snow = ChunkWithOwn(TestWorldGenerators.GroundMaterial("Snow"));
         int mobs = 0;
+        int props = 0;
         Dictionary<Vector2Int, Grid> grids = new();
         foreach (Vector2Int coords in new[] { plateau, snow, new Vector2Int(0, 0) })
         {
@@ -104,9 +108,11 @@ public class WorldGenerationWriterTests
             Assert.That(written, Is.EqualTo(overworld.ChunkAt(coords).ContentHash), $"chunk {coords}'s written hash");
             ExpectWritten(grids[coords], coords);
             mobs += MobsOf(coords).Count;
+            props += PropsOf(coords).Count;
         }
 
         Assert.That(mobs, Is.GreaterThan(0), "the chunks written hold mobs");
+        Assert.That(props, Is.GreaterThan(0), "the chunks written hold props");
         Tilemap raised = grids[plateau].GetComponent<TerrainBlendRenderer>().RaisedTilemap;
         Assert.That(raised != null, Is.True, "the plateau's chunk has a raised tilemap");
         Assert.That(raised.GetTile(Cell3(FirstRaisedCell(RaisedGround.Ramp))) == TestWorldGenerators.Area("Coast").RampTile, Is.True, "its ramp holds the Coast's ramp tile");
@@ -157,9 +163,9 @@ public class WorldGenerationWriterTests
 
     /// <summary>
     /// The hash of a written chunk read back from its grid changes with a cell painted on an empty layer its
-    /// <see cref="AreaTerrain"/> keeps, a cell painted on any ground layer, a raised cell and a generated spawn point
-    /// moved, and comes back when each is undone; walls, a decor tilemap and a spawn point outside the generated root
-    /// change nothing.
+    /// <see cref="AreaTerrain"/> keeps, a cell painted on any ground layer, a raised cell, a generated spawn point moved
+    /// and a generated prop moved, and comes back when each is undone; walls, a decor tilemap, a spawn point outside the
+    /// generated root and a prop placed by hand under the scene's Props root change nothing.
     /// </summary>
     [Test]
     public void TheWrittenHash_FollowsPaintOnAnyLayerRaisedGroundAndGeneratedSpawnPoints_AndNothingElse()
@@ -183,6 +189,9 @@ public class WorldGenerationWriterTests
         Transform spawn = grid.transform.Find(WorldGenerationWriter.GeneratedMobSpawnsName).GetChild(0);
         Vector3 at = spawn.position;
         ExpectChange(grid, coords, composed, "a generated spawn point moved", () => spawn.position = at + Vector3.right, () => spawn.position = at);
+        Transform prop = grid.transform.Find(WorldGenerationWriter.GeneratedPropsName).GetChild(0);
+        Vector3 stood = prop.position;
+        ExpectChange(grid, coords, composed, "a generated prop moved", () => prop.position = stood + Vector3.right, () => prop.position = stood);
 
         DualGridTilemapModule walls = WorldAuthoring.AddWalls(grid);
         walls.SetDataTiles(new List<Vector3Int> { cell });
@@ -190,14 +199,16 @@ public class WorldGenerationWriterTests
         decor.transform.SetParent(grid.transform, false);
         decor.SetTile(cell, TileOf(TestWorldGenerators.GroundMaterial("Stone")));
         HandSpawnPoint(grid.transform.position + new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f), "hand-made");
-        Assert.That(Hash(grid, coords), Is.EqualTo(composed), "walls, a decor tilemap and a hand-made spawn point change nothing");
+        HandProp(grid, cell);
+        Assert.That(Hash(grid, coords), Is.EqualTo(composed), "walls, a decor tilemap, a hand-made spawn point and a prop placed by hand change nothing");
     }
 
     /// <summary>
-    /// Writing a chunk twice keeps every object outside its generated root (a hand-made spawn point with its id, a decor
-    /// object under the grid, the walls), removes a painted layer of a material it neither lists nor keeps in its
-    /// <see cref="AreaTerrain"/> and the raised tilemap of a chunk without raised ground, and leaves its generated
-    /// spawn points the composition's.
+    /// Writing a chunk twice keeps every object outside its generated roots (a hand-made spawn point with its id, a decor
+    /// object under the grid, a prop placed by hand under the scene's Props root, the walls), removes a painted layer of a
+    /// material it neither lists nor keeps in its <see cref="AreaTerrain"/> and the raised tilemap of a chunk without
+    /// raised ground, and leaves its generated spawn points and props the composition's, the second write reusing every
+    /// prop instance the first made.
     /// </summary>
     [Test]
     public void Writing_KeepsEveryObjectOutsideTheGeneratedRoot_AndRemovesALayerNeitherListedNorKept_AndUnneededRaisedGround()
@@ -214,6 +225,8 @@ public class WorldGenerationWriterTests
         GameObject decor = new("Decor");
         decor.transform.SetParent(grid.transform, false);
         MobSpawnPoint hand = HandSpawnPoint(grid.transform.position + new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f), "hand-made");
+        GameObject handProp = HandProp(grid, cell);
+        List<GameObject> firstProps = null;
 
         for (int write = 0; write < 2; write++)
         {
@@ -226,7 +239,21 @@ public class WorldGenerationWriterTests
             Assert.That(hand != null && hand.GetComponent<PersistentId>().Id == "hand-made", Is.True, $"write {write + 1}: the hand-made spawn point and its id stay");
             Assert.That(decor != null && decor.transform.parent == grid.transform, Is.True, $"write {write + 1}: the decor object stays");
             Assert.That(grid.transform.Find(WorldAuthoring.WallsName) != null, Is.True, $"write {write + 1}: the walls stay");
+            Assert.That(handProp != null && handProp.transform.parent.name == PropPlacementWindow.PropsRootName, Is.True, $"write {write + 1}: the prop placed by hand stays");
             ExpectWritten(grid, coords);
+            List<GameObject> written = new();
+            foreach (Transform prop in grid.transform.Find(WorldGenerationWriter.GeneratedPropsName))
+            {
+                written.Add(prop.gameObject);
+            }
+
+            Assert.That(written, Is.Not.Empty, $"write {write + 1}: the chunk holds props");
+            if (firstProps != null)
+            {
+                Assert.That(written, Is.EqualTo(firstProps), "the second write reuses every prop instance");
+            }
+
+            firstProps = written;
         }
     }
 
@@ -617,6 +644,23 @@ public class WorldGenerationWriterTests
             Assert.That(PersistentIds.RepairNew(ids, Object.FindObjectsByType<PersistentId>(FindObjectsInactive.Include)), Is.Empty, $"chunk {coords}: the id watcher keeps every derived id");
         }
 
+        List<WorldComposition.Prop> props = PropsOf(coords);
+        Transform propsRoot = grid.transform.Find(WorldGenerationWriter.GeneratedPropsName);
+        Assert.That(propsRoot != null ? propsRoot.childCount : 0, Is.EqualTo(props.Count), $"chunk {coords}'s generated props");
+        Vector3 origin = grid.CellToWorld(Vector3Int.zero);
+        for (int i = 0; i < props.Count; i++)
+        {
+            Transform instance = propsRoot.GetChild(i);
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(instance.gameObject) == props[i].Prefab, Is.True, $"chunk {coords}: prop {i} is an instance of {props[i].Prefab.name}");
+            Vector2 root2 = ChunkContent.RootOf(props[i]);
+            Assert.That(Vector2.Distance(instance.position, new Vector2(origin.x + root2.x, origin.y + root2.y)), Is.LessThan(0.001f), $"chunk {coords}: prop {i}'s place");
+            if (props[i].Blocks && PropGridSnapping.TryGetFootprint(props[i].Prefab, out Rect footprint))
+            {
+                BoundsInt blocked = PropGridSnapping.BlockedCells(grid, instance.position, footprint);
+                Assert.That((new Vector2Int(blocked.xMin, blocked.yMin), new Vector2Int(blocked.size.x, blocked.size.y)), Is.EqualTo((props[i].Cell, props[i].Covered)), $"chunk {coords}: prop {i} blocks its composed cells");
+            }
+        }
+
         Assert.That(Hash(grid, coords), Is.EqualTo(chunk.ContentHash), $"chunk {coords} read back hashes as composed");
     }
 
@@ -999,6 +1043,29 @@ public class WorldGenerationWriterTests
 
         Assert.Fail($"no chunk of the Overworld has mobs, no raised ground and no {material.name}");
         return default;
+    }
+
+    /// <summary>
+    /// The Overworld's props in the chunk at <paramref name="coords"/>, in the composition's order.
+    /// </summary>
+    private List<WorldComposition.Prop> PropsOf(Vector2Int coords)
+    {
+        return overworld.Props.FindAll(prop => prop.Chunk == coords);
+    }
+
+    /// <summary>
+    /// A prop placed by hand on <paramref name="cell"/> of <paramref name="grid"/>'s chunk, as the Prop Placement window
+    /// places one: an instance of a stone under its scene's Props root, which the test destroys.
+    /// </summary>
+    private GameObject HandProp(Grid grid, Vector3Int cell)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Rocks/Stones_Small_0.prefab");
+        Transform root = PropPlacementWindow.FindOrCreateRoot(grid.gameObject.scene, PropPlacementWindow.PropsRootName);
+        perTest.Track(root.gameObject);
+        GameObject prop = (GameObject)PrefabUtility.InstantiatePrefab(prefab, grid.gameObject.scene);
+        prop.transform.SetParent(root, false);
+        prop.transform.position = grid.CellToWorld(cell) + new Vector3(0.5f, 0.5f, 0f);
+        return prop;
     }
 
     /// <summary>

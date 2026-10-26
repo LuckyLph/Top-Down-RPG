@@ -208,13 +208,6 @@ internal sealed class AreaLayoutBuilder
     public HashSet<Vector3Int> Decorated { get; } = new(CellComparer.Instance);
 
     /// <summary>
-    /// Whether the generator's scatter layers place props
-    /// (<see cref="ScatterProps(AreaGenerator.PropScatter, List{Vector3Int})"/>). Off, they place nothing and draw
-    /// nothing from the random stream, as layers listing no prefabs would.
-    /// </summary>
-    public bool ScattersProps { get; set; } = true;
-
-    /// <summary>
     /// From here on every random draw (<see cref="Range"/>, <see cref="Next"/>, <see cref="Shuffle{T}"/>,
     /// <see cref="WobblyShape"/>, <see cref="ScatterProps"/>) comes from a second stream seeded from the layout's seed,
     /// for terrain a generator lays after its props and mobs: what it lays stays deterministic, and adding it changes
@@ -447,11 +440,11 @@ internal sealed class AreaLayoutBuilder
     /// <summary>
     /// Scatters <paramref name="scatter"/>'s props over <paramref name="candidates"/> as
     /// <see cref="ScatterProps(IReadOnlyList{GameObject}, int, float, List{Vector3Int})"/> does, each prop recording
-    /// the layer that placed it, unless <see cref="ScattersProps"/> is off. Returns how many were placed.
+    /// the layer that placed it. Returns how many were placed.
     /// </summary>
     public int ScatterProps(AreaGenerator.PropScatter scatter, List<Vector3Int> candidates)
     {
-        return ScattersProps ? Scatter(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates, scatter) : 0;
+        return Scatter(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates, scatter);
     }
 
     /// <summary>

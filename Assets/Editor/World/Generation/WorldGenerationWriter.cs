@@ -16,8 +16,9 @@ using Object = UnityEngine.Object;
 /// <see cref="AreaTerrain"/> lists, each cleared and filled in one batch with its material's tile in exactly the
 /// composition's cells, and a layer neither listed nor kept is removed; its raised tilemap is written, or removed when
 /// it has no raised ground; the base ground layers it lays are appended to its <see cref="AreaTerrain"/>, which is never
-/// removed from or reordered; and the spawn points under its grid's <see cref="GeneratedMobSpawnsName"/> become its
-/// mobs, each with its prefab and its derived <see cref="PersistentId"/>. <see cref="Write"/> writes chunks of a world
+/// removed from or reordered; the spawn points under its grid's <see cref="GeneratedMobSpawnsName"/> become its mobs,
+/// each with its prefab and its derived <see cref="PersistentId"/>; and the prop instances under its grid's
+/// <see cref="GeneratedPropsName"/> become its props. <see cref="Write"/> writes chunks of a world
 /// one at a time: it creates the missing ones first, leaves the locked ones alone and skips those whose composed hash
 /// equals their record without opening them, refuses, unless forced, a chunk whose scene no longer hashes to its record
 /// (<see cref="ContentHash"/>), and opens, writes, saves and closes the others, recording their hashes; then it sets the
@@ -27,6 +28,7 @@ using Object = UnityEngine.Object;
 public static class WorldGenerationWriter
 {
     public const string GeneratedMobSpawnsName = "GeneratedMobSpawns";
+    public const string GeneratedPropsName = "GeneratedProps";
 
     private const string Owner = "World generation";
     private const int ListedInError = 3;
@@ -180,7 +182,9 @@ public static class WorldGenerationWriter
     /// <see cref="GeneratedMobSpawnsName"/> (made when missing) become the chunk's mobs in order, each at its cell's
     /// centre with its prefab and its derived id set as it is made, but for the mobs whose ids are in
     /// <paramref name="leaveOut"/> (another chunk keeping its content still holds them), in which case the hash returned
-    /// is the one read back from the grid; every object outside that root stays.
+    /// is the one read back from the grid. The prop instances under the grid's <see cref="GeneratedPropsName"/> (made
+    /// when missing) become the chunk's props in order, each where <see cref="ChunkContent.RootOf"/> puts it; every object
+    /// outside those two roots stays.
     /// </summary>
     public static string WriteChunk(Grid grid, WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut = null)
     {
@@ -216,6 +220,7 @@ public static class WorldGenerationWriter
             ListGrounds(grid, composition, coords, layers, tilemaps);
             WriteRaised(grid, raisedCells, raisedTiles, changes);
             WriteMobSpawns(grid, composition, coords, leaveOut);
+            WriteProps(grid, composition, coords);
         }
         finally
         {
@@ -502,10 +507,11 @@ public static class WorldGenerationWriter
     {
         int layers = grid.TryGetComponent(out TerrainBlendRenderer renderer) ? renderer.Layers.Count : 0;
         int mobs = MobsOf(composition, coords, leftOut.Keys).Count;
+        int props = composition.Props.FindAll(prop => prop.Chunk == coords).Count;
         string past = layers > TerrainControlMap.NarrowLayers && (record == null || !record.AllowWide) ? $", past {TerrainControlMap.NarrowLayers}: it draws in the wide variant" : string.Empty;
         if (leftOut.Count == 0)
         {
-            return $"{layers} layers{past}, {mobs} generated spawn points.";
+            return $"{layers} layers{past}, {mobs} generated spawn points, {props} props.";
         }
 
         List<string> holders = new();
@@ -518,7 +524,7 @@ public static class WorldGenerationWriter
             }
         }
 
-        return $"{layers} layers{past}, {mobs} generated spawn points; {leftOut.Count} left out, their ids still in {string.Join(", ", holders)}, which keeps its content: they are written here once it no longer holds them.";
+        return $"{layers} layers{past}, {mobs} generated spawn points, {props} props; {leftOut.Count} left out, their ids still in {string.Join(", ", holders)}, which keeps its content: they are written here once it no longer holds them.";
     }
 
     /// <summary>
@@ -962,6 +968,66 @@ public static class WorldGenerationWriter
             SerializedObject id = new(marker.TryGetComponent(out PersistentId persistentId) ? persistentId : marker.AddComponent<PersistentId>());
             id.FindProperty("id").stringValue = mob.Id;
             id.ApplyModifiedPropertiesWithoutUndo();
+        }
+    }
+
+    /// <summary>
+    /// Makes the prop instances under <paramref name="grid"/>'s <see cref="GeneratedPropsName"/> the props of the chunk
+    /// at <paramref name="coords"/>, in the composition's order: an instance already there of the same prefab is reused
+    /// in its place, so an unchanged prop keeps its place in the scene file, another is made in the chunk's scene and put
+    /// there, the rest destroyed; each stands where <see cref="ChunkContent.RootOf"/> puts it on the grid. The root is
+    /// made when missing and destroyed when the chunk has no props.
+    /// </summary>
+    private static void WriteProps(Grid grid, WorldComposition composition, Vector2Int coords)
+    {
+        List<WorldComposition.Prop> props = composition.Props.FindAll(prop => prop.Chunk == coords);
+        Transform root = grid.transform.Find(GeneratedPropsName);
+        if (props.Count == 0)
+        {
+            if (root != null)
+            {
+                Object.DestroyImmediate(root.gameObject);
+            }
+
+            return;
+        }
+
+        if (root == null)
+        {
+            root = new GameObject(GeneratedPropsName).transform;
+            root.SetParent(grid.transform, false);
+        }
+
+        Vector3 origin = grid.CellToWorld(Vector3Int.zero);
+        Scene scene = grid.gameObject.scene;
+        for (int i = 0; i < props.Count; i++)
+        {
+            WorldComposition.Prop prop = props[i];
+            GameObject instance = i < root.childCount ? root.GetChild(i).gameObject : null;
+            if (instance != null && PrefabUtility.GetCorrespondingObjectFromSource(instance) != prop.Prefab)
+            {
+                Object.DestroyImmediate(instance);
+                instance = null;
+            }
+
+            if (instance == null)
+            {
+                instance = (GameObject)PrefabUtility.InstantiatePrefab(prop.Prefab, scene);
+                instance.transform.SetParent(root, false);
+                instance.transform.SetSiblingIndex(i);
+            }
+
+            Vector2 local = ChunkContent.RootOf(prop);
+            Vector3 position = new(origin.x + local.x * grid.cellSize.x, origin.y + local.y * grid.cellSize.y, 0f);
+            if (instance.transform.position != position)
+            {
+                instance.transform.position = position;
+            }
+        }
+
+        for (int i = root.childCount - 1; i >= props.Count; i--)
+        {
+            Object.DestroyImmediate(root.GetChild(i).gameObject);
         }
     }
 

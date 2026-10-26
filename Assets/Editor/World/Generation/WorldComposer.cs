@@ -10,8 +10,9 @@ using Random = System.Random;
 /// Composition), in order: the regions laid from their seeds and moved into place cell for cell, with their outlines,
 /// ports and spawn cells; the land, the sea and the world's beach, joined to a sea region's own coast; the wilds' grass;
 /// the roads between the ports, each the cheapest route over the wilds sampled into a spline; the waystones with their
-/// plazas, and the gates; the wilds' patches and mobs, per chunk on a stream of its own; each chunk's material list and
-/// content hash; and the checks, each a warning. Every cell's materials are a bit per material of the style's layer
+/// plazas, and the gates; the wilds' patches, mobs, groves and props, per chunk on a stream of its own; each chunk's
+/// material list and content hash; and the checks, each a warning. The regions' props come with their layouts, but for
+/// a blocking prop whose footprint would cross a chunk's border and those a waystone's plaza covers. Every cell's materials are a bit per material of the style's layer
 /// order in a dense array over the world, with the region owning each cell and its raised ground beside them, and
 /// every step walks ordered lists or the arrays in row order, never a hash set, so the same settings always give the
 /// same composition.
@@ -186,6 +187,10 @@ internal sealed class WorldComposer
     private short[] nearestRegion;
     private byte[] beachSteps;
     private byte[] roadSteps;
+    private bool[] footprints;
+    private bool[] decorated;
+    private bool[] groves;
+    private bool[] grassRegions;
     private int[,] regionDistances;
     private int[] shoreDistances;
     private int[] queue;
@@ -284,6 +289,9 @@ internal sealed class WorldComposer
         paths = stone | gravel | plaza;
         int count = width * height;
         queue = new int[count];
+        footprints = new bool[count];
+        decorated = new bool[count];
+        groves = new bool[count];
 
         Timed("Regions", PlaceRegions);
         Timed("Land and sea", LayLandAndSea);
@@ -318,9 +326,8 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Step 1. Lays each placement's layout from its seed, once, without its scatter layers' props, which the world
-    /// does not write yet, and moves its cells, raised ground and mobs by the placement's cell; then reads each
-    /// region's outline and ports from the moved cells.
+    /// Step 1. Lays each placement's layout from its seed, once, and moves its cells, raised ground, mobs and props by
+    /// the placement's cell; then reads each region's outline and ports from the moved cells.
     /// </summary>
     private void PlaceRegions()
     {
@@ -340,7 +347,7 @@ internal sealed class WorldComposer
             }
 
             keys.Add(placement.Key);
-            AreaLayout layout = placement.Generator.Generate(placement.Seed, false);
+            AreaLayout layout = placement.Generator.Generate(placement.Seed);
             WorldComposition.Region region = new(composition.Regions.Count, placement, placement.Seed);
             composition.Regions.Add(region);
             layouts.Add(layout);
@@ -385,8 +392,8 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Moves <paramref name="layout"/>'s cells, raised ground and mobs into the world for <paramref name="region"/>,
-    /// counting the cells that fall outside it or on another region.
+    /// Moves <paramref name="layout"/>'s cells, raised ground, mobs and props into the world for
+    /// <paramref name="region"/>, counting the cells that fall outside it or on another region.
     /// </summary>
     private void Lay(WorldComposition.Region region, AreaLayout layout)
     {
@@ -469,6 +476,7 @@ internal sealed class WorldComposer
             }
         }
 
+        LayProps(region, layout);
         region.SpawnCell = new Vector2Int(layout.SpawnCell.x + offset.x, layout.SpawnCell.y + offset.y);
         if (outside > 0)
         {
@@ -478,6 +486,86 @@ internal sealed class WorldComposer
         if (overlap > 0)
         {
             composition.Warnings.Add($"{region.Key}: {overlap} cells lie on another region.");
+        }
+    }
+
+    /// <summary>
+    /// Moves <paramref name="layout"/>'s props into the world for <paramref name="region"/>, in its order, but for a
+    /// blocking prop whose footprint would cross a chunk's border or leave the world: a chunk's navigation sees only its
+    /// own props.
+    /// </summary>
+    private void LayProps(WorldComposition.Region region, AreaLayout layout)
+    {
+        Vector2Int offset = region.Cell;
+        foreach (AreaLayout.Prop prop in layout.Props)
+        {
+            Vector2Int cell = new(prop.Cell.x + offset.x, prop.Cell.y + offset.y);
+            Vector2Int covered = PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint) ? PropGridSnapping.CellsCovered(footprint, Vector2.one) : Vector2Int.zero;
+            Vector2Int far = cell + Vector2Int.Max(covered, Vector2Int.one) - Vector2Int.one;
+            if (IndexOf(cell.x, cell.y) >= 0 && IndexOf(far.x, far.y) >= 0 && ChunkCoords.ChunkOf(cell) == ChunkCoords.ChunkOf(far))
+            {
+                AddProp(new WorldComposition.Prop(prop.Prefab, cell, prop.Offset, covered, region.Key));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds <paramref name="prop"/> to the composition and marks the cells its footprint covers, or the cell it stands
+    /// in.
+    /// </summary>
+    private void AddProp(WorldComposition.Prop prop)
+    {
+        composition.Props.Add(prop);
+        MarkProp(prop, true);
+    }
+
+    /// <summary>
+    /// Marks (<paramref name="on"/>) or frees the cells <paramref name="prop"/>'s footprint covers, or the cell it stands
+    /// in.
+    /// </summary>
+    private void MarkProp(WorldComposition.Prop prop, bool on)
+    {
+        if (!prop.Blocks)
+        {
+            decorated[prop.Cell.y * width + prop.Cell.x] = on;
+            return;
+        }
+
+        for (int dy = 0; dy < prop.Covered.y; dy++)
+        {
+            for (int dx = 0; dx < prop.Covered.x; dx++)
+            {
+                footprints[(prop.Cell.y + dy) * width + prop.Cell.x + dx] = on;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes every blocking prop whose footprint covers a cell that passes <paramref name="on"/>, and every
+    /// walk-through prop standing on or beside one, freeing their cells.
+    /// </summary>
+    private void RemovePropsOn(Func<int, bool> on)
+    {
+        for (int i = composition.Props.Count - 1; i >= 0; i--)
+        {
+            WorldComposition.Prop prop = composition.Props[i];
+            int reach = prop.Blocks ? 0 : 1;
+            Vector2Int size = prop.Blocks ? prop.Covered : Vector2Int.one;
+            bool hit = false;
+            for (int dy = -reach; dy < size.y + reach && !hit; dy++)
+            {
+                for (int dx = -reach; dx < size.x + reach && !hit; dx++)
+                {
+                    int index = IndexOf(prop.Cell.x + dx, prop.Cell.y + dy);
+                    hit = index >= 0 && on(index);
+                }
+            }
+
+            if (hit)
+            {
+                MarkProp(prop, false);
+                composition.Props.RemoveAt(i);
+            }
         }
     }
 
@@ -1568,8 +1656,8 @@ internal sealed class WorldComposer
 
     /// <summary>
     /// Step 5. A waystone per region at its spawn cell, named by its key, the first region's first, with a disc of
-    /// plaza of the plaza's radius under it on the region's own cells, under its road; then a gate per linked port, the
-    /// gate distance outside its outline on its road.
+    /// plaza of the plaza's radius under it on the region's own cells, under its road, taking the region's props off it
+    /// and the plants beside it; then a gate per linked port, the gate distance outside its outline on its road.
     /// </summary>
     private void PlaceEntries()
     {
@@ -1591,6 +1679,8 @@ internal sealed class WorldComposer
                 }
             }
         }
+
+        RemovePropsOn(index => owners[index] >= 0 && (cells[index] & plaza) != 0);
 
         foreach (WorldComposition.Region region in composition.Regions)
         {
@@ -1618,8 +1708,9 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Steps 6 and 7, per chunk in row order on a stream of the chunk's own (the world's seed, its coordinates and its
-    /// record's wilds seed): tall grass, meadow and weed patches on the wilds' plain grass, then its mobs.
+    /// Steps 6, 7 and 8, per chunk in row order on a stream of the chunk's own (the world's seed, its coordinates and its
+    /// record's wilds seed): tall grass, meadow and weed patches on the wilds' plain grass, then its mobs, then its grove
+    /// patches and its props, so the patches and mobs are the same with or without props.
     /// </summary>
     private void LayWilds()
     {
@@ -1636,6 +1727,13 @@ internal sealed class WorldComposer
             regionMobs.Add(mob.Cell);
         }
 
+        grassRegions = new bool[composition.Regions.Count];
+        for (int i = 0; i < grassRegions.Length; i++)
+        {
+            IReadOnlyList<AreaGenerator.TerrainLayer> layers = composition.Regions[i].Generator.TerrainLayers;
+            grassRegions[i] = layers.Count > 0 && layers[0] != null && layers[0].Material == settings.Materials.Grass;
+        }
+
         for (int cy = 0; cy < size.y; cy++)
         {
             for (int cx = 0; cx < size.x; cx++)
@@ -1648,6 +1746,8 @@ internal sealed class WorldComposer
                 LayPatches(random, bounds, meadow, tallGrass, settings.Meadows);
                 LayPatches(random, bounds, weeds, tallGrass | meadow, settings.Weeds);
                 PlaceWildsMobs(random, coords, bounds, entries, regionMobs);
+                LayGroves(random, bounds);
+                ScatterWildsProps(random, coords, bounds, entries);
             }
         }
     }
@@ -1732,6 +1832,17 @@ internal sealed class WorldComposer
     /// </summary>
     private void PaintPatches(Random random, RectInt area, uint kind, int count, Vector2 radii, Func<int, int, bool> allowed)
     {
+        PaintPatches(random, area, count, radii, allowed, index => (cells[index] & kind) != 0, index => cells[index] |= kind);
+    }
+
+    /// <summary>
+    /// Paints up to <paramref name="count"/> wobbly patches of a radius between the two values of
+    /// <paramref name="radii"/> through <paramref name="paint"/>, each centred on a random cell of
+    /// <paramref name="area"/>, in row order, that <paramref name="allowed"/> allows and <paramref name="painted"/> does
+    /// not hold yet, on the cells it allows.
+    /// </summary>
+    private void PaintPatches(Random random, RectInt area, int count, Vector2 radii, Func<int, int, bool> allowed, Func<int, bool> painted, Action<int> paint)
+    {
         if (count == 0)
         {
             return;
@@ -1764,12 +1875,12 @@ internal sealed class WorldComposer
                     int y = centre.y + dy;
                     if (IndexOf(x, y) >= 0 && allowed(x, y) && contains(new Vector2(x + 0.5f, y + 0.5f)))
                     {
-                        cells[y * width + x] |= kind;
+                        paint(y * width + x);
                     }
                 }
             }
 
-            centres.RemoveAll(cell => (cells[cell.y * width + cell.x] & kind) != 0);
+            centres.RemoveAll(cell => painted(cell.y * width + cell.x));
         }
     }
 
@@ -1946,6 +2057,239 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
+    /// Lays the grove patches of the chunk of <paramref name="bounds"/> (<see cref="WorldGenerator.Groves"/>), where
+    /// Grove layers place their props: its edge groves centred on and kept to cells within their reach of a region's
+    /// outline, then its open ones anywhere, each a wobbly patch on cells a blocking prop of the wilds may stand on
+    /// (<see cref="CanHoldProp"/>), a cell inside the chunk's border.
+    /// </summary>
+    private void LayGroves(Random random, RectInt bounds)
+    {
+        WorldGenerator.Patches patches = settings.Groves;
+        if (patches.EdgeCount + patches.OpenCount == 0)
+        {
+            return;
+        }
+
+        RectInt inside = new(bounds.xMin + 1, bounds.yMin + 1, bounds.width - 2, bounds.height - 2);
+        bool Allowed(int x, int y) => inside.Contains(new Vector2Int(x, y)) && CanHoldProp(y * width + x, true);
+        bool NearEdge(int x, int y) => Allowed(x, y) && regionSteps[y * width + x] <= patches.Reach;
+        PaintPatches(random, inside, patches.EdgeCount, patches.Radius, NearEdge, index => groves[index], index => groves[index] = true);
+        PaintPatches(random, inside, patches.OpenCount, patches.Radius, Allowed, index => groves[index], index => groves[index] = true);
+    }
+
+    /// <summary>
+    /// Places the wilds' scatter layers (<see cref="WorldGenerator.WildsProps"/>) in the chunk at
+    /// <paramref name="coords"/>, in order, on its stream. Each layer tries the cells of its zone a cell inside the chunk's
+    /// border in random order, each with a random prefab of the layer, until it has placed its count: Edge the wilds
+    /// within the edge reach of the outline of a region whose ground is the wilds' grass, Grove the chunk's groves, Open
+    /// the rest. A blocking prop's footprint
+    /// stands on the tried cell, as centred as its width allows, on cells that may hold one (<see cref="CanHoldProp"/>),
+    /// inside that border, free of every other prop and with no other footprint beside it; a walk-through prop stands at a
+    /// random point of a free cell that may hold one. Every prop keeps its layer's spacing from the others it placed in
+    /// the chunk, the entry clearance from every waystone and gate, and a cell from every mob.
+    /// </summary>
+    private void ScatterWildsProps(Random random, Vector2Int coords, RectInt bounds, List<Vector2> entries)
+    {
+        if (settings.WildsProps.Count == 0)
+        {
+            return;
+        }
+
+        RectInt inside = new(bounds.xMin + 1, bounds.yMin + 1, bounds.width - 2, bounds.height - 2);
+        float clearance = settings.PropEntryClearance;
+        int pad = Mathf.CeilToInt(clearance) + 1;
+        RectInt near = new(inside.xMin - pad, inside.yMin - pad, inside.width + 2 * pad, inside.height + 2 * pad);
+        List<Vector2> nearEntries = entries.FindAll(entry => near.Contains(Vector2Int.FloorToInt(entry)));
+        List<Vector2Int> nearMobs = new();
+        foreach (WorldComposition.Mob mob in composition.Mobs)
+        {
+            if (near.Contains(mob.Cell))
+            {
+                nearMobs.Add(mob.Cell);
+            }
+        }
+
+        bool Clear(Vector2Int cell)
+        {
+            Vector2 centre = cell + new Vector2(0.5f, 0.5f);
+            foreach (Vector2 entry in nearEntries)
+            {
+                if (Vector2.Distance(centre, entry) < clearance)
+                {
+                    return false;
+                }
+            }
+
+            foreach (Vector2Int mob in nearMobs)
+            {
+                if (Mathf.Abs(mob.x - cell.x) <= 1 && Mathf.Abs(mob.y - cell.y) <= 1)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        string scope = $"wilds_{coords.x}_{coords.y}";
+        foreach (WorldGenerator.WildsScatter layer in settings.WildsProps)
+        {
+            List<GameObject> usable = new();
+            foreach (GameObject prefab in layer != null ? layer.Prefabs : new GameObject[0])
+            {
+                if (prefab != null)
+                {
+                    usable.Add(prefab);
+                }
+            }
+
+            if (usable.Count == 0 || layer.Count == 0)
+            {
+                continue;
+            }
+
+            List<Vector2Int> candidates = new();
+            for (int y = inside.yMin; y < inside.yMax; y++)
+            {
+                for (int x = inside.xMin; x < inside.xMax; x++)
+                {
+                    if (InZone(y * width + x, layer.Zone))
+                    {
+                        candidates.Add(new Vector2Int(x, y));
+                    }
+                }
+            }
+
+            for (int i = candidates.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+            }
+
+            List<Vector2> placed = new();
+            foreach (Vector2Int cell in candidates)
+            {
+                if (placed.Count >= layer.Count)
+                {
+                    break;
+                }
+
+                GameObject prefab = usable[random.Next(usable.Count)];
+                if (PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+                {
+                    Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+                    Vector2Int corner = new(cell.x - (covered.x - 1) / 2, cell.y);
+                    Vector2 centre = corner + (Vector2)covered * 0.5f;
+                    if (FarFrom(placed, centre, layer.Spacing) && FootprintFits(corner, covered, inside, Clear))
+                    {
+                        AddProp(new WorldComposition.Prop(prefab, corner, Vector2.zero, covered, scope));
+                        placed.Add(centre);
+                    }
+
+                    continue;
+                }
+
+                Vector2 offset = new(Range(random, 0.2f, 0.8f), Range(random, 0.15f, 0.6f));
+                Vector2 point = cell + offset;
+                int index = cell.y * width + cell.x;
+                if (CanHoldProp(index, false) && !footprints[index] && !decorated[index] && Clear(cell) && FarFrom(placed, point, layer.Spacing))
+                {
+                    AddProp(new WorldComposition.Prop(prefab, cell, offset, Vector2Int.zero, scope));
+                    placed.Add(point);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the cell at <paramref name="index"/> lies in <paramref name="zone"/>: Edge, the wilds within the edge
+    /// reach of the outline of a region whose ground is the wilds' grass, so the wilds' trees thicken its band of trees
+    /// but stand against no other ground's; Grove, a grove; Open, the rest of the wilds outside the groves.
+    /// </summary>
+    private bool InZone(int index, WorldGenerator.WildsZone zone)
+    {
+        if (owners[index] != WorldComposition.Wilds)
+        {
+            return false;
+        }
+
+        int region = nearestRegion[index];
+        bool edge = regionSteps[index] <= settings.EdgeReach && region >= 0 && grassRegions[region];
+        return zone switch
+        {
+            WorldGenerator.WildsZone.Edge => edge,
+            WorldGenerator.WildsZone.Grove => groves[index],
+            _ => !edge && !groves[index]
+        };
+    }
+
+    /// <summary>
+    /// Whether a prop of the wilds may stand on the cell at <paramref name="index"/>: wilds ground of grass and its
+    /// patches alone, beside a region at the nearest; for a blocking prop more than the props' path clearance from a road
+    /// and the beach, for a walk-through prop more than a step from them and off the tall grass.
+    /// </summary>
+    private bool CanHoldProp(int index, bool blocking)
+    {
+        uint grassy = grass | weeds | meadow | tallGrass;
+        if (owners[index] != WorldComposition.Wilds || (cells[index] & ~grassy) != 0 || regionSteps[index] == 0)
+        {
+            return false;
+        }
+
+        int clearance = blocking ? settings.PropPathClearance : 1;
+        return roadSteps[index] > clearance && beachSteps[index] > clearance && (blocking || (cells[index] & tallGrass) == 0);
+    }
+
+    /// <summary>
+    /// Whether a footprint of <paramref name="covered"/> cells from <paramref name="corner"/> lies in
+    /// <paramref name="area"/> on cells that may hold a blocking prop and that <paramref name="clear"/> passes, free of
+    /// every other prop, with no other footprint beside it.
+    /// </summary>
+    private bool FootprintFits(Vector2Int corner, Vector2Int covered, RectInt area, Func<Vector2Int, bool> clear)
+    {
+        for (int dy = -1; dy <= covered.y; dy++)
+        {
+            for (int dx = -1; dx <= covered.x; dx++)
+            {
+                Vector2Int cell = new(corner.x + dx, corner.y + dy);
+                bool inside = dx >= 0 && dy >= 0 && dx < covered.x && dy < covered.y;
+                int index = IndexOf(cell.x, cell.y);
+                if (inside)
+                {
+                    if (!area.Contains(cell) || !CanHoldProp(index, true) || footprints[index] || decorated[index] || !clear(cell))
+                    {
+                        return false;
+                    }
+                }
+                else if ((dx < 0 || dx >= covered.x) != (dy < 0 || dy >= covered.y) && index >= 0 && footprints[index])
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="point"/> lies at least <paramref name="spacing"/> from every point of
+    /// <paramref name="placed"/>.
+    /// </summary>
+    private static bool FarFrom(List<Vector2> placed, Vector2 point, float spacing)
+    {
+        float squared = spacing * spacing;
+        foreach (Vector2 other in placed)
+        {
+            if ((other - point).sqrMagnitude < squared)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Lists each chunk's materials, in row order of the chunks: its own cells' and those of its neighbours' border
     /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order, and hashes its content
     /// (<see cref="ChunkContent"/>).
@@ -2000,7 +2344,7 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Step 8. The checks, each a warning: the placement (every region on the land and on chunks the world has,
+    /// Step 9. The checks, each a warning: the placement (every region on the land and on chunks the world has,
     /// <see cref="WorldGenerator.RegionGap"/> from every other and <see cref="WorldGenerator.RegionShoreGap"/> from the
     /// beach, a sea region's ocean joining the sea), the layer lists, reachability from the default entry, the ids, and
     /// every port linked.
@@ -2125,8 +2469,8 @@ internal sealed class WorldComposer
 
     /// <summary>
     /// Warns of every waystone, gate and mob the default entry cannot walk to: over 4-connected cells whose top
-    /// material the movement profile walks, off the cliff faces, stepping between raised and level ground only at a
-    /// ramp's foot (<see cref="RaisedGround.CanCross"/>), as the navigation does.
+    /// material the movement profile walks, off the cliff faces and the props' footprints, stepping between raised and
+    /// level ground only at a ramp's foot (<see cref="RaisedGround.CanCross"/>), as the navigation does.
     /// </summary>
     private void CheckReachability()
     {
@@ -2189,7 +2533,7 @@ internal sealed class WorldComposer
         bool Walkable(int x, int y)
         {
             int top = WorldComposition.TopIndex(cells[y * width + x]);
-            if (top < 0 || !walkable[top])
+            if (top < 0 || !walkable[top] || footprints[y * width + x])
             {
                 return false;
             }

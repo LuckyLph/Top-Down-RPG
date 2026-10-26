@@ -235,21 +235,19 @@ public sealed class VillageForestGenerator : AreaGenerator
     }
 
     /// <summary>
-    /// Lays out the area from <paramref name="layoutSeed"/>, its scatter layers placing props unless
-    /// <paramref name="scatter"/> is false.
+    /// Lays out the area from <paramref name="layoutSeed"/>.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed, bool scatter)
+    public override AreaLayout Generate(int layoutSeed)
     {
-        return GenerateWithRegions(layoutSeed, scatter).Layout;
+        return GenerateWithRegions(layoutSeed).Layout;
     }
 
     /// <summary>
-    /// Lays out the area from <paramref name="layoutSeed"/> and tells which region each grass cell belongs to, its
-    /// scatter layers placing props unless <paramref name="scatter"/> is false.
+    /// Lays out the area from <paramref name="layoutSeed"/> and tells which region each grass cell belongs to.
     /// </summary>
-    public Generation GenerateWithRegions(int layoutSeed, bool scatter = true)
+    public Generation GenerateWithRegions(int layoutSeed)
     {
-        return new Run(this, layoutSeed, scatter).Build();
+        return new Run(this, layoutSeed).Build();
     }
 
     /// <summary>
@@ -280,14 +278,12 @@ public sealed class VillageForestGenerator : AreaGenerator
         private bool hasSquare;
 
         /// <summary>
-        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>, its scatter
-        /// layers placing props unless <paramref name="scatter"/> is false.
+        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
         /// </summary>
-        public Run(VillageForestGenerator generator, int seed, bool scatter)
+        public Run(VillageForestGenerator generator, int seed)
         {
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone, generator.plaza);
-            builder.ScattersProps = scatter;
             halfSize = new Vector2(Mathf.Max(24, generator.size.x), Mathf.Max(16, generator.size.y)) * 0.5f;
             villageHalf = new Vector2(Mathf.Max(8, generator.villageSize.x), Mathf.Max(8, generator.villageSize.y)) * 0.5f;
             clearingHalf = new Vector2(Mathf.Max(8, generator.clearingSize.x), Mathf.Max(8, generator.clearingSize.y)) * 0.5f;

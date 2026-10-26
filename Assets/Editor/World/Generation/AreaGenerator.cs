@@ -154,15 +154,5 @@ public abstract class AreaGenerator : ScriptableObject
     /// <summary>
     /// Lays out an area from <paramref name="layoutSeed"/>, in cells of one unit.
     /// </summary>
-    public AreaLayout Generate(int layoutSeed)
-    {
-        return Generate(layoutSeed, true);
-    }
-
-    /// <summary>
-    /// Lays out an area from <paramref name="layoutSeed"/>, in cells of one unit. With <paramref name="scatter"/> false
-    /// the scatter layers place nothing, as if they listed no prefabs, so the rest of the layout is what it was before
-    /// they were filled: world composition lays its regions that way until it writes their props.
-    /// </summary>
-    public abstract AreaLayout Generate(int layoutSeed, bool scatter);
+    public abstract AreaLayout Generate(int layoutSeed);
 }

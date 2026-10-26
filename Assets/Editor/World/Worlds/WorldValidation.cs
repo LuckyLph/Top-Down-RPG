@@ -6,9 +6,10 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Ownership checks of seamless worlds (Docs/WorldStreaming.md: Ownership): everything placed in a chunk lies inside
-/// its 64 x 64 cells. A mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of
-/// the scene's Props root) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the
-/// rule <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
+/// its 64 x 64 cells. A mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of the scene's
+/// Props root, placed by hand, or of its grid's <see cref="WorldGenerationWriter.GeneratedPropsName"/>, written by world
+/// generation) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the rule
+/// <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
 /// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Every <see cref="WorldExit"/>
 /// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has. Each
@@ -62,6 +63,15 @@ public static class WorldValidation
             }
 
             foreach (Transform prop in root.transform)
+            {
+                CheckProp(problems, prop.gameObject, grid, cells);
+            }
+        }
+
+        Transform generated = grid != null ? grid.transform.Find(WorldGenerationWriter.GeneratedPropsName) : null;
+        if (generated != null)
+        {
+            foreach (Transform prop in generated)
             {
                 CheckProp(problems, prop.gameObject, grid, cells);
             }

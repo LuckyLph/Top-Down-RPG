@@ -6,7 +6,8 @@ using UnityEngine;
 /// <summary>
 /// Unsaved world generators for the world generation tests, built in code from the project's area generators, terrain
 /// style, movement profile, ground materials and Weasel, which they only read: worlds of any size, the Overworld's
-/// Phase 0 settings (Docs/WorldGeneration.md: Behaviour: The Overworld), and chunk grids built in memory as
+/// Phase 0 settings (Docs/WorldGeneration.md: Behaviour: The Overworld) with the wilds' prop settings of the project's
+/// Overworld generator (<see cref="WithWildsProps"/>), and chunk grids built in memory as
 /// <see cref="WorldAuthoring.CreateChunk"/> builds a chunk's. <see cref="Destroy"/> destroys everything it made.
 /// </summary>
 public sealed class TestWorldGenerators
@@ -20,6 +21,8 @@ public sealed class TestWorldGenerators
     public static readonly Vector2Int Origin = new(8192, 0);
 
     private const string GeneratorFolder = "Assets/Settings/Generation";
+    private const string OverworldGeneratorPath = GeneratorFolder + "/WorldGenerator_Overworld.asset";
+    private static readonly string[] WildsPropFields = { "groves", "edgeReach", "propPathClearance", "propEntryClearance", "wildsProps" };
     private const string MaterialFolder = "Assets/Settings/Terrain/Materials";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
@@ -82,7 +85,7 @@ public sealed class TestWorldGenerators
 
     /// <summary>
     /// The Overworld's Phase 0 settings on an unsaved generator of an unsaved world <paramref name="name"/>: the six
-    /// regions at their seed 1 layouts on 5 x 4 chunks, the Clearing first, and the eight road links.
+    /// regions at their seed 1 layouts on 5 x 4 chunks, the Clearing first, the eight road links and the wilds' props.
     /// </summary>
     public WorldGenerator Overworld(string name = "Overworld")
     {
@@ -90,10 +93,12 @@ public sealed class TestWorldGenerators
     }
 
     /// <summary>
-    /// Gives <paramref name="generator"/> the Overworld's Phase 0 regions and road links, and returns it.
+    /// Gives <paramref name="generator"/> the Overworld's Phase 0 regions and road links and the wilds' props, and
+    /// returns it.
     /// </summary>
     public static WorldGenerator Overworld(WorldGenerator generator)
     {
+        WithWildsProps(generator);
         generator.SetRegions(
             new RegionPlacement(Clearing, Area("Clearing"), new Vector2Int(86, 124)),
             new RegionPlacement(VillageForest, Area("VillageForest"), new Vector2Int(200, 126)),
@@ -110,6 +115,25 @@ public sealed class TestWorldGenerators
             Link(LavaFields, PortSide.East, Coast, PortSide.East, false, RoadLink.Surface.Stone),
             Link(Snowfield, PortSide.West, Clearing, PortSide.West, false, RoadLink.Surface.Stone),
             Link(Lakeside, PortSide.West, Clearing, PortSide.West, false, RoadLink.Surface.Stone));
+        return generator;
+    }
+
+    /// <summary>
+    /// Gives <paramref name="generator"/> the wilds' prop settings of the project's Overworld generator asset (its groves,
+    /// edge reach, clearances and scatter layers), which the tests only read, and returns it.
+    /// </summary>
+    public static WorldGenerator WithWildsProps(WorldGenerator generator)
+    {
+        WorldGenerator asset = AssetDatabase.LoadAssetAtPath<WorldGenerator>(OverworldGeneratorPath);
+        Assert.That(asset, Is.Not.Null, "the Overworld's generator asset");
+        SerializedObject source = new(asset);
+        SerializedObject target = new(generator);
+        foreach (string field in WildsPropFields)
+        {
+            target.CopyFromSerializedProperty(source.FindProperty(field));
+        }
+
+        target.ApplyModifiedPropertiesWithoutUndo();
         return generator;
     }
 

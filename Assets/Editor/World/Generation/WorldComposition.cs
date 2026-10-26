@@ -142,6 +142,36 @@ public sealed class WorldComposition
     }
 
     /// <summary>
+    /// A prop: its prefab, its cell (the bottom-left cell of a blocking prop's footprint, or the cell a walk-through prop
+    /// stands in), where in that cell a walk-through prop stands (a fraction of a cell), how many cells a blocking prop's
+    /// footprint covers (none for a walk-through prop), and the scope that placed it: a region's key, or the wilds of a
+    /// chunk. Every cell it covers lies in one chunk, <see cref="Chunk"/>.
+    /// </summary>
+    public readonly struct Prop
+    {
+        /// <summary>
+        /// A placement of <paramref name="prefab"/> at <paramref name="cell"/>, offset by <paramref name="offset"/> when it
+        /// covers no cells, covering <paramref name="covered"/> cells when it blocks, placed by <paramref name="scope"/>.
+        /// </summary>
+        internal Prop(GameObject prefab, Vector2Int cell, Vector2 offset, Vector2Int covered, string scope)
+        {
+            Prefab = prefab;
+            Cell = cell;
+            Offset = offset;
+            Covered = covered;
+            Scope = scope;
+        }
+
+        public GameObject Prefab { get; }
+        public Vector2Int Cell { get; }
+        public Vector2 Offset { get; }
+        public Vector2Int Covered { get; }
+        public string Scope { get; }
+        public bool Blocks => Covered != Vector2Int.zero;
+        public Vector2Int Chunk => ChunkCoords.ChunkOf(Cell);
+    }
+
+    /// <summary>
     /// A chunk of the world: its coordinates, whether the world has its scene, the materials it lists (its own cells'
     /// and its neighbours' border strips', <see cref="WorldChunk.SkirtCells"/> wide, in the style's order), the
     /// materials of its own cells, whether it may be wide (its record), and a hash of its content.
@@ -227,6 +257,12 @@ public sealed class WorldComposition
     public List<Region> Regions { get; } = new();
     public List<Road> Roads { get; } = new();
     public List<Mob> Mobs { get; } = new();
+
+    /// <summary>
+    /// The props, the regions' first, in region order and each region's own order, then the wilds', chunk by chunk in
+    /// row order.
+    /// </summary>
+    public List<Prop> Props { get; } = new();
 
     /// <summary>
     /// The entries the composition makes, in order: a waystone per region, the first region's first, so it is the

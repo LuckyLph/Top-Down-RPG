@@ -54,7 +54,7 @@ The look, the scope (Non-goals), the layout and the shadows were settled in Phas
 | Shadows | A shadow sprite of its own, drawn on the ground under every unit: a hard ellipse of black at 35% under the crown or body, shifted a little east, away from the light. A shadow drawn into the prop's sprite sorts with the prop and darkens a unit standing in it behind the prop; with no shadow, trees stand on the grass rather than in it. Units keep having none. Settled in Phase 0; the recipe bakes the shadow with the prop (Phase 1). Plants cast a small one, small stones none (Phase 2). |
 | Light | Lit like units (`SpriteLit`) by each world's Global Light 2D; nothing glows. |
 | In play | Props never move, so they sort once: `YPositionSorter`'s `sortsOnce`, which in play sorts when it starts and then disables itself, and in the editor keeps sorting. The prop sheets are packed in one Sprite Atlas; with URP's 2D renderer and the SRP Batcher every sprite stays its own draw call through the batcher with or without it, so it changes no count. A tall prop (trees, spires) hiding the local player fades to 45% while it does, on that machine only; others' players never fade anything. Settled and measured in Phase 4. |
-| Placement | The area generators' scatter layers list all four variants of each look of their terrain, a look's weight the times its variants are listed. The edge bands take a spacing of 1.3, so one-cell trunks may stand diagonally next to each other and close into a band; every other layer keeps its spacing. Bushes standing on dry grass or tall grass, laid after the props, dry: each becomes a `Bush_Dry` covering the same cells. Shore props stand on the grass along the sand and the mud. World composition lays its regions without their props until Phase 6 writes them. Settled in Phase 5 on previews. |
+| Placement | The area generators' scatter layers list all four variants of each look of their terrain, a look's weight the times its variants are listed. The edge bands take a spacing of 1.3, so one-cell trunks may stand diagonally next to each other and close into a band; every other layer keeps its spacing. Bushes standing on dry grass or tall grass, laid after the props, dry: each becomes a `Bush_Dry` covering the same cells. Shore props stand on the grass along the sand and the mud. World composition lays the regions with their props, but for each blocking prop whose footprint would cross a chunk's border and those a waystone's plaza covers, and grows the wilds' forest per chunk: groves, a band of trees along the outlines of the regions on grass, and a scatter in the open. Settled in Phases 5 and 6 on previews. |
 | Hand-drawn props | Later: an Aseprite prop recipe reading a file through `AsepriteClipReader` and writing the same sheet and prefabs ([AsepriteCharacters.md](AsepriteCharacters.md)). |
 
 ## Natural props per terrain
@@ -444,7 +444,7 @@ Phase 5 notes:
   - the detail steps after them keep off props and mobs (the Lakeside's ponds, the Coast's plateau);
   - so composing the Overworld with the filled assets moved 29 of its 48 mobs and changed the content hash of 12 of its 20 chunks, and `OverworldTests`' record check would fail.
 
-  So `AreaGenerator.Generate(seed, scatter)` can leave the scatter layers out, as if they listed nothing (`AreaLayoutBuilder.ScattersProps`). World composition lays its regions that way until Phase 6 writes their props, its "props were skipped" warning went, and the Overworld composes exactly as written. `WorldGeneratorTests` compares each region with its layout laid the same way.
+  So `AreaGenerator.Generate(seed, scatter)` can leave the scatter layers out, as if they listed nothing (`AreaLayoutBuilder.ScattersProps`). World composition lays its regions that way until Phase 6 writes their props, its "props were skipped" warning went, and the Overworld composes exactly as written. Phase 6 lays them with their props and removed the switch. `WorldGeneratorTests` compares each region with its layout laid the same way.
 - **Layers recorded.** Each prop a scatter layer places records it (`AreaLayout.Prop.Scatter`), and `AreaGenerator.Scatters` lists the layers. The tests count each layer's props, and the Scene Generator window shows them in a line under its counts.
 - **The numbers** (seed 1, then over the twenty seeds; props per layer in layer order, the total with the blocking ones). SceneGeneration.md has each generator's layers with their counts and spacings.
 
@@ -469,11 +469,71 @@ Phase 5 notes:
 
 ### Phase 6: props in the world
 
-- [ ] World composition lays the regions with their props again (`Generate(seed, true)`; Phase 5 notes), and `WorldGenerationWriter` writes each region's props into its chunks under `GeneratedProps`, every footprint inside one chunk, and the chunk's written hash covers them, so props placed or moved by hand are kept as hand work (WorldGeneration.md's Later).
-- [ ] The wilds' forest: props on the wilds' grass along the regions' bands of trees and in patches, per chunk on its own stream, as the wilds' patches and mobs are.
-- [ ] `WorldValidation` and the Prop Placement window read `GeneratedProps`.
-- [ ] The Overworld written with its props; its streaming measured with them loaded.
+- [x] World composition lays the regions with their props again (Phase 5 notes), and `WorldGenerationWriter` writes each region's props into its chunks under `GeneratedProps`, every footprint inside one chunk, and the chunk's written hash covers them, so props placed or moved by hand are kept as hand work (WorldGeneration.md's Later).
+- [x] The wilds' forest: props on the wilds' grass along the regions' bands of trees and in patches, per chunk on its own stream, as the wilds' patches and mobs are.
+- [x] `WorldValidation` and the Prop Placement window read `GeneratedProps`.
+- [x] The Overworld written with its props; its streaming measured with them loaded.
 - [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see the same props, are blocked by the same footprints, and each sees only its own player fade a tree.
+
+- **Previews.** The Overworld composed from its asset, drawn by the World Generator window's map (footprints dark green, walk-through props light green, before the mobs) and rendered through the game's pipeline (`TerrainBlendProbe`) with its chunk scenes open, in `Recordings/Props/` (gitignored):
+  - `p6_map_r1_3x.png` and `p6_map_r1b_3x.png`: the window's map of the first round;
+  - `p6_r1_clearing_village_1x.png`, `p6_r1_east_1x.png`, `p6_r1_snowfield_1x.png` and `p6_r1_lavafields_1x.png`: the first round around the Clearing and the Village Forest, in the east, and around the Snowfield and the Lava Fields;
+  - `p6_r1_grove_3x.png` and `p6_r1_snowjoin_3x.png`: a grove, and where the Snowfield meets the wilds, at 3x;
+  - `p6_r2_snowfield_1x.png` and `p6_r2_lavafields_1x.png`: the second round, which took the edge trees away from the Snowfield and the Lava Fields.
+- **The regions' props.** World composition lays each region with its layout's props, moved by the region's cell (`WorldComposer.LayProps`), so a region's props, mobs and the terrain laid after its props are what the Scene Generator lays for the same seed. It leaves out:
+  - each blocking prop whose footprint would cross a chunk's border, since a chunk's navigation sees only its own props;
+  - once the waystones' plazas are laid, each blocking prop whose footprint a plaza covers and each walk-through prop on or beside one (`RemovePropsOn`).
+
+  That leaves out 8 of the regions' 2125 props: 2 of the Clearing's, 3 of the Village Forest's, 1 of the Lakeside's, 2 of the Coast's. Laying the regions with their props moved the mobs and the late terrain Phase 5 said they would, so the Phase 5 switch (`Generate(seed, scatter)`, `AreaLayoutBuilder.ScattersProps`) went: `Generate(seed)` is the only way to lay a region again.
+- **The wilds' forest** (WorldGeneration.md's Composition step 8). Per chunk, on the chunk's own stream after its mobs, so the wilds' patches and mobs are the same with or without props.
+  - **Groves.** Each chunk paints its groves first (`groves`: two wobbly patches centred near a region's outline, `reach` 6, and two anywhere in the open wilds, of radius 5 to 9 cells), on cells a blocking prop may take. They mark cells only; the props come from the layers.
+  - **Zones.** Each wilds layer (`WorldGenerator.WildsScatter`, a scatter layer with a zone) takes one zone: Edge, the wilds within `edgeReach` (3) of the outline of a region whose ground is the wilds' grass; Grove; or Open, the rest. The first round ringed every region with edge trees; a ring of broadleaf trees around the snow and the lava read as a hedge, so the Edge zone follows only the regions on grass (the Clearing, the Village Forest, the Lakeside and the Coast).
+  - **The layers** (each the most props a chunk takes, tried over the zone's cells a cell inside the chunk's border in random order; weights by repetition, all four variants of each look):
+
+    | Layer | Zone | Count | Spacing | Props |
+    |---|---|---|---|---|
+    | Edge trees | Edge | 60 | 1.3 | `Tree_Broadleaf` 2, `Tree_BroadleafSmall` 1 |
+    | Grove trees | Grove | 200 | 2 | `Tree_Broadleaf` 3, `Tree_BroadleafSmall` 1 |
+    | Grove floor | Grove | 50 | 2 | `Bush_Green` 2, `Fern` 3, `Mushrooms_Brown` 1, `Mushrooms_Red` 1, `Stump_Oak` 1, `Log_Oak` 1 |
+    | Lone trees | Open | 4 | 8 | `Tree_Broadleaf` 1, `Tree_BroadleafSmall` 1 |
+    | Bushes and rocks | Open | 8 | 6 | `Bush_Green` 2, `Bush_Flowering` 1, `Rock_Grey` 2, `Boulder_Grey` 1, `Stump_Oak` 1 |
+    | Plants | Open | 25 | 3 | `Fern` 3, `Stones_Small` 2, `Mushrooms_Brown` 1, `Mushrooms_Red` 1 |
+
+  - **Where they may stand.** A blocking prop's footprint lies on the wilds' grass, weeds, meadow or tall grass, more than `propPathClearance` (2) from every road and beach cell, on cells no other prop takes, and with no other footprint directly beside it (diagonally beside may). A walk-through prop stands off the tall grass, more than a step from the roads and the beach. Every prop keeps `propEntryClearance` (4) from the waystones and gates and stays off and beside every mob. The composition's reachability check counts footprints as blocked.
+- **The numbers.** 5102 props, 3549 of them blocking:
+  - the regions 2117 (1737 blocking): the Clearing 225, the Village Forest 793, the Lakeside 346, the Snowfield 276, the Coast 232, the Lava Fields 245;
+  - the wilds 2985 (1812 blocking): 1610 trees (1151 broadleaf, 459 small), 85 bushes, 40 rocks, 20 boulders, 54 stumps, 3 logs, 608 ferns, 414 mushrooms and 151 small stones;
+  - 87 to 524 props a chunk, of them 87 to 224 the wilds'.
+
+  The chunk scenes grew from 1.17 to 1.38 MB each (24.9 MB in all) to 1.41 to 2.70 MB (38.7 MB). Each prop is a prefab instance with its position, and with the sorting order `YPositionSorter` writes in the editor as an override (Architecture.md's Known gaps). Composing the Overworld takes 0.6 to 1.2 s with its props; it warns of nothing.
+- **Writing.** `WorldGenerationWriter` writes a chunk's props under its grid's `GeneratedProps`, in the composition's order. It reuses each instance whose prefab is the one wanted there, moves it only when its place changed, and removes the root of a chunk left with none.
+  - A blocking prop's root goes where its footprint covers its cells (`ChunkContent.RootOf`), a walk-through prop's at its place in its cell, snapped to pixels.
+  - Props anywhere else in the chunk (placed by hand) stay.
+  - The chunk's hash mixes in each generated prop's prefab and position in pixels, only when the chunk has props, so the records of chunks written before stay valid. Moving, adding or removing a generated prop by hand makes the chunk hand work, which the writer refuses unless forced.
+  - Rewriting every chunk with nothing changed (forced) changed no file.
+  - **Times** (in the editor): the first write with props, 20 chunks in 7.6 s (253 to 718 ms each) and the steps after it in 12.1 s; changing the Edge zone rewrote 7 chunks in 2.1 s (steps 7.7 s); the forced rewrite took 3.7 s (steps 10.6 s). The world validates with no problem.
+- **Validation and the window.** `WorldValidation` checks each prop under `GeneratedProps` as it checks a prop placed by hand, its footprint inside its chunk. The Prop Placement window places into the chunk under the pointer, against that chunk's navigation, shows a footprint that would cross its border as taken, names the world, and warns when the selection holds generated props, since moving one makes its chunk hand work.
+- **Streaming.** `OverworldPlayModeTests.Benchmark_StreamingAlongARouteThroughEveryRegion` (explicit, category `Benchmark`) boots into the Overworld and carries the player a quarter of a cell a frame along a fixed route through every region (the Clearing, the Village Forest, the Coast, the Snowfield, the Clearing, the Lakeside, the Lava Fields), with the mobs switched off. It appends a line to `Temp/StreamingBenchmark.txt`, labelled from `Temp/StreamingBenchmarkLabel.txt`. In the editor, unfocused by any script (the Test Runner had turned `runInBackground` on, which was reverted afterwards), three runs before the props were written and two after:
+
+  | | Before props | With props |
+  |---|---|---|
+  | Frame, mean | 3.66 to 3.86 ms | 4.20 to 4.39 ms |
+  | Frame, 99th percentile | 15.0 to 16.7 ms | 23.3 to 25.0 ms |
+  | Worst frame | 68 to 94 ms | 116 to 117 ms |
+  | A chunk load's worst frame (of the load and the 3 after it), mean of 15 | 42.8 to 43.1 ms | 79.2 to 82.7 ms |
+  | Allocated a frame | 35.0 to 35.1 KB | 42.3 to 42.4 KB |
+  | Draw calls | 20 | 96 |
+  | Most loaded | 4 chunks | 4 chunks, 1809 props |
+
+  The props cost little while walking but nearly double a chunk load's hitch in the editor, which activates a scene's objects far more slowly than a player does (Phase 4). A player build is unmeasured; the Open question stays open.
+- **The build version** went from 1.11 to 1.12, since a host and its clients must load the same chunk scenes and this phase changed every chunk (Architecture.md's Networking).
+- **Tests.**
+  - `WorldGeneratorTests`: each region is its layout moved, its props included, but for the left-out ones, each crossing a border or on or beside a plaza and fewer than 5% plus 2 a region; `TheWildsProps_StandOnTheWildsGrassInsideTheirChunks_ClearOfThePathsTheEntriesTheMobsAndEachOther`; `EdgeTrees_GrowOnlyBesideTheRegionsOfGrass`; the reachability check blocks footprints, and the same settings give the same props. `TestWorldGenerators.WithWildsProps` copies the Overworld's wilds props into the test generators.
+  - `WorldGenerationWriterTests`: the written props are the composition's (prefab, root, cells blocked); moving a generated prop changes the hash and a prop placed by hand does not; a hand prop stays and a second write reuses the instances.
+  - `WorldValidationTests`: `AGeneratedPropWhoseFootprintCrossesTheBorder_IsRefusedToo` and `ThePropPlacementWindow_PlacesInTheChunkUnderThePointer_InsideItsBorder_AndCountsGeneratedProps`.
+
+  The world and prop classes (`AreaGenerationTests`, `WorldGeneratorTests`, `WorldGenerationWriterTests`, `WorldValidationTests`, `WorldGeneratorWindowTests`, `OverworldTests`, `ChunkedGroundRenderTests`, `PropPrefabTests`, `GroundLayerMigrationTests`): 148 pass, in 104 s. `OverworldPlayModeTests`: 11 pass, walking and respawning among the props.
+- **Still to check by hand,** for the last box: in Multiplayer Play Mode, a host and a client in the Overworld. Both should see the same props, be blocked by the same footprints, and each see only its own player fade a tree.
 
 ## Testing
 
@@ -501,5 +561,5 @@ Phase 5 notes:
 
 ## Open questions
 
-- Whether a dense forest of GameObjects costs too much once whole regions are loaded. Phase 4 measured 2025 trees around the player at about 0.2 ms of the main thread in the editor, with a draw call a sprite in view; Phase 6 measures whole regions. If they cost too much, the forest edge's trees could be drawn by one renderer per chunk instead, sorted per tree.
+- Whether a dense forest of GameObjects costs too much once whole regions are loaded. Phase 4 measured 2025 trees around the player at about 0.2 ms of the main thread in the editor, with a draw call a sprite in view; Phase 6 measured the Overworld's streaming with its 5102 props: in the editor walking costs about 0.5 ms a frame more, but a chunk load's hitch nearly doubles (about 43 ms to 80 ms), and the draw calls go from 20 to 96. A player build is unmeasured. If they cost too much, the forest edge's trees could be drawn by one renderer per chunk instead, sorted per tree.
 - Sorting range: `YPositionSorter` writes `-round(y * 100)` into a 16-bit sorting order, which runs out about 327 units from y = 0. The Overworld reaches 256, but a world 16 chunks tall would stop sorting past its sixth chunk row. This is not a prop matter, but a forest in such a world would show it first.

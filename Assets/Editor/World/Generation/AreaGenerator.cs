@@ -100,6 +100,23 @@ public abstract class AreaGenerator : ScriptableObject
         public float Spacing => spacing;
     }
 
+    /// <summary>
+    /// Props a generator swaps for others where terrain laid after them lies under them
+    /// (<see cref="AreaLayoutBuilder.SwapProps"/>): each blocking prop of <see cref="From"/> whose footprint lies
+    /// wholly on that terrain becomes one of <see cref="To"/> covering the same cells, so nothing else moves.
+    /// </summary>
+    [Serializable]
+    public class PropSwap
+    {
+        [Tooltip("The blocking props swapped where they stand on the terrain.")]
+        [SerializeField] private List<GameObject> from = new();
+        [Tooltip("The props they become: one covering the same cells, picked by the prop's cell. A prop none of them fits stays.")]
+        [SerializeField] private List<GameObject> to = new();
+
+        public IReadOnlyList<GameObject> From => from;
+        public IReadOnlyList<GameObject> To => to;
+    }
+
     public const string RaisedTilemapName = "RaisedTilemap";
 
     [Tooltip("Seed the scene generator uses. The same seed always gives the same layout.")]
@@ -129,7 +146,23 @@ public abstract class AreaGenerator : ScriptableObject
     public abstract IReadOnlyList<TerrainLayer> TerrainLayers { get; }
 
     /// <summary>
+    /// The scatter layers, in the order they are placed. Each prop a layer places records it
+    /// (<see cref="AreaLayout.Prop.Scatter"/>).
+    /// </summary>
+    public abstract IReadOnlyList<PropScatter> Scatters { get; }
+
+    /// <summary>
     /// Lays out an area from <paramref name="layoutSeed"/>, in cells of one unit.
     /// </summary>
-    public abstract AreaLayout Generate(int layoutSeed);
+    public AreaLayout Generate(int layoutSeed)
+    {
+        return Generate(layoutSeed, true);
+    }
+
+    /// <summary>
+    /// Lays out an area from <paramref name="layoutSeed"/>, in cells of one unit. With <paramref name="scatter"/> false
+    /// the scatter layers place nothing, as if they listed no prefabs, so the rest of the layout is what it was before
+    /// they were filled: world composition lays its regions that way until it writes their props.
+    /// </summary>
+    public abstract AreaLayout Generate(int layoutSeed, bool scatter);
 }

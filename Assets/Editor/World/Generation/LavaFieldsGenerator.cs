@@ -133,12 +133,15 @@ public sealed class LavaFieldsGenerator : AreaGenerator
     /// </summary>
     public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { dirt, gravel, stone, lava };
 
+    public override IReadOnlyList<PropScatter> Scatters => scatters;
+
     /// <summary>
-    /// Lays out lava fields from <paramref name="layoutSeed"/>.
+    /// Lays out lava fields from <paramref name="layoutSeed"/>, its scatter layers placing props unless
+    /// <paramref name="scatter"/> is false.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed)
+    public override AreaLayout Generate(int layoutSeed, bool scatter)
     {
-        return new Run(this, layoutSeed).Build();
+        return new Run(this, layoutSeed, scatter).Build();
     }
 
     /// <summary>
@@ -156,12 +159,14 @@ public sealed class LavaFieldsGenerator : AreaGenerator
         private readonly float halfHeight;
 
         /// <summary>
-        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
+        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>, its scatter
+        /// layers placing props unless <paramref name="scatter"/> is false.
         /// </summary>
-        public Run(LavaFieldsGenerator generator, int seed)
+        public Run(LavaFieldsGenerator generator, int seed, bool scatter)
         {
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.dirt, generator.gravel, generator.stone);
+            builder.ScattersProps = scatter;
             lava = builder.Layout.TerrainCells(generator.lava);
             halfWidth = Mathf.Max(8, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(8, generator.size.y) * 0.5f;
@@ -422,7 +427,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
                 }
             }
 
-            builder.ScatterProps(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates);
+            builder.ScatterProps(scatter, candidates);
         }
 
         /// <summary>

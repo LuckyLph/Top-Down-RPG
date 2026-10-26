@@ -12,6 +12,8 @@ public sealed class TestAreaGenerator : AreaGenerator
 
     public override IReadOnlyList<TerrainLayer> TerrainLayers => layers;
 
+    public override IReadOnlyList<PropScatter> Scatters => new PropScatter[0];
+
     /// <summary>
     /// A generator named TestGenerator listing <paramref name="terrainLayers"/>, drawn with <paramref name="style"/>;
     /// the caller destroys it.
@@ -28,9 +30,9 @@ public sealed class TestAreaGenerator : AreaGenerator
     }
 
     /// <summary>
-    /// A layout filling cell (i, 0) of each layer i, whatever the seed.
+    /// A layout filling cell (i, 0) of each layer i, whatever the seed; it has no scatter layers.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed)
+    public override AreaLayout Generate(int layoutSeed, bool scatter)
     {
         AreaLayout layout = new(layers);
         for (int i = 0; i < layers.Count; i++)

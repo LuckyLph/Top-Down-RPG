@@ -54,6 +54,7 @@ The look, the scope (Non-goals), the layout and the shadows were settled in Phas
 | Shadows | A shadow sprite of its own, drawn on the ground under every unit: a hard ellipse of black at 35% under the crown or body, shifted a little east, away from the light. A shadow drawn into the prop's sprite sorts with the prop and darkens a unit standing in it behind the prop; with no shadow, trees stand on the grass rather than in it. Units keep having none. Settled in Phase 0; the recipe bakes the shadow with the prop (Phase 1). Plants cast a small one, small stones none (Phase 2). |
 | Light | Lit like units (`SpriteLit`) by each world's Global Light 2D; nothing glows. |
 | In play | Props never move, so they sort once: `YPositionSorter`'s `sortsOnce`, which in play sorts when it starts and then disables itself, and in the editor keeps sorting. The prop sheets are packed in one Sprite Atlas; with URP's 2D renderer and the SRP Batcher every sprite stays its own draw call through the batcher with or without it, so it changes no count. A tall prop (trees, spires) hiding the local player fades to 45% while it does, on that machine only; others' players never fade anything. Settled and measured in Phase 4. |
+| Placement | The area generators' scatter layers list all four variants of each look of their terrain, a look's weight the times its variants are listed. The edge bands take a spacing of 1.3, so one-cell trunks may stand diagonally next to each other and close into a band; every other layer keeps its spacing. Bushes standing on dry grass or tall grass, laid after the props, dry: each becomes a `Bush_Dry` covering the same cells. Shore props stand on the grass along the sand and the mud. World composition lays its regions without their props until Phase 6 writes them. Settled in Phase 5 on previews. |
 | Hand-drawn props | Later: an Aseprite prop recipe reading a file through `AsepriteClipReader` and writing the same sheet and prefabs ([AsepriteCharacters.md](AsepriteCharacters.md)). |
 
 ## Natural props per terrain
@@ -386,13 +387,89 @@ Phase 4 notes:
 
 ### Phase 5: the area generators
 
-- [ ] Every scatter layer of the six generator assets lists the props of its terrain (Natural props per terrain).
-- [ ] `AreaGenerationTests` run with the real props over their 20 seeds as they do with the test props; the Scene Generator's map and counts show them; generation times recorded.
-- [ ] SceneGeneration.md's "No props for now" replaced by what each generator places.
+- [x] Every scatter layer of the six generator assets lists the props of its terrain (Natural props per terrain).
+- [x] `AreaGenerationTests` run with the real props over their 20 seeds as they do with the test props; the Scene Generator's map and counts show them; generation times recorded.
+- [x] SceneGeneration.md's "No props for now" replaced by what each generator places.
+
+Phase 5 notes:
+- **Previews.** Each area was generated for seed 1 into an unsaved scratch scene and rendered through the game's pipeline (`TerrainBlendProbe`), its props' sorters applied first. They are in `Recordings/Props/` (gitignored), each a whole area at 1x and a crop at 3x:
+  - round 1, as the assets' spacings stood: `p5_clearing`, `p5_villageforest` (and `p5_villageforest_forest_3x`), `p5_lakeside`, `p5_snowfield`, `p5_coast` and `p5_lavafields`;
+  - the denser edges compared: `p5_clearing_denseedge` and `p5_lavafields_denseedge`;
+  - round 2, with the dense edges and the dry bushes: `p5r2_lakeside` (and `p5r2_lakeside_drybush_3x`), `p5r2_snowfield` and `p5r2_coast`; the Clearing and the Lava Fields are their dense previews;
+  - the Scene Generator window's maps of the six assets: `p5_window_maps_4x.png`.
+
+  Two rounds; the second was accepted.
+- **The mix.** Each layer lists all four variants of each of its looks, a look listed n times picked n times as often. The weights (shares):
+
+  | Layers | Looks |
+  |---|---|
+  | Forest edges, trees, clearing trees | `Tree_Broadleaf` 2, `Tree_BroadleafSmall` 1 |
+  | The Village Forest's forest trees | `Tree_Broadleaf` 3, `Tree_BroadleafSmall` 1 |
+  | Village trees | `Tree_BroadleafSmall` 2, `Tree_Broadleaf` 1 |
+  | Bushes and rocks | `Bush_Green` 2, `Rock_Grey` 2, `Bush_Flowering`, `Boulder_Grey`, `Stump_Oak`, `Log_Oak` 1 each |
+  | Village bushes | `Bush_Flowering` 2, `Bush_Green` 1 |
+  | Forest undergrowth | `Bush_Green` 3, `Bush_Flowering` 1 |
+  | Plants | `Fern` 3, `Stones_Small` 2, `Mushrooms_Brown`, `Mushrooms_Red` 1 each |
+  | Village flowers | `Fern` 2, `Stones_Small`, `Mushrooms_Brown` 1 each (there is no flower prop) |
+  | Forest floor | `Fern` 4, `Mushrooms_Brown` 2, `Mushrooms_Red`, `Stones_Small`, `Stump_Oak`, `Log_Oak`, `Rock_Grey` 1 each |
+  | The Lakeside's shore bushes | `Bush_Willow` 3, `Rock_Sand` 1 |
+  | The Lakeside's shore plants | `Reeds` 2, `Cattails` 2, `BeachGrass` 1 |
+  | The Coast's shore bushes | `Rock_Sand` 2, `Driftwood` 1, `Bush_Green` 1 |
+  | The Coast's shore plants | `BeachGrass` |
+  | The Snowfield's edge | `Pine_Snow` 3, `PineSmall_Snow` 1, `Tree_DeadSnow` 1 |
+  | Its pines | `Pine_Snow` 2, `PineSmall_Snow` 1, `Tree_DeadSnow` 1 |
+  | Its shore rocks | `Rock_Snow` 2, `Boulder_Snow` 1 |
+  | Its rocks and stumps | `Rock_Snow` 2, `Stump_Snow` 2, `Boulder_Snow` 1 |
+  | Its small stumps | `StumpSmall_Snow` |
+  | The scorched edge | `Tree_Charred` 3, `Spire_Basalt` 2, `Boulder_Basalt` 1, `Stump_Charred` 1 |
+  | Dead trees | `Tree_Charred` 2, `Stump_Charred` 1 |
+  | Lava rocks | `Rock_Basalt` 2, `Boulder_Basalt` 1 |
+  | Spires and boulders | `Spire_Basalt` 2, `Boulder_Basalt` 1, `Rock_Basalt` 1 |
+  | The Lava Fields' small stumps | `StumpSmall_Charred` |
+
+  The counts and spacings are the assets' own but for the edges.
+- **Edges.** A trunk blocks one cell and layouts are in whole cells, so two props stand 1, 1.41, 2, 2.24 cells and so on apart. Any spacing from 1.42 to 2 therefore lays the same layout.
+  - At the assets' spacing of 2 no two trunks touch, even diagonally. The edges read as rows of single trees with grass between them, and the Lava Fields' bare trees as a scatter.
+  - The edge layers (the forest edges, the Snowfield's, the scorched edge) now take 1.3. Trees may then stand diagonally next to each other: about 1.75 times as many, a closed band in which each tree still reads.
+  - Nothing has to be reached inside an edge band. The interior layers and the Village Forest's forest trees (2.2, so the forest stays walkable around every trunk) keep their spacing.
+  - The Clearing's edge count went from 160, which bound at 1.3, to the 280 the other edges ask. No edge reaches its count.
+- **Dry bushes.** The dry grass and the tall grass are laid after the props, on the detail stream, so no scatter layer can aim at them.
+  - `AreaGenerator.PropSwap` (from and to prefabs) and `AreaLayoutBuilder.SwapProps` swap them instead. Once its tall grass is laid, the Lakeside turns every `Bush_Green` and `Bush_Flowering` whose footprint lies wholly on its dry grass or tall grass into a `Bush_Dry` covering the same cells, and the Village Forest those on its tall grass (`dryBushes` on both).
+  - The variant is picked by the cell's hash, so the swap draws nothing from either stream and nothing else moves; a bush no dry variant fits stays.
+  - Only `Bush_Dry_0` covers two cells, so the two-cell bushes, most of them, become that variant.
+  - Seed 1 dries 2 bushes in the Lakeside and 1 in the Village Forest; the twenty seeds 19 in each. The first round had `Bush_Dry` as a share of the Lakeside's bushes on green grass instead.
+- **Shores stay on grass.** The Lakeside and the Coast keep every prop off the sand and the mud, so their shore looks (`Bush_Willow`, `Reeds`, `Cattails`, `BeachGrass`, `Driftwood`, `Rock_Sand`) stand on the grass along the beaches and the marsh. Zones on the sand and the mud would need code and reachability checks of their own, and went under Later.
+- **World composition.** Filling the layers changes more than the props:
+  - the scatter draws from the layout's main random stream before the mobs, and the mobs keep away from the props;
+  - the detail steps after them keep off props and mobs (the Lakeside's ponds, the Coast's plateau);
+  - so composing the Overworld with the filled assets moved 29 of its 48 mobs and changed the content hash of 12 of its 20 chunks, and `OverworldTests`' record check would fail.
+
+  So `AreaGenerator.Generate(seed, scatter)` can leave the scatter layers out, as if they listed nothing (`AreaLayoutBuilder.ScattersProps`). World composition lays its regions that way until Phase 6 writes their props, its "props were skipped" warning went, and the Overworld composes exactly as written. `WorldGeneratorTests` compares each region with its layout laid the same way.
+- **Layers recorded.** Each prop a scatter layer places records it (`AreaLayout.Prop.Scatter`), and `AreaGenerator.Scatters` lists the layers. The tests count each layer's props, and the Scene Generator window shows them in a line under its counts.
+- **The numbers** (seed 1, then over the twenty seeds; props per layer in layer order, the total with the blocking ones). SceneGeneration.md has each generator's layers with their counts and spacings.
+
+  | Generator | Seed 1 | Twenty seeds |
+  |---|---|---|
+  | Clearing | 160, 12, 10, 45: 227 (182 blocking) | edge 142 to 162, the others their counts; 209 to 229 |
+  | Village Forest | 12, 10, 48, 8, 8, 44, 40, 489, 137: 796 (605), 1 bush dried | forest trees 489 to 524, village flowers 46 to 50, clearing plants 38 to 45, forest floor 136 to 140; 796 to 828; 19 bushes dried |
+  | Lakeside | 248, 16, 10, 10, 23, 40: 347 (284), 2 bushes dried | edge 219 to 248, shore plants 19 to 28, plants 35 to 42; 317 to 347; 19 bushes dried |
+  | Snowfield | 236, 14, 8, 10, 8: 276 (268) | edge 204 to 236; 244 to 276 |
+  | Coast | 126, 16, 10, 9, 30, 43: 234 (161) | edge 125 to 144, trees 13 to 16, bushes and rocks 8 to 10, plants 41 to 45 (the plateau's face takes a few); 232 to 255 |
+  | Lava Fields | 209, 10, 10, 10, 6: 245 (239) | edge 187 to 214; 223 to 250 |
+
+  The terrain laid after the props moved only where it keeps off props and mobs: the Lakeside's ponds, tall grass, meadows and weeds (seed 1: 42, 77, 96 and 75 cells, against 41, 81, 88 and 68 without props) and the Coast's plateau (its ramp two cells east for seed 1; 58 to 111 cells over the seeds, against 65 to 105).
+- **Footprints.** The real footprints block one cell (trees, spires, stumps, most rocks) or two (boulders, logs, driftwood, most bushes), fewer than the borrowed ones the tests used (a bush 3 cells wide, a tree 2). Every property check of `AreaGenerationTests` holds over the twenty seeds unchanged: footprints on their ground and apart, the paths' clearance, the spawn open, every mob and region reachable, the forest over three times as dense with footprints as the clearing, nothing on the dock or the plateau's face. `TestPropPrefabs` keeps only the built props the assets leave unset (a campfire, seats, a building, the village's furniture), which the tests give the generators' copies.
+- **Tests.** `AreaGenerationTests`:
+  - `TheProjectsGenerators_FillEveryScatterLayer_AndWarnOfNothing` replaces the check that the assets placed no props. Over twenty seeds, every layer of the six assets lists props of the props' folder and places some, every prop comes from a layer, and nothing warns.
+  - `TheGenerators_DryTheBushesOnTheirDryAndTallGrass` checks the dry bushes of the Lakeside and the Village Forest.
+  - The detail-stream, meadow and tall grass comparisons allow for the bushes dried.
+
+  All 81 pass, in 35 s. `WorldGeneratorTests`, `WorldGenerationWriterTests`, `WorldGeneratorWindowTests`, `OverworldTests`, `PropPrefabTests`, `GroundLayerMigrationTests` and `ChunkedGroundRenderTests` (58) pass too.
+- **Generation times** (in the editor, the best of three, alternating). The props add about 7%: the six generators' twenty seeds take 5.7 s with them against 5.3 s without. SceneGeneration.md's Speed has each generator's.
 
 ### Phase 6: props in the world
 
-- [ ] `WorldGenerationWriter` writes each region's props into its chunks under `GeneratedProps`, every footprint inside one chunk, and the chunk's written hash covers them, so props placed or moved by hand are kept as hand work (WorldGeneration.md's Later).
+- [ ] World composition lays the regions with their props again (`Generate(seed, true)`; Phase 5 notes), and `WorldGenerationWriter` writes each region's props into its chunks under `GeneratedProps`, every footprint inside one chunk, and the chunk's written hash covers them, so props placed or moved by hand are kept as hand work (WorldGeneration.md's Later).
 - [ ] The wilds' forest: props on the wilds' grass along the regions' bands of trees and in patches, per chunk on its own stream, as the wilds' patches and mobs are.
 - [ ] `WorldValidation` and the Prop Placement window read `GeneratedProps`.
 - [ ] The Overworld written with its props; its streaming measured with them loaded.
@@ -417,6 +494,7 @@ Phase 4 notes:
 - Built and crafted props: campfires and log seats (which bring the campsites back), fences, lamp posts, a fountain, furniture, buildings.
 - Swaying crowns and plants (a per-pixel sway weight, as the terrain's weeds have).
 - Props on water: lily pads, reeds in the shallows; ice shards by the frozen lake.
+- Props on the sand and the mud: beach grass, driftwood and sand rocks on the beaches and reeds and cattails in the marsh, through scatter zones of their own that keep the trail, the dock's approach and the water's edge clear and every beach and marsh cell reachable (Phase 5 kept the shore looks on the grass beside them).
 - Hand-drawn props imported from Aseprite through a prop recipe.
 - Props that change in play (cut, broken, harvested), with authority, replication and persistence.
 - Glowing props (embers in basalt, luminous mushrooms) with 2D lights.

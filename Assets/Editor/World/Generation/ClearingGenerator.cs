@@ -116,12 +116,15 @@ public sealed class ClearingGenerator : AreaGenerator
     /// </summary>
     public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, dirt, gravel, stone };
 
+    public override IReadOnlyList<PropScatter> Scatters => scatters;
+
     /// <summary>
-    /// Lays out a clearing from <paramref name="layoutSeed"/>.
+    /// Lays out a clearing from <paramref name="layoutSeed"/>, its scatter layers placing props unless
+    /// <paramref name="scatter"/> is false.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed)
+    public override AreaLayout Generate(int layoutSeed, bool scatter)
     {
-        return new Run(this, layoutSeed).Build();
+        return new Run(this, layoutSeed, scatter).Build();
     }
 
 
@@ -137,12 +140,14 @@ public sealed class ClearingGenerator : AreaGenerator
         private readonly float halfHeight;
 
         /// <summary>
-        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
+        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>, its scatter
+        /// layers placing props unless <paramref name="scatter"/> is false.
         /// </summary>
-        public Run(ClearingGenerator generator, int seed)
+        public Run(ClearingGenerator generator, int seed, bool scatter)
         {
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
+            builder.ScattersProps = scatter;
             halfWidth = Mathf.Max(4, generator.size.x) * 0.5f;
             halfHeight = Mathf.Max(4, generator.size.y) * 0.5f;
         }
@@ -268,7 +273,7 @@ public sealed class ClearingGenerator : AreaGenerator
                 }
             }
 
-            builder.ScatterProps(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates);
+            builder.ScatterProps(scatter, candidates);
         }
 
         /// <summary>

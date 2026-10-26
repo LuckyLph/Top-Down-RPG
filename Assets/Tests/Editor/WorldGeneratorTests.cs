@@ -179,9 +179,10 @@ public class WorldGeneratorTests
     }
 
     /// <summary>
-    /// Each region of the Overworld owns exactly its generator's seed layout's ground moved by its cell, and each of
-    /// its cells holds exactly the layout's materials there, plus plaza within the plaza's radius of its spawn cell;
-    /// its raised ground, its ramps, its mobs (in order) and its spawn cell are the layout's, moved.
+    /// Each region of the Overworld owns exactly its generator's seed layout's ground moved by its cell, the layout
+    /// laid without its scatter layers' props as the world lays it, and each of its cells holds exactly the layout's
+    /// materials there, plus plaza within the plaza's radius of its spawn cell; its raised ground, its ramps, its mobs
+    /// (in order) and its spawn cell are the layout's, moved.
     /// </summary>
     [Test]
     public void EachRegion_IsItsGeneratorsLayoutMovedByItsCell_PlusOnlyItsPlaza()
@@ -190,7 +191,7 @@ public class WorldGeneratorTests
         float radius = overworldGenerator.PlazaRadius;
         foreach (WorldComposition.Region region in overworld.Regions)
         {
-            AreaLayout layout = region.Generator.Generate(region.Seed);
+            AreaLayout layout = region.Generator.Generate(region.Seed, false);
             Dictionary<Vector3Int, uint> masks = new(CellComparer.Instance);
             for (int layer = 0; layer < layout.TerrainLayerCount; layer++)
             {

@@ -232,8 +232,8 @@ public sealed class SceneGeneratorWindow : EditorWindow
     }
 
     /// <summary>
-    /// Draws the map of the current layout, rebuilt during the layout pass when the settings changed, with its counts
-    /// and the generator's warnings.
+    /// Draws the map of the current layout, rebuilt during the layout pass when the settings changed, with its counts,
+    /// the props each scatter layer placed and the generator's warnings.
     /// </summary>
     private void DrawPreview()
     {
@@ -246,6 +246,11 @@ public sealed class SceneGeneratorWindow : EditorWindow
         EditorGUI.DrawRect(area, Background);
         GUI.DrawTexture(area, previewTexture, ScaleMode.ScaleToFit);
         EditorGUILayout.LabelField(Summary(generator, preview), EditorStyles.miniLabel);
+        if (generator.Scatters.Count > 0)
+        {
+            EditorGUILayout.LabelField(ScatterSummary(generator, preview), EditorStyles.wordWrappedMiniLabel);
+        }
+
         foreach (string warning in preview.Warnings)
         {
             EditorGUILayout.HelpBox(warning, MessageType.Warning);
@@ -405,6 +410,31 @@ public sealed class SceneGeneratorWindow : EditorWindow
         }
 
         return $"{string.Join(", ", parts)} cells, {layout.Props.Count} props ({blocking} blocking), {layout.Mobs.Count} mobs";
+    }
+
+    /// <summary>
+    /// How many props of <paramref name="layout"/> each of <paramref name="source"/>'s scatter layers placed, by label.
+    /// </summary>
+    private static string ScatterSummary(AreaGenerator source, AreaLayout layout)
+    {
+        List<string> parts = new();
+        foreach (AreaGenerator.PropScatter scatter in source.Scatters)
+        {
+            if (scatter == null)
+            {
+                continue;
+            }
+
+            int placed = 0;
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                placed += prop.Scatter == scatter ? 1 : 0;
+            }
+
+            parts.Add($"{scatter.Label} {placed}");
+        }
+
+        return string.Join(", ", parts);
     }
 
     /// <summary>

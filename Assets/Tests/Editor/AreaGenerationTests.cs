@@ -9,37 +9,39 @@ using UnityEngine.Tilemaps;
 using Object = UnityEngine.Object;
 
 /// <summary>
-/// Tests for scene generation. The project's generators place no props for now (their borrowed art was removed), and
-/// lay their layouts without warnings; every other test runs them with test props (<see cref="TestPropPrefabs"/>) in
-/// place of the props they were built with. The Clearing generator gives playable layouts for many seeds (paths on the
-/// grass, open ground around a spawn on the road, props clear of the paths and of each other, every mob spread out
-/// where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does too, with a village,
-/// a clearing and a forest joined by one connected path network, buildings beside the street with reachable doors, a
-/// paved square, dirt along the trails near the village and most mobs in the forest; the Lakeside generator lays a lake
-/// off the paths with a beach and a marsh, dry grass on the open grass, small shallow ponds on plain grass apart from
-/// the lake with no third look at their corners, a dock from the trail's end across the beach into the lake that adds
-/// no third look under a rounded corner, and keeps props off the water, the beach and the mud with the beach and every
-/// mob within the spawn's reach; the Snowfield generator lays a frozen lake with a hole of open water that meets only
-/// ice, a trail that stops short of the ice, and a campsite on dirt away from the ice and the paths, with props off the
-/// ice and every mob and the ice within the spawn's reach; the Coast generator lays a beach and the ocean out to the
-/// map's northern edge, the ocean meeting only the beach, a trail that ends on the beach short of the sea, a
-/// campsite away from the coast and a plateau of raised grass that only its ramp leads up, with props off the coast,
-/// the cliff's face and the ramp's approach and the beach and every mob within the spawn's reach; the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off
-/// the spawn's ground, the road crossing the river on earth, an unbroken trail that stops short of the lava and a
-/// campsite away from it, with props off and beside the lava and every mob and the trail within the spawn's reach
-/// around it; the terrain each generator lays from its detail stream leaves the rest of its layout
-/// where it was, and the Lakeside's ponds leave its dry grass where it was and its dock everything else; the same
-/// seed gives the same layout; the project's style lists every ground material in the shared draw order, the
-/// project's generators list only the layers they lay (plain ground tiles and the project's materials) as a
-/// subsequence of it, and the default movement profile blocks water and makes mud and the shallows cost more; and
-/// <see cref="AreaLayoutWriter"/> writes a layout into a scene as plain ground layers drawn by
-/// a <see cref="TerrainBlendRenderer"/> in the shared order, with navigation priorities from that order, keeping painted
-/// layers the generator does not list and removing empty ones, a renderer that follows a layout written over another,
-/// a navigation grid that blocks exactly the props' cells, wades the Lakeside's ponds at the shallows' cost and walks
-/// its dock over the lake at grass's cost, the water beside it blocked, walks the Snowfield's snow at its cost and its
-/// ice like grass with its hole blocked, blocks the Coast's ocean and its plateau's cliff but not its ramp and the Lava
-/// Fields' lava, an area
-/// of only some layers that still draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
+/// Tests for scene generation. The project's generators place the generated props in every scatter layer and lay their
+/// layouts without warnings; every other test runs copies of them with their props and with test built props
+/// (<see cref="TestPropPrefabs"/>: a campfire and seats, a building and the village's furniture), which the assets
+/// leave unset, so the campsites, the square and the buildings are laid too. The Lakeside and the Village Forest dry
+/// the bushes that stand on their dry grass and tall grass. The Clearing generator gives playable layouts for many
+/// seeds (paths on the grass, open ground around a spawn on the road, props clear of the paths and of each other, every
+/// mob spread out where it can walk to the spawn, a campsite on a patch of dirt); the Village Forest generator does
+/// too, with a village, a clearing and a forest joined by one connected path network, buildings beside the street with
+/// reachable doors, a paved square, dirt along the trails near the village and most mobs in the forest; the Lakeside
+/// generator lays a lake off the paths with a beach and a marsh, dry grass on the open grass, small shallow ponds on
+/// plain grass apart from the lake with no third look at their corners, a dock from the trail's end across the beach
+/// into the lake that adds no third look under a rounded corner, and keeps props off the water, the beach and the mud
+/// with the beach and every mob within the spawn's reach; the Snowfield generator lays a frozen lake with a hole of
+/// open water that meets only ice, a trail that stops short of the ice, and a campsite on dirt away from the ice and
+/// the paths, with props off the ice and every mob and the ice within the spawn's reach; the Coast generator lays a
+/// beach and the ocean out to the map's northern edge, the ocean meeting only the beach, a trail that ends on the beach
+/// short of the sea, a campsite away from the coast and a plateau of raised grass that only its ramp leads up, with
+/// props off the coast, the cliff's face and the ramp's approach and the beach and every mob within the spawn's reach;
+/// the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off the
+/// spawn's ground, the road crossing the river on earth, an unbroken trail that stops short of the lava and a campsite
+/// away from it, with props off and beside the lava and every mob and the trail within the spawn's reach around it; the
+/// terrain each generator lays from its detail stream leaves the rest of its layout where it was, and the Lakeside's
+/// ponds leave its dry grass where it was and its dock everything else; the same seed gives the same layout; the
+/// project's style lists every ground material in the shared draw order, the project's generators list only the layers
+/// they lay (plain ground tiles and the project's materials) as a subsequence of it, and the default movement profile
+/// blocks water and makes mud and the shallows cost more; and <see cref="AreaLayoutWriter"/> writes a layout into a
+/// scene as plain ground layers drawn by a <see cref="TerrainBlendRenderer"/> in the shared order, with navigation
+/// priorities from that order, keeping painted layers the generator does not list and removing empty ones, a renderer
+/// that follows a layout written over another, a navigation grid that blocks exactly the props' cells, wades the
+/// Lakeside's ponds at the shallows' cost and walks its dock over the lake at grass's cost, the water beside it
+/// blocked, walks the Snowfield's snow at its cost and its ice like grass with its hole blocked, blocks the Coast's
+/// ocean and its plateau's cliff but not its ramp and the Lava Fields' lava, an area of only some layers that still
+/// draws and navigates, and writes up to 16 layers but refuses 17 and refuses layers out of the shared order.
 /// </summary>
 public class AreaGenerationTests
 {
@@ -52,19 +54,11 @@ public class AreaGenerationTests
     private const string TerrainStylePath = "Assets/Settings/Terrain/TerrainStyle.asset";
     private const string ProfilePath = "Assets/Settings/AI/TerrainMovement_Default.asset";
     private const string PropsRootName = "Props";
+    private const string PropsFolder = "Assets/Prefabs/Props/";
     private const int SeedCount = 20;
     private const int MinRegionCells = 300;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
-    private static readonly Dictionary<string, string> ScatterKinds = new()
-    {
-        { "Generator_Clearing", "BBBW" },
-        { "Generator_VillageForest", "BBWBBWBBW" },
-        { "Generator_Lakeside", "BBBBWW" },
-        { "Generator_Snowfield", "BBMMW" },
-        { "Generator_Coast", "BBBBWW" },
-        { "Generator_LavaFields", "BBBBW" },
-    };
     private static readonly VillageForestGenerator.Region[] Regions =
     {
         VillageForestGenerator.Region.Village,
@@ -86,7 +80,7 @@ public class AreaGenerationTests
     private int undoGroup;
 
     /// <summary>
-    /// Saves the test props and copies the project's generators with them once for the fixture
+    /// Saves the test built props and copies the project's generators with them once for the fixture
     /// (<see cref="WithTestProps{T}"/>), leaving the project's assets as they are. The tests only read the copies, so
     /// they share them, and the layouts they lay (<see cref="Layout"/>).
     /// </summary>
@@ -103,7 +97,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// Destroys the generators' copies and removes the test props.
+    /// Destroys the generators' copies and removes the test built props.
     /// </summary>
     [OneTimeTearDown]
     public void OneTimeTearDown()
@@ -157,8 +151,10 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The project's generators place no props for now, since the borrowed art their props used was removed, and lay
-    /// every layout without a warning, their mobs still spread over it.
+    /// The project's generators fill every scatter layer with the generated props (Docs/PropGeneration.md, Phase 5) and
+    /// lay every layout without a warning, their mobs spread over it: each layer lists props of the props' folder, for
+    /// every seed each places some, and every prop comes from a layer, since the assets set no campfire, seat, building
+    /// or village furniture.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -166,17 +162,96 @@ public class AreaGenerationTests
     [TestCase(SnowfieldGeneratorPath)]
     [TestCase(CoastGeneratorPath)]
     [TestCase(LavaFieldsGeneratorPath)]
-    public void TheProjectsGenerators_PlaceNoProps_AndWarnOfNothing(string generatorPath)
+    public void TheProjectsGenerators_FillEveryScatterLayer_AndWarnOfNothing(string generatorPath)
     {
         AreaGenerator target = AssetDatabase.LoadAssetAtPath<AreaGenerator>(generatorPath);
-        for (int seed = 1; seed <= 5; seed++)
+        Assert.That(target.Scatters, Is.Not.Empty, "scatter layers");
+        foreach (AreaGenerator.PropScatter scatter in target.Scatters)
+        {
+            Assert.That(scatter.Prefabs, Is.Not.Empty, $"{scatter.Label}'s prefabs");
+            foreach (GameObject prefab in scatter.Prefabs)
+            {
+                Assert.That(prefab != null && AssetDatabase.GetAssetPath(prefab).StartsWith(PropsFolder), Is.True, $"{scatter.Label} lists {prefab}");
+            }
+        }
+
+        for (int seed = 1; seed <= SeedCount; seed++)
         {
             AreaLayout layout = Layout(target, seed);
-
-            Assert.That(layout.Props, Is.Empty, $"seed {seed}: props");
             Assert.That(layout.Warnings, Is.Empty, $"seed {seed}: warnings");
             Assert.That(layout.Mobs, Is.Not.Empty, $"seed {seed}: mobs");
+            foreach (AreaGenerator.PropScatter scatter in target.Scatters)
+            {
+                int placed = 0;
+                foreach (AreaLayout.Prop prop in layout.Props)
+                {
+                    placed += prop.Scatter == scatter ? 1 : 0;
+                }
+
+                Expect(placed > 0, $"seed {seed}: {scatter.Label} places nothing");
+            }
+
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                Expect(prop.Scatter != null, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} comes from no scatter layer");
+            }
         }
+    }
+
+    /// <summary>
+    /// The Lakeside and the Village Forest dry the bushes on the dry grass and the tall grass they lay after their
+    /// props: the dry bushes are in no scatter layer, and over the seeds some stand in the layouts, each wholly on
+    /// those patches, placed by a layer that lists a bush of the swap covering as many cells; no bush of the swap that
+    /// a dry bush fits is left wholly on them.
+    /// </summary>
+    [TestCase(VillageForestGeneratorPath)]
+    [TestCase(LakesideGeneratorPath)]
+    public void TheGenerators_DryTheBushesOnTheirDryAndTallGrass(string generatorPath)
+    {
+        AreaGenerator target = ProjectCopy<AreaGenerator>(generatorPath);
+        AreaGenerator.PropSwap swap = DryBushes(target);
+        Assert.That(swap.From, Is.Not.Empty, "the bushes that dry");
+        Assert.That(swap.To, Is.Not.Empty, "the dry bushes");
+        HashSet<Vector2Int> drySizes = new();
+        foreach (GameObject dry in swap.To)
+        {
+            Assert.That(PropGridSnapping.TryGetFootprint(dry, out Rect footprint), Is.True, $"{dry.name} blocks");
+            drySizes.Add(PropGridSnapping.CellsCovered(footprint, Vector2.one));
+            foreach (AreaGenerator.PropScatter scatter in target.Scatters)
+            {
+                Assert.That(ListContains(scatter.Prefabs, dry), Is.False, $"{scatter.Label} lists {dry.name}");
+            }
+        }
+
+        int dried = 0;
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout layout = Layout(target, seed);
+            HashSet<Vector3Int> patches = new(CellsOrNone(layout, "DryGrass"), CellComparer.Instance);
+            patches.UnionWith(Cells(layout, "TallGrass"));
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (!PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
+                {
+                    continue;
+                }
+
+                Vector2Int size = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+                bool onPatches = CoveredCells(prop, footprint).TrueForAll(patches.Contains);
+                if (ListContains(swap.To, prop.Prefab))
+                {
+                    dried++;
+                    Expect(onPatches, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} off the dry and tall grass");
+                    Expect(prop.Scatter != null && ListsBushOfSize(prop.Scatter, swap, size), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} where no bush of its size stood");
+                }
+                else if (ListContains(swap.From, prop.Prefab))
+                {
+                    Expect(!onPatches || !drySizes.Contains(size), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} left green on the dry or tall grass");
+                }
+            }
+        }
+
+        Assert.That(dried, Is.GreaterThan(0), "dry bushes over the seeds");
     }
 
     /// <summary>
@@ -3000,7 +3075,8 @@ public class AreaGenerationTests
     /// with those steps turned off, every other layer, every mob and the spawn are the same, and so is every prop, but
     /// for the campfires and seats and the props they replaced, all of them within the campsite's radius plus three
     /// cells of the campfire,
-    /// the plants the ponds removed, on, beside or just below them, and the plants the tall grass removed, on it.
+    /// the plants the ponds removed, on, beside or just below them, the plants the tall grass removed, on it, and the
+    /// bushes dried on the dry grass and the tall grass.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -3121,6 +3197,12 @@ public class AreaGenerationTests
             if (tallGrassIndex >= 0)
             {
                 campsite.UnionWith(full.TerrainCells(tallGrassIndex));
+            }
+
+            int dryGrassIndex = full.IndexOf(ProjectMaterial("DryGrass"));
+            if (dryGrassIndex >= 0)
+            {
+                campsite.UnionWith(full.TerrainCells(dryGrassIndex));
             }
 
             Assert.That(plain.Raised, Is.Empty, $"seed {seed}: the plateau is off");
@@ -3251,11 +3333,13 @@ public class AreaGenerationTests
     /// <summary>
     /// The Village Forest's tall grass and meadows, laid last on the detail stream, leave everything laid before them
     /// where it was: with both turned off, every other layer (the dirt included), the spawn and every mob are the same,
-    /// and so is every prop but the walk-through props the tall grass removed, all of them on it.
+    /// and so is every prop but the walk-through props the tall grass removed and the bushes it dried, all of them on
+    /// it.
     /// </summary>
     [Test]
     public void TheVillageForestsMeadowsAndTallGrass_LeaveTheRestOfItsLayoutWhereItWas()
     {
+        AreaGenerator.PropSwap swap = villageForest.DryBushes;
         AreaGenerator without = Track(Object.Instantiate(villageForest));
         SerializedObject settings = new(without);
         settings.FindProperty("tallGrassCount").intValue = 0;
@@ -3289,16 +3373,24 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop) || (IsSwapped(plain, prop, swap) && tall.Contains(prop.Cell)), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
-                if (!HasProp(full, prop))
+                if (HasProp(full, prop))
                 {
-                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                    continue;
                 }
+
+                if (IsSwapped(full, prop, swap))
+                {
+                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} dried off the tall grass");
+                    continue;
+                }
+
+                Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
             }
         }
     }
@@ -3387,11 +3479,12 @@ public class AreaGenerationTests
     /// <summary>
     /// The Lakeside's tall grass and meadows, laid last, leave everything laid before them where it was: with both
     /// turned off, every other layer, the spawn and every mob are the same, and so is every prop but the walk-through
-    /// props the tall grass removed, all of them on it.
+    /// props the tall grass removed and the bushes it dried, all of them on it.
     /// </summary>
     [Test]
     public void TheLakesidesMeadowsAndTallGrass_LeaveTheRestOfItsLayoutWhereItWas()
     {
+        AreaGenerator.PropSwap swap = lakeside.DryBushes;
         AreaGenerator without = Track(Object.Instantiate(lakeside));
         SerializedObject settings = new(without);
         settings.FindProperty("tallGrassCount").intValue = 0;
@@ -3425,16 +3518,24 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop) || (IsSwapped(plain, prop, swap) && tall.Contains(prop.Cell)), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
             {
-                if (!HasProp(full, prop))
+                if (HasProp(full, prop))
                 {
-                    Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
+                    continue;
                 }
+
+                if (IsSwapped(full, prop, swap))
+                {
+                    Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} dried off the tall grass");
+                    continue;
+                }
+
+                Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
+                Expect(tall.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed off the tall grass");
             }
         }
     }
@@ -3501,6 +3602,50 @@ public class AreaGenerationTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The bushes <paramref name="target"/>, the Lakeside or the Village Forest, dries on its dry grass and tall grass.
+    /// </summary>
+    private static AreaGenerator.PropSwap DryBushes(AreaGenerator target)
+    {
+        return target is LakesideGenerator lakesideTarget ? lakesideTarget.DryBushes : ((VillageForestGenerator)target).DryBushes;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="scatter"/> lists a prop of <paramref name="swap"/>'s From covering
+    /// <paramref name="size"/> cells.
+    /// </summary>
+    private static bool ListsBushOfSize(AreaGenerator.PropScatter scatter, AreaGenerator.PropSwap swap, Vector2Int size)
+    {
+        foreach (GameObject prefab in scatter.Prefabs)
+        {
+            if (ListContains(swap.From, prefab) && PropGridSnapping.TryGetFootprint(prefab, out Rect footprint) && PropGridSnapping.CellsCovered(footprint, Vector2.one) == size)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="layout"/> holds, on <paramref name="prop"/>'s cell, the prop <paramref name="swap"/>
+    /// turned it into or the one it was before: one of the swap's From and the other of its To.
+    /// </summary>
+    private static bool IsSwapped(AreaLayout layout, AreaLayout.Prop prop, AreaGenerator.PropSwap swap)
+    {
+        bool from = ListContains(swap.From, prop.Prefab);
+        bool to = ListContains(swap.To, prop.Prefab);
+        foreach (AreaLayout.Prop other in layout.Props)
+        {
+            if (other.Cell == prop.Cell && ((from && ListContains(swap.To, other.Prefab)) || (to && ListContains(swap.From, other.Prefab))))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -3614,7 +3759,7 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// The fixture's copy, with the test props, of the project's generator at <paramref name="path"/>, made once.
+    /// The fixture's copy, with the test built props, of the project's generator at <paramref name="path"/>, made once.
     /// </summary>
     private T ProjectCopy<T>(string path) where T : AreaGenerator
     {
@@ -3840,25 +3985,15 @@ public class AreaGenerationTests
     }
 
     /// <summary>
-    /// A copy of the project's generator <paramref name="asset"/>, which the caller destroys, with the test props in
-    /// place of the props it was built with: blocking, mixed or walk-through props in each scatter layer as
-    /// <see cref="ScatterKinds"/> lists them, the test campfire and seats, and for the Village Forest the test
-    /// building, fence, lamp post, fountain and town props.
+    /// A copy of the project's generator <paramref name="asset"/>, which the caller destroys, keeping its scatter
+    /// layers' props and given the test built props the asset leaves unset: the test campfire and seats, and for the
+    /// Village Forest the test building, fence, lamp post, fountain and town props.
     /// </summary>
     private T WithTestProps<T>(T asset) where T : AreaGenerator
     {
         Assert.That(asset, Is.Not.Null, "The project's generator should exist.");
         T copy = Object.Instantiate(asset);
         SerializedObject settings = new(copy);
-        SerializedProperty scatters = settings.FindProperty("scatters");
-        string kinds = ScatterKinds[asset.name];
-        Assert.That(scatters.arraySize, Is.EqualTo(kinds.Length), $"{asset.name}'s scatter layers");
-        for (int i = 0; i < kinds.Length; i++)
-        {
-            IReadOnlyList<GameObject> props = kinds[i] == 'B' ? testProps.BlockingProps : kinds[i] == 'M' ? testProps.MixedProps : testProps.WalkThroughProps;
-            SetList(scatters.GetArrayElementAtIndex(i).FindPropertyRelative("prefabs"), props);
-        }
-
         SetIfPresent(settings, "campfirePrefab", testProps.Campfire);
         SetListIfPresent(settings, "campsiteSeats", testProps.Seats);
         SetIfPresent(settings, "buildingPrefab", testProps.Building);

@@ -318,8 +318,9 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Step 1. Lays each placement's layout from its seed, once, and moves its cells, raised ground and mobs by the
-    /// placement's cell; then reads each region's outline and ports from the moved cells.
+    /// Step 1. Lays each placement's layout from its seed, once, without its scatter layers' props, which the world
+    /// does not write yet, and moves its cells, raised ground and mobs by the placement's cell; then reads each
+    /// region's outline and ports from the moved cells.
     /// </summary>
     private void PlaceRegions()
     {
@@ -339,7 +340,7 @@ internal sealed class WorldComposer
             }
 
             keys.Add(placement.Key);
-            AreaLayout layout = placement.Generator.Generate(placement.Seed);
+            AreaLayout layout = placement.Generator.Generate(placement.Seed, false);
             WorldComposition.Region region = new(composition.Regions.Count, placement, placement.Seed);
             composition.Regions.Add(region);
             layouts.Add(layout);
@@ -347,11 +348,6 @@ internal sealed class WorldComposer
             foreach (string warning in layout.Warnings)
             {
                 composition.Warnings.Add($"{region.Key}: {warning}");
-            }
-
-            if (layout.Props.Count > 0)
-            {
-                composition.Warnings.Add($"{region.Key}: {layout.Props.Count} props were skipped; the world lays none yet.");
             }
 
             Lay(region, layout);

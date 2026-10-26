@@ -13,24 +13,27 @@ public sealed class AreaLayout
     /// <summary>
     /// A prop to place. A blocking prop's footprint fills the cells it needs from <see cref="Cell"/>, its bottom-left
     /// cell (<see cref="PropGridSnapping.CellsCovered"/>); a walk-through prop stands at <see cref="Offset"/>, a fraction
-    /// of a cell, inside <see cref="Cell"/>.
+    /// of a cell, inside <see cref="Cell"/>. <see cref="Scatter"/> is the scatter layer that placed it, or null for a
+    /// prop the generator placed itself (a campfire, a seat, a building, the village's furniture).
     /// </summary>
     public readonly struct Prop
     {
         /// <summary>
         /// Creates a placement of <paramref name="prefab"/> at <paramref name="cell"/>, offset by
-        /// <paramref name="offset"/> when it is a walk-through prop.
+        /// <paramref name="offset"/> when it is a walk-through prop, placed by <paramref name="scatter"/>.
         /// </summary>
-        public Prop(GameObject prefab, Vector3Int cell, Vector2 offset)
+        public Prop(GameObject prefab, Vector3Int cell, Vector2 offset, AreaGenerator.PropScatter scatter = null)
         {
             Prefab = prefab;
             Cell = cell;
             Offset = offset;
+            Scatter = scatter;
         }
 
         public GameObject Prefab { get; }
         public Vector3Int Cell { get; }
         public Vector2 Offset { get; }
+        public AreaGenerator.PropScatter Scatter { get; }
     }
 
     /// <summary>

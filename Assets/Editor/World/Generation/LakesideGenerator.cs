@@ -158,6 +158,8 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField, Min(1)] private int borderDepth = 3;
     [Tooltip("Scatter layers, placed in this order: earlier layers take the room first.")]
     [SerializeField] private List<Scatter> scatters = new();
+    [Tooltip("Bushes swapped for dry ones where the dry grass or the tall grass, laid after them, lies under them.")]
+    [SerializeField] private PropSwap dryBushes = new();
 
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
@@ -184,6 +186,7 @@ public sealed class LakesideGenerator : AreaGenerator
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
     public WeedPatches Weeds => weedPatches;
+    public PropSwap DryBushes => dryBushes;
 
     /// <summary>
     /// Grass, dry grass, meadow, tall grass, sand, mud, gravel, stone, shallows, water, then planks, in the style's layer
@@ -192,12 +195,15 @@ public sealed class LakesideGenerator : AreaGenerator
     /// </summary>
     public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, dryGrass, weeds, meadow, tallGrass, sand, mud, gravel, stone, shallows, water, planks };
 
+    public override IReadOnlyList<PropScatter> Scatters => scatters;
+
     /// <summary>
-    /// Lays out a lakeside from <paramref name="layoutSeed"/>.
+    /// Lays out a lakeside from <paramref name="layoutSeed"/>, its scatter layers placing props unless
+    /// <paramref name="scatter"/> is false.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed)
+    public override AreaLayout Generate(int layoutSeed, bool scatter)
     {
-        return new Run(this, layoutSeed).Build();
+        return new Run(this, layoutSeed, scatter).Build();
     }
 
     /// <summary>
@@ -224,12 +230,14 @@ public sealed class LakesideGenerator : AreaGenerator
         private Vector3Int? trailEnd;
 
         /// <summary>
-        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
+        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>, its scatter
+        /// layers placing props unless <paramref name="scatter"/> is false.
         /// </summary>
-        public Run(LakesideGenerator generator, int seed)
+        public Run(LakesideGenerator generator, int seed, bool scatter)
         {
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone);
+            builder.ScattersProps = scatter;
             water = builder.Layout.TerrainCells(generator.water);
             sand = builder.Layout.TerrainCells(generator.sand);
             mud = builder.Layout.TerrainCells(generator.mud);
@@ -245,8 +253,9 @@ public sealed class LakesideGenerator : AreaGenerator
         /// <summary>
         /// Lays the grass, the road, the lake, its beach and marsh, the trail to the beach and the mud patches, picks
         /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs,
-        /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds, the dock, the tall grass and
-        /// the meadows from the detail stream, so they move nothing laid before them.
+        /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds, the dock, the tall grass
+        /// and the meadows from the detail stream, so they move nothing laid before them, drying the bushes that stand
+        /// wholly on the dry grass or the tall grass.
         /// </summary>
         public AreaLayout Build()
         {
@@ -277,6 +286,7 @@ public sealed class LakesideGenerator : AreaGenerator
             LayShallowPonds();
             LayDock();
             LayTallGrass();
+            builder.SwapProps(settings.dryBushes, cell => dryGrass.Contains(cell) || tallGrass.Contains(cell));
             LayMeadows();
             LayWeeds();
             return builder.Layout;
@@ -961,7 +971,7 @@ public sealed class LakesideGenerator : AreaGenerator
                 candidates.Add(cell);
             }
 
-            builder.ScatterProps(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates);
+            builder.ScatterProps(scatter, candidates);
         }
 
         /// <summary>

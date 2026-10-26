@@ -3,10 +3,11 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Prop prefabs for tests that need props the generators can place and the writer can instantiate, now that the
-/// project's generators place none: variants of the project's <c>Prop</c> (walk-through) and <c>BlockingProp</c>
-/// prefabs, without art, whose footprints have the sizes of the props the generators were built with. Saved as
-/// prefab assets in a temporary folder by <see cref="Create"/> and removed with it by <see cref="Delete"/>.
+/// Built props for tests of the generators' steps that the project's assets leave unset (campsites, the Village
+/// Forest's buildings and furniture; Docs/PropGeneration.md's Non-goals): variants of the project's <c>Prop</c>
+/// (walk-through) and <c>BlockingProp</c> prefabs, without art, whose footprints have the sizes of the props the
+/// generators were built with. Saved as prefab assets in a temporary folder by <see cref="Create"/> and removed with it
+/// by <see cref="Delete"/>.
 /// </summary>
 internal sealed class TestPropPrefabs
 {
@@ -16,10 +17,6 @@ internal sealed class TestPropPrefabs
 
     private TestPropPrefabs()
     {
-        Tree = Blocking("TestTree", new Vector2(1.69f, 0.68f));
-        SmallTree = Blocking("TestSmallTree", new Vector2(0.53f, 0.25f));
-        Bush = Blocking("TestBush", new Vector2(2.81f, 0.72f));
-        Rock = Blocking("TestRock", new Vector2(0.97f, 0.44f));
         Plant = WalkThrough("TestPlant");
         Campfire = Blocking("TestCampfire", new Vector2(1.09f, 0.56f));
         Stool = Blocking("TestStool", new Vector2(0.78f, 0.22f));
@@ -31,10 +28,6 @@ internal sealed class TestPropPrefabs
         Table = Blocking("TestTable", new Vector2(1.91f, 0.44f));
     }
 
-    public GameObject Tree { get; }
-    public GameObject SmallTree { get; }
-    public GameObject Bush { get; }
-    public GameObject Rock { get; }
     public GameObject Plant { get; }
     public GameObject Campfire { get; }
     public GameObject Stool { get; }
@@ -44,21 +37,6 @@ internal sealed class TestPropPrefabs
     public GameObject LampPost { get; }
     public GameObject Barrel { get; }
     public GameObject Table { get; }
-
-    /// <summary>
-    /// Trees large and small, bushes and rocks, for a scatter layer of blocking props.
-    /// </summary>
-    public IReadOnlyList<GameObject> BlockingProps => new[] { Tree, Bush, Rock, SmallTree };
-
-    /// <summary>
-    /// A rock, a tree and a plant, for a scatter layer of both kinds.
-    /// </summary>
-    public IReadOnlyList<GameObject> MixedProps => new[] { Rock, Tree, Plant };
-
-    /// <summary>
-    /// Plants only, for a scatter layer of walk-through props.
-    /// </summary>
-    public IReadOnlyList<GameObject> WalkThroughProps => new[] { Plant };
 
     /// <summary>
     /// A walk-through seat and two stools, for a campsite.

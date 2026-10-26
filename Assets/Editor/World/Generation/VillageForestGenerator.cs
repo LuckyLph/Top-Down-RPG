@@ -175,6 +175,8 @@ public sealed class VillageForestGenerator : AreaGenerator
     [Header("Props")]
     [Tooltip("Scatter layers, placed in this order after the village: earlier layers take the room first.")]
     [SerializeField] private List<Scatter> scatters = new();
+    [Tooltip("Bushes swapped for dry ones where the tall grass, laid after them, lies under them.")]
+    [SerializeField] private PropSwap dryBushes = new();
 
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
@@ -208,6 +210,7 @@ public sealed class VillageForestGenerator : AreaGenerator
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
     public float MobSpacing => mobSpacing;
     public WeedPatches Weeds => weedPatches;
+    public PropSwap DryBushes => dryBushes;
 
     /// <summary>
     /// Grass, meadow, tall grass, dirt, gravel, plaza, then stone, in the style's layer order: each layer is drawn over
@@ -215,6 +218,8 @@ public sealed class VillageForestGenerator : AreaGenerator
     /// they meet and the street runs over the square.
     /// </summary>
     public override IReadOnlyList<TerrainLayer> TerrainLayers => new[] { grass, weeds, meadow, tallGrass, dirt, gravel, plaza, stone };
+
+    public override IReadOnlyList<PropScatter> Scatters => scatters;
 
     /// <summary>
     /// How many mobs <paramref name="region"/> gets.
@@ -230,19 +235,21 @@ public sealed class VillageForestGenerator : AreaGenerator
     }
 
     /// <summary>
-    /// Lays out the area from <paramref name="layoutSeed"/>.
+    /// Lays out the area from <paramref name="layoutSeed"/>, its scatter layers placing props unless
+    /// <paramref name="scatter"/> is false.
     /// </summary>
-    public override AreaLayout Generate(int layoutSeed)
+    public override AreaLayout Generate(int layoutSeed, bool scatter)
     {
-        return GenerateWithRegions(layoutSeed).Layout;
+        return GenerateWithRegions(layoutSeed, scatter).Layout;
     }
 
     /// <summary>
-    /// Lays out the area from <paramref name="layoutSeed"/> and tells which region each grass cell belongs to.
+    /// Lays out the area from <paramref name="layoutSeed"/> and tells which region each grass cell belongs to, its
+    /// scatter layers placing props unless <paramref name="scatter"/> is false.
     /// </summary>
-    public Generation GenerateWithRegions(int layoutSeed)
+    public Generation GenerateWithRegions(int layoutSeed, bool scatter = true)
     {
-        return new Run(this, layoutSeed).Build();
+        return new Run(this, layoutSeed, scatter).Build();
     }
 
     /// <summary>
@@ -273,12 +280,14 @@ public sealed class VillageForestGenerator : AreaGenerator
         private bool hasSquare;
 
         /// <summary>
-        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
+        /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>, its scatter
+        /// layers placing props unless <paramref name="scatter"/> is false.
         /// </summary>
-        public Run(VillageForestGenerator generator, int seed)
+        public Run(VillageForestGenerator generator, int seed, bool scatter)
         {
             settings = generator;
             builder = new AreaLayoutBuilder(seed, generator.TerrainLayers, generator.grass, generator.gravel, generator.stone, generator.plaza);
+            builder.ScattersProps = scatter;
             halfSize = new Vector2(Mathf.Max(24, generator.size.x), Mathf.Max(16, generator.size.y)) * 0.5f;
             villageHalf = new Vector2(Mathf.Max(8, generator.villageSize.x), Mathf.Max(8, generator.villageSize.y)) * 0.5f;
             clearingHalf = new Vector2(Mathf.Max(8, generator.clearingSize.x), Mathf.Max(8, generator.clearingSize.y)) * 0.5f;
@@ -292,9 +301,10 @@ public sealed class VillageForestGenerator : AreaGenerator
 
         /// <summary>
         /// Lays the ground and its regions, the street, the spawn, the square, the buildings with their paths and the
-        /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; checks what the spawn can
-        /// reach; then, from the detail stream, so they move nothing laid before them, lays the dirt along the trails, the
-        /// tall grass along the forest's edge and the meadows in the clearing.
+        /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; checks what the spawn
+        /// can reach; then, from the detail stream, so they move nothing laid before them, lays the dirt along the
+        /// trails, the tall grass along the forest's edge, drying the bushes that stand wholly on it, and the meadows
+        /// in the clearing.
         /// </summary>
         public Generation Build()
         {
@@ -338,6 +348,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             builder.StartDetailStream();
             LayDirt();
             LayTallGrass();
+            builder.SwapProps(settings.dryBushes, builder.Layout.TerrainCells(settings.tallGrass).Contains);
             LayMeadows();
             LayWeeds();
             return new Generation(builder.Layout, regions);
@@ -918,7 +929,7 @@ public sealed class VillageForestGenerator : AreaGenerator
                 }
             }
 
-            builder.ScatterProps(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates);
+            builder.ScatterProps(scatter, candidates);
         }
 
         /// <summary>

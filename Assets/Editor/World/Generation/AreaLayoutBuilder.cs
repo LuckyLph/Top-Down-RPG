@@ -21,6 +21,7 @@ internal sealed class AreaLayoutBuilder
     private const int OutlineHarmonics = 4;
     private const int DetailStreamFactor = 486187739;
     private const int DetailStreamSalt = 1013904223;
+    private const uint SwapPickFactor = 2654435761u;
 
     private static readonly Vector3Int[] Sides = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
     private static readonly float[] PlateauScales = { 1f, 0.8f, 0.65f, 0.5f };
@@ -205,6 +206,13 @@ internal sealed class AreaLayoutBuilder
     /// Cells holding a walk-through prop.
     /// </summary>
     public HashSet<Vector3Int> Decorated { get; } = new(CellComparer.Instance);
+
+    /// <summary>
+    /// Whether the generator's scatter layers place props
+    /// (<see cref="ScatterProps(AreaGenerator.PropScatter, List{Vector3Int})"/>). Off, they place nothing and draw
+    /// nothing from the random stream, as layers listing no prefabs would.
+    /// </summary>
+    public bool ScattersProps { get; set; } = true;
 
     /// <summary>
     /// From here on every random draw (<see cref="Range"/>, <see cref="Next"/>, <see cref="Shuffle{T}"/>,
@@ -433,41 +441,74 @@ internal sealed class AreaLayoutBuilder
     /// </summary>
     public int ScatterProps(IReadOnlyList<GameObject> prefabs, int count, float spacing, List<Vector3Int> candidates)
     {
-        List<GameObject> usable = new();
-        foreach (GameObject prefab in prefabs)
+        return Scatter(prefabs, count, spacing, candidates, null);
+    }
+
+    /// <summary>
+    /// Scatters <paramref name="scatter"/>'s props over <paramref name="candidates"/> as
+    /// <see cref="ScatterProps(IReadOnlyList{GameObject}, int, float, List{Vector3Int})"/> does, each prop recording
+    /// the layer that placed it, unless <see cref="ScattersProps"/> is off. Returns how many were placed.
+    /// </summary>
+    public int ScatterProps(AreaGenerator.PropScatter scatter, List<Vector3Int> candidates)
+    {
+        return ScattersProps ? Scatter(scatter.Prefabs, scatter.Count, scatter.Spacing, candidates, scatter) : 0;
+    }
+
+    /// <summary>
+    /// Swaps every blocking prop of <paramref name="swap"/>'s <see cref="AreaGenerator.PropSwap.From"/> whose footprint
+    /// lies wholly on cells that pass <paramref name="on"/> for one of its <see cref="AreaGenerator.PropSwap.To"/> that
+    /// covers the same cells, picked by the prop's cell, so it draws nothing from either random stream. The new prop
+    /// keeps the cell and the scatter layer; a prop none of them fits stays.
+    /// </summary>
+    public void SwapProps(AreaGenerator.PropSwap swap, Predicate<Vector3Int> on)
+    {
+        if (swap == null)
+        {
+            return;
+        }
+
+        HashSet<GameObject> from = new();
+        foreach (GameObject prefab in swap.From)
         {
             if (prefab != null)
             {
-                usable.Add(prefab);
+                from.Add(prefab);
             }
         }
 
-        if (usable.Count == 0 || count == 0)
+        Dictionary<Vector2Int, List<GameObject>> bySize = new();
+        foreach (GameObject prefab in swap.To)
         {
-            return 0;
+            if (prefab != null && PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            {
+                Vector2Int size = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+                if (!bySize.TryGetValue(size, out List<GameObject> fits))
+                {
+                    fits = new List<GameObject>();
+                    bySize[size] = fits;
+                }
+
+                fits.Add(prefab);
+            }
         }
 
-        Shuffle(candidates);
-        SpacedPoints placed = new(spacing);
-        foreach (Vector3Int cell in candidates)
+        for (int i = 0; i < Layout.Props.Count; i++)
         {
-            if (placed.Count >= count)
+            AreaLayout.Prop prop = Layout.Props[i];
+            if (!from.Contains(prop.Prefab) || !PropGridSnapping.TryGetFootprint(prop.Prefab, out Rect footprint))
             {
-                break;
+                continue;
             }
 
-            GameObject prefab = usable[random.Next(usable.Count)];
-            if (PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            Vector2Int size = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            if (!bySize.TryGetValue(size, out List<GameObject> fits) || !IsWhollyOn(prop.Cell, size, on))
             {
-                TryPlaceBlocking(prefab, footprint, cell, placed);
+                continue;
             }
-            else
-            {
-                TryPlaceWalkThrough(prefab, cell, placed);
-            }
+
+            uint pick = unchecked((uint)CellComparer.Instance.GetHashCode(prop.Cell) * SwapPickFactor) >> 16;
+            Layout.Props[i] = new AreaLayout.Prop(fits[(int)(pick % (uint)fits.Count)], prop.Cell, prop.Offset, prop.Scatter);
         }
-
-        return placed.Count;
     }
 
     /// <summary>
@@ -487,7 +528,7 @@ internal sealed class AreaLayoutBuilder
             return false;
         }
 
-        Cover(prefab, corner, covered);
+        Cover(prefab, corner, covered, null);
         return true;
     }
 
@@ -1591,11 +1632,75 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// Whether every cell of the <paramref name="size"/> block from <paramref name="corner"/> passes
+    /// <paramref name="on"/>.
+    /// </summary>
+    private static bool IsWhollyOn(Vector3Int corner, Vector2Int size, Predicate<Vector3Int> on)
+    {
+        for (int dy = 0; dy < size.y; dy++)
+        {
+            for (int dx = 0; dx < size.x; dx++)
+            {
+                if (!on(corner + new Vector3Int(dx, dy, 0)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Tries <paramref name="candidates"/> in random order, each with a random prefab from <paramref name="prefabs"/>,
+    /// until <paramref name="count"/> props are placed or the cells run out, each recording <paramref name="layer"/>.
+    /// Returns how many were placed.
+    /// </summary>
+    private int Scatter(IReadOnlyList<GameObject> prefabs, int count, float spacing, List<Vector3Int> candidates, AreaGenerator.PropScatter layer)
+    {
+        List<GameObject> usable = new();
+        foreach (GameObject prefab in prefabs)
+        {
+            if (prefab != null)
+            {
+                usable.Add(prefab);
+            }
+        }
+
+        if (usable.Count == 0 || count == 0)
+        {
+            return 0;
+        }
+
+        Shuffle(candidates);
+        SpacedPoints placed = new(spacing);
+        foreach (Vector3Int cell in candidates)
+        {
+            if (placed.Count >= count)
+            {
+                break;
+            }
+
+            GameObject prefab = usable[random.Next(usable.Count)];
+            if (PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+            {
+                TryPlaceBlocking(prefab, footprint, cell, placed, layer);
+            }
+            else
+            {
+                TryPlaceWalkThrough(prefab, cell, placed, layer);
+            }
+        }
+
+        return placed.Count;
+    }
+
+    /// <summary>
     /// Places a blocking prop whose footprint stands on <paramref name="cell"/>, centred on it as far as its width
     /// allows, when every cell it covers is free ground and it is far enough from the props in
-    /// <paramref name="placed"/>.
+    /// <paramref name="placed"/>, recording <paramref name="layer"/>.
     /// </summary>
-    private void TryPlaceBlocking(GameObject prefab, Rect footprint, Vector3Int cell, SpacedPoints placed)
+    private void TryPlaceBlocking(GameObject prefab, Rect footprint, Vector3Int cell, SpacedPoints placed, AreaGenerator.PropScatter layer)
     {
         Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
         Vector3Int corner = new(cell.x - (covered.x - 1) / 2, cell.y, 0);
@@ -1605,15 +1710,16 @@ internal sealed class AreaLayoutBuilder
             return;
         }
 
-        Cover(prefab, corner, covered);
+        Cover(prefab, corner, covered, layer);
         placed.Add(centre);
     }
 
     /// <summary>
     /// Places a walk-through prop at a random point in <paramref name="cell"/> when the cell and its neighbours are
-    /// off the paths, nothing else stands in it, and it is far enough from the props in <paramref name="placed"/>.
+    /// off the paths, nothing else stands in it, and it is far enough from the props in <paramref name="placed"/>,
+    /// recording <paramref name="layer"/>.
     /// </summary>
-    private void TryPlaceWalkThrough(GameObject prefab, Vector3Int cell, SpacedPoints placed)
+    private void TryPlaceWalkThrough(GameObject prefab, Vector3Int cell, SpacedPoints placed, AreaGenerator.PropScatter layer)
     {
         Vector2 offset = new(Range(0.2f, 0.8f), Range(0.15f, 0.6f));
         Vector2 point = new(cell.x + offset.x, cell.y + offset.y);
@@ -1624,13 +1730,14 @@ internal sealed class AreaLayoutBuilder
 
         Decorated.Add(cell);
         placed.Add(point);
-        Layout.Props.Add(new AreaLayout.Prop(prefab, cell, offset));
+        Layout.Props.Add(new AreaLayout.Prop(prefab, cell, offset, layer));
     }
 
     /// <summary>
-    /// Marks the <paramref name="covered"/> block from <paramref name="corner"/> as covered and adds the prop.
+    /// Marks the <paramref name="covered"/> block from <paramref name="corner"/> as covered and adds the prop, placed
+    /// by <paramref name="layer"/>.
     /// </summary>
-    private void Cover(GameObject prefab, Vector3Int corner, Vector2Int covered)
+    private void Cover(GameObject prefab, Vector3Int corner, Vector2Int covered, AreaGenerator.PropScatter layer)
     {
         for (int dy = 0; dy < covered.y; dy++)
         {
@@ -1640,6 +1747,6 @@ internal sealed class AreaLayoutBuilder
             }
         }
 
-        Layout.Props.Add(new AreaLayout.Prop(prefab, corner, Vector2.zero));
+        Layout.Props.Add(new AreaLayout.Prop(prefab, corner, Vector2.zero, layer));
     }
 }

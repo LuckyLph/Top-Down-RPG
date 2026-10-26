@@ -184,7 +184,7 @@ Phase 0 notes:
 - [x] The canvas shared by characters and props (material ids and their table; ellipsoids, convex solids, ray-marched fields, envelope normals, the ground hidden, world positions and normals, patterns, tone offsets and tones by height, cover), the characters' sheets unchanged byte for byte.
 - [x] `PropRecipe` with `TreeRecipe`, `BushRecipe`, `RockRecipe` and `WoodRecipe`; the writer (sheet, shadow sprites, prefabs created or updated in place, footprints measured); the bases moved to the units' layout, with a shadow renderer drawing under the units; the inspector with its previews on the terrain and Generate.
 - [x] The woods' looks generated: `Tree_Broadleaf`, `Tree_BroadleafSmall`, `Bush_Green`, `Rock_Grey`, `Boulder_Grey`, `Stump_Oak`.
-- [ ] They show in the Prop Placement window and pass `PropPrefabTests`; placed by hand in Testlands, they block their cells and sort with the player walking around them.
+- [x] They show in the Prop Placement window and pass `PropPrefabTests`; placed by hand in Testlands, they block their cells and sort with the player walking around them.
 
 Phase 1 notes:
 - **The canvas.** `ArtCanvas` (`Assets/Editor/Art/`) took over `CharacterCanvas`'s drawing and shading with material and part ids and a table of `ArtMaterial`s: a `ColourRamp`, flat or not, outlined or not, a pattern, a tone offset, a tone height and a cover. The ramp keeps its four colours (outline, shadow, middle, light), since Phase 0 chose three tones.
@@ -224,7 +224,7 @@ Phase 1 notes:
   - `phase1_woods_1x.png` and `phase1_woods_3x.png`: the six looks on the grass, from their assets, with their shadows;
   - `testlands_render_1x.png`, `testlands_render_3x.png` and `testlands_render_trees_4x.png`: the in-editor render with the stand-ins;
   - `inspector_strip_tree.png`: the inspector's strip of `Tree_Broadleaf`.
-- **Still to check by hand,** for the last box: in play in Testlands, walk behind, beside and in front of the trees, and into the bushes, rocks and stumps. Each should block its cells, sort with the player as it walks around it, and draw its shadow under the player.
+- **Checked by hand** for the last box: in play in Testlands, walking behind, beside and in front of the trees, and into the bushes, rocks and stumps. Each blocks its cells, sorts with the player as it walks around it, and draws its shadow under the player.
 
 ### Phase 2: forest floor and shores
 
@@ -473,7 +473,7 @@ Phase 5 notes:
 - [x] The wilds' forest: props on the wilds' grass along the regions' bands of trees and in patches, per chunk on its own stream, as the wilds' patches and mobs are.
 - [x] `WorldValidation` and the Prop Placement window read `GeneratedProps`.
 - [x] The Overworld written with its props; its streaming measured with them loaded.
-- [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see the same props, are blocked by the same footprints, and each sees only its own player fade a tree.
+- [x] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see the same props, are blocked by the same footprints, and each sees only its own player fade a tree.
 
 - **Previews.** The Overworld composed from its asset, drawn by the World Generator window's map (footprints dark green, walk-through props light green, before the mobs) and rendered through the game's pipeline (`TerrainBlendProbe`) with its chunk scenes open, in `Recordings/Props/` (gitignored):
   - `p6_map_r1_3x.png` and `p6_map_r1b_3x.png`: the window's map of the first round;
@@ -533,7 +533,7 @@ Phase 5 notes:
   - `WorldValidationTests`: `AGeneratedPropWhoseFootprintCrossesTheBorder_IsRefusedToo` and `ThePropPlacementWindow_PlacesInTheChunkUnderThePointer_InsideItsBorder_AndCountsGeneratedProps`.
 
   The world and prop classes (`AreaGenerationTests`, `WorldGeneratorTests`, `WorldGenerationWriterTests`, `WorldValidationTests`, `WorldGeneratorWindowTests`, `OverworldTests`, `ChunkedGroundRenderTests`, `PropPrefabTests`, `GroundLayerMigrationTests`): 148 pass, in 104 s. `OverworldPlayModeTests`: 11 pass, walking and respawning among the props.
-- **Still to check by hand,** for the last box: in Multiplayer Play Mode, a host and a client in the Overworld. Both should see the same props, be blocked by the same footprints, and each see only its own player fade a tree.
+- **Checked by hand** for the last box: in Multiplayer Play Mode, a host and a client in the Overworld. Both see the same props and are blocked by the same footprints, and each sees only its own player fade a tree.
 
 ## Testing
 

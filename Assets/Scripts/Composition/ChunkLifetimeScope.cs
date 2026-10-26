@@ -14,7 +14,8 @@ public class ChunkLifetimeScope : LifetimeScope
     /// to its world's navigation, and the <see cref="ChunkMobSpawner"/> of the chunk's mob spawn points, whose network
     /// prefabs it registers in a session once the container is built, and, when the chunk has an
     /// <see cref="AreaTerrain"/>, that terrain and its <see cref="ChunkTerrainSync"/>, whose prefab is registered the same
-    /// way. Without a grid it logs an error and registers neither the navigation nor the mobs.
+    /// way, and, when it has props, the <see cref="ChunkPropFading"/> that hands them to the Gameplay scope's
+    /// <see cref="PropFading"/>. Without a grid it logs an error and registers neither the navigation nor the mobs.
     /// Logs an error and registers nothing without a parent scope, and logs one for every mob placed directly in the
     /// chunk, since mobs come from spawn points.
     /// </summary>
@@ -42,6 +43,12 @@ public class ChunkLifetimeScope : LifetimeScope
                 .WithParameter(gameObject.scene)
                 .AsSelf();
             builder.RegisterBuildCallback(resolver => resolver.Resolve<ChunkTerrainSync>().RegisterNetworkPrefab());
+        }
+
+        PropFade[] props = SceneQuery.FindAll<PropFade>(gameObject.scene);
+        if (props.Length > 0)
+        {
+            builder.RegisterEntryPoint<ChunkPropFading>().WithParameter(props);
         }
 
         NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);

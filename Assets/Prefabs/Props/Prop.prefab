@@ -202,6 +202,7 @@ MonoBehaviour:
   sortingPoint: {fileID: 8954776278319050438}
   useSortingReferenceY: 0
   sortingReferenceY: 0
+  sortsOnce: 1
 --- !u!1 &7729509778616174314
 GameObject:
   m_ObjectHideFlags: 0
@@ -211,6 +212,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8954776278319050438}
+  - component: {fileID: 1709973392982375461}
   m_Layer: 0
   m_Name: Prop
   m_TagString: Untagged
@@ -235,3 +237,22 @@ Transform:
   - {fileID: 1303201576033085060}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1709973392982375461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7729509778616174314}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56b13f842bcc5434d888133b50f4a5d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PropFade
+  visuals: {fileID: 6825275978066788991}
+  cover:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 0
+    height: 0

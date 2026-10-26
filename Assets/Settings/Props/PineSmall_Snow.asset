@@ -29,6 +29,7 @@ MonoBehaviour:
   shadowShift: 0.08
   shadowRise: 2
   shadowOpacity: 0.35
+  fades: 1
   previewTerrains:
   - {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
   form: 1

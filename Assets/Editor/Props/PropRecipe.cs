@@ -15,11 +15,12 @@ public enum PropCategory
 /// <summary>
 /// An editor-only recipe for a natural prop (Docs/PropGeneration.md), made like the character recipes: the prop's name
 /// and category, a seed and how many variants to bake, the frame each variant is drawn in and the base pixel it stands
-/// on, whether it blocks, the shading, its shadow and the terrains its inspector previews it on. Each kind of prop is a
-/// kind of recipe holding its shape and palette and drawing a variant onto a <see cref="PropDrawing"/>: trees
-/// (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks (<see cref="RockRecipe"/>), wood
-/// (<see cref="WoodRecipe"/>) and plants (<see cref="PlantRecipe"/>). <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe
-/// always giving the same pixels; <see cref="PropWriter"/> writes the sheet and a prefab per variant.
+/// on, whether it blocks, the shading, its shadow, whether it fades while it hides the local player, and the terrains
+/// its inspector previews it on. Each kind of prop is a kind of recipe holding its shape and palette and drawing a
+/// variant onto a <see cref="PropDrawing"/>: trees (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks
+/// (<see cref="RockRecipe"/>), wood (<see cref="WoodRecipe"/>) and plants (<see cref="PlantRecipe"/>).
+/// <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe always giving the same pixels;
+/// <see cref="PropWriter"/> writes the sheet and a prefab per variant.
 /// </summary>
 public abstract class PropRecipe : ScriptableObject
 {
@@ -62,6 +63,10 @@ public abstract class PropRecipe : ScriptableObject
     [Tooltip("How dark the shadow is: the opacity of its black.")]
     [SerializeField, Range(0f, 1f)] private float shadowOpacity = 0.35f;
 
+    [Header("In play")]
+    [Tooltip("Whether the prop fades while it hides the local player, as trees and spires do: its prefab's fade covers its drawing.")]
+    [SerializeField] private bool fades;
+
     [Header("Preview")]
     [Tooltip("The terrains the inspector shows the variants on.")]
     [SerializeField] private TerrainMaterial[] previewTerrains = new TerrainMaterial[0];
@@ -83,6 +88,7 @@ public abstract class PropRecipe : ScriptableObject
     public float ShadowShift => shadowShift;
     public int ShadowRise => shadowRise;
     public float ShadowOpacity => shadowOpacity;
+    public bool Fades => fades;
     public TerrainMaterial[] PreviewTerrains => previewTerrains;
 
     /// <summary>

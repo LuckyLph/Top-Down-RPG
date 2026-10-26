@@ -9,7 +9,8 @@ using UnityEngine.TestTools;
 /// Tests for the prop writer (Docs/PropGeneration.md, Testing), writing a recipe built in the test into a temporary
 /// folder: the sheet holds a slice per variant pivoted on the base pixel and one per shadow, and each variant is a
 /// prefab of the base it should be, in the units' layout, its footprint its collider; generating again writes nothing
-/// and, after a change, keeps every prefab's GUID and every slice's ID; lowering the variant count while a dropped
+/// and, after a change, keeps every prefab's GUID and every slice's ID; a recipe that fades covers each variant's
+/// drawing with its prefab's fade, and one that does not covers nothing; lowering the variant count while a dropped
 /// variant's prefab is left, or changing whether it blocks once its prefabs exist, is refused.
 /// </summary>
 public class PropWriterTests
@@ -107,6 +108,32 @@ public class PropWriterTests
         Assert.That(written, Does.Contain(sheet));
         Assert.That(Guids(sheet), Is.EqualTo(guids));
         Assert.That(SliceIds(sheet), Is.EqualTo(sliceIds));
+    }
+
+    /// <summary>
+    /// A recipe that fades gives each variant's prefab a fade covering the variant's drawing around its root, in units;
+    /// once it no longer fades, generating again empties the cover.
+    /// </summary>
+    [Test]
+    public void Generate_AFadingRecipe_CoversEachDrawing_AndAnotherNothing()
+    {
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("fades").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        PropWriter.Generate(recipe, Sprites, Prefabs);
+
+        for (int i = 0; i < 2; i++)
+        {
+            RectInt drawn = PropBaker.Bake(recipe, i).Drawn;
+            PropFade fade = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(i)).GetComponent<PropFade>();
+            Assert.That(fade.Fades, Is.True);
+            Assert.That(fade.Cover, Is.EqualTo(new Rect((drawn.x - 28) / Unit, (drawn.y - 10) / Unit, drawn.width / Unit, drawn.height / Unit)));
+        }
+
+        settings.FindProperty("fades").boolValue = false;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(PropWriter.Generate(recipe, Sprites, Prefabs), Is.EquivalentTo(new[] { PrefabPath(0), PrefabPath(1) }));
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(0)).GetComponent<PropFade>().Fades, Is.False);
     }
 
     /// <summary>

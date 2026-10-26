@@ -6,7 +6,9 @@ using UnityEngine.Rendering;
 /// Sorts a sprite object by its height in the world: sets its sorting order to an offset minus its y times a
 /// multiplier, so lower objects draw in front. The y is its own, or a sorting point's (the root of a unit or prop whose
 /// sprite sits above where it stands), or a reference set in code. Writes a <see cref="SortingGroup"/> when there is
-/// one, else every cached renderer, keeping their relative orders. Runs in edit mode too.
+/// one, else every cached renderer, keeping their relative orders. Runs in edit mode too. Something that never moves (a
+/// prop) sorts once: in play it sorts when it starts and then disables itself, so it costs nothing per frame, while in
+/// the editor it keeps sorting as it is moved.
 /// </summary>
 [DisallowMultipleComponent]
 [ExecuteAlways]
@@ -20,6 +22,8 @@ public class YPositionSorter : MonoBehaviour
     private Transform sortingPoint;
     [SerializeField] private bool useSortingReferenceY;
     [SerializeField] private float sortingReferenceY;
+    [SerializeField, Tooltip("Sorts once in play, when it starts, and then disables itself, for something that never moves (a prop); in the editor it keeps sorting.")]
+    private bool sortsOnce;
 
     private Renderer[] cachedRenderers = Array.Empty<Renderer>();
     private int[] cachedOrderOffsets = Array.Empty<int>();
@@ -45,6 +49,21 @@ public class YPositionSorter : MonoBehaviour
     {
         CacheTargets();
         ApplySortingOrder();
+    }
+
+    /// <summary>
+    /// In play, when it sorts once, sorts where it stands after the frame it was enabled in (so a position set right
+    /// after it was created counts) and disables itself.
+    /// </summary>
+    private void Start()
+    {
+        if (!sortsOnce || !Application.isPlaying)
+        {
+            return;
+        }
+
+        ApplySortingOrder();
+        enabled = false;
     }
 
     /// <summary>

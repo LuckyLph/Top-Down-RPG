@@ -354,6 +354,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: 1b67014f06f5f6645825b52856b87320, type: 2}
   combatSettings: {fileID: 11400000, guid: 418926d2b15a1a544b4edc782443c711, type: 2}
   hitFeedbackSettings: {fileID: 11400000, guid: ddad85f53f064964b94a22caa963862b, type: 2}
+  propFadeSettings: {fileID: 11400000, guid: 2c60b55aeca7f3248b75ca06bc393e0f, type: 2}
   worldStreamingSettings: {fileID: 11400000, guid: 23be795292e99c94d9d6a57acb34670d, type: 2}
 --- !u!4 &1350234814
 Transform:

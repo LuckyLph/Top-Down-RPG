@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.U2D;
 
 /// <summary>
 /// Writes what a <see cref="PropRecipe"/> bakes (Docs/PropGeneration.md, Output): one sheet,
@@ -10,11 +12,13 @@ using UnityEngine;
 /// on the shadow frame's base pixel, through <see cref="SpriteSheetFiles"/> (an unchanged sheet is not rewritten and
 /// slices keep their IDs); then one prefab per variant, <c>Assets/Prefabs/Props/&lt;category&gt;/&lt;name&gt;_&lt;variant&gt;.prefab</c>,
 /// a variant of <c>BlockingProp</c> or <c>Prop</c> whose <c>Visuals</c> draw the variant's sprite, whose
-/// <c>Shadow</c> draws its shadow and, when it blocks, whose collider is its footprint. A prefab is created once and
+/// <c>Shadow</c> draws its shadow, whose <see cref="PropFade"/> covers its drawing when the recipe fades (and nothing
+/// otherwise) and, when it blocks, whose collider is its footprint. A prefab is created once and
 /// updated in place afterwards, so its GUID and every placed instance stay, and saved only when it changed. Every
 /// variant is baked before anything is written; a recipe is refused when it cannot bake, when a drawing reaches its
 /// frame's edge, when a blocking variant touches no ground, when a prefab of a variant past the count is left, or when
-/// an existing prefab is a variant of the other base.
+/// an existing prefab is a variant of the other base. Writing into the props' folder also makes sure the props' Sprite
+/// Atlas is there (<see cref="AtlasPath"/>): it packs the whole folder, every sheet in it, so props draw in few batches.
 /// </summary>
 public static class PropWriter
 {
@@ -24,6 +28,9 @@ public static class PropWriter
     public const string BlockingPropPath = PrefabsFolder + "/BlockingProp.prefab";
     public const string VisualsName = "Visuals";
     public const string ShadowName = "Shadow";
+    public const string AtlasPath = SpritesFolder + "/Props.spriteatlasv2";
+    private const int AtlasPadding = 2;
+    private const int AtlasMaxSize = 4096;
 
     /// <summary>
     /// Bakes and writes <paramref name="recipe"/>'s sheet and prefabs, returning the paths it wrote or changed (none
@@ -31,7 +38,44 @@ public static class PropWriter
     /// </summary>
     public static IReadOnlyList<string> Generate(PropRecipe recipe)
     {
-        return Generate(recipe, SpritesFolder, PrefabsFolder);
+        IReadOnlyList<string> written = Generate(recipe, SpritesFolder, PrefabsFolder);
+        if (written == null || !EnsureAtlas(SpritesFolder, AtlasPath))
+        {
+            return written;
+        }
+
+        List<string> withAtlas = new(written) { AtlasPath };
+        return withAtlas;
+    }
+
+    /// <summary>
+    /// Creates the Sprite Atlas at <paramref name="path"/> packing every sprite in <paramref name="folder"/> unless it is
+    /// there, returning whether it was created: pixel art packed as it is imported (point filtered, no mipmaps,
+    /// uncompressed), sprites neither rotated nor packed tight, so each keeps its rectangle and pivot.
+    /// </summary>
+    internal static bool EnsureAtlas(string folder, string path)
+    {
+        if (AssetDatabase.LoadAssetAtPath<SpriteAtlasAsset>(path) != null || File.Exists(path))
+        {
+            return false;
+        }
+
+        SpriteAtlasAsset atlas = new();
+        atlas.Add(new Object[] { AssetDatabase.LoadAssetAtPath<DefaultAsset>(folder) });
+        SpriteAtlasAsset.Save(atlas, path);
+        AssetDatabase.ImportAsset(path);
+        SpriteAtlasImporter importer = (SpriteAtlasImporter)AssetImporter.GetAtPath(path);
+        importer.packingSettings = new SpriteAtlasPackingSettings { blockOffset = 1, padding = AtlasPadding, enableRotation = false, enableTightPacking = false };
+        importer.textureSettings = new SpriteAtlasTextureSettings { readable = false, generateMipMaps = false, sRGB = true, filterMode = FilterMode.Point };
+        TextureImporterPlatformSettings platform = importer.GetPlatformSettings("DefaultTexturePlatform");
+        platform.maxTextureSize = AtlasMaxSize;
+        platform.format = TextureImporterFormat.RGBA32;
+        platform.textureCompression = TextureImporterCompression.Uncompressed;
+        platform.crunchedCompression = false;
+        importer.SetPlatformSettings(platform);
+        importer.includeInBuild = true;
+        importer.SaveAndReimport();
+        return true;
     }
 
     /// <summary>
@@ -234,7 +278,7 @@ public static class PropWriter
     }
 
     /// <summary>
-    /// Whether <paramref name="root"/>'s sprite, shadow or footprint differ from the variant's, setting them when
+    /// Whether <paramref name="root"/>'s sprite, shadow, fade or footprint differ from the variant's, setting them when
     /// <paramref name="write"/>.
     /// </summary>
     private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, Sprite shadow, bool write)
@@ -246,6 +290,16 @@ public static class PropWriter
         {
             visuals.sprite = sprite;
             shadowRenderer.sprite = shadow;
+        }
+
+        if (root.TryGetComponent(out PropFade fade))
+        {
+            Rect cover = recipe.Fades ? CoverOf(variant.Drawn, recipe.BasePixel) : default;
+            changed |= fade.Visuals != visuals || fade.Cover != cover;
+            if (write)
+            {
+                fade.Configure(visuals, cover);
+            }
         }
 
         if (!recipe.Blocking || !root.TryGetComponent(out BoxCollider2D box))
@@ -265,6 +319,16 @@ public static class PropWriter
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// The box <paramref name="drawn"/>, in frame pixels, covers around the base pixel <paramref name="basePixel"/>, in
+    /// units.
+    /// </summary>
+    private static Rect CoverOf(RectInt drawn, Vector2Int basePixel)
+    {
+        float unit = PropBaker.PixelsPerCell;
+        return new Rect((drawn.x - basePixel.x) / unit, (drawn.y - basePixel.y) / unit, drawn.width / unit, drawn.height / unit);
     }
 
     /// <summary>

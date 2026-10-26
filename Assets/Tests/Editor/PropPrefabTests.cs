@@ -9,8 +9,8 @@ using UnityEngine.Tilemaps;
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
 /// <c>Visuals</c> child on it holding the sprite pivoted on the base and its sorter, and a <c>Shadow</c> child drawing
-/// the shadow on the ground under every unit), the footprints of blocking props, and how a placed prop blocks
-/// navigation.
+/// the shadow on the ground under every unit), the props sorting once and fading over their own drawing, the footprints
+/// of blocking props, and how a placed prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -116,6 +116,36 @@ public class PropPrefabTests
             {
                 AssertContainsRoot(renderer.sprite.bounds, $"{propPrefab.name}'s shadow should be pivoted on its base.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Every prop sorts once, since it never moves, and has a fade on its root drawing through its <c>Visuals</c>'
+    /// renderer; a prop that fades is a tall one, its fade covering its drawing: around its root and within its sprite.
+    /// </summary>
+    [Test]
+    public void Props_SortOnce_AndFadeOverTheirOwnDrawing()
+    {
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            Transform visuals = Child(propPrefab, VisualsName);
+            SerializedObject sorting = new(visuals.GetComponent<YPositionSorter>());
+            Assert.That(sorting.FindProperty("sortsOnce").boolValue, Is.True, $"{propPrefab.name} never moves, so it sorts once.");
+
+            PropFade fade = propPrefab.GetComponent<PropFade>();
+            Assert.That(fade, Is.Not.Null, propPrefab.name);
+            Assert.That(fade.Visuals, Is.EqualTo(visuals.GetComponent<SpriteRenderer>()), propPrefab.name);
+            if (!fade.Fades)
+            {
+                continue;
+            }
+
+            Rect cover = fade.Cover;
+            Assert.That(cover.yMax, Is.GreaterThan(2f), $"{propPrefab.name} fades, so it stands taller than a unit.");
+            AssertContainsRoot(new Bounds(cover.center, cover.size), $"{propPrefab.name}'s fade should cover its root.");
+            Bounds drawn = fade.Visuals.sprite.bounds;
+            Assert.That(cover.xMin >= drawn.min.x - OnePixel && cover.xMax <= drawn.max.x + OnePixel, Is.True, $"{propPrefab.name}'s fade should lie within its sprite.");
+            Assert.That(cover.yMin >= drawn.min.y - OnePixel && cover.yMax <= drawn.max.y + OnePixel, Is.True, $"{propPrefab.name}'s fade should lie within its sprite.");
         }
     }
 

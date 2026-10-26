@@ -53,7 +53,7 @@ The look, the scope (Non-goals), the layout and the shadows were settled in Phas
 | Size | 32 px a unit, as everything; a recipe's sizes are in cells, heights on screen from the base. Settled in Phase 0 against the 46 px (1.45 cells) rogue, keeping the plan's starting points: a broadleaf tree 3 to 4 cells tall and 2.5 wide on a one-cell trunk, a pine 3.5 to 4.5 tall and 2 wide, a dead tree 2.5 to 3.5, a bush 1 to 1.3, a rock 0.6 to 1.2 (its lumps included), a boulder 1.5 to 2, a spire 2 to 3 tall on one cell, a stump 0.7, a log 1.5 to 2 long, plants 0.4 to 1. A forest edge at a spacing of 2 cells closes into one canopy in which each tree still reads. |
 | Shadows | A shadow sprite of its own, drawn on the ground under every unit: a hard ellipse of black at 35% under the crown or body, shifted a little east, away from the light. A shadow drawn into the prop's sprite sorts with the prop and darkens a unit standing in it behind the prop; with no shadow, trees stand on the grass rather than in it. Units keep having none. Settled in Phase 0; the recipe bakes the shadow with the prop (Phase 1). Plants cast a small one, small stones none (Phase 2). |
 | Light | Lit like units (`SpriteLit`) by each world's Global Light 2D; nothing glows. |
-| In play | Props never move, so they sort once: a static mode on `YPositionSorter` (applied when enabled and in the editor, no `LateUpdate`), and the prop sheets packed in one Sprite Atlas so a forest draws in few batches. A tall prop hiding the local player fades while it does, on that machine only. Settled and measured in Phase 4. |
+| In play | Props never move, so they sort once: `YPositionSorter`'s `sortsOnce`, which in play sorts when it starts and then disables itself, and in the editor keeps sorting. The prop sheets are packed in one Sprite Atlas; with URP's 2D renderer and the SRP Batcher every sprite stays its own draw call through the batcher with or without it, so it changes no count. A tall prop (trees, spires) hiding the local player fades to 45% while it does, on that machine only; others' players never fade anything. Settled and measured in Phase 4. |
 | Hand-drawn props | Later: an Aseprite prop recipe reading a file through `AsepriteClipReader` and writing the same sheet and prefabs ([AsepriteCharacters.md](AsepriteCharacters.md)). |
 
 ## Natural props per terrain
@@ -345,11 +345,44 @@ Phase 3 notes:
 
 ### Phase 4: props in play
 
-- [ ] Static sorting: props sort once, with no per-frame work.
-- [ ] The props' Sprite Atlas, its batches measured.
-- [ ] A tall prop hiding the local player fades while it does, on that machine only (fade or a silhouette, compared in play).
-- [ ] Measured in a scene of the Village Forest's 2000 forest trees: frame time and batches against the same scene without props, and no allocation per frame once warm.
-- [ ] PlayMode: the player walks behind and in front of a tree and around its trunk; a remote player behind a tree does not fade it on another machine.
+- [x] Static sorting: props sort once, with no per-frame work.
+- [x] The props' Sprite Atlas, its batches measured.
+- [x] A tall prop hiding the local player fades while it does, on that machine only (fade or a silhouette, compared on a mockup).
+- [x] Measured in a scene of 2000 forest trees: frame time and batches against the same scene without props, and no allocation per frame once warm.
+- [x] PlayMode: the player walks behind and in front of a tree and around its trunk; a remote player behind a tree does not fade it on another machine.
+
+Phase 4 notes:
+- **Sorting once.** `YPositionSorter` gained `sortsOnce`, set on the `Prop` base, so every prop has it. In play the sorter sorts when it starts (after the frame it was enabled in, so a position set just after it was created counts) and then disables itself, so no prop runs anything per frame. In the editor it keeps sorting as props are moved.
+- **Fading.** Compared on a mockup of the rogue standing behind trees (`Recordings/Props/p4_fade_compare_3x.png`): no treatment, the trees hiding the player fading to 45% or 60%, and the trees staying while the player shows as a silhouette over them. Chosen: fading to 45%.
+  - At 60% the rogue is hard to make out in a crown's dark core.
+  - The silhouette needs a shader of its own and shows through every tree, even one that only hides the player's feet.
+  - Fading the props that hide the player is what the genre does.
+
+  How it works:
+  - A recipe says whether its props fade (`PropRecipe.Fades`: the trees and the spires, the props taller than a unit). Every prop's `PropFade` holds the box its drawing covers, which the writer measures from the drawing, empty for the others.
+  - `PropFading`, in the Gameplay scope, fades the props hiding this machine's local player. The loaded chunks hand it their props, which it keeps in buckets of 4 units, so each frame it looks only at the few standing just in front of the player.
+  - A prop hides the player when it stands lower than the player's feet (so it draws over them) and its drawing covers a quarter of the player's body (a box 0.5 wide and 1.3 tall above the feet). It fades to 45% over 0.15 s while it does and back once it does not (`PropFadeSettings`).
+  - Other players never fade anything, so on each machine only its own player fades props: the PlayMode test hosts with an in-process client, and the client's player standing behind a tree leaves it opaque on the host.
+- **The atlas.** `Assets/Sprites/Props/Props.spriteatlasv2` packs the props' folder, every sheet in it, the writer creating it when it is missing. The 252 sprites of the 32 looks (variants and shadows) fit one 1024 px page, uncompressed.
+  - With URP's 2D renderer and the SRP Batcher on, every sprite in view stays its own draw call through the batcher, atlas or not.
+  - The atlas changed neither the draw calls (213), the set passes (19) nor the main thread time (3.79 ms against 3.75 without it, within the noise).
+  - It stays, since it costs nothing in play and builds pack one texture for the props instead of 32, but the batches the plan hoped for do not come from it. Fewer draw calls would need the forest drawn by fewer renderers (Open questions).
+- **Measured** (`PropsPlayModeTests`' explicit benchmarks, in the editor, focused). The forest is 2025 copies of a broadleaf tree in a grid 2.2 cells apart (99 cells a side), with the player in its middle, since the generators place no forest before Phase 5. Each measurement is over 6 s once warm:
+
+  | Scene | Frame rate | Main thread | Late updates | Draw calls (SRP Batcher) | Set passes |
+  |---|---|---|---|---|---|
+  | no forest | 326 fps | 3.05 ms | 0.052 ms | 18 (5) | 17 |
+  | the forest, sorting once | 306 fps | 3.25 ms | 0.057 ms | 213 (200) | 19 |
+  | the forest, every sorter running each frame | 252 fps | 3.96 ms | 0.84 ms | 213 (200) | 19 |
+
+  - The forest costs about 0.2 ms of the main thread, most of it drawing the hundred or so sprites in view.
+  - Sorting once saves 0.79 ms a frame: the late updates of 2025 sorters that found nothing to change.
+  - Runs drifted by up to 0.4 ms between batches, so only figures from the same run are compared.
+  - Once warm, the game's update allocates nothing per frame while the player stands behind tree after tree, fading them (`FrameAllocationProbe`, in a PlayMode test).
+- **Tests.**
+  - EditMode: `PropFadingTests` covers the fading. `PropPrefabTests` checks that every prop sorts once and fades over its own drawing, and `PropWriterTests` that a fading recipe covers each drawing.
+  - PlayMode: `PropsPlayModeTests` checks sorting once and against the player, walking around a trunk and fading behind it, a client's player not fading a tree on the host, and a forest allocating nothing.
+- **Not done here.** Nothing places props yet but Testlands' start chunk, so a forest's cost with whole regions loaded is measured once the world writes its forests (Phase 6).
 
 ### Phase 5: the area generators
 
@@ -390,6 +423,5 @@ Phase 3 notes:
 
 ## Open questions
 
-- Whether a dense forest of GameObjects costs too much once whole regions are loaded. If Phase 4's measurements say so, the forest edge's trees could be drawn by one renderer per chunk instead, sorted per tree.
-- Fade or silhouette for a unit hidden behind a prop (Phase 4).
+- Whether a dense forest of GameObjects costs too much once whole regions are loaded. Phase 4 measured 2025 trees around the player at about 0.2 ms of the main thread in the editor, with a draw call a sprite in view; Phase 6 measures whole regions. If they cost too much, the forest edge's trees could be drawn by one renderer per chunk instead, sorted per tree.
 - Sorting range: `YPositionSorter` writes `-round(y * 100)` into a 16-bit sorting order, which runs out about 327 units from y = 0. The Overworld reaches 256, but a world 16 chunks tall would stop sorting past its sixth chunk row. This is not a prop matter, but a forest in such a world would show it first.

@@ -29,8 +29,10 @@ MonoBehaviour:
   shadowShift: 0.08
   shadowRise: 2
   shadowOpacity: 0.35
+  fades: 1
   previewTerrains:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 0
   height: 2.6
   crownWidth: 1.8
   crownHeight: 1.7
@@ -49,6 +51,30 @@ MonoBehaviour:
     clumpRadius: {x: 0.22, y: 0.38}
     blend: 0.45
     shell: {x: 0.88, y: 1.02}
+    stretch: 1
+  pine:
+    tiers: 5
+    clearance: 0.3
+    topShare: 0.32
+    tierHeight: 1.25
+    point: 1.6
+    profile: 0.6
+    teeth: {x: 7, y: 9}
+    drop: 0.14
+    reach: 0.12
+  limbs:
+    trunkShare: 0.42
+    lean: 20
+    segment: 0.16
+    jitter: 0.3
+    pull: 0.35
+    depth: 3
+    threeChance: 0.3
+    forkAngle: {x: 22, y: 42}
+    forkLength: {x: 0.54, y: 0.72}
+    sideChance: 0.22
+    taper: 0.6
+    twigPixels: 1.1
   bark:
     outline:
       serializedVersion: 2
@@ -76,3 +102,22 @@ MonoBehaviour:
     light:
       serializedVersion: 2
       rgba: 4283081326
+  needleStreaks: 6
+  cover:
+    enabled: 0
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4287392346
+      shadow:
+        serializedVersion: 2
+        rgba: 4292262057
+      middle:
+        serializedVersion: 2
+        rgba: 4293976278
+      light:
+        serializedVersion: 2
+        rgba: 4294965750
+    facing: 0.55
+    noise: 0.35
+    noiseScale: 6

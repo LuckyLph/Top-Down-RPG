@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44836177053e9ac43a40c07574ff434a, type: 3}
+  m_Name: Rock_Basalt
+  m_EditorClassIdentifier: TopDownRPG.Editor::RockRecipe
+  propName: Rock_Basalt
+  category: 2
+  seed: 301
+  variantCount: 4
+  frameSize: {x: 48, y: 44}
+  basePixel: {x: 24, y: 14}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.52
+  shadowFlatness: 0.34
+  shadowShift: 0.05
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
+  form: 0
+  width: 1.1
+  height: 0.7
+  depth: {x: 0.7, y: 0.9}
+  sink: 0.3
+  facets: 14
+  cut: {x: 0.88, y: 1}
+  top: {x: 0.86, y: 0.98}
+  lumps: 2
+  scatter: {x: 0.5, y: 0.8}
+  blocks: 3
+  sides: 6
+  narrowing: 0.25
+  taper: 0.12
+  shift: 0.05
+  tilt: 0.3
+  companion: 0.5
+  stone:
+    outline:
+      serializedVersion: 2
+      rgba: 4279766544
+    shadow:
+      serializedVersion: 2
+      rgba: 4282265652
+    middle:
+      serializedVersion: 2
+      rgba: 4284370002
+    light:
+      serializedVersion: 2
+      rgba: 4287132794
+  speckles: 0.1
+  joints: 0
+  cover:
+    enabled: 0
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4280690732
+      shadow:
+        serializedVersion: 2
+        rgba: 4283717726
+      middle:
+        serializedVersion: 2
+        rgba: 4286087046
+      light:
+        serializedVersion: 2
+        rgba: 4288390573
+    facing: 0.7
+    noise: 0.35
+    noiseScale: 6

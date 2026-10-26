@@ -44,7 +44,7 @@ The look, the scope (Non-goals), the layout and the shadows were settled in Phas
 |---|---|
 | Art | Drawn by code in the editor through the characters' 3/4 canvas. Trunks and branches are tapering capsules. Broadleaf crowns and bushes are clusters of leaf clumps of three sizes: spheres whose normals lean toward the whole crown's, so each clump catches the light on its top left while the crown is lit as one mass, over a core one tone darker. Pines are five tiers hanging under their apex, with branch tips along each lower edge and needle streaks. Dead and charred trees are bare, twisted and three forks deep. Rocks are faceted (convex solids cut by random planes), and basalt spires are stacked crags. Everything is shaded as the characters are: three tones (shadow, middle, light) and no highlight, at the characters' light thresholds, with an outline in each ramp's darkest colour and inner lines between parts (clumps, tiers, limbs, lumps). Thin parts (twigs, reed blades, fern stems) are unlined, as the bow string is. Small plants (blades, reeds, fern fronds, mushroom caps) are thin capsules, discs, dots and small flattened ellipsoids on the same canvas. One renderer for everything keeps the characters' light, outlines and pixel density, and gives a prop's look from every side for free if one is ever needed. Settled in Phase 0. |
 | The canvas | `CharacterCanvas` becomes a canvas of material ids with a table saying which are flat and which are outlined, shared by the characters and the props; the characters' frames come out byte for byte the same (`CharacterRecipeTests` already compares them with the project's sheets). Props add what they need to it, each used by the Phase 0 previews: ellipsoids at any orientation; convex solids (an intersection of half-spaces, each pixel shaded by the face its view ray enters) for faceted rocks, crags and columns, instead of triangles; fields ray-marched along each pixel's view ray, their gradient the normal, for a pine's tiers and a stump with its flared foot and broken top, with a material per pixel from its position and normal (a stump's cut end); a normal blended toward an envelope's (crowns); points under the ground hidden, so rocks, roots and trunks sink into it; each pixel's world position and world normal, kept for covers and patterns; per-material surface patterns (bark grooves, stone speckles, wood rings, needle streaks, basalt joints), read in the world or, since Phase 2, in a frame of their own (a fallen log's grooves along it and rings around its axis), a tone offset (a crown's darker core) and a tone by height (blades); and a cover material taken where the world normal faces up past a threshold, broken up by value noise (snow on pines, rocks and stumps; moss; ash). |
-| Recipes | Editor-only ScriptableObjects under `Assets/Settings/Props/`, one abstract `PropRecipe` (the prop's name, its category folder, a seed, the variant count, the frame size and base pixel, blocking or walk-through, the palette as a ramp per material, an optional cover) with a kind per shape: `TreeRecipe` (trunk, branching, a crown that is round, conical as a pine, or bare as a dead tree), `BushRecipe`, `RockRecipe` (lumps, flatness, facets, height, so boulders and spires too), `WoodRecipe` (stumps, fallen logs, driftwood) and `PlantRecipe` (ferns, reeds, cattails, beach grass, mushrooms). Since Phase 2 a plant is one kind with a form (a fern, a tuft of blades or a cluster of mushrooms), a bush can have flowers, hanging strands or twigs, a rock can scatter its lumps as small stones, and wood can lie as a log and take a cover. |
+| Recipes | Editor-only ScriptableObjects under `Assets/Settings/Props/`, one abstract `PropRecipe` (the prop's name, its category folder, a seed, the variant count, the frame size and base pixel, blocking or walk-through, the palette as a ramp per material, an optional cover) with a kind per shape: `TreeRecipe` (trunk, branching, a crown that is round, conical as a pine, or bare as a dead tree), `BushRecipe`, `RockRecipe` (lumps, flatness, facets, height, so boulders and spires too), `WoodRecipe` (stumps, fallen logs, driftwood) and `PlantRecipe` (ferns, reeds, cattails, beach grass, mushrooms). Since Phase 2 a plant is one kind with a form (a fern, a tuft of blades or a cluster of mushrooms), a bush can have flowers, hanging strands or twigs, a rock can scatter its lumps as small stones, and wood can lie as a log. Since Phase 3 a tree's form is round, a pine or bare, a rock can be a crag, and rocks, wood and trees share one optional cover. |
 | Looks per terrain | A look is a recipe asset: the same kind with the palette and cover of the terrain it stands on (`Rock_Grey` with moss for the woods, `Rock_Sand` for the beach, `Rock_Snow` capped with snow, `Boulder_Basalt` for the lava fields). Palettes are chosen against each terrain's albedo and previewed on it, never on a blank background. Phase 0 chose the first looks' palettes and covers (its notes list the ramps): snow past 0.55 on pines and 0.75 on rocks and stumps, moss past 0.8, ash past 0.7. |
 | Variants | Each recipe bakes `variantCount` variants (4 by default) from its seed, each its own prefab, so scatter layers, which pick a random prefab per try, mix them. A recipe's count only grows: lowering it is refused while a prefab of a dropped variant exists, since placed props reference it. |
 | Output | Through `SpriteSheetFiles`: `Assets/Sprites/Props/<Name>.png`, the variants in one row over a row of their shadows, sliced into `<Name>_<variant>` pivoted on the base pixel and `<Name>_<variant>_Shadow` pivoted on the shadow frame's base pixel, keeping slice IDs; and `Assets/Prefabs/Props/<Category>/<Name>_<variant>.prefab`, a variant of `Prop` or `BlockingProp`, created once and updated in place afterwards, so its GUID and every placed instance stay. Categories: `Trees`, `Bushes`, `Rocks`, `Wood`, `Plants`, which the Prop Placement window lists. |
@@ -293,9 +293,55 @@ Phase 2 notes:
 
 ### Phase 3: snow and scorched earth
 
-- [ ] Covers in use: snow on the Snowfield's looks, ash on the Lava Fields'.
-- [ ] Conical and bare crowns: `Pine_Snow`, `PineSmall_Snow`, `Tree_DeadSnow`, `Tree_Charred`.
-- [ ] `Rock_Snow`, `Boulder_Snow`, `Stump_Snow`, `StumpSmall_Snow`; `Spire_Basalt` (a stacked crag), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred`.
+- [x] Covers in use: snow on the Snowfield's looks, ash on the Lava Fields'.
+- [x] Conical and bare crowns: `Pine_Snow`, `PineSmall_Snow`, `Tree_DeadSnow`, `Tree_Charred`.
+- [x] `Rock_Snow`, `Boulder_Snow`, `Stump_Snow`, `StumpSmall_Snow`; `Spire_Basalt` (a stacked crag), `Boulder_Basalt`, `Rock_Basalt`, `Stump_Charred`, `StumpSmall_Charred`.
+
+Phase 3 notes:
+- **Previews.** Baked from the recipe assets and composed as in Phase 2, in `Recordings/Props/` (gitignored, each `_1x.png` and `_3x.png`):
+  - every look, four variants on each of its preview terrains: `p3_snow` (snow, and ice for the snow rocks) and `p3_lava` (dirt, as the Lava Fields' scorched earth);
+  - scenes: `p3_scene_snow` (a pine edge at a spacing of 2 cells, with dead trees, rocks and stumps) and `p3_scene_lava`.
+
+  One round, accepted as drawn. What the first bakes got wrong is in the notes below.
+- **Covers.** One `PropCover` (whether it lies on the prop, its ramp, the facing past which it lies, its noise and the noise's cycles a cell) is shared by rocks, wood and trees. It replaces the rocks' moss settings and Phase 2's wood cover. Their assets were moved onto it, and every Phase 1 and 2 look generated byte for byte the same afterwards.
+  - Snow lies past 0.55 on the pines, 0.6 on the dead tree's limbs and 0.75 on rocks and stumps, each with noise of 0.35.
+  - Ash lies past 0.7 on the charred tree, a dusting on the limbs' upper sides. On the charred stumps it lies past 0.88 with noise of 0.6: at 0.7 their flat tops turned into pale caps that read as snow, as ash on basalt had in Phase 0. Basalt takes none.
+- **Pines.** `TreeRecipe`'s pine form draws Phase 0's tiers (`PropPine`) on a short trunk with roots. Each tier is a field whose radius grows as its depth below the apex to the power 0.6, 1.25 radii tall, the top one 1.6 times taller. The radii run from the lowest tier's down to 0.32 of it, the bottoms are spaced evenly, and 7 to 9 teeth hang 0.14 cells lower and reach 12% further out.
+  - The tiers are marched in steps of half a pixel: 0.3 s a pine, 0.12 s a small one (Phase 0's took 0.6 s on a canvas of 360 px in steps of 0.35).
+  - With the lowest tier 0.3 cells up and as wide as Phase 0's, its front hid the trunk entirely and reached below the frame: a tier's front edge shows half its radius lower on screen than its bottom. So the lowest tier sits 1 cell up (0.75 on the small pine) and the tiers are 2 cells wide (2.2 with their teeth, against Phase 0's measured 2.5). The trunk and its roots show under them, as in Phase 0's look.
+  - Needle streaks (`ArtPattern.Streaks`) darken a third of the needles by one tone. They are value noise on a circle around the up axis, which has no seam where the angle wraps, stretched up, at 6 cycles a radian.
+  - `PineSmall_Snow`: 2.8 tall, four tiers 1.5 across, the top one 0.36 of the lowest.
+- **Bare trees.** `PropLimbs` grows Phase 0's limbs: segments of 0.16 cells turned by a jitter of 0.3 and pulled 35% back toward their aim, the trunk 0.42 of the height, forks into two (three at 30%) at 22 to 42 degrees and 0.54 to 0.72 as long, three deep, side branches at 22% a segment, and twigs under 1.1 px in radius unlined. Two changes:
+  - the trunk leans at most 20 degrees rather than 30: at 30, with the jitter, some trunks looked like they were falling;
+  - side branches grow only on a limb's upper 60%: low on the trunk they made a shrub.
+- **Crags.** `RockRecipe`'s crag form stacks blocks with 6 flat sides (convex solids). Each block is a quarter narrower than the one under it, its sides lean in by 12%, it sits up to 0.05 cells off the one under it, and its top tilts by up to 0.3. Their heights are in the shares 5, 4 and 3 (Phase 0's 0.42, 0.33 and 0.25), and the last block is pointed. A smaller spire half as tall, a block fewer, stands 0.42 of the width east or west. Its material does not count as touching the ground, so the crag blocks one cell, as in Phase 0. Basalt joints (`ArtPattern.Joints`) are lines across the up axis, 5 a cell, wobbling with noise; only the spire has them, and the basalt rocks and boulders are speckled.
+- **Rock forms.** The rock's form became an enum (lumps, scattered, crag) in place of Phase 2's scatter flag, and `Stones_Small` was moved onto it.
+- **Stumps.** `Stump_Snow` and `Stump_Charred` take `Stump_Oak`'s shape, the charred one with a more jagged top (0.12). The small stumps are 0.17 in radius and 0.26 tall on three roots, and are walked through.
+- **Palettes** (outline, shadow, middle, light) are Phase 0's: needles, snow, `Rock_Snow`'s stone (on `Boulder_Snow` too), the charred wood, ash and basalt. `Stump_Snow` keeps the oak's bark and cut end. Two are new:
+
+  | Look | Material | Ramp |
+  |---|---|---|
+  | `Tree_DeadSnow` | bark | `1e1814`, `40342c`, `5e4e42`, `847060` (weathered grey-brown) |
+  | `Stump_Charred` | cut end | `140e0c`, `2e2420`, `4a3a32`, `6a5446` (charcoal) |
+- **The looks, measured from their assets** (four variants each):
+
+  | Look | Previewed on | Tall | Wide | Footprint | Blocks |
+  |---|---|---|---|---|---|
+  | `Pine_Snow` | snow | 4.12 | 2.22 to 2.25 | 10 to 14 x 4 to 6 px | 1 cell |
+  | `PineSmall_Snow` | snow | 2.84 | 1.69 to 1.75 | 8 to 10 x 4 to 6 px | 1 cell |
+  | `Tree_DeadSnow` | snow | 2.41 to 3.03 | 1.81 to 2.56 | 20 to 24 x 10 to 12 px | 1 cell |
+  | `Rock_Snow` | snow, ice | 0.66 to 0.75 | 0.78 to 0.97 | 24 to 30 x 14 to 16 px | 1 cell |
+  | `Boulder_Snow` | snow, ice | 1.16 to 1.34 | 1.19 to 1.53 | 36 to 48 x 22 to 26 px | 2 cells |
+  | `Stump_Snow` | snow | 0.5 to 0.56 | 0.84 to 0.91 | 26 to 28 x 12 px | 1 cell |
+  | `StumpSmall_Snow` | snow | 0.31 to 0.38 | 0.53 to 0.56 | | no |
+  | `Tree_Charred` | dirt | 2.38 to 3.06 | 1.91 to 2.41 | 20 to 24 x 8 to 10 px | 1 cell |
+  | `Spire_Basalt` | dirt | 2.53 | 1.09 to 1.12 | 22 to 24 x 10 to 12 px | 1 cell |
+  | `Boulder_Basalt` | dirt | 1.16 to 1.19 | 1.59 to 1.69 | 50 to 54 x 22 to 24 px | 2 cells |
+  | `Rock_Basalt` | dirt | 0.69 to 0.78 | 0.75 to 1.0 | 22 to 30 x 14 px | 1 cell |
+  | `Stump_Charred` | dirt | 0.47 to 0.59 | 0.81 to 0.84 | 24 to 26 x 12 px | 1 cell |
+  | `StumpSmall_Charred` | dirt | 0.31 to 0.38 | 0.53 to 0.56 | | no |
+- **Bake times, in the editor.** Each look's four variants bake in 26 to 82 ms, the stumps in 52 to 154 ms (fields), and the pines in 0.43 s (small) and 1.2 s. A first Generate took 0.38 to 0.84 s a look, and 1.5 s for `Pine_Snow`. Generating again unchanged took 8 to 1044 ms and wrote nothing.
+- **Not placed yet.** The new prefabs show in the Prop Placement window under Trees, Rocks and Wood, and the generators will place them in Phase 5.
 
 ### Phase 4: props in play
 

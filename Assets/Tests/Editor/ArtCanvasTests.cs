@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -5,8 +7,8 @@ using UnityEngine;
 /// Tests for the shared canvas's prop primitives and shading (Docs/PropGeneration.md, The canvas): an ellipsoid with
 /// equal axes covers what a sphere covers, facing the same ways; a convex cube shows its top and front faces with their
 /// own normals; a marched field of a sphere matches the sphere; the ground hides what lies under it; a cover is taken
-/// only where the surface faces up past its threshold; a tone offset darkens by one tone; and a pattern read in a frame
-/// of its own moves with the frame's origin. The characters' frames
+/// only where the surface faces up past its threshold; a tone offset darkens by one tone; a pattern read in a frame of
+/// its own moves with the frame's origin; needle streaks run out from the up axis and basalt joints across it. The characters' frames
 /// staying byte for byte the same is checked by the character, Weasel and weapon tests against the project's sheets.
 /// </summary>
 public class ArtCanvasTests
@@ -238,6 +240,136 @@ public class ArtCanvasTests
 
         Assert.That(compared, Is.GreaterThan(200));
         Assert.That(ringed, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// Needle streaks on a cube's flat top run out from the up axis: the pixels in each narrow wedge around it mostly
+    /// share a tone, while those on each ring around it do not.
+    /// </summary>
+    [Test]
+    public void Shade_Streaks_RunOutFromTheAxis()
+    {
+        ArtCanvas canvas = Cube();
+        Color32[] pixels = canvas.Shade(new[] { new ArtMaterial(Red, flat: true, pattern: ArtPattern.Streaks, patternScale: 2f) }, 0.64f, 0.28f, 2.6f);
+        Dictionary<int, List<bool>> wedges = new();
+        Dictionary<int, List<bool>> rings = new();
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                Vector3 p = canvas.WorldPositionAt(x, y);
+                if (!canvas.IsFilled(x, y) || canvas.WorldNormalAt(x, y).z < 0.99f || IsOutline(pixels[y * canvas.Width + x]))
+                {
+                    continue;
+                }
+
+                float radius = new Vector2(p.x, p.y).magnitude;
+                if (radius < 0.3f || radius > 1f)
+                {
+                    continue;
+                }
+
+                bool dark = pixels[y * canvas.Width + x].r != Red.Middle.r;
+                Add(wedges, Mathf.FloorToInt(Mathf.Atan2(p.y, p.x) / (2f * Mathf.PI) * 72f), dark);
+                Add(rings, Mathf.FloorToInt(radius * 10f), dark);
+            }
+        }
+
+        Assert.That(Purity(wedges), Is.GreaterThan(0.9f));
+        Assert.That(Purity(rings), Is.LessThan(0.85f));
+    }
+
+    /// <summary>
+    /// Basalt joints on a cube's south face run across the up axis: pixels side by side share a tone more often than
+    /// pixels one above the other, and some are on a joint.
+    /// </summary>
+    [Test]
+    public void Shade_Joints_RunAcrossTheUpAxis()
+    {
+        ArtCanvas canvas = Cube();
+        Color32[] pixels = canvas.Shade(new[] { new ArtMaterial(Red, flat: true, pattern: ArtPattern.Joints, patternScale: 2f) }, 0.64f, 0.28f, 2.6f);
+        int across = 0, acrossSame = 0, up = 0, upSame = 0, joints = 0;
+        int width = canvas.Width;
+        for (int y = 0; y < canvas.Height - 1; y++)
+        {
+            for (int x = 0; x < width - 1; x++)
+            {
+                if (!OnFront(canvas, x, y))
+                {
+                    continue;
+                }
+
+                Color32 here = pixels[y * width + x];
+                joints += here.r != Red.Middle.r ? 1 : 0;
+                if (OnFront(canvas, x + 1, y))
+                {
+                    across++;
+                    acrossSame += pixels[y * width + x + 1].r == here.r ? 1 : 0;
+                }
+
+                if (OnFront(canvas, x, y + 1))
+                {
+                    up++;
+                    upSame += pixels[(y + 1) * width + x].r == here.r ? 1 : 0;
+                }
+            }
+        }
+
+        Assert.That(joints, Is.GreaterThan(0));
+        Assert.That(acrossSame / (float)across, Is.GreaterThan(upSame / (float)up));
+    }
+
+    /// <summary>
+    /// A canvas of 96 pixels a side at 24 pixels a unit holding a cube from the ground to two units up, two units a side
+    /// around the up axis.
+    /// </summary>
+    private static ArtCanvas Cube()
+    {
+        ArtCanvas canvas = new(96, 96, new Vector2Int(48, 20), 24f);
+        Vector4[] planes =
+        {
+            new(1f, 0f, 0f, 1f), new(-1f, 0f, 0f, 1f), new(0f, 1f, 0f, 1f), new(0f, -1f, 0f, 1f), new(0f, 0f, 1f, 2f), new(0f, 0f, -1f, 0f)
+        };
+        canvas.Convex(planes, new Bounds(new Vector3(0f, 0f, 1f), new Vector3(2f, 2f, 2f)), 0, 0);
+        return canvas;
+    }
+
+    /// <summary>
+    /// Whether pixel (<paramref name="x"/>, <paramref name="y"/>) shows a cube's south face.
+    /// </summary>
+    private static bool OnFront(ArtCanvas canvas, int x, int y)
+    {
+        return canvas.IsFilled(x, y) && canvas.WorldNormalAt(x, y).y < -0.99f;
+    }
+
+    /// <summary>
+    /// Adds <paramref name="dark"/> to the group <paramref name="key"/> of <paramref name="groups"/>.
+    /// </summary>
+    private static void Add(Dictionary<int, List<bool>> groups, int key, bool dark)
+    {
+        if (!groups.TryGetValue(key, out List<bool> group))
+        {
+            group = new List<bool>();
+            groups[key] = group;
+        }
+
+        group.Add(dark);
+    }
+
+    /// <summary>
+    /// The share of the pixels in <paramref name="groups"/> that share their group's commoner tone.
+    /// </summary>
+    private static float Purity(Dictionary<int, List<bool>> groups)
+    {
+        int total = 0, common = 0;
+        foreach (List<bool> group in groups.Values)
+        {
+            int dark = group.Count(d => d);
+            total += group.Count;
+            common += Mathf.Max(dark, group.Count - dark);
+        }
+
+        return common / (float)total;
     }
 
     /// <summary>

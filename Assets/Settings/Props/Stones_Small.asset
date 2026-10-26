@@ -31,6 +31,7 @@ MonoBehaviour:
   shadowOpacity: 0.35
   previewTerrains:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 1
   width: 0.8
   height: 0.28
   depth: {x: 0.7, y: 0.9}
@@ -39,8 +40,14 @@ MonoBehaviour:
   cut: {x: 0.88, y: 1}
   top: {x: 0.86, y: 0.98}
   lumps: 3
-  scattered: 1
   scatter: {x: 0.5, y: 0.85}
+  blocks: 3
+  sides: 6
+  narrowing: 0.25
+  taper: 0.12
+  shift: 0.05
+  tilt: 0.3
+  companion: 0.5
   stone:
     outline:
       serializedVersion: 2
@@ -55,20 +62,22 @@ MonoBehaviour:
       serializedVersion: 2
       rgba: 4290033332
   speckles: 0.1
-  moss: 0
-  mossColours:
-    outline:
-      serializedVersion: 2
-      rgba: 4279383068
-    shadow:
-      serializedVersion: 2
-      rgba: 4280576574
-    middle:
-      serializedVersion: 2
-      rgba: 4281372254
-    light:
-      serializedVersion: 2
-      rgba: 4282955410
-  mossFacing: 0.8
-  mossNoise: 0.4
-  mossNoiseScale: 6
+  joints: 0
+  cover:
+    enabled: 0
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4279383068
+      shadow:
+        serializedVersion: 2
+        rgba: 4280576574
+      middle:
+        serializedVersion: 2
+        rgba: 4281372254
+      light:
+        serializedVersion: 2
+        rgba: 4282955410
+    facing: 0.8
+    noise: 0.4
+    noiseScale: 6

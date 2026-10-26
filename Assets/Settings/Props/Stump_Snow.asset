@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc10e75a8a8fd6747817ea25edde596c, type: 3}
+  m_Name: Stump_Snow
+  m_EditorClassIdentifier: TopDownRPG.Editor::WoodRecipe
+  propName: Stump_Snow
+  category: 3
+  seed: 261
+  variantCount: 4
+  frameSize: {x: 40, y: 36}
+  basePixel: {x: 20, y: 12}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.55
+  shadowFlatness: 0.36
+  shadowShift: 0.05
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
+  form: 0
+  radius: 0.27
+  height: 0.42
+  flare: 0.4
+  flareHeight: 0.06
+  jag: 0.08
+  slant: 0.1
+  wobble: 0.05
+  cutFacing: 0.72
+  roots:
+    count: 4
+    reach: {x: 1.2, y: 1.62}
+    thickness: {x: 0.33, y: 0.12}
+    rise: 0.72
+  length: 1.6
+  logRadius: 0.2
+  taper: 0.85
+  turn: 0.9
+  bend: {x: 0, y: 0.06}
+  sink: 0.2
+  knots: 0.04
+  endJag: 0.03
+  endFacing: 0.7
+  stubs: 1
+  stubLength: {x: 0.1, y: 0.2}
+  bark:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035902
+    middle:
+      serializedVersion: 2
+      rgba: 4281352800
+    light:
+      serializedVersion: 2
+      rgba: 4282672778
+  barkGrooves: 16
+  cutEnd:
+    outline:
+      serializedVersion: 2
+      rgba: 4279772730
+    shadow:
+      serializedVersion: 2
+      rgba: 4282937498
+    middle:
+      serializedVersion: 2
+      rgba: 4284781760
+    light:
+      serializedVersion: 2
+      rgba: 4287020256
+  rings: 11
+  cover:
+    enabled: 1
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4287392346
+      shadow:
+        serializedVersion: 2
+        rgba: 4292262057
+      middle:
+        serializedVersion: 2
+        rgba: 4293976278
+      light:
+        serializedVersion: 2
+        rgba: 4294965750
+    facing: 0.75
+    noise: 0.35
+    noiseScale: 6

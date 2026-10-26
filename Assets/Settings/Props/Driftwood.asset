@@ -84,20 +84,21 @@ MonoBehaviour:
       serializedVersion: 2
       rgba: 4291550436
   rings: 14
-  cover: 0
-  coverColours:
-    outline:
-      serializedVersion: 2
-      rgba: 4279383068
-    shadow:
-      serializedVersion: 2
-      rgba: 4280576574
-    middle:
-      serializedVersion: 2
-      rgba: 4281372254
-    light:
-      serializedVersion: 2
-      rgba: 4282955410
-  coverFacing: 0.75
-  coverNoise: 0.4
-  coverNoiseScale: 6
+  cover:
+    enabled: 0
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4279383068
+      shadow:
+        serializedVersion: 2
+        rgba: 4280576574
+      middle:
+        serializedVersion: 2
+        rgba: 4281372254
+      light:
+        serializedVersion: 2
+        rgba: 4282955410
+    facing: 0.85
+    noise: 0.5
+    noiseScale: 6

@@ -9,8 +9,9 @@ using UnityEngine;
 /// the same seed and different ones for different variants; every variant of every recipe asset keeps its drawing
 /// inside its frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame;
 /// its shadow is an ellipse of the recipe's opacity inside its frame; a bush's flowers only recolour its crown, in one
-/// colour a variant; a log lies across its base with its broken ends showing; and a recipe refuses names and frames it
-/// cannot bake.
+/// colour a variant; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
+/// its tiers; a bare tree's twigs are unlined; a crag blocks only its own foot; a cover lies only where it is enabled;
+/// and a recipe refuses names and frames it cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
@@ -41,9 +42,12 @@ public class PropRecipeTests
     /// gives other pixels.
     /// </summary>
     [TestCase(typeof(TreeRecipe), null, 0)]
+    [TestCase(typeof(TreeRecipe), "form", (int)TreeForm.Pine)]
+    [TestCase(typeof(TreeRecipe), "form", (int)TreeForm.Bare)]
     [TestCase(typeof(BushRecipe), null, 0)]
     [TestCase(typeof(RockRecipe), null, 0)]
-    [TestCase(typeof(RockRecipe), "scattered", 1)]
+    [TestCase(typeof(RockRecipe), "form", (int)RockForm.Scattered)]
+    [TestCase(typeof(RockRecipe), "form", (int)RockForm.Crag)]
     [TestCase(typeof(WoodRecipe), null, 0)]
     [TestCase(typeof(WoodRecipe), "form", (int)WoodForm.Log)]
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Fern)]
@@ -188,6 +192,103 @@ public class PropRecipeTests
     }
 
     /// <summary>
+    /// A pine stands on its trunk: the bark shows on its base pixel under the lowest tier, and its needles are drawn as
+    /// one part a tier.
+    /// </summary>
+    [Test]
+    public void Pine_StandsOnATrunkThatShows_UnderItsTiers()
+    {
+        TreeRecipe recipe = Track(ScriptableObject.CreateInstance<TreeRecipe>());
+        Set(recipe, "form", (int)TreeForm.Pine);
+        Set(recipe, "pine.clearance", 1f);
+        Set(recipe, "crownWidth", 2f);
+        Set(recipe, "frameSize", new Vector2Int(96, 152));
+        Set(recipe, "basePixel", new Vector2Int(48, 12));
+
+        ArtCanvas canvas = PropBaker.Render(recipe, 0, out PropDrawing _);
+        Vector2Int basePixel = recipe.BasePixel;
+        HashSet<int> tiers = new();
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                if (canvas.IsFilled(x, y) && canvas.MaterialIdAt(x, y) == 1)
+                {
+                    tiers.Add(canvas.PartIdAt(x, y));
+                }
+            }
+        }
+
+        Assert.That(canvas.MaterialIdAt(basePixel.x, basePixel.y), Is.EqualTo(0), "the trunk's bark on the base pixel");
+        Assert.That(tiers.Count, Is.EqualTo(5));
+        Assert.That(PropBaker.Bake(recipe, 0).AtEdge, Is.False);
+    }
+
+    /// <summary>
+    /// A bare tree draws its thick limbs in lined bark and its twigs, thinner than the twig radius, in unlined bark.
+    /// </summary>
+    [Test]
+    public void Bare_LinesItsLimbs_AndNotItsTwigs()
+    {
+        TreeRecipe recipe = Track(ScriptableObject.CreateInstance<TreeRecipe>());
+        Set(recipe, "form", (int)TreeForm.Bare);
+
+        ArtCanvas canvas = PropBaker.Render(recipe, 0, out PropDrawing drawing);
+
+        Assert.That(drawing.Materials[0].Outlined, Is.True);
+        Assert.That(drawing.Materials[1].Outlined, Is.False);
+        Assert.That(canvas.CountId(0), Is.GreaterThan(0), "lined limbs");
+        Assert.That(canvas.CountId(1), Is.GreaterThan(0), "unlined twigs");
+    }
+
+    /// <summary>
+    /// A crag is taller than wide, and its footprint is its own foot's: narrower than the drawing, which its smaller
+    /// spire beside it widens without blocking.
+    /// </summary>
+    [Test]
+    public void Crag_BlocksOnlyItsOwnFoot()
+    {
+        RockRecipe recipe = Track(ScriptableObject.CreateInstance<RockRecipe>());
+        Set(recipe, "form", (int)RockForm.Crag);
+        Set(recipe, "width", 1.1f);
+        Set(recipe, "height", 2.9f);
+        Set(recipe, "frameSize", new Vector2Int(56, 104));
+        Set(recipe, "basePixel", new Vector2Int(28, 12));
+
+        for (int i = 0; i < recipe.VariantCount; i++)
+        {
+            PropVariant variant = PropBaker.Bake(recipe, i);
+            Assert.That(variant.AtEdge, Is.False, $"variant {i}");
+            Assert.That(variant.Drawn.height, Is.GreaterThan(variant.Drawn.width * 2), $"variant {i}");
+            Assert.That(variant.Footprint.width, Is.LessThan(variant.Drawn.width * 0.75f), $"variant {i}");
+        }
+    }
+
+    /// <summary>
+    /// A rock's cover shows its colours on the rock when enabled, and none of them when not.
+    /// </summary>
+    [Test]
+    public void Cover_ShowsOnlyWhenEnabled()
+    {
+        RockRecipe covered = Track(ScriptableObject.CreateInstance<RockRecipe>());
+        RockRecipe bare = Track(ScriptableObject.CreateInstance<RockRecipe>());
+        Set(bare, "cover.enabled", 0);
+        PropBaker.Render(covered, 0, out PropDrawing drawing);
+        ColourRamp cover = drawing.Materials[0].Ramp;
+        HashSet<Color32> colours = new() { cover.Shadow, cover.Middle, cover.Light };
+
+        int withCover = 0, without = 0;
+        for (int i = 0; i < covered.VariantCount; i++)
+        {
+            withCover += PropBaker.Bake(covered, i).Pixels.Count(colours.Contains);
+            without += PropBaker.Bake(bare, i).Pixels.Count(colours.Contains);
+        }
+
+        Assert.That(withCover, Is.GreaterThan(0));
+        Assert.That(without, Is.Zero);
+    }
+
+    /// <summary>
     /// A recipe refuses a name that is not letters, digits and underscores starting with a letter, and a frame too
     /// small or with its base pixel outside it.
     /// </summary>
@@ -223,6 +324,26 @@ public class PropRecipeTests
             .Select(AssetDatabase.LoadAssetAtPath<PropRecipe>)
             .Where(r => r != null)
             .ToList();
+    }
+
+    /// <summary>
+    /// Sets <paramref name="recipe"/>'s float <paramref name="setting"/> to <paramref name="value"/>.
+    /// </summary>
+    private static void Set(PropRecipe recipe, string setting, float value)
+    {
+        SerializedObject settings = new(recipe);
+        settings.FindProperty(setting).floatValue = value;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// Sets <paramref name="recipe"/>'s <see cref="Vector2Int"/> <paramref name="setting"/> to <paramref name="value"/>.
+    /// </summary>
+    private static void Set(PropRecipe recipe, string setting, Vector2Int value)
+    {
+        SerializedObject settings = new(recipe);
+        settings.FindProperty(setting).vector2IntValue = value;
+        settings.ApplyModifiedPropertiesWithoutUndo();
     }
 
     /// <summary>

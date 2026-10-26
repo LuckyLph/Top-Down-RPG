@@ -25,6 +25,11 @@ public class ArtCanvas
     private const float RingNoiseScale = 9f;
     private const float RingNoise = 0.5f;
     private const float RingShare = 0.3f;
+    private const float StreakStretch = 1.5f;
+    private const float StreakShare = 0.32f;
+    private const float JointNoiseScale = 4f;
+    private const float JointNoise = 0.45f;
+    private const float JointShare = 0.16f;
     private const float HeightFacing = 0.35f;
     private const float HeightRise = 0.85f;
     private const float HeightBias = 0.05f;
@@ -638,8 +643,9 @@ public class ArtCanvas
 
     /// <summary>
     /// How many tones <paramref name="art"/>'s pattern moves pixel <paramref name="index"/>: bark one darker in its
-    /// grooves, stone one darker or lighter on its speckles, a cut end one darker on its rings, read in the material's
-    /// pattern frame when it has one.
+    /// grooves, stone one darker or lighter on its speckles, a cut end one darker on its rings, needles one darker on
+    /// their streaks (value noise on a circle around the axis, so it has no seam) and basalt one darker on its joints,
+    /// read in the material's pattern frame when it has one.
     /// </summary>
     private int PatternOffset(ArtMaterial art, int index)
     {
@@ -658,6 +664,17 @@ public class ArtCanvas
             {
                 float ring = new Vector2(p.x, p.y).magnitude * art.PatternScale + ArtNoise.Value(p * RingNoiseScale) * RingNoise;
                 return ring - Mathf.Floor(ring) < RingShare ? -1 : 0;
+            }
+            case ArtPattern.Streaks:
+            {
+                float angle = Mathf.Atan2(p.y, p.x);
+                Vector3 around = new(Mathf.Cos(angle) * art.PatternScale, Mathf.Sin(angle) * art.PatternScale, p.z * StreakStretch);
+                return ArtNoise.Value(around) < StreakShare ? -1 : 0;
+            }
+            case ArtPattern.Joints:
+            {
+                float joint = p.z * art.PatternScale + ArtNoise.Value(p * JointNoiseScale) * JointNoise;
+                return joint - Mathf.Floor(joint) < JointShare ? -1 : 0;
             }
             default:
                 return 0;

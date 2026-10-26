@@ -17,7 +17,7 @@ public enum WoodForm
 /// (<see cref="PropRoots"/>). A log: a fallen trunk lying sunk a little into the ground, turned from lying east and
 /// west, bowed and tapering, its broken ends (where the surface faces along it) wood with rings around its axis, its
 /// bark grooved along it, with a few branch stubs; a fallen log, or driftwood in bleached colours. Either can take a
-/// cover where it faces up (moss, later snow).
+/// cover where it faces up (<see cref="PropCover"/>: moss, snow, ash).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Wood Recipe", fileName = "Stump_Oak")]
 public sealed class WoodRecipe : PropRecipe
@@ -89,28 +89,20 @@ public sealed class WoodRecipe : PropRecipe
     [SerializeField, Min(1f)] private float rings = 11f;
 
     [Header("Cover")]
-    [Tooltip("Whether a cover (moss) lies on the wood where it faces up.")]
-    [SerializeField] private bool cover;
-    [SerializeField] private ColourRamp coverColours = Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648);
-    [Tooltip("The cover lies where the surface faces up past this.")]
-    [SerializeField, Range(-1f, 1f)] private float coverFacing = 0.85f;
-    [Tooltip("How much noise breaks up the cover's edge: the noise's full range.")]
-    [SerializeField, Range(0f, 2f)] private float coverNoise = 0.5f;
-    [Tooltip("The cover noise's cycles per cell.")]
-    [SerializeField, Min(0.1f)] private float coverNoiseScale = 6f;
+    [SerializeField] private PropCover cover = new(false, Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648), 0.85f, 0.5f, 6f);
 
     /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
     {
-        int coverId = cover ? drawing.AddMaterial(new ArtMaterial(coverColours), true) : -1;
+        int coverId = cover.Add(drawing);
         if (form == WoodForm.Log)
         {
             DrawLog(drawing, coverId);
             return;
         }
 
-        int barkId = drawing.AddMaterial(Wood(bark, ArtPattern.Bark, barkGrooves, coverId, Vector3.zero, Vector3.zero), true);
-        int endId = drawing.AddMaterial(Wood(cutEnd, ArtPattern.Rings, rings, coverId, Vector3.zero, Vector3.zero), false);
+        int barkId = drawing.AddMaterial(cover.Under(bark, coverId, ArtPattern.Bark, barkGrooves), true);
+        int endId = drawing.AddMaterial(cover.Under(cutEnd, coverId, ArtPattern.Rings, rings), false);
         float tilt = drawing.Range(-slant, slant);
         float phase = drawing.Range(0f, 10f);
         Func<Vector3, float> field = q =>
@@ -146,8 +138,8 @@ public sealed class WoodRecipe : PropRecipe
         float bow = drawing.Range(bend) * (drawing.Random.NextDouble() < 0.5 ? -1f : 1f);
         float phase = drawing.Range(0f, 10f);
         float half = length * 0.5f;
-        int barkId = drawing.AddMaterial(Wood(bark, ArtPattern.Bark, barkGrooves, coverId, centre, along), true);
-        int endId = drawing.AddMaterial(Wood(cutEnd, ArtPattern.Rings, rings, coverId, centre, along), true);
+        int barkId = drawing.AddMaterial(cover.Under(bark, coverId, ArtPattern.Bark, barkGrooves, patternOrigin: centre, patternAxis: along), true);
+        int endId = drawing.AddMaterial(cover.Under(cutEnd, coverId, ArtPattern.Rings, rings, patternOrigin: centre, patternAxis: along), true);
         Func<Vector3, float> field = q =>
         {
             Vector3 d = q - centre;
@@ -195,14 +187,5 @@ public sealed class WoodRecipe : PropRecipe
     {
         float t = Mathf.Clamp01((u + half) / (2f * half));
         return logRadius * Mathf.Lerp(1f, taper, t) * (1f + knots * Mathf.Sin(u * KnotWaves + phase));
-    }
-
-    /// <summary>
-    /// A wood material in <paramref name="ramp"/> with its pattern, taking the cover (or none, for -1), its pattern in the
-    /// frame of <paramref name="axis"/> through <paramref name="origin"/> (or the world's, for zero).
-    /// </summary>
-    private ArtMaterial Wood(ColourRamp ramp, ArtPattern pattern, float scale, int coverId, Vector3 origin, Vector3 axis)
-    {
-        return new ArtMaterial(ramp, pattern: pattern, patternScale: scale, cover: coverId, coverThreshold: coverFacing, coverNoise: coverNoise, coverNoiseScale: coverNoiseScale, patternOrigin: origin, patternAxis: axis);
     }
 }

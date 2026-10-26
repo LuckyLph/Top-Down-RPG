@@ -2,15 +2,18 @@ using UnityEngine;
 
 /// <summary>
 /// A surface pattern an <see cref="ArtMaterial"/> draws over its shading, each pixel one tone darker or lighter by
-/// where it lies in the world: bark's grooves along the up axis, stone's speckles, and the rings of a cut end around the
-/// up axis. A material with a pattern frame reads the axis as its own (a fallen log's).
+/// where it lies in the world: bark's grooves along the up axis, stone's speckles, the rings of a cut end around the up
+/// axis, a pine's needle streaks running out from the up axis, and basalt's joints across it. A material with a pattern
+/// frame reads the axis as its own (a fallen log's).
 /// </summary>
 public enum ArtPattern
 {
     None,
     Bark,
     Speckle,
-    Rings
+    Rings,
+    Streaks,
+    Joints
 }
 
 /// <summary>
@@ -25,7 +28,8 @@ public sealed class ArtMaterial
 {
     /// <summary>
     /// Creates a material drawn in <paramref name="ramp"/>. <paramref name="patternScale"/> is the bark's grooves per
-    /// unit across, the share of speckled pixels, or the rings per unit; <paramref name="cover"/> is the id of the
+    /// unit across, the share of speckled pixels, the rings per unit, the streaks' noise cycles around the axis per
+    /// radian, or the joints per unit up; <paramref name="cover"/> is the id of the
     /// material taken where the world normal's up component plus noise of <paramref name="coverNoise"/> (its full range)
     /// at <paramref name="coverNoiseScale"/> cycles per unit passes <paramref name="coverThreshold"/>, or -1 for none.
     /// A <paramref name="patternAxis"/> other than zero puts the pattern in the frame of that axis through

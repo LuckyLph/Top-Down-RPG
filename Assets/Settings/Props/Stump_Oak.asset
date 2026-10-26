@@ -31,6 +31,7 @@ MonoBehaviour:
   shadowOpacity: 0.35
   previewTerrains:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 0
   radius: 0.27
   height: 0.42
   flare: 0.4
@@ -44,6 +45,17 @@ MonoBehaviour:
     reach: {x: 1.2, y: 1.62}
     thickness: {x: 0.33, y: 0.12}
     rise: 0.72
+  length: 1.6
+  logRadius: 0.2
+  taper: 0.85
+  turn: 0.9
+  bend: {x: 0, y: 0.06}
+  sink: 0.2
+  knots: 0.04
+  endJag: 0.03
+  endFacing: 0.7
+  stubs: 1
+  stubLength: {x: 0.1, y: 0.2}
   bark:
     outline:
       serializedVersion: 2
@@ -72,3 +84,21 @@ MonoBehaviour:
       serializedVersion: 2
       rgba: 4287020256
   rings: 11
+  cover:
+    enabled: 0
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4279383068
+      shadow:
+        serializedVersion: 2
+        rgba: 4280576574
+      middle:
+        serializedVersion: 2
+        rgba: 4281372254
+      light:
+        serializedVersion: 2
+        rgba: 4282955410
+    facing: 0.85
+    noise: 0.5
+    noiseScale: 6

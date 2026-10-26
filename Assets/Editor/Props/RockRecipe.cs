@@ -2,10 +2,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A faceted rock (Docs/PropGeneration.md, Phase 0 notes): a body and a few smaller lumps leaning on its sides, each a
-/// convex solid inside an octagon around its ellipsoid, cut by random planes leaning up and flattened on top, sunk
-/// partly into the ground, in speckled stone with an optional moss cover where it faces up. Its width counts its lumps,
-/// so rocks and boulders are this one kind; scattered, its lumps are small stones lying apart around a middle one.
+/// The shapes a <see cref="RockRecipe"/> draws.
+/// </summary>
+public enum RockForm
+{
+    Lumps,
+    Scattered,
+    Crag
+}
+
+/// <summary>
+/// A rock (Docs/PropGeneration.md, Phase 0 notes) in speckled or jointed stone, with an optional cover where it faces up
+/// (<see cref="PropCover"/>: moss, snow). Of lumps: a body and a few smaller lumps leaning on its sides, each a convex
+/// solid inside an octagon around its ellipsoid, cut by random planes leaning up and flattened on top, sunk partly into
+/// the ground; its width counts its lumps, so rocks and boulders are this one kind. Scattered: its lumps are small
+/// stones lying apart around a middle one. A crag: blocks with a few flat sides stacked into a spire, each narrower than
+/// the one under it, sitting a little off it with its top tilted, the last pointed, and a smaller spire beside it that
+/// does not count as touching the ground.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Rock Recipe", fileName = "Rock_Grey")]
 public sealed class RockRecipe : PropRecipe
@@ -25,9 +38,18 @@ public sealed class RockRecipe : PropRecipe
     private const int BoundingSides = 8;
     private const float MiddleStone = 1.2f;
     private const float ScatterJitter = 0.4f;
+    private const float CragFoot = 0.3f;
+    private const float CompanionFoot = 0.62f;
+    private const float CompanionSpread = 0.42f;
+    private const float CompanionDrift = 0.12f;
+    private const float BlockOverlap = 0.08f;
+    private const float BlockBounds = 1.4f;
+
+    [Tooltip("A body with lumps leaning on it, small stones scattered apart, or a crag of stacked blocks.")]
+    [SerializeField] private RockForm form = RockForm.Lumps;
 
     [Header("Size (cells)")]
-    [Tooltip("The rock's width, its lumps included.")]
+    [Tooltip("The rock's width, its lumps or the crag's smaller spire included.")]
     [SerializeField, Min(0.1f)] private float width = 1.1f;
     [Tooltip("How high its top stands above the ground.")]
     [SerializeField, Min(0.1f)] private float height = 0.7f;
@@ -45,36 +67,51 @@ public sealed class RockRecipe : PropRecipe
     [SerializeField] private Vector2 top = new(0.86f, 0.98f);
     [Tooltip("How many smaller lumps lean on its sides, or lie around it when scattered.")]
     [SerializeField, Min(0)] private int lumps = 2;
-    [Tooltip("Whether its lumps lie apart as small stones around a middle one a little larger, instead of leaning on a body.")]
-    [SerializeField] private bool scattered;
     [Tooltip("How far from the middle each scattered stone lies, as a share of half the width: the nearest and farthest.")]
     [SerializeField] private Vector2 scatter = new(0.5f, 0.8f);
+
+    [Header("Crag")]
+    [Tooltip("How many blocks the crag stacks, each narrower than the one under it, the last pointed.")]
+    [SerializeField, Min(1)] private int blocks = 3;
+    [Tooltip("How many flat sides each block has.")]
+    [SerializeField, Range(3, 12)] private int sides = 6;
+    [Tooltip("How much narrower each block is than the one under it, as a share.")]
+    [SerializeField, Range(0f, 0.8f)] private float narrowing = 0.25f;
+    [Tooltip("How much each block narrows from its foot to its top, as a share.")]
+    [SerializeField, Range(0f, 0.8f)] private float taper = 0.12f;
+    [Tooltip("How far each block may sit off the one under it, in cells.")]
+    [SerializeField, Min(0f)] private float shift = 0.05f;
+    [Tooltip("How far each block's top may tilt, in cells of height per cell across.")]
+    [SerializeField, Min(0f)] private float tilt = 0.3f;
+    [Tooltip("The smaller spire beside the crag, as a share of its height; 0 for none.")]
+    [SerializeField, Range(0f, 1f)] private float companion = 0.5f;
 
     [Header("Colours")]
     [SerializeField] private ColourRamp stone = Ramp(0x26282e, 0x5e626c, 0x868a92, 0xb4b6b4);
     [Tooltip("The share of the stone's pixels speckled one tone darker or lighter.")]
     [SerializeField, Range(0f, 0.5f)] private float speckles = 0.1f;
+    [Tooltip("Joints across the stone per cell up, as basalt's cracks, drawn instead of speckles; 0 for none.")]
+    [SerializeField, Min(0f)] private float joints;
 
-    [Header("Moss")]
-    [Tooltip("Whether moss covers the rock where it faces up.")]
-    [SerializeField] private bool moss = true;
-    [SerializeField] private ColourRamp mossColours = Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648);
-    [Tooltip("Moss covers the stone where its surface faces up past this.")]
-    [SerializeField, Range(-1f, 1f)] private float mossFacing = 0.8f;
-    [Tooltip("How much noise breaks up the moss's edge: the noise's full range.")]
-    [SerializeField, Range(0f, 2f)] private float mossNoise = 0.4f;
-    [Tooltip("The moss noise's cycles per cell.")]
-    [SerializeField, Min(0.1f)] private float mossNoiseScale = 6f;
+    [Header("Cover")]
+    [SerializeField] private PropCover cover = new(true, Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648), 0.8f, 0.4f, 6f);
 
     /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
     {
-        int mossId = moss ? drawing.AddMaterial(new ArtMaterial(mossColours), true) : -1;
-        int stoneId = drawing.AddMaterial(new ArtMaterial(stone, pattern: ArtPattern.Speckle, patternScale: speckles, cover: mossId, coverThreshold: mossFacing, coverNoise: mossNoise, coverNoiseScale: mossNoiseScale), true);
+        int coverId = cover.Add(drawing);
+        ArtMaterial stoneMaterial = joints > 0f ? cover.Under(stone, coverId, ArtPattern.Joints, joints) : cover.Under(stone, coverId, ArtPattern.Speckle, speckles);
+        int stoneId = drawing.AddMaterial(stoneMaterial, true);
         float turn = drawing.Range(0f, Mathf.PI);
-        if (scattered)
+        if (form == RockForm.Scattered)
         {
             Scatter(drawing, turn, stoneId);
+            return;
+        }
+
+        if (form == RockForm.Crag)
+        {
+            Crag(drawing, turn, stoneId, drawing.AddMaterial(stoneMaterial, false));
             return;
         }
 
@@ -104,6 +141,84 @@ public sealed class RockRecipe : PropRecipe
             float half = width * drawing.Range(LumpWidth);
             Lump(drawing, offset, half, half * drawing.Range(depth), height * drawing.Range(LumpHeight), drawing.Range(0f, Mathf.PI), material);
         }
+    }
+
+    /// <summary>
+    /// Draws the crag on the base, turned <paramref name="turn"/>, in <paramref name="material"/>, and its smaller spire
+    /// east or west of it in <paramref name="beside"/>, a block fewer.
+    /// </summary>
+    private void Crag(PropDrawing drawing, float turn, int material, int beside)
+    {
+        Spire(drawing, Vector3.zero, width * CragFoot, height, blocks, turn, material);
+        if (companion <= 0f)
+        {
+            return;
+        }
+
+        float side = drawing.Random.NextDouble() < 0.5 ? -1f : 1f;
+        Vector3 at = new(side * width * CompanionSpread, drawing.Range(-CompanionDrift, CompanionDrift), 0f);
+        Spire(drawing, at, width * CragFoot * CompanionFoot, height * companion, Mathf.Max(1, blocks - 1), drawing.Range(0f, Mathf.PI), beside);
+    }
+
+    /// <summary>
+    /// Draws a spire of <paramref name="count"/> blocks standing at <paramref name="foot"/>, its lowest block
+    /// <paramref name="apothem"/> from its middle to each side, <paramref name="tall"/> high: each block a convex solid
+    /// with the recipe's sides leaning in by its taper, its own part, taller the lower it is, the last pointed.
+    /// </summary>
+    private void Spire(PropDrawing drawing, Vector3 foot, float apothem, float tall, int count, float turn, int material)
+    {
+        float total = 0f;
+        for (int i = 0; i < count; i++)
+        {
+            total += count + 2 - i;
+        }
+
+        Vector3 centre = foot;
+        float z = 0f;
+        float foot0 = apothem;
+        for (int i = 0; i < count; i++)
+        {
+            bool last = i == count - 1;
+            float top = z + tall * (count + 2 - i) / total;
+            float bottomApothem = foot0;
+            float topApothem = last ? 0f : bottomApothem * (1f - taper);
+            float rotation = turn + drawing.Range(0f, 2f * Mathf.PI / sides);
+            Vector2 lean = Random2(drawing) * drawing.Range(0f, tilt);
+            List<Vector4> planes = new();
+            for (int k = 0; k < sides; k++)
+            {
+                float angle = rotation + k * 2f * Mathf.PI / sides;
+                Vector3 outward = new(Mathf.Cos(angle), Mathf.Sin(angle), 0f);
+                Vector3 n = (outward * (top - z) + Vector3.forward * (bottomApothem - topApothem)).normalized;
+                planes.Add(new Vector4(n.x, n.y, n.z, Vector3.Dot(n, centre + outward * bottomApothem + Vector3.forward * z)));
+            }
+
+            float floor = i == 0 ? -BottomDepth : z - BlockOverlap - bottomApothem * tilt;
+            planes.Add(new Vector4(0f, 0f, -1f, -floor));
+            if (!last)
+            {
+                Vector3 up = new Vector3(lean.x, lean.y, 1f).normalized;
+                planes.Add(new Vector4(up.x, up.y, up.z, Vector3.Dot(up, centre + Vector3.forward * top)));
+            }
+
+            float across = bottomApothem * BlockBounds;
+            float above = top + bottomApothem * tilt + BlockOverlap;
+            Vector3 middle = new(centre.x, centre.y, (floor + above) * 0.5f);
+            drawing.Canvas.Convex(planes, new Bounds(middle, new Vector3(across * 2f, across * 2f, above - floor)), material, drawing.NewPart());
+            Vector2 step = Random2(drawing) * drawing.Range(0f, shift);
+            centre += new Vector3(step.x, step.y, 0f);
+            z = top;
+            foot0 = bottomApothem * (1f - narrowing);
+        }
+    }
+
+    /// <summary>
+    /// A direction picked evenly around the ground plane.
+    /// </summary>
+    private static Vector2 Random2(PropDrawing drawing)
+    {
+        float angle = drawing.Range(0f, 2f * Mathf.PI);
+        return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
     }
 
     /// <summary>

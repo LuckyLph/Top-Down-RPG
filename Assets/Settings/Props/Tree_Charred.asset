@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b61831a3418a1447b4b467396888e44, type: 3}
+  m_Name: Tree_Charred
+  m_EditorClassIdentifier: TopDownRPG.Editor::TreeRecipe
+  propName: Tree_Charred
+  category: 0
+  seed: 231
+  variantCount: 4
+  frameSize: {x: 128, y: 128}
+  basePixel: {x: 64, y: 12}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  shadowRadius: 0.26
+  shadowFlatness: 0.34
+  shadowShift: 0.06
+  shadowRise: 2
+  shadowOpacity: 0.35
+  previewTerrains:
+  - {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
+  form: 2
+  height: 3.3
+  crownWidth: 2.5
+  crownHeight: 2.4
+  crownDepth: 0.9
+  crownWander: {x: 0.08, y: 0.05}
+  trunkRadius: 0.15
+  trunkTaper: 0.62
+  branches: 3
+  roots:
+    count: 4
+    reach: {x: 2, y: 2.7}
+    thickness: {x: 0.55, y: 0.2}
+    rise: 1.2
+  crown:
+    clumps: 26
+    clumpRadius: {x: 0.28, y: 0.5}
+    blend: 0.45
+    shell: {x: 0.88, y: 1.02}
+    stretch: 1
+  pine:
+    tiers: 5
+    clearance: 0.3
+    topShare: 0.32
+    tierHeight: 1.25
+    point: 1.6
+    profile: 0.6
+    teeth: {x: 7, y: 9}
+    drop: 0.14
+    reach: 0.12
+  limbs:
+    trunkShare: 0.42
+    lean: 20
+    segment: 0.16
+    jitter: 0.3
+    pull: 0.35
+    depth: 3
+    threeChance: 0.3
+    forkAngle: {x: 22, y: 42}
+    forkLength: {x: 0.54, y: 0.72}
+    sideChance: 0.22
+    taper: 0.6
+    twigPixels: 1.1
+  bark:
+    outline:
+      serializedVersion: 2
+      rgba: 4278782220
+    shadow:
+      serializedVersion: 2
+      rgba: 4279900961
+    middle:
+      serializedVersion: 2
+      rgba: 4281151546
+    light:
+      serializedVersion: 2
+      rgba: 4283060318
+  barkGrooves: 16
+  leaves:
+    outline:
+      serializedVersion: 2
+      rgba: 4280429071
+    shadow:
+      serializedVersion: 2
+      rgba: 4281880351
+    middle:
+      serializedVersion: 2
+      rgba: 4282348851
+    light:
+      serializedVersion: 2
+      rgba: 4283081326
+  needleStreaks: 6
+  cover:
+    enabled: 1
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4280690732
+      shadow:
+        serializedVersion: 2
+        rgba: 4283717726
+      middle:
+        serializedVersion: 2
+        rgba: 4286087046
+      light:
+        serializedVersion: 2
+        rgba: 4288390573
+    facing: 0.7
+    noise: 0.35
+    noiseScale: 6

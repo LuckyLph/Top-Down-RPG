@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
@@ -74,6 +75,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         public TerrainMaterial Material => material;
     }
 
+    private static readonly ProfilerMarker BuildMarker = new("TerrainBlendRenderer.Build");
     private static readonly int ControlMapId = Shader.PropertyToID("_ControlMap");
     private static readonly int LutId = Shader.PropertyToID("_TerrainLut");
     private static readonly int AlbedoArrayId = Shader.PropertyToID("_AlbedoArray");
@@ -521,7 +523,11 @@ public class TerrainBlendRenderer : MonoBehaviour
         UnityEditor.Undo.undoRedoPerformed += HandleUndoRedo;
 #endif
         live = true;
-        Build();
+        using (BuildMarker.Auto())
+        {
+            Build();
+        }
+
 #if UNITY_EDITOR
         enabledOnce = true;
 #endif

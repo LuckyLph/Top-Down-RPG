@@ -100,6 +100,15 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     internal ChunkStreamer Streamer => streamer;
 
     /// <summary>
+    /// Whether <paramref name="world"/> and the chunks around <paramref name="position"/> in it are loaded, so a player
+    /// placed there stands on loaded ground (<see cref="ChunkStreamer.IsSettled"/>).
+    /// </summary>
+    public bool IsSettled(WorldDefinition world, Vector2 position)
+    {
+        return streamer.IsSettled(new StreamInterest(world, position));
+    }
+
+    /// <summary>
     /// Follows the local player's trips, to report its new world's chunks again.
     /// </summary>
     public void Start()

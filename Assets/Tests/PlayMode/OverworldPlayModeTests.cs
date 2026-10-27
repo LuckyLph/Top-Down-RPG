@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -24,11 +23,7 @@ public class OverworldPlayModeTests
     private static readonly Vector2 AcrossTheBorder = new(130.5f, 122.5f);
     private const string BenchmarkPath = "Temp/StreamingBenchmark.txt";
     private const string BenchmarkLabelPath = "Temp/StreamingBenchmarkLabel.txt";
-    private const int BenchmarkWarmFrames = 120;
-    private const float BenchmarkStep = 0.25f;
-    private const int BenchmarkLoadFrames = 3;
     private static readonly string[] Regions = { "clearing", "villageForest", "lakeside", "snowfield", "coast", "lavaFields" };
-    private static readonly string[] BenchmarkRoute = { "clearing", "villageForest", "coast", "snowfield", "clearing", "lakeside", "lavaFields" };
 
     private InProcessClient client;
 
@@ -197,181 +192,26 @@ public class OverworldPlayModeTests
     }
 
     /// <summary>
-    /// Explicit benchmark of streaming the Overworld: once the chunks around the Clearing's waystone are up and warm,
-    /// the player is carried a fixed step a frame along <see cref="BenchmarkRoute"/>, from waystone to waystone through
-    /// every region, its mobs deactivated as their chunks load. Appends to <c>Temp/StreamingBenchmark.txt</c>, under the
-    /// label in <c>Temp/StreamingBenchmarkLabel.txt</c> (if any), the frames, their times (mean, 99th percentile,
-    /// worst) and main thread times, the chunks loaded and the worst frame of each load's first few, the memory
-    /// allocated a frame, the draw calls, and the most props and chunks loaded at once.
+    /// Explicit benchmark of streaming the Overworld (<see cref="StreamingBenchmark"/>, shared with a player run):
+    /// once the chunks around the Clearing's waystone are up and warm, the player is carried a fixed step a frame
+    /// along the benchmark's route, from waystone to waystone through every region, its mobs deactivated as their
+    /// chunks load. Appends the benchmark's line to <c>Temp/StreamingBenchmark.txt</c>, under the label in
+    /// <c>Temp/StreamingBenchmarkLabel.txt</c> (if any).
     /// </summary>
     [UnityTest, Explicit, Category("Benchmark")]
     public IEnumerator Benchmark_StreamingAlongARouteThroughEveryRegion()
     {
         yield return SceneBootTestHelper.BootIntoWorld(RootPath);
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
-        SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(world, out LoadedWorld loaded);
-        PlayerController player = LocalPlayer().Controller;
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-        player.GetComponent<Collider2D>().enabled = false;
-        yield return TeleportAndSettle(player, world, world.EntryPosition(BenchmarkRoute[0]));
-        for (int i = 0; i < BenchmarkWarmFrames; i++)
-        {
-            DeactivateMobs();
-            yield return null;
-        }
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(world, out LoadedWorld loaded), Is.True, "the Overworld is loaded");
+        StreamingBenchmark benchmark = new(world, loaded, SceneBootTestHelper.ResolveFromGameplay<WorldStreaming>(), LocalPlayer().Controller);
+        yield return benchmark.Run();
+        Assert.That(benchmark.Failure, Is.Null, "the benchmark ran to the end");
 
-        int chunkLoads = 0;
-        int loadedThisFrame = 0;
-        int framesSinceLoad = BenchmarkLoadFrames + 1;
-        void CountLoad(Scene scene, LoadSceneMode mode) => loadedThisFrame++;
-        SceneManager.sceneLoaded += CountLoad;
-        using ProfilerRecorder mainThread = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 1);
-        using ProfilerRecorder allocated = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", 1);
-        List<float> frameTimes = new();
-        List<float> loadFrameTimes = new();
-        List<double> mainTimes = new();
-        double allocatedSum = 0;
-        double drawSum = 0;
-        int mostChunks = 0;
-        int mostProps = 0;
-        float start = Time.realtimeSinceStartup;
-        try
-        {
-            for (int leg = 1; leg < BenchmarkRoute.Length; leg++)
-            {
-                Vector2 from = world.EntryPosition(BenchmarkRoute[leg - 1]);
-                Vector2 to = world.EntryPosition(BenchmarkRoute[leg]);
-                int steps = Mathf.CeilToInt(Vector2.Distance(from, to) / BenchmarkStep);
-                for (int step = 1; step <= steps; step++)
-                {
-                    Vector2 at = Vector2.Lerp(from, to, step / (float)steps);
-                    body.position = at;
-                    player.transform.position = at;
-                    DeactivateMobs();
-                    loadedThisFrame = 0;
-                    yield return null;
-                    frameTimes.Add(Time.unscaledDeltaTime * 1000f);
-                    mainTimes.Add(mainThread.LastValue / 1e6);
-                    allocatedSum += allocated.LastValue;
-#if UNITY_EDITOR
-                    drawSum += UnityEditor.UnityStats.drawCalls;
-#endif
-                    if (loadedThisFrame > 0)
-                    {
-                        chunkLoads += loadedThisFrame;
-                        loadFrameTimes.Add(0f);
-                        framesSinceLoad = 0;
-                        mostChunks = Mathf.Max(mostChunks, loaded.Chunks.Count);
-                        mostProps = Mathf.Max(mostProps, Object.FindObjectsByType<PropFade>().Length);
-                    }
-
-                    if (framesSinceLoad <= BenchmarkLoadFrames)
-                    {
-                        loadFrameTimes[^1] = Mathf.Max(loadFrameTimes[^1], Time.unscaledDeltaTime * 1000f);
-                        framesSinceLoad++;
-                    }
-                }
-            }
-        }
-        finally
-        {
-            SceneManager.sceneLoaded -= CountLoad;
-        }
-
-        float seconds = Time.realtimeSinceStartup - start;
         string label = System.IO.File.Exists(BenchmarkLabelPath) ? System.IO.File.ReadAllText(BenchmarkLabelPath).Trim() : "unlabelled";
-        int frames = frameTimes.Count;
-        string line = $"{label}: {frames} frames over {seconds:F1} s; frame {Mean(frameTimes):F2} ms mean, {Percentile(frameTimes, 0.99f):F1} ms p99, {Max(frameTimes):F1} ms worst; "
-            + $"main thread {Mean(mainTimes):F2} ms mean, {Percentile(mainTimes, 0.99f):F1} ms p99, {Max(mainTimes):F1} ms worst; "
-            + $"{chunkLoads} chunk loads, the worst frame of each load and the {BenchmarkLoadFrames} after it {Mean(loadFrameTimes):F1} ms mean, {Max(loadFrameTimes):F1} ms worst; "
-            + $"{allocatedSum / frames / 1024:F1} KB allocated a frame; {drawSum / frames:F0} draw calls; at most {mostChunks} chunks and {mostProps} props loaded; focused {Application.isFocused}";
+        string line = $"{label}: {benchmark.Line}\n{label}, loads: {benchmark.LoadDetails}";
         System.IO.File.AppendAllText(BenchmarkPath, line + "\n");
         TestContext.WriteLine(line);
-    }
-
-    /// <summary>
-    /// The mean of <paramref name="values"/>, 0 for none.
-    /// </summary>
-    private static double Mean(IReadOnlyList<float> values)
-    {
-        double sum = 0;
-        foreach (float value in values)
-        {
-            sum += value;
-        }
-
-        return values.Count > 0 ? sum / values.Count : 0;
-    }
-
-    /// <summary>
-    /// The mean of <paramref name="values"/>, 0 for none.
-    /// </summary>
-    private static double Mean(IReadOnlyList<double> values)
-    {
-        double sum = 0;
-        foreach (double value in values)
-        {
-            sum += value;
-        }
-
-        return values.Count > 0 ? sum / values.Count : 0;
-    }
-
-    /// <summary>
-    /// The largest of <paramref name="values"/>, 0 for none.
-    /// </summary>
-    private static double Max(IReadOnlyList<float> values)
-    {
-        float max = 0f;
-        foreach (float value in values)
-        {
-            max = Mathf.Max(max, value);
-        }
-
-        return max;
-    }
-
-    /// <summary>
-    /// The largest of <paramref name="values"/>, 0 for none.
-    /// </summary>
-    private static double Max(IReadOnlyList<double> values)
-    {
-        double max = 0;
-        foreach (double value in values)
-        {
-            max = System.Math.Max(max, value);
-        }
-
-        return max;
-    }
-
-    /// <summary>
-    /// The value of <paramref name="values"/> at <paramref name="share"/> of the way up their sorted order, 0 for none.
-    /// </summary>
-    private static double Percentile(IReadOnlyList<float> values, float share)
-    {
-        List<double> sorted = new();
-        foreach (float value in values)
-        {
-            sorted.Add(value);
-        }
-
-        return Percentile(sorted, share);
-    }
-
-    /// <summary>
-    /// The value of <paramref name="values"/> at <paramref name="share"/> of the way up their sorted order, 0 for none.
-    /// </summary>
-    private static double Percentile(IReadOnlyList<double> values, float share)
-    {
-        if (values.Count == 0)
-        {
-            return 0;
-        }
-
-        List<double> sorted = new(values);
-        sorted.Sort();
-        return sorted[Mathf.Clamp(Mathf.CeilToInt(share * sorted.Count) - 1, 0, sorted.Count - 1)];
     }
 
     /// <summary>

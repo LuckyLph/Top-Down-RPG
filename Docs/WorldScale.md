@@ -43,14 +43,14 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Decisions
 
-Sorting and the budget were chosen when the plan was written, and the phases come in the order measure, then sort. The rest are proposals, confirmed as their phases land.
+Sorting and the budget were chosen when the plan was written, and the phases come in the order measure, then sort. Phase 2's aim (the ground build) was chosen on Phase 0's numbers. The rest are proposals, confirmed as their phases land.
 
 | Topic | Decision |
 |---|---|
 | Sorting | By the 2D renderer's custom axis, which it already uses: units, props and effects keep a constant sorting order within their layer, and Unity orders equal orders by height, in floats, with no range to run out of. A prop's sprite sorts at its pivot, its base (Sprite Sort Point: Pivot). A unit of several sprites sorts as one group at its root. An effect sorts at the height of what it hit by where its root stands, with its sprite offset from the root. `Impact`'s offset of 5 becomes a nudge of its sort point toward the camera. Props then need no sorter, so nothing is written per prop and nothing runs when one starts. Fallback, if the axis cannot do something the orders do: keep the sorter but sort by height above the world's origin at 32 a unit, one step a pixel. That fits a 16-row world exactly and leaves no room for offsets. |
 | Measuring | A dev-only benchmark (DevTools, so in development builds only) that the PlayMode benchmark and a player share. In a player a command-line flag starts it: it boots into the Overworld and carries the player along the PlayMode benchmark's route. It writes the same line to a file, with each load's times split as WorldGeneration.md's Phase 0 split them, and then quits. The player runs in batchmode (no window, so nothing takes the focus, and CPU only, since no camera renders). Memory is read from outside the process. The scene sizes come from the build report. |
 | The budget | None set ahead: Phase 0 records the numbers, and whether Phase 2 goes ahead, and with which step, is decided on them. A 60 Hz frame (16.7 ms) is the reference they are read against. The session's first chunk is reported apart, since it loads behind the loading screen. |
-| If it hitches | First spread the activation: a chunk's generated props start inactive and are switched on a batch a frame after the scene loads. Chunks load `loadMargin` ahead of the player, so they are all on before anyone reaches them. Only if that is not enough, generated props become compact data in the chunk (a prefab index and a position each) built from a pool at load. |
+| If it hitches | Lighten the ground build, the largest part of a load in the player (Phase 0). The texture arrays, and what else of the build depends only on the materials, are built once per terrain style, holding every material the style orders, and shared by every renderer. Each renderer maps its own layers onto the shared slices, so a load builds only its control map, its lookup and its chunk quads. Sharing only between renderers that list the same materials would barely help: the Overworld's 20 chunks list 16 different sets. Props stay GameObjects: in the player they add about 2.5 ms to the densest chunk's load. Spreading their activation over frames, or making them compact data, is Later. |
 
 ## Phases
 
@@ -61,7 +61,9 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] The streaming benchmark moved into DevTools (`StreamingBenchmark`: the route, the stepping and the statistics), with the PlayMode benchmark running it unchanged.
 - [x] A player entry: a command-line flag that runs the benchmark on boot, writes its line and quits, and the split of each load (its chunk and props, its worst frame, the scene activation and the ground build in it).
 - [x] A Windows development build with the Overworld, the size of every chunk scene in it, and the benchmark run in batchmode (best of 3), memory read from outside.
-- [ ] The numbers recorded here against the editor's, and the decision, taken on them, on whether Phase 2 is needed and with which of its two steps.
+- [x] The numbers recorded here against the editor's, and the decision, taken on them, on whether Phase 2 is needed and with which of its two steps.
+
+- **The decision.** Phase 2 goes ahead, aimed at the ground build instead of the props. The ground build is the largest part of a load in the player (10 ms on average, up to 20 ms) and does not depend on props. Each loaded chunk's renderer also holds about 36 MB of graphics memory for arrays of materials that other chunks hold too. Props add about 2.5 ms to the densest chunk, so Phase 2's two prop steps went to Later (Decisions: If it hitches).
 
 - **The benchmark.** `StreamingBenchmark` (DevTools) holds what the PlayMode benchmark did: the route, the warm-up, the stepping, the statistics.
   - It adds, from `ProfilerRecorder`s, each load's scene activation (Unity's `Application.LoadLevelAsync Integrate` marker) and ground build (`TerrainBlendRenderer.Build`, a marker around the renderer's build when it is enabled). It also adds the memory used (`System Used Memory`, `Gfx Used Memory`) once the start is warm and at most, and, in `LoadDetails`, each load's chunk, its props and its times.
@@ -120,22 +122,27 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] CLAUDE.md's 2D line, Architecture.md's sorting section and Known gaps, and PropGeneration.md's sorting Open question updated.
 - [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see units, props and effects sort as before.
 
-### Phase 2: a lighter chunk load (only if Phase 0 says so)
+### Phase 2: a lighter ground build
 
-- [ ] A chunk's generated props activated over several frames after its scene loads, before the player can reach them, with the load's frames measured again in the player.
-- [ ] Only if that is not enough: generated props as compact data in the chunk, built from a pool, with the writer, the hash, validation and the Prop Placement window following.
-- [ ] Checked in Multiplayer Play Mode with a host and a client: a client streaming its own chunks sees and is blocked by the same props as the host, and late joining changes nothing.
+Follows [TerrainBlending.md](TerrainBlending.md) for everything it changes in the terrain renderer.
+
+- [ ] What the ground build spends its time and graphics memory on, part by part, in the player: the control map, the texture arrays, the lookup, the material, the chunk quads and the coast map. Measured on the Lakeside's chunks (1, 0) and (1, 1) (14 and 13 layers), chunk (3, 2) (8 layers, no sea) and a shore chunk, and with it how the shader reaches a layer's slice of the arrays.
+- [ ] The parts that depend only on the materials (the texture arrays at least) built once per terrain style and shared by every renderer drawing with that style. They are kept while any renderer uses them and released with the last, each renderer mapping its layers onto them. In the editor a change to a material or the style rebuilds them, as it rebuilds a renderer now.
+- [ ] The ground drawn the same, pixel for pixel, in both looks: `ChunkedGroundRenderTests`, `TerrainBlendRendererTests`, and the `ShaderCompile` category if the shader changes.
+- [ ] The player benchmark run again: each load's ground build and the graphics memory a chunk holds, against Phase 0's. If a load's worst frame is still well over a 60 Hz frame, the next step is chosen on the numbers: spreading the build over frames, or chunk (3, 3)'s slow activation.
+- [ ] TerrainBlending.md and Architecture.md updated.
+- [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both draw the same ground while streaming, and a client's chunks unload and load again with their ground.
 
 ## Testing
 
 - EditMode: the shared benchmark statistics (mean, percentile, load windows) on made-up frame times. The sorting setup of every prefab that sorts: a constant order, its sort point or group, no sorter where none is needed. The writer writing no sorting overrides.
 - PlayMode: the existing benchmark running through the shared code. The render test of Phase 1 at a low and a high y. The Overworld walk and respawn tests unchanged.
-- Manual: Multiplayer Play Mode checks per phase, and the player benchmark (Phase 0, again after Phase 2).
+- Manual: Multiplayer Play Mode checks per phase, and the player benchmark (Phase 0, again in Phase 2).
 
 ## Later
 
 - Whole-world editor steps working through a few chunks at a time, so a 16 x 16 world fits in the editor's memory.
-- Leaner chunk YAML in the project, if import or save times start to matter: props as compact data (Phase 2's second step) would also shrink a dense chunk by about half.
+- Props switched on over several frames after their chunk's scene loads, or kept as compact data in the chunk (a prefab index and a position each) built from a pool, if their 2.5 ms on the densest chunk's load comes to matter. Compact props would also shrink a dense chunk's YAML by about half, and its scene in the build to about a sixth (chunk (3, 2)'s 524 props are about 730 of its 871 KB).
 - The GPU side of streaming: draw calls and the first draw of a chunk's ground, which a batchmode player does not render.
 
 ## Open questions

@@ -35,6 +35,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/PropGeneration.md` is the plan for natural props generated in the editor (trees, bushes, rocks, stumps, logs, plants) in looks for each terrain, written as sprites and prefabs and placed by the area and world generators. Follow it when working on props, their recipes, the prop canvas, prop prefabs or prop placement, and tick off its phase checklist as steps land.
 
+`Docs/WorldScale.md` is the plan for worlds up to the 16 x 16 chunk limit: sprites sorted by the 2D renderer's custom axis instead of a 16-bit sorting order that runs out past 327 units, a chunk's cost measured in a player build with the streaming benchmark, and a chunk load made lighter if those numbers call for it. Follow it when working on sprite sorting, the streaming benchmark, player builds or chunk load costs, and tick off its phase checklist as steps land.
+
 Use only art generated in this project (recipes and editor tools) or drawn by hand in Aseprite for it and imported through an Aseprite recipe (character, effect or projectile; `Docs/AsepriteCharacters.md`); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.

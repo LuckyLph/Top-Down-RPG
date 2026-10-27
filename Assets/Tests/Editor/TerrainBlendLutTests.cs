@@ -22,8 +22,9 @@ using UnityEngine.TestTools;
 /// take the deep water seamlessly (Phase 4); bridges reach row 0 as bits (their high half past 16 layers in a column
 /// of its own, TerrainLayers32.md's Phase 2) and materials that turn to their runs mark
 /// their layer's row, and the project's planks are a level bridge drawn last with a shadow of their own on the water
-/// (Phase 5); raised ground's cliff settings reach row 0 only for layers drawn over raised ground (Phase 10); the shader's
-/// layout defines and the constants agree. The project's style and materials are only read.
+/// (Phase 5); raised ground's cliff settings reach row 0 only for layers drawn over raised ground (Phase 10); each
+/// layer's slice of the texture arrays reaches its row, its own index unless one is given (WorldScale.md's Phase 2); the
+/// shader's layout defines and the constants agree. The project's style and materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
 {
@@ -717,6 +718,27 @@ public class TerrainBlendLutTests
         Assert.That(texels.Length, Is.EqualTo(TerrainBlendLut.Width * TerrainBlendLut.Height(32)));
         Assert.That(texels[shared + TerrainBlendLut.SharedColumn].a, Is.EqualTo(8f), "The low half holds layer 3.");
         Assert.That(texels[shared + TerrainBlendLut.SharedHighBridgesColumn], Is.EqualTo(new Color((1 << 1) | (1 << 15), 0f, 0f, 0f)), "The high half holds layers 17 and 31.");
+    }
+
+    /// <summary>
+    /// Each layer's slice of the texture arrays reaches its row as the first value of its slice column: the slice given
+    /// for it (World scale's Phase 2, arrays shared by the style's renderers), and its own index when none is given.
+    /// </summary>
+    [Test]
+    public void EachLayersSlice_ReachesItsRow_ItsOwnIndexWhenNoneIsGiven()
+    {
+        TerrainMaterial[] layers = { Material("Grass", 0.1f), Material("Gravel", 0.2f), Material("Stone", 0.3f) };
+
+        Color[] shared = TerrainBlendLut.BuildTexels(Style(), layers, false, new[] { 4, 0, 17 });
+        Color[] own = TerrainBlendLut.BuildTexels(Style(), layers);
+
+        Assert.That(LayerTexel(shared, 0, TerrainBlendLut.LayerSliceColumn), Is.EqualTo(new Color(4f, 0f, 0f, 0f)));
+        Assert.That(LayerTexel(shared, 1, TerrainBlendLut.LayerSliceColumn), Is.EqualTo(new Color(0f, 0f, 0f, 0f)));
+        Assert.That(LayerTexel(shared, 2, TerrainBlendLut.LayerSliceColumn), Is.EqualTo(new Color(17f, 0f, 0f, 0f)));
+        for (int layer = 0; layer < layers.Length; layer++)
+        {
+            Assert.That(LayerTexel(own, layer, TerrainBlendLut.LayerSliceColumn), Is.EqualTo(new Color(layer, 0f, 0f, 0f)), $"layer {layer}");
+        }
     }
 
     /// <summary>

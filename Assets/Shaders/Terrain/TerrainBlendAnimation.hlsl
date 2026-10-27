@@ -22,7 +22,7 @@ float3 TBGlint(TBInputs ins, uint m, int2 texel, float3 colour)
     [branch]
     if (animation.x > 0.0 && TBLut(ins, TB_LAYER_SWAY_COLUMN, row).x <= 0.0)
     {
-        float code = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).b * 255.0);
+        float code = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, TBSlice(ins, m)).b * 255.0);
         [branch]
         if (code > 0.5)
         {

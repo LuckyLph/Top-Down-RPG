@@ -26,7 +26,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
     {
         bool turned = TBTurned(ins, m, pixel);
         int2 texel = (int2)WrapPixel(TBSampled(worldPixel, turned), shape.z);
-        float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m);
+        float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, TBSlice(ins, m));
         grit = (f.b * 255.0 - 128.0) / 255.0;
         float4 chip = TBLut(ins, TB_LAYER_CHIPS_COLUMN, TBLayerRow(m));
         [branch]
@@ -38,10 +38,10 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
             if (centre.whole >= 0.5)
             {
                 decided = true;
-                float jitter = TBLut(ins, TB_LAYER_HEIGHT_COLUMN, TBLayerRow(m)).x * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m).g - 1.0);
+                float jitter = TBLut(ins, TB_LAYER_HEIGHT_COLUMN, TBLayerRow(m)).x * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, TBSlice(ins, m)).g - 1.0);
                 if (centre.depth + jitter >= centre.rim + chip.x)
                 {
-                    result = float4(LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, m).rgb, 1.0);
+                    result = float4(LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, TBSlice(ins, m)).rgb, 1.0);
                 }
             }
         }

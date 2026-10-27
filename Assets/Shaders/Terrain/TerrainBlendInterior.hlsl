@@ -29,7 +29,7 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
     int2 texel = (int2)WrapPixel(sampled, shape.z);
     float lean;
     int2 shown = TBSwayTexel(ins, m, sampled, texel, lean);
-    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, shown, m).rgb);
+    float3 colour = TBGlint(ins, m, texel, LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, shown, TBSlice(ins, m)).rgb);
     float4 sway = TBLut(ins, TB_LAYER_SWAY_COLUMN, TBLayerRow(m));
     [branch]
     if (sway.x > 0.0)
@@ -38,29 +38,29 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
         if (sway.w > 0.5 && lean != 0.0)
         {
             [branch]
-            if (all(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, m).rgb == colour))
+            if (all(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, TBSlice(ins, m)).rgb == colour))
             {
-                colour = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m).rgb;
+                colour = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, TBSlice(ins, m)).rgb;
             }
         }
 
-        float rows = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, shown, m).g * 255.0);
+        float rows = round(LOAD_TEXTURE2D_ARRAY(ins.height.tex, shown, TBSlice(ins, m)).g * 255.0);
         [branch]
         if (rows > 0.5)
         {
             float2 down = TBUnturn(float2(-lean, 2.0 - rows), turned);
-            float2 up = down + TBUnturn(float2(0.0, round(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, m).a * 255.0)), turned);
+            float2 up = down + TBUnturn(float2(0.0, round(LOAD_TEXTURE2D_ARRAY(ins.field.tex, shown, TBSlice(ins, m)).a * 255.0)), turned);
             [branch]
             if (!TBOpenOn(ins, m, pixel + down, worldPixel + down) || !TBOpenOn(ins, m, pixel + up, worldPixel + up))
             {
-                colour = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m).rgb;
+                colour = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, TBSlice(ins, m)).rgb;
             }
         }
     }
     [branch]
     if (shape.w > 0.5)
     {
-        float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, m);
+        float4 f = LOAD_TEXTURE2D_ARRAY(ins.field.tex, texel, TBSlice(ins, m));
         [branch]
         if (f.a > 0.0)
         {

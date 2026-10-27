@@ -17,8 +17,10 @@ using Object = UnityEngine.Object;
 /// written by <see cref="WorldGenerationWriter.WriteChunk"/> into chunk grids built as
 /// <see cref="WorldAuthoring.CreateChunk"/> builds them, around the Lava Fields' edge (its dirt meeting the wilds'
 /// grass with no grass under it), with the roads leaving its ports across that edge and the south shore, against one
-/// renderer over the block's composed cells. Animated materials are drawn at a fixed time. Renders from a later editor
-/// update, until every renderer draws.
+/// renderer over the block's composed cells. The chunks draw with the texture arrays of the style's layer order shared
+/// between them (<see cref="SharedTerrainArrays"/>, WorldScale.md's Phase 2), each layer at its material's slice, and
+/// the whole renderer with its own, a slice per layer. Animated materials are drawn at a fixed time. Renders from a later
+/// editor update, until every renderer draws.
 /// </summary>
 public class ChunkedGroundRenderTests
 {
@@ -28,9 +30,10 @@ public class ChunkedGroundRenderTests
 
     private ChunkedGround ground;
     private TestWorldGenerators generators;
+    private SharedTerrainArrays shared;
 
     /// <summary>
-    /// Destroys the ground and the generated block.
+    /// Destroys the ground and the generated block, then the shared arrays.
     /// </summary>
     [TearDown]
     public void TearDown()
@@ -39,6 +42,8 @@ public class ChunkedGroundRenderTests
         ground = null;
         generators?.Destroy();
         generators = null;
+        shared?.Dispose();
+        shared = null;
     }
 
     /// <summary>
@@ -49,6 +54,7 @@ public class ChunkedGroundRenderTests
     public IEnumerator GroundDrawnPerChunk_MatchesTheGroundDrawnWhole_InBothLooks()
     {
         ground = new ChunkedGround();
+        Share(ground.Chunks.Values);
         List<string> problems = new();
         IEnumerator comparing = CompareEachChunk(ground.Whole, ground.Chunks, ground.WorldRectOf, ChunkedGround.Origin, problems);
         while (comparing.MoveNext())
@@ -91,6 +97,7 @@ public class ChunkedGroundRenderTests
             }
         }
 
+        Share(chunks.Values);
         TerrainBlendRenderer whole = BuildWhole(composition, world, block, chunks.Values);
         List<string> problems = new();
         IEnumerator comparing = CompareEachChunk(whole, chunks, coords => WorldRectOf(world, coords), world.Origin, problems);
@@ -174,6 +181,19 @@ public class ChunkedGroundRenderTests
                     problems.Add($"{mode}, chunk {chunk.Key}: {differing} pixels differ, the nearest {nearestBorder} px from the chunk's edge, at cells {string.Join(", ", where)}");
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Has every chunk's renderer draw with the shared arrays of its style's layer order, and asserts each does.
+    /// </summary>
+    private void Share(IEnumerable<WorldChunk> chunks)
+    {
+        shared = new SharedTerrainArrays();
+        foreach (WorldChunk chunk in chunks)
+        {
+            chunk.Terrain.Construct(shared);
+            Assert.That(chunk.Terrain.SharesArrays, Is.True, $"{chunk.name} draws with the shared arrays.");
         }
     }
 

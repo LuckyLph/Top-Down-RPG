@@ -18,7 +18,7 @@ float4 TBCellHeights(TBInputs ins, TBCorner corner, float2 worldPixel)
             uint top = TBTopLayer(corner.cells[k]);
             float scale = TBLut(ins, TB_LAYER_HEIGHT_COLUMN, TBLayerRow(top)).x;
             int2 texel = (int2)WrapPixel(worldPixel, TBShape(ins, top).z);
-            heights[k] = scale * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, top).r - 1.0);
+            heights[k] = scale * (2.0 * LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, TBSlice(ins, top)).r - 1.0);
         }
     }
     return heights;

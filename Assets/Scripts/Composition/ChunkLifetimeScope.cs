@@ -15,7 +15,8 @@ public class ChunkLifetimeScope : LifetimeScope
     /// prefabs it registers in a session once the container is built, and, when the chunk has an
     /// <see cref="AreaTerrain"/>, that terrain and its <see cref="ChunkTerrainSync"/>, whose prefab is registered the same
     /// way, and, when it has props, the <see cref="ChunkPropFading"/> that hands them to the Gameplay scope's
-    /// <see cref="PropFading"/>. Without a grid it logs an error and registers neither the navigation nor the mobs.
+    /// <see cref="PropFading"/>, and, when it has a <see cref="TerrainBlendRenderer"/>, that renderer, injected with the
+    /// Gameplay scope's <see cref="SharedTerrainArrays"/> before it first builds. Without a grid it logs an error and registers neither the navigation nor the mobs.
     /// Logs an error and registers nothing without a parent scope, and logs one for every mob placed directly in the
     /// chunk, since mobs come from spawn points.
     /// </summary>
@@ -43,6 +44,12 @@ public class ChunkLifetimeScope : LifetimeScope
                 .WithParameter(gameObject.scene)
                 .AsSelf();
             builder.RegisterBuildCallback(resolver => resolver.Resolve<ChunkTerrainSync>().RegisterNetworkPrefab());
+        }
+
+        TerrainBlendRenderer ground = SceneQuery.FindFirst<TerrainBlendRenderer>(gameObject.scene);
+        if (ground != null)
+        {
+            builder.RegisterComponent(ground);
         }
 
         PropFade[] props = SceneQuery.FindAll<PropFade>(gameObject.scene);

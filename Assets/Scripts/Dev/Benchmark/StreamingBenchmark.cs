@@ -11,8 +11,9 @@ using UnityEngine.SceneManagement;
 /// around the first entry of <see cref="Route"/> are up and warm, the player is carried a fixed step a frame from
 /// entry to entry along it, its mobs deactivated as their chunks load. <see cref="Line"/> then reports the frames,
 /// their times and main thread times, the chunks loaded with the worst frame of each load's first few and the scene
-/// activation and ground build in them, the memory allocated a frame, the draw calls, the most chunks and props loaded
-/// at once, and the memory used.
+/// activation and ground build in them, with the mean of each of the build's parts and of the neighbours' skirt
+/// re-reads and teardowns (Docs/WorldScale.md, Phase 2), the memory allocated a frame, the draw calls, the most chunks
+/// and props loaded at once, and the memory used.
 /// </summary>
 public sealed class StreamingBenchmark
 {
@@ -24,8 +25,10 @@ public sealed class StreamingBenchmark
     private const double BytesPerMegabyte = 1024.0 * 1024.0;
     private const string ActivationMarker = "Application.LoadLevelAsync Integrate";
     private const string GroundMarker = "TerrainBlendRenderer.Build";
+    private const string GroundPartPrefix = "TerrainBlendRenderer.";
 
     private static readonly string[] route = { "clearing", "villageForest", "coast", "snowfield", "clearing", "lakeside", "lavaFields" };
+    private static readonly string[] groundParts = { "ControlMap", "CoastMap", "Arrays", "ElevationMap", "Lut", "Material", "Chunks", "Skirt", "Teardown" };
 
     private readonly WorldDefinition world;
     private readonly LoadedWorld loaded;
@@ -61,7 +64,8 @@ public sealed class StreamingBenchmark
 
     /// <summary>
     /// Each chunk load the run measured, in order, once <see cref="Run"/> has finished: its scene, the props it holds,
-    /// the worst frame of the load and the frames after it, and the scene activation and ground build in them.
+    /// the worst frame of the load and the frames after it, and the scene activation and ground build in them, with the
+    /// build's parts.
     /// </summary>
     public string LoadDetails { get; private set; }
 
@@ -124,6 +128,7 @@ public sealed class StreamingBenchmark
         List<double> loadFrameTimes = new();
         List<double> loadActivations = new();
         List<double> loadGrounds = new();
+        List<double[]> loadGroundParts = new();
         List<Scene> loadScenes = new();
         List<string> details = new();
         double allocatedSum = 0;
@@ -131,9 +136,15 @@ public sealed class StreamingBenchmark
         int mostChunks = warmChunks;
         int mostProps = CountProps();
         float startTime = Time.realtimeSinceStartup;
+        ProfilerRecorder[] groundPartRecorders = new ProfilerRecorder[groundParts.Length];
         SceneManager.sceneLoaded += CountLoad;
         try
         {
+            for (int i = 0; i < groundParts.Length; i++)
+            {
+                groundPartRecorders[i] = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, GroundPartPrefix + groundParts[i], 1);
+            }
+
             for (int leg = 1; leg < route.Length; leg++)
             {
                 Vector2 from = world.EntryPosition(route[leg - 1]);
@@ -165,6 +176,7 @@ public sealed class StreamingBenchmark
                         loadFrameTimes.Add(0);
                         loadActivations.Add(0);
                         loadGrounds.Add(0);
+                        loadGroundParts.Add(new double[groundParts.Length]);
                         loadScenes.Add(scenesThisFrame[0]);
                         framesSinceLoad = 0;
                         mostChunks = Mathf.Max(mostChunks, loaded.Chunks.Count);
@@ -176,11 +188,16 @@ public sealed class StreamingBenchmark
                         loadFrameTimes[last] = Math.Max(loadFrameTimes[last], frame);
                         loadActivations[last] += activation.LastValue / NanosecondsPerMillisecond;
                         loadGrounds[last] += ground.LastValue / NanosecondsPerMillisecond;
+                        for (int i = 0; i < groundParts.Length; i++)
+                        {
+                            loadGroundParts[last][i] += groundPartRecorders[i].LastValue / NanosecondsPerMillisecond;
+                        }
+
                         framesSinceLoad++;
                         if (framesSinceLoad > LoadFrames)
                         {
                             mostProps = Mathf.Max(mostProps, CountProps());
-                            details.Add($"{loadScenes[last].name} with {CountProps(loadScenes[last])} props: worst frame {loadFrameTimes[last]:F1} ms, activation {loadActivations[last]:F1} ms, ground {loadGrounds[last]:F1} ms");
+                            details.Add($"{loadScenes[last].name} with {CountProps(loadScenes[last])} props: worst frame {loadFrameTimes[last]:F1} ms, activation {loadActivations[last]:F1} ms, ground {loadGrounds[last]:F1} ms ({GroundPartsText(loadGroundParts[last])})");
                         }
                     }
                 }
@@ -189,6 +206,19 @@ public sealed class StreamingBenchmark
         finally
         {
             SceneManager.sceneLoaded -= CountLoad;
+            foreach (ProfilerRecorder recorder in groundPartRecorders)
+            {
+                recorder.Dispose();
+            }
+        }
+
+        double[] meanGroundParts = new double[groundParts.Length];
+        foreach (double[] parts in loadGroundParts)
+        {
+            for (int i = 0; i < groundParts.Length; i++)
+            {
+                meanGroundParts[i] += parts[i] / loadGroundParts.Count;
+            }
         }
 
         float seconds = Time.realtimeSinceStartup - startTime;
@@ -196,7 +226,7 @@ public sealed class StreamingBenchmark
         Line = $"{frames} frames over {seconds:F1} s; frame {Mean(frameTimes):F2} ms mean, {Percentile(frameTimes, 0.99f):F1} ms p99, {Max(frameTimes):F1} ms worst; "
             + $"main thread {Mean(mainTimes):F2} ms mean, {Percentile(mainTimes, 0.99f):F1} ms p99, {Max(mainTimes):F1} ms worst; "
             + $"{chunkLoads} chunk loads, the worst frame of each load and the {LoadFrames} after it {Mean(loadFrameTimes):F1} ms mean, {Max(loadFrameTimes):F1} ms worst, "
-            + $"scene activation in them {Mean(loadActivations):F1} ms mean, {Max(loadActivations):F1} ms worst, ground build {Mean(loadGrounds):F1} ms mean, {Max(loadGrounds):F1} ms worst; "
+            + $"scene activation in them {Mean(loadActivations):F1} ms mean, {Max(loadActivations):F1} ms worst, ground build {Mean(loadGrounds):F1} ms mean, {Max(loadGrounds):F1} ms worst, its parts' means {GroundPartsText(meanGroundParts)}; "
             + $"{allocatedSum / Math.Max(frames, 1) / 1024:F1} KB allocated a frame; {drawSum / Math.Max(frames, 1):F0} draw calls; at most {mostChunks} chunks and {mostProps} props loaded; "
             + $"memory with {warmChunks} chunks warm: system {warmSystem / BytesPerMegabyte:F0} MB, graphics {warmGraphics / BytesPerMegabyte:F0} MB, at most {mostSystem / BytesPerMegabyte:F0} and {mostGraphics / BytesPerMegabyte:F0} MB; "
             + $"focused {Application.isFocused}";
@@ -245,6 +275,20 @@ public sealed class StreamingBenchmark
         List<double> sorted = new(values);
         sorted.Sort();
         return sorted[Mathf.Clamp(Mathf.CeilToInt(share * sorted.Count) - 1, 0, sorted.Count - 1)];
+    }
+
+    /// <summary>
+    /// The ground build's parts with their times in milliseconds, named after their markers.
+    /// </summary>
+    private static string GroundPartsText(double[] times)
+    {
+        string[] parts = new string[groundParts.Length];
+        for (int i = 0; i < groundParts.Length; i++)
+        {
+            parts[i] = $"{groundParts[i]} {times[i]:F2}";
+        }
+
+        return string.Join(", ", parts);
     }
 
     /// <summary>

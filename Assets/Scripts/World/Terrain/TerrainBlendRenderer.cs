@@ -5,16 +5,20 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
+using VContainer;
 
 /// <summary>
 /// Draws an area's ground layers with one blending shader at 32 px per unit (Docs/TerrainBlending.md), in place of
 /// their render tilemaps. Sits on the area's Grid and runs in edit mode too. From its layers (data tilemaps, bottom
 /// first, each drawing a <see cref="TerrainMaterial"/>) and its <see cref="TerrainStyle"/> it builds a
-/// <see cref="TerrainControlMap"/>, texture arrays of the materials' albedo, cell field and height textures (a slice per
-/// layer), the lookup texture of the style and materials (<see cref="TerrainBlendLut"/>), a runtime material, and one
-/// quad per chunk of cells over the control map's bounds on the Terrain sorting layer, each its own renderer so
-/// off-screen chunks are culled (chunks the bounds no longer reach are removed); nothing is drawn where no layer is
-/// filled. Everything is created at runtime, flagged so it is never saved, and destroyed when disabled. Tile changes on
+/// <see cref="TerrainControlMap"/>, the texture arrays of the materials' albedo, cell field and height textures
+/// (<see cref="TerrainMaterialArrays"/>: those of its style's layer order, shared with every renderer of the style, when
+/// it is given <see cref="SharedTerrainArrays"/> holding all its materials, else its own with a slice per layer), the
+/// lookup texture of the style and materials (<see cref="TerrainBlendLut"/>, with each layer's slice), a runtime
+/// material, and one quad per chunk of cells over the control map's bounds on the Terrain sorting layer, each its own
+/// renderer so off-screen chunks are culled (chunks the bounds no longer reach are removed); nothing is drawn where no
+/// layer is filled. Everything is created at runtime, flagged so it is never saved, and destroyed (shared arrays
+/// released) when disabled. Its build's parts each have a profiler marker under TerrainBlendRenderer.Build. Tile changes on
 /// a layer (painting, the scene generator, <see cref="AreaTerrain"/> edits on the host or replicated on a client) patch
 /// the control map at once, an undo or redo in the editor reads the layers again, and the texture is uploaded once
 /// before the next render; nothing runs per frame while no cell changes. A brush's hover preview
@@ -76,6 +80,15 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     private static readonly ProfilerMarker BuildMarker = new("TerrainBlendRenderer.Build");
+    private static readonly ProfilerMarker ControlMapMarker = new("TerrainBlendRenderer.ControlMap");
+    private static readonly ProfilerMarker CoastMapMarker = new("TerrainBlendRenderer.CoastMap");
+    private static readonly ProfilerMarker ArraysMarker = new("TerrainBlendRenderer.Arrays");
+    private static readonly ProfilerMarker ElevationMapMarker = new("TerrainBlendRenderer.ElevationMap");
+    private static readonly ProfilerMarker LutMarker = new("TerrainBlendRenderer.Lut");
+    private static readonly ProfilerMarker MaterialMarker = new("TerrainBlendRenderer.Material");
+    private static readonly ProfilerMarker ChunksMarker = new("TerrainBlendRenderer.Chunks");
+    private static readonly ProfilerMarker SkirtMarker = new("TerrainBlendRenderer.Skirt");
+    private static readonly ProfilerMarker TeardownMarker = new("TerrainBlendRenderer.Teardown");
     private static readonly int ControlMapId = Shader.PropertyToID("_ControlMap");
     private static readonly int LutId = Shader.PropertyToID("_TerrainLut");
     private static readonly int AlbedoArrayId = Shader.PropertyToID("_AlbedoArray");
@@ -124,9 +137,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private readonly List<TerrainSkirtSource> unbuiltSkirt = new();
     private int waveLayer = -1;
     private uint bridgeBits;
-    private Texture2DArray albedoArray;
-    private Texture2DArray fieldArray;
-    private Texture2DArray heightArray;
+    [NonSerialized] private SharedTerrainArrays sharedArrays;
+    [NonSerialized] private TerrainMaterialArrays arrays;
+    [NonSerialized] private SharedTerrainArrays arraysSource;
     private Texture2D lut;
     private Material material;
     private TerrainChunkSet chunkSet;
@@ -263,9 +276,15 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// </summary>
     internal bool IsWide => controlMap != null && controlMap.IsWide;
     internal Material RuntimeMaterial => material;
-    internal Texture2DArray AlbedoArray => albedoArray;
-    internal Texture2DArray FieldArray => fieldArray;
-    internal Texture2DArray HeightArray => heightArray;
+    internal Texture2DArray AlbedoArray => arrays?.Albedo;
+    internal Texture2DArray FieldArray => arrays?.Field;
+    internal Texture2DArray HeightArray => arrays?.Height;
+
+    /// <summary>
+    /// Whether it draws with the arrays shared by its style's renderers (<see cref="SharedTerrainArrays"/>) instead of
+    /// its own.
+    /// </summary>
+    internal bool SharesArrays => arraysSource != null;
     internal Texture2D Lut => lut;
     internal TerrainElevationMap ElevationMap => elevationMap;
     internal IReadOnlyList<MeshRenderer> Chunks => chunkSet != null ? chunkSet.Renderers : NoChunks;
@@ -284,6 +303,21 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     private TerrainBlendRebuilds Rebuilds => rebuilds ??= new TerrainBlendRebuilds(RebuildIfEnabled);
 #endif
+
+    /// <summary>
+    /// Has it draw with <paramref name="shared"/>'s arrays of its style's layer order, shared with the other renderers of
+    /// the style, whenever they hold all its materials (null to build its own again); rebuilds when built. A chunk's
+    /// scope injects the Gameplay scope's; elsewhere (the editor, tests, scratch scenes) it builds its own unless given.
+    /// </summary>
+    [Inject]
+    public void Construct(SharedTerrainArrays shared)
+    {
+        sharedArrays = shared;
+        if (controlMap != null)
+        {
+            Rebuild();
+        }
+    }
 
     /// <summary>
     /// Sets the style and layers in code (tests, editor tools) and rebuilds when enabled.
@@ -358,11 +392,14 @@ public class TerrainBlendRenderer : MonoBehaviour
             return;
         }
 
-        BoundsInt before = controlMap.Bounds;
-        controlMap.SetSources(ControlMapSources());
-        controlMap.Rebuild();
-        elevationChanged |= builtRaised;
-        FollowControlMapChange(before);
+        using (SkirtMarker.Auto())
+        {
+            BoundsInt before = controlMap.Bounds;
+            controlMap.SetSources(ControlMapSources());
+            controlMap.Rebuild();
+            elevationChanged |= builtRaised;
+            FollowControlMapChange(before);
+        }
     }
 
     /// <summary>
@@ -523,11 +560,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         UnityEditor.Undo.undoRedoPerformed += HandleUndoRedo;
 #endif
         live = true;
-        using (BuildMarker.Auto())
-        {
-            Build();
-        }
-
+        Build();
 #if UNITY_EDITOR
         enabledOnce = true;
 #endif
@@ -620,6 +653,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// </summary>
     private void Build()
     {
+        using ProfilerMarker.AutoScope build = BuildMarker.Auto();
         if (grid == null)
         {
             grid = GetComponent<Grid>();
@@ -662,41 +696,77 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         RectInt? area = chunked ? ChunkControlArea(chunkCells, skirtCells) : null;
-        controlMap = new TerrainControlMap(layerTilemaps, wide, $"{name} Terrain Control Map", area, ControlMapSources());
-        controlMap.Apply();
+        using (ControlMapMarker.Auto())
+        {
+            controlMap = new TerrainControlMap(layerTilemaps, wide, $"{name} Terrain Control Map", area, ControlMapSources());
+            controlMap.Apply();
+        }
+
         previewGrewBounds = false;
         waveLayer = Array.FindIndex(materials, m => m.HasWaves);
         bridgeBits = TerrainBlendLut.BridgeBits(materials);
         coastBaked = waveLayer >= 0 && chunked && IsBakedFor(chunkCoastMap, area.Value);
         if (!coastBaked)
         {
-            coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
-            coastMap.Build(controlMap, waveLayer, bridgeBits);
+            using (CoastMapMarker.Auto())
+            {
+                coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
+                coastMap.Build(controlMap, waveLayer, bridgeBits);
+            }
         }
 
-        albedoArray = BuildArray(materials, m => m.Albedo, $"{name} Terrain Albedo");
-        fieldArray = BuildArray(materials, m => m.CellField, $"{name} Terrain Cell Field");
-        heightArray = BuildArray(materials, m => m.Height, $"{name} Terrain Height");
+        int[] slices = new int[count];
+        using (ArraysMarker.Auto())
+        {
+            arrays = sharedArrays != null ? sharedArrays.Acquire(style) : null;
+            if (arrays != null && !arrays.HoldsAll(materials))
+            {
+                sharedArrays.Release(arrays);
+                arrays = null;
+            }
+
+            arraysSource = arrays != null ? sharedArrays : null;
+            arrays ??= new TerrainMaterialArrays(materials, $"{name} Terrain");
+            for (int i = 0; i < count; i++)
+            {
+                slices[i] = arrays.SliceOf(materials[i]);
+            }
+        }
+
         builtRaisedTilemap = raisedTilemap;
         builtRaised = raised;
-        elevationMap = new TerrainElevationMap($"{name} Terrain Elevation Map");
-        elevationMap.Build(controlMap, builtRaisedTilemap, skirt);
-        elevationChanged = false;
-        lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaised);
+        using (ElevationMapMarker.Auto())
+        {
+            elevationMap = new TerrainElevationMap($"{name} Terrain Elevation Map");
+            elevationMap.Build(controlMap, builtRaisedTilemap, skirt);
+        }
 
-        material = new Material(style.Shader) { name = $"{name} Terrain (runtime)", hideFlags = HideFlags.DontSave };
-        material.SetTexture(ControlMapId, controlMap.Texture);
-        material.SetTexture(LutId, lut);
-        material.SetTexture(AlbedoArrayId, albedoArray);
-        material.SetTexture(FieldArrayId, fieldArray);
-        material.SetTexture(HeightArrayId, heightArray);
-        material.SetTexture(CoastMapId, coastBaked ? chunkCoastMap : coastMap.Texture);
-        material.SetTexture(RaisedMapId, elevationMap.Texture);
-        ApplyMode();
-        UpdateControlRect();
-        UpdateInfo();
-        chunkSet = new TerrainChunkSet(gameObject, grid, chunkSize);
-        UpdateChunks();
+        elevationChanged = false;
+        using (LutMarker.Auto())
+        {
+            lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaised, slices);
+        }
+
+        using (MaterialMarker.Auto())
+        {
+            material = new Material(style.Shader) { name = $"{name} Terrain (runtime)", hideFlags = HideFlags.DontSave };
+            material.SetTexture(ControlMapId, controlMap.Texture);
+            material.SetTexture(LutId, lut);
+            material.SetTexture(AlbedoArrayId, arrays.Albedo);
+            material.SetTexture(FieldArrayId, arrays.Field);
+            material.SetTexture(HeightArrayId, arrays.Height);
+            material.SetTexture(CoastMapId, coastBaked ? chunkCoastMap : coastMap.Texture);
+            material.SetTexture(RaisedMapId, elevationMap.Texture);
+            ApplyMode();
+            UpdateControlRect();
+            UpdateInfo();
+        }
+
+        using (ChunksMarker.Auto())
+        {
+            chunkSet = new TerrainChunkSet(gameObject, grid, chunkSize);
+            UpdateChunks();
+        }
     }
 
     /// <summary>
@@ -742,41 +812,6 @@ public class TerrainBlendRenderer : MonoBehaviour
         {
             Debug.LogWarning($"{name}: the terrain shader {material.shader.name} has no {WideKeywordName} keyword, so its wide control map is read as a narrow one.", this);
         }
-    }
-
-    /// <summary>
-    /// Copies each layer's texture of one kind (albedo, cell field or height, picked by <paramref name="kind"/>) into
-    /// a slice of a new array as large as the largest material, on the GPU. The array keeps no copy in memory, so it is
-    /// uploaded empty and made unreadable before the copies, which a later upload would otherwise overwrite. A slice
-    /// whose material has no such texture is left empty: the shader never reads a missing cell field, and the lookup
-    /// texture gives a material without a height a height scale of 0.
-    /// </summary>
-    private static Texture2DArray BuildArray(TerrainMaterial[] materials, Func<TerrainMaterial, Texture2D> kind, string arrayName)
-    {
-        int size = TerrainStyle.PixelsPerCell;
-        foreach (TerrainMaterial layerMaterial in materials)
-        {
-            size = Mathf.Max(size, layerMaterial.RepeatPixels);
-        }
-
-        Texture2DArray array = new(size, size, materials.Length, TextureFormat.RGBA32, false, true)
-        {
-            name = arrayName,
-            filterMode = FilterMode.Point,
-            wrapMode = TextureWrapMode.Repeat,
-            hideFlags = HideFlags.DontSave
-        };
-        array.Apply(false, true);
-        for (int slice = 0; slice < materials.Length; slice++)
-        {
-            Texture2D source = kind(materials[slice]);
-            if (source != null)
-            {
-                Graphics.CopyTexture(source, 0, 0, 0, 0, source.width, source.height, array, slice, 0, 0, 0);
-            }
-        }
-
-        return array;
     }
 
     /// <summary>
@@ -1086,11 +1121,12 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Stops waiting to upload, stops following the style and materials, and destroys the chunks, meshes, material and
-    /// textures (the control map's, the three arrays and the lookup texture).
+    /// Stops waiting to upload, stops following the style and materials, destroys the chunks, meshes, material and
+    /// textures (the control map's and the lookup texture), and destroys its own arrays or releases the shared ones.
     /// </summary>
     private void Teardown()
     {
+        using ProfilerMarker.AutoScope teardown = TeardownMarker.Auto();
         if (flushScheduled)
         {
             RenderPipelineManager.beginContextRendering -= flushHandler;
@@ -1115,15 +1151,20 @@ public class TerrainBlendRenderer : MonoBehaviour
         elevationChanged = false;
         waveLayer = -1;
         DestroyRuntime(material);
-        DestroyRuntime(albedoArray);
-        DestroyRuntime(fieldArray);
-        DestroyRuntime(heightArray);
         DestroyRuntime(lut);
         material = null;
-        albedoArray = null;
-        fieldArray = null;
-        heightArray = null;
         lut = null;
+        if (arraysSource != null)
+        {
+            arraysSource.Release(arrays);
+        }
+        else
+        {
+            arrays?.Dispose();
+        }
+
+        arrays = null;
+        arraysSource = null;
         layerTilemaps = new Tilemap[0];
         animationFramesPerSecond = 0f;
     }

@@ -24,7 +24,7 @@ int2 TBSwayTexel(TBInputs ins, uint m, float2 worldPixel, int2 texel, out float 
     [branch]
     if (sway.x > 0.0)
     {
-        float4 h = LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, m);
+        float4 h = LOAD_TEXTURE2D_ARRAY(ins.height.tex, texel, TBSlice(ins, m));
         float weight = h.b;
         [branch]
         if (weight > 0.0)

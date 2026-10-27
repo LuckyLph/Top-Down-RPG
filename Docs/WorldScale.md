@@ -43,7 +43,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Decisions
 
-Sorting and the budget were chosen when the plan was written, and the phases come in the order measure, then sort. Phase 2's aim (the ground build) was chosen on Phase 0's numbers. The rest are proposals, confirmed as their phases land.
+Sorting and the budget were chosen when the plan was written, and the phases come in the order measure, then sort. Phase 2's aim (the ground build) was chosen on Phase 0's numbers, and its texture arrays shared per style landed with it. The rest are proposals, confirmed as their phases land.
 
 | Topic | Decision |
 |---|---|
@@ -126,27 +126,78 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 Follows [TerrainBlending.md](TerrainBlending.md) for everything it changes in the terrain renderer.
 
-- [ ] What the ground build spends its time and graphics memory on, part by part, in the player: the control map, the texture arrays, the lookup, the material, the chunk quads and the coast map. Measured on the Lakeside's chunks (1, 0) and (1, 1) (14 and 13 layers), chunk (3, 2) (8 layers, no sea) and a shore chunk, and with it how the shader reaches a layer's slice of the arrays.
-- [ ] The parts that depend only on the materials (the texture arrays at least) built once per terrain style and shared by every renderer drawing with that style. They are kept while any renderer uses them and released with the last, each renderer mapping its layers onto them. In the editor a change to a material or the style rebuilds them, as it rebuilds a renderer now.
-- [ ] The ground drawn the same, pixel for pixel, in both looks: `ChunkedGroundRenderTests`, `TerrainBlendRendererTests`, and the `ShaderCompile` category if the shader changes.
-- [ ] The player benchmark run again: each load's ground build and the graphics memory a chunk holds, against Phase 0's. If a load's worst frame is still well over a 60 Hz frame, the next step is chosen on the numbers: spreading the build over frames, or chunk (3, 3)'s slow activation.
-- [ ] TerrainBlending.md and Architecture.md updated.
+- [x] What the ground build spends its time and graphics memory on, part by part, in the player: the control map, the texture arrays, the lookup, the material, the chunk quads and the coast map. Measured on the Lakeside's chunks (1, 0) and (1, 1) (14 and 13 layers), chunk (3, 2) (8 layers, no sea) and a shore chunk, and with it how the shader reaches a layer's slice of the arrays.
+- [x] The parts that depend only on the materials (the texture arrays at least) built once per terrain style and shared by every renderer drawing with that style. They are kept while any renderer uses them and released with the last, each renderer mapping its layers onto them. In the editor a change to a material or the style rebuilds them, as it rebuilds a renderer now.
+- [x] The ground drawn the same, pixel for pixel, in both looks: `ChunkedGroundRenderTests`, `TerrainBlendRendererTests`, and the `ShaderCompile` category if the shader changes.
+- [x] The player benchmark run again: each load's ground build and the graphics memory a chunk holds, against Phase 0's. If a load's worst frame is still well over a 60 Hz frame, the next step is chosen on the numbers: spreading the build over frames, or chunk (3, 3)'s slow activation.
+- [x] TerrainBlending.md and Architecture.md updated.
 - [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both draw the same ground while streaming, and a client's chunks unload and load again with their ground.
+
+- **The parts of the ground build.** Each part now has a profiler marker under `TerrainBlendRenderer.Build`, and the benchmark records them per load (`TerrainBlendRenderer.ControlMap`, `.CoastMap`, `.Arrays`, `.ElevationMap`, `.Lut`, `.Material`, `.Chunks`). It also records the neighbours re-reading their skirts (`.Skirt`) and teardowns (`.Teardown`). The `Build` marker now wraps every build, including the rebuilds a neighbour's skirt causes when it brings a new material or raised ground. Phase 0 counted only the build on enable.
+- **Before the change** (the Phase 0 player, three runs that agree within a millisecond on every mean), a load's ground build was 11.0 to 11.9 ms on average:
+  - The texture arrays took 8.1 to 8.9 ms of it. Building them meant allocating, uploading empty and copying three arrays of a slice per layer, sized to the largest material. That costs about 0.4 ms a megabyte: 16 to 18 ms for the Lakeside's (1, 0) and (1, 1) (14 and 13 layers at 512 px), 2.5 to 3 ms for chunk (3, 2) (8 layers at 256 px), and 5 to 12 ms for an 8-layer shore chunk at 512 px.
+  - The control map took 1.4 ms, the lookup texture 0.2 ms, the chunk quads 0.4 ms and the material under 0.1 ms. A coast map is baked for every shore chunk, so building one cost nothing.
+  - The elevation map took about 0.05 ms, but 11 ms in chunk (3, 3)'s load.
+  - Outside the build, the neighbours re-reading their skirts took 3.0 to 3.3 ms a load.
+- **Graphics memory, part by part** (one renderer of each of the Overworld's chunks in the editor, as Unity counts it, which is twice the arrays' size of 4 bytes a texel):
+  - The arrays took 12 MB for chunk (3, 2) and 84 MB for chunk (1, 0).
+  - The baked coast map took 1.4 MB (the thirteen shore chunks only), the lookup texture 54 to 323 KB, the control map 34 KB, the elevation map 18 KB (5 KB without raised ground), the chunk quads' meshes 29 KB and the material 5 KB.
+  - So the arrays were nearly all of a chunk's 36 MB.
+- **How the shader reached a slice.** Each layer's index was its slice, so the arrays could only hold the renderer's own layers in its own order. Now the lookup texture holds each layer's slice (`TerrainBlendLut.LayerSliceColumn`), and the shader reads a layer's textures at it (`TBSlice`). That is one more texel of the lookup texture per material texture read.
+- **The shared arrays.**
+  - `SharedTerrainArrays` builds each style's arrays once, over its layer order (`TerrainMaterialArrays`; the project's style orders 18 materials, so three arrays of 18 slices of 512 px, 54 MB). It hands them to every renderer that asks, and destroys them with the last one's release or with its scope.
+  - It is a Gameplay scope singleton, and each chunk's scope injects it into the chunk's renderer before it first builds. A renderer drawing a material the style's order does not list builds its own arrays, as before.
+  - In the editor a change to the style or one of its materials (their `Validated` events, which the renderers follow too) retires the style's set: the renderers rebuilding after the change get a new set, and the old set is destroyed with its last user.
+  - Outside play mode nothing injects it, so a renderer opened in the editor (whole-world steps, tests, scratch scenes) still builds its own arrays. A static cache would have shared them there too, but CLAUDE.md rules out static state.
+  - The first chunk of a session builds the set, in about 19 ms in the editor, behind the loading screen.
+- **The elevation map's loop.** For each cell it went through every source of the skirt to find the raised ones. Each check compared a source's material with null, a native call. Chunk (3, 3) has 5,476 cells and 34 sources, so each build took 11 ms in the player and 18.5 ms in the editor. That build ran inside chunk (3, 3)'s scene activation, which is why the chunk activated slowly (Phase 0's open question). The map now picks out the raised sources once per build: 1.5 ms for chunk (3, 3) and 0.04 ms elsewhere.
+- **Streaming in the player** (three runs of the same batchmode player after both changes, which agree within half a millisecond on every mean), against the three runs before them:
+
+  | | Before | After |
+  |---|---|---|
+  | Frame, mean | 0.55 to 0.58 ms | 0.50 to 0.51 ms |
+  | Worst frame | 34.0 to 35.7 ms | 14.9 to 16.0 ms |
+  | A load's worst frame (of the load and the 3 after it), mean of 15 | 21.5 to 22.6 ms | 12.6 to 12.7 ms |
+  | Scene activation in a load, mean (worst) | 7.4 to 7.5 ms (17.2 to 18.2) | 6.5 ms (8.4 to 9.8) |
+  | Ground build in a load, mean (worst) | 11.0 to 11.9 ms (25.2 to 26.6) | 2.1 to 2.2 ms (4.5 to 4.8) |
+  | Its arrays, mean | 8.1 to 8.9 ms | 0 |
+  | Neighbours' skirt re-reads in a load, mean | 3.0 to 3.3 ms | 2.7 to 2.9 ms |
+  | Graphics memory with the 4 chunks around the Clearing warm (most along the route) | 222 MB (250) | 159 MB (163) |
+  | System memory, the same | 450 MB (483 to 522) | 467 to 472 MB (486 to 489) |
+  | Private memory from outside, at most | 1047 to 1089 MB | 800 to 805 MB |
+
+  - **Chunk by chunk** (a run before against a run after), a load's ground build and worst frame went:
+    - from 19 to 20 ms and 29.5 to 31 ms to 2.8 and 12.2 ms for the Lakeside's (1, 0);
+    - from 16.5 to 20 ms and 29 to 33 ms to 1.6 and 13.7 ms for (1, 1);
+    - from 4 to 5 ms and 17 to 19 ms to 1.3 and 14.9 ms for (3, 2), whose 524 props now make most of its load;
+    - from 6 to 14 ms to 1.3 to 3.6 ms for the 8-layer shore chunks;
+    - from 25 to 27 ms and 34 to 36 ms to 4.7 and 13.0 ms for (3, 3), whose activation went from 17 to 18 ms to 6.8 ms.
+  - **Against a 60 Hz frame**, every load's worst frame is now under 16.7 ms, where before only 1 to 3 of the 15 were. The run's worst frame is 15 to 16 ms, so no next step is needed for now (Later).
+  - **Graphics memory over the main menu's** went from 144 MB to 81 MB with 4 chunks warm, and from 172 MB to 85 MB at most. The shared set accounts for most of it, once, and each chunk's own ground holds 0.1 to 1.8 MB (its lookup texture, its baked coast map if any, its control and elevation maps and meshes) where it held about 36 MB. System memory in the process rose by about 20 MB, while the private memory read from outside fell by about 250 MB.
+  - **In the editor** (the PlayMode benchmark, which shares the arrays the same way), a load's ground build went from 11.9 to 4.6 ms on average and a load's worst frame from 84 to 69 ms, still mostly the editor's scene activation.
+  - **Not measured:** the GPU side. A batchmode player renders nothing, so the extra lookup texel a material texture read now costs is not in these numbers.
+- **Tests.**
+  - `SharedTerrainArraysTests` (new) covers the shared sets and the renderers drawing with them. In `ChunkedGroundRenderTests` the chunks draw with shared arrays and the whole renderer with its own, and both its comparisons still match pixel for pixel in both looks.
+  - `TerrainBlendLutTests` checks the slice column, and `WorldStreamingPlayModeTests` checks that two streamed chunks draw with the same arrays and the Gameplay scope holds one set.
+  - `TerrainBlendRendererTests`, `TerrainSkirtTests`, the `ShaderCompile` category, and the Overworld, stress world, streaming and network terrain PlayMode tests pass unchanged.
 
 ## Testing
 
 - EditMode: the shared benchmark statistics (mean, percentile, load windows) on made-up frame times. The sorting setup of every prefab that sorts: a constant order, its sort point or group, no sorter where none is needed. The writer writing no sorting overrides.
-- PlayMode: the existing benchmark running through the shared code. The render test of Phase 1 at a low and a high y. The Overworld walk and respawn tests unchanged.
+- EditMode, Phase 2: a style's shared arrays built once, released with the last user, retired by a change to the style or a material; renderers drawing with them at their materials' slices, or with their own for a material outside the order; chunks on shared arrays drawing the same pixels as one renderer on its own.
+- PlayMode: the existing benchmark running through the shared code. The render test of Phase 1 at a low and a high y. The Overworld walk and respawn tests unchanged. Streamed chunks drawing with one shared set.
 - Manual: Multiplayer Play Mode checks per phase, and the player benchmark (Phase 0, again in Phase 2).
 
 ## Later
 
 - Whole-world editor steps working through a few chunks at a time, so a 16 x 16 world fits in the editor's memory.
 - Props switched on over several frames after their chunk's scene loads, or kept as compact data in the chunk (a prefab index and a position each) built from a pool, if their 2.5 ms on the densest chunk's load comes to matter. Compact props would also shrink a dense chunk's YAML by about half, and its scene in the build to about a sixth (chunk (3, 2)'s 524 props are about 730 of its 871 KB).
-- The GPU side of streaming: draw calls and the first draw of a chunk's ground, which a batchmode player does not render.
+- The GPU side of streaming: draw calls and the first draw of a chunk's ground, which a batchmode player does not render, and with it what the shader's extra lookup texel per material texture read costs (Phase 2).
+- The neighbours' skirt re-reads, about 2.8 ms of a load after Phase 2, now the largest part of the ground's work in a load: each neighbour reads its whole control map again when a chunk loads beside it, where only the strip along their border changed.
+- The shared arrays in the editor, so whole-world steps hold one set instead of a set per open chunk. Nothing injects renderers outside play mode, and a static cache would break CLAUDE.md's rule against static state.
 
 ## Open questions
 
 - Whether Unity's custom-axis sorting treats a sorting group's position, a sprite's pivot and a tilemap's chunks the way the decision assumes. Phase 1 starts by checking.
-- What memory a loaded chunk holds in a player. Phase 0 measured about 36 MB of graphics memory a chunk, as in the editor (about 40 MB in all), mostly each chunk renderer's texture arrays, which are not shared between renderers that list the same materials.
-- Why chunk (3, 3) activates in 17 to 22 ms in the player where chunks like it take 4 to 7 ms (Phase 0).
+- What memory a loaded chunk holds in a player. Resolved in Phase 2: about 36 MB of graphics memory a chunk, nearly all its renderer's texture arrays. Now that the arrays are shared, a chunk's own ground holds 0.1 to 1.8 MB.
+- Why chunk (3, 3) activates in 17 to 22 ms in the player where chunks like it take 4 to 7 ms (Phase 0). Resolved in Phase 2: an elevation map built during its activation went through every skirt source for every cell (11 ms). It now activates in about 7 ms.

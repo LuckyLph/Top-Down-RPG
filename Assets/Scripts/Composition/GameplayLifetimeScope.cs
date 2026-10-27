@@ -139,6 +139,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
         builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
+        builder.Register<SharedTerrainArrays>(Lifetime.Singleton);
         if (worldStreamingSettings == null)
         {
             Debug.LogError($"{name} has no {nameof(WorldStreamingSettings)}; no world session can start.", this);

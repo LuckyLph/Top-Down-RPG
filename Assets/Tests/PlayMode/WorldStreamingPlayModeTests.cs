@@ -11,9 +11,10 @@ using VContainer.Unity;
 /// <summary>
 /// PlayMode tests for seamless worlds on one machine: booting into a world, the chunks loading around the player under
 /// the right scopes, chunks following the player across the world, loaded neighbours drawing each other's border cells
-/// with only the chunks near the local player drawn, the player pathing across a border on its world's navigation, each
-/// chunk's mobs spawning into its scene and going with it, a mob chasing the player across a border stopping at its
-/// leash, and leaving to the menu unloading everything, mobs included.
+/// with the texture arrays the Gameplay scope shares between them, with only the chunks near the local player drawn,
+/// the player pathing across a border on its world's navigation, each chunk's mobs spawning into its scene and going
+/// with it, a mob chasing the player across a border stopping at its leash, and leaving to the menu unloading
+/// everything, mobs included.
 /// </summary>
 public class WorldStreamingPlayModeTests
 {
@@ -61,7 +62,8 @@ public class WorldStreamingPlayModeTests
 
     /// <summary>
     /// Standing near the border of two chunks loads both, and each draws the other's border cells: their terrain
-    /// renderers read each other's ground in a strip along the border and their walls each other's wall cells.
+    /// renderers read each other's ground in a strip along the border and their walls each other's wall cells. Both
+    /// renderers draw with the same texture arrays, their style's, which the Gameplay scope shares.
     /// </summary>
     [UnityTest]
     public IEnumerator NeighbouringChunks_LinkTheirGroundAndWallsAcrossTheBorder()
@@ -82,6 +84,9 @@ public class WorldStreamingPlayModeTests
         Assert.That(north.Neighbours, Does.Contain(south));
         Assert.That(south.IsDrawn && north.IsDrawn, Is.True);
         Assert.That(south.Terrain.Skirt, Is.Not.Empty, "The southern chunk reads the northern one's border cells.");
+        Assert.That(south.Terrain.SharesArrays && north.Terrain.SharesArrays, Is.True, "Both chunks draw with the shared arrays.");
+        Assert.That(north.Terrain.AlbedoArray, Is.SameAs(south.Terrain.AlbedoArray));
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<SharedTerrainArrays>().AliveCount, Is.EqualTo(1));
         DualGridTilemapModule southWalls = south.GetComponentInChildren<DualGridTilemapModule>();
         Assert.That(southWalls.HasChunk, Is.True);
         Assert.That(southWalls.Neighbours, Does.Contain(north.GetComponentInChildren<DualGridTilemapModule>()));

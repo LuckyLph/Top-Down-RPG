@@ -26,7 +26,9 @@ using UnityEngine;
 /// <see cref="LayerWaveCrestColumn"/> (crest colour, stretch), at <see cref="LayerWaveTroughColumn"/> the trough's colour, at
 /// <see cref="LayerWashFoamColumn"/> (foam colour, wet), then the foam's shade, the film's and the film's back colours
 /// at <see cref="LayerWashFoamShadeColumn"/>, <see cref="LayerWashFilmColumn"/> and <see cref="LayerWashFilmBackColumn"/>,
-/// zero otherwise. Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
+/// zero otherwise, and at <see cref="LayerSliceColumn"/> the slice of the texture arrays holding the material (its first
+/// value; the layer's own index unless the renderer draws with arrays shared by its style, <see cref="SharedTerrainArrays"/>).
+/// Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
 /// = -1), at <see cref="PairRow"/>: at <see cref="PairShadowColumn"/> (shadow colour, shadow alpha), at
 /// <see cref="PairOutlineColumn"/> (outline colour, 1 when drawn), at <see cref="PairWidthsColumn"/> (shadow width, rim
 /// width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), at
@@ -64,6 +66,7 @@ public static class TerrainBlendLut
     public const int LayerWashFoamShadeColumn = 16;
     public const int LayerWashFilmColumn = 17;
     public const int LayerWashFilmBackColumn = 18;
+    public const int LayerSliceColumn = 19;
     public const int PairShadowColumn = 0;
     public const int PairOutlineColumn = 1;
     public const int PairWidthsColumn = 2;
@@ -102,9 +105,10 @@ public static class TerrainBlendLut
     /// <summary>
     /// Builds the texels for layers drawing <paramref name="layerMaterials"/> (bottom layer first) with
     /// <paramref name="style"/>'s shared settings and pair overrides, row by row from the bottom, <see cref="Width"/>
-    /// per row.
+    /// per row; each layer's slice of the texture arrays is its entry of <paramref name="slices"/>, or its own index
+    /// without them.
     /// </summary>
-    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, bool raised = false)
+    public static Color[] BuildTexels(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, bool raised = false, IReadOnlyList<int> slices = null)
     {
         int layers = layerMaterials.Count;
         Color[] texels = new Color[Width * Height(layers)];
@@ -129,6 +133,7 @@ public static class TerrainBlendLut
             texels[row + LayerChipsColumn] = new Color(material.KeepMargin, material.CutGap, material.CutBevel, 0f);
             texels[row + LayerBaseColumn] = material.BaseColour;
             texels[row + LayerHeightColumn] = new Color(material.Height != null ? material.HeightScale : 0f, material.TurnsToRuns ? 1f : 0f, 0f, 0f);
+            texels[row + LayerSliceColumn] = new Color(slices != null ? slices[layer] : layer, 0f, 0f, 0f);
             if (material.IsAnimated)
             {
                 Color glint = material.GlintColour;
@@ -186,10 +191,11 @@ public static class TerrainBlendLut
     }
 
     /// <summary>
-    /// Creates the lookup texture for <paramref name="style"/> and <paramref name="layerMaterials"/>, flagged so it is
-    /// never saved. The caller destroys it.
+    /// Creates the lookup texture for <paramref name="style"/> and <paramref name="layerMaterials"/>, with each layer's
+    /// slice of the texture arrays from <paramref name="slices"/> (its own index without them), flagged so it is never
+    /// saved. The caller destroys it.
     /// </summary>
-    public static Texture2D Create(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, string textureName, bool raised = false)
+    public static Texture2D Create(TerrainStyle style, IReadOnlyList<TerrainMaterial> layerMaterials, string textureName, bool raised = false, IReadOnlyList<int> slices = null)
     {
         Texture2D texture = new(Width, Height(layerMaterials.Count), TextureFormat.RGBAFloat, false, true)
         {
@@ -198,7 +204,7 @@ public static class TerrainBlendLut
             wrapMode = TextureWrapMode.Clamp,
             hideFlags = HideFlags.DontSave
         };
-        texture.SetPixels(BuildTexels(style, layerMaterials, raised));
+        texture.SetPixels(BuildTexels(style, layerMaterials, raised, slices));
         texture.Apply(false, false);
         return texture;
     }

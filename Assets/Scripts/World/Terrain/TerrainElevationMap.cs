@@ -14,6 +14,7 @@ using UnityEngine.Tilemaps;
 public sealed class TerrainElevationMap : IDisposable
 {
     private readonly string textureName;
+    private readonly List<TerrainSkirtSource> raisedSkirt = new();
     private Texture2D texture;
     private byte[] cells = new byte[0];
     private BoundsInt bounds;
@@ -39,11 +40,21 @@ public sealed class TerrainElevationMap : IDisposable
     /// <summary>
     /// Reads <paramref name="raised"/> (null for none) and the raised sources among <paramref name="skirt"/> (null for
     /// none) over <paramref name="controlMap"/>'s bounds and uploads the map. A source counts only inside its cells,
-    /// where the renderer's own raised tilemap is level.
+    /// where the renderer's own raised tilemap is level. The raised sources are picked out once, and each cell looks only
+    /// at those.
     /// </summary>
     public void Build(TerrainControlMap controlMap, Tilemap raised, IReadOnlyList<TerrainSkirtSource> skirt)
     {
-        bool used = (raised != null || HasRaised(skirt)) && !controlMap.IsEmpty;
+        raisedSkirt.Clear();
+        for (int i = 0; skirt != null && i < skirt.Count; i++)
+        {
+            if (skirt[i].IsRaised && skirt[i].Tilemap != null)
+            {
+                raisedSkirt.Add(skirt[i]);
+            }
+        }
+
+        bool used = (raised != null || raisedSkirt.Count > 0) && !controlMap.IsEmpty;
         bounds = used ? controlMap.Bounds : new BoundsInt(0, 0, 0, 1, 1, 1);
         int width = bounds.size.x;
         int height = bounds.size.y;
@@ -68,7 +79,7 @@ public sealed class TerrainElevationMap : IDisposable
         {
             for (int x = 0; x < width; x++)
             {
-                cells[y * width + x] = used ? KindAt(raised, skirt, new Vector3Int(bounds.xMin + x, bounds.yMin + y, 0)) : RaisedGround.Level;
+                cells[y * width + x] = used ? KindAt(raised, new Vector3Int(bounds.xMin + x, bounds.yMin + y, 0)) : RaisedGround.Level;
             }
         }
 
@@ -87,33 +98,17 @@ public sealed class TerrainElevationMap : IDisposable
     }
 
     /// <summary>
-    /// Whether <paramref name="skirt"/> holds any raised source.
-    /// </summary>
-    public static bool HasRaised(IReadOnlyList<TerrainSkirtSource> skirt)
-    {
-        for (int i = 0; skirt != null && i < skirt.Count; i++)
-        {
-            if (skirt[i].IsRaised && skirt[i].Tilemap != null)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// What <paramref name="cell"/> is: on <paramref name="raised"/>, or, where that is level, on the first raised
-    /// source of <paramref name="skirt"/> covering it.
+    /// source of the skirt covering it.
     /// </summary>
-    private static byte KindAt(Tilemap raised, IReadOnlyList<TerrainSkirtSource> skirt, Vector3Int cell)
+    private byte KindAt(Tilemap raised, Vector3Int cell)
     {
         byte kind = raised != null ? RaisedGround.KindAt(raised, cell) : RaisedGround.Level;
-        for (int i = 0; kind == RaisedGround.Level && skirt != null && i < skirt.Count; i++)
+        for (int i = 0; kind == RaisedGround.Level && i < raisedSkirt.Count; i++)
         {
-            if (skirt[i].IsRaised && skirt[i].Tilemap != null && skirt[i].Contains(cell))
+            if (raisedSkirt[i].Contains(cell))
             {
-                kind = RaisedGround.KindAt(skirt[i].Tilemap, cell);
+                kind = RaisedGround.KindAt(raisedSkirt[i].Tilemap, cell);
             }
         }
 

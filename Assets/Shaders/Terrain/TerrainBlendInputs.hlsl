@@ -128,6 +128,13 @@ float4 TBShape(TBInputs ins, uint l)
     return TBLut(ins, TB_LAYER_SHAPE_COLUMN, TBLayerRow(l));
 }
 
+// The slice of the texture arrays holding layer l's material, from its row of the lookup texture: the layer's own
+// index, or its material's place in the arrays its renderer shares with every renderer of its style.
+uint TBSlice(TBInputs ins, uint l)
+{
+    return (uint)TBLut(ins, TB_LAYER_SLICE_COLUMN, TBLayerRow(l)).x;
+}
+
 // sRGB colour to the colour the target expects.
 float3 TBToOutput(float3 c)
 {

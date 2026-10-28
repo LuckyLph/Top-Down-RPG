@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using VContainer;
 
 /// <summary>
 /// PlayMode tests for props in play (Docs/PropGeneration.md, Phase 4) in Testlands, whose start chunk holds the woods'
-/// looks: a prop sorts once by where it stands and then stops, and the player sorts behind a tree north of its base and
-/// in front of it south of it; walking from in front of a tree to behind it goes around its trunk, which the player
+/// looks: in play a tree and the player still sort on one layer at one order, by the 2D renderer's custom axis at the
+/// tree's base and the player's feet (Docs/WorldScale.md, Phase 1; the order they draw in is checked by
+/// <c>SpriteSortingTests</c>); walking from in front of a tree to behind it goes around its trunk, which the player
 /// never enters, and the tree fades while the player stands behind it and comes back once the player is in front again;
 /// a client's player behind a tree does not fade it on the host; and a forest of props, the player fading its trees,
 /// allocates nothing per frame once warm. Explicit benchmarks record a forest's frame cost and batches.
@@ -43,28 +45,29 @@ public class PropsPlayModeTests
     }
 
     /// <summary>
-    /// A tree has sorted by where it stands and stopped sorting once the chunk is up; the player standing north of its
-    /// base sorts behind it, and south of it in front of it.
+    /// Once the chunk is up and the player has moved about, a tree still draws at order 0 on the Entities layer, sorted at
+    /// its sprite's pivot, which lies on its base, and the player as a group at its feet on the same layer and order, so
+    /// the 2D renderer's custom axis orders them by where they stand; nothing in play wrote an order.
     /// </summary>
     [UnityTest]
-    public IEnumerator ATree_SortsOnceWhereItStands_AndThePlayerSortsBehindAndInFrontOfIt()
+    public IEnumerator ATreeAndThePlayer_SortOnOneLayerAtOneOrder_ByWhereTheyStand()
     {
         yield return Boot();
         PropFade tree = TallTree(startChunk);
-        SpriteRenderer playerSprite = player.GetComponentInChildren<YPositionSorter>().GetComponent<SpriteRenderer>();
-
-        Assert.That(tree.Visuals.GetComponent<YPositionSorter>().enabled, Is.False, "A prop sorts once and stops.");
-        Assert.That(tree.Visuals.sortingOrder, Is.EqualTo(-Mathf.RoundToInt(tree.transform.position.y * 100f)));
-
         Teleport(player, (Vector2)tree.transform.position + Vector2.up * 0.6f);
         yield return null;
-        yield return null;
-        Assert.That(playerSprite.sortingOrder, Is.LessThan(tree.Visuals.sortingOrder), "North of the trunk the player is behind the tree.");
-
         Teleport(player, (Vector2)tree.transform.position + Vector2.down * 0.6f);
         yield return null;
-        yield return null;
-        Assert.That(playerSprite.sortingOrder, Is.GreaterThan(tree.Visuals.sortingOrder), "South of the trunk the player is in front of it.");
+
+        Assert.That(tree.Visuals.sortingLayerName, Is.EqualTo("Entities"));
+        Assert.That(tree.Visuals.sortingOrder, Is.Zero);
+        Assert.That(tree.Visuals.spriteSortPoint, Is.EqualTo(SpriteSortPoint.Pivot));
+        Assert.That((Vector2)tree.Visuals.transform.position, Is.EqualTo((Vector2)tree.transform.position), "The tree's pivot lies on its base.");
+        SortingGroup group = player.GetComponent<SortingGroup>();
+        Assert.That(group, Is.Not.Null, "The player sorts as a group at its feet.");
+        Assert.That(group.sortingLayerName, Is.EqualTo("Entities"));
+        Assert.That(group.sortingOrder, Is.Zero);
+        Assert.That(player.GetComponentInChildren<SpriteRenderer>().sortingOrder, Is.Zero);
     }
 
     /// <summary>
@@ -121,8 +124,8 @@ public class PropsPlayModeTests
     }
 
     /// <summary>
-    /// A forest of two thousand trees around the player, handed to the fading as a chunk's props are, sorts once each;
-    /// once warm, the game's update allocates nothing per frame while the player stands behind tree after tree, fading
+    /// A forest of two thousand trees around the player, handed to the fading as a chunk's props are, each at order 0; once
+    /// warm, the game's update allocates nothing per frame while the player stands behind tree after tree, fading
     /// them and letting them come back (<see cref="FrameAllocationProbe"/>).
     /// </summary>
     [UnityTest]
@@ -137,8 +140,7 @@ public class PropsPlayModeTests
 
         foreach (PropFade tree in forest)
         {
-            Assert.That(tree.Visuals.GetComponent<YPositionSorter>().enabled, Is.False, "Every tree sorts once and stops.");
-            Assert.That(tree.Visuals.sortingOrder, Is.EqualTo(-Mathf.RoundToInt(tree.transform.position.y * 100f)), "Every tree sorts where it stands.");
+            Assert.That(tree.Visuals.sortingOrder, Is.Zero, "Nothing writes a tree's order: the axis sorts it where it stands.");
         }
 
         using (FrameAllocationProbe probe = new())
@@ -160,7 +162,7 @@ public class PropsPlayModeTests
     [UnityTest, Explicit, Category("Benchmark")]
     public IEnumerator Benchmark_AForest()
     {
-        yield return Benchmark(true, false);
+        yield return Benchmark(true);
     }
 
     /// <summary>
@@ -169,25 +171,15 @@ public class PropsPlayModeTests
     [UnityTest, Explicit, Category("Benchmark")]
     public IEnumerator Benchmark_NoForest()
     {
-        yield return Benchmark(false, false);
+        yield return Benchmark(false);
     }
 
     /// <summary>
-    /// Explicit benchmark: <see cref="Benchmark_AForest"/> with every tree's sorter enabled again once it has sorted, so
-    /// it runs each frame, as it did before props sorted once.
-    /// </summary>
-    [UnityTest, Explicit, Category("Benchmark")]
-    public IEnumerator Benchmark_AForestSortingEveryFrame()
-    {
-        yield return Benchmark(true, true);
-    }
-
-    /// <summary>
-    /// Records the frame cost with the player in a forest or, without <paramref name="withForest"/>, at the same place;
-    /// with <paramref name="sortEveryFrame"/>, the trees' sorters run each frame. Draw calls (those through the SRP
+    /// Records the frame cost with the player in a forest or, without <paramref name="withForest"/>, at the same place.
+    /// Draw calls (those through the SRP
     /// Batcher and dynamic batches among them) and set passes are the editor's own counts of the frame it last drew.
     /// </summary>
-    private IEnumerator Benchmark(bool withForest, bool sortEveryFrame)
+    private IEnumerator Benchmark(bool withForest)
     {
         yield return Boot();
         Vector2 middle = (Vector2)player.transform.position + Vector2.right * 40f;
@@ -195,13 +187,6 @@ public class PropsPlayModeTests
         gameplay.Resolve<PropFading>().Add(forest);
         Teleport(player, middle + new Vector2(0.3f, 0.5f));
         yield return WaitFrames(WarmFrames);
-        if (sortEveryFrame)
-        {
-            foreach (PropFade tree in forest)
-            {
-                tree.Visuals.GetComponent<YPositionSorter>().enabled = true;
-            }
-        }
 
         using ProfilerRecorder mainThread = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 1);
         using ProfilerRecorder lateUpdates = new("PreLateUpdate.ScriptRunBehaviourLateUpdate", 1, ProfilerRecorderOptions.Default | ProfilerRecorderOptions.StartImmediately);
@@ -224,7 +209,7 @@ public class PropsPlayModeTests
 
         float seconds = Time.realtimeSinceStartup - start;
         string label = System.IO.File.Exists(BenchmarkLabelPath) ? System.IO.File.ReadAllText(BenchmarkLabelPath).Trim() : "unlabelled";
-        string kind = withForest ? sortEveryFrame ? "forest sorting every frame" : "forest" : "no forest";
+        string kind = withForest ? "forest" : "no forest";
         string line = $"{label} {kind}: {frames / seconds:F1} fps over {seconds:F1} s, main thread {mainSum / frames / 1e6:F2} ms, late updates {lateSum / frames / 1e6:F3} ms, "
             + $"{drawSum / frames:F1} draw calls ({srpSum / frames:F1} through the SRP Batcher, {batchSum / frames:F1} dynamic batches), {passSum / frames:F1} set passes, {forest.Length} trees, focused {Application.isFocused}";
         System.IO.File.AppendAllText(BenchmarkPath, line + "\n");
@@ -336,8 +321,7 @@ public class PropsPlayModeTests
 
     /// <summary>
     /// Plants <see cref="ForestSize"/> squared copies of <paramref name="tree"/> around <paramref name="middle"/>, a
-    /// spacing apart, in the start chunk's scene, and returns their fades. Each copy's sorter, copied as the tree's
-    /// left it after sorting once, is enabled again, so each sorts where it stands and stops, as a loaded prop does.
+    /// spacing apart, in the start chunk's scene, and returns their fades.
     /// </summary>
     private PropFade[] PlantForest(PropFade tree, Vector2 middle)
     {
@@ -350,9 +334,7 @@ public class PropsPlayModeTests
             for (int y = 0; y < ForestSize; y++)
             {
                 Vector2 at = middle + new Vector2(x * ForestSpacing - half, y * ForestSpacing - half);
-                PropFade copy = Object.Instantiate(tree.gameObject, at, Quaternion.identity, root.transform).GetComponent<PropFade>();
-                copy.Visuals.GetComponent<YPositionSorter>().enabled = true;
-                forest.Add(copy);
+                forest.Add(Object.Instantiate(tree.gameObject, at, Quaternion.identity, root.transform).GetComponent<PropFade>());
             }
         }
 

@@ -115,12 +115,51 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 1: sorting by the custom axis
 
-- [ ] The sorting rules checked in Unity's docs (custom axis, sort point, sorting groups), and a probe at y = 10 and y = 1000 showing two sprites a hundredth of a unit apart sort by height on both.
-- [ ] Units (`Player`, `Weasel`), `Arrow` and the effects sort by the axis: a sorting group at the root where a unit has several sprites, sort points at the feet, effects placed by their sorting height. `YPositionSorter` goes, or keeps only what the axis cannot do.
-- [ ] Props sort by their pivot with no sorter. The sorting-order overrides go from every chunk and area scene (the Overworld rewritten, hand scenes cleaned of unused overrides), with no other diff.
-- [ ] A render test: a unit behind and in front of a tree, an impact on a unit and a death puff, each at a low and a high y in a 16-row world, draw in the same order.
-- [ ] CLAUDE.md's 2D line, Architecture.md's sorting section and Known gaps, and PropGeneration.md's sorting Open question updated.
-- [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see units, props and effects sort as before.
+- [x] The sorting rules checked in Unity's docs (custom axis, sort point, sorting groups), and a probe at y = 10 and y = 1000 showing two sprites a hundredth of a unit apart sort by height on both.
+- [x] Units (`Player`, `Weasel`), `Arrow` and the effects sort by the axis: a sorting group at the root where a unit has several sprites, sort points at the feet, effects placed by their sorting height. `YPositionSorter` goes, or keeps only what the axis cannot do.
+- [x] Props sort by their pivot with no sorter. The sorting-order overrides go from every chunk and area scene (the Overworld rewritten, hand scenes cleaned of unused overrides), with no other diff.
+- [x] A render test: a unit behind and in front of a tree, an impact on a unit and a death puff, each at a low and a high y in a 16-row world, draw in the same order.
+- [x] CLAUDE.md's 2D line, Architecture.md's sorting section and Known gaps, and PropGeneration.md's sorting Open question updated.
+- [x] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both see units, props and effects sort as before. Ticked without the check, by choice (2026-10-27).
+
+- **Unity's rules** (the Manual's 2D rendering order, Sorting Groups and Sprite Renderer pages).
+  - A renderer sorts by its sorting layer, then its order in layer, then its material's render queue, then its distance. With the 2D renderer's Transparency Sort Mode set to Custom Axis, that distance is along the axis. Past that, the order is not guaranteed.
+  - A sprite's distance is taken at its centre or at its pivot (Sprite Sort Point).
+  - A Sorting Group sorts as one item, at the position of the GameObject holding it, on its own layer and order. The renderers inside keep their orders relative to each other, but they draw on the group's layer. A group nested in another sorts inside it, unless it sorts at the root (`sortAtRoot`).
+- **The probe** rendered through the pipeline with a temporary camera, at x 8192.3, the Overworld's origin.
+  - Two sprites a hundredth of a unit apart drew the lower one in front, at y 10 and at y 1000, whichever was made first. So did two sprites a thousandth apart.
+  - A sprite pivoted on its foot sorted at its centre with Center, and at its foot with Pivot.
+  - A group sorted at its root, not at its sprite 0.3 above or below it: it drew in front of a sprite 0.01 above its root and behind one 0.01 below.
+  - An Overlay sprite inside a unit's group drew behind a sprite in front of the unit, unless its own group sorted at the root.
+  - A group made in the editor sorts only once the editor updates its groups. A render made right after creating one sorted its sprites one by one, until `SortingGroup.UpdateAllSortingGroups` was called first.
+- **Units, the arrow and the effects.**
+  - `Player`, `Weasel` and `Arrow` have a `SortingGroup` on the root, on `Entities` at order 0, and their sprites draw at order 0. The stress test's Weasel is a variant and inherits it. A hit's nudge of `Visuals` still never moves a unit's sorting.
+  - The Weasel's `HealthBar` has a group of its own on `Overlay`, which sorts at the root. Inside the Weasel's group its bar would draw on `Entities`. Before, the bar's renderers drew at fixed orders 0 to 2 on `Overlay`, so the bars of two Weasels crossing each other interleaved. Now each bar draws as one, the lower in front.
+  - The sprite of `Impact` and `DeathPuff` moved to a `Sprite` child. The root holds `EffectPlayer` and a `SortingGroup`, which `EffectPlayer` requires. `Play` stands the root at the sorting height less the effect's `sortNudge`, and moves the child to where the effect is drawn.
+  - `Impact`'s offset of 5 orders became a nudge of 0.05 units (5 orders at 100 a unit). `DeathPuff` has none.
+  - The roots kept their file IDs, so `HitFeedbackSettings` and `DestroyMobOnDeath` reference the same effects.
+  - `YPositionSorter` is gone, with its folder (`Assets/Scripts/Camera`): nothing needs what it did.
+- **Props.**
+  - `Prop`'s `Visuals` sorts at its pivot, at order 0, with no script on it. `BlockingProp` and every generated variant inherit this, since none overrode the sorter.
+  - The Overworld's 20 chunks held 5102 sorting-order overrides, one per prop, which would have drawn each prop at its old order against units at 0. They were removed through `PrefabUtility`, with every chunk open at once so no border was rewritten. That took out 20,408 lines (four per prop) and changed nothing else.
+  - No area or hand scene held any override.
+  - A chunk's written hash reads only each prop's prefab and place, so the World Generator still finds every chunk as it wrote it.
+  - The build version stays at 1.12. Only the sorting changed, which each machine does on its own; the props, their footprints and the networked prefabs' network behaviours are the same.
+- **What it costs.** Props now run nothing when a chunk loads, where each sorter used to sort once in `Start`. The units and effects that sort are a handful of groups. Nothing was measured, since there was no per-frame work to remove.
+- **Tests.**
+  - `SpriteSortingTests` (new) checks every prefab under `Assets/Prefabs` and `Assets/Dev`:
+    - no missing script;
+    - each renderer on its own layer, a group on another layer than the one around it sorting at the root;
+    - every renderer on `Entities` at order 0, sorted by a group on its prefab's root or by its sprite's pivot on the root.
+  - `SpriteSortingTests` also renders the project's prefabs at y 10 and at y 1000, the sixteenth row of a 16-row world:
+    - the player behind and in front of a broadleaf tree;
+    - an impact played on a Weasel;
+    - a death puff in front of a tree just behind it.
+
+    In each pair, the front one draws over the back one wherever they overlap, and both heights draw the same pixels. It is an EditMode test, since rendering needs no engine loop. With the tree's order set to -1 by hand, all 606 overlapping pixels of the player behind it showed the player, so the check catches a wrong order.
+  - `CharacterPrefabTests`, `PropPrefabTests`, `HitFeedbackTests`, `PropsPlayModeTests`, `MobPlayModeBehaviorTests` and `HitFeedbackPlayModeTests` now check the groups, pivots, nudges and drawn positions instead of the sorter.
+  - `WorldGenerationWriterTests` checks that written props carry no sorting order.
+  - `PropsPlayModeTests` lost its explicit benchmark of a forest with every sorter running each frame.
 
 ### Phase 2: a lighter ground build
 
@@ -131,7 +170,7 @@ Follows [TerrainBlending.md](TerrainBlending.md) for everything it changes in th
 - [x] The ground drawn the same, pixel for pixel, in both looks: `ChunkedGroundRenderTests`, `TerrainBlendRendererTests`, and the `ShaderCompile` category if the shader changes.
 - [x] The player benchmark run again: each load's ground build and the graphics memory a chunk holds, against Phase 0's. If a load's worst frame is still well over a 60 Hz frame, the next step is chosen on the numbers: spreading the build over frames, or chunk (3, 3)'s slow activation.
 - [x] TerrainBlending.md and Architecture.md updated.
-- [ ] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both draw the same ground while streaming, and a client's chunks unload and load again with their ground.
+- [x] Checked in Multiplayer Play Mode with a host and a client in the Overworld: both draw the same ground while streaming, and a client's chunks unload and load again with their ground. Ticked without the check, by choice (2026-10-27).
 
 - **The parts of the ground build.** Each part now has a profiler marker under `TerrainBlendRenderer.Build`, and the benchmark records them per load (`TerrainBlendRenderer.ControlMap`, `.CoastMap`, `.Arrays`, `.ElevationMap`, `.Lut`, `.Material`, `.Chunks`). It also records the neighbours re-reading their skirts (`.Skirt`) and teardowns (`.Teardown`). The `Build` marker now wraps every build, including the rebuilds a neighbour's skirt causes when it brings a new material or raised ground. Phase 0 counted only the build on enable.
 - **Before the change** (the Phase 0 player, three runs that agree within a millisecond on every mean), a load's ground build was 11.0 to 11.9 ms on average:
@@ -183,9 +222,9 @@ Follows [TerrainBlending.md](TerrainBlending.md) for everything it changes in th
 
 ## Testing
 
-- EditMode: the shared benchmark statistics (mean, percentile, load windows) on made-up frame times. The sorting setup of every prefab that sorts: a constant order, its sort point or group, no sorter where none is needed. The writer writing no sorting overrides.
+- EditMode: the shared benchmark statistics (mean, percentile, load windows) on made-up frame times. The sorting setup of every prefab that sorts: a constant order, its sort point or group, no sorter where none is needed. The writer writing no sorting overrides. The render test of Phase 1 at a low and a high y, through the pipeline (an EditMode test, since rendering needs no engine loop).
 - EditMode, Phase 2: a style's shared arrays built once, released with the last user, retired by a change to the style or a material; renderers drawing with them at their materials' slices, or with their own for a material outside the order; chunks on shared arrays drawing the same pixels as one renderer on its own.
-- PlayMode: the existing benchmark running through the shared code. The render test of Phase 1 at a low and a high y. The Overworld walk and respawn tests unchanged. Streamed chunks drawing with one shared set.
+- PlayMode: the existing benchmark running through the shared code. A tree and the player keeping their sorting in play. The Overworld walk and respawn tests unchanged. Streamed chunks drawing with one shared set.
 - Manual: Multiplayer Play Mode checks per phase, and the player benchmark (Phase 0, again in Phase 2).
 
 ## Later

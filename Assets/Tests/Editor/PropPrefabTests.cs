@@ -8,9 +8,9 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
-/// <c>Visuals</c> child on it holding the sprite pivoted on the base and its sorter, and a <c>Shadow</c> child drawing
-/// the shadow on the ground under every unit), the props sorting once and fading over their own drawing, the footprints
-/// of blocking props, and how a placed prop blocks navigation.
+/// <c>Visuals</c> child on it holding the sprite pivoted on the base, which it sorts by with nothing running, and a
+/// <c>Shadow</c> child drawing the shadow on the ground under every unit), the props fading over their own drawing, the
+/// footprints of blocking props, and how a placed prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -61,9 +61,10 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every prop keeps its sprite renderer and sorter on a visible <c>Visuals</c> child on the root, as units do,
-    /// drawn on the Entities sorting layer and sorted with no offset at the root, its base, as units sort at their feet;
-    /// a sprite, where it has one, pivoted on its base, so the root lies inside it; the root itself draws nothing.
+    /// Every prop keeps its sprite renderer on a visible <c>Visuals</c> child on the root, as units do, drawn on the
+    /// Entities sorting layer at order 0 and sorted by the 2D renderer's custom axis at its sprite's pivot, its base, as
+    /// units sort at their feet, with no script on it, so nothing runs when a prop starts; a sprite, where it has one,
+    /// pivoted on its base, so the root lies inside it; the root itself draws nothing.
     /// </summary>
     [Test]
     public void Props_KeepTheirSpriteOnAVisualsChild_AtTheirBase()
@@ -84,11 +85,9 @@ public class PropPrefabTests
                 AssertContainsRoot(renderer.sprite.bounds, $"{propPrefab.name}'s sprite should be pivoted on its base.");
             }
 
-            YPositionSorter sorter = visuals.GetComponent<YPositionSorter>();
-            Assert.That(sorter, Is.Not.Null, propPrefab.name);
-            SerializedObject sorting = new(sorter);
-            Assert.That(sorting.FindProperty("sortingOrderOffset").intValue, Is.Zero, propPrefab.name);
-            Assert.That(sorting.FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(propPrefab.transform), $"{propPrefab.name} should sort at its base.");
+            Assert.That(renderer.sortingOrder, Is.Zero, propPrefab.name);
+            Assert.That(renderer.spriteSortPoint, Is.EqualTo(SpriteSortPoint.Pivot), $"{propPrefab.name} should sort at its base.");
+            Assert.That(visuals.GetComponents<MonoBehaviour>(), Is.Empty, $"{propPrefab.name}'s visuals run nothing.");
         }
     }
 
@@ -106,7 +105,7 @@ public class PropPrefabTests
             Transform shadow = Child(propPrefab, ShadowName);
             Assert.That(shadow.localPosition, Is.EqualTo(Vector3.zero), propPrefab.name);
             Assert.That(shadow.gameObject.layer, Is.Not.EqualTo(obstacles), $"{propPrefab.name}'s shadow must be on a layer the camera draws.");
-            Assert.That(shadow.GetComponent<YPositionSorter>(), Is.Null, $"{propPrefab.name}'s shadow is not sorted.");
+            Assert.That(shadow.GetComponents<MonoBehaviour>(), Is.Empty, $"{propPrefab.name}'s shadow runs nothing.");
 
             SpriteRenderer renderer = shadow.GetComponent<SpriteRenderer>();
             Assert.That(renderer, Is.Not.Null, propPrefab.name);
@@ -120,18 +119,15 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every prop sorts once, since it never moves, and has a fade on its root drawing through its <c>Visuals</c>'
-    /// renderer; a prop that fades is a tall one, its fade covering its drawing: around its root and within its sprite.
+    /// Every prop has a fade on its root drawing through its <c>Visuals</c>' renderer; a prop that fades is a tall one,
+    /// its fade covering its drawing: around its root and within its sprite.
     /// </summary>
     [Test]
-    public void Props_SortOnce_AndFadeOverTheirOwnDrawing()
+    public void Props_FadeOverTheirOwnDrawing()
     {
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
             Transform visuals = Child(propPrefab, VisualsName);
-            SerializedObject sorting = new(visuals.GetComponent<YPositionSorter>());
-            Assert.That(sorting.FindProperty("sortsOnce").boolValue, Is.True, $"{propPrefab.name} never moves, so it sorts once.");
-
             PropFade fade = propPrefab.GetComponent<PropFade>();
             Assert.That(fade, Is.Not.Null, propPrefab.name);
             Assert.That(fade.Visuals, Is.EqualTo(visuals.GetComponent<SpriteRenderer>()), propPrefab.name);

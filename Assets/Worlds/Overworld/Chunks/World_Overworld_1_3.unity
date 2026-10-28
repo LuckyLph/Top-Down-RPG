@@ -594,10 +594,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_DeadSnow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7839905887723070527, guid: 7a38d1cc64374954a93af34f6035d7d9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19616
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -660,10 +656,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19734
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -682,10 +674,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20116
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 79.5
@@ -748,10 +736,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19309
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 79.5
@@ -814,10 +798,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 44555102699451331, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21822
-      objectReference: {fileID: 0}
     - target: {fileID: 2478047843960774522, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 72.46875
@@ -880,10 +860,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6428314586028445488, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20519
-      objectReference: {fileID: 0}
     - target: {fileID: 7838808073984461733, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_1
@@ -946,10 +922,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21016
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 72.5
@@ -1056,10 +1028,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19516
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1122,10 +1090,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21116
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1144,10 +1108,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19709
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 95.5
@@ -1254,10 +1214,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21116
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1320,10 +1276,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_2
       objectReference: {fileID: 0}
-    - target: {fileID: 2841169055093204571, guid: 0450ab1f322fa544fab76d204b432be9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19312
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1385,10 +1337,6 @@ PrefabInstance:
     - target: {fileID: 6510591457240823599, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21353
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5011,10 +4959,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22716
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 74.5
@@ -5077,10 +5021,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19309
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 87.5
@@ -5143,10 +5083,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19406
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 104.5
@@ -5209,10 +5145,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6719860957882109123, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19819
-      objectReference: {fileID: 0}
     - target: {fileID: 7547260671137318998, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
       propertyPath: m_Name
       value: Stones_Small_3
@@ -5275,10 +5207,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19309
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 109.5
@@ -5385,10 +5313,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19616
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5407,10 +5331,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19209
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 106.5
@@ -5517,10 +5437,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22519
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5539,10 +5455,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5773442015687834711, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20631
-      objectReference: {fileID: 0}
     - target: {fileID: 7341886139136850114, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_3
@@ -5605,10 +5517,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20025
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -5671,10 +5579,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21028
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -5781,10 +5685,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19541
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5846,10 +5746,6 @@ PrefabInstance:
     - target: {fileID: 1833186318369083275, guid: 650961d697af9bd4bb896eacab43203e, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4291166274901140274, guid: 650961d697af9bd4bb896eacab43203e, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22738
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5913,10 +5809,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21053
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5935,10 +5827,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19409
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 101.5
@@ -6045,10 +5933,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8894603349530114353, guid: 338ffe2fb175eca4e99cc96c60c33760, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22747
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6111,10 +5995,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3729530373161289458, guid: 23f97504eae3c8c4f89525694255cd21, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21219
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6133,10 +6013,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 101.5
@@ -6199,10 +6075,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 865766763258872011, guid: e2f57f1f12cb3bf48b9d04c6ae35d0f0, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21212
-      objectReference: {fileID: 0}
     - target: {fileID: 3386235826303282290, guid: e2f57f1f12cb3bf48b9d04c6ae35d0f0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 66.5
@@ -6265,10 +6137,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22059
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -6375,10 +6243,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19941
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6397,10 +6261,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 264052574973097020, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21250
-      objectReference: {fileID: 0}
     - target: {fileID: 2402560077512628357, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 68.46875
@@ -6507,10 +6367,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stones_Small_0
       objectReference: {fileID: 0}
-    - target: {fileID: 2484652878662515428, guid: e8df603b03bba1d4191fb90f113f5bff, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19644
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6572,10 +6428,6 @@ PrefabInstance:
     - target: {fileID: 1503741165185519001, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
       propertyPath: m_Name
       value: Tree_Broadleaf_1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21319
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -6639,10 +6491,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21519
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6705,10 +6553,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20219
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6727,10 +6571,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5773442015687834711, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20053
-      objectReference: {fileID: 0}
     - target: {fileID: 7341886139136850114, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_3
@@ -6793,10 +6633,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 83.5
@@ -6859,10 +6695,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 44555102699451331, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22047
-      objectReference: {fileID: 0}
     - target: {fileID: 2478047843960774522, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 67.28125
@@ -6969,10 +6801,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20019
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6991,10 +6819,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6719860957882109123, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20922
-      objectReference: {fileID: 0}
     - target: {fileID: 7547260671137318998, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
       propertyPath: m_Name
       value: Stones_Small_3
@@ -7101,10 +6925,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19731
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7167,10 +6987,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22616
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7189,10 +7005,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5313611450807056300, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19706
-      objectReference: {fileID: 0}
     - target: {fileID: 7728243710956002069, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
       propertyPath: m_LocalPosition.x
       value: 92.5
@@ -7255,10 +7067,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 106.5
@@ -7321,10 +7129,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19328
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -7431,10 +7235,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8161345819598132123, guid: e444621d0a9c525468766106d0c3bb8a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19206
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7497,10 +7297,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7519,10 +7315,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19206
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 83.5
@@ -7629,10 +7421,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 9143433418415264942, guid: 9e244a0c8687f184da54154e988e0c92, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19719
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7651,10 +7439,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 102.5
@@ -7761,10 +7545,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22650
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7783,10 +7563,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20819
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 72.5
@@ -7849,10 +7625,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20256
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -7915,10 +7687,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20519
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 65.5
@@ -8025,10 +7793,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19725
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8047,10 +7811,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22719
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 81.5
@@ -8113,10 +7873,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20019
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 85.5
@@ -8179,10 +7935,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19409
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 88.5
@@ -8245,10 +7997,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6472363194765330348, guid: 0bca2b2bd0792b8498bdafe8c1a69c1d, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19819
-      objectReference: {fileID: 0}
     - target: {fileID: 7795318017188037433, guid: 0bca2b2bd0792b8498bdafe8c1a69c1d, type: 3}
       propertyPath: m_Name
       value: Bush_Green_1
@@ -8355,10 +8103,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20038
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8421,10 +8165,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22716
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8443,10 +8183,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19409
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 93.5
@@ -8509,10 +8245,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5773442015687834711, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22425
-      objectReference: {fileID: 0}
     - target: {fileID: 7341886139136850114, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_3
@@ -8619,10 +8351,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21516
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8641,10 +8369,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20919
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 74.5
@@ -8751,10 +8475,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8348918709355188386, guid: 6337ecc4de4d1a34db0bafff56ee7a48, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21225
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8773,10 +8493,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5185537873047055372, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19219
-      objectReference: {fileID: 0}
     - target: {fileID: 7280978072599085237, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 81.5
@@ -8883,10 +8599,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4412832630437525862, guid: 2a61639d096ced349828fef3682e11da, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21322
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8905,10 +8617,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 756502508443504361, guid: 275418ca84b22c64999a8db7bdbb150a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20803
-      objectReference: {fileID: 0}
     - target: {fileID: 2918933743523013200, guid: 275418ca84b22c64999a8db7bdbb150a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 65.5
@@ -8971,10 +8679,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20319
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 86.5
@@ -9096,10 +8800,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 109.5
@@ -9162,10 +8862,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5185537873047055372, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19219
-      objectReference: {fileID: 0}
     - target: {fileID: 7280978072599085237, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 85.5
@@ -9381,10 +9077,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19606
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 87.5
@@ -9447,10 +9139,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 89.5
@@ -9513,10 +9201,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 67.5
@@ -9655,10 +9339,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8348918709355188386, guid: 6337ecc4de4d1a34db0bafff56ee7a48, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19516
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9721,10 +9401,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20916
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9743,10 +9419,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 756502508443504361, guid: 275418ca84b22c64999a8db7bdbb150a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21403
-      objectReference: {fileID: 0}
     - target: {fileID: 2918933743523013200, guid: 275418ca84b22c64999a8db7bdbb150a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 114.5
@@ -9853,10 +9525,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19816
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9919,10 +9587,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19741
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9941,10 +9605,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19519
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -10007,10 +9667,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 103.5
@@ -10117,10 +9773,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_2
       objectReference: {fileID: 0}
-    - target: {fileID: 2841169055093204571, guid: 0450ab1f322fa544fab76d204b432be9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20512
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10183,10 +9835,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4609676444570306222, guid: eda792928e7154a4e8f9d25d0534d500, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20634
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10205,10 +9853,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 264052574973097020, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22756
-      objectReference: {fileID: 0}
     - target: {fileID: 2402560077512628357, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 73.28125
@@ -10315,10 +9959,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21119
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10381,10 +10021,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20519
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10403,10 +10039,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21547
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -10469,10 +10101,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21822
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -10535,10 +10163,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 91.5
@@ -10601,10 +10225,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1944322216596964792, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     - target: {fileID: 3388785713445552429, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
       propertyPath: m_Name
       value: Tree_DeadSnow_0
@@ -10667,10 +10287,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22519
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 82.5
@@ -10777,10 +10393,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20831
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10843,10 +10455,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19819
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10865,10 +10473,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19709
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 102.5
@@ -10975,10 +10579,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22216
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -10997,10 +10597,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5773442015687834711, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19756
-      objectReference: {fileID: 0}
     - target: {fileID: 7341886139136850114, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_3
@@ -11063,10 +10659,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20659
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -11129,10 +10721,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5313611450807056300, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19706
-      objectReference: {fileID: 0}
     - target: {fileID: 7728243710956002069, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
       propertyPath: m_LocalPosition.x
       value: 98.5
@@ -11239,10 +10827,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20153
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -11261,10 +10845,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6428314586028445488, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19525
-      objectReference: {fileID: 0}
     - target: {fileID: 7838808073984461733, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_1
@@ -11327,10 +10907,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 75.5
@@ -11437,10 +11013,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stones_Small_0
       objectReference: {fileID: 0}
-    - target: {fileID: 2484652878662515428, guid: e8df603b03bba1d4191fb90f113f5bff, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19431
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -11459,10 +11031,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1944322216596964792, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19316
-      objectReference: {fileID: 0}
     - target: {fileID: 3388785713445552429, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
       propertyPath: m_Name
       value: Tree_DeadSnow_0
@@ -11610,10 +11178,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5684898398385768140, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19419
-      objectReference: {fileID: 0}
     - target: {fileID: 7789346342431107701, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 91.5
@@ -11676,10 +11240,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 264052574973097020, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22644
-      objectReference: {fileID: 0}
     - target: {fileID: 2402560077512628357, guid: 6ef8ae94679b6c642a52f44e355bbeb3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 68.4375
@@ -11742,10 +11302,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19506
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 90.5
@@ -11852,10 +11408,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20950
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -11874,10 +11426,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1128362298785281767, guid: f0f54cb8456954247ba741b39deeec68, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19819
-      objectReference: {fileID: 0}
     - target: {fileID: 3266585600662870622, guid: f0f54cb8456954247ba741b39deeec68, type: 3}
       propertyPath: m_LocalPosition.x
       value: 94.5
@@ -11940,10 +11488,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6428314586028445488, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19431
-      objectReference: {fileID: 0}
     - target: {fileID: 7838808073984461733, guid: 2144dd8454d4393489495b0eaa12c721, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_1
@@ -12050,10 +11594,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20047
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -12072,10 +11612,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5773442015687834711, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20525
-      objectReference: {fileID: 0}
     - target: {fileID: 7341886139136850114, guid: 4e7c4c0af04ccbf4194979f6bca9afd5, type: 3}
       propertyPath: m_Name
       value: Mushrooms_Brown_3
@@ -12138,10 +11674,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 96.5
@@ -12247,10 +11779,6 @@ PrefabInstance:
     - target: {fileID: 6586770486157459735, guid: 5118330fa05751f44995855287879c34, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8761024203438812590, guid: 5118330fa05751f44995855287879c34, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20419
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -38867,10 +38395,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4333921918961804794, guid: 4a7b33549a0554d4298c58432f15b1b9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20709
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -38932,10 +38456,6 @@ PrefabInstance:
     - target: {fileID: 6510591457240823599, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21528
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -38999,10 +38519,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22434
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -39064,10 +38580,6 @@ PrefabInstance:
     - target: {fileID: 1342464022526179335, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22441
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -39131,10 +38643,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -39153,10 +38661,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 93.5
@@ -39263,10 +38767,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20116
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -39285,10 +38785,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19609
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 99.5
@@ -39351,10 +38847,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 71.5
@@ -39417,10 +38909,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19209
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 73.5
@@ -39483,10 +38971,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19206
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 78.5
@@ -39593,10 +39077,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_DeadSnow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7839905887723070527, guid: 7a38d1cc64374954a93af34f6035d7d9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19416
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -39659,10 +39139,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19816
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -39681,10 +39157,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21016
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 65.5
@@ -52684,10 +52156,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19819
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -52706,10 +52174,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22550
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -52772,10 +52236,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5185537873047055372, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19219
-      objectReference: {fileID: 0}
     - target: {fileID: 7280978072599085237, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 108.5
@@ -52838,10 +52298,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20719
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 68.5
@@ -52904,10 +52360,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 98.5
@@ -53014,10 +52466,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_DeadSnow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7839905887723070527, guid: 7a38d1cc64374954a93af34f6035d7d9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19516
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -53036,10 +52484,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5240453770173646704, guid: 321fab61d7116ae45b39463ea948578a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21238
-      objectReference: {fileID: 0}
     - target: {fileID: 7657338947859524553, guid: 321fab61d7116ae45b39463ea948578a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 112.6875
@@ -53102,10 +52546,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19619
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 77.5
@@ -53168,10 +52608,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 4958392888757080849, guid: 5bbac4f1c7fc6984d83a2c06a511e1e6, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19241
-      objectReference: {fileID: 0}
     - target: {fileID: 7364020687177056168, guid: 5bbac4f1c7fc6984d83a2c06a511e1e6, type: 3}
       propertyPath: m_LocalPosition.x
       value: 101
@@ -53278,10 +52714,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19816
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -53343,10 +52775,6 @@ PrefabInstance:
     - target: {fileID: 1503741165185519001, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
       propertyPath: m_Name
       value: Tree_Broadleaf_1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20319
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -53410,10 +52838,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20738
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -53432,10 +52856,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6890977401257468373, guid: 6587d3cf71bbe2647843a8ba3f70307a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19712
-      objectReference: {fileID: 0}
     - target: {fileID: 7664377833963971904, guid: 6587d3cf71bbe2647843a8ba3f70307a, type: 3}
       propertyPath: m_Name
       value: Tree_BroadleafSmall_0
@@ -53498,10 +52918,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5313611450807056300, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19206
-      objectReference: {fileID: 0}
     - target: {fileID: 7728243710956002069, guid: 2f8eec26cd912c042a5fae0cedc49bfb, type: 3}
       propertyPath: m_LocalPosition.x
       value: 76.5
@@ -53564,10 +52980,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6719860957882109123, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20338
-      objectReference: {fileID: 0}
     - target: {fileID: 7547260671137318998, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
       propertyPath: m_Name
       value: Stones_Small_3
@@ -54697,10 +54109,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8894603349530114353, guid: 338ffe2fb175eca4e99cc96c60c33760, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21419
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -54719,10 +54127,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22716
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 72.5
@@ -54829,10 +54233,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8348918709355188386, guid: 6337ecc4de4d1a34db0bafff56ee7a48, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19434
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -54851,10 +54251,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20522
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -54961,10 +54357,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8348918709355188386, guid: 6337ecc4de4d1a34db0bafff56ee7a48, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19359
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -54983,10 +54375,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19209
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 113.5
@@ -55093,10 +54481,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19616
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -55159,10 +54543,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_DeadSnow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7839905887723070527, guid: 7a38d1cc64374954a93af34f6035d7d9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19316
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -55181,10 +54561,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 865766763258872011, guid: e2f57f1f12cb3bf48b9d04c6ae35d0f0, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20612
-      objectReference: {fileID: 0}
     - target: {fileID: 3386235826303282290, guid: e2f57f1f12cb3bf48b9d04c6ae35d0f0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 70.5
@@ -55247,10 +54623,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5684898398385768140, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19519
-      objectReference: {fileID: 0}
     - target: {fileID: 7789346342431107701, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 92.5
@@ -57166,10 +56538,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1054392729029549906, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19306
-      objectReference: {fileID: 0}
     - target: {fileID: 3196558867038155755, guid: e4c51884f2721794795c0f4b3e94b641, type: 3}
       propertyPath: m_LocalPosition.x
       value: 107.5
@@ -57276,10 +56644,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: PineSmall_Snow_3
       objectReference: {fileID: 0}
-    - target: {fileID: 7212379701133256535, guid: dc72f8142c7f0f74b856530d6126074b, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19406
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -57298,10 +56662,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 1944322216596964792, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19516
-      objectReference: {fileID: 0}
     - target: {fileID: 3388785713445552429, guid: 28039ecb69a53e74191db84569a40e42, type: 3}
       propertyPath: m_Name
       value: Tree_DeadSnow_0
@@ -57408,10 +56768,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20219
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -57474,10 +56830,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: PineSmall_Snow_0
       objectReference: {fileID: 0}
-    - target: {fileID: 7743050456753231844, guid: 9a0287b9eb6edb0409052c34b3e44917, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19309
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -57496,10 +56848,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5684898398385768140, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19419
-      objectReference: {fileID: 0}
     - target: {fileID: 7789346342431107701, guid: 14616c3b8ba04d8448b77859103d916a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 110.5
@@ -57562,10 +56910,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 4674087357064856801, guid: ffa173d227593d74f8d2de602b8f782f, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19238
-      objectReference: {fileID: 0}
     - target: {fileID: 7070704657133103192, guid: ffa173d227593d74f8d2de602b8f782f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 88
@@ -57628,10 +56972,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5879393986047614819, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20259
-      objectReference: {fileID: 0}
     - target: {fileID: 7235931969485364214, guid: 55ee3fa30c5759a4cb50c5b425a54321, type: 3}
       propertyPath: m_Name
       value: Fern_2
@@ -57694,10 +57034,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 44555102699451331, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20619
-      objectReference: {fileID: 0}
     - target: {fileID: 2478047843960774522, guid: ef34d64f2cebf1b4ca94fba905a5db0c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 118.28125
@@ -57804,10 +57140,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8694134948999240598, guid: 93b1de1608a016f41a4299fd38798114, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20241
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -57870,10 +57202,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19619
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -57892,10 +57220,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19334
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -58002,10 +57326,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21516
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58024,10 +57344,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 219407067596734804, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19709
-      objectReference: {fileID: 0}
     - target: {fileID: 2447420883010121197, guid: cd1dfda676df0f541be7c17a4f788c39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 100.5
@@ -58090,10 +57406,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20219
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 84.5
@@ -58200,10 +57512,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21316
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58222,10 +57530,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19719
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 84.5
@@ -58288,10 +57592,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 235541661600290382, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19509
-      objectReference: {fileID: 0}
     - target: {fileID: 2430059403682855671, guid: 2b9d661c7e0ab1541af19885d4c6c486, type: 3}
       propertyPath: m_LocalPosition.x
       value: 85.5
@@ -58398,10 +57698,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20028
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58420,10 +57716,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6719860957882109123, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21141
-      objectReference: {fileID: 0}
     - target: {fileID: 7547260671137318998, guid: ba604fcdda3d88248835e88a2cc5ab1f, type: 3}
       propertyPath: m_Name
       value: Stones_Small_3
@@ -58530,10 +57822,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22316
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58552,10 +57840,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21016
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 67.5
@@ -58618,10 +57902,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19834
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -58728,10 +58008,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_1
       objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19919
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58750,10 +58026,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22416
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 78.5
@@ -58816,10 +58088,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5240453770173646704, guid: 321fab61d7116ae45b39463ea948578a, type: 3}
-      propertyPath: m_SortingOrder
-      value: -21647
-      objectReference: {fileID: 0}
     - target: {fileID: 7657338947859524553, guid: 321fab61d7116ae45b39463ea948578a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 68.6875
@@ -58926,10 +58194,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20016
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -58992,10 +58256,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_DeadSnow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7839905887723070527, guid: 7a38d1cc64374954a93af34f6035d7d9, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19616
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59014,10 +58274,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22616
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 76.5
@@ -59128,10 +58384,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 489567642160835303, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20016
-      objectReference: {fileID: 0}
     - target: {fileID: 2609496159846467166, guid: 817a35a049b820f4fbf7aabc17c9c5e7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 74.5
@@ -59238,10 +58490,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19856
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59260,10 +58508,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5185537873047055372, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19419
-      objectReference: {fileID: 0}
     - target: {fileID: 7280978072599085237, guid: a3bcfb21bb682f64598107c2485ad94d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 80.5
@@ -59370,10 +58614,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3484908880831091902, guid: dc35a7328b3bb4c44b1b01f5e02831d3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19725
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59436,10 +58676,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8591644291314489917, guid: 5a0fe2a1ced47f646bdf6a5ba40c309c, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19828
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59458,10 +58694,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 442457433432889855, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22419
-      objectReference: {fileID: 0}
     - target: {fileID: 2656681169761809734, guid: 85e91361e363d5d44ac02aa7a594e045, type: 3}
       propertyPath: m_LocalPosition.x
       value: 80.5
@@ -59798,10 +59030,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stones_Small_0
       objectReference: {fileID: 0}
-    - target: {fileID: 2484652878662515428, guid: e8df603b03bba1d4191fb90f113f5bff, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22122
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59863,10 +59091,6 @@ PrefabInstance:
     - target: {fileID: 6811741965651874673, guid: 9a0287b9eb6edb0409052c34b3e44917, type: 3}
       propertyPath: m_Name
       value: PineSmall_Snow_0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7743050456753231844, guid: 9a0287b9eb6edb0409052c34b3e44917, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19209
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -59930,10 +59154,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_BroadleafSmall_3
       objectReference: {fileID: 0}
-    - target: {fileID: 2436370723794647713, guid: eba722b63cb258e4ba4d15768f558681, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19716
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -59996,10 +59216,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree_Broadleaf_2
       objectReference: {fileID: 0}
-    - target: {fileID: 7230705550914113047, guid: ccb42a2f77fa9ed4599bd388e584c101, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20716
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -60018,10 +59234,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 5122734223015515207, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
-      propertyPath: m_SortingOrder
-      value: -19309
-      objectReference: {fileID: 0}
     - target: {fileID: 7343711149909817598, guid: a54a95725c0a98741a4626d9ded26665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 105.5
@@ -60527,10 +59739,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2047487454}
     m_Modifications:
-    - target: {fileID: 6006568421869690238, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
-      propertyPath: m_SortingOrder
-      value: -20934
-      objectReference: {fileID: 0}
     - target: {fileID: 7396988940607150571, guid: 2a99dc8c653bc0041b63e3a4c0a041b2, type: 3}
       propertyPath: m_Name
       value: Fern_1
@@ -60636,10 +59844,6 @@ PrefabInstance:
     - target: {fileID: 1503741165185519001, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
       propertyPath: m_Name
       value: Tree_Broadleaf_1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2387647741988505868, guid: 8455d3303dd36b645a1548594c9a0ec3, type: 3}
-      propertyPath: m_SortingOrder
-      value: -22319
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

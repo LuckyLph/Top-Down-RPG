@@ -276,7 +276,7 @@ public class HitFeedbackPlayModeTests
 
             Impact = effect;
             At = Time.time;
-            Position = effect.transform.position;
+            Position = effect.GetComponentInChildren<SpriteRenderer>().transform.position;
             Flashes = struck.FlashCount;
             FlashColor = struck.FlashColor;
             Holds = struck.HoldCount;

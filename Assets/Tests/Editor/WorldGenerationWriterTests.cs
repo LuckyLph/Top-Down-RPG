@@ -19,7 +19,7 @@ using Object = UnityEngine.Object;
 /// folder under <c>Assets/Dev</c>, deleted after. Each chunk lists its own and its neighbours' strips' materials in the
 /// style's order, each layer holding exactly its composed cells and tile, with its raised ground, its mobs under its
 /// generated root with derived ids the id watcher keeps and its props under its generated props' root where the
-/// composition puts them; its <see cref="AreaTerrain"/> is only appended to; the written hash follows paint on any layer,
+/// composition puts them, with no sorting order written; its <see cref="AreaTerrain"/> is only appended to; the written hash follows paint on any layer,
 /// the generated spawn points and the generated props, and nothing else; objects outside the generated roots (props
 /// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances; a locked chunk is
 /// never opened, an unchanged one is skipped without being opened, one
@@ -654,6 +654,8 @@ public class WorldGenerationWriterTests
             Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(instance.gameObject) == props[i].Prefab, Is.True, $"chunk {coords}: prop {i} is an instance of {props[i].Prefab.name}");
             Vector2 root2 = ChunkContent.RootOf(props[i]);
             Assert.That(Vector2.Distance(instance.position, new Vector2(origin.x + root2.x, origin.y + root2.y)), Is.LessThan(0.001f), $"chunk {coords}: prop {i}'s place");
+            PropertyModification[] modifications = PrefabUtility.GetPropertyModifications(instance.gameObject) ?? new PropertyModification[0];
+            Assert.That(System.Array.FindAll(modifications, m => m.propertyPath == "m_SortingOrder"), Is.Empty, $"chunk {coords}: prop {i} keeps its prefab's sorting order");
             if (props[i].Blocks && PropGridSnapping.TryGetFootprint(props[i].Prefab, out Rect footprint))
             {
                 BoundsInt blocked = PropGridSnapping.BlockedCells(grid, instance.position, footprint);

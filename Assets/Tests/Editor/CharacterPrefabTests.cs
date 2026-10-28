@@ -3,6 +3,7 @@ using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Tests for how the player and the Weasel prefabs are drawn and sorted (Docs/Animation.md, Rules), on the project's
@@ -12,8 +13,8 @@ using UnityEngine;
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
 /// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
 /// casts; its look comes from the project's catalog, whose first look is the rogue it is drawn as and whose every look
-/// holds every clip it plays, standing, walking and running clips included; a sorter with a sorting point sorts by that
-/// point's height, and the Weasel sorts by its feet; the Weasels draw the Weasel's baked set from their feet with no
+/// holds every clip it plays, standing, walking and running clips included; the player and the Weasel sort as a group at
+/// their feet, the Weasel's bar apart from it over every unit; the Weasels draw the Weasel's baked set from their feet with no
 /// Mecanim animator, their config's attack clip in it.
 /// </summary>
 public class CharacterPrefabTests
@@ -133,9 +134,10 @@ public class CharacterPrefabTests
         Assert.That(sprite, Is.EqualTo(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0)));
         Assert.That(sprite.pivot, Is.EqualTo(new Vector2(32f, 12f)));
 
-        SerializedObject sorter = new(visuals.GetComponent<YPositionSorter>());
-        Assert.That(sorter.FindProperty("sortingPoint").objectReferenceValue, Is.SameAs(player.transform));
-        Assert.That(sorter.FindProperty("sortingOrderOffset").intValue, Is.Zero);
+        SortingGroup group = player.GetComponent<SortingGroup>();
+        Assert.That(group, Is.Not.Null, "The player sorts as a group at its root, its feet.");
+        Assert.That(group.sortingLayerName, Is.EqualTo("Entities"));
+        Assert.That(group.sortingOrder, Is.Zero);
 
         BoxCollider2D feet = player.GetComponent<BoxCollider2D>();
         Assert.That(feet.offset.y - feet.size.y * 0.5f, Is.EqualTo(0f).Within(OnePixel));
@@ -316,32 +318,24 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// A sorter with a sorting point orders its renderers by the point's height rather than its own, and the Weasel's
-    /// sorts by its root, its feet, as the player's does.
+    /// The Weasel sorts as one group at its root, its feet, as the player does, at a constant order on the Entities layer;
+    /// its health bar sorts apart, at the root of the sorting on the Overlay layer, so it draws over every unit: inside the
+    /// body's group it would draw on the Entities layer.
     /// </summary>
     [Test]
-    public void ASortingPoint_SortsByItsHeight_AndTheWeaselSortsByItsFeet()
+    public void TheWeasel_SortsAsAGroupAtItsFeet_AndItsBarOverEveryUnit()
     {
-        GameObject unit = Track(new GameObject("Unit"));
-        unit.transform.position = new Vector3(0f, 1f, 0f);
-        GameObject sprite = new("Visuals");
-        sprite.transform.SetParent(unit.transform, false);
-        sprite.transform.localPosition = new Vector3(0f, 0.72f, 0f);
-        SpriteRenderer renderer = sprite.AddComponent<SpriteRenderer>();
-        YPositionSorter sorter = sprite.AddComponent<YPositionSorter>();
-        sorter.SetSortingOrderOffset(0);
-        Assert.That(renderer.sortingOrder, Is.EqualTo(-172));
-
-        SerializedObject serialized = new(sorter);
-        serialized.FindProperty("sortingPoint").objectReferenceValue = unit.transform;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        sorter.SetSortingOrderOffset(0);
-        Assert.That(sorter.SortingY, Is.EqualTo(1f).Within(1e-5f));
-        Assert.That(renderer.sortingOrder, Is.EqualTo(-100));
-
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>(WeaselPath);
-        YPositionSorter weaselSorter = weasel.transform.Find("Visuals").GetComponent<YPositionSorter>();
-        Assert.That(new SerializedObject(weaselSorter).FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(weasel.transform));
+        SortingGroup group = weasel.GetComponent<SortingGroup>();
+        Assert.That(group, Is.Not.Null);
+        Assert.That(group.sortingLayerName, Is.EqualTo("Entities"));
+        Assert.That(group.sortingOrder, Is.Zero);
+        Assert.That(group.sortAtRoot, Is.False);
+
+        SortingGroup bar = weasel.GetComponentInChildren<WorldHealthBar>(true).GetComponent<SortingGroup>();
+        Assert.That(bar, Is.Not.Null, "The bar sorts apart from the body.");
+        Assert.That(bar.sortingLayerName, Is.EqualTo("Overlay"));
+        Assert.That(bar.sortAtRoot, Is.True);
     }
 
     /// <summary>

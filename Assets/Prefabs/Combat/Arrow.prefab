@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6204296507009315200}
   - component: {fileID: 6372472257475858116}
-  - component: {fileID: 6470431913340030339}
   m_Layer: 0
   m_Name: Sprite
   m_TagString: Untagged
@@ -92,25 +91,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &6470431913340030339
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2754912850079380821}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 47e05ee08395dd1448cdcd87505a2dfd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::YPositionSorter
-  sortingGroup: {fileID: 0}
-  includeChildRenderers: 1
-  sortingOrderMultiplier: 100
-  sortingOrderOffset: 0
-  sortingPoint: {fileID: 40165824560821531}
-  useSortingReferenceY: 0
-  sortingReferenceY: 0
 --- !u!1 &5019134148765438277
 GameObject:
   m_ObjectHideFlags: 0
@@ -121,6 +101,7 @@ GameObject:
   m_Component:
   - component: {fileID: 40165824560821531}
   - component: {fileID: 3463214288168290358}
+  - component: {fileID: 2645705137331558282}
   m_Layer: 0
   m_Name: Arrow
   m_TagString: Untagged
@@ -158,3 +139,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ProjectileVisual
   sprites: {fileID: 11400000, guid: 65c22e18779606240b6d6f52f29b5ca2, type: 2}
   spriteRenderer: {fileID: 6372472257475858116}
+--- !u!210 &2645705137331558282
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5019134148765438277}
+  m_Enabled: 1
+  m_SortingLayerID: 771016619
+  m_SortingLayer: 2
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
+  m_Sort3DAs2D: 0

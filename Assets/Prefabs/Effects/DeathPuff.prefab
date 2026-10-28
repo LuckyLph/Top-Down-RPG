@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7221225707389129350
+--- !u!1 &2928399646472180082
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,40 +8,38 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7492403756710208394}
-  - component: {fileID: 7202062593372761631}
-  - component: {fileID: 8484717844017035042}
-  - component: {fileID: 3270815177430100726}
+  - component: {fileID: 5023390135572360234}
+  - component: {fileID: 2339392892388439309}
   m_Layer: 0
-  m_Name: DeathPuff
+  m_Name: Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7492403756710208394
+--- !u!4 &5023390135572360234
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7221225707389129350}
+  m_GameObject: {fileID: 2928399646472180082}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 7492403756710208394}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &7202062593372761631
+--- !u!212 &2339392892388439309
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7221225707389129350}
+  m_GameObject: {fileID: 2928399646472180082}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -93,25 +91,40 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &8484717844017035042
-MonoBehaviour:
+--- !u!1 &7221225707389129350
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7492403756710208394}
+  - component: {fileID: 3270815177430100726}
+  - component: {fileID: 2239203451236597234}
+  m_Layer: 0
+  m_Name: DeathPuff
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7492403756710208394
+Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7221225707389129350}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 47e05ee08395dd1448cdcd87505a2dfd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: TopDownRPG.Gameplay::YPositionSorter
-  sortingGroup: {fileID: 0}
-  includeChildRenderers: 1
-  sortingOrderMultiplier: 100
-  sortingOrderOffset: 0
-  sortingPoint: {fileID: 0}
-  useSortingReferenceY: 0
-  sortingReferenceY: 0
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5023390135572360234}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3270815177430100726
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -125,5 +138,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::EffectPlayer
   sprites: {fileID: 11400000, guid: f5c1a96b0abbe8842a7acd5fda072d49, type: 2}
-  spriteRenderer: {fileID: 7202062593372761631}
-  sorter: {fileID: 8484717844017035042}
+  spriteRenderer: {fileID: 2339392892388439309}
+  sortNudge: 0
+--- !u!210 &2239203451236597234
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7221225707389129350}
+  m_Enabled: 1
+  m_SortingLayerID: 771016619
+  m_SortingLayer: 2
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
+  m_Sort3DAs2D: 0

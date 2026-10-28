@@ -1,22 +1,24 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// A pooled one-shot effect on its prefab (Docs/Animation.md, Phase 6): plays one variant and direction of its baked
-/// <see cref="EffectSprites"/> frame by frame on <see cref="Time.deltaTime"/> (visual only), sorted by the ground height
-/// it is given, then goes back to its <see cref="EffectPool"/>. Nothing rotates or scales it. A pooled effect stays
-/// active with its renderer off, since activating it again would make its <see cref="YPositionSorter"/> look its
-/// renderers up anew.
+/// <see cref="EffectSprites"/> frame by frame on <see cref="Time.deltaTime"/> (visual only), then goes back to its
+/// <see cref="EffectPool"/>. It sorts by the 2D renderer's custom axis (Docs/WorldScale.md, Phase 1): its root, whose
+/// <see cref="SortingGroup"/> sorts at where it stands, stands at the ground height it is given, nudged toward the
+/// camera by its sort nudge, and its sprite, on a child, is drawn where it is played. Nothing rotates or scales it. A
+/// pooled effect stays active with its renderer off.
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(SpriteRenderer))]
+[RequireComponent(typeof(SortingGroup))]
 public class EffectPlayer : MonoBehaviour
 {
     [SerializeField, Tooltip("The effect's baked frames, written by its recipe's Generate.")]
     private EffectSprites sprites;
-    [SerializeField, Tooltip("The renderer the frames show on.")]
+    [SerializeField, Tooltip("The renderer the frames show on, on a child moved to where the effect is played.")]
     private SpriteRenderer spriteRenderer;
-    [SerializeField, Tooltip("Sorts the effect by the ground height it is played at.")]
-    private YPositionSorter sorter;
+    [SerializeField, Min(0f), Tooltip("How far toward the camera the effect sorts from the ground height it is played at, in units: above 0 it draws over what stands there.")]
+    private float sortNudge;
 
     private EffectPool pool;
     private int variant;
@@ -36,13 +38,17 @@ public class EffectPlayer : MonoBehaviour
     internal EffectPlayer SourcePrefab { get; set; }
 
     /// <summary>
-    /// Fails loudly when the frames, the renderer or the sorter are missing.
+    /// Fails loudly when the frames or the renderer are missing, or the renderer is not on a child.
     /// </summary>
     private void Awake()
     {
-        if (sprites == null || spriteRenderer == null || sorter == null)
+        if (sprites == null || spriteRenderer == null)
         {
-            Debug.LogError($"{name} needs its {nameof(EffectSprites)}, sprite renderer and {nameof(YPositionSorter)} to play.", this);
+            Debug.LogError($"{name} needs its {nameof(EffectSprites)} and sprite renderer to play.", this);
+        }
+        else if (spriteRenderer.transform.parent != transform)
+        {
+            Debug.LogError($"{name}'s sprite renderer should be on a child, so the effect can sort apart from where it is drawn.", this);
         }
     }
 
@@ -68,14 +74,12 @@ public class EffectPlayer : MonoBehaviour
         elapsed = 0f;
         IsPlaying = true;
         Transform own = transform;
-        own.position = new Vector3(position.x, position.y, own.position.z);
-        if (sorter != null)
-        {
-            sorter.SetSortingReferenceY(sortingY);
-        }
-
+        float standing = sortingY - sortNudge;
+        own.position = new Vector3(position.x, standing, own.position.z);
         if (sprites != null && spriteRenderer != null)
         {
+            Transform drawn = spriteRenderer.transform;
+            drawn.localPosition = new Vector3(0f, position.y - standing, drawn.localPosition.z);
             spriteRenderer.sprite = sprites.Get(variant, direction, 0);
             spriteRenderer.enabled = true;
         }
@@ -120,13 +124,14 @@ public class EffectPlayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Sets the frames, renderer and sorter in code, for tests that build an effect without its prefab.
+    /// Sets the frames, the renderer (on a child) and the sort nudge in code, for tests that build an effect without its
+    /// prefab.
     /// </summary>
-    internal void Configure(EffectSprites effectSprites, SpriteRenderer renderer, YPositionSorter effectSorter)
+    internal void Configure(EffectSprites effectSprites, SpriteRenderer renderer, float nudge = 0f)
     {
         sprites = effectSprites;
         spriteRenderer = renderer;
-        sorter = effectSorter;
+        sortNudge = nudge;
     }
 
     /// <summary>

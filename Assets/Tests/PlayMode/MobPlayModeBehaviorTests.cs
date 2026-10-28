@@ -354,13 +354,13 @@ public class MobPlayModeBehaviorTests
         Assert.That(health.IsDead, Is.True);
         Assert.That(mob == null, Is.True, "Mob root should be destroyed after death.");
         Assert.That(deathEffect, Is.Not.Null, "The death effect should play when the mob dies.");
-        Assert.That(Vector2.Distance(deathEffect.transform.position, feet), Is.LessThan(1e-3f), "The death effect stands where the mob stood.");
+        Assert.That(Vector2.Distance(deathEffect.transform.position, feet), Is.LessThan(1e-3f), "The death effect stands, and so sorts, where the mob stood.");
+        Assert.That(Vector2.Distance(deathEffect.GetComponentInChildren<SpriteRenderer>().transform.position, feet), Is.LessThan(1e-3f), "The death effect is drawn where the mob stood.");
         Assert.That(deathEffect.transform.lossyScale, Is.EqualTo(Vector3.one), "The death effect is drawn unscaled.");
-        Assert.That(deathEffect.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(feet.y).Within(1e-3f), "The death effect sorts where the mob stood.");
 
         yield return new WaitForSeconds(deathSprites.Duration + 0.5f);
         Assert.That(deathEffect.IsPlaying, Is.False, "The death effect ends after playback and goes back to its pool.");
-        Assert.That(deathEffect.GetComponent<SpriteRenderer>().enabled, Is.False, "A pooled effect is hidden.");
+        Assert.That(deathEffect.GetComponentInChildren<SpriteRenderer>().enabled, Is.False, "A pooled effect is hidden.");
     }
 
     /// <summary>

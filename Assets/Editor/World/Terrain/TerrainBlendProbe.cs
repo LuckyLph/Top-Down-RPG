@@ -15,9 +15,8 @@ using UnityEngine.Tilemaps;
 /// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. Shaders compile synchronously during its
 /// renders, since a render skips variants still compiling in the background. It hides renderers only through
 /// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved, and puts back what a render
-/// hid even when the render fails, clearing the dirty mark that setting it leaves: otherwise the next save would write
-/// every prop's sorting order (set in edit mode by its <see cref="YPositionSorter"/>) into the scene as a prefab
-/// override.
+/// hid even when the render fails, clearing the dirty mark that setting it leaves, so it leaves the scene as it found
+/// it.
 /// </summary>
 public static class TerrainBlendProbe
 {

@@ -4,6 +4,7 @@ using System.Text;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
@@ -117,10 +118,10 @@ public class HitFeedbackTests
         Assert.That(impact.Variant, Is.EqualTo((int)DamageType.Fire));
         Assert.That(impact.Direction, Is.EqualTo(impactPrefab.Sprites.DirectionOf(away)));
         Bounds body = target.GetComponent<Collider2D>().bounds;
-        Vector2 ground = (Vector2)impact.transform.position - Vector2.up * struck.ImpactHeight;
+        Vector2 ground = (Vector2)impact.GetComponentInChildren<SpriteRenderer>().transform.position - Vector2.up * struck.ImpactHeight;
         Assert.That(ground.x, Is.EqualTo(body.min.x).Within(1e-4f), "The impact lands on the face toward the source.");
         Assert.That(Cross(ground, body.center), Is.EqualTo(0f).Within(1e-4f), "It lies on the line from the source to the unit's middle.");
-        Assert.That(impact.GetComponent<YPositionSorter>().SortingY, Is.EqualTo(0.2f).Within(1e-4f), "It sorts with the struck unit's feet.");
+        Assert.That(impact.transform.position.y, Is.EqualTo(0.2f).Within(1e-4f), "It sorts with the struck unit's feet, where its root stands.");
 
         CharacterVisuals animated = target.GetComponentInChildren<CharacterVisuals>();
         animated.Tick();
@@ -485,8 +486,9 @@ public class HitFeedbackTests
     /// <summary>
     /// The player and the Weasel show hits: their hit feedback flashes the body renderer under their root through the
     /// flash shader, nudges that renderer's transform (never the root), lands impacts on the root's collider and holds
-    /// through their character visuals, and each sorts by its root, so a nudge never changes its sorting; the Weasel's
-    /// death plays the pooled death puff; the settings' impact has a variant per damage type.
+    /// through their character visuals, and each sorts as a group at its root, so a nudge never changes its sorting; the
+    /// Weasel's death plays the pooled death puff, sorted where the mob stood; the settings' impact has a variant per
+    /// damage type and sorts in front of the unit it hits.
     /// </summary>
     [Test]
     public void TheShippedUnitsAndSettings_AreWiredForHitFeedback()
@@ -505,7 +507,7 @@ public class HitFeedbackTests
             Assert.That(visuals, Is.Not.SameAs(prefab.transform), path);
             Assert.That(serialized.FindProperty("bodyCollider").objectReferenceValue, Is.SameAs(prefab.GetComponent<Collider2D>()), path);
             Assert.That(serialized.FindProperty("characterVisuals").objectReferenceValue, Is.EqualTo(prefab.GetComponentInChildren<CharacterVisuals>()), path);
-            Assert.That(new SerializedObject(prefab.GetComponentInChildren<YPositionSorter>()).FindProperty("sortingPoint").objectReferenceValue, Is.EqualTo(prefab.transform), path);
+            Assert.That(prefab.GetComponent<SortingGroup>(), Is.Not.Null, $"{path} sorts as a group at its root.");
         }
 
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Mobs/Weasel.prefab");
@@ -520,6 +522,8 @@ public class HitFeedbackTests
         Assert.That(shipped.ImpactEffect, Is.Not.Null);
         Assert.That(shipped.ImpactEffect.Sprites.VariantCount, Is.EqualTo(System.Enum.GetValues(typeof(DamageType)).Length));
         Assert.That(shipped.ImpactEffect.transform.localScale, Is.EqualTo(Vector3.one));
+        Assert.That(new SerializedObject(shipped.ImpactEffect).FindProperty("sortNudge").floatValue, Is.GreaterThan(0f), "An impact sorts in front of the unit it hits.");
+        Assert.That(new SerializedObject(death).FindProperty("sortNudge").floatValue, Is.Zero, "A death puff sorts where the mob stood.");
     }
 
     /// <summary>
@@ -685,10 +689,11 @@ public class HitFeedbackTests
 
         EffectSprites effectSprites = Track(EffectSprites.Create(sprites, variants, directions, frames, 0.04f));
         GameObject root = Track(new GameObject("ImpactPrefab"));
-        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
-        YPositionSorter sorter = root.AddComponent<YPositionSorter>();
+        GameObject drawn = new("Sprite");
+        drawn.transform.SetParent(root.transform, false);
+        SpriteRenderer renderer = drawn.AddComponent<SpriteRenderer>();
         EffectPlayer effect = root.AddComponent<EffectPlayer>();
-        effect.Configure(effectSprites, renderer, sorter);
+        effect.Configure(effectSprites, renderer);
         renderer.enabled = false;
         return effect;
     }

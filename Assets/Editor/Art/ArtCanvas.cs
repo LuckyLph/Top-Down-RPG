@@ -224,11 +224,13 @@ public class ArtCanvas
     /// Draws a sphere of <paramref name="radius"/> units, at least <paramref name="minRadius"/> pixels, around
     /// <paramref name="world"/>: each pixel whose centre lies inside its disc and in front of what is there takes the
     /// sphere's front surface. With an <paramref name="envelope"/>, each normal leans toward the envelope's by
-    /// <paramref name="blend"/>.
+    /// <paramref name="blend"/>. A <paramref name="depthOffset"/> (pixels of depth, negative nearer) moves it in the depth
+    /// test only, not where it lands or how it is lit.
     /// </summary>
-    public void Sphere(Vector3 world, float radius, int value, int owner, float minRadius = 0f, ArtEnvelope envelope = null, float blend = 0f)
+    public void Sphere(Vector3 world, float radius, int value, int owner, float minRadius = 0f, ArtEnvelope envelope = null, float blend = 0f, float depthOffset = 0f)
     {
         Vector3 centre = Project(world);
+        centre.z += depthOffset;
         float r = Mathf.Max(radius * Scale, minRadius);
         float r2 = r * r;
         int x0 = Mathf.Max(Mathf.FloorToInt(centre.x + Pivot.x - r - 1f), 0);
@@ -375,9 +377,10 @@ public class ArtCanvas
     /// Draws an ellipsoid around <paramref name="centre"/> whose half axes are <paramref name="axisX"/>,
     /// <paramref name="axisY"/> and <paramref name="axisZ"/> (perpendicular, in world units, at any orientation): each
     /// pixel whose view ray meets it takes its nearest surface. With an <paramref name="envelope"/>, each normal leans
-    /// toward the envelope's by <paramref name="blend"/>.
+    /// toward the envelope's by <paramref name="blend"/>. A <paramref name="depthOffset"/> (pixels of depth, negative
+    /// nearer) moves it in the depth test only.
     /// </summary>
-    public void Ellipsoid(Vector3 centre, Vector3 axisX, Vector3 axisY, Vector3 axisZ, int value, int owner, ArtEnvelope envelope = null, float blend = 0f)
+    public void Ellipsoid(Vector3 centre, Vector3 axisX, Vector3 axisY, Vector3 axisZ, int value, int owner, ArtEnvelope envelope = null, float blend = 0f, float depthOffset = 0f)
     {
         Vector3 extent = new(
             Mathf.Abs(axisX.x) + Mathf.Abs(axisY.x) + Mathf.Abs(axisZ.x),
@@ -417,7 +420,7 @@ public class ArtCanvas
                     surfaceNormal = Vector3.Lerp(surfaceNormal, envelope.NormalAt(surface), blend);
                 }
 
-                Write(y * Width + x, t, surface, surfaceNormal, value, owner);
+                Write(y * Width + x, t + depthOffset, surface, surfaceNormal, value, owner);
             }
         }
     }

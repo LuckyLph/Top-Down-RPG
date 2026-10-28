@@ -5,7 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for the shared canvas's prop primitives and shading (Docs/PropGeneration.md, The canvas): an ellipsoid with
-/// equal axes covers what a sphere covers, facing the same ways; a convex cube shows its top and front faces with their
+/// equal axes covers what a sphere covers, facing the same ways; a depth offset moves a shape in the depth test only; a
+/// convex cube shows its top and front faces with their
 /// own normals; a marched field of a sphere matches the sphere; the ground hides what lies under it; a cover is taken
 /// only where the surface faces up past its threshold; a tone offset darkens by one tone; a pattern read in a frame of
 /// its own moves with the frame's origin; needle streaks run out from the up axis and basalt joints across it. The characters' frames
@@ -47,6 +48,54 @@ public class ArtCanvasTests
         }
 
         Assert.That(filled, Is.GreaterThan(200));
+    }
+
+    /// <summary>
+    /// A sphere or an ellipsoid drawn behind another, its depth offset bringing it nearer, shows over it with the pixels,
+    /// normals and world positions it has drawn alone, its depth moved by the offset; drawn without the offset, it hides
+    /// behind the other where they overlap.
+    /// </summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public void DepthOffset_MovesAShapeInTheDepthTestOnly(bool ellipsoid)
+    {
+        const float offset = -40f;
+        Vector3 front = new(-0.4f, -0.5f, 1.2f);
+        Vector3 back = new(0.4f, 0.5f, 1.2f);
+        ArtCanvas alone = Canvas();
+        Round(alone, back, 1, ellipsoid, 0f);
+        ArtCanvas behind = Canvas();
+        Round(behind, front, 0, ellipsoid, 0f);
+        Round(behind, back, 1, ellipsoid, 0f);
+        ArtCanvas brought = Canvas();
+        Round(brought, front, 0, ellipsoid, 0f);
+        Round(brought, back, 1, ellipsoid, offset);
+
+        int filled = 0;
+        int hidden = 0;
+        for (int y = 0; y < Size; y++)
+        {
+            for (int x = 0; x < Size; x++)
+            {
+                if (!alone.IsFilled(x, y))
+                {
+                    continue;
+                }
+
+                filled++;
+                Assert.That(brought.PartIdAt(x, y), Is.EqualTo(1), $"pixel {x}, {y}");
+                Assert.That(brought.NormalAt(x, y), Is.EqualTo(alone.NormalAt(x, y)), $"pixel {x}, {y}");
+                Assert.That(brought.WorldPositionAt(x, y), Is.EqualTo(alone.WorldPositionAt(x, y)), $"pixel {x}, {y}");
+                Assert.That(brought.DepthAt(x, y), Is.EqualTo(alone.DepthAt(x, y) + offset).Within(0.001f), $"pixel {x}, {y}");
+                if (behind.PartIdAt(x, y) == 0)
+                {
+                    hidden++;
+                }
+            }
+        }
+
+        Assert.That(filled, Is.GreaterThan(200));
+        Assert.That(hidden, Is.GreaterThan(20));
     }
 
     /// <summary>
@@ -379,6 +428,22 @@ public class ArtCanvasTests
     private static ArtMaterial Ringed(Vector3 origin, Vector3 axis)
     {
         return new ArtMaterial(Red, flat: true, pattern: ArtPattern.Rings, patternScale: 4f, patternOrigin: origin, patternAxis: axis);
+    }
+
+    /// <summary>
+    /// Draws a sphere, or an ellipsoid with equal axes, of one unit around <paramref name="centre"/> as material and part
+    /// <paramref name="id"/>, moved in the depth test by <paramref name="depthOffset"/>.
+    /// </summary>
+    private static void Round(ArtCanvas canvas, Vector3 centre, int id, bool ellipsoid, float depthOffset)
+    {
+        if (ellipsoid)
+        {
+            canvas.Ellipsoid(centre, new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f), new Vector3(0f, 0f, 1f), id, id, depthOffset: depthOffset);
+        }
+        else
+        {
+            canvas.Sphere(centre, 1f, id, id, depthOffset: depthOffset);
+        }
     }
 
     /// <summary>

@@ -52,6 +52,9 @@ MonoBehaviour:
     blend: 0.45
     shell: {x: 0.88, y: 1.02}
     stretch: 1
+    tilt: 2
+    candidates: 8
+    taper: 0.6
   pine:
     tiers: 5
     clearance: 0.3

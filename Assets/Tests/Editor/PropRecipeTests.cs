@@ -9,13 +9,18 @@ using UnityEngine;
 /// the same seed and different ones for different variants; every variant of every recipe asset keeps its drawing
 /// inside its frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame;
 /// its shadow is an ellipse of the recipe's opacity inside its frame; a bush's flowers only recolour its crown, in one
-/// colour a variant; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
+/// colour a variant; a crown drawing its lower clumps in front shows the lower of two overlapping clumps, one picking
+/// from several places spreads its clumps and one tapered grows them from its top to its foot; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
 /// its tiers; a bare tree's twigs are unlined; a crag blocks only its own foot; a cover lies only where it is enabled;
 /// and a recipe refuses names and frames it cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
     private const string RecipesFolder = "Assets/Settings/Props";
+    private static readonly Vector2 ClumpSizes = new(0.28f, 0.5f);
+    private static readonly Vector2 Shell = new(0.88f, 1.02f);
+    private static readonly Vector3 CrownCentre = new(0f, 0f, 2.6f);
+    private static readonly Vector3 CrownRadii = new(1.25f, 1.1f, 1.3f);
 
     private readonly List<Object> created = new();
 
@@ -163,6 +168,57 @@ public class PropRecipeTests
             }
 
             Assert.That(added.Count, Is.InRange(1, 2), $"variant {i}");
+        }
+    }
+
+    /// <summary>
+    /// A crown drawing each clump in front of the clumps above it shows the lower clump nearly everywhere two clumps
+    /// more than a fifth of a cell apart on screen overlap, far more often than one sorting them by their depth.
+    /// </summary>
+    [Test]
+    public void TiltedCrown_ShowsTheLowerOfTwoOverlappingClumps()
+    {
+        for (int seed = 0; seed < 4; seed++)
+        {
+            float sorted = LowerShown(new PropCrown(26, ClumpSizes, 0.45f, Shell), seed);
+            float tilted = LowerShown(new PropCrown(26, ClumpSizes, 0.45f, Shell, lowerInFront: 2f), seed);
+            Assert.That(tilted, Is.GreaterThan(0.85f), $"seed {seed}");
+            Assert.That(tilted, Is.GreaterThan(sorted + 0.3f), $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// A crown picking each clump from several places sets its clumps farther from their nearest neighbours than one
+    /// setting them at random.
+    /// </summary>
+    [Test]
+    public void SpreadCrown_SetsItsClumpsFartherApart()
+    {
+        for (int seed = 0; seed < 4; seed++)
+        {
+            float random = MeanGap(DrawCrown(new PropCrown(26, ClumpSizes, 0.45f, Shell), seed, out _));
+            float spread = MeanGap(DrawCrown(new PropCrown(26, ClumpSizes, 0.45f, Shell, spotChoices: 8), seed, out _));
+            Assert.That(spread, Is.GreaterThan(random * 1.15f), $"seed {seed}");
+        }
+    }
+
+    /// <summary>
+    /// A crown tapered all the way sizes its clumps by how high they sit on screen, from the smallest at its top to the
+    /// largest at its foot.
+    /// </summary>
+    [Test]
+    public void TaperedCrown_GrowsItsClumpsFromItsTopToItsFoot()
+    {
+        for (int seed = 0; seed < 4; seed++)
+        {
+            List<PropClump> clumps = DrawCrown(new PropCrown(26, ClumpSizes, 0.45f, Shell, sizeTaper: 1f), seed, out ArtCanvas canvas);
+            List<PropClump> downward = clumps.OrderByDescending(c => canvas.Project(c.Centre).y).ToList();
+            for (int i = 1; i < downward.Count; i++)
+            {
+                Assert.That(downward[i].Radius, Is.GreaterThanOrEqualTo(downward[i - 1].Radius - 0.00001f), $"seed {seed}, clump {i}");
+            }
+
+            Assert.That(downward[downward.Count - 1].Radius - downward[0].Radius, Is.GreaterThan((ClumpSizes.y - ClumpSizes.x) * 0.5f), $"seed {seed}");
         }
     }
 
@@ -324,6 +380,78 @@ public class PropRecipeTests
             .Select(AssetDatabase.LoadAssetAtPath<PropRecipe>)
             .Where(r => r != null)
             .ToList();
+    }
+
+    /// <summary>
+    /// Draws <paramref name="crown"/> from <paramref name="seed"/> around a broadleaf's middle on a broadleaf's frame,
+    /// returning its clumps.
+    /// </summary>
+    private static List<PropClump> DrawCrown(PropCrown crown, int seed, out ArtCanvas canvas)
+    {
+        canvas = new ArtCanvas(104, 136, new Vector2Int(52, 10), PropBaker.PixelsPerCell) { HidesBelowGround = true };
+        List<PropClump> clumps = new();
+        crown.Draw(new PropDrawing(canvas, new System.Random(seed)), CrownCentre, CrownRadii, 0, 1, clumps);
+        return clumps;
+    }
+
+    /// <summary>
+    /// The share of overlaps where <paramref name="crown"/>, drawn from <paramref name="seed"/>, shows the lower clump:
+    /// each pixel showing a clump counts once for every other clump covering it whose middle lies more than a fifth of a
+    /// cell higher or lower on screen.
+    /// </summary>
+    private static float LowerShown(PropCrown crown, int seed)
+    {
+        List<PropClump> clumps = DrawCrown(crown, seed, out ArtCanvas canvas);
+        float apart = PropBaker.PixelsPerCell * 0.2f;
+        int overlaps = 0;
+        int lower = 0;
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                int shown = canvas.PartIdAt(x, y);
+                int index = clumps.FindIndex(c => c.Part == shown);
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                float shownHeight = canvas.Project(clumps[index].Centre).y;
+                foreach (PropClump other in clumps)
+                {
+                    Vector3 at = canvas.Project(other.Centre);
+                    float dx = x + 0.5f - canvas.Pivot.x - at.x;
+                    float dy = y + 0.5f - canvas.Pivot.y - at.y;
+                    float radius = other.Radius * canvas.Scale;
+                    if (dx * dx + dy * dy > radius * radius || Mathf.Abs(at.y - shownHeight) <= apart)
+                    {
+                        continue;
+                    }
+
+                    overlaps++;
+                    if (shownHeight < at.y)
+                    {
+                        lower++;
+                    }
+                }
+            }
+        }
+
+        return lower / (float)overlaps;
+    }
+
+    /// <summary>
+    /// The mean distance from each of <paramref name="clumps"/>' middles to its nearest neighbour's.
+    /// </summary>
+    private static float MeanGap(List<PropClump> clumps)
+    {
+        float sum = 0f;
+        foreach (PropClump clump in clumps)
+        {
+            sum += clumps.Where(other => other.Part != clump.Part).Min(other => (other.Centre - clump.Centre).magnitude);
+        }
+
+        return sum / clumps.Count;
     }
 
     /// <summary>

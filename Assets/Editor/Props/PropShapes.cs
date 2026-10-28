@@ -26,7 +26,9 @@ public readonly struct PropClump
 /// A crown of leaf clumps, shared by trees and bushes (Docs/PropGeneration.md, Phase 0 notes): a core ellipsoid one
 /// tone darker that shows between the clumps, and clumps of three sizes set on its surface where it faces the camera,
 /// each its own part so inner lines scallop the crown, their normals leaning toward the whole crown's so it is lit as
-/// one mass. Clumps stretched taller than wide hang, as a willow's.
+/// one mass. Clumps stretched taller than wide hang, as a willow's. A tree's crown can draw each clump in front of the
+/// clumps above it, spread its clumps apart and size them from small at its top to large at its foot, so it reads as a
+/// dome over its trunk rather than hanging from its top.
 /// </summary>
 [Serializable]
 public sealed class PropCrown
@@ -48,6 +50,12 @@ public sealed class PropCrown
     [SerializeField] private Vector2 shell = new(0.88f, 1.02f);
     [Tooltip("How tall each clump is, as a share of its width: above 1 the clumps hang, as a willow's.")]
     [SerializeField, Min(0.2f)] private float stretch = 1f;
+    [Tooltip("How far each clump is drawn in front of the clumps above it, in cells of depth per cell lower on screen: 0 sorts them by their real depth.")]
+    [SerializeField, Min(0f)] private float tilt;
+    [Tooltip("How many places each clump picks from, taking the one farthest from the clumps already set: 1 sets them at random.")]
+    [SerializeField, Min(1)] private int candidates = 1;
+    [Tooltip("How far the clumps grow from the smallest at the crown's top to the largest at its foot, instead of taking a size at random.")]
+    [SerializeField, Range(0f, 1f)] private float taper;
 
     /// <summary>
     /// Creates a crown of the clumps a tree has, for Unity serialization.
@@ -58,14 +66,19 @@ public sealed class PropCrown
 
     /// <summary>
     /// Creates a crown of <paramref name="clumpCount"/> clumps of <paramref name="radius"/>, leaning by
-    /// <paramref name="leanBlend"/>, set at <paramref name="shellRange"/> of the core's radius.
+    /// <paramref name="leanBlend"/>, set at <paramref name="shellRange"/> of the core's radius, each drawn in front of the
+    /// clumps above it by <paramref name="lowerInFront"/>, picked from <paramref name="spotChoices"/> places and sized by
+    /// how high it sits by <paramref name="sizeTaper"/>.
     /// </summary>
-    public PropCrown(int clumpCount, Vector2 radius, float leanBlend, Vector2 shellRange)
+    public PropCrown(int clumpCount, Vector2 radius, float leanBlend, Vector2 shellRange, float lowerInFront = 0f, int spotChoices = 1, float sizeTaper = 0f)
     {
         clumps = clumpCount;
         clumpRadius = radius;
         blend = leanBlend;
         shell = shellRange;
+        tilt = lowerInFront;
+        candidates = spotChoices;
+        taper = sizeTaper;
     }
 
     /// <summary>
@@ -81,6 +94,8 @@ public sealed class PropCrown
         Vector3 inner = new(Mathf.Max(0.1f, radii.x - inset), Mathf.Max(0.1f, radii.y - inset), Mathf.Max(0.1f, radii.z - inset));
         drawing.Canvas.Ellipsoid(centre, new Vector3(inner.x * CoreShrink, 0f, 0f), new Vector3(0f, inner.y * CoreShrink, 0f), new Vector3(0f, 0f, inner.z * CoreShrink), core, drawing.NewPart(), envelope, CoreBlend);
         float[] sizes = { clumpRadius.x, mean, clumpRadius.y };
+        float top = ScreenHeight(centre) + Mathf.Sqrt(inner.y * ArtCanvas.SinPitch * inner.y * ArtCanvas.SinPitch + inner.z * ArtCanvas.CosPitch * inner.z * ArtCanvas.CosPitch);
+        List<Vector3> spots = new(clumps);
         int count = 0;
         for (int attempt = 0; count < clumps && attempt < clumps * Attempts; attempt++)
         {
@@ -90,21 +105,56 @@ public sealed class PropCrown
                 continue;
             }
 
+            for (int k = 1; k < candidates; k++)
+            {
+                Vector3 other = drawing.OnSphere();
+                if (Vector3.Dot(other, PropDrawing.ToCamera) >= HiddenFacing && Clearance(spots, Vector3.Scale(other, inner)) > Clearance(spots, Vector3.Scale(direction, inner)))
+                {
+                    direction = other;
+                }
+            }
+
+            spots.Add(Vector3.Scale(direction, inner));
             float radius = sizes[drawing.Random.Next(sizes.Length)] * drawing.Range(1f - SizeJitter, 1f + SizeJitter);
             Vector3 at = centre + Vector3.Scale(direction, inner) * drawing.Range(shell);
+            float rise = Mathf.Clamp01((ScreenHeight(at) - (2f * ScreenHeight(centre) - top)) / (2f * (top - ScreenHeight(centre))));
+            radius = Mathf.Lerp(radius, Mathf.Lerp(clumpRadius.y, clumpRadius.x, rise), taper);
             int part = drawing.NewPart();
+            float depthOffset = -tilt * Mathf.Max(0f, top - ScreenHeight(at)) * drawing.Canvas.Scale;
             if (stretch == 1f)
             {
-                drawing.Canvas.Sphere(at, radius, leaves, part, 0f, envelope, blend);
+                drawing.Canvas.Sphere(at, radius, leaves, part, 0f, envelope, blend, depthOffset);
             }
             else
             {
-                drawing.Canvas.Ellipsoid(at, new Vector3(radius, 0f, 0f), new Vector3(0f, radius, 0f), new Vector3(0f, 0f, radius * stretch), leaves, part, envelope, blend);
+                drawing.Canvas.Ellipsoid(at, new Vector3(radius, 0f, 0f), new Vector3(0f, radius, 0f), new Vector3(0f, 0f, radius * stretch), leaves, part, envelope, blend, depthOffset);
             }
 
             placed?.Add(new PropClump(at, radius, part));
             count++;
         }
+    }
+
+    /// <summary>
+    /// The squared distance from <paramref name="spot"/> to the nearest of <paramref name="spots"/>.
+    /// </summary>
+    private static float Clearance(List<Vector3> spots, Vector3 spot)
+    {
+        float nearest = float.PositiveInfinity;
+        for (int i = 0; i < spots.Count; i++)
+        {
+            nearest = Mathf.Min(nearest, (spots[i] - spot).sqrMagnitude);
+        }
+
+        return nearest;
+    }
+
+    /// <summary>
+    /// How high <paramref name="world"/> lands on screen, in cells.
+    /// </summary>
+    private static float ScreenHeight(Vector3 world)
+    {
+        return world.y * ArtCanvas.SinPitch + world.z * ArtCanvas.CosPitch;
     }
 }
 

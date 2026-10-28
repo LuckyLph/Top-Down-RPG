@@ -22,7 +22,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2052509169285427512, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: cover.x
-      value: -1.21875
+      value: -1.25
       objectReference: {fileID: 0}
     - target: {fileID: 2052509169285427512, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: cover.y
@@ -30,7 +30,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2052509169285427512, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: cover.width
-      value: 2.46875
+      value: 2.5625
       objectReference: {fileID: 0}
     - target: {fileID: 2052509169285427512, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: cover.height

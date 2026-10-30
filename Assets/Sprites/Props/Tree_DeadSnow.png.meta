@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 128
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 256
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 384
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 1f3518d26e8d272d0800000000000000
       internalID: -3282322695282142223
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_DeadSnow_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9b7869327be68cb4fb74d2a22d7b1ff4
-      internalID: -1279834173
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_DeadSnow_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 128
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ed044cd2efbc75242abdc3c4d72dd1b2
-      internalID: 967644367
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_DeadSnow_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 256
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 26d3a27123556f94ba297e4d489e6697
-      internalID: 1309156771
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_DeadSnow_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 384
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: abc4dd0a564a3b046944ad2e3a258008
-      internalID: 1647862586
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Tree_DeadSnow_0: 7258192924066473180
-      Tree_DeadSnow_0_Shadow: -1279834173
       Tree_DeadSnow_1: -3717450767472765322
-      Tree_DeadSnow_1_Shadow: 967644367
       Tree_DeadSnow_2: 8556354671401873063
-      Tree_DeadSnow_2_Shadow: 1309156771
       Tree_DeadSnow_3: -3282322695282142223
-      Tree_DeadSnow_3_Shadow: 1647862586
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

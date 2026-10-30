@@ -24,11 +24,7 @@ MonoBehaviour:
   shadowThreshold: 0.28
   innerLineGap: 2.6
   castsShadow: 1
-  shadowRadius: 0.52
-  shadowFlatness: 0.34
-  shadowShift: 0.05
-  shadowRise: 2
-  shadowOpacity: 0.35
+  fades: 0
   previewTerrains:
   - {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
   form: 0

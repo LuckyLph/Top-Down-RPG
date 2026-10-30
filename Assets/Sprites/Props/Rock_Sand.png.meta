@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 48
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 96
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: ff7ab442440bd8a40800000000000000
       internalID: 5372143737236072447
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Sand_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: eb52587997efe514f860c65209998783
-      internalID: 1137098556
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Sand_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 48
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9d3d5c16cf9df664892c023f8076f0b8
-      internalID: -1660476783
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Sand_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 96
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ddbb4158e1a2c7946931b06b118b463d
-      internalID: 1751969560
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Sand_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c00a192eac1a2b44e887dfb4ecfbb2fd
-      internalID: -282408610
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Rock_Sand_0: -6456401896250159429
-      Rock_Sand_0_Shadow: 1137098556
       Rock_Sand_1: -8976507713862824363
-      Rock_Sand_1_Shadow: -1660476783
       Rock_Sand_2: 3796671906484434021
-      Rock_Sand_2_Shadow: 1751969560
       Rock_Sand_3: 5372143737236072447
-      Rock_Sand_3_Shadow: -282408610
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

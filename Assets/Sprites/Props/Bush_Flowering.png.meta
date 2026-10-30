@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 25
+        y: 0
         width: 56
         height: 52
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 56
-        y: 25
+        y: 0
         width: 56
         height: 52
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 112
-        y: 25
+        y: 0
         width: 56
         height: 52
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 168
-        y: 25
+        y: 0
         width: 56
         height: 52
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 71ba7086cc40c4560800000000000000
       internalID: 7299214372025903895
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Bush_Flowering_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 56
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 89de23d5330992d4b882f4d11e236a51
-      internalID: 1659101141
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Bush_Flowering_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 56
-        y: 0
-        width: 56
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 99d76052bfa759348884a8464c5e9f9d
-      internalID: -757130094
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Bush_Flowering_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 112
-        y: 0
-        width: 56
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ba40efb9dd059a44897fb96e11dbdde7
-      internalID: -265851461
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Bush_Flowering_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 168
-        y: 0
-        width: 56
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ad2c9eb0e129bc6448ecbaf90bc9ab28
-      internalID: -1411203192
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Bush_Flowering_0: -8445951918733647900
-      Bush_Flowering_0_Shadow: 1659101141
       Bush_Flowering_1: -7847841298802954736
-      Bush_Flowering_1_Shadow: -757130094
       Bush_Flowering_2: -4337614364861948880
-      Bush_Flowering_2_Shadow: -265851461
       Bush_Flowering_3: 7299214372025903895
-      Bush_Flowering_3_Shadow: -1411203192
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

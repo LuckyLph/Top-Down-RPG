@@ -1087,8 +1087,9 @@ MonoBehaviour:
   cliffOutlineShade: 0.55
   cliffRimLight: 0.2
   rampShade: 0.18
-  cliffShadowAlpha: 0.4
-  cliffShadowWidth: 4
+  cliffShadowLayers:
+    serializedVersion: 0
+    m_Bits: 32
   layerOrder:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   - {fileID: 11400000, guid: a8206c6f6236ebd4985b7974fc0e0de0, type: 2}

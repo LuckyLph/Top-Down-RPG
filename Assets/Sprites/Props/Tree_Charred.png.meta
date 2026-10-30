@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 128
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 256
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 384
-        y: 29
+        y: 0
         width: 128
         height: 128
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: f872bd7c0da6440f0800000000000000
       internalID: -1133663761251752049
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 373ab315d72af9e42be95bfecac34b72
-      internalID: -36472324
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 128
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: bbe295f01596ba1439236604f3ae96f3
-      internalID: -577703362
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 256
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: eab14e2b30f3005468a550f73bb04f69
-      internalID: 288876504
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 384
-        y: 0
-        width: 128
-        height: 29
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44827586}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 689b4df497906d6429d778ca62ae5965
-      internalID: 1049908515
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Tree_Charred_0: 816154449537104517
-      Tree_Charred_0_Shadow: -36472324
       Tree_Charred_1: -3417104876737142665
-      Tree_Charred_1_Shadow: -577703362
       Tree_Charred_2: 6510091337065044706
-      Tree_Charred_2_Shadow: 288876504
       Tree_Charred_3: -1133663761251752049
-      Tree_Charred_3_Shadow: 1049908515
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

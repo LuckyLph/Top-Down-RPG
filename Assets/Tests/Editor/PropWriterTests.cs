@@ -7,10 +7,12 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// Tests for the prop writer (Docs/PropGeneration.md, Testing), writing a recipe built in the test into a temporary
-/// folder: the sheet holds a slice per variant pivoted on the base pixel and one per shadow, and each variant is a
-/// prefab of the base it should be, in the units' layout, its footprint its collider; generating again writes nothing
+/// folder: the sheet holds a slice per variant pivoted on the base pixel, and each variant is a prefab of the base it
+/// should be, in the units' layout, casting the sun's shadow unless the recipe casts none, its footprint its collider;
+/// generating again writes nothing
 /// and, after a change, keeps every prefab's GUID and every slice's ID; a recipe that fades covers each variant's
-/// drawing with its prefab's fade, and one that does not covers nothing; lowering the variant count while a dropped
+/// drawing with its prefab's fade, and one that does not covers nothing; a recipe casting no shadow draws on the
+/// default rendering layer alone, and one casting it again on the base's; lowering the variant count while a dropped
 /// variant's prefab is left, or changing whether it blocks once its prefabs exist, is refused.
 /// </summary>
 public class PropWriterTests
@@ -53,9 +55,9 @@ public class PropWriterTests
     }
 
     /// <summary>
-    /// Generating writes the sheet and a prefab per variant: a variant of <c>BlockingProp</c> whose <c>Visuals</c>, on
-    /// its root, draw the variant's slice pivoted on the base pixel, whose <c>Shadow</c> draws its shadow slice, and
-    /// whose collider is its footprint around the root.
+    /// Generating writes the sheet, the variants in a row, and a prefab per variant: a variant of <c>BlockingProp</c>
+    /// whose <c>Visuals</c>, on its root and its only child, draw the variant's slice pivoted on the base pixel on the
+    /// base's rendering layers, which cast the sun's shadow, and whose collider is its footprint around the root.
     /// </summary>
     [Test]
     public void Generate_WritesTheSheetAndAPrefabPerVariant_InTheUnitsLayout()
@@ -65,11 +67,13 @@ public class PropWriterTests
         string sheet = PropWriter.SheetPath(Sprites, Name);
         Assert.That(written, Is.EquivalentTo(new[] { sheet, PrefabPath(0), PrefabPath(1) }));
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
-        Assert.That(sprites.Keys, Is.EquivalentTo(new[] { "TestBush_0", "TestBush_1", "TestBush_0_Shadow", "TestBush_1_Shadow" }));
+        Assert.That(sprites.Keys, Is.EquivalentTo(new[] { "TestBush_0", "TestBush_1" }));
+        Assert.That(sprites["TestBush_0"].texture.height, Is.EqualTo(52));
         Assert.That(sprites["TestBush_0"].pivot, Is.EqualTo(new Vector2(28f, 10f)));
         Assert.That(sprites["TestBush_0"].pixelsPerUnit, Is.EqualTo(Unit));
 
         GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.BlockingPropPath);
+        uint casters = blocking.transform.Find(PropWriter.VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask;
         for (int i = 0; i < 2; i++)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(i));
@@ -77,7 +81,8 @@ public class PropWriterTests
             Transform visuals = prefab.transform.Find(PropWriter.VisualsName);
             Assert.That(visuals.localPosition, Is.EqualTo(Vector3.zero));
             Assert.That(visuals.GetComponent<SpriteRenderer>().sprite, Is.EqualTo(sprites[PropWriter.SliceName(Name, i)]));
-            Assert.That(prefab.transform.Find(PropWriter.ShadowName).GetComponent<SpriteRenderer>().sprite, Is.EqualTo(sprites[PropWriter.ShadowSliceName(Name, i)]));
+            Assert.That(visuals.GetComponent<SpriteRenderer>().renderingLayerMask, Is.EqualTo(casters));
+            Assert.That(prefab.transform.childCount, Is.EqualTo(1));
 
             RectInt footprint = PropBaker.Bake(recipe, i).Footprint;
             BoxCollider2D box = prefab.GetComponent<BoxCollider2D>();
@@ -134,6 +139,29 @@ public class PropWriterTests
         settings.ApplyModifiedPropertiesWithoutUndo();
         Assert.That(PropWriter.Generate(recipe, Sprites, Prefabs), Is.EquivalentTo(new[] { PrefabPath(0), PrefabPath(1) }));
         Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(0)).GetComponent<PropFade>().Fades, Is.False);
+    }
+
+    /// <summary>
+    /// A recipe casting no shadow, as props lying flat, puts each variant's <c>Visuals</c> on the default rendering
+    /// layer alone, so the sun's shadows leave it out; once it casts one again, generating rewrites the prefabs onto the
+    /// base's layers.
+    /// </summary>
+    [Test]
+    public void Generate_ARecipeCastingNoShadow_DrawsOnTheDefaultLayerAlone_AndCastingOneOnTheBases()
+    {
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("castsShadow").boolValue = false;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        PropWriter.Generate(recipe, Sprites, Prefabs);
+        SpriteRenderer visuals = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(0)).transform.Find(PropWriter.VisualsName).GetComponent<SpriteRenderer>();
+        Assert.That(visuals.renderingLayerMask, Is.EqualTo(RenderingLayerMask.defaultRenderingLayerMask.value));
+
+        settings.FindProperty("castsShadow").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(PropWriter.Generate(recipe, Sprites, Prefabs), Is.EquivalentTo(new[] { PrefabPath(0), PrefabPath(1) }));
+        GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.BlockingPropPath);
+        visuals = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(0)).transform.Find(PropWriter.VisualsName).GetComponent<SpriteRenderer>();
+        Assert.That(visuals.renderingLayerMask, Is.EqualTo(blocking.transform.Find(PropWriter.VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask));
     }
 
     /// <summary>

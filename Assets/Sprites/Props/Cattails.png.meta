@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 17
+        y: 0
         width: 36
         height: 48
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 36
-        y: 17
+        y: 0
         width: 36
         height: 48
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 72
-        y: 17
+        y: 0
         width: 36
         height: 48
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 108
-        y: 17
+        y: 0
         width: 36
         height: 48
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 60c4f5734f2b91260800000000000000
       internalID: 7068877852105460742
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Cattails_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 36
-        height: 17
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4117647}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 4cf4271659b813b4faa1705da0059c3b
-      internalID: -552318512
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Cattails_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 36
-        y: 0
-        width: 36
-        height: 17
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4117647}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 5d4900f8e57180944895c9e909f95829
-      internalID: -194958837
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Cattails_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 72
-        y: 0
-        width: 36
-        height: 17
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4117647}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 1bf60cfbdcb3ab44094d663ce65acf70
-      internalID: -2069111922
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Cattails_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 108
-        y: 0
-        width: 36
-        height: 17
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4117647}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 74cc6f09af6abb94cbd196f4449c1ed1
-      internalID: 1681668057
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Cattails_0: -1419349382128094535
-      Cattails_0_Shadow: -552318512
       Cattails_1: -1526165505576963474
-      Cattails_1_Shadow: -194958837
       Cattails_2: -7478770804086185374
-      Cattails_2_Shadow: -2069111922
       Cattails_3: 7068877852105460742
-      Cattails_3_Shadow: 1681668057
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

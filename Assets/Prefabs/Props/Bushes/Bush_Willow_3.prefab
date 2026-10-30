@@ -40,22 +40,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Bush_Willow_3
       objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.x
-      value: 1.875
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.y
-      value: 0.84375
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: 1637758321, guid: 9517a5be5d033484881f9e1ce6a8c88b, type: 3}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_WasSpriteAssigned
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8612342776096695259, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 21
+        y: 0
         width: 56
         height: 36
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 56
-        y: 21
+        y: 0
         width: 56
         height: 36
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 112
-        y: 21
+        y: 0
         width: 56
         height: 36
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 168
-        y: 21
+        y: 0
         width: 56
         height: 36
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 913bf4b869a1894a0800000000000000
       internalID: -6586485221144677607
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BeachGrass_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 56
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9310842a930e4664f9ea3e136e29d113
-      internalID: 190492401
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BeachGrass_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 56
-        y: 0
-        width: 56
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 426a330917d95a648a3b4e5c89f3495a
-      internalID: -1584678227
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BeachGrass_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 112
-        y: 0
-        width: 56
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 0d2041b3d7c0b8d4895d03b0824ee4f1
-      internalID: -993699723
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: BeachGrass_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 168
-        y: 0
-        width: 56
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: fa60bb64f087d4c4eb7a1be51295bd06
-      internalID: 1090049787
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       BeachGrass_0: 6579024671347122763
-      BeachGrass_0_Shadow: 190492401
       BeachGrass_1: -9113915926851378951
-      BeachGrass_1_Shadow: -1584678227
       BeachGrass_2: -1792864852078697950
-      BeachGrass_2_Shadow: -993699723
       BeachGrass_3: -6586485221144677607
-      BeachGrass_3_Shadow: 1090049787
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

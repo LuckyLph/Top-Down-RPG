@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 21
+        y: 0
         width: 40
         height: 36
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 40
-        y: 21
+        y: 0
         width: 40
         height: 36
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 80
-        y: 21
+        y: 0
         width: 40
         height: 36
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 120
-        y: 21
+        y: 0
         width: 40
         height: 36
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 3663a8469bb577e30800000000000000
       internalID: 4501167204393956963
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Oak_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 2b26230dc81155c498a05bc4473d36ec
-      internalID: 883221871
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Oak_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 40
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 0c3fbc1291ef8594ab835f5bbdb9b707
-      internalID: -1821078424
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Oak_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 80
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 61134da947a55d24db862a7adcfeb718
-      internalID: -699486946
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Oak_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 120
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 84493b7da9c0d9a4aad073ace730c888
-      internalID: 1045240286
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Stump_Oak_0: -2894783121947520637
-      Stump_Oak_0_Shadow: 883221871
       Stump_Oak_1: -5293625164973381560
-      Stump_Oak_1_Shadow: -1821078424
       Stump_Oak_2: -5565520938263334083
-      Stump_Oak_2_Shadow: -699486946
       Stump_Oak_3: 4501167204393956963
-      Stump_Oak_3_Shadow: 1045240286
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

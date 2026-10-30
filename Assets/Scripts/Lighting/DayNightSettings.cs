@@ -23,9 +23,9 @@ public sealed class DayNightSettings : ScriptableObject
 
     [Header("Sun")]
     [SerializeField, Min(0f), Tooltip("How long a shadow is at noon, per unit of its caster's height.")]
-    private float noonShadowLength = 0.35f;
+    private float noonShadowLength = 0.5f;
     [SerializeField, Min(0f), Tooltip("How long a shadow may grow as the sun gets low, per unit of its caster's height.")]
-    private float maxShadowLength = 3f;
+    private float maxShadowLength = 2f;
     [SerializeField, Range(0f, 1f), Tooltip("How far a shadow cast across the screen at sunrise or sunset leans toward the camera, as a share of its length across.")]
     private float shadowLean = 0.5f;
 
@@ -131,7 +131,7 @@ public sealed class DayNightSettings : ScriptableObject
     /// <summary>
     /// Creates unsaved settings for tests.
     /// </summary>
-    public static DayNightSettings Create(float day, float night, float start, DayLightKey[] lightKeys, float noonShadow = 0.35f, float maxShadow = 3f, float lean = 0.5f, float resync = 60f)
+    public static DayNightSettings Create(float day, float night, float start, DayLightKey[] lightKeys, float noonShadow = 0.5f, float maxShadow = 2f, float lean = 0.5f, float resync = 60f)
     {
         DayNightSettings settings = CreateInstance<DayNightSettings>();
         settings.daySeconds = day;

@@ -49,10 +49,10 @@ internal sealed class TerrainChunkSet
     /// <summary>
     /// Removes the chunks <paramref name="bounds"/> no longer reach (all of them when <paramref name="empty"/>), creates
     /// the chunks covering the bounds that do not exist yet, drawing with <paramref name="material"/> on the given
-    /// sorting layer and order, and fits every chunk's quad to the bounds. Chunks sit on a fixed grid, so growing bounds
-    /// only add chunks.
+    /// sorting layer and order, and fits every chunk's quad to the bounds, on <paramref name="renderingLayerMask"/>.
+    /// Chunks sit on a fixed grid, so growing bounds only add chunks.
     /// </summary>
-    public void Fit(BoundsInt bounds, bool empty, Material material, int sortingLayerId, int sortingOrder)
+    public void Fit(BoundsInt bounds, bool empty, Material material, int sortingLayerId, int sortingOrder, uint renderingLayerMask)
     {
         staleChunks.Clear();
         foreach (KeyValuePair<Vector2Int, Chunk> entry in chunksByKey)
@@ -88,6 +88,10 @@ internal sealed class TerrainChunkSet
                 int xMax = Mathf.Min((cx + 1) * ChunkSize, bounds.xMax);
                 int yMax = Mathf.Min((cy + 1) * ChunkSize, bounds.yMax);
                 SetQuad(chunk.Mesh, xMin, yMin, xMax, yMax);
+                if (chunk.Renderer.renderingLayerMask != renderingLayerMask)
+                {
+                    chunk.Renderer.renderingLayerMask = renderingLayerMask;
+                }
             }
         }
     }

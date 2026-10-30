@@ -11,20 +11,23 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Tests of crisp light (Docs/Lighting.md's Phase 1). The pixel-lit sprite shader compiles for D3D without errors or
-/// warnings; only the 2D lit passes of it and of the terrain graph declare the light keyword; the pixel-lit material is
+/// Tests of crisp light (Docs/Lighting.md's Phase 1). The pixel-lit sprite shader and the sun shadows' caster and
+/// cliffs shaders compile for D3D without errors or warnings; only the 2D lit passes of the sprite shader and of the
+/// terrain graph declare the light keyword; the pixel-lit material is
 /// the 2D renderer's default. Rendered through <see cref="TerrainBlendProbe.Render"/>: under a global light alone, a
 /// sprite on the pixel-lit material draws exactly the pixels URP's Sprite-Lit-Default draws, and the terrain draws its
 /// unlit colour times the light; under a point light, the terrain and sprites (one flipped, one cut from the middle of
 /// a larger texture, as the sprite atlas packs props) change light only from one whole art pixel to the next, while the
-/// light does fall off across them. And under the shipped day's afternoon sky (Docs/Lighting.md, Phase 3), an outdoor
-/// world's ground and sprites draw exactly the pixels today's light draws. Renders from later editor updates, until
-/// something is drawn.
+/// light does fall off across them. And under the shipped day's afternoon sky and sun (Docs/Lighting.md, Phases 3 and
+/// 4), an outdoor world's ground and sprites draw exactly the pixels today's light draws wherever no sun shadow falls.
+/// Renders from later editor updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
     private const string SpriteMaterialPath = "Assets/Materials/SpritePixelLit.mat";
     private const string SpriteShaderPath = "Assets/Shaders/Sprites/SpritePixelLit.shader";
+    private const string CasterShaderPath = "Assets/Shaders/Sprites/SunShadowCaster.shader";
+    private const string CliffsShaderPath = "Assets/Shaders/Terrain/SunShadowCliffs.shader";
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string LitLightMode = "Universal2D";
     private const string UrpLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
@@ -67,13 +70,16 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// The pixel-lit sprite shader imports without errors or messages, and every pass compiles for D3D, vertex and
-    /// fragment, without errors or warnings, with and without the light keyword where the pass declares it.
+    /// The pixel-lit sprite shader and the sun shadows' caster and cliffs shaders import without errors or messages,
+    /// and every pass compiles for D3D, vertex and fragment, without errors or warnings, with and without the light
+    /// keyword where the pass declares it.
     /// </summary>
-    [Test]
-    public void TheSpriteShader_CompilesForD3DWithoutErrorsOrWarnings()
+    [TestCase(SpriteShaderPath)]
+    [TestCase(CasterShaderPath)]
+    [TestCase(CliffsShaderPath)]
+    public void TheShader_CompilesForD3DWithoutErrorsOrWarnings(string path)
     {
-        Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(SpriteShaderPath);
+        Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
         Assert.That(shader, Is.Not.Null);
         Assert.That(ShaderUtil.ShaderHasError(shader), Is.False);
         Assert.That(ShaderUtil.GetShaderMessages(shader), Is.Empty);
@@ -189,14 +195,17 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// A world's global light set by its outdoor lighting to the shipped day's afternoon key, sky and sun together,
-    /// draws a terrain of many colours and a sprite on it exactly as the authored light, white at 0.85, draws them.
+    /// A world's global light set by its outdoor lighting to the shipped day's afternoon key, sky and sun together, with
+    /// the afternoon's sun casting, draws a terrain of many colours and a sprite casting a shadow on it exactly as the
+    /// authored light, white at 0.85, draws them, wherever the sun's shadow does not fall; where it falls the ground is
+    /// darker.
     /// </summary>
     [UnityTest]
     public IEnumerator UnderTheAfternoonSky_AnOutdoorWorld_DrawsTodaysPixels()
     {
         TerrainBlendRenderer terrain = AddTerrain(NoiseTexture(128, 128, 5, false), 8, 6);
-        AddSprite(NoiseTexture(16, 16, 9, true), new Rect(0f, 0f, 16f, 16f), new Vector2(4f, 2.5f), false);
+        SpriteRenderer sprite = AddSprite(NoiseTexture(16, 16, 9, true), new Rect(0f, 0f, 16f, 16f), new Vector2(4f, 2.5f), false);
+        sprite.renderingLayerMask |= 1u << RenderingLayerMask.NameToRenderingLayer("Sun Shadow Props");
         Light2D sky = AddGlobalLight(Color.white, 0.85f);
         Rect world = new(2f, 2f, 4f, 2f);
         Color32[] today = null;
@@ -217,16 +226,34 @@ public class PixelLightTests
         WorldLighting lighting = sky.gameObject.AddComponent<WorldLighting>();
         lighting.ApplySky(afternoon);
         Assert.That(sky.intensity, Is.EqualTo(1f));
-        Color32[] day = null;
-        yield return RenderUntilDrawn(terrain, world, world.center, false, pixels => day = pixels);
-
-        int differing = 0;
-        for (int i = 0; i < today.Length; i++)
+        float time = 0f;
+        for (int i = 0; i < settings.KeyCount; i++)
         {
-            differing += today[i].Equals(day[i]) ? 0 : 1;
+            time = settings.LightAt(settings.GetKey(i).Time).Total == afternoon ? settings.GetKey(i).Time : time;
         }
 
-        Assert.That(differing, Is.EqualTo(0), $"pixels differing of {today.Length}");
+        SunShadowGlobals.Set(settings.LightAt(time).Sun, settings.SunAt(time).Shadow, true);
+        Color32[] day = null;
+        try
+        {
+            yield return RenderUntilDrawn(terrain, world, world.center, false, pixels => day = pixels);
+        }
+        finally
+        {
+            SunShadowGlobals.Set(Color.black, Vector2.zero, false);
+        }
+
+        int differing = 0;
+        int shadowed = 0;
+        for (int i = 0; i < today.Length; i++)
+        {
+            bool darker = day[i].r <= today[i].r && day[i].g <= today[i].g && day[i].b <= today[i].b && !today[i].Equals(day[i]);
+            shadowed += darker ? 1 : 0;
+            differing += today[i].Equals(day[i]) || darker ? 0 : 1;
+        }
+
+        Assert.That(differing, Is.EqualTo(0), $"pixels differing other than darker of {today.Length}");
+        Assert.That(shadowed, Is.GreaterThan(100), "The sprite casts a shadow on the ground.");
     }
 
     /// <summary>

@@ -89,38 +89,16 @@ float TBRowsAboveFoot(TBInputs ins, float4 cliff, float2 pixel, float height)
     return rows;
 }
 
-// The shadow a cliff casts on the ground below it at a pixel off raised ground: the shadow's alpha (shadow.x) fading
-// over its height (shadow.y) below the first pixel of raised ground straight above, none below a ramp, scaled by the
-// look (TBCliffShadowScale: none in soft).
-float TBCliffShadow(TBInputs ins, float4 cliff, float4 shadow, float2 pixel)
-{
-    float width = shadow.y * TBCliffShadowScale();
-    float alpha = 0.0;
-    bool found = false;
-    [loop]
-    for (float s = 1.0; s <= width && !found; s += 1.0)
-    {
-        float2 above = pixel + float2(0.0, s);
-        [branch]
-        if (TBRaisedAt(ins, cliff, above) < 0.5)
-        {
-            found = true;
-            alpha = TBRaisedCellAt(ins, above) == TB_RAMP ? 0.0 : shadow.x * (1.0 - (s - 1.0) / max(width, 1.0));
-        }
-    }
-    return alpha;
-}
-
 // The ramp's slope at a pixel of its face, row rows below its top, over the face's whole height above the ramp: the
-// ground there darkening by the ramp shade (shadow.z) towards the foot, and a cheek of the cliff's foot colour along a
+// ground there darkening by the ramp shade (ramp.x) towards the foot, and a cheek of the cliff's foot colour along a
 // side where the ramp meets a cliff. pixel is the slope's lowest pixel in its column, in the ramp's cell.
-float3 TBRampFace(TBInputs ins, float4 shadow, float3 colour, float3 foot, float row, float height, float2 pixel)
+float3 TBRampFace(TBInputs ins, float4 ramp, float3 colour, float3 foot, float row, float height, float2 pixel)
 {
     int2 cell = (int2)floor((pixel + 0.5) / ART_PIXELS_PER_UNIT);
     float x = pixel.x - (float)cell.x * ART_PIXELS_PER_UNIT;
     bool cheek = (x < 1.0 && TBRaisedCell(ins, cell + int2(-1, 0)) == TB_RAISED)
         || (x >= ART_PIXELS_PER_UNIT - 1.0 && TBRaisedCell(ins, cell + int2(1, 0)) == TB_RAISED);
-    return cheek ? foot : colour * (1.0 - shadow.z * row / height);
+    return cheek ? foot : colour * (1.0 - ramp.x * row / height);
 }
 
 // The cliff face at a pixel row rows below its top (1 to the cliff's height): the ground on top hanging over it by up
@@ -185,7 +163,7 @@ float3 TBCliffRim(float4 cliff, float4 face, float4 edge, float4 rim, float3 col
 // through the cells above it (TBRampFace); above that the plateau's top, its
 // edge pixel outlined in the bank colour darkened to edge.y and a ledge of earth inside it along its sides and back
 // (TBCliffRim).
-float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uint top, float d, float2 pixel, float2 worldPixel)
+float3 TBRaisedTop(TBInputs ins, float4 cliff, float3 colour, uint top, float d, float2 pixel, float2 worldPixel)
 {
     float4 face = TBLut(ins, TB_SHARED_CLIFF_FACE_COLUMN, TB_SHARED_ROW);
     float4 edge = TBLut(ins, TB_SHARED_CLIFF_EDGE_COLUMN, TB_SHARED_ROW);
@@ -197,7 +175,8 @@ float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uin
     [branch]
     if (rows <= height && TBRaisedCellAt(ins, foot) == TB_RAMP)
     {
-        result = TBRampFace(ins, shadow, colour, bank * edge.x, height + 1.0 - rows, height, foot);
+        float4 ramp = TBLut(ins, TB_SHARED_RAMP_COLUMN, TB_SHARED_ROW);
+        result = TBRampFace(ins, ramp, colour, bank * edge.x, height + 1.0 - rows, height, foot);
     }
     else if (d > -1.0)
     {
@@ -215,10 +194,9 @@ float3 TBRaisedTop(TBInputs ins, float4 cliff, float4 shadow, float3 colour, uin
     return result;
 }
 
-// Raised ground over the ground's colour at a pixel (sRGB, its topmost opaque layer top): off raised ground the shadow
-// its cliffs cast below them (TBCliffShadow), on it its top (TBRaisedTop); the ground's colour as it is where no raised
-// ground lies around the pixel's corner. The cliff's settings come from the lookup texture's shared row
-// (TB_SHARED_CLIFF_COLUMN to TB_SHARED_CLIFF_RIM_COLUMN).
+// Raised ground over the ground's colour at a pixel (sRGB, its topmost opaque layer top): on it its top (TBRaisedTop);
+// the ground's colour as it is off raised ground, where the cliffs' shadows are the sun's (the SunShadowCliffs shader).
+// The cliff's settings come from the lookup texture's shared row (TB_SHARED_CLIFF_COLUMN to TB_SHARED_CLIFF_RIM_COLUMN).
 float3 TBRaised(TBInputs ins, float4 cliff, float3 colour, uint top, float2 pixel, float2 worldPixel)
 {
     float2 uv = float2(0.0, 0.0);
@@ -228,15 +206,10 @@ float3 TBRaised(TBInputs ins, float4 cliff, float3 colour, uint top, float2 pixe
     if (mask != 0u)
     {
         float d = TBRaisedDistance(mask, uv, cliff);
-        float4 shadow = TBLut(ins, TB_SHARED_CLIFF_SHADOW_COLUMN, TB_SHARED_ROW);
         [branch]
-        if (d >= 0.5)
+        if (d < 0.5)
         {
-            result = colour * (1.0 - TBCliffShadow(ins, cliff, shadow, pixel));
-        }
-        else
-        {
-            result = TBRaisedTop(ins, cliff, shadow, colour, top, d, pixel, worldPixel);
+            result = TBRaisedTop(ins, cliff, colour, top, d, pixel, worldPixel);
         }
     }
     return result;

@@ -59,12 +59,6 @@ float TBRaisedDistance(uint mask, float2 uv, float4 cliff)
     return CornerShapeDistance(mask, uv, cliff.z, cliff.w, TB_FAR);
 }
 
-// How much of the shadow a cliff casts below it this look draws: all of it.
-float TBCliffShadowScale()
-{
-    return 1.0;
-}
-
 // Adds one pair's look-specific part to an edge's settings (TBGetEdge), by its weight: how much of the edge pixel is
 // outline (outline.a, 1 when drawn) and the rim's outer colour (fill).
 void TBAddPairEdge(TBInputs ins, int row, float weight, float4 outline, float4 fill, inout TBEdge e)

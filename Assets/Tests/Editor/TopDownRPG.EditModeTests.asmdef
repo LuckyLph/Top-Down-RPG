@@ -13,7 +13,9 @@
     "Unity.2D.Tilemap.Extras",
     "Unity.2D.Tilemap.Editor",
     "Unity.2D.Aseprite.Editor",
-    "Unity.RenderPipelines.Universal.2D.Runtime"
+    "Unity.RenderPipelines.Universal.2D.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.RenderPipelines.Core.Runtime"
   ],
   "includePlatforms": [
     "Editor"

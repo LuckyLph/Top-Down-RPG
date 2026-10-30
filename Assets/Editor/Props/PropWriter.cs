@@ -7,13 +7,13 @@ using UnityEngine.U2D;
 
 /// <summary>
 /// Writes what a <see cref="PropRecipe"/> bakes (Docs/PropGeneration.md, Output): one sheet,
-/// <c>Assets/Sprites/Props/&lt;name&gt;.png</c>, the variants in a row over a row of their shadows, sliced into
-/// <c>&lt;name&gt;_&lt;variant&gt;</c> pivoted on the base pixel and <c>&lt;name&gt;_&lt;variant&gt;_Shadow</c> pivoted
-/// on the shadow frame's base pixel, through <see cref="SpriteSheetFiles"/> (an unchanged sheet is not rewritten and
-/// slices keep their IDs); then one prefab per variant, <c>Assets/Prefabs/Props/&lt;category&gt;/&lt;name&gt;_&lt;variant&gt;.prefab</c>,
-/// a variant of <c>BlockingProp</c> or <c>Prop</c> whose <c>Visuals</c> draw the variant's sprite, whose
-/// <c>Shadow</c> draws its shadow, whose <see cref="PropFade"/> covers its drawing when the recipe fades (and nothing
-/// otherwise) and, when it blocks, whose collider is its footprint. A prefab is created once and
+/// <c>Assets/Sprites/Props/&lt;name&gt;.png</c>, the variants in a row, sliced into <c>&lt;name&gt;_&lt;variant&gt;</c>
+/// pivoted on the base pixel, through <see cref="SpriteSheetFiles"/> (an unchanged sheet is not rewritten and slices
+/// keep their IDs); then one prefab per variant, <c>Assets/Prefabs/Props/&lt;category&gt;/&lt;name&gt;_&lt;variant&gt;.prefab</c>,
+/// a variant of <c>BlockingProp</c> or <c>Prop</c> whose <c>Visuals</c> draw the variant's sprite on the base's
+/// rendering layers, which make it cast the sun's shadow, or on the default one alone when the recipe casts none,
+/// whose <see cref="PropFade"/> covers its drawing when the recipe fades (and nothing otherwise) and, when it blocks,
+/// whose collider is its footprint. A prefab is created once and
 /// updated in place afterwards, so its GUID and every placed instance stay, and saved only when it changed. Every
 /// variant is baked before anything is written; a recipe is refused when it cannot bake, when a drawing reaches its
 /// frame's edge, when a blocking variant touches no ground, when a prefab of a variant past the count is left, or when
@@ -27,7 +27,6 @@ public static class PropWriter
     public const string PropPath = PrefabsFolder + "/Prop.prefab";
     public const string BlockingPropPath = PrefabsFolder + "/BlockingProp.prefab";
     public const string VisualsName = "Visuals";
-    public const string ShadowName = "Shadow";
     public const string AtlasPath = SpritesFolder + "/Props.spriteatlasv2";
     private const int AtlasPadding = 2;
     private const int AtlasMaxSize = 4096;
@@ -108,17 +107,12 @@ public static class PropWriter
 
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
         GameObject basePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(recipe.Blocking ? BlockingPropPath : PropPath);
+        uint layers = recipe.CastsShadow ? basePrefab.transform.Find(VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask : RenderingLayerMask.defaultRenderingLayerMask.value;
         for (int i = 0; i < variants.Count; i++)
         {
             sprites.TryGetValue(SliceName(recipe.PropName, i), out Sprite sprite);
-            Sprite shadow = null;
-            if (recipe.CastsShadow)
-            {
-                sprites.TryGetValue(ShadowSliceName(recipe.PropName, i), out shadow);
-            }
-
             string path = PrefabPath(prefabsFolder, recipe, i);
-            if (WritePrefab(path, basePrefab, recipe, variants[i], sprite, shadow))
+            if (WritePrefab(path, basePrefab, recipe, variants[i], sprite, layers))
             {
                 written.Add(path);
             }
@@ -197,39 +191,20 @@ public static class PropWriter
     }
 
     /// <summary>
-    /// The name of variant <paramref name="index"/>'s shadow slice.
-    /// </summary>
-    public static string ShadowSliceName(string propName, int index)
-    {
-        return $"{propName}_{index}_{ShadowName}";
-    }
-
-    /// <summary>
     /// Writes the sheet of <paramref name="variants"/> at <paramref name="path"/>, returning whether anything changed.
     /// </summary>
     private static bool WriteSheet(PropRecipe recipe, IReadOnlyList<PropVariant> variants, string path)
     {
         Vector2Int frame = recipe.FrameSize;
-        Vector2Int shadowFrame = recipe.CastsShadow ? PropBaker.ShadowFrameSize(recipe) : Vector2Int.zero;
         int width = frame.x * variants.Count;
-        int height = frame.y + shadowFrame.y;
+        int height = frame.y;
         Color32[] pixels = new Color32[width * height];
         List<SpriteSheetFiles.Slice> slices = new();
         Vector2 pivot = SpriteSheetFiles.Slice.PivotOn(recipe.BasePixel, frame);
         for (int i = 0; i < variants.Count; i++)
         {
-            Blit(variants[i].Pixels, frame, pixels, width, i * frame.x, shadowFrame.y);
-            slices.Add(new SpriteSheetFiles.Slice(SliceName(recipe.PropName, i), new Rect(i * frame.x, shadowFrame.y, frame.x, frame.y), pivot));
-        }
-
-        if (recipe.CastsShadow)
-        {
-            Vector2 shadowPivot = SpriteSheetFiles.Slice.PivotOn(PropBaker.ShadowBasePixel(recipe), shadowFrame);
-            for (int i = 0; i < variants.Count; i++)
-            {
-                Blit(variants[i].Shadow, shadowFrame, pixels, width, i * frame.x, 0);
-                slices.Add(new SpriteSheetFiles.Slice(ShadowSliceName(recipe.PropName, i), new Rect(i * frame.x, 0, shadowFrame.x, shadowFrame.y), shadowPivot));
-            }
+            Blit(variants[i].Pixels, frame, pixels, width, i * frame.x, 0);
+            slices.Add(new SpriteSheetFiles.Slice(SliceName(recipe.PropName, i), new Rect(i * frame.x, 0, frame.x, frame.y), pivot));
         }
 
         return SpriteSheetFiles.WriteSheet(path, width, height, pixels, slices);
@@ -251,10 +226,10 @@ public static class PropWriter
     /// Creates variant prefab <paramref name="path"/> from <paramref name="basePrefab"/>, or updates it in place when
     /// it differs, returning whether it was written.
     /// </summary>
-    private static bool WritePrefab(string path, GameObject basePrefab, PropRecipe recipe, PropVariant variant, Sprite sprite, Sprite shadow)
+    private static bool WritePrefab(string path, GameObject basePrefab, PropRecipe recipe, PropVariant variant, Sprite sprite, uint layers)
     {
         GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        if (existing != null && !Apply(existing, recipe, variant, sprite, shadow, false))
+        if (existing != null && !Apply(existing, recipe, variant, sprite, layers, false))
         {
             return false;
         }
@@ -264,32 +239,31 @@ public static class PropWriter
             TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab);
             instance.name = Path.GetFileNameWithoutExtension(path);
-            Apply(instance, recipe, variant, sprite, shadow, true);
+            Apply(instance, recipe, variant, sprite, layers, true);
             PrefabUtility.SaveAsPrefabAsset(instance, path);
             Object.DestroyImmediate(instance);
             return true;
         }
 
         GameObject contents = PrefabUtility.LoadPrefabContents(path);
-        Apply(contents, recipe, variant, sprite, shadow, true);
+        Apply(contents, recipe, variant, sprite, layers, true);
         PrefabUtility.SaveAsPrefabAsset(contents, path);
         PrefabUtility.UnloadPrefabContents(contents);
         return true;
     }
 
     /// <summary>
-    /// Whether <paramref name="root"/>'s sprite, shadow, fade or footprint differ from the variant's, setting them when
-    /// <paramref name="write"/>.
+    /// Whether <paramref name="root"/>'s sprite, rendering layers, fade or footprint differ from the variant's, setting
+    /// them when <paramref name="write"/>.
     /// </summary>
-    private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, Sprite shadow, bool write)
+    private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, uint layers, bool write)
     {
         SpriteRenderer visuals = root.transform.Find(VisualsName).GetComponent<SpriteRenderer>();
-        SpriteRenderer shadowRenderer = root.transform.Find(ShadowName).GetComponent<SpriteRenderer>();
-        bool changed = visuals.sprite != sprite || shadowRenderer.sprite != shadow;
+        bool changed = visuals.sprite != sprite || visuals.renderingLayerMask != layers;
         if (write)
         {
             visuals.sprite = sprite;
-            shadowRenderer.sprite = shadow;
+            visuals.renderingLayerMask = layers;
         }
 
         if (root.TryGetComponent(out PropFade fade))

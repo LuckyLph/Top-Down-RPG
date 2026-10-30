@@ -46,7 +46,7 @@ MonoBehaviour:
   - time: 0.96
     sky: {r: 0.16, g: 0.18, b: 0.32, a: 1}
     sun: {r: 0, g: 0, b: 0, a: 1}
-  noonShadowLength: 0.35
-  maxShadowLength: 3
+  noonShadowLength: 0.5
+  maxShadowLength: 2
   shadowLean: 0.5
   resyncSeconds: 60

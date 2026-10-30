@@ -100,12 +100,6 @@ float TBRaisedDistance(uint mask, float2 uv, float4 cliff)
     return 0.5 - ART_PIXELS_PER_UNIT * (w - 0.5);
 }
 
-// How much of the shadow a cliff casts below it this look draws: none, as the soft look draws no shadows.
-float TBCliffShadowScale()
-{
-    return 0.0;
-}
-
 // What a layer's signed distance at a corner patch needs besides its own cells: the four cells' heights
 // (TBCellHeights).
 float4 TBDistanceTerms(TBInputs ins, TBCorner corner, float2 worldPixel)

@@ -56,22 +56,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Pine_Snow_2
       objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.x
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.y
-      value: 1.03125
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: 1358705513, guid: 5facae15327ffb1498f0d0bd0165a38a, type: 3}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_WasSpriteAssigned
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8612342776096695259, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

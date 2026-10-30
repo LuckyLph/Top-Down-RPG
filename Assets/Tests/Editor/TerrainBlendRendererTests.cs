@@ -1013,15 +1013,15 @@ public class TerrainBlendRendererTests
 
     /// <summary>
     /// Raised ground draws a cliff face along its bottom edge, inside its lowest cells, in the bank colour of the ground
-    /// on top, at the style's 64 px through two rows; casts a shadow on the ground below the face; slopes down a ramp in
-    /// the ground's own colour, darkening towards its foot, over the face's whole height, the raised cell above the ramp
+    /// on top, at the style's 64 px through two rows; paints no shadow on the ground below the face, whose shadow is the
+    /// sun's (Docs/Lighting.md, Phase 4); slopes down a ramp in the ground's own colour, darkening towards its foot, over the face's whole height, the raised cell above the ramp
     /// included; and leaves the rest of its top and the ground beside it the ground's own colour; without a raised
     /// tilemap the same pixels show plain ground. Green ground with a red bank colour fills an 8 x 6 block, raised ground
     /// covers columns 1 to 6 of rows 2 to 5, and columns 3 and 4 of row 2 are a ramp; no edge draws an outline, rim or
     /// shadow, and the cliff has no fringe or pebbles. Renders from a later editor update, until anything is drawn.
     /// </summary>
     [UnityTest]
-    public IEnumerator RaisedGround_DrawsItsCliffFace_ItsShadow_AndItsRamp()
+    public IEnumerator RaisedGround_DrawsItsCliffFace_AndItsRamp()
     {
         Color32 green = new(40, 160, 40, 255);
         Color32 red = new(220, 30, 30, 255);
@@ -1067,7 +1067,7 @@ public class TerrainBlendRendererTests
         Color32 top = pixels.GetPixel(48, 150);
         Color32 slope = pixels.GetPixel(112, 70);
         Color32 slopeAbove = pixels.GetPixel(112, 120);
-        Color32 shadowed = pixels.GetPixel(48, 62);
+        Color32 below = pixels.GetPixel(48, 62);
         Color32 open = pixels.GetPixel(48, 30);
         Color32 beside = pixels.GetPixel(240, 70);
         Object.DestroyImmediate(pixels);
@@ -1077,7 +1077,7 @@ public class TerrainBlendRendererTests
         Assert.That(slopeAbove.g, Is.GreaterThan(slopeAbove.r), "The ramp's slope reaches into the cell above it.");
         Assert.That(top, Is.EqualTo(open), "The plateau's top shows the ground.");
         Assert.That(beside, Is.EqualTo(open), "The ground beside the plateau shows no cliff.");
-        Assert.That(shadowed.g, Is.LessThan(open.g), "The cliff casts a shadow below it.");
+        Assert.That(below, Is.EqualTo(open), "The cliff paints no shadow below it.");
         Assert.That(slope.g, Is.GreaterThan(slope.r), "The ramp shows the ground.");
         Assert.That(slope.g, Is.LessThan(open.g), "The ramp's ground darkens towards its foot.");
         Assert.That(slope.r, Is.LessThanOrEqualTo(open.r), "The ramp's ground is not drawn towards the bank colour.");

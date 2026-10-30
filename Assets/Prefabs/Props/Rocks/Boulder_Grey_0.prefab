@@ -40,22 +40,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Boulder_Grey_0
       objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.x
-      value: 2.25
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.y
-      value: 0.96875
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: 548660706, guid: 6c7509398a8e21843b35c9ee5960da5c, type: 3}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_WasSpriteAssigned
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8612342776096695259, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

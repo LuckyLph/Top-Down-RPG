@@ -56,22 +56,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Spire_Basalt_0
       objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.x
-      value: 1.75
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Size.y
-      value: 0.78125
-      objectReference: {fileID: 0}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_Sprite
-      value: 
-      objectReference: {fileID: 619791280, guid: 126284a83e8330844bf51420bcde21d1, type: 3}
-    - target: {fileID: 8576812373597032542, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
-      propertyPath: m_WasSpriteAssigned
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8612342776096695259, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

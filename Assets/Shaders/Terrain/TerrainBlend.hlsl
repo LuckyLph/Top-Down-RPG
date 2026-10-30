@@ -29,7 +29,8 @@
 // the high half of the bridge bits. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
 // visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
 // draws animated materials at the time Info.w instead of the frame's. The colour is lit by the 2D lights read once at
-// the art pixel's centre (PixelLit), so the light changes only from one art pixel to the next.
+// the art pixel's centre, without the sun where a sun shadow covers the art pixel (PixelLitShadowed, SunShadowAt), so the
+// light changes only from one art pixel to the next.
 void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
 {
     TBInputs ins;
@@ -118,7 +119,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         return;
     }
     float3 colour = acc.a > 0.0 ? acc.rgb / acc.a : float3(0.0, 0.0, 0.0);
-    Color = PixelLit(TBToOutput(TBRaisedOver(ins, colour, top, pixel, worldPixel)), centre);
+    Color = PixelLitShadowed(TBToOutput(TBRaisedOver(ins, colour, top, pixel, worldPixel)), centre, SunShadowAt(worldPixel));
     Alpha = acc.a;
 }
 

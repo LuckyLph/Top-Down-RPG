@@ -48,6 +48,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float2 positionWS : TEXCOORD1;
+                nointerpolation half shadowed : TEXCOORD2;
                 half4 color : COLOR;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -70,6 +71,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 input.positionOS = UnityFlipSprite(input.positionOS, unity_SpriteProps.xy);
                 o.positionCS = TransformObjectToHClip(input.positionOS);
                 o.positionWS = TransformObjectToWorld(input.positionOS).xy;
+                o.shadowed = (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xy) : -1.0;
                 o.uv = input.uv;
                 o.color = input.color * _Color * unity_SpriteColor;
                 return o;
@@ -86,7 +88,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                     discard;
                 }
 
-                half4 lit = half4(PixelLit(main.rgb, centre), main.a);
+                half shadowed = input.shadowed >= 0.0 ? input.shadowed : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
+                half4 lit = half4(PixelLitShadowed(main.rgb, centre, shadowed), main.a);
                 lit.rgb = lerp(lit.rgb, _FlashColor.rgb, _FlashAmount);
                 return lit;
             }

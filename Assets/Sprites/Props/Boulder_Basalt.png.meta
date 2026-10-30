@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 72
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 216
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: cca7dab03c4777c00800000000000000
       internalID: 898315031747066572
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Basalt_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ae17e89d0dba4a346afdac9c921f4899
-      internalID: -817433835
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Basalt_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 72
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c6e11e5007c904b498e06bca2aa82486
-      internalID: 24291123
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Basalt_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 307c77c69a3e7c54fb8b12a5bdd67262
-      internalID: -715981010
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Basalt_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 216
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6df3300abdd5a3942a61072b5890e902
-      internalID: 541628418
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Boulder_Basalt_0: 2904807432455817863
-      Boulder_Basalt_0_Shadow: -817433835
       Boulder_Basalt_1: -4439211489694828839
-      Boulder_Basalt_1_Shadow: 24291123
       Boulder_Basalt_2: -212170572599271936
-      Boulder_Basalt_2_Shadow: -715981010
       Boulder_Basalt_3: 898315031747066572
-      Boulder_Basalt_3_Shadow: 541628418
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

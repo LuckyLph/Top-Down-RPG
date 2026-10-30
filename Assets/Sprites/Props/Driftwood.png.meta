@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 25
+        y: 0
         width: 68
         height: 40
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 68
-        y: 25
+        y: 0
         width: 68
         height: 40
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 136
-        y: 25
+        y: 0
         width: 68
         height: 40
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 204
-        y: 25
+        y: 0
         width: 68
         height: 40
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 7c56bcfd094e01fc0800000000000000
       internalID: -3526067197350025785
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Driftwood_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 68
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6524463dc8f69474688e0a6e01d76d42
-      internalID: 337477676
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Driftwood_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 68
-        y: 0
-        width: 68
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 7b40acf37365b4e429175ff0973f8308
-      internalID: 639463615
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Driftwood_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 136
-        y: 0
-        width: 68
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 2a531b03149a3634a8748f7781ad042e
-      internalID: 450261033
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Driftwood_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 204
-        y: 0
-        width: 68
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e5f8ffb9be63aea448c821eab478bb21
-      internalID: 787253538
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Driftwood_0: -519577046388947190
-      Driftwood_0_Shadow: 337477676
       Driftwood_1: -2012985059872454640
-      Driftwood_1_Shadow: 639463615
       Driftwood_2: -6825125353248082605
-      Driftwood_2_Shadow: 450261033
       Driftwood_3: -3526067197350025785
-      Driftwood_3_Shadow: 787253538
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

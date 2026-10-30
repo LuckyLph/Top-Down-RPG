@@ -24,11 +24,6 @@ MonoBehaviour:
   shadowThreshold: 0.28
   innerLineGap: 2.6
   castsShadow: 1
-  shadowRadius: 0.26
-  shadowFlatness: 0.34
-  shadowShift: 0.06
-  shadowRise: 2
-  shadowOpacity: 0.35
   fades: 1
   previewTerrains:
   - {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
@@ -52,6 +47,9 @@ MonoBehaviour:
     blend: 0.45
     shell: {x: 0.88, y: 1.02}
     stretch: 1
+    tilt: 0
+    candidates: 1
+    taper: 0
   pine:
     tiers: 5
     clearance: 0.3

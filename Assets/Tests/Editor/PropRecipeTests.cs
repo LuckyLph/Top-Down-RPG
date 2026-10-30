@@ -8,7 +8,7 @@ using UnityEngine;
 /// Tests for the prop baker (Docs/PropGeneration.md, Testing): each kind and form of recipe bakes the same pixels for
 /// the same seed and different ones for different variants; every variant of every recipe asset keeps its drawing
 /// inside its frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame;
-/// its shadow is an ellipse of the recipe's opacity inside its frame; a bush's flowers only recolour its crown, in one
+/// a bush's flowers only recolour its crown, in one
 /// colour a variant; a crown drawing its lower clumps in front shows the lower of two overlapping clumps, one picking
 /// from several places spreads its clumps and one tapered grows them from its top to its foot; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
 /// its tiers; a bare tree's twigs are unlined; a crag blocks only its own foot; a cover lies only where it is enabled;
@@ -43,8 +43,8 @@ public class PropRecipeTests
 
     /// <summary>
     /// Every kind and form of recipe (its <paramref name="setting"/>, an enum or a flag, set to
-    /// <paramref name="value"/>), baked twice from the same seed, gives the same pixels and shadow; another variant index
-    /// gives other pixels.
+    /// <paramref name="value"/>), baked twice from the same seed, gives the same pixels; another variant index gives
+    /// other pixels.
     /// </summary>
     [TestCase(typeof(TreeRecipe), null, 0)]
     [TestCase(typeof(TreeRecipe), "form", (int)TreeForm.Pine)]
@@ -71,7 +71,6 @@ public class PropRecipeTests
         PropVariant other = PropBaker.Bake(recipe, 1);
 
         Assert.That(again.Pixels.SequenceEqual(first.Pixels), Is.True);
-        Assert.That(again.Shadow.SequenceEqual(first.Shadow), Is.True);
         Assert.That(again.Footprint, Is.EqualTo(first.Footprint));
         Assert.That(other.Pixels.SequenceEqual(first.Pixels), Is.False);
     }
@@ -107,35 +106,6 @@ public class PropRecipeTests
                 Assert.That(footprint.x * 2 + footprint.width, Is.EqualTo(basePixel.x * 2), $"{name}'s footprint should be centred on its base.");
                 Assert.That(footprint.y * 2 + footprint.height, Is.EqualTo(basePixel.y * 2), $"{name}'s footprint should be centred on its base.");
                 Assert.That(footprint.xMin >= 0 && footprint.yMin >= 0 && footprint.xMax <= frame.x && footprint.yMax <= frame.y, Is.True, $"{name}'s footprint should lie inside its frame.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// A variant's shadow is an ellipse of black at the recipe's opacity, every pixel either that or clear, under the
-    /// base pixel's column and away from its frame's edge.
-    /// </summary>
-    [Test]
-    public void Shadow_IsAnEllipseOfTheRecipesOpacity_InsideItsFrame()
-    {
-        PropRecipe recipe = Track(ScriptableObject.CreateInstance<TreeRecipe>());
-        PropVariant variant = PropBaker.Bake(recipe, 0);
-        Vector2Int size = PropBaker.ShadowFrameSize(recipe);
-        Vector2Int pivot = PropBaker.ShadowBasePixel(recipe);
-        byte alpha = (byte)Mathf.RoundToInt(recipe.ShadowOpacity * 255f);
-
-        Assert.That(variant.Shadow.Length, Is.EqualTo(size.x * size.y));
-        Assert.That(variant.Shadow[(pivot.y + recipe.ShadowRise) * size.x + pivot.x].a, Is.EqualTo(alpha));
-        for (int y = 0; y < size.y; y++)
-        {
-            for (int x = 0; x < size.x; x++)
-            {
-                Color32 pixel = variant.Shadow[y * size.x + x];
-                Assert.That(pixel.a == 0 || (pixel.a == alpha && pixel.r == 0 && pixel.g == 0 && pixel.b == 0), Is.True, $"pixel {x}, {y}");
-                if (x == 0 || y == 0 || x == size.x - 1 || y == size.y - 1)
-                {
-                    Assert.That(pixel.a, Is.Zero, $"pixel {x}, {y} on the frame's edge");
-                }
             }
         }
     }

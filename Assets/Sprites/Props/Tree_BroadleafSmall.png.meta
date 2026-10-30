@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 27
+        y: 0
         width: 76
         height: 100
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 76
-        y: 27
+        y: 0
         width: 76
         height: 100
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 152
-        y: 27
+        y: 0
         width: 76
         height: 100
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 228
-        y: 27
+        y: 0
         width: 76
         height: 100
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 166e23793a815e8e0800000000000000
       internalID: -1664897396348098975
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_BroadleafSmall_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 76
-        height: 27
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44444445}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 3f7c985c405f85b48859312864a2859c
-      internalID: -819912075
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_BroadleafSmall_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 76
-        y: 0
-        width: 76
-        height: 27
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44444445}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: f521dcf99a6412444abdae45baa27069
-      internalID: -605516363
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_BroadleafSmall_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 152
-        y: 0
-        width: 76
-        height: 27
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44444445}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9e2a95c049c119b49b28de00a61e90f7
-      internalID: -304920818
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_BroadleafSmall_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 228
-        y: 0
-        width: 76
-        height: 27
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44444445}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 1957894f75335c643918cc838f493fa1
-      internalID: 1048504613
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Tree_BroadleafSmall_0: 5289171235428814366
-      Tree_BroadleafSmall_0_Shadow: -819912075
       Tree_BroadleafSmall_1: 6033740769772019827
-      Tree_BroadleafSmall_1_Shadow: -605516363
       Tree_BroadleafSmall_2: -8924470423493385913
-      Tree_BroadleafSmall_2_Shadow: -304920818
       Tree_BroadleafSmall_3: -1664897396348098975
-      Tree_BroadleafSmall_3_Shadow: 1048504613
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

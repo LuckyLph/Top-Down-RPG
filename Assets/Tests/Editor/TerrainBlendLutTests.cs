@@ -363,7 +363,7 @@ public class TerrainBlendLutTests
         Assert.That(raised[row + TerrainBlendLut.SharedCliffColumn], Is.EqualTo(new Color(12f, style.CliffFringe, style.CliffOuterRadius, style.CliffInnerRadius)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffFaceColumn], Is.EqualTo(new Color(style.CliffBandRows, style.CliffBandShade, style.CliffDepthShade, style.CliffPebbleChance)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffEdgeColumn], Is.EqualTo(new Color(style.CliffFootShade, style.CliffOutlineShade, style.CliffRimLight, style.CliffPebbleLight)));
-        Assert.That(raised[row + TerrainBlendLut.SharedCliffShadowColumn], Is.EqualTo(new Color(style.CliffShadowAlpha, style.CliffShadowWidth, 0.5f, 0f)));
+        Assert.That(raised[row + TerrainBlendLut.SharedRampColumn], Is.EqualTo(new Color(0.5f, 0f, 0f, 0f)));
         Assert.That(raised[row + TerrainBlendLut.SharedCliffRimColumn], Is.EqualTo(new Color(4f, 0f, 0f, 0f)));
         for (int column = TerrainBlendLut.SharedCliffColumn; column <= TerrainBlendLut.SharedCliffRimColumn; column++)
         {

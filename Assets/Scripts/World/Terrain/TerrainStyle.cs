@@ -182,10 +182,8 @@ public class TerrainStyle : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float cliffRimLight = 0.12f;
     [Tooltip("How much darker a ramp grows from its top to its foot.")]
     [SerializeField, Range(0f, 1f)] private float rampShade = 0.18f;
-    [Tooltip("How dark the shadow the cliff casts on the ground below it is at the cliff's foot.")]
-    [SerializeField, Range(0f, 1f)] private float cliffShadowAlpha = 0.4f;
-    [Tooltip("Height in pixels of the shadow the cliff casts below it; the soft look draws none.")]
-    [SerializeField, Range(0f, 8f)] private float cliffShadowWidth = 4f;
+    [Tooltip("Rendering layers the terrain chunks of a grid with raised ground draw on besides the default, so the sun's shadows find its cliffs (Sun Shadow Cliffs, Docs/Lighting.md).")]
+    [SerializeField] private RenderingLayerMask cliffShadowLayers;
     [Header("Layers")]
     [Tooltip("Every ground material, bottom first: the order areas draw their layers in. Each area lists a subsequence of it (Docs/TerrainTypes.md).")]
     [SerializeField] private TerrainMaterial[] layerOrder = new TerrainMaterial[0];
@@ -210,8 +208,7 @@ public class TerrainStyle : ScriptableObject
     public float CliffOutlineShade => cliffOutlineShade;
     public float CliffRimLight => cliffRimLight;
     public float RampShade => rampShade;
-    public float CliffShadowAlpha => cliffShadowAlpha;
-    public float CliffShadowWidth => cliffShadowWidth;
+    public RenderingLayerMask CliffShadowLayers => cliffShadowLayers;
 
 #if UNITY_EDITOR
     internal event Action Validated;

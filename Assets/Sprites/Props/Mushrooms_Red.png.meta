@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 40
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 80
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 120
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: e967319487a2246f0800000000000000
       internalID: -701951895805921634
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Mushrooms_Red_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: b49b1c4b2f9b0ac4782c9290ba319ac3
-      internalID: 1038418861
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Mushrooms_Red_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 40
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: dd7ce2dcb866f734f983689257d56a4d
-      internalID: 1714240996
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Mushrooms_Red_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 80
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 433bec7e3270c3a4b82cbf2eee225a49
-      internalID: 2047032190
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Mushrooms_Red_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 120
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: bd3c64077a574e041a1a39b63191c463
-      internalID: -1734456650
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Mushrooms_Red_0: 5638362721587567625
-      Mushrooms_Red_0_Shadow: 1038418861
       Mushrooms_Red_1: -1554730513212452033
-      Mushrooms_Red_1_Shadow: 1714240996
       Mushrooms_Red_2: 5954709049205818756
-      Mushrooms_Red_2_Shadow: 2047032190
       Mushrooms_Red_3: -701951895805921634
-      Mushrooms_Red_3_Shadow: -1734456650
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

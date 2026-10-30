@@ -6,8 +6,8 @@ using UnityEngine;
 
 /// <summary>
 /// Inspector of every kind of <see cref="PropRecipe"/>: its settings, then every variant baked on a strip of each
-/// preview terrain (its albedo tiled at one texel a pixel, the variants with their shadows and the rogue's idle frame
-/// facing south for scale, all at the worlds' 0.85 light), each footprint centred on its cells as the placement tool
+/// preview terrain (its albedo tiled at one texel a pixel, the variants and the rogue's idle frame facing south for
+/// scale, all at the worlds' 0.85 light, without the sun's shadows), each footprint centred on its cells as the placement tool
 /// snaps it; at 1x, and at 3x (shrunk to fit) with the cells drawn faintly, the cells each footprint blocks and the
 /// footprint itself. The strips are baked again when the recipe changes (its serialized settings are compared on each
 /// layout). Below them: each variant's size and footprint, the bake time, why the recipe cannot be written if it cannot,
@@ -179,16 +179,7 @@ public sealed class PropRecipeEditor : Editor
         Color32[] pixels = Ground(terrain, width, height);
         for (int i = 0; i < variants.Count; i++)
         {
-            if (variants[i].Shadow != null)
-            {
-                Vector2Int shadowBase = PropBaker.ShadowBasePixel(recipe);
-                Blend(pixels, width, height, variants[i].Shadow, PropBaker.ShadowFrameSize(recipe), bases[i] - shadowBase, false);
-            }
-        }
-
-        for (int i = 0; i < variants.Count; i++)
-        {
-            Blend(pixels, width, height, variants[i].Pixels, frame, bases[i] - basePixel, true);
+            Blend(pixels, width, height, variants[i].Pixels, frame, bases[i] - basePixel);
         }
 
         DrawRogue(pixels, width, height, new Vector2Int((1 + variants.Count * slot) * Cell + RogueCells * Cell / 2, Cell + RogueFeet));
@@ -235,14 +226,14 @@ public sealed class PropRecipeEditor : Editor
         }
 
         Vector2Int pivot = new(Mathf.RoundToInt(rogue.pivot.x), Mathf.RoundToInt(rogue.pivot.y));
-        Blend(pixels, width, height, frame, new Vector2Int(rect.width, rect.height), feet - pivot, true);
+        Blend(pixels, width, height, frame, new Vector2Int(rect.width, rect.height), feet - pivot);
     }
 
     /// <summary>
     /// Blends <paramref name="source"/> of <paramref name="size"/> over the strip with its bottom left at
-    /// <paramref name="corner"/>, its colours at the worlds' light when <paramref name="lit"/>.
+    /// <paramref name="corner"/>, its colours at the worlds' light.
     /// </summary>
-    private static void Blend(Color32[] pixels, int width, int height, Color32[] source, Vector2Int size, Vector2Int corner, bool lit)
+    private static void Blend(Color32[] pixels, int width, int height, Color32[] source, Vector2Int size, Vector2Int corner)
     {
         for (int y = 0; y < size.y; y++)
         {
@@ -261,7 +252,7 @@ public sealed class PropRecipeEditor : Editor
                     continue;
                 }
 
-                Color32 colour = lit ? Lit(over) : over;
+                Color32 colour = Lit(over);
                 pixels[ty * width + tx] = Color32.Lerp(pixels[ty * width + tx], new Color32(colour.r, colour.g, colour.b, 255), over.a / 255f);
             }
         }

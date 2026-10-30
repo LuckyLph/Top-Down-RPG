@@ -54,4 +54,7 @@ TagManager:
   - Default
   - Terrain
   - Entities
+  - Sun Shadow Props
+  - Sun Shadow Units
+  - Sun Shadow Cliffs
   m_MigratedRenderPipelines: []

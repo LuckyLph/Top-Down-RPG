@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 25
+        y: 0
         width: 72
         height: 112
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 72
-        y: 25
+        y: 0
         width: 72
         height: 112
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 25
+        y: 0
         width: 72
         height: 112
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 216
-        y: 25
+        y: 0
         width: 72
         height: 112
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: d96ea7e39bc1840d0800000000000000
       internalID: -3438466733554604387
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: PineSmall_Snow_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 72
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6a92cffb3ea96fc44b438ac60ccdbc57
-      internalID: -945530311
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: PineSmall_Snow_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 72
-        y: 0
-        width: 72
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6de16bc2aaf527849a6fbfd9ca5a6780
-      internalID: -968740923
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: PineSmall_Snow_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 72
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: a7713b283e01bcc4481dcb0b18e53370
-      internalID: 141936836
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: PineSmall_Snow_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 216
-        y: 0
-        width: 72
-        height: 25
-      alignment: 9
-      pivot: {x: 0.5, y: 0.44}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: f29ada8e6862574438d0cbd46e3e0089
-      internalID: -558993060
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       PineSmall_Snow_0: -2893110897164330617
-      PineSmall_Snow_0_Shadow: -945530311
       PineSmall_Snow_1: 1848428548744346260
-      PineSmall_Snow_1_Shadow: -968740923
       PineSmall_Snow_2: 4342313505460707922
-      PineSmall_Snow_2_Shadow: 141936836
       PineSmall_Snow_3: -3438466733554604387
-      PineSmall_Snow_3_Shadow: -558993060
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

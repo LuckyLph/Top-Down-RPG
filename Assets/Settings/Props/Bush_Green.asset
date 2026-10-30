@@ -24,11 +24,7 @@ MonoBehaviour:
   shadowThreshold: 0.28
   innerLineGap: 2.6
   castsShadow: 1
-  shadowRadius: 0.5
-  shadowFlatness: 0.34
-  shadowShift: 0.06
-  shadowRise: 2
-  shadowOpacity: 0.35
+  fades: 0
   previewTerrains:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   width: 1.2
@@ -40,6 +36,46 @@ MonoBehaviour:
     clumpRadius: {x: 0.15, y: 0.27}
     blend: 0.45
     shell: {x: 0.78, y: 0.95}
+    stretch: 1
+    tilt: 0
+    candidates: 1
+    taper: 0
+  flowers:
+    count: 0
+    colours:
+    - petal:
+        serializedVersion: 2
+        rgba: 4292274924
+      heart:
+        serializedVersion: 2
+        rgba: 4282433256
+    - petal:
+        serializedVersion: 2
+        rgba: 4283092720
+      heart:
+        serializedVersion: 2
+        rgba: 4280844484
+    - petal:
+        serializedVersion: 2
+        rgba: 4289759970
+      heart:
+        serializedVersion: 2
+        rgba: 4293055734
+    - petal:
+        serializedVersion: 2
+        rgba: 4292771980
+      heart:
+        serializedVersion: 2
+        rgba: 4288078060
+  twigs:
+    count: 0
+    reach: {x: 0.08, y: 0.2}
+    thickness: {x: 0.025, y: 0.01}
+  strands:
+    count: 0
+    start: {x: -0.6, y: 0.5}
+    end: {x: 0.02, y: 0.2}
+    thickness: {x: 0.025, y: 0.012}
   leaves:
     outline:
       serializedVersion: 2
@@ -53,3 +89,18 @@ MonoBehaviour:
     light:
       serializedVersion: 2
       rgba: 4283480198
+  leafPattern: 0
+  leafPatternScale: 16
+  twigColours:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035902
+    middle:
+      serializedVersion: 2
+      rgba: 4281352800
+    light:
+      serializedVersion: 2
+      rgba: 4282672778

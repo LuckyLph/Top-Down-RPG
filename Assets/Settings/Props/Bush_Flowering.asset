@@ -24,11 +24,7 @@ MonoBehaviour:
   shadowThreshold: 0.28
   innerLineGap: 2.6
   castsShadow: 1
-  shadowRadius: 0.5
-  shadowFlatness: 0.34
-  shadowShift: 0.06
-  shadowRise: 2
-  shadowOpacity: 0.35
+  fades: 0
   previewTerrains:
   - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
   width: 1.2
@@ -41,6 +37,9 @@ MonoBehaviour:
     blend: 0.45
     shell: {x: 0.78, y: 0.95}
     stretch: 1
+    tilt: 0
+    candidates: 1
+    taper: 0
   flowers:
     count: 13
     colours:

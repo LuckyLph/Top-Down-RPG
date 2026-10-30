@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 40
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 80
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 120
-        y: 21
+        y: 0
         width: 40
         height: 40
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: ba58381f7e66deaf0800000000000000
       internalID: -365522848371735125
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Charred_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ca1c49d8f1a05e847a248cc8bf52fb4d
-      internalID: 736377371
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Charred_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 40
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e22bf79598ffda64c9361286cd6ac52e
-      internalID: -2036666273
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Charred_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 80
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 818aceeadfbe1994e86edef73cd42dd1
-      internalID: 5722496
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Stump_Charred_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 120
-        y: 0
-        width: 40
-        height: 21
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42857143}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 2417ef249877a0442a3574d1f72faf38
-      internalID: -224285330
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Stump_Charred_0: 7869631056355982414
-      Stump_Charred_0_Shadow: 736377371
       Stump_Charred_1: 6163657785546315533
-      Stump_Charred_1_Shadow: -2036666273
       Stump_Charred_2: -6752684538530422509
-      Stump_Charred_2_Shadow: 5722496
       Stump_Charred_3: -365522848371735125
-      Stump_Charred_3_Shadow: -224285330
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

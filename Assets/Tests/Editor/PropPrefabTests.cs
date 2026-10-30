@@ -8,9 +8,9 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
-/// <c>Visuals</c> child on it holding the sprite pivoted on the base, which it sorts by with nothing running, and a
-/// <c>Shadow</c> child drawing the shadow on the ground under every unit), the props fading over their own drawing, the
-/// footprints of blocking props, and how a placed prop blocks navigation.
+/// <c>Visuals</c> child on it holding the sprite pivoted on the base, which it sorts by with nothing running, and which
+/// casts the sun's shadow), the props fading over their own drawing, the footprints of blocking props, and how a placed
+/// prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -18,9 +18,7 @@ public class PropPrefabTests
     private const string PropPath = PropsFolder + "/Prop.prefab";
     private const string BlockingPropPath = PropsFolder + "/BlockingProp.prefab";
     private const string VisualsName = "Visuals";
-    private const string ShadowName = "Shadow";
-    private const string ShadowSortingLayer = "Terrain";
-    private const int ShadowSortingOrder = 5;
+    private const string SunShadowPropsLayer = "Sun Shadow Props";
     private const float OnePixel = 1f / 32f;
 
     private readonly List<Object> created = new();
@@ -92,29 +90,24 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every prop has a <c>Shadow</c> child on its root, on a layer the camera draws, whose sprite renderer draws on the
-    /// ground (the Terrain sorting layer, over the ground and under auras, markers and walls) and so under every unit,
-    /// sorted by nothing; its sprite, where it has one, pivoted on the base.
+    /// Props cast the sun's shadow from their own sprite (Docs/Lighting.md, Phase 4): the base prefabs' <c>Visuals</c>
+    /// draw on the props' sun shadow rendering layer besides the default one, every variant's on the same layers or, for
+    /// a prop lying flat that casts none, on the default one alone, and no prop draws a shadow of its own any more:
+    /// <c>Visuals</c> is its only child.
     /// </summary>
     [Test]
-    public void Props_DrawTheirShadowOnTheGround_UnderEveryUnit()
+    public void Props_CastTheSunsShadowFromTheirSprite_AndDrawNoneOfTheirOwn()
     {
-        int obstacles = LayerMask.NameToLayer("Obstacles");
+        uint casters = 1u << RenderingLayerMask.NameToRenderingLayer(SunShadowPropsLayer);
+        uint plain = RenderingLayerMask.defaultRenderingLayerMask.value;
+        uint baseLayers = Child(AssetDatabase.LoadAssetAtPath<GameObject>(PropPath), VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask;
+        Assert.That(baseLayers, Is.EqualTo(plain | casters));
+        Assert.That(Child(AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath), VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask, Is.EqualTo(baseLayers));
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
-            Transform shadow = Child(propPrefab, ShadowName);
-            Assert.That(shadow.localPosition, Is.EqualTo(Vector3.zero), propPrefab.name);
-            Assert.That(shadow.gameObject.layer, Is.Not.EqualTo(obstacles), $"{propPrefab.name}'s shadow must be on a layer the camera draws.");
-            Assert.That(shadow.GetComponents<MonoBehaviour>(), Is.Empty, $"{propPrefab.name}'s shadow runs nothing.");
-
-            SpriteRenderer renderer = shadow.GetComponent<SpriteRenderer>();
-            Assert.That(renderer, Is.Not.Null, propPrefab.name);
-            Assert.That(renderer.sortingLayerName, Is.EqualTo(ShadowSortingLayer), propPrefab.name);
-            Assert.That(renderer.sortingOrder, Is.EqualTo(ShadowSortingOrder), propPrefab.name);
-            if (renderer.sprite != null)
-            {
-                AssertContainsRoot(renderer.sprite.bounds, $"{propPrefab.name}'s shadow should be pivoted on its base.");
-            }
+            Assert.That(propPrefab.transform.childCount, Is.EqualTo(1), $"{propPrefab.name} has only its visuals.");
+            uint layers = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask;
+            Assert.That(layers == baseLayers || layers == plain, Is.True, $"{propPrefab.name}'s visuals are on rendering layers {layers}.");
         }
     }
 

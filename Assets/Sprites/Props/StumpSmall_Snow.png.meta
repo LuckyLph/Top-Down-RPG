@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 19
+        y: 0
         width: 32
         height: 28
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 32
-        y: 19
+        y: 0
         width: 32
         height: 28
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 64
-        y: 19
+        y: 0
         width: 32
         height: 28
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 96
-        y: 19
+        y: 0
         width: 32
         height: 28
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: e48c93241246569f0800000000000000
       internalID: -475864091609937842
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: StumpSmall_Snow_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 32
-        height: 19
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42105263}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6c041a02706516740a27486343206a2d
-      internalID: 1804791269
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: StumpSmall_Snow_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 32
-        y: 0
-        width: 32
-        height: 19
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42105263}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 69037f24313b06f43a0b3867c80ea380
-      internalID: 1328600078
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: StumpSmall_Snow_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 64
-        y: 0
-        width: 32
-        height: 19
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42105263}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c98b9c2e49638a64986c09e625226c50
-      internalID: -1922241137
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: StumpSmall_Snow_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 96
-        y: 0
-        width: 32
-        height: 19
-      alignment: 9
-      pivot: {x: 0.5, y: 0.42105263}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 1208a4dccbe80104fb1a3d452ba36ffe
-      internalID: 582333768
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       StumpSmall_Snow_0: 403542665817534690
-      StumpSmall_Snow_0_Shadow: 1804791269
       StumpSmall_Snow_1: 3606184592483280752
-      StumpSmall_Snow_1_Shadow: 1328600078
       StumpSmall_Snow_2: -48010230292070174
-      StumpSmall_Snow_2_Shadow: -1922241137
       StumpSmall_Snow_3: -475864091609937842
-      StumpSmall_Snow_3_Shadow: 582333768
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -11,13 +11,16 @@ using UnityEngine.Rendering.Universal;
 /// setting in the west and down at night, with shadows long to the lower left and right at either end and short below at
 /// noon; the clock following the session's world clock where game state is decided and a client following the host's
 /// from when it last heard it; the local offset moving one machine's time alone; a loaded save resuming its time of day;
-/// an outdoor world's global lights taking the sky while an indoor one's keep theirs; and the presenter lighting the
-/// loaded worlds as the day moves and a world as it loads.
+/// an outdoor world's global lights taking the sky while an indoor one's keep theirs; the presenter lighting the loaded
+/// worlds as the day moves and a world as it loads; and the presenter handing the sun to the shaders while it is up
+/// over an outdoor world shown (Docs/Lighting.md, Phase 4), and taking it away at night, indoors and when it stops.
 /// </summary>
 public class DayNightTests
 {
     private const string SettingsPath = "Assets/Data/Lighting/DayNight.asset";
     private static readonly Color Grey85 = new(0.85f, 0.85f, 0.85f, 1f);
+    private static readonly int SunColourId = Shader.PropertyToID("_SunColour");
+    private static readonly int SunShadowId = Shader.PropertyToID("_SunShadow");
 
     private readonly List<Object> created = new();
 
@@ -27,6 +30,7 @@ public class DayNightTests
     [TearDown]
     public void TearDown()
     {
+        SunShadowGlobals.Set(Color.black, Vector2.zero, false);
         foreach (Object made in created)
         {
             if (made != null)
@@ -314,6 +318,70 @@ public class DayNightTests
         {
             presenter.Dispose();
         }
+    }
+
+    /// <summary>
+    /// While the sun is up over the outdoor world shown, the presenter hands the shaders the sun's light and its shadow
+    /// vector, casting; with an indoor world shown, at night, and once disposed, nothing is cast and no sun is taken
+    /// away anywhere. A world loaded but not shown does not count.
+    /// </summary>
+    [Test]
+    public void ThePresenter_HandsTheSunToTheShaders_WhileItIsUpOverAnOutdoorWorldShown()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f))
+        }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out _, out _);
+        WorldLighting indoor = CreateLighting(WorldLightingProfile.Indoor, out _, out _);
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, outdoor));
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, indoor));
+        DayNightPresenter presenter = new(clock, worlds);
+        outdoor.SetShown(true);
+        presenter.Start();
+        try
+        {
+            Assert.That(presenter.Casting, Is.True);
+            Vector4 shadow = Shader.GetGlobalVector(SunShadowId);
+            Assert.That(new Vector2(shadow.x, shadow.y), Is.EqualTo(clock.Sun.Shadow));
+            Assert.That(shadow.z, Is.EqualTo(1f));
+            Color sun = clock.Light.Sun;
+            Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(new Vector4(sun.r, sun.g, sun.b, 0f)));
+
+            outdoor.SetShown(false);
+            indoor.SetShown(true);
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.False, "Indoors there is no sun.");
+            Assert.That(Shader.GetGlobalVector(SunShadowId), Is.EqualTo(Vector4.zero));
+            Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(Vector4.zero));
+
+            indoor.SetShown(false);
+            outdoor.SetShown(true);
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.True);
+            time.Advance(70f);
+            presenter.Tick();
+            Assert.That(clock.Sun.IsUp, Is.False);
+            Assert.That(presenter.Casting, Is.False, "At night there is no sun.");
+            Assert.That(Shader.GetGlobalVector(SunShadowId), Is.EqualTo(Vector4.zero));
+
+            time.Advance(75f);
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.True);
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
+
+        Assert.That(Shader.GetGlobalVector(SunShadowId), Is.EqualTo(Vector4.zero), "Stopping takes the sun away.");
+        Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(Vector4.zero));
     }
 
     /// <summary>

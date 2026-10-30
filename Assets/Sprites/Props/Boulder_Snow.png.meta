@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 72
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 216
-        y: 31
+        y: 0
         width: 72
         height: 64
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: ea3878c4590c9a140800000000000000
       internalID: 4731524630996026286
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Snow_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 4ef9eb54f4e89d546a7b4e63766aa519
-      internalID: -596556798
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Snow_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 72
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 4fc21d5e15c82634190dc94d4bbf6134
-      internalID: 1726121876
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Snow_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9b4df329a630bd1498e089ccef317b6d
-      internalID: 1355248956
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Boulder_Snow_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 216
-        y: 0
-        width: 72
-        height: 31
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4516129}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 1abece7a6657c044f9b068525b958552
-      internalID: -103543387
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Boulder_Snow_0: 4532685167944664632
-      Boulder_Snow_0_Shadow: -596556798
       Boulder_Snow_1: 1402926416763012052
-      Boulder_Snow_1_Shadow: 1726121876
       Boulder_Snow_2: 229295641901056501
-      Boulder_Snow_2_Shadow: 1355248956
       Boulder_Snow_3: 4731524630996026286
-      Boulder_Snow_3_Shadow: -103543387
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

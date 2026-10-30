@@ -50,18 +50,8 @@ public abstract class PropRecipe : ScriptableObject
     [SerializeField, Min(0f)] private float innerLineGap = 2.6f;
 
     [Header("Shadow")]
-    [Tooltip("Whether the prop casts a shadow: a sprite of its own drawn on the ground under every unit.")]
+    [Tooltip("Whether the prop casts the sun's shadow, its sprite laid on the ground away from the sun (Docs/Lighting.md). Off for props lying flat on the ground.")]
     [SerializeField] private bool castsShadow = true;
-    [Tooltip("The shadow's half width, as a share of the drawing's width.")]
-    [SerializeField, Range(0.05f, 1f)] private float shadowRadius = 0.42f;
-    [Tooltip("The shadow's half height, as a share of its half width.")]
-    [SerializeField, Range(0.05f, 1f)] private float shadowFlatness = 0.34f;
-    [Tooltip("How far east of the drawing's middle the shadow's middle lies, away from the light, as a share of the drawing's width.")]
-    [SerializeField, Range(-0.5f, 0.5f)] private float shadowShift = 0.08f;
-    [Tooltip("How many pixels above the base the shadow's middle lies.")]
-    [SerializeField, Min(0)] private int shadowRise = 2;
-    [Tooltip("How dark the shadow is: the opacity of its black.")]
-    [SerializeField, Range(0f, 1f)] private float shadowOpacity = 0.35f;
 
     [Header("In play")]
     [Tooltip("Whether the prop fades while it hides the local player, as trees and spires do: its prefab's fade covers its drawing.")]
@@ -83,11 +73,6 @@ public abstract class PropRecipe : ScriptableObject
     public float ShadowThreshold => shadowThreshold;
     public float InnerLineGap => innerLineGap;
     public bool CastsShadow => castsShadow;
-    public float ShadowRadius => shadowRadius;
-    public float ShadowFlatness => shadowFlatness;
-    public float ShadowShift => shadowShift;
-    public int ShadowRise => shadowRise;
-    public float ShadowOpacity => shadowOpacity;
     public bool Fades => fades;
     public TerrainMaterial[] PreviewTerrains => previewTerrains;
 

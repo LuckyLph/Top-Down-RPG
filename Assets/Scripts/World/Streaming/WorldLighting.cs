@@ -32,6 +32,11 @@ public class WorldLighting : MonoBehaviour
     public WorldLightingProfile Profile => profile;
 
     /// <summary>
+    /// Whether the world's lights are shown: it is the world on screen.
+    /// </summary>
+    public bool IsShown => gameObject.activeSelf;
+
+    /// <summary>
     /// Hides the lights until the presentation shows them, so a world loading beside the one on screen never enables a
     /// second global light.
     /// </summary>

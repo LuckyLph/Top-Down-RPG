@@ -1,5 +1,32 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3706174750994259297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e5df9e7948b84e47b601165a4ff9e4e, type: 3}
+  m_Name: SunShadows
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::SunShadowFeature
+  m_Active: 1
+  casterMaterial: {fileID: 2100000, guid: af6067b5a7eb1e344816e376a106915b, type: 2}
+  propLayers:
+    serializedVersion: 0
+    m_Bits: 8
+  unitLayers:
+    serializedVersion: 0
+    m_Bits: 16
+  cliffShader: {fileID: 4800000, guid: ec14783ee88730a4eae55db4218b996c, type: 3}
+  cliffLayers:
+    serializedVersion: 0
+    m_Bits: 32
+  tallestCaster: 5
+  margin: 4
+  redrawPixels: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24,8 +51,9 @@ MonoBehaviour:
     probeSamplingDebugMesh: {fileID: -3555484719484374845, guid: 57d7c4c16e2765b47a4d2069b311bffe, type: 3}
     probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e, type: 3}
     probeVolumeBlendStatesCS: {fileID: 0}
-  m_RendererFeatures: []
-  m_RendererFeatureMap: 
+  m_RendererFeatures:
+  - {fileID: -3706174750994259297}
+  m_RendererFeatureMap: 9f22773bb30591cc
   m_UseNativeRenderPass: 0
   m_LayerMask:
     serializedVersion: 2

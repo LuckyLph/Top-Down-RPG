@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 48
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 96
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 028861ca9cddc3240800000000000000
       internalID: 4772933563351205920
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Basalt_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 80b4b9eae662a8e4f8e0148e3f9e154c
-      internalID: 1620823742
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Basalt_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 48
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: d25851c713c9e5b49af2651642d90430
-      internalID: -1851246119
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Basalt_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 96
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 549e2de284b9aa541ba550f2bc4768e4
-      internalID: -549225857
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Basalt_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c118d099ecd2a904c92b25f9dc9dcd52
-      internalID: -278397277
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Rock_Basalt_0: 8856464978243379185
-      Rock_Basalt_0_Shadow: 1620823742
       Rock_Basalt_1: -1106719528945290039
-      Rock_Basalt_1_Shadow: -1851246119
       Rock_Basalt_2: -751445892452015899
-      Rock_Basalt_2_Shadow: -549225857
       Rock_Basalt_3: 4772933563351205920
-      Rock_Basalt_3_Shadow: -278397277
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

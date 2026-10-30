@@ -832,7 +832,8 @@ public class TerrainBlendRenderer : MonoBehaviour
             bounds = new BoundsInt(xMin, yMin, 0, Mathf.Max(0, xMax - xMin), Mathf.Max(0, yMax - yMin), 1);
         }
 
-        chunkSet.Fit(bounds, empty, material, SortingLayer.NameToID(sortingLayerName), sortingOrder);
+        uint layers = RenderingLayerMask.defaultRenderingLayerMask.value | (builtRaised ? style.CliffShadowLayers.value : 0u);
+        chunkSet.Fit(bounds, empty, material, SortingLayer.NameToID(sortingLayerName), sortingOrder, layers);
     }
 
     /// <summary>

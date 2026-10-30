@@ -164,7 +164,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -186,7 +186,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 48
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -208,7 +208,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 96
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -230,7 +230,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 144
-        y: 23
+        y: 0
         width: 48
         height: 44
       alignment: 9
@@ -243,94 +243,6 @@ TextureImporter:
       bones: []
       spriteID: 038b88671ce6021a0800000000000000
       internalID: -6836342457151997904
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Snow_0_Shadow
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 68cf9a0034cd3074c93b0b495bec170d
-      internalID: 160968324
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Snow_1_Shadow
-      rect:
-        serializedVersion: 2
-        x: 48
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: d25f0e1f30706784b9d125e00806f48d
-      internalID: 521379589
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Snow_2_Shadow
-      rect:
-        serializedVersion: 2
-        x: 96
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c3f476b52a7ea3b488298d08ce332a16
-      internalID: 1241116714
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Rock_Snow_3_Shadow
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 0
-        width: 48
-        height: 23
-      alignment: 9
-      pivot: {x: 0.5, y: 0.4347826}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 20fa8101bff4f9843a95b43a7d37a2d5
-      internalID: 1282831137
       vertices: []
       indices: 
       edges: []
@@ -350,13 +262,9 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Rock_Snow_0: 4084193352548589233
-      Rock_Snow_0_Shadow: 160968324
       Rock_Snow_1: -5472608576135711477
-      Rock_Snow_1_Shadow: 521379589
       Rock_Snow_2: 254907862256159593
-      Rock_Snow_2_Shadow: 1241116714
       Rock_Snow_3: -6836342457151997904
-      Rock_Snow_3_Shadow: 1282831137
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

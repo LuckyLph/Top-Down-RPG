@@ -356,6 +356,7 @@ MonoBehaviour:
   hitFeedbackSettings: {fileID: 11400000, guid: ddad85f53f064964b94a22caa963862b, type: 2}
   propFadeSettings: {fileID: 11400000, guid: 2c60b55aeca7f3248b75ca06bc393e0f, type: 2}
   worldStreamingSettings: {fileID: 11400000, guid: 23be795292e99c94d9d6a57acb34670d, type: 2}
+  dayNightSettings: {fileID: 11400000, guid: 7cda3134405a00f43a0923b86835c4fc, type: 2}
 --- !u!4 &1350234814
 Transform:
   m_ObjectHideFlags: 0

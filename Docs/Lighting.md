@@ -46,8 +46,8 @@ The rules for crisp light, the painted light and the time of day were chosen wit
 | Sun shadows | A caster's own silhouette laid on the ground away from the sun: flipped at its base, stretched as the sun gets lower, leaned toward where it is, by a vertex shader from one global sun vector, so nothing runs per prop. Shadows lean a little toward the camera so they show instead of hiding behind their casters. A unit's comes from its current frame. They replace the props' baked ellipses, which go. |
 | Shadow mask | The silhouettes are drawn into a sun shadow mask of one texel per art pixel, aligned to the world's art grid, so it never moves against the ground as the camera does; overlapping shadows are one shadow. A 2D renderer feature draws it before the frame (`RenderPassEvent2D.BeforeRendering`) from the casters' own sprite renderers with the caster material, over the view and a margin. The ground reads it at each art pixel; a sprite reads it two art pixels toward the sun from its feet, past the start of its own shadow, so a unit standing in another caster's shadow darkens whole and no caster darkens itself. Static casters are redrawn when the sun has moved about an art pixel at the tip of the longest shadow (every few seconds over a 20-minute day), units every frame. Chosen in Phase 0 over shadows multiplied onto the ground through the stencil, which cannot darken units. |
 | Sun path | Rises in the east, passes high and sets in the west: long shadows to the lower left at dawn, short ones under the casters at noon, long ones to the lower right at dusk. The painted light is the afternoon. At night there is no sun, and the sky is a dark blue. |
-| Time of day | Cosmetic and shared: the host owns the day clock (the time of day at a network time, and its rate), saves it with the game and sends it to joining players; each machine computes the time locally from the network time. A day lasts 20 minutes and a night 5, in a settings asset. |
-| Worlds | A lighting profile per world: outdoor worlds follow the day, indoor ones (`SandboxInterior`) keep a fixed sky and have no sun. |
+| Time of day | Cosmetic and shared: the time of day is a start time plus the cycles the world clock (the game time played on the save) has run, so it is saved with the game as the world clock is, with no save format change. The host sends its world clock and the network time it read it at to each joining player, and again every minute against drift; each machine counts on from there on the network time. A day lasts 20 minutes and a night 5, in a settings asset. Chosen in Phase 3 over a time of day saved on its own, which only skipping time (sleeping) would need. |
+| Worlds | A lighting profile per world: outdoor worlds follow the day, indoor ones (`SandboxInterior`) keep their authored sky, today's 0.85 white, and have no sun. |
 | Spell lights | A Light 2D on what draws a spell's light, played on every machine from what already plays there, nothing networked. A cast's light is on the caster and follows the glow baked into the frame it shows: where the baker drew it, how strong it is drawn there (0.5, 0.75 and 1 over the gather, 1 on the release, 0.5 on the ring, 0.25 on the sparks) and in the motion's rim tone, at 1.2 and radius 3. An elemental impact (Fire, Frost, Lightning, Poison) lights in its spark's middle colour at 1.2 and radius 2, fading to nothing over the impact. Physical and True impacts and the weapon casts have none, and Bolt does not fly, so it has no flight light. Chosen in Phase 2. |
 
 ## Phases
@@ -129,12 +129,34 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 3: day and night
 
-- [ ] A day clock (Gameplay scope) driven by the host's start and the network time, saved with the game and sent to joining players.
-- [ ] A day and night settings asset: the day's and the night's length, the sky's and the sun's colours over the day, the sun's direction and the shadows' length.
-- [ ] A lighting profile per world, outdoor or indoor, driving its global light.
-- [ ] A dev panel slider that moves the time of day on this machine.
-- [ ] Tests: the time from a start, a rate and the network time; the colours and sun at set times; a loaded save resuming its time; a joining player taking the host's.
+- [x] A day clock (Gameplay scope) driven by the host's world clock and the network time, saved with the game and sent to joining players.
+- [x] A day and night settings asset: the day's and the night's length, the sky's and the sun's colours over the day, the sun's direction and the shadows' length.
+- [x] A lighting profile per world, outdoor or indoor, driving its global light.
+- [x] A dev panel slider that moves the time of day on this machine.
+- [x] Tests: the time from a start, a rate and the network time; the colours and sun at set times; a loaded save resuming its time; a joining player taking the host's.
 - [ ] Checked in Multiplayer Play Mode with a host and a client: the same sky on both, and after a client joins late.
+
+- **The look**, settled on in-engine previews of the Overworld's chunk (1, 1) with the global light at each key and over the whole cycle, in `Recordings/Lighting/Phase3/`: `try_keys.png` (ten keys) and `try_cycle.gif` (the 25 minutes in 6 s). Chosen with the user as rendered. Until the sun shadows of Phase 4 take the sun away where they fall, a world's global light is the sky and the sun together.
+
+  | Key | Time | Sky | Sun | Together |
+  |---|---|---|---|---|
+  | Sunrise | 0 | (0.36, 0.36, 0.48) | (0.40, 0.24, 0.16) | (0.76, 0.60, 0.64) |
+  | Early morning | 0.06 | (0.50, 0.52, 0.58) | (0.32, 0.27, 0.22) | (0.82, 0.79, 0.80) |
+  | Morning | 0.16 | (0.55, 0.57, 0.60) | (0.29, 0.28, 0.26) | (0.84, 0.85, 0.86) |
+  | Noon | 0.40 | (0.55, 0.56, 0.58) | (0.32, 0.31, 0.29) | (0.87, 0.87, 0.87) |
+  | Afternoon | 0.56 | (0.50, 0.52, 0.56) | (0.35, 0.33, 0.29) | 0.85 white, today's, exactly |
+  | Evening | 0.70 | (0.48, 0.48, 0.54) | (0.35, 0.28, 0.22) | (0.83, 0.76, 0.76) |
+  | Sunset | 0.80 | (0.40, 0.36, 0.46) | (0.38, 0.20, 0.14) | (0.78, 0.56, 0.60) |
+  | Dusk | 0.84 | (0.18, 0.19, 0.34) | none | (0.18, 0.19, 0.34) |
+  | Night | 0.88 | (0.13, 0.16, 0.30) | none | (0.13, 0.16, 0.30) |
+  | Before dawn | 0.96 | (0.16, 0.18, 0.32) | none | (0.16, 0.18, 0.32) |
+
+  The time runs from 0 at sunrise; sunset is at 0.8, the day's 20 minutes of the 25. The light blends linearly between keys, round past the last to sunrise, so it falls from sunset to the night in a minute and rises again in one. A new game starts in the morning (0.16).
+- **The day clock.** `DayClock` (Gameplay scope) is the settings' start time plus the world clock over the cycle. Where game state is decided (offline, the host) the world clock is `SessionSave.Time`, saved with the game, so a loaded save resumes its time of day and a new game starts in the morning. A client follows the host's: `DayClockSync` sends a joining client (from `NetworkSession.ClientJoined`, a late joiner included) the host's world clock and the network time it read it at, a named message of two doubles, and every joined client again each minute of the host's world clock; the client counts on from the last it heard on the network time (`INetworkClock`, `NetworkSession.ServerTime`). The resync covers the host's world clock running on game time, which a hitch over a third of a second holds back, while the network time runs on real time. A client takes messages from the host only, and before the first it shows its own time. Nothing is sent each frame. The build version went to 1.13.
+- **The worlds.** `WorldLighting` takes a profile: outdoor (the default, so every world's root scene but one kept its file) or indoor (`SandboxInterior`, set in its scene). `DayNightPresenter` writes the clock's light to the global lights of every loaded outdoor world at an intensity of 1, once it has moved by 1/512 (a step too small to see) and to a world as it loads; an indoor world keeps its authored light. The light at the afternoon key is exactly 0.85 in each channel, so a world's global light there draws exactly the pixels the authored white at 0.85 draws (`PixelLightTests`).
+- **The sun** (for Phase 4's shadows): by day its height is the sine of the day's progress; a shadow points away from it, across the screen as the cosine (to the left at sunrise, the right at sunset), leaning toward the camera by half its way across at either end and straight down at noon, as long on the screen as 0.35 over the sun's height, up to 3 (per unit of the caster's height); at night there is none (`DayNightSettings.SunAt`). Tuned on Phase 4's previews.
+- **The dev panel.** F7 toggles a slider over the cycle that moves this machine's time of day alone (`DayClock.LocalOffset`), and a button to follow the session again.
+- **Tests.** `DayNightTests` (the time of day, the light at and between keys, the shipped day, the sun, the clock on the host and on a client, the offset, a loaded save, the profiles, the presenter), `PixelLightTests` (the afternoon draws today's pixels) and `DayNightPlayModeTests` (an offline game's world lit by the time of day and moved by the dev panel; an in-process client taking the host's time of day as it joins).
 
 ### Phase 4: moving shadows
 

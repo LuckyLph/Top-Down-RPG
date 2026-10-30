@@ -17,7 +17,9 @@ using UnityEngine.Tilemaps;
 /// sprite on the pixel-lit material draws exactly the pixels URP's Sprite-Lit-Default draws, and the terrain draws its
 /// unlit colour times the light; under a point light, the terrain and sprites (one flipped, one cut from the middle of
 /// a larger texture, as the sprite atlas packs props) change light only from one whole art pixel to the next, while the
-/// light does fall off across them. Renders from later editor updates, until something is drawn.
+/// light does fall off across them. And under the shipped day's afternoon sky (Docs/Lighting.md, Phase 3), an outdoor
+/// world's ground and sprites draw exactly the pixels today's light draws. Renders from later editor updates, until
+/// something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -187,6 +189,47 @@ public class PixelLightTests
     }
 
     /// <summary>
+    /// A world's global light set by its outdoor lighting to the shipped day's afternoon key, sky and sun together,
+    /// draws a terrain of many colours and a sprite on it exactly as the authored light, white at 0.85, draws them.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderTheAfternoonSky_AnOutdoorWorld_DrawsTodaysPixels()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(NoiseTexture(128, 128, 5, false), 8, 6);
+        AddSprite(NoiseTexture(16, 16, 9, true), new Rect(0f, 0f, 16f, 16f), new Vector2(4f, 2.5f), false);
+        Light2D sky = AddGlobalLight(Color.white, 0.85f);
+        Rect world = new(2f, 2f, 4f, 2f);
+        Color32[] today = null;
+        yield return RenderUntilDrawn(terrain, world, world.center, false, pixels => today = pixels);
+
+        DayNightSettings settings = AssetDatabase.LoadAssetAtPath<DayNightSettings>("Assets/Data/Lighting/DayNight.asset");
+        Color afternoon = Color.clear;
+        for (int i = 0; i < settings.KeyCount; i++)
+        {
+            Color total = settings.LightAt(settings.GetKey(i).Time).Total;
+            if (total.r == 0.85f && total.g == 0.85f && total.b == 0.85f)
+            {
+                afternoon = total;
+            }
+        }
+
+        Assert.That(afternoon.a, Is.EqualTo(1f), "The shipped day has today's light as a key.");
+        WorldLighting lighting = sky.gameObject.AddComponent<WorldLighting>();
+        lighting.ApplySky(afternoon);
+        Assert.That(sky.intensity, Is.EqualTo(1f));
+        Color32[] day = null;
+        yield return RenderUntilDrawn(terrain, world, world.center, false, pixels => day = pixels);
+
+        int differing = 0;
+        for (int i = 0; i < today.Length; i++)
+        {
+            differing += today[i].Equals(day[i]) ? 0 : 1;
+        }
+
+        Assert.That(differing, Is.EqualTo(0), $"pixels differing of {today.Length}");
+    }
+
+    /// <summary>
     /// Under a white point light over a dim global one, the terrain of one colour and two white sprites standing on it
     /// (one flipped, one cut from the middle of a larger texture) light every art pixel in one value: each 3 x 3 block
     /// of screen pixels is one colour. The light falls off across them: the art pixel under the light is brighter than
@@ -349,12 +392,13 @@ public class PixelLightTests
     /// <summary>
     /// A global light on every sorting layer.
     /// </summary>
-    private void AddGlobalLight(Color colour, float intensity)
+    private Light2D AddGlobalLight(Color colour, float intensity)
     {
         Light2D light = Track(new GameObject("Global Light 2D")).AddComponent<Light2D>();
         light.lightType = Light2D.LightType.Global;
         light.color = colour;
         light.intensity = intensity;
+        return light;
     }
 
     /// <summary>

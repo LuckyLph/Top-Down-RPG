@@ -148,6 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16b9db6e3a0f0f04cbedbdd81f6526e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::WorldLighting
+  profile: 1
 --- !u!4 &662115046
 Transform:
   m_ObjectHideFlags: 0

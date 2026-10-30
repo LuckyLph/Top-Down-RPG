@@ -1,0 +1,377 @@
+using System.Collections.Generic;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+
+/// <summary>
+/// Tests for the day and night (Docs/Lighting.md, Phase 3): the time of day from the start time and the world clock
+/// over the cycle; the light exactly each key's at its time and blended between, round the cycle; the shipped day's
+/// lengths, its afternoon today's light exactly and its night the night sky; the sun rising in the east, high at noon,
+/// setting in the west and down at night, with shadows long to the lower left and right at either end and short below at
+/// noon; the clock following the session's world clock where game state is decided and a client following the host's
+/// from when it last heard it; the local offset moving one machine's time alone; a loaded save resuming its time of day;
+/// an outdoor world's global lights taking the sky while an indoor one's keep theirs; and the presenter lighting the
+/// loaded worlds as the day moves and a world as it loads.
+/// </summary>
+public class DayNightTests
+{
+    private const string SettingsPath = "Assets/Data/Lighting/DayNight.asset";
+    private static readonly Color Grey85 = new(0.85f, 0.85f, 0.85f, 1f);
+
+    private readonly List<Object> created = new();
+
+    /// <summary>
+    /// Destroys every object the test made.
+    /// </summary>
+    [TearDown]
+    public void TearDown()
+    {
+        foreach (Object made in created)
+        {
+            if (made != null)
+            {
+                Object.DestroyImmediate(made);
+            }
+        }
+
+        created.Clear();
+    }
+
+    /// <summary>
+    /// The time of day is the start time plus the cycles the world clock has played, wrapped into a cycle: a day of 100 s
+    /// and a night of 25 s put sunset at 0.8 of the cycle.
+    /// </summary>
+    [Test]
+    public void TheTimeOfDay_IsTheStartPlusTheCyclesPlayed()
+    {
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.2f, new DayLightKey[0]));
+        Assert.That(settings.CycleSeconds, Is.EqualTo(125f));
+        Assert.That(settings.DayShare, Is.EqualTo(0.8f).Within(1e-6f));
+        Assert.That(settings.PhaseAt(0d), Is.EqualTo(0.2f).Within(1e-6f));
+        Assert.That(settings.PhaseAt(62.5d), Is.EqualTo(0.7f).Within(1e-6f));
+        Assert.That(settings.PhaseAt(125d), Is.EqualTo(0.2f).Within(1e-6f));
+        Assert.That(settings.PhaseAt(100d), Is.EqualTo(0f).Within(1e-6f), "The cycle wraps to the next sunrise.");
+        Assert.That(settings.PhaseAt(125d * 100000d + 25d), Is.EqualTo(0.4f).Within(1e-4f), "Far into a save the time of day keeps its precision.");
+    }
+
+    /// <summary>
+    /// The light is exactly each key's at its time, blended linearly between two keys, and from the last key round past
+    /// sunrise to the first; its total is the sky and the sun together, opaque.
+    /// </summary>
+    [Test]
+    public void TheLight_IsEachKeysAtItsTime_AndBlendsBetween_RoundTheCycle()
+    {
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0f, new[]
+        {
+            new DayLightKey(0.1f, new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f)),
+            new DayLightKey(0.9f, new Color(0f, 0f, 0.2f), Color.black)
+        }));
+        AssertLight(settings.LightAt(0.1f), new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f));
+        AssertLight(settings.LightAt(0.5f), new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f));
+        AssertLight(settings.LightAt(0.3f), new Color(0.4f, 0.4f, 0.5f), new Color(0.3f, 0.2f, 0.1f));
+        AssertLight(settings.LightAt(0f), new Color(0.1f, 0.1f, 0.3f), new Color(0.2f, 0.1f, 0f));
+        AssertLight(settings.LightAt(0.95f), new Color(0.05f, 0.05f, 0.25f), new Color(0.1f, 0.05f, 0f));
+        AssertLight(settings.LightAt(1.1f), new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f));
+        Color total = settings.LightAt(0.5f).Total;
+        Assert.That(total.r, Is.EqualTo(0.8f).Within(1e-6f));
+        Assert.That(total.a, Is.EqualTo(1f));
+    }
+
+    /// <summary>
+    /// The shipped day lasts 20 minutes and the night 5; its keys lie in order within the cycle; one key, the
+    /// afternoon's, is today's light exactly, 0.85 white, and noon is a little brighter; the light warms at sunrise and
+    /// sunset; the night is the night sky (0.13, 0.16, 0.30) without sun; and no light passes 1.
+    /// </summary>
+    [Test]
+    public void TheShippedDay_IsTodaysLightInTheAfternoon_AndTheNightSkyAtNight()
+    {
+        DayNightSettings settings = AssetDatabase.LoadAssetAtPath<DayNightSettings>(SettingsPath);
+        Assert.That(settings, Is.Not.Null);
+        Assert.That(settings.DaySeconds, Is.EqualTo(1200f));
+        Assert.That(settings.NightSeconds, Is.EqualTo(300f));
+        Assert.That(settings.KeyCount, Is.GreaterThan(1));
+        int today = -1;
+        for (int i = 0; i < settings.KeyCount; i++)
+        {
+            DayLightKey key = settings.GetKey(i);
+            Assert.That(key.Time, Is.InRange(0f, 0.999f));
+            Assert.That(i == 0 || key.Time > settings.GetKey(i - 1).Time, Is.True, $"key {i} is in order");
+            Color total = settings.LightAt(key.Time).Total;
+            Assert.That(Mathf.Max(total.r, total.g, total.b), Is.LessThanOrEqualTo(1f), $"key {i}");
+            if (total == Grey85 && total.r == 0.85f && total.g == 0.85f && total.b == 0.85f)
+            {
+                today = i;
+            }
+        }
+
+        Assert.That(today, Is.GreaterThanOrEqualTo(0), "One key is today's light, 0.85 white, exactly.");
+        float afternoon = settings.GetKey(today).Time;
+        Assert.That(afternoon, Is.GreaterThan(settings.DayShare * 0.5f).And.LessThan(settings.DayShare), "Today's light is the afternoon's.");
+        Assert.That(settings.LightAt(settings.DayShare * 0.5f).Total.r, Is.GreaterThan(0.85f), "Noon is a little brighter.");
+        Color sunrise = settings.LightAt(0f).Total;
+        Color sunset = settings.LightAt(settings.DayShare).Total;
+        Assert.That(sunrise.r, Is.GreaterThan(sunrise.b));
+        Assert.That(sunset.r, Is.GreaterThan(sunset.b));
+        DayLight night = settings.LightAt(settings.DayShare + (1f - settings.DayShare) * 0.4f);
+        Assert.That((Vector4)night.Sky, Is.EqualTo((Vector4)new Color(0.13f, 0.16f, 0.30f, 1f)).Using(Vector4EqualityComparer(1e-5f)));
+        Assert.That(night.Sun.r + night.Sun.g + night.Sun.b, Is.Zero, "No sun at night.");
+    }
+
+    /// <summary>
+    /// The sun rises in the east, stands highest at noon and sets in the west, and is down at night. Just after sunrise
+    /// a shadow is as long as allowed, to the left and leaning toward the camera by half as much; at noon it is the noon
+    /// length straight down; mid-morning it is the noon length over the sun's height, still to the left; just before
+    /// sunset it is long to the lower right; at night there is none.
+    /// </summary>
+    [Test]
+    public void TheSun_RisesEast_PeaksAtNoon_SetsWest_AndIsDownAtNight()
+    {
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0f, new DayLightKey[0], 0.35f, 3f, 0.5f));
+        SunState dawn = settings.SunAt(0.005f);
+        Assert.That(dawn.IsUp, Is.True);
+        Assert.That(dawn.Elevation, Is.LessThan(0.05f));
+        Assert.That(dawn.Shadow.magnitude, Is.EqualTo(3f).Within(0.01f), "A low sun's shadow is as long as allowed.");
+        Assert.That(dawn.Shadow.x, Is.LessThan(0f), "Sunrise in the east casts shadows to the west.");
+        Assert.That(dawn.Shadow.y / dawn.Shadow.x, Is.EqualTo(0.5f).Within(0.01f), "Leaning toward the camera by half.");
+
+        SunState noon = settings.SunAt(0.4f);
+        Assert.That(noon.Elevation, Is.EqualTo(1f).Within(1e-5f));
+        Assert.That(noon.Shadow.x, Is.EqualTo(0f).Within(1e-5f));
+        Assert.That(noon.Shadow.y, Is.EqualTo(-0.35f).Within(1e-5f), "Short shadows below the casters at noon.");
+
+        SunState morning = settings.SunAt(0.2f);
+        Assert.That(morning.Elevation, Is.EqualTo(Mathf.Sin(Mathf.PI * 0.25f)).Within(1e-5f));
+        Assert.That(morning.Shadow.magnitude, Is.EqualTo(0.35f / morning.Elevation).Within(1e-4f));
+        Assert.That(morning.Shadow.x, Is.LessThan(0f));
+
+        SunState dusk = settings.SunAt(0.795f);
+        Assert.That(dusk.Shadow.x, Is.GreaterThan(2.5f), "Sunset in the west casts long shadows to the east.");
+        Assert.That(dusk.Shadow.y, Is.LessThan(0f));
+
+        SunState night = settings.SunAt(0.9f);
+        Assert.That(night.IsUp, Is.False);
+        Assert.That(night.Shadow, Is.EqualTo(Vector2.zero));
+    }
+
+    /// <summary>
+    /// Where game state is decided, the clock follows the session's world clock: its time of day is the settings' at the
+    /// session's time, moving on as game time passes.
+    /// </summary>
+    [Test]
+    public void TheClock_FollowsTheSessionsWorldClock_WhereGameStateIsDecided()
+    {
+        ManualClock time = new() { Time = 40f };
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.1f, new DayLightKey[0]));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock { ServerTime = 900d });
+        Assert.That(clock.WorldTime, Is.EqualTo(0d));
+        Assert.That(clock.Phase, Is.EqualTo(0.1f).Within(1e-6f));
+        time.Advance(25f);
+        Assert.That(clock.WorldTime, Is.EqualTo(25d).Within(1e-5));
+        Assert.That(clock.Phase, Is.EqualTo(0.3f).Within(1e-5f));
+        clock.Anchor(1000d, 900d);
+        Assert.That(clock.WorldTime, Is.EqualTo(25d).Within(1e-5), "Where game state is decided an anchor changes nothing.");
+    }
+
+    /// <summary>
+    /// A client follows its own world clock until it hears the host's, then the host's from the network time it was read
+    /// at, counting on with the network time, and the latest it heard after that.
+    /// </summary>
+    [Test]
+    public void AClient_FollowsTheHostsWorldClock_FromWhenItLastHeardIt()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        time.Advance(3f);
+        FakeNetworkClock network = new() { ServerTime = 1000d };
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0f, new DayLightKey[0]));
+        DayClock clock = new(settings, session, new FixedGameAuthority(false), network);
+        Assert.That(clock.IsAnchored, Is.False);
+        Assert.That(clock.WorldTime, Is.EqualTo(3d).Within(1e-5));
+        clock.Anchor(500d, 1000d);
+        Assert.That(clock.IsAnchored, Is.True);
+        Assert.That(clock.WorldTime, Is.EqualTo(500d));
+        network.ServerTime = 1010d;
+        time.Advance(50f);
+        Assert.That(clock.WorldTime, Is.EqualTo(510d), "It counts on with the network time, not its own game time.");
+        Assert.That(clock.Phase, Is.EqualTo(settings.PhaseAt(510d)));
+        clock.Anchor(509.5d, 1010d);
+        Assert.That(clock.WorldTime, Is.EqualTo(509.5d), "A later message replaces the anchor.");
+    }
+
+    /// <summary>
+    /// The local offset moves this machine's time of day and its light, wrapping round the cycle either way, while the
+    /// world clock and the session's time of day stay.
+    /// </summary>
+    [Test]
+    public void TheLocalOffset_MovesThisMachinesTimeOfDayAlone()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.5f, new[]
+        {
+            new DayLightKey(0f, Color.red, Color.black),
+            new DayLightKey(0.5f, Color.blue, Color.black)
+        }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        clock.LocalOffset = 0.75f;
+        Assert.That(clock.SessionPhase, Is.EqualTo(0.5f).Within(1e-6f));
+        Assert.That(clock.Phase, Is.EqualTo(0.25f).Within(1e-6f));
+        Assert.That(clock.WorldTime, Is.EqualTo(0d));
+        Assert.That((Vector4)clock.Light.Sky, Is.EqualTo((Vector4)Color.Lerp(Color.red, Color.blue, 0.5f)).Using(Vector4EqualityComparer(1e-5f)));
+        clock.LocalOffset = -0.1f;
+        Assert.That(clock.LocalOffset, Is.EqualTo(0.9f).Within(1e-6f));
+        Assert.That(clock.Phase, Is.EqualTo(0.4f).Within(1e-6f));
+        clock.LocalOffset = 0f;
+        Assert.That(clock.Phase, Is.EqualTo(clock.SessionPhase));
+    }
+
+    /// <summary>
+    /// A save written at some time of day and loaded in a later session, whose game clock started elsewhere, resumes the
+    /// same time of day, since it is kept as the world clock is.
+    /// </summary>
+    [Test]
+    public void ALoadedSave_ResumesItsTimeOfDay()
+    {
+        DayNightSettings settings = AssetDatabase.LoadAssetAtPath<DayNightSettings>(SettingsPath);
+        ManualClock firstTime = new() { Time = 12f };
+        SessionSave first = new(firstTime);
+        first.StartNew();
+        firstTime.Advance(777.25f);
+        DayClock before = new(settings, first, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        float phase = before.Phase;
+        Assert.That(GameSaveData.TryParse(first.ToData().ToJson(), out GameSaveData data), Is.True);
+
+        ManualClock secondTime = new() { Time = 5000f };
+        SessionSave second = new(secondTime);
+        second.StartFrom(data);
+        DayClock after = new(settings, second, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Assert.That(after.Phase, Is.EqualTo(phase).Within(1e-6f));
+        Assert.That(phase, Is.Not.EqualTo(settings.StartTime).Within(1e-3f), "The day had moved on before it was saved.");
+    }
+
+    /// <summary>
+    /// An outdoor world's global lights take the sky at an intensity of 1, its other lights untouched; an indoor world's
+    /// keep the light they were authored with.
+    /// </summary>
+    [Test]
+    public void AnOutdoorWorld_TakesTheSky_AnIndoorOneKeepsItsLight()
+    {
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out Light2D outdoorSky, out Light2D lamp);
+        WorldLighting indoor = CreateLighting(WorldLightingProfile.Indoor, out Light2D indoorSky, out _);
+        Color dusk = new(0.6f, 0.4f, 0.45f, 1f);
+        outdoor.ApplySky(dusk);
+        indoor.ApplySky(dusk);
+        Assert.That(outdoorSky.color, Is.EqualTo(dusk));
+        Assert.That(outdoorSky.intensity, Is.EqualTo(1f));
+        Assert.That(lamp.color, Is.EqualTo(Color.white), "A light that is not global is not the sky.");
+        Assert.That(lamp.intensity, Is.EqualTo(0.85f));
+        Assert.That(indoorSky.color, Is.EqualTo(Color.white));
+        Assert.That(indoorSky.intensity, Is.EqualTo(0.85f));
+    }
+
+    /// <summary>
+    /// The presenter lights every loaded world with the clock's sky and sun together as it starts, again once the light
+    /// has moved by a visible step, not for a step too small to see, and a world as it loads.
+    /// </summary>
+    [Test]
+    public void ThePresenter_LightsTheLoadedWorlds_AsTheDayMoves()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f))
+        }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldLighting first = CreateLighting(WorldLightingProfile.Outdoor, out Light2D firstSky, out _);
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, first));
+        DayNightPresenter presenter = new(clock, worlds);
+        presenter.Start();
+        try
+        {
+            Assert.That(firstSky.color, Is.EqualTo(new Color(0.4f, 0.3f, 0.4f, 1f)));
+            time.Advance(0.01f);
+            presenter.Tick();
+            Assert.That(firstSky.color, Is.EqualTo(new Color(0.4f, 0.3f, 0.4f, 1f)), "A step too small to see is not written.");
+            time.Advance(30f);
+            presenter.Tick();
+            Assert.That((Vector4)firstSky.color, Is.EqualTo((Vector4)clock.Light.Total).Using(Vector4EqualityComparer(1e-6f)));
+
+            WorldLighting second = CreateLighting(WorldLightingProfile.Outdoor, out Light2D secondSky, out _);
+            worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, second));
+            Assert.That(secondSky.color, Is.EqualTo(presenter.Shown), "A world takes the light as it loads.");
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// A world's lighting object of <paramref name="profile"/> holding a global light and a point light, both white at
+    /// 0.85, as the worlds' scenes author theirs.
+    /// </summary>
+    private WorldLighting CreateLighting(WorldLightingProfile profile, out Light2D sky, out Light2D lamp)
+    {
+        GameObject root = Track(new GameObject("WorldLighting"));
+        WorldLighting lighting = root.AddComponent<WorldLighting>();
+        lighting.Configure(profile);
+        GameObject skyObject = new("Global Light 2D");
+        skyObject.transform.SetParent(root.transform, false);
+        sky = skyObject.AddComponent<Light2D>();
+        sky.lightType = Light2D.LightType.Global;
+        sky.color = Color.white;
+        sky.intensity = 0.85f;
+        GameObject lampObject = new("Lamp");
+        lampObject.transform.SetParent(root.transform, false);
+        lamp = lampObject.AddComponent<Light2D>();
+        lamp.lightType = Light2D.LightType.Point;
+        lamp.color = Color.white;
+        lamp.intensity = 0.85f;
+        root.SetActive(false);
+        return lighting;
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="light"/> is <paramref name="sky"/> and <paramref name="sun"/>, to within float rounding.
+    /// </summary>
+    private static void AssertLight(DayLight light, Color sky, Color sun)
+    {
+        Assert.That((Vector4)light.Sky, Is.EqualTo((Vector4)sky).Using(Vector4EqualityComparer(1e-5f)), "sky");
+        Assert.That((Vector4)light.Sun, Is.EqualTo((Vector4)sun).Using(Vector4EqualityComparer(1e-5f)), "sun");
+    }
+
+    /// <summary>
+    /// Compares vectors component by component to within <paramref name="tolerance"/>.
+    /// </summary>
+    private static System.Comparison<Vector4> Vector4EqualityComparer(float tolerance)
+    {
+        return (a, b) => Mathf.Abs(a.x - b.x) <= tolerance && Mathf.Abs(a.y - b.y) <= tolerance && Mathf.Abs(a.z - b.z) <= tolerance && Mathf.Abs(a.w - b.w) <= tolerance ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Remembers <paramref name="instance"/> for destruction after the test.
+    /// </summary>
+    private T Track<T>(T instance) where T : Object
+    {
+        created.Add(instance);
+        return instance;
+    }
+
+    /// <summary>
+    /// A network clock the test sets.
+    /// </summary>
+    private sealed class FakeNetworkClock : INetworkClock
+    {
+        public double ServerTime { get; set; }
+    }
+}

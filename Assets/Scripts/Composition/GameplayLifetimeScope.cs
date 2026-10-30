@@ -6,7 +6,7 @@ using VContainer.Unity;
 /// The composition root of the Gameplay scene, a child of the Main scope and parent of each world's scope:
 /// registers the players, combat (projectiles included), abilities, statuses, hit feedback and pooled effects, HUD,
 /// menus, pointer feedback, the props fading over the local player, the world streaming, the trips between worlds,
-/// waystones and respawns, and the saving of world sessions for the session.
+/// waystones and respawns, the day and night, and the saving of world sessions for the session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -18,12 +18,14 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private HitFeedbackSettings hitFeedbackSettings;
     [SerializeField] private PropFadeSettings propFadeSettings;
     [SerializeField] private WorldStreamingSettings worldStreamingSettings;
+    [SerializeField] private DayNightSettings dayNightSettings;
 
     /// <summary>
     /// Registers the Gameplay services and entry points and, once built, the player network prefabs. Logs an error
     /// and registers nothing without a parent scope, a player prefab, its control settings or the combat settings;
     /// skips pointer feedback, or hit feedback, with an error, when its layer, or its settings, are missing; without the
-    /// prop fade settings it logs an error and props never fade.
+    /// prop fade settings it logs an error and props never fade; without the day and night settings it logs an error and
+    /// the worlds keep their authored light.
     /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
@@ -153,6 +155,18 @@ public class GameplayLifetimeScope : LifetimeScope
                 .AsSelf();
             builder.RegisterEntryPoint<LocalWorldPresentation>().WithParameter(worldStreamingSettings);
             builder.RegisterEntryPoint<LocalTripTraveller>().AsSelf();
+        }
+
+        if (dayNightSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(DayNightSettings)}; the worlds keep their authored light.", this);
+        }
+        else
+        {
+            builder.RegisterInstance(dayNightSettings);
+            builder.Register<DayClock>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<DayClockSync>().AsSelf();
+            builder.RegisterEntryPoint<DayNightPresenter>().AsSelf();
         }
 
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());

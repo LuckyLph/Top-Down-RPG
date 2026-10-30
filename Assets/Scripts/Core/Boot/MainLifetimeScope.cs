@@ -87,6 +87,7 @@ public class MainLifetimeScope : LifetimeScope
                 .As<IChunkHolds>()
                 .As<ISessionStatus>()
                 .As<IPlayerIdSource>()
+                .As<INetworkClock>()
                 .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);

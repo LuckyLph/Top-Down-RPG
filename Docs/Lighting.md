@@ -17,7 +17,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Goals
 
-- Light that keeps the art crisp: it changes from one whole art pixel to the next, in a few steps, as hand-drawn light does, never in gradients across an art pixel.
+- Light that keeps the art crisp: one value per art pixel, changing only from one whole art pixel to the next, never in gradients across an art pixel.
 - Spells light the world: the ground, props and units around a cast, a bolt in flight and an impact, on every machine.
 - A day and night: the sky's colour and brightness change over the day, the sun rises in the east and sets in the west, and the shadows of props, units and cliffs swing and lengthen with it. Night is dark enough for spell light to matter.
 - Under the painted light, at the afternoon's sun, the game looks exactly as it does today.
@@ -34,15 +34,16 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Decisions
 
-The rules for crisp light, the painted light and the time of day were chosen with the user before Phase 0 (2026-10-30), on mockups composed outside the engine. The rest are proposals, confirmed as their phases land.
+The rules for crisp light, the painted light and the time of day were chosen with the user before Phase 0 (2026-10-30), on mockups composed outside the engine. Phase 0's previews in the engine then dropped the steps the mockups had, kept URP's lights over a light list of our own, and chose how sun shadows are drawn, with the user. The rest are proposals, confirmed as their phases land.
 
 | Topic | Decision |
 |---|---|
-| Pipeline | URP's 2D lights for every light, combined by our own shaders: the terrain graph moves to the Sprite Custom Lit target and samples the light texture itself, and one hand-written lit sprite shader (`SpriteLitFlash`'s successor) serves units, props and effects. No URP normals pass: it would draw the terrain's shader a second time. |
-| Crisp light | Light is sampled once per art pixel: the terrain at its snapped pixel, a sprite at the centre of the texel it draws. The light above the sky's is banded into steps by its brightness, keeping its hue, so a light draws rings of whole pixels. |
+| Pipeline | URP's 2D lights for every light, combined by our own shaders: the terrain graph moves to the Sprite Custom Lit target and samples the light texture itself, and one hand-written lit sprite shader (`SpriteLitFlash`'s successor) serves units, props and effects. No URP normals pass: it would draw the terrain's shader a second time. Chosen in Phase 0 over a list of lights the shaders compute in world space, which looks the same without steps and does not flicker with them, but gives up the editor's tooling, light shapes and Shadow Caster 2D; it stays the way back if steps or relief are ever wanted (Phase 0 notes). |
+| Crisp light | Light is sampled once per art pixel: the terrain at its snapped pixel, a sprite at the centre of the texel it draws, so a light's falloff changes only from one art pixel to the next. It is not banded into steps: chosen on Phase 0's previews over steps of 0.2 and 0.3 and a dithered version, which also flicker as the camera moves (Phase 0 notes). |
 | Painted light | Stays. Every sprite and the ground keep their top-left shading, which reads as the afternoon sun. The sun's colour and the shadows tell the time of day. |
 | Light model | `colour = albedo * (sky + sun * unshadowed + lights)`. The sky is the world's Global Light 2D. The sun is ours: its colour and direction come from the time of day, and it is taken away where a sun shadow falls, so shadows take the sky's colour and two shadows never darken each other. At the afternoon's sun, sky plus sun is today's 0.85 white. |
-| Sun shadows | A caster's own silhouette laid on the ground away from the sun: flipped at its base, stretched as the sun gets lower, leaned toward where it is, by a vertex shader from one global sun vector, so nothing runs per prop. Shadows lean a little toward the camera so they show instead of hiding behind their casters. A unit's comes from its current frame. They replace the props' baked ellipses. A caster's own shadow never darkens it. |
+| Sun shadows | A caster's own silhouette laid on the ground away from the sun: flipped at its base, stretched as the sun gets lower, leaned toward where it is, by a vertex shader from one global sun vector, so nothing runs per prop. Shadows lean a little toward the camera so they show instead of hiding behind their casters. A unit's comes from its current frame. They replace the props' baked ellipses, which go. |
+| Shadow mask | The silhouettes are drawn into a sun shadow mask of one texel per art pixel, aligned to the world's art grid, so it never moves against the ground as the camera does; overlapping shadows are one shadow. A 2D renderer feature draws it before the frame (`RenderPassEvent2D.BeforeRendering`) from the casters' own sprite renderers with the caster material, over the view and a margin. The ground reads it at each art pixel; a sprite reads it two art pixels toward the sun from its feet, past the start of its own shadow, so a unit standing in another caster's shadow darkens whole and no caster darkens itself. Static casters are redrawn when the sun has moved about an art pixel at the tip of the longest shadow (every few seconds over a 20-minute day), units every frame. Chosen in Phase 0 over shadows multiplied onto the ground through the stencil, which cannot darken units. |
 | Sun path | Rises in the east, passes high and sets in the west: long shadows to the lower left at dawn, short ones under the casters at noon, long ones to the lower right at dusk. The painted light is the afternoon. At night there is no sun, and the sky is a dark blue. |
 | Time of day | Cosmetic and shared: the host owns the day clock (the time of day at a network time, and its rate), saves it with the game and sends it to joining players; each machine computes the time locally from the network time. A day lasts 20 minutes and a night 5, in a settings asset. |
 | Worlds | A lighting profile per world: outdoor worlds follow the day, indoor ones (`SandboxInterior`) keep a fixed sky and have no sun. |
@@ -55,11 +56,11 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 ### Phase 0: the look
 
 - [x] Mockups composed outside the engine from the game's own sprites and textures, in `Recordings/Lighting/` (gitignored): the day from dawn to night with silhouette shadows (`DayCycle_3x.png`), and a Smite light at night, smooth against snapped and banded (`SpellLight_SmoothVsSnapped_3x.png`).
-- [ ] An in-engine spike, kept out of the shipped code: the terrain and sprites reading the light textures at art-pixel centres, banded, with a Smite-coloured point light in an Overworld chunk at night. Previews in `Recordings/Lighting/`.
-- [ ] A silhouette sun shadow in the engine, for a tree and the player, even where two shadows overlap.
-- [ ] Today's look kept: with only the world's global light, the spike's shaders render today's pixels.
-- [ ] The cost: the terrain's and the sprites' frame time with the spike's shaders against today's, and what a light and the shadows add.
-- [ ] Decisions taken on the previews and recorded here: the steps, the falloff, how the shadows are drawn.
+- [x] An in-engine spike, kept out of the shipped code: the terrain and sprites reading the light textures at art-pixel centres, banded, with a Smite-coloured point light in an Overworld chunk at night. Previews in `Recordings/Lighting/`.
+- [x] A silhouette sun shadow in the engine, for a tree and the player, even where two shadows overlap.
+- [x] Today's look kept: with only the world's global light, the spike's shaders render today's pixels.
+- [x] The cost: the terrain's and the sprites' frame time with the spike's shaders against today's, and what a light and the shadows add.
+- [x] Decisions taken on the previews and recorded here: the steps, the falloff, how the shadows are drawn.
 
 - **The mockups.** Python composites of the broadleaf trees, a rock, a bush and the rogue on the grass and gravel textures, lit by the light model above, drawn at 1x and scaled 3x.
   - Silhouette shadows read better than the baked ellipses, most of all when long.
@@ -67,13 +68,26 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - A caster sampling the shadows at its feet sat in its own shadow, so the trees darkened all day: a caster's own shadow has to be left out.
   - The rogue darkening as its feet stand in a tree's shadow at dawn and dusk sells the shadows as light.
   - The snapped bands keep the art crisp; the smooth light runs across art pixels. The outermost band of a light reads as a hard disc, which the falloff and the number of steps tune.
+- **The spike.** Throwaway files in `Assets/Tests/Editor/LightingSpikeTemp/` and `LightingSpikeTemp.cs`, never committed and deleted when the phase closed.
+  - The terrain: the graph's Sprite Lit pass as Shader Graph generates it, with URP's lighting step replaced by one that samples the light textures once at the art pixel's centre and bands the light above the sky's. The sprites: a hand-written lit shader doing the same at the centre of the texel each fragment draws.
+  - Rendered through `TerrainBlendProbe` on the Overworld's chunk (1, 1), where the stone road, the plaza and a gravel path meet, at 1920 x 1080 and zoom 3: a night sky of (0.13, 0.16, 0.30), a Smite light at the rogue's hand (gold, radius 3.5, intensity 1.2) and a Bolt light over the cobbles (frost blue, radius 2.2, intensity 1.1). Previews: `Recordings/Lighting/Spike_NightBands_3x.png` and `Spike_ListedLights_3x.png`.
+- **Today's look, exactly.** Under the global light alone, with the terrain's animation at a fixed time, the spike's shaders render today's pixels: 0 of 2,073,600 differ, for the ground alone and with the props and the rogue. Without the fixed time a few swaying weeds differ between any two renders.
+- **Cost.** The terrain's draw on that chunk at 1920 x 1080, zoom 3, chunks shown against hidden: 0.65 ms with either shader (mean of six alternating measurements, each 0.2 to 1.2 ms; the noise is larger than any difference).
+- **Bands from the light textures flicker.** With the camera moved by 0.25 to 1 screen pixel, light sampled from URP's light textures and banded changes 1,800 to 2,600 screen pixels by more than 8 levels (about 200 to 290 art pixels along the band edges), where smooth light and snapped light without steps change none. The light textures are in screen space at half resolution, so the light at an art pixel's centre drifts with the camera's sub-pixel position and pixels near a step flip back and forth. Snapping the camera was ruled out in TerrainBlending.md's Phase 1 (the moving player wobbles).
+- **Lights computed in world space do not.** The same two lights computed by the shaders from a list of positions (colour times (1 - distance / radius) to a power, summed, then banded) change no pixel at those offsets; at 1.5 px they change the same 782 pixels the art itself does without any light (Architecture.md's Known gaps). A power of 2 matches the look of URP's default falloff.
+- **Steps.** Steps of 0.2 give three or four rings for a spell; steps of 0.3 give two or three, bolder. A 2 x 2 ordered dither between steps covers the whole light in a checker and reads as a screen door. Chosen with the user: no steps, the light snapped to art pixels and otherwise smooth, which looked best.
+- **URP's lights, kept.** Without steps nothing flickers, so the plan's URP lights stay (Decisions: Pipeline), chosen with the user.
+- **Sun shadows in the engine.** A caster shader lays each prop's sprite and the rogue's frame on the ground from one sun vector (the height above the pivot times the vector, the parts below the pivot kept at it), drawn into a mask of one texel per art pixel by a camera aligned with the art grid that sees only temporary casters on an unused layer; the spike's terrain and sprite shaders add the sun where the mask is clear, the sprites reading it two art pixels sunward of their feet. The props' baked ellipses were hidden.
+  - Rendered on the forest's edge in chunk (1, 1) from dawn to night with the mockups' colours and sun vectors: `Recordings/Lighting/Spike_DayCycle_3x.png`. The shadows swing from the lower left to the lower right and lengthen at dawn and dusk; the forest's overlapping shadows are one shade; the rogue darkens whole in a tree's shadow at dawn and dusk and never in its own; at the afternoon's sun the scene reads as today's.
+- **What lights and shadows cost.** In the editor at 1920 x 1080 and zoom 3 on that chunk, with the frame drifting from 3 to 7 ms over the run with the machine's load, the first round compares like for like: today 3.0 ms, the spike's shaders at night 3.5 ms, with two point lights 3.5 ms, with the sun and its mask read 3.3 ms; two lights and reading the mask cost nothing measurable. Drawing the mask through a second camera took 2.0 ms for the chunk's 474 casters, of which 1.5 ms is the camera's own overhead with nothing to draw: about 0.5 ms for the casters, which a renderer feature inside the main camera pays without the overhead, and only when the sun has moved (Decisions: Shadow mask). Light counts and the mask's cost are to be measured again in a player in Phases 2 and 4.
+- **Two editor traps.** A render request skips a shader variant it has not compiled, and the first render after a shader import skips them all: the spike compiles the swapped materials' pass with `USE_SHAPE_LIGHT_TYPE_0` enabled, and renders once to throw away after an import. And a sprite sharing the spike's material with the atlas-packed props drew with the atlas's pixels; giving it a material of its own fixed it, and why is left to Phase 1.
 
 ### Phase 1: crisp light
 
-- [ ] The lighting HLSL in `Assets/Shaders/Include`: the light at an art pixel, the sky's colour, the banding.
+- [ ] The lighting HLSL in `Assets/Shaders/Include`: the light at an art pixel and the sky's colour.
 - [ ] The terrain graph on the Sprite Custom Lit target, passing the light texture to `TerrainBlend_float`.
 - [ ] One lit sprite shader for units, props and effects; props and their prefabs off `Sprite-Lit-Default`.
-- [ ] A render test: with only the global light, the terrain and sprites draw today's pixels; under a point light, the light changes only at whole art pixels and in its steps.
+- [ ] A render test: with only the global light, the terrain and sprites draw today's pixels; under a point light, the light changes only at whole art pixels.
 - [ ] Architecture.md's camera and sorting, terrain and effects sections updated; the `ShaderCompile` tests run.
 - [ ] Checked in Multiplayer Play Mode with a host and a client.
 
@@ -96,10 +110,10 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 4: moving shadows
 
-- [ ] Silhouette shadows for props, from their `Shadow` child drawing their sprite with the shadow material, and for units from their current frame.
-- [ ] Shadows that never darken each other, and units darkened while their feet stand in another caster's shadow.
+- [ ] The sun shadow mask: a 2D renderer feature drawing the casters' own sprite renderers with the caster material into a mask aligned to the art grid (Decisions: Shadow mask), static casters only when the sun has moved, units every frame.
+- [ ] The lit shaders reading it: the ground at each art pixel, sprites two art pixels sunward of their feet, so shadows never darken each other and units darken in another caster's shadow.
 - [ ] The cliffs' shadow cast toward the sun across the raised cells, and the ground's chips and cobbles lit from the sun's side (`TB_LIGHT` from the sun).
-- [ ] The prop baker's ellipse shadows retired or kept for the noon shape, as Phase 0 decides.
+- [ ] The prop baker's ellipse shadows retired: the shadow row of the prop sheets and each prop's `Shadow` child go, every prefab and placed prop updated in place.
 - [ ] A render test of a tree's and a unit's shadow at dawn, noon and dusk; the Overworld's props drawn with the new shadows at no new cost per prop.
 - [ ] Checked in Multiplayer Play Mode with a host and a client.
 
@@ -120,8 +134,9 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ## Open questions
 
-- Whether band edges flicker as the camera moves, since the light textures are in screen space at half resolution and the camera is not snapped. If they do: snap the camera, render the light textures at full resolution, or band with some hysteresis.
-- How the sun shadows reach the sprites: a mask drawn before the `Entities` layer (a renderer feature) that units sample at their feet, or shadows multiplied onto the ground with a stencil, which cannot darken units.
-- Whether sampling at a sprite's texel centres holds for props packed in the sprite atlas.
+- Whether band edges flicker as the camera moves, since the light textures are in screen space at half resolution and the camera is not snapped. Answered in Phase 0: they do with URP's light textures, and they do not with lights the shaders compute from a list in world space; without steps neither does.
+- How the sun shadows reach the sprites: a mask drawn before the `Entities` layer (a renderer feature) that units sample at their feet, or shadows multiplied onto the ground with a stencil, which cannot darken units. Answered in Phase 0: the mask (Decisions: Shadow mask).
+- Whether sampling at a sprite's texel centres holds for props packed in the sprite atlas. Answered in Phase 0: it does; the atlas-packed props lit and matched today's pixels.
+- Why a sprite sharing one lit material with the atlas-packed props drew with the atlas's pixels in the spike (Phase 0 notes), before Phase 1 puts every sprite on one shader.
 - How bright a spell may be in daylight before the art's light colours burn to white.
 - How many lights a frame can afford, measured in a player.

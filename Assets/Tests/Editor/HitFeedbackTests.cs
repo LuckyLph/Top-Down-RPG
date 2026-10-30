@@ -502,7 +502,7 @@ public class HitFeedbackTests
             SpriteRenderer body = (SpriteRenderer)serialized.FindProperty("body").objectReferenceValue;
             Transform visuals = (Transform)serialized.FindProperty("visuals").objectReferenceValue;
             Assert.That(body, Is.Not.Null, path);
-            Assert.That(body.sharedMaterial.shader.name, Is.EqualTo("TopDownRPG/Sprite Lit Flash"), path);
+            Assert.That(body.sharedMaterial.shader.name, Is.EqualTo("TopDownRPG/Sprite Pixel Lit"), path);
             Assert.That(visuals, Is.SameAs(body.transform), path);
             Assert.That(visuals, Is.Not.SameAs(prefab.transform), path);
             Assert.That(serialized.FindProperty("bodyCollider").objectReferenceValue, Is.SameAs(prefab.GetComponent<Collider2D>()), path);

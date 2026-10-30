@@ -15,6 +15,11 @@
 #include "Assets/Shaders/Terrain/TerrainBlendLayer.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendRaised.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendDebug.hlsl"
+#include "Assets/Shaders/Include/PixelLight.hlsl"
+
+#if SHADERPASS == SHADERPASS_SPRITELIT
+#pragma multi_compile _ USE_SHAPE_LIGHT_TYPE_0
+#endif
 
 // The terrain at a world position: snaps to the 32 px grid, reads the four cells around the nearest corner and
 // composites the layers bottom up, each drawn over the layer below it with that pair's edge (without its shadow or
@@ -23,7 +28,8 @@
 // with the keyword _TERRAIN_SOFT, the soft one. With the keyword _TERRAIN_WIDE it reads a wide control map (TBCell) and
 // the high half of the bridge bits. Info.x is the number of layers, Info.y > 0.5 outputs the topmost
 // visible layer instead as TBDebugColour (pure colours, which the 2D lights scale but never mix), and Info.z > 0.5
-// draws animated materials at the time Info.w instead of the frame's.
+// draws animated materials at the time Info.w instead of the frame's. The colour is lit by the 2D lights read once at
+// the art pixel's centre (PixelLit), so the light changes only from one art pixel to the next.
 void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
 {
     TBInputs ins;
@@ -105,13 +111,14 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         }
     }
 
+    float2 centre = (worldPixel + 0.5) / ART_PIXELS_PER_UNIT;
     if (debugView)
     {
-        Color = TBDebugColour(top);
+        Color = PixelLit(TBDebugColour(top), centre);
         return;
     }
     float3 colour = acc.a > 0.0 ? acc.rgb / acc.a : float3(0.0, 0.0, 0.0);
-    Color = TBToOutput(TBRaisedOver(ins, colour, top, pixel, worldPixel));
+    Color = PixelLit(TBToOutput(TBRaisedOver(ins, colour, top, pixel, worldPixel)), centre);
     Alpha = acc.a;
 }
 

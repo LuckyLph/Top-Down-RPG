@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// How a unit shows the hits it takes and lands (Docs/Animation.md, Phase 6), played by
 /// <see cref="HitFeedbackPresenter"/> from the hits each machine learns of. Its body sprite flashes through a property
-/// block on its flash-capable material (<c>TopDownRPG/Sprite Lit Flash</c>); its animation holds through its
+/// block on its flash-capable material (<c>TopDownRPG/Sprite Pixel Lit</c>); its animation holds through its
 /// <see cref="CharacterVisuals"/>; and the transform holding the sprite is nudged by whole pixels away from the hit and
 /// back, while the body and its colliders stay put. Visual only, timed on <see cref="Time.deltaTime"/>, each from the
 /// frame it starts; nothing shows while the unit is disabled (dead), and disabling puts everything back. Allocates
@@ -16,7 +16,7 @@ public class HitFeedback : MonoBehaviour
     private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
     private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
 
-    [SerializeField, Tooltip("The body's sprite renderer, drawn with a material that can flash (TopDownRPG/Sprite Lit Flash).")]
+    [SerializeField, Tooltip("The body's sprite renderer, drawn with a material that can flash (TopDownRPG/Sprite Pixel Lit).")]
     private SpriteRenderer body;
     [SerializeField, Tooltip("The transform holding the body's sprite, nudged by whole pixels; never the root, so the body and its colliders stay put.")]
     private Transform visuals;
@@ -80,7 +80,7 @@ public class HitFeedback : MonoBehaviour
         restPosition = visuals.localPosition;
         if (body.sharedMaterial == null || !body.sharedMaterial.HasProperty(FlashAmountId))
         {
-            Debug.LogError($"{name}'s body material cannot flash; give it the TopDownRPG/Sprite Lit Flash shader.", this);
+            Debug.LogError($"{name}'s body material cannot flash; give it the TopDownRPG/Sprite Pixel Lit shader.", this);
         }
     }
 

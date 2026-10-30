@@ -12,11 +12,11 @@ using UnityEngine.Tilemaps;
 /// whole number of screen pixels per art pixel and writes it as a PNG; checks the topmost visible layer for detached
 /// blobs and holes; measures shimmer at sub-pixel camera offsets, the cost of a frame, of a rebuild and of switching
 /// the look; builds the stress scene those measurements share. Any check can run in either look through
-/// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. Shaders compile synchronously during its
-/// renders, since a render skips variants still compiling in the background. It hides renderers only through
-/// <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not saved, and puts back what a render
-/// hid even when the render fails, clearing the dirty mark that setting it leaves, so it leaves the scene as it found
-/// it.
+/// <see cref="InMode{T}"/>, which puts the renderer's mode back afterwards. The shaders of everything a render draws
+/// compile synchronously before it, unlit and lit, since a render skips variants still compiling in the background.
+/// It hides renderers only through <see cref="Renderer.forceRenderingOff"/>, which takes effect at once and is not
+/// saved, and puts back what a render hid even when the render fails, clearing the dirty mark that setting it leaves,
+/// so it leaves the scene as it found it.
 /// </summary>
 public static class TerrainBlendProbe
 {
@@ -32,6 +32,7 @@ public static class TerrainBlendProbe
     private const int StressMinRadius = 2;
     private const int StressMaxRadius = 5;
     private const float StressLightIntensity = 0.85f;
+    private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
 
     private static readonly Vector3Int[] DebugColours =
     {
@@ -191,6 +192,7 @@ public static class TerrainBlendProbe
         {
             ShaderUtil.allowAsyncCompilation = false;
             HashSet<Renderer> chunks = new(terrain != null ? terrain.Chunks : new MeshRenderer[0]);
+            HashSet<Material> drawn = new();
             foreach (Renderer renderer in Resources.FindObjectsOfTypeAll<Renderer>())
             {
                 if (EditorUtility.IsPersistent(renderer) || !renderer.gameObject.scene.isLoaded)
@@ -209,6 +211,21 @@ public static class TerrainBlendProbe
                     renderer.forceRenderingOff = true;
                     hidden.Add(renderer);
                 }
+                else if (!hide && !renderer.forceRenderingOff)
+                {
+                    foreach (Material material in renderer.sharedMaterials)
+                    {
+                        if (material != null)
+                        {
+                            drawn.Add(material);
+                        }
+                    }
+                }
+            }
+
+            foreach (Material material in drawn)
+            {
+                CompileNow(material);
             }
 
             if (terrain != null && terrain.RuntimeMaterial != null)
@@ -493,16 +510,44 @@ public static class TerrainBlendProbe
     }
 
     /// <summary>
-    /// Compiles the material's current variant of every pass before rendering, since the editor skips objects whose
-    /// shader is still compiling in the background.
+    /// Compiles the material's current variant of every pass before rendering, unlit and with the 2D renderer's light
+    /// keyword (which the renderer enables globally only while it draws a lit sorting layer), since the editor skips
+    /// objects whose shader is still compiling in the background. Leaves the keyword as it found it.
     /// </summary>
     private static void CompileNow(Material material)
     {
-        for (int pass = 0; pass < material.passCount; pass++)
+        bool wasLit = Shader.IsKeywordEnabled(LightKeyword);
+        try
         {
-            if (!ShaderUtil.IsPassCompiled(material, pass))
+            foreach (bool lit in new[] { false, true })
             {
-                ShaderUtil.CompilePass(material, pass, true);
+                if (lit)
+                {
+                    Shader.EnableKeyword(LightKeyword);
+                }
+                else
+                {
+                    Shader.DisableKeyword(LightKeyword);
+                }
+
+                for (int pass = 0; pass < material.passCount; pass++)
+                {
+                    if (!ShaderUtil.IsPassCompiled(material, pass))
+                    {
+                        ShaderUtil.CompilePass(material, pass, true);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (wasLit)
+            {
+                Shader.EnableKeyword(LightKeyword);
+            }
+            else
+            {
+                Shader.DisableKeyword(LightKeyword);
             }
         }
     }

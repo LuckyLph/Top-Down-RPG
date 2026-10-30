@@ -591,7 +591,8 @@ public class AsepriteCharacterTests
         try
         {
             texture.LoadImage(File.ReadAllBytes(CharacterSheetWriter.SheetPath(recipe, clip)));
-            return new CharacterSheet(clip, clip.Motion.FrameCount, texture.GetPixels32(), Array.Empty<string>());
+            int frames = CharacterDirections.Count * clip.Motion.FrameCount;
+            return new CharacterSheet(clip, clip.Motion.FrameCount, texture.GetPixels32(), Array.Empty<string>(), new Vector2[frames], new float[frames]);
         }
         finally
         {

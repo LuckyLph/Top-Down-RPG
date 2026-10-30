@@ -62,6 +62,7 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4280839364
+    castsLight: 0
   - type: 1
     hot:
       serializedVersion: 2
@@ -75,6 +76,7 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4279775416
+    castsLight: 1
   - type: 2
     hot:
       serializedVersion: 2
@@ -88,6 +90,7 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4291851320
+    castsLight: 1
   - type: 3
     hot:
       serializedVersion: 2
@@ -101,6 +104,7 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4293159060
+    castsLight: 1
   - type: 4
     hot:
       serializedVersion: 2
@@ -114,6 +118,7 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4280841776
+    castsLight: 1
   - type: 5
     hot:
       serializedVersion: 2
@@ -127,3 +132,4 @@ MonoBehaviour:
     dark:
       serializedVersion: 2
       rgba: 4290808458
+    castsLight: 0

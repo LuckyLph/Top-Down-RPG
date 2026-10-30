@@ -8,10 +8,10 @@ using UnityEngine;
 /// <c>Assets/Sprites/Effects/&lt;sheet name&gt;.png</c>, a row per variant and direction (variant by variant, the first
 /// at the top) and a column per frame, sliced into <c>&lt;sheet name&gt;_&lt;variant&gt;_&lt;direction&gt;_&lt;frame&gt;</c>
 /// pivoted at the recipe's pivot, and the runtime <see cref="EffectSprites"/>
-/// <c>&lt;sheet name&gt;_Sprites.asset</c> beside it. Baking touches no asset and gives the same pixels for the same
-/// recipe; writing (<see cref="Write"/>, shared with the effects drawn in Aseprite) goes through
-/// <see cref="SpriteSheetFiles"/>, skips a sheet whose bytes did not change, keeps slice IDs by name, and the sprite set
-/// keeps its GUID.
+/// <c>&lt;sheet name&gt;_Sprites.asset</c> beside it, with each variant's light colour. Baking touches no asset and
+/// gives the same pixels for the same recipe; writing (<see cref="Write"/>, shared with the effects drawn in Aseprite)
+/// goes through <see cref="SpriteSheetFiles"/>, skips a sheet whose bytes did not change, keeps slice IDs by name, and
+/// the sprite set keeps its GUID.
 /// </summary>
 public static class EffectSheetWriter
 {
@@ -59,7 +59,8 @@ public static class EffectSheetWriter
             return null;
         }
 
-        Write(recipe.SheetName, new Vector2Int(recipe.FrameWidth, recipe.FrameHeight), recipe.Pivot, recipe.VariantCount, recipe.DirectionCount, recipe.FrameCount, recipe.FrameSeconds, Bake(recipe));
+        Color[] lightColours = Enumerable.Range(0, recipe.VariantCount).Select(recipe.LightColour).ToArray();
+        Write(recipe.SheetName, new Vector2Int(recipe.FrameWidth, recipe.FrameHeight), recipe.Pivot, recipe.VariantCount, recipe.DirectionCount, recipe.FrameCount, recipe.FrameSeconds, Bake(recipe), lightColours);
         return new[] { SheetPath(recipe), SpritesPath(recipe) };
     }
 
@@ -68,11 +69,12 @@ public static class EffectSheetWriter
     /// them), at <see cref="SheetPath(string)"/> through <see cref="SpriteSheetFiles.WriteSheet"/>, sliced into
     /// <see cref="SliceName(string, int, int, int)"/> at <paramref name="pivot"/> (a share of the frame from its bottom
     /// left), then its <see cref="EffectSprites"/> at <see cref="SpritesPath(string)"/>, each frame shown
-    /// <paramref name="frameSeconds"/>, keeping its GUID. Shared by the baked effect recipes and the effects drawn in
-    /// Aseprite (<see cref="AsepriteEffectWriter"/>). Returns the paths it wrote: the sheet when it was written or its
-    /// import settings or slices changed, the sprite set when it was created or changed.
+    /// <paramref name="frameSeconds"/>, each variant lighting in its <paramref name="lightColours"/> (none without),
+    /// keeping its GUID. Shared by the baked effect recipes and the effects drawn in Aseprite
+    /// (<see cref="AsepriteEffectWriter"/>). Returns the paths it wrote: the sheet when it was written or its import
+    /// settings or slices changed, the sprite set when it was created or changed.
     /// </summary>
-    public static IReadOnlyList<string> Write(string sheetName, Vector2Int frameSize, Vector2 pivot, int variants, int directions, int frames, float frameSeconds, Color32[] pixels)
+    public static IReadOnlyList<string> Write(string sheetName, Vector2Int frameSize, Vector2 pivot, int variants, int directions, int frames, float frameSeconds, Color32[] pixels, Color[] lightColours = null)
     {
         TerrainMaterialWriter.EnsureFolder(Folder);
         string sheetPath = SheetPath(sheetName);
@@ -100,7 +102,7 @@ public static class EffectSheetWriter
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheetPath);
         Sprite[] ordered = slices.Select(s => sprites.TryGetValue(s.Name, out Sprite sprite) ? sprite : null).ToArray();
         string spritesPath = SpritesPath(sheetName);
-        if (SpriteSheetFiles.WriteAsset(spritesPath, EffectSprites.Create(ordered, variants, directions, frames, frameSeconds)))
+        if (SpriteSheetFiles.WriteAsset(spritesPath, EffectSprites.Create(ordered, variants, directions, frames, frameSeconds, lightColours)))
         {
             written.Add(spritesPath);
         }

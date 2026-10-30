@@ -7,7 +7,8 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for cast animation online (Docs/Animation.md, Phase 5) between a host and an in-process client: a
-/// client's cast plays on the host's copy and shows its release when the host resolves the cast; a client's cast
+/// client's cast plays on the host's copy and shows its release when the host resolves the cast, its cast light
+/// (Docs/Lighting.md, Phase 2) shining in Bolt's colour at the release and off once the cast is over; a client's cast
 /// interrupted mid-way stops the host's copy before its release and never resolves; a client switching weapons mid-cast
 /// has the host resolve the ability it cast; and the host's cast plays on the client's copy of the host's player.
 /// </summary>
@@ -33,7 +34,8 @@ public class NetworkCastsPlayModeTests
     /// <summary>
     /// A client casting Bolt plays it on the host's copy of its player, which shows its release frame within a network
     /// tick or two of the host resolving the cast (both follow the owner's messages, a start and a completion), and
-    /// plays its follow-through after.
+    /// plays its follow-through after; the copy's cast light shines in Bolt's light colour at the release and goes off
+    /// once the cast is over, with nothing sent for it.
     /// </summary>
     [UnityTest]
     public IEnumerator AClientsCast_PlaysOnTheHostsCopy_AndReleasesAtCompletion()
@@ -62,6 +64,7 @@ public class NetworkCastsPlayModeTests
 
         bool played = false;
         float releasedAt = -1f;
+        bool litAtRelease = false;
         for (float until = Time.time + 3f; Time.time < until && (resolvedAt < 0f || releasedAt < 0f);)
         {
             yield return null;
@@ -69,6 +72,7 @@ public class NetworkCastsPlayModeTests
             if (releasedAt < 0f && copyAnimation.IsActing && copyAnimation.Clip == clip && copyAnimation.ActionPhase == AttackPhase.Contact)
             {
                 releasedAt = Time.time;
+                litAtRelease = copyVisuals.CastLight.enabled && copyVisuals.CastLight.color == clip.LightColour;
             }
         }
 
@@ -76,6 +80,10 @@ public class NetworkCastsPlayModeTests
         Assert.That(resolvedAt, Is.GreaterThanOrEqualTo(0f), "The host resolves the client's cast.");
         Assert.That(releasedAt, Is.GreaterThanOrEqualTo(0f), "The host's copy shows the release.");
         Assert.That(Mathf.Abs(releasedAt - resolvedAt), Is.LessThan(0.1f), "The copy releases when the cast completes, within a few network ticks.");
+        Assert.That(litAtRelease, Is.True, "The copy's cast light shines in Bolt's colour at the release.");
+        yield return SceneBootTestHelper.WaitUntil(() => !copyAnimation.IsActing, "the copy's cast to end");
+        yield return null;
+        Assert.That(copyVisuals.CastLight.enabled, Is.False, "The copy's cast light is off once the cast is over.");
     }
 
     /// <summary>

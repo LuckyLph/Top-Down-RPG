@@ -10,7 +10,8 @@
     "Unity.Netcode.Runtime",
     "Unity.Collections",
     "Unity.Networking.Transport",
-    "Unity.Multiplayer.Tools.NetworkSimulator.Runtime"
+    "Unity.Multiplayer.Tools.NetworkSimulator.Runtime",
+    "Unity.RenderPipelines.Universal.2D.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

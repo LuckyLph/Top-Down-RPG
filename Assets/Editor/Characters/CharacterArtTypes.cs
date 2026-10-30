@@ -343,4 +343,18 @@ public struct MotionEffect
     /// Whether the effect is part of a cast's light.
     /// </summary>
     public bool IsLight => kind >= MotionEffectKind.Gather;
+
+    /// <summary>
+    /// How strongly a cast's light effect shines on what is around it, 0 to 1: a gathering glow as its size, the
+    /// release's star in full, the ring breaking up after it at half and the sparks at a quarter; 0 for any other
+    /// effect.
+    /// </summary>
+    public float LightStrength => kind switch
+    {
+        MotionEffectKind.Gather => Mathf.Clamp01(size),
+        MotionEffectKind.Burst => Mathf.Clamp01(size),
+        MotionEffectKind.Ring => 0.5f * Mathf.Clamp01(size),
+        MotionEffectKind.Sparks => 0.25f * Mathf.Clamp01(size),
+        _ => 0f
+    };
 }

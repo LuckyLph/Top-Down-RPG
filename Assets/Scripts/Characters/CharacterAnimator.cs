@@ -51,6 +51,17 @@ public sealed class CharacterAnimator
     public bool IsHolding { get; private set; }
 
     /// <summary>
+    /// The light the sprite the last update showed casts (Docs/Lighting.md, Phase 2): a cast's glow, held with its
+    /// sprite; none for a sprite without one.
+    /// </summary>
+    public CharacterFrameLight Light { get; private set; }
+
+    /// <summary>
+    /// The colour of <see cref="Light"/>: its clip's light colour.
+    /// </summary>
+    public Color LightColour { get; private set; }
+
+    /// <summary>
     /// Whether the last update showed a cast's clip drawn over a gait, the legs running on.
     /// </summary>
     public bool ShowsMovingCast => action.IsPlaying && actionMovedLegs;
@@ -175,7 +186,9 @@ public sealed class CharacterAnimator
                 if (showedAction && actionMovedLegs && moving)
                 {
                     locomotion.Advance(speed, deltaTime);
-                    Sprite = action.MovingSpriteAt(Direction, shownActionFrame, GaitFrameOf(action.MovingClip));
+                    int heldGaitFrame = GaitFrameOf(action.MovingClip);
+                    Sprite = action.MovingSpriteAt(Direction, shownActionFrame, heldGaitFrame);
+                    ShowLight(action.MovingLightAt(Direction, shownActionFrame, heldGaitFrame), action.MovingClip);
                 }
 
                 return Sprite;
@@ -198,11 +211,14 @@ public sealed class CharacterAnimator
             if (actionMovedLegs)
             {
                 locomotion.Advance(speed, deltaTime);
-                Sprite = action.MovingSpriteAt(Direction, action.Frame, GaitFrameOf(action.MovingClip));
+                int gaitFrame = GaitFrameOf(action.MovingClip);
+                Sprite = action.MovingSpriteAt(Direction, action.Frame, gaitFrame);
+                ShowLight(action.MovingLightAt(Direction, action.Frame, gaitFrame), action.MovingClip);
                 return Sprite;
             }
 
             Sprite = action.Sprite;
+            ShowLight(action.Light, action.Clip);
             return Sprite;
         }
 
@@ -214,6 +230,7 @@ public sealed class CharacterAnimator
         locomotion.Advance(speed, resuming ? 0f : deltaTime);
         actionMovedLegs = false;
         Sprite = locomotion.SpriteFacing(Direction);
+        ShowLight(default, null);
         return Sprite;
     }
 
@@ -239,6 +256,15 @@ public sealed class CharacterAnimator
         IsHolding = true;
         holdPending = true;
         holdUntil = until;
+    }
+
+    /// <summary>
+    /// Keeps <paramref name="light"/>, the light of the sprite shown, in <paramref name="clip"/>'s light colour.
+    /// </summary>
+    private void ShowLight(CharacterFrameLight light, CharacterAnimationClip clip)
+    {
+        Light = light;
+        LightColour = light.IsLit && clip != null ? clip.LightColour : default;
     }
 
     /// <summary>

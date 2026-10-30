@@ -183,6 +183,7 @@ public abstract class CharacterPainter
         Vector3 centre = World(hand) - CharacterCanvas.ViewForward * (recipe.HandRadius + 0.3f);
         Vector3 nearer = -CharacterCanvas.ViewForward * (0.01f / canvas.Scale);
         float size = effect.Size;
+        canvas.MarkLight(centre, effect.LightStrength);
         switch (effect.Kind)
         {
             case MotionEffectKind.Gather:

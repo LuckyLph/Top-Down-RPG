@@ -8,6 +8,9 @@ using UnityEngine;
 /// </summary>
 public sealed class CharacterCanvas : ArtCanvas
 {
+    private Vector2 lightSum;
+    private int lightsMarked;
+
     /// <summary>
     /// Creates an empty frame of <paramref name="width"/> x <paramref name="height"/> pixels whose world origin falls on
     /// pixel <paramref name="pivot"/> (from the bottom left), drawn at <paramref name="scale"/> pixels per rig unit.
@@ -15,6 +18,30 @@ public sealed class CharacterCanvas : ArtCanvas
     public CharacterCanvas(int width, int height, Vector2Int pivot, float scale)
         : base(width, height, pivot, scale)
     {
+    }
+
+    /// <summary>
+    /// How strongly a cast's light drawn on the frame shines on what is around it, 0 (none drawn) to 1: the strongest
+    /// light marked.
+    /// </summary>
+    public float LightStrength { get; private set; }
+
+    /// <summary>
+    /// Where a cast's light drawn on the frame shines from, in pixels from the pivot on the screen: the middle of the
+    /// lights marked (between the hands, for a light at both); zero when none is drawn.
+    /// </summary>
+    public Vector2 LightCentre => lightsMarked > 0 ? lightSum / lightsMarked : Vector2.zero;
+
+    /// <summary>
+    /// Marks a cast's light shining from <paramref name="world"/> at <paramref name="strength"/>, whether or not the
+    /// body hides it, so a light at a hand behind the body still lights what is around it.
+    /// </summary>
+    public void MarkLight(Vector3 world, float strength)
+    {
+        Vector3 view = Project(world);
+        lightSum += new Vector2(view.x, view.y);
+        lightsMarked++;
+        LightStrength = Mathf.Max(LightStrength, strength);
     }
 
     /// <summary>

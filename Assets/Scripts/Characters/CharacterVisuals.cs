@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using VContainer;
 
 /// <summary>
@@ -8,7 +9,9 @@ using VContainer;
 /// motor has moved, it asks its
 /// <see cref="CharacterAnimator"/> for the sprite on the game clock and puts it on the renderer when it changed. Logs an error without a set or locomotion settings, keeping the sprite it has.
 /// A player's look (<see cref="SetLook"/>) swaps the set and settings; the weapon and the casts look their clips up
-/// again in the new set.
+/// again in the new set. With a cast light (Docs/Lighting.md, Phase 2), the light each sprite's glow casts shows with
+/// that sprite: where the glow shines from, at the cast light's intensity times the frame's strength, in its clip's
+/// light colour, and off for a sprite without one. Visual only, on every machine that plays the casts.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -20,6 +23,12 @@ public class CharacterVisuals : MonoBehaviour
     [SerializeField, Tooltip("Gait speed bands, playback rates and the direction margin.")]
     private CharacterLocomotionSettings locomotion;
 
+    [SerializeField, Tooltip("The light a cast's glow casts on what is around it, on a child of this object and off until a frame with a glow shows. None for a character without glowing frames.")]
+    private Light2D castLight;
+
+    [SerializeField, Min(0f), Tooltip("The cast light's intensity at a frame's full strength, the glow's brightest.")]
+    private float castLightIntensity = 1f;
+
     private SpriteRenderer spriteRenderer;
     private IClock clock = UnityClock.Shared;
     private CharacterAnimator animator;
@@ -29,6 +38,7 @@ public class CharacterVisuals : MonoBehaviour
 
     public CharacterAnimationSet AnimationSet => animationSet;
     public CharacterLocomotionSettings Locomotion => locomotion;
+    public Light2D CastLight => castLight;
 
     /// <summary>
     /// The animator, built on first use; null without a set or settings.
@@ -44,6 +54,17 @@ public class CharacterVisuals : MonoBehaviour
         if (animationSet == null || locomotion == null)
         {
             Debug.LogError($"{name} needs a {nameof(CharacterAnimationSet)} and {nameof(CharacterLocomotionSettings)} to animate.", this);
+        }
+    }
+
+    /// <summary>
+    /// Turns the cast light off while nothing animates.
+    /// </summary>
+    private void OnDisable()
+    {
+        if (castLight != null)
+        {
+            castLight.enabled = false;
         }
     }
 
@@ -182,6 +203,7 @@ public class CharacterVisuals : MonoBehaviour
         }
 
         Sprite sprite = current.Update(velocity, facing);
+        ShowLight(current.Light, current.LightColour);
         if (sprite == null || ReferenceEquals(sprite, shown))
         {
             return;
@@ -194,6 +216,58 @@ public class CharacterVisuals : MonoBehaviour
 
         shown = sprite;
         spriteRenderer.sprite = sprite;
+    }
+
+    /// <summary>
+    /// Sets the cast light and its intensity at full strength in code, for tests that build the visuals without their
+    /// prefab.
+    /// </summary>
+    internal void Configure(Light2D light, float intensity)
+    {
+        castLight = light;
+        castLightIntensity = intensity;
+    }
+
+    /// <summary>
+    /// Shows <paramref name="light"/>, the light of the sprite shown, on the cast light: where it shines from, its
+    /// strength times the cast light's intensity, in <paramref name="colour"/>; off for a frame without light. Writes
+    /// only what changed.
+    /// </summary>
+    private void ShowLight(CharacterFrameLight light, Color colour)
+    {
+        if (castLight == null)
+        {
+            return;
+        }
+
+        bool lit = light.IsLit && colour.a > 0f;
+        if (castLight.enabled != lit)
+        {
+            castLight.enabled = lit;
+        }
+
+        if (!lit)
+        {
+            return;
+        }
+
+        Transform lightTransform = castLight.transform;
+        Vector3 position = new(light.Offset.x, light.Offset.y, 0f);
+        if (lightTransform.localPosition != position)
+        {
+            lightTransform.localPosition = position;
+        }
+
+        float intensity = castLightIntensity * light.Strength;
+        if (castLight.intensity != intensity)
+        {
+            castLight.intensity = intensity;
+        }
+
+        if (castLight.color != colour)
+        {
+            castLight.color = colour;
+        }
     }
 
     /// <summary>

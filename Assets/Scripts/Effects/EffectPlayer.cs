@@ -1,13 +1,16 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// A pooled one-shot effect on its prefab (Docs/Animation.md, Phase 6): plays one variant and direction of its baked
 /// <see cref="EffectSprites"/> frame by frame on <see cref="Time.deltaTime"/> (visual only), then goes back to its
 /// <see cref="EffectPool"/>. It sorts by the 2D renderer's custom axis (Docs/WorldScale.md, Phase 1): its root, whose
 /// <see cref="SortingGroup"/> sorts at where it stands, stands at the ground height it is given, nudged toward the
-/// camera by its sort nudge, and its sprite, on a child, is drawn where it is played. Nothing rotates or scales it. A
-/// pooled effect stays active with its renderer off.
+/// camera by its sort nudge, and its sprite, on a child, is drawn where it is played. Nothing rotates or scales it. With
+/// a light (Docs/Lighting.md, Phase 2), a variant its frames give a light colour lights what is around it in that
+/// colour, from its light intensity when it starts down to nothing as it ends; other variants leave it off. A pooled
+/// effect stays active with its renderer and light off.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SortingGroup))]
@@ -19,18 +22,24 @@ public class EffectPlayer : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     [SerializeField, Min(0f), Tooltip("How far toward the camera the effect sorts from the ground height it is played at, in units: above 0 it draws over what stands there.")]
     private float sortNudge;
+    [SerializeField, Tooltip("The light the effect casts, under its sprite and off until it plays a variant with a light colour. None for an effect that never lights.")]
+    private Light2D effectLight;
+    [SerializeField, Min(0f), Tooltip("The light's intensity as the effect starts; it fades to nothing over the effect's frames.")]
+    private float lightIntensity = 1f;
 
     private EffectPool pool;
     private int variant;
     private int direction;
     private int frame;
     private float elapsed;
+    private bool lit;
 
     public EffectSprites Sprites => sprites;
     public bool IsPlaying { get; private set; }
     public int Variant => variant;
     public int Direction => direction;
     public int Frame => frame;
+    public Light2D EffectLight => effectLight;
 
     /// <summary>
     /// The prefab this instance was made from, for its pool.
@@ -83,6 +92,8 @@ public class EffectPlayer : MonoBehaviour
             spriteRenderer.sprite = sprites.Get(variant, direction, 0);
             spriteRenderer.enabled = true;
         }
+
+        StartLight();
     }
 
     /// <summary>
@@ -104,6 +115,11 @@ public class EffectPlayer : MonoBehaviour
             return;
         }
 
+        if (lit)
+        {
+            effectLight.intensity = lightIntensity * (1f - elapsed / sprites.Duration);
+        }
+
         if (reached != frame)
         {
             frame = reached;
@@ -121,17 +137,46 @@ public class EffectPlayer : MonoBehaviour
         {
             spriteRenderer.enabled = false;
         }
+
+        lit = false;
+        if (effectLight != null)
+        {
+            effectLight.enabled = false;
+        }
     }
 
     /// <summary>
-    /// Sets the frames, the renderer (on a child) and the sort nudge in code, for tests that build an effect without its
-    /// prefab.
+    /// Sets the frames, the renderer (on a child), the sort nudge and the light with its starting intensity in code, for
+    /// tests that build an effect without its prefab.
     /// </summary>
-    internal void Configure(EffectSprites effectSprites, SpriteRenderer renderer, float nudge = 0f)
+    internal void Configure(EffectSprites effectSprites, SpriteRenderer renderer, float nudge = 0f, Light2D light = null, float intensity = 1f)
     {
         sprites = effectSprites;
         spriteRenderer = renderer;
         sortNudge = nudge;
+        effectLight = light;
+        lightIntensity = intensity;
+    }
+
+    /// <summary>
+    /// Turns the light on at its brightest in the colour the frames give the variant playing, or off for a variant
+    /// without one.
+    /// </summary>
+    private void StartLight()
+    {
+        if (effectLight == null)
+        {
+            return;
+        }
+
+        Color colour = sprites != null ? sprites.LightColour(variant) : Color.clear;
+        lit = colour.a > 0f;
+        effectLight.enabled = lit;
+        if (lit)
+        {
+            effectLight.color = colour;
+            effectLight.intensity = lightIntensity;
+        }
     }
 
     /// <summary>

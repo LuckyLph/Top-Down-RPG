@@ -10,8 +10,9 @@ using UnityEngine;
 /// its windup and the frames after it its recovery, each stretched to its phase of the attack's timeline; a cast's clip
 /// has its release frame there, the frames before it its gather and those after it its follow-through. A cast baked
 /// over a gait (played while a Continue cast moves the character) has every one of its frames drawn over each of the
-/// gait's frames, so the legs keep their stride while the upper body casts. The character baker writes it; nothing
-/// changes it at runtime.
+/// gait's frames, so the legs keep their stride while the upper body casts. A cast's clip with a light drawn on it has
+/// the light each sprite casts on what is around it, and the light's colour (Docs/Lighting.md, Phase 2). The character
+/// baker writes it; nothing changes it at runtime.
 /// </summary>
 [Serializable]
 public sealed class CharacterAnimationClip
@@ -24,6 +25,8 @@ public sealed class CharacterAnimationClip
     [SerializeField, Min(0f)] private float naturalSpeed;
     [SerializeField] private int contactFrame = -1;
     [SerializeField, Min(0)] private int gaitFrames;
+    [SerializeField] private Color lightColour;
+    [SerializeField] private CharacterFrameLight[] lights = Array.Empty<CharacterFrameLight>();
 
     public string Name => name;
     public CharacterGait Gait => gait;
@@ -31,6 +34,16 @@ public sealed class CharacterAnimationClip
     public int FrameCount => frameSeconds.Length;
     public float NaturalSpeed => naturalSpeed;
     public int ContactFrame => contactFrame;
+
+    /// <summary>
+    /// The colour of the light the clip's frames cast; clear for a clip without light.
+    /// </summary>
+    public Color LightColour => lightColour;
+
+    /// <summary>
+    /// Whether the clip has a light for every sprite.
+    /// </summary>
+    public bool HasLights => lights.Length > 0 && lights.Length == sprites.Length;
 
     /// <summary>
     /// How many frames of a gait each frame is drawn over: 0 for a clip drawn standing.
@@ -67,9 +80,10 @@ public sealed class CharacterAnimationClip
     /// Creates a clip from its sprites, direction by direction and within each direction frame by frame (east first,
     /// counterclockwise; for a clip drawn over <paramref name="clipGaitFrames"/> gait frames, gait frame by gait frame
     /// and within each the clip's frames), the duration of each frame and, for an attack or a cast, its contact
-    /// (release) frame (-1 for none); for the baker and tests.
+    /// (release) frame (-1 for none), and for a clip with a light, its colour and the light of each sprite in the
+    /// sprites' order; for the baker and tests.
     /// </summary>
-    public static CharacterAnimationClip Create(string clipName, CharacterGait clipGait, bool drawnArmed, Sprite[] clipSprites, float[] clipFrameSeconds, float clipNaturalSpeed, int clipContactFrame = -1, int clipGaitFrames = 0)
+    public static CharacterAnimationClip Create(string clipName, CharacterGait clipGait, bool drawnArmed, Sprite[] clipSprites, float[] clipFrameSeconds, float clipNaturalSpeed, int clipContactFrame = -1, int clipGaitFrames = 0, Color clipLightColour = default, CharacterFrameLight[] clipLights = null)
     {
         return new CharacterAnimationClip
         {
@@ -80,7 +94,9 @@ public sealed class CharacterAnimationClip
             frameSeconds = clipFrameSeconds ?? Array.Empty<float>(),
             naturalSpeed = Mathf.Max(0f, clipNaturalSpeed),
             contactFrame = clipContactFrame < 0 ? -1 : clipContactFrame,
-            gaitFrames = Mathf.Max(0, clipGaitFrames)
+            gaitFrames = Mathf.Max(0, clipGaitFrames),
+            lightColour = clipLightColour,
+            lights = clipLights ?? Array.Empty<CharacterFrameLight>()
         };
     }
 
@@ -108,6 +124,17 @@ public sealed class CharacterAnimationClip
     public Sprite SpriteAt(int direction, int frame, int gaitFrame)
     {
         return sprites[(direction * Mathf.Max(1, gaitFrames) + gaitFrame) * frameSeconds.Length + frame];
+    }
+
+    /// <summary>
+    /// The light frame <paramref name="frame"/> casts facing direction <paramref name="direction"/> over gait frame
+    /// <paramref name="gaitFrame"/>, as <see cref="SpriteAt(int, int, int)"/> finds its sprite; none for a clip without
+    /// lights.
+    /// </summary>
+    public CharacterFrameLight LightAt(int direction, int frame, int gaitFrame)
+    {
+        int index = (direction * Mathf.Max(1, gaitFrames) + gaitFrame) * frameSeconds.Length + frame;
+        return HasLights && index >= 0 && index < lights.Length ? lights[index] : default;
     }
 
     /// <summary>

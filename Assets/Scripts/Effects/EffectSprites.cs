@@ -3,8 +3,9 @@ using UnityEngine;
 /// <summary>
 /// The frames of a baked one-shot effect (Docs/Animation.md, Phase 6), written by the effect recipes' writer: one
 /// sequence of frames per variant (an impact's damage type) and direction (evenly spaced, counterclockwise from east),
-/// each frame shown for <see cref="FrameSeconds"/>. Nothing rotates or scales an effect at runtime: a direction is
-/// baked. Runtime code only reads it.
+/// each frame shown for <see cref="FrameSeconds"/>, and for a variant that lights what is around it, the light's colour
+/// (Docs/Lighting.md, Phase 2). Nothing rotates or scales an effect at runtime: a direction is baked. Runtime code only
+/// reads it.
 /// </summary>
 public sealed class EffectSprites : ScriptableObject
 {
@@ -15,6 +16,8 @@ public sealed class EffectSprites : ScriptableObject
     [SerializeField, Min(1)] private int frames = 1;
     [SerializeField, Min(0.001f), Tooltip("How long each frame shows, in seconds.")]
     private float frameSeconds = 0.04f;
+    [SerializeField, Tooltip("Each variant's light colour, in the variants' order; clear for a variant that casts no light.")]
+    private Color[] lightColours = new Color[0];
 
     public int VariantCount => variants;
     public int DirectionCount => directions;
@@ -36,6 +39,14 @@ public sealed class EffectSprites : ScriptableObject
     }
 
     /// <summary>
+    /// The colour of the light <paramref name="variant"/> casts on what is around it; clear for one that casts none.
+    /// </summary>
+    public Color LightColour(int variant)
+    {
+        return variant >= 0 && variant < lightColours.Length ? lightColours[variant] : Color.clear;
+    }
+
+    /// <summary>
     /// The baked direction nearest <paramref name="direction"/>: its angle counterclockwise from east over the step
     /// between directions, rounded; the first for none.
     /// </summary>
@@ -51,10 +62,10 @@ public sealed class EffectSprites : ScriptableObject
     }
 
     /// <summary>
-    /// Creates an unsaved set of <paramref name="effectSprites"/> (variant by variant, then direction, then frame), for
-    /// the writer and tests.
+    /// Creates an unsaved set of <paramref name="effectSprites"/> (variant by variant, then direction, then frame), with
+    /// each variant's light colour (none for an effect that casts no light), for the writer and tests.
     /// </summary>
-    public static EffectSprites Create(Sprite[] effectSprites, int variantCount, int directionCount, int frameCount, float seconds)
+    public static EffectSprites Create(Sprite[] effectSprites, int variantCount, int directionCount, int frameCount, float seconds, Color[] variantLightColours = null)
     {
         EffectSprites set = CreateInstance<EffectSprites>();
         set.sprites = effectSprites;
@@ -62,6 +73,7 @@ public sealed class EffectSprites : ScriptableObject
         set.directions = Mathf.Max(1, directionCount);
         set.frames = Mathf.Max(1, frameCount);
         set.frameSeconds = Mathf.Max(0.001f, seconds);
+        set.lightColours = variantLightColours ?? new Color[0];
         return set;
     }
 }

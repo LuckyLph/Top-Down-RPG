@@ -4,15 +4,17 @@ using UnityEngine;
 
 /// <summary>
 /// One clip drawn as a sheet: a row per direction (<see cref="CharacterDirections"/>, east at the top), a column per
-/// frame, pixels rows from the bottom, and the frames whose drawing reached their edge (named "direction frame"),
-/// which the inspector warns about.
+/// frame, pixels rows from the bottom, the frames whose drawing reached their edge (named "direction frame"), which
+/// the inspector warns about, and where each frame's cast light shines from and how strongly
+/// (<see cref="CharacterCanvas.LightCentre"/>, <see cref="CharacterCanvas.LightStrength"/>), direction by direction and
+/// within each frame by frame.
 /// </summary>
 public sealed class CharacterSheet
 {
     /// <summary>
     /// Creates the sheet of <paramref name="clip"/> from its pixels.
     /// </summary>
-    public CharacterSheet(CharacterClip clip, int frameCount, Color32[] pixels, IReadOnlyList<string> framesAtEdge)
+    public CharacterSheet(CharacterClip clip, int frameCount, Color32[] pixels, IReadOnlyList<string> framesAtEdge, Vector2[] lightCentres, float[] lightStrengths)
     {
         Clip = clip;
         FrameCount = frameCount;
@@ -20,6 +22,8 @@ public sealed class CharacterSheet
         Height = CharacterDirections.Count * clip.FrameSize.y;
         Pixels = pixels;
         FramesAtEdge = framesAtEdge;
+        LightCentres = lightCentres;
+        LightStrengths = lightStrengths;
     }
 
     public CharacterClip Clip { get; }
@@ -28,6 +32,16 @@ public sealed class CharacterSheet
     public int Height { get; }
     public Color32[] Pixels { get; }
     public IReadOnlyList<string> FramesAtEdge { get; }
+
+    /// <summary>
+    /// Where each frame's cast light shines from, in pixels from the feet on the screen; zero where none is drawn.
+    /// </summary>
+    public Vector2[] LightCentres { get; }
+
+    /// <summary>
+    /// How strongly each frame's cast light shines, 0 where none is drawn to 1.
+    /// </summary>
+    public float[] LightStrengths { get; }
 
     /// <summary>
     /// Where frame <paramref name="frame"/> of direction <paramref name="direction"/> lies on a sheet of frames of
@@ -98,11 +112,16 @@ public sealed class CharacterBaker
         int width = frames * size.x;
         Color32[] pixels = new Color32[width * CharacterDirections.Count * size.y];
         List<string> atEdge = new();
+        Vector2[] lightCentres = new Vector2[CharacterDirections.Count * frames];
+        float[] lightStrengths = new float[lightCentres.Length];
         for (int direction = 0; direction < CharacterDirections.Count; direction++)
         {
             for (int frame = 0; frame < frames; frame++)
             {
-                Color32[] colours = Shade(Render(clip, direction, frame), clip.Weapon, clip.Motion.Light);
+                CharacterCanvas canvas = Render(clip, direction, frame);
+                lightCentres[direction * frames + frame] = canvas.LightCentre;
+                lightStrengths[direction * frames + frame] = canvas.LightStrength;
+                Color32[] colours = Shade(canvas, clip.Weapon, clip.Motion.Light);
                 if (TouchesEdge(colours, size))
                 {
                     atEdge.Add($"{CharacterDirections.Name(direction)} {frame}");
@@ -116,7 +135,7 @@ public sealed class CharacterBaker
             }
         }
 
-        return new CharacterSheet(clip, frames, pixels, atEdge);
+        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths);
     }
 
     /// <summary>

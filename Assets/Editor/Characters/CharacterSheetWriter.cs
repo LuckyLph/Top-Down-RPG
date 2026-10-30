@@ -14,8 +14,9 @@ using UnityEngine;
 /// one whose import settings and slices did not change either is not reimported. Then it writes the runtime
 /// <see cref="CharacterAnimationSet"/>, <c>&lt;sheet name&gt;_AnimationSet.asset</c> beside the sheets: per clip its
 /// sprites by direction and frame (and gait frame, for a motion drawn over a gait, whose sheet columns run gait frame
-/// by gait frame), each frame's duration at natural speed, its gait, whether it is armed, its contact (release) frame
-/// and a gait's natural speed (<see cref="NaturalSpeed"/>); the asset keeps its GUID and is saved only when it changed.
+/// by gait frame), each frame's duration at natural speed, its gait, whether it is armed, its contact (release) frame,
+/// a gait's natural speed (<see cref="NaturalSpeed"/>) and, for a cast with a light, the light each sprite casts and
+/// its colour (<see cref="Lights"/>); the asset keeps its GUID and is saved only when it changed.
 /// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
 /// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) goes through
 /// <see cref="SpriteSheetFiles"/> and is shared with <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn
@@ -50,7 +51,7 @@ public static class CharacterSheetWriter
         }
 
         string setPath = SetPath(recipe);
-        WriteSet(setPath, BuildSet(recipe, baker));
+        WriteSet(setPath, BuildSet(recipe, baker, sheets));
         paths.Add(setPath);
         return paths;
     }
@@ -126,23 +127,50 @@ public static class CharacterSheetWriter
     }
 
     /// <summary>
-    /// An unsaved set of <paramref name="recipe"/>'s clips over the sprites of its written sheets, without touching an
-    /// asset.
+    /// An unsaved set of <paramref name="recipe"/>'s clips, baked as <paramref name="sheets"/> (in the recipe's order),
+    /// over the sprites of its written sheets, without touching an asset.
     /// </summary>
-    public static CharacterAnimationSet BuildSet(CharacterRecipe recipe, CharacterBaker baker)
+    public static CharacterAnimationSet BuildSet(CharacterRecipe recipe, CharacterBaker baker, IReadOnlyList<CharacterSheet> sheets)
     {
         List<CharacterAnimationClip> clips = new();
-        foreach (CharacterClip clip in recipe.Clips)
+        foreach (CharacterSheet sheet in sheets)
         {
+            CharacterClip clip = sheet.Clip;
             int columns = clip.Motion.FrameCount;
             int gaitFrames = clip.Motion.GaitFrames;
             int frames = columns / Mathf.Max(1, gaitFrames);
             Sprite[] ordered = SheetSprites(recipe.SheetName, clip.Name, columns);
             float[] seconds = Enumerable.Range(0, frames).Select(clip.Motion.FrameSeconds).ToArray();
-            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames));
+            CharacterFrameLight[] lights = Lights(sheet, out Color lightColour);
+            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames, lightColour, lights));
         }
 
         return CharacterAnimationSet.Create(clips);
+    }
+
+    /// <summary>
+    /// The light each of <paramref name="sheet"/>'s frames casts, in the order of <see cref="SheetSprites"/>: where its
+    /// cast light shines from, in units from the feet, and how strongly; and in <paramref name="colour"/> the light's
+    /// colour, the rim tone of its motion's light colours (<see cref="ColourRamp.Shadow"/>), which tints what it lights
+    /// most (Docs/Lighting.md, Phase 2). Null and clear for a clip whose motion has no light colours or draws no light.
+    /// </summary>
+    public static CharacterFrameLight[] Lights(CharacterSheet sheet, out Color colour)
+    {
+        Color32 rim = sheet.Clip.Motion.Light.Shadow;
+        colour = Color.clear;
+        if (rim.a == 0 || sheet.LightStrengths.All(strength => strength <= 0f))
+        {
+            return null;
+        }
+
+        colour = rim;
+        CharacterFrameLight[] lights = new CharacterFrameLight[sheet.LightStrengths.Length];
+        for (int i = 0; i < lights.Length; i++)
+        {
+            lights[i] = new CharacterFrameLight(sheet.LightCentres[i] / PixelsPerUnit, sheet.LightStrengths[i]);
+        }
+
+        return lights;
     }
 
     /// <summary>

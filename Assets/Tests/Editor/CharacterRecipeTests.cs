@@ -359,7 +359,7 @@ public class CharacterRecipeTests
     [Test]
     public void TheBaker_WritesTheContactFrameIntoTheSet()
     {
-        CharacterAnimationSet built = CharacterSheetWriter.BuildSet(recipe, baker);
+        CharacterAnimationSet built = CharacterSheetWriter.BuildSet(recipe, baker, recipe.Clips.Select(clip => sheets[clip.Name]).ToList());
         try
         {
             CharacterAnimationClip slash = built.Find("SwordSlash");

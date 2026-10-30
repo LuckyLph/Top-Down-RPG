@@ -36,6 +36,15 @@ public abstract class EffectRecipe : ScriptableObject
     public abstract Color32[] BakeFrame(int variant, int direction, int frame);
 
     /// <summary>
+    /// The colour of the light <paramref name="variant"/> casts on what is around it (Docs/Lighting.md, Phase 2); clear,
+    /// the default, for one that casts none.
+    /// </summary>
+    public virtual Color LightColour(int variant)
+    {
+        return Color.clear;
+    }
+
+    /// <summary>
     /// Whether the recipe can bake; otherwise <paramref name="problem"/> says why.
     /// </summary>
     public virtual bool CanGenerate(out string problem)

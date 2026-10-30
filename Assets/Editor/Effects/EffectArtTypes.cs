@@ -58,7 +58,8 @@ public enum ImpactShade
 }
 
 /// <summary>
-/// An impact's colours for one damage type, hottest first; its outline is the darkest colour darkened further.
+/// An impact's colours for one damage type, hottest first; its outline is the darkest colour darkened further. An
+/// impact that casts light lights what is around it in its middle colour (Docs/Lighting.md, Phase 2).
 /// </summary>
 [Serializable]
 public struct ImpactPalette
@@ -68,20 +69,25 @@ public struct ImpactPalette
     [SerializeField] private Color32 light;
     [SerializeField] private Color32 middle;
     [SerializeField] private Color32 dark;
+    [Tooltip("Whether the impact lights what is around it, in its middle colour.")]
+    [SerializeField] private bool castsLight;
 
     /// <summary>
-    /// Creates the palette of <paramref name="damageType"/>.
+    /// Creates the palette of <paramref name="damageType"/>, casting light in its middle colour when
+    /// <paramref name="lights"/>.
     /// </summary>
-    public ImpactPalette(DamageType damageType, Color32 hot, Color32 light, Color32 middle, Color32 dark)
+    public ImpactPalette(DamageType damageType, Color32 hot, Color32 light, Color32 middle, Color32 dark, bool lights = false)
     {
         type = damageType;
         this.hot = hot;
         this.light = light;
         this.middle = middle;
         this.dark = dark;
+        castsLight = lights;
     }
 
     public DamageType Type => type;
+    public bool CastsLight => castsLight;
 
     /// <summary>
     /// The colour of <paramref name="shade"/>.

@@ -6,7 +6,8 @@
     "Unity.InputSystem",
     "Unity.TextMeshPro",
     "Unity.Netcode.Runtime",
-    "Unity.2D.Tilemap.Extras"
+    "Unity.2D.Tilemap.Extras",
+    "Unity.RenderPipelines.Universal.2D.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -55,6 +55,11 @@ public sealed class CharacterActionLayer
     public Sprite Sprite => IsPlaying ? clip.SpriteAt(Direction, Frame) : null;
 
     /// <summary>
+    /// The light the current frame casts in the action's direction, or none when nothing plays.
+    /// </summary>
+    public CharacterFrameLight Light => IsPlaying ? clip.LightAt(Direction, Frame, 0) : default;
+
+    /// <summary>
     /// Starts <paramref name="actionClip"/>, an attack's clip, facing <paramref name="direction"/> at
     /// <paramref name="now"/> on <paramref name="actionTimeline"/>, replacing any action playing; with
     /// <paramref name="untilContact"/> the windup holds its last frame until <see cref="ReachContact"/>. False, and
@@ -155,6 +160,15 @@ public sealed class CharacterActionLayer
     public Sprite MovingSpriteAt(int direction, int frame, int gaitFrame)
     {
         return IsPlaying && movingClip != null ? movingClip.SpriteAt(direction, frame, Mathf.Clamp(gaitFrame, 0, movingClip.GaitFrames - 1)) : null;
+    }
+
+    /// <summary>
+    /// The light <paramref name="frame"/> of the moving clip casts in <paramref name="direction"/> over gait frame
+    /// <paramref name="gaitFrame"/>, or none when nothing plays or there is no moving clip.
+    /// </summary>
+    public CharacterFrameLight MovingLightAt(int direction, int frame, int gaitFrame)
+    {
+        return IsPlaying && movingClip != null ? movingClip.LightAt(direction, frame, Mathf.Clamp(gaitFrame, 0, movingClip.GaitFrames - 1)) : default;
     }
 
     /// <summary>

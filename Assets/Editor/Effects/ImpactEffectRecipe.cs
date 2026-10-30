@@ -6,7 +6,8 @@ using UnityEngine;
 /// out, one along the hit, drawn by <see cref="EffectPainter"/> frame by frame from <see cref="Frames"/>, outlined in
 /// its darkest colour darkened further so it still reads over a white flash. One variant per damage type, in
 /// <see cref="DamageType"/>'s order, each in its palette, and baked facing each of <see cref="DirectionCount"/>
-/// directions. Frames are square and pivot on their middle.
+/// directions. Frames are square and pivot on their middle. The elemental types' impacts (Fire, Frost, Lightning and
+/// Poison) cast light in their middle colour (Docs/Lighting.md, Phase 2); Physical and True do not.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Effects/Impact Effect Recipe", fileName = "Impact")]
 public sealed class ImpactEffectRecipe : EffectRecipe
@@ -62,6 +63,15 @@ public sealed class ImpactEffectRecipe : EffectRecipe
     }
 
     /// <summary>
+    /// The middle colour of a damage type whose palette casts light; clear for one that does not.
+    /// </summary>
+    public override Color LightColour(int variant)
+    {
+        ImpactPalette palette = palettes[variant];
+        return palette.CastsLight ? (Color)palette.Get(ImpactShade.Middle) : Color.clear;
+    }
+
+    /// <summary>
     /// Whether the recipe can bake: a name, frames, and one palette per damage type in their order.
     /// </summary>
     public override bool CanGenerate(out string problem)
@@ -114,17 +124,17 @@ public sealed class ImpactEffectRecipe : EffectRecipe
 
     /// <summary>
     /// The shipped palettes, one per damage type: white-hot cores fading through the type's light, middle and dark
-    /// colours (Physical a warm spark).
+    /// colours (Physical a warm spark), the elemental types casting light.
     /// </summary>
     private static ImpactPalette[] DefaultPalettes()
     {
         return new[]
         {
             new ImpactPalette(DamageType.Physical, new Color32(255, 255, 255, 255), new Color32(255, 244, 186, 255), new Color32(255, 200, 96, 255), new Color32(196, 108, 40, 255)),
-            new ImpactPalette(DamageType.Fire, new Color32(255, 255, 214, 255), new Color32(255, 206, 84, 255), new Color32(255, 124, 36, 255), new Color32(184, 48, 24, 255)),
-            new ImpactPalette(DamageType.Frost, new Color32(255, 255, 255, 255), new Color32(206, 244, 255, 255), new Color32(124, 204, 255, 255), new Color32(56, 116, 208, 255)),
-            new ImpactPalette(DamageType.Lightning, new Color32(255, 255, 255, 255), new Color32(255, 250, 164, 255), new Color32(240, 220, 64, 255), new Color32(148, 104, 228, 255)),
-            new ImpactPalette(DamageType.Poison, new Color32(240, 255, 220, 255), new Color32(184, 240, 120, 255), new Color32(112, 200, 72, 255), new Color32(48, 118, 40, 255)),
+            new ImpactPalette(DamageType.Fire, new Color32(255, 255, 214, 255), new Color32(255, 206, 84, 255), new Color32(255, 124, 36, 255), new Color32(184, 48, 24, 255), true),
+            new ImpactPalette(DamageType.Frost, new Color32(255, 255, 255, 255), new Color32(206, 244, 255, 255), new Color32(124, 204, 255, 255), new Color32(56, 116, 208, 255), true),
+            new ImpactPalette(DamageType.Lightning, new Color32(255, 255, 255, 255), new Color32(255, 250, 164, 255), new Color32(240, 220, 64, 255), new Color32(148, 104, 228, 255), true),
+            new ImpactPalette(DamageType.Poison, new Color32(240, 255, 220, 255), new Color32(184, 240, 120, 255), new Color32(112, 200, 72, 255), new Color32(48, 118, 40, 255), true),
             new ImpactPalette(DamageType.True, new Color32(255, 255, 255, 255), new Color32(236, 236, 255, 255), new Color32(200, 200, 236, 255), new Color32(138, 138, 192, 255))
         };
     }

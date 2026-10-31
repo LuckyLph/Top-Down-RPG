@@ -164,8 +164,12 @@ MonoBehaviour:
     count: 8
     spacing: 4
     zone: 1
-  campfirePrefab: {fileID: 0}
-  campsiteSeats: []
+  campfirePrefab: {fileID: 3469111738270407838, guid: 8d1d7656e34d5a24e877f149fb604c06, type: 3}
+  campsiteSeats:
+  - {fileID: 5596322375299190283, guid: d71493f81655d4e43988b8d21eca26b9, type: 3}
+  - {fileID: 8773834282467193367, guid: fdcb0377605267c47bc7c1d7c42b0b9b, type: 3}
+  - {fileID: 1860551632279197078, guid: 64368c27c1923ca46bebe3927e86f3f4, type: 3}
+  - {fileID: 8057450510566065146, guid: 12ad5ce7bac1dee479261836df830e6e, type: 3}
   seatCount: 3
   seatSpacing: 1.5
   campsiteRadius: 3

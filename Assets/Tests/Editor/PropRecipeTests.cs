@@ -12,7 +12,9 @@ using UnityEngine;
 /// colour a variant; a crown drawing its lower clumps in front shows the lower of two overlapping clumps, one picking
 /// from several places spreads its clumps and one tapered grows them from its top to its foot; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
 /// its tiers; a bare tree's twigs are unlined; a crag blocks only its own foot; a cover lies only where it is enabled;
-/// and a recipe refuses names and frames it cannot bake.
+/// a light prop glows only where its flame, coals or glass are drawn, its flame's pixels flickering to the tones next to
+/// theirs, and stands its light on the ground under where it shines from (Docs/Lighting.md, Phase 5); and a recipe
+/// refuses names and frames it cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
@@ -58,6 +60,7 @@ public class PropRecipeTests
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Fern)]
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Blades)]
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Mushrooms)]
+    [TestCase(typeof(LightRecipe), null, 0)]
     public void Bake_SameSeed_GivesTheSamePixels_AndOtherVariantsOthers(System.Type kind, string setting, int value)
     {
         PropRecipe recipe = Track((PropRecipe)ScriptableObject.CreateInstance(kind));
@@ -338,6 +341,72 @@ public class PropRecipeTests
         settings.FindProperty("frameSize").vector2IntValue = new Vector2Int(6, 6);
         settings.ApplyModifiedPropertiesWithoutUndo();
         Assert.That(recipe.CanGenerate(out _), Is.False);
+    }
+
+    /// <summary>
+    /// A campfire glows only on the pixels of its glowing materials (its flame and coals), each at its material's glow,
+    /// its flame's flickering to one of the tones next to theirs and nothing else flickering, its outline and stones not
+    /// glowing; a lamp post's glass and wick glow without flickering; and each stands its light on the ground under where
+    /// it shines from, at its base. A prop that does not glow has no glow and no light.
+    /// </summary>
+    [Test]
+    public void LightProps_GlowWhereTheirFlameOrGlassIs_AndStandTheirLightUnderIt()
+    {
+        LightRecipe campfire = Track(ScriptableObject.CreateInstance<LightRecipe>());
+        AssertGlow(campfire, true);
+        LightRecipe lamp = Track(ScriptableObject.CreateInstance<LightRecipe>());
+        Set(lamp, "form", (int)LightForm.LampPost);
+        AssertGlow(lamp, false);
+
+        PropVariant rock = PropBaker.Bake(Track(ScriptableObject.CreateInstance<RockRecipe>()), 0);
+        Assert.That(rock.Glows, Is.False);
+        Assert.That(rock.HasLight, Is.False);
+    }
+
+    /// <summary>
+    /// Asserts each pixel of <paramref name="recipe"/>'s first variant glows as its material does, flickering to one of
+    /// its flicker colours when it has any, that some glow and some do not, that some flicker when
+    /// <paramref name="flickers"/> and none otherwise, and that its light stands on the ground at its base.
+    /// </summary>
+    private static void AssertGlow(LightRecipe recipe, bool flickers)
+    {
+        PropVariant variant = PropBaker.Bake(recipe, 0);
+        ArtCanvas canvas = PropBaker.Render(recipe, 0, out PropDrawing drawing);
+        int glowing = 0;
+        int flickering = 0;
+        int plain = 0;
+        for (int i = 0; i < variant.Pixels.Length; i++)
+        {
+            Color32 glow = variant.Glow[i];
+            int id = canvas.MaterialIdAt(i % canvas.Width, i / canvas.Width);
+            if (id < 0 || variant.Pixels[i].a == 0 || drawing.Materials[id].Glow <= 0f)
+            {
+                Assert.That(glow, Is.EqualTo(new Color32(0, 0, 0, 0)), $"{recipe.Form}'s pixel {i} does not glow.");
+                plain += variant.Pixels[i].a > 0 ? 1 : 0;
+                continue;
+            }
+
+            ArtMaterial material = drawing.Materials[id];
+            glowing++;
+            Assert.That(glow.a, Is.EqualTo((byte)Mathf.RoundToInt(material.Glow * 255f)), $"{recipe.Form}'s pixel {i}");
+            Color32 colour = new(glow.r, glow.g, glow.b, 255);
+            if (material.Flicker.Count == 0)
+            {
+                Assert.That(colour, Is.EqualTo(new Color32(0, 0, 0, 255)), $"{recipe.Form}'s pixel {i} does not flicker.");
+                continue;
+            }
+
+            flickering++;
+            Assert.That(material.Flicker.Any(c => c.r == colour.r && c.g == colour.g && c.b == colour.b), Is.True, $"{recipe.Form}'s pixel {i} flickers to {colour}.");
+        }
+
+        Assert.That(glowing, Is.GreaterThan(0), $"{recipe.Form} glows.");
+        Assert.That(plain, Is.GreaterThan(0), $"{recipe.Form} has pixels that do not glow.");
+        Assert.That(flickering > 0, Is.EqualTo(flickers), $"{recipe.Form}'s flame flickers: {flickering}.");
+        Assert.That(variant.Glows, Is.True);
+        Assert.That(variant.HasLight, Is.True);
+        Assert.That(variant.LightOffset, Is.EqualTo(Vector2.zero), $"{recipe.Form}'s light stands on the ground under it, at its base.");
+        Assert.That(variant.LightStrength, Is.EqualTo(1f));
     }
 
     /// <summary>

@@ -299,8 +299,8 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// Lays the ground and its regions, the street, the spawn, the square, the buildings with their paths and the
         /// trails; furnishes the village; scatters the props layer by layer; spreads the mobs; checks what the spawn
         /// can reach; then, from the detail stream, so they move nothing laid before them, lays the dirt along the
-        /// trails, the tall grass along the forest's edge, drying the bushes that stand wholly on it, and the meadows
-        /// in the clearing.
+        /// trails, the tall grass along the forest's edge, drying the bushes that stand wholly on it, the meadows in the
+        /// clearing and the weeds, and last stands the lamp posts along the street (Docs/Lighting.md, Phase 5).
         /// </summary>
         public Generation Build()
         {
@@ -320,7 +320,6 @@ public sealed class VillageForestGenerator : AreaGenerator
             }
 
             PlaceFountain();
-            PlaceLampPosts();
             PlaceFences();
             PlaceTownProps();
             foreach (RectInt lot in lots)
@@ -347,6 +346,7 @@ public sealed class VillageForestGenerator : AreaGenerator
             builder.SwapProps(settings.dryBushes, builder.Layout.TerrainCells(settings.tallGrass).Contains);
             LayMeadows();
             LayWeeds();
+            PlaceLampPosts();
             return new Generation(builder.Layout, regions);
         }
 
@@ -809,7 +809,9 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// <summary>
         /// Stands lamp posts along the street through the village, about the configured spacing apart, alternately
         /// north and south of it just beyond its clearance, and outside the lots, so those north of it stand between
-        /// the yards rather than in their fences.
+        /// the yards rather than in their fences. Laid last, from the detail stream: a lamp post goes only where no
+        /// blocking prop or mob stands, taking the walk-through props off its cells (<see cref="TryPlaceLamp"/>), so
+        /// nothing else moves.
         /// </summary>
         private void PlaceLampPosts()
         {
@@ -838,12 +840,46 @@ public sealed class VillageForestGenerator : AreaGenerator
                 }
 
                 Vector3Int cell = AreaLayoutBuilder.CellAt(street[i] + normal * (north ? offset : -offset));
-                if (regions.TryGetValue(cell, out Region region) && region == Region.Village && !IsInLot(cell) && builder.TryPlaceFootprint(lamp, cell))
+                if (regions.TryGetValue(cell, out Region region) && region == Region.Village && !IsInLot(cell) && TryPlaceLamp(lamp, cell))
                 {
                     travelled = 0f;
                     north = !north;
                 }
             }
+        }
+
+        /// <summary>
+        /// Stands <paramref name="lamp"/> with its footprint's bottom-left cell on <paramref name="corner"/> when every
+        /// cell it covers is ground that no reservation, blocking prop or mob holds, first taking off the walk-through
+        /// props standing on those cells. Returns whether it was placed.
+        /// </summary>
+        private bool TryPlaceLamp(GameObject lamp, Vector3Int corner)
+        {
+            if (!PropGridSnapping.TryGetFootprint(lamp, out Rect footprint))
+            {
+                return false;
+            }
+
+            RectInt block = new((Vector2Int)corner, PropGridSnapping.CellsCovered(footprint, Vector2.one));
+            foreach (Vector2Int cell in block.allPositionsWithin)
+            {
+                Vector3Int part = new(cell.x, cell.y, 0);
+                if (!builder.Ground.Contains(part) || builder.Reserved.Contains(part) || builder.Occupied.Contains(part))
+                {
+                    return false;
+                }
+            }
+
+            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
+            {
+                if (block.Contains((Vector2Int)mob.Cell))
+                {
+                    return false;
+                }
+            }
+
+            builder.RemoveProps(cell => block.Contains((Vector2Int)cell), true);
+            return builder.TryPlaceFootprint(lamp, corner);
         }
 
         /// <summary>

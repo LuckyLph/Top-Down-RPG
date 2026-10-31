@@ -3,6 +3,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
     Properties
     {
         _MainTex("Diffuse", 2D) = "white" {}
+        [NoScaleOffset] _GlowTex("Glow", 2D) = "black" {}
         _FlashColor("Flash Color", Color) = (1,1,1,1)
         _FlashAmount("Flash Amount", Range(0, 1)) = 0
 
@@ -55,6 +56,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            TEXTURE2D(_GlowTex);
+            SAMPLER(sampler_GlowTex);
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
@@ -89,7 +92,9 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 }
 
                 half shadowed = input.shadowed >= 0.0 ? input.shadowed : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
-                half4 lit = half4(PixelLitShadowed(main.rgb, centre, shadowed), main.a);
+                half4 glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, input.uv);
+                main.rgb = PixelGlowColour(main.rgb, glow, input.color.rgb, floor(input.uv * texels));
+                half4 lit = half4(PixelGlowLit(PixelLitShadowed(main.rgb, centre, shadowed), main.rgb, glow.a), main.a);
                 lit.rgb = lerp(lit.rgb, _FlashColor.rgb, _FlashAmount);
                 return lit;
             }

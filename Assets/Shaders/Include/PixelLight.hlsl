@@ -38,6 +38,32 @@ half3 PixelLit(half3 colour, float2 worldPosition)
     return PixelLitShadowed(colour, worldPosition, 0.0);
 }
 
+// The flicker of glowing pixels (Docs/Lighting.md, Phase 5), which PropLighting sets: x the step it is at, y the share
+// of flickering pixels shown in their flicker colour at a step. Zero, as it is in the editor, shows none.
+float4 _GlowFlicker;
+
+// A sprite pixel's colour before it is lit, from its glow (_GlowTex: alpha how much it glows, colour the one it flickers
+// to, black for none): its flicker colour, tinted as the sprite is, at the steps a hash of its texel and the flicker's
+// step picks, and its own colour otherwise.
+half3 PixelGlowColour(half3 colour, half4 glow, half3 tint, float2 texel)
+{
+    if (glow.a <= 0.0 || max(glow.r, max(glow.g, glow.b)) <= 0.0)
+    {
+        return colour;
+    }
+
+    uint h = (uint)texel.x * 374761393u + (uint)texel.y * 668265263u + (uint)_GlowFlicker.x * 1440662683u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    h ^= h >> 16;
+    return (h & 0xFFFFFFu) / 16777216.0 < _GlowFlicker.y ? glow.rgb * tint : colour;
+}
+
+// A lit colour that glows: no less than its colour unlit times how much it glows.
+half3 PixelGlowLit(half3 lit, half3 colour, half glow)
+{
+    return max(lit, colour * glow);
+}
+
 // The world position of the centre of the texel a sprite's fragment draws: the fragment's own, moved by its offset to
 // that texel's centre through the mapping from texels to the world, which the screen-space derivatives of both give,
 // so a flipped, scaled, rotated or atlas-packed sprite finds its texel's centre too. Call it before any discard.

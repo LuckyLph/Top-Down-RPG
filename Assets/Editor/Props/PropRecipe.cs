@@ -9,7 +9,8 @@ public enum PropCategory
     Bushes,
     Rocks,
     Wood,
-    Plants
+    Plants,
+    Lights
 }
 
 /// <summary>
@@ -18,7 +19,8 @@ public enum PropCategory
 /// on, whether it blocks, the shading, its shadow, whether it fades while it hides the local player, and the terrains
 /// its inspector previews it on. Each kind of prop is a kind of recipe holding its shape and palette and drawing a
 /// variant onto a <see cref="PropDrawing"/>: trees (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks
-/// (<see cref="RockRecipe"/>), wood (<see cref="WoodRecipe"/>) and plants (<see cref="PlantRecipe"/>).
+/// (<see cref="RockRecipe"/>), wood (<see cref="WoodRecipe"/>), plants (<see cref="PlantRecipe"/>) and light props
+/// (<see cref="LightRecipe"/>).
 /// <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe always giving the same pixels;
 /// <see cref="PropWriter"/> writes the sheet and a prefab per variant.
 /// </summary>

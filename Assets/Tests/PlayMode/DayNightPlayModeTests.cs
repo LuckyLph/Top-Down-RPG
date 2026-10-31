@@ -9,7 +9,8 @@ using VContainer;
 /// <summary>
 /// PlayMode tests for the day and night (Docs/Lighting.md, Phase 3): in an offline game the world on screen is lit by
 /// the time of day, which follows the session's world clock, and the dev panel moves this machine's time of day, night
-/// lighting the world with the night sky; and a client joining a host takes the host's time of day from its message.
+/// lighting the world with the night sky and burning the night's lights, which the loaded chunks hand over as they load
+/// (Phase 5); and a client joining a host takes the host's time of day from its message.
 /// </summary>
 public class DayNightPlayModeTests
 {
@@ -34,7 +35,8 @@ public class DayNightPlayModeTests
 
     /// <summary>
     /// In a new offline game the clock follows the session's world clock, and the world on screen's global light is the
-    /// clock's sky and sun together at an intensity of 1; moved to the night by the dev panel, it takes the night sky.
+    /// clock's sky and sun together at an intensity of 1; moved to the night by the dev panel, it takes the night sky,
+    /// and the night's lights, which every loaded chunk has handed over, burn at full, their flicker handed to the shaders.
     /// </summary>
     [UnityTest]
     public IEnumerator TheWorldOnScreen_IsLitByTheTimeOfDay()
@@ -58,6 +60,10 @@ public class DayNightPlayModeTests
         yield return null;
         yield return null;
         AssertColour(sky.color, new Color(0.13f, 0.16f, 0.30f, 1f), 0.01f, "At night the sky is the night sky.");
+        PropLighting lighting = SceneBootTestHelper.ResolveFromGameplay<PropLighting>();
+        Assert.That(lighting.GroupCount, Is.GreaterThan(0), "The loaded chunks hand their lights over.");
+        Assert.That(lighting.Shown, Is.EqualTo(1f), "The night's lights burn at full at night.");
+        Assert.That(Shader.GetGlobalVector("_GlowFlicker").y, Is.EqualTo(clock.Settings.GlowFlickerShare), "The flicker goes to the shaders.");
         clock.LocalOffset = 0f;
     }
 

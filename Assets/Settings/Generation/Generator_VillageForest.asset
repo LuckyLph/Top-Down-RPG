@@ -93,7 +93,7 @@ MonoBehaviour:
   backYard: 2
   lotGap: 1
   fencePrefab: {fileID: 0}
-  lampPostPrefab: {fileID: 0}
+  lampPostPrefab: {fileID: 3389624742728205493, guid: 441361268c466c348a7d85d3989bebc3, type: 3}
   lampSpacing: 7
   fountainPrefab: {fileID: 0}
   squareAlongStreet: 0.45

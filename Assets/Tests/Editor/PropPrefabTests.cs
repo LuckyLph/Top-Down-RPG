@@ -3,14 +3,15 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
 /// <c>Visuals</c> child on it holding the sprite pivoted on the base, which it sorts by with nothing running, and which
-/// casts the sun's shadow), the props fading over their own drawing, the footprints of blocking props, and how a placed
-/// prop blocks navigation.
+/// casts the sun's shadow), the props fading over their own drawing, the light props carrying their light, off until it
+/// burns, and their glow, the footprints of blocking props, and how a placed prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -18,6 +19,8 @@ public class PropPrefabTests
     private const string PropPath = PropsFolder + "/Prop.prefab";
     private const string BlockingPropPath = PropsFolder + "/BlockingProp.prefab";
     private const string VisualsName = "Visuals";
+    private const string LightName = "Light";
+    private const string LightsFolder = PropsFolder + "/Lights";
     private const string SunShadowPropsLayer = "Sun Shadow Props";
     private const float OnePixel = 1f / 32f;
 
@@ -93,7 +96,7 @@ public class PropPrefabTests
     /// Props cast the sun's shadow from their own sprite (Docs/Lighting.md, Phase 4): the base prefabs' <c>Visuals</c>
     /// draw on the props' sun shadow rendering layer besides the default one, every variant's on the same layers or, for
     /// a prop lying flat that casts none, on the default one alone, and no prop draws a shadow of its own any more:
-    /// <c>Visuals</c> is its only child.
+    /// <c>Visuals</c> is its only child, but for a light prop's <c>Light</c>.
     /// </summary>
     [Test]
     public void Props_CastTheSunsShadowFromTheirSprite_AndDrawNoneOfTheirOwn()
@@ -105,9 +108,54 @@ public class PropPrefabTests
         Assert.That(Child(AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath), VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask, Is.EqualTo(baseLayers));
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
-            Assert.That(propPrefab.transform.childCount, Is.EqualTo(1), $"{propPrefab.name} has only its visuals.");
+            int light = propPrefab.transform.Find(LightName) != null ? 1 : 0;
+            Assert.That(propPrefab.transform.childCount, Is.EqualTo(1 + light), $"{propPrefab.name} has only its visuals and any light.");
             uint layers = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask;
             Assert.That(layers == baseLayers || layers == plain, Is.True, $"{propPrefab.name}'s visuals are on rendering layers {layers}.");
+        }
+    }
+
+    /// <summary>
+    /// Every light prop (Docs/Lighting.md, Phase 5) blocks and carries its light in a <c>Light</c> child: a point Light
+    /// 2D on blend style 0 and the <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, without shadows,
+    /// off until it burns, and the <see cref="PropLight"/> that burns it, at a strength above none; its sprite glows,
+    /// through its sheet's secondary texture <c>_GlowTex</c>. No other prop has a light.
+    /// </summary>
+    [Test]
+    public void LightProps_CarryTheirLight_OffUntilItBurns_AndGlow()
+    {
+        List<GameObject> lights = AssetDatabase.FindAssets("t:Prefab", new[] { LightsFolder })
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+            .ToList();
+        Assert.That(lights.Select(p => p.name), Does.Contain("Campfire_0").And.Contain("LampPost_0"));
+        int[] litLayers = { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain"), SortingLayer.NameToID("Entities") };
+        foreach (GameObject propPrefab in lights)
+        {
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(propPrefab), Is.EqualTo(AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath)), $"{propPrefab.name} blocks.");
+            Light2D light = Child(propPrefab, LightName).GetComponent<Light2D>();
+            Assert.That(light, Is.Not.Null, propPrefab.name);
+            Assert.That(light.lightType, Is.EqualTo(Light2D.LightType.Point), propPrefab.name);
+            Assert.That(light.blendStyleIndex, Is.EqualTo(0), propPrefab.name);
+            Assert.That(light.shadowsEnabled, Is.False, propPrefab.name);
+            Assert.That(light.enabled, Is.False, $"{propPrefab.name}'s light is off until it burns.");
+            Assert.That(light.targetSortingLayers, Is.EqualTo(litLayers), propPrefab.name);
+            PropLight propLight = light.GetComponent<PropLight>();
+            Assert.That(propLight, Is.Not.Null, propPrefab.name);
+            Assert.That(propLight.LightSource, Is.EqualTo(light), propPrefab.name);
+            Assert.That(propLight.Intensity, Is.GreaterThan(0f), propPrefab.name);
+            Sprite sprite = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>().sprite;
+            SecondarySpriteTexture[] secondary = new SecondarySpriteTexture[sprite.GetSecondaryTextureCount()];
+            sprite.GetSecondaryTextures(secondary);
+            Assert.That(secondary.Select(t => t.name), Does.Contain("_GlowTex"), $"{propPrefab.name} glows.");
+        }
+
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            if (!lights.Contains(propPrefab))
+            {
+                Assert.That(propPrefab.GetComponentInChildren<PropLight>(true), Is.Null, $"{propPrefab.name} has no light.");
+            }
         }
     }
 

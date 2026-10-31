@@ -4,8 +4,8 @@ using UnityEngine;
 /// <summary>
 /// One variant of a prop being drawn: the <see cref="ArtCanvas"/> it is drawn on (in cells, the base at the world
 /// origin, the ground hiding what lies under it), the random stream every value is drawn from, the table of materials
-/// the recipe adds (each marked as touching the ground or not, for the footprint) and the parts its shapes take, each
-/// new part lined where it overlaps another.
+/// the recipe adds (each marked as touching the ground or not, for the footprint), the parts its shapes take, each
+/// new part lined where it overlaps another, and where a light prop's light shines from.
 /// </summary>
 public sealed class PropDrawing
 {
@@ -30,6 +30,20 @@ public sealed class PropDrawing
     public ArtCanvas Canvas { get; }
     public System.Random Random { get; }
     public IReadOnlyList<ArtMaterial> Materials => materials;
+    public bool HasLight { get; private set; }
+    public Vector3 LightAt { get; private set; }
+    public float LightStrength { get; private set; }
+
+    /// <summary>
+    /// Marks where the prop's light shines from, in world units, and how strongly, as a share of its full strength; the
+    /// light stands on the ground under it, so its pool lies where light from that height would fall.
+    /// </summary>
+    public void MarkLight(Vector3 world, float strength)
+    {
+        HasLight = true;
+        LightAt = world;
+        LightStrength = strength;
+    }
 
     /// <summary>
     /// Adds <paramref name="material"/> to the table and returns its id; its pixels low enough count as touching the

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.TestTools;
 
 /// <summary>
@@ -12,15 +13,18 @@ using UnityEngine.TestTools;
 /// generating again writes nothing
 /// and, after a change, keeps every prefab's GUID and every slice's ID; a recipe that fades covers each variant's
 /// drawing with its prefab's fade, and one that does not covers nothing; a recipe casting no shadow draws on the
-/// default rendering layer alone, and one casting it again on the base's; lowering the variant count while a dropped
-/// variant's prefab is left, or changing whether it blocks once its prefabs exist, is refused.
+/// default rendering layer alone, and one casting it again on the base's; a light prop writes its glow as its sheet's
+/// secondary texture and a light on each prefab, and a prop that does not glow neither; lowering the variant count while
+/// a dropped variant's prefab is left, or changing whether it blocks once its prefabs exist, is refused.
 /// </summary>
 public class PropWriterTests
 {
     private const string Folder = "Assets/Tests/TestPropWriter";
     private const string Sprites = Folder + "/Sprites";
     private const string Prefabs = Folder + "/Prefabs";
+    private const string Glows = Folder + "/Glow";
     private const string Name = "TestBush";
+    private const string LightName = "TestFire";
     private const float Unit = PropBaker.PixelsPerCell;
 
     private BushRecipe recipe;
@@ -68,6 +72,7 @@ public class PropWriterTests
         Assert.That(written, Is.EquivalentTo(new[] { sheet, PrefabPath(0), PrefabPath(1) }));
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
         Assert.That(sprites.Keys, Is.EquivalentTo(new[] { "TestBush_0", "TestBush_1" }));
+        Assert.That(((TextureImporter)AssetImporter.GetAtPath(sheet)).secondarySpriteTextures, Is.Empty, "A prop that does not glow has no glow.");
         Assert.That(sprites["TestBush_0"].texture.height, Is.EqualTo(52));
         Assert.That(sprites["TestBush_0"].pivot, Is.EqualTo(new Vector2(28f, 10f)));
         Assert.That(sprites["TestBush_0"].pixelsPerUnit, Is.EqualTo(Unit));
@@ -83,11 +88,92 @@ public class PropWriterTests
             Assert.That(visuals.GetComponent<SpriteRenderer>().sprite, Is.EqualTo(sprites[PropWriter.SliceName(Name, i)]));
             Assert.That(visuals.GetComponent<SpriteRenderer>().renderingLayerMask, Is.EqualTo(casters));
             Assert.That(prefab.transform.childCount, Is.EqualTo(1));
+            Assert.That(prefab.GetComponentInChildren<PropLight>(true), Is.Null, "A prop that does not glow has no light.");
 
             RectInt footprint = PropBaker.Bake(recipe, i).Footprint;
             BoxCollider2D box = prefab.GetComponent<BoxCollider2D>();
             Assert.That(box.size, Is.EqualTo(new Vector2(footprint.width / Unit, footprint.height / Unit)));
             Assert.That(box.offset, Is.EqualTo(Vector2.zero));
+        }
+    }
+
+    /// <summary>
+    /// A light prop's glow goes beside its sheet in the glow folder, laid out as the sheet, each pixel's alpha its glow
+    /// and its colour the one it flickers to, as the sheet's secondary texture <c>_GlowTex</c>, imported as a plain
+    /// point-filtered texture; each prefab carries a <c>Light</c> child where its light stands: a point Light 2D, off,
+    /// in the recipe's colour, strength and radius on the lit sorting layers, and the <see cref="PropLight"/> that burns
+    /// it. Generating again writes nothing.
+    /// </summary>
+    [Test]
+    public void Generate_ALightProp_WritesItsGlowAsTheSheetsSecondaryTexture_AndALightOnEachPrefab()
+    {
+        LightRecipe campfire = ScriptableObject.CreateInstance<LightRecipe>();
+        try
+        {
+            SerializedObject settings = new(campfire);
+            settings.FindProperty("propName").stringValue = LightName;
+            settings.FindProperty("category").enumValueIndex = (int)PropCategory.Lights;
+            settings.FindProperty("variantCount").intValue = 2;
+            settings.FindProperty("frameSize").vector2IntValue = new Vector2Int(48, 48);
+            settings.FindProperty("basePixel").vector2IntValue = new Vector2Int(24, 14);
+            settings.ApplyModifiedPropertiesWithoutUndo();
+
+            IReadOnlyList<string> written = PropWriter.Generate(campfire, Sprites, Prefabs, Glows);
+
+            string sheet = PropWriter.SheetPath(Sprites, LightName);
+            string glow = PropWriter.GlowPath(Glows, LightName);
+            Assert.That(written, Is.EquivalentTo(new[] { sheet, glow, PropWriter.PrefabPath(Prefabs, campfire, 0), PropWriter.PrefabPath(Prefabs, campfire, 1) }));
+            TextureImporter sheetImporter = (TextureImporter)AssetImporter.GetAtPath(sheet);
+            Texture2D glowTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(glow);
+            Assert.That(sheetImporter.secondarySpriteTextures.Length, Is.EqualTo(1));
+            Assert.That(sheetImporter.secondarySpriteTextures[0].name, Is.EqualTo(PropWriter.GlowTextureName));
+            Assert.That(sheetImporter.secondarySpriteTextures[0].texture, Is.EqualTo(glowTexture));
+            TextureImporter glowImporter = (TextureImporter)AssetImporter.GetAtPath(glow);
+            Assert.That(glowImporter.textureType, Is.EqualTo(TextureImporterType.Default));
+            Assert.That(glowImporter.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(glowImporter.mipmapEnabled, Is.False);
+            Assert.That(glowImporter.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
+
+            Texture2D file = new(2, 2);
+            file.LoadImage(System.IO.File.ReadAllBytes(glow));
+            Color32[] glowPixels = file.GetPixels32();
+            Assert.That(new Vector2Int(file.width, file.height), Is.EqualTo(new Vector2Int(96, 48)));
+            Object.DestroyImmediate(file);
+            for (int i = 0; i < 2; i++)
+            {
+                PropVariant variant = PropBaker.Bake(campfire, i);
+                for (int y = 0; y < 48; y++)
+                {
+                    for (int x = 0; x < 48; x++)
+                    {
+                        Assert.That(glowPixels[y * 96 + i * 48 + x], Is.EqualTo(variant.Glow[y * 48 + x]), $"Variant {i}'s glow at ({x}, {y}).");
+                    }
+                }
+
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PrefabPath(Prefabs, campfire, i));
+                Transform child = prefab.transform.Find(PropWriter.LightName);
+                Assert.That(child, Is.Not.Null, $"Variant {i} has a light.");
+                Assert.That((Vector2)child.localPosition, Is.EqualTo(variant.LightOffset));
+                Light2D light = child.GetComponent<Light2D>();
+                Assert.That(light.lightType, Is.EqualTo(Light2D.LightType.Point));
+                Assert.That(light.enabled, Is.False, "Off until it burns.");
+                Assert.That(light.color, Is.EqualTo((Color)campfire.LightColour));
+                Assert.That(light.intensity, Is.EqualTo(campfire.LightIntensity));
+                Assert.That(light.pointLightOuterRadius, Is.EqualTo(campfire.LightRadius));
+                Assert.That(light.blendStyleIndex, Is.EqualTo(0));
+                Assert.That(light.shadowsEnabled, Is.False);
+                Assert.That(light.targetSortingLayers, Is.EqualTo(new[] { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain"), SortingLayer.NameToID("Entities") }));
+                PropLight propLight = child.GetComponent<PropLight>();
+                Assert.That(propLight.LightSource, Is.EqualTo(light));
+                Assert.That(propLight.Intensity, Is.EqualTo(campfire.LightIntensity));
+                Assert.That(propLight.Flicker, Is.EqualTo(campfire.LightFlicker));
+            }
+
+            Assert.That(PropWriter.Generate(campfire, Sprites, Prefabs, Glows), Is.Empty);
+        }
+        finally
+        {
+            Object.DestroyImmediate(campfire);
         }
     }
 

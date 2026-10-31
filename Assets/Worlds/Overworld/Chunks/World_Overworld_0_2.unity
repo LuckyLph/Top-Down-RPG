@@ -34674,6 +34674,8 @@ MonoBehaviour:
     material: {fileID: 11400000, guid: 6531cbe7d6da4924bbc02b4f6abc0ba6, type: 2}
   - tilemap: {fileID: 728779382}
     material: {fileID: 11400000, guid: 3ed53aa60a241a542bd303dba4096c31, type: 2}
+  - tilemap: {fileID: 1100371428}
+    material: {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
   - tilemap: {fileID: 1917675177}
     material: {fileID: 11400000, guid: 0ac6b929169cd1f479697cf11cf993f1, type: 2}
   - tilemap: {fileID: 1740517504}
@@ -34731,6 +34733,7 @@ Transform:
   - {fileID: 1186883562}
   - {fileID: 1531423097}
   - {fileID: 728779384}
+  - {fileID: 1100371430}
   - {fileID: 1917675179}
   - {fileID: 1740517506}
   - {fileID: 1852727643}
@@ -35379,6 +35382,91 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 37932477925561949, guid: e8df603b03bba1d4191fb90f113f5bff, type: 3}
   m_PrefabInstance: {fileID: 1098989515}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1100371427
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1100371430}
+  - component: {fileID: 1100371428}
+  - component: {fileID: 1100371429}
+  m_Layer: 0
+  m_Name: DirtTilemap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!1839735485 &1100371428
+Tilemap:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100371427}
+  m_Enabled: 1
+  m_Tiles: {}
+  m_AnimatedTiles: {}
+  m_TileAssetArray: []
+  m_TileSpriteArray: []
+  m_TileMatrixArray: []
+  m_TileColorArray: []
+  m_TileObjectToInstantiateArray: []
+  m_AnimationFrameRate: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Origin: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0, y: 0, z: 1}
+  m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
+  m_TileOrientation: 0
+  m_TileOrientationMatrix:
+    e00: 1
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 1
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 1
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 1
+--- !u!114 &1100371429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100371427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33c305fd5f406cf9dfa12c3ab2e34567, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
+  terrainType: {fileID: 11400000, guid: 50fd8a13dcd00a347be53fb7eb9ab4b0, type: 2}
+  priority: 5
+--- !u!4 &1100371430
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100371427}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 999502353}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1117406412
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -41564,7 +41652,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: f95e3411a6fbfbb4cafec1787f67934c, type: 2}
-  priority: 6
+  priority: 7
 --- !u!4 &1740517506
 Transform:
   m_ObjectHideFlags: 0
@@ -54863,7 +54951,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: 0d76f979ad20ca845a12be76540aff6b, type: 2}
-  priority: 7
+  priority: 8
 --- !u!4 &1852727643
 Transform:
   m_ObjectHideFlags: 0
@@ -58610,7 +58698,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::NavigationTerrainSource2D
   terrainType: {fileID: 11400000, guid: 9b1cce5b11f53524e9d0e19ded4520f0, type: 2}
-  priority: 5
+  priority: 6
 --- !u!4 &1917675179
 Transform:
   m_ObjectHideFlags: 0

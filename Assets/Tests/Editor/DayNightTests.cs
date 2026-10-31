@@ -12,8 +12,10 @@ using UnityEngine.Rendering.Universal;
 /// noon; the clock following the session's world clock where game state is decided and a client following the host's
 /// from when it last heard it; the local offset moving one machine's time alone; a loaded save resuming its time of day;
 /// an outdoor world's global lights taking the sky while an indoor one's keep theirs; the presenter lighting the loaded
-/// worlds as the day moves and a world as it loads; and the presenter handing the sun to the shaders while it is up
-/// over an outdoor world shown (Docs/Lighting.md, Phase 4), and taking it away at night, indoors and when it stops.
+/// worlds as the day moves and a world as it loads; the presenter handing the sun to the shaders while it is up
+/// over an outdoor world shown (Docs/Lighting.md, Phase 4), and taking it away at night, indoors and when it stops; and
+/// the night lights' share blending between the keys like the light, the shipped day's off by day and full at night
+/// (Phase 5).
 /// </summary>
 public class DayNightTests
 {
@@ -70,7 +72,7 @@ public class DayNightTests
         {
             new DayLightKey(0.1f, new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f)),
             new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f)),
-            new DayLightKey(0.9f, new Color(0f, 0f, 0.2f), Color.black)
+            new DayLightKey(0.9f, new Color(0f, 0f, 0.2f), Color.black, 1f)
         }));
         AssertLight(settings.LightAt(0.1f), new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f));
         AssertLight(settings.LightAt(0.5f), new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f));
@@ -78,6 +80,10 @@ public class DayNightTests
         AssertLight(settings.LightAt(0f), new Color(0.1f, 0.1f, 0.3f), new Color(0.2f, 0.1f, 0f));
         AssertLight(settings.LightAt(0.95f), new Color(0.05f, 0.05f, 0.25f), new Color(0.1f, 0.05f, 0f));
         AssertLight(settings.LightAt(1.1f), new Color(0.2f, 0.2f, 0.4f), new Color(0.4f, 0.2f, 0f));
+        Assert.That(settings.LightAt(0.5f).NightLights, Is.EqualTo(0f), "The night lights' share is each key's at its time.");
+        Assert.That(settings.LightAt(0.9f).NightLights, Is.EqualTo(1f));
+        Assert.That(settings.LightAt(0.7f).NightLights, Is.EqualTo(0.5f).Within(1e-5f), "It blends between two keys.");
+        Assert.That(settings.LightAt(0f).NightLights, Is.EqualTo(0.5f).Within(1e-5f), "And round the cycle.");
         Color total = settings.LightAt(0.5f).Total;
         Assert.That(total.r, Is.EqualTo(0.8f).Within(1e-6f));
         Assert.That(total.a, Is.EqualTo(1f));
@@ -86,7 +92,9 @@ public class DayNightTests
     /// <summary>
     /// The shipped day lasts 20 minutes and the night 5; its keys lie in order within the cycle; one key, the
     /// afternoon's, is today's light exactly, 0.85 white, and noon is a little brighter; the light warms at sunrise and
-    /// sunset; the night is the night sky (0.13, 0.16, 0.30) without sun; and no light passes 1.
+    /// sunset; the night is the night sky (0.13, 0.16, 0.30) without sun; no light passes 1; and the lights that burn at
+    /// night are off from sunrise through the evening, so the afternoon draws today's pixels, rising at sunset and full
+    /// from dusk to before dawn.
     /// </summary>
     [Test]
     public void TheShippedDay_IsTodaysLightInTheAfternoon_AndTheNightSkyAtNight()
@@ -121,6 +129,13 @@ public class DayNightTests
         DayLight night = settings.LightAt(settings.DayShare + (1f - settings.DayShare) * 0.4f);
         Assert.That((Vector4)night.Sky, Is.EqualTo((Vector4)new Color(0.13f, 0.16f, 0.30f, 1f)).Using(Vector4EqualityComparer(1e-5f)));
         Assert.That(night.Sun.r + night.Sun.g + night.Sun.b, Is.Zero, "No sun at night.");
+        Assert.That(night.NightLights, Is.EqualTo(1f), "The night's lights burn at full at night.");
+        Assert.That(settings.LightAt(afternoon).NightLights, Is.EqualTo(0f), "Off in the afternoon.");
+        Assert.That(settings.LightAt(0.02f).NightLights, Is.EqualTo(0f), "Off after sunrise.");
+        Assert.That(settings.LightAt(0.7f).NightLights, Is.EqualTo(0f), "Off through the evening.");
+        Assert.That(settings.LightAt(settings.DayShare).NightLights, Is.InRange(0.01f, 0.99f), "Rising at sunset.");
+        Assert.That(settings.LightAt(0.96f).NightLights, Is.EqualTo(1f), "Full before dawn.");
+        Assert.That(settings.FlickerSteps, Is.EqualTo(8f));
     }
 
     /// <summary>

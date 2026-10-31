@@ -9,8 +9,9 @@ using UnityEngine.SceneManagement;
 /// fixture beside the test's scene and closed unchanged: each chunk holds what its generator asset composes and its
 /// record says was written there, locked chunks aside, the world's entries are the composition's, and it is the
 /// starting world at its default entry; every chunk draws 16 layers or fewer and together they lay all eighteen
-/// materials; no coast map is stale and the world validates; and on the open chunks' joined navigation every waystone,
-/// gate and mob can be walked to from the default entry across chunk borders.
+/// materials; no coast map is stale and the world validates; on the open chunks' joined navigation every waystone,
+/// gate and mob can be walked to from the default entry across chunk borders; and its campsites, village and waystones
+/// are lit (Docs/Lighting.md, Phase 5).
 /// </summary>
 public class OverworldTests
 {
@@ -119,6 +120,66 @@ public class OverworldTests
 
         Assert.That(composition.Style.LayerOrder.Count, Is.EqualTo(18), "the style's materials");
         Assert.That(laid, Is.EquivalentTo(composition.Style.LayerOrder), "the materials the chunks lay");
+    }
+
+    /// <summary>
+    /// The Overworld's lights that are not spells (Docs/Lighting.md, Phase 5): a campfire at each of the four campsites,
+    /// the Clearing's, the Snowfield's, the Coast's and the Lava Fields', lamp posts along the Village Forest's street
+    /// and a lamp post on every waystone's plaza, within its radius of the waystone; the chunks hold a prop light for each
+    /// light prop composed, and the Lava Fields' ground glows.
+    /// </summary>
+    [Test]
+    public void ItsCampsitesVillageAndWaystones_AreLit()
+    {
+        HashSet<string> campsites = new();
+        HashSet<string> litWaystones = new();
+        int villageLamps = 0;
+        int lights = 0;
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            if (prop.Prefab.GetComponentInChildren<PropLight>(true) == null)
+            {
+                continue;
+            }
+
+            lights++;
+            if (prop.Prefab.name.StartsWith("Campfire"))
+            {
+                campsites.Add(prop.Scope);
+                continue;
+            }
+
+            Vector2 at = prop.Cell + new Vector2(0.5f, 0.5f);
+            bool onPlaza = false;
+            foreach (WorldDefinition.Entry entry in composition.Entries)
+            {
+                if (entry.Waystone && Vector2.Distance(at, entry.Position) <= generator.PlazaRadius)
+                {
+                    litWaystones.Add(entry.Name);
+                    onPlaza = true;
+                }
+            }
+
+            villageLamps += !onPlaza && prop.Scope == "villageForest" ? 1 : 0;
+        }
+
+        Assert.That(campsites, Is.EquivalentTo(new[] { "clearing", "snowfield", "coast", "lavaFields" }), "the campsites with a campfire");
+        Assert.That(litWaystones, Is.EquivalentTo(composition.Entries.FindAll(entry => entry.Waystone).ConvertAll(entry => entry.Name)), "the waystones with a lamp post");
+        Assert.That(villageLamps, Is.GreaterThanOrEqualTo(3), "the lamp posts along the village street");
+        int inScenes = 0;
+        bool glows = false;
+        foreach (Scene scene in opened)
+        {
+            inScenes += SceneQuery.FindAll<PropLight>(scene).Length;
+        }
+
+        foreach (Grid grid in grids.Values)
+        {
+            glows |= grid.GetComponent<TerrainBlendRenderer>().GlowLight != null;
+        }
+
+        Assert.That(inScenes, Is.EqualTo(lights), "the chunks hold a light for each light prop");
+        Assert.That(glows, Is.True, "the Lava Fields' ground glows");
     }
 
     /// <summary>

@@ -45,6 +45,11 @@ internal sealed class WorldComposer
         new(1, 0), new(0, 1), new(-1, 0), new(0, -1), new(1, 1), new(-1, 1), new(-1, -1), new(1, -1)
     };
 
+    private static readonly Vector2Int[] LampOffsets =
+    {
+        new(2, 1), new(-2, 1), new(2, -1), new(-2, -1), new(1, 2), new(-1, 2), new(1, -2), new(-1, -2), new(2, 2), new(-2, 2), new(2, -2), new(-2, -2)
+    };
+
     /// <summary>
     /// The cells waiting in an A* search, the cheapest estimate first, then the nearest to the goal, then the lowest
     /// index, so the order of a search is fixed.
@@ -1657,7 +1662,8 @@ internal sealed class WorldComposer
     /// <summary>
     /// Step 5. A waystone per region at its spawn cell, named by its key, the first region's first, with a disc of
     /// plaza of the plaza's radius under it on the region's own cells, under its road, taking the region's props off it
-    /// and the plants beside it; then a gate per linked port, the gate distance outside its outline on its road.
+    /// and the plants beside it, and the waystone lamp on it (<see cref="PlaceWaystoneLamp"/>); then a gate per linked
+    /// port, the gate distance outside its outline on its road.
     /// </summary>
     private void PlaceEntries()
     {
@@ -1681,6 +1687,14 @@ internal sealed class WorldComposer
         }
 
         RemovePropsOn(index => owners[index] >= 0 && (cells[index] & plaza) != 0);
+        if (settings.WaystoneLamp != null && PropGridSnapping.TryGetFootprint(settings.WaystoneLamp, out Rect footprint))
+        {
+            Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+            foreach (WorldComposition.Region region in composition.Regions)
+            {
+                PlaceWaystoneLamp(region, covered);
+            }
+        }
 
         foreach (WorldComposition.Region region in composition.Regions)
         {
@@ -1690,6 +1704,36 @@ internal sealed class WorldComposer
                 {
                     composition.Entries.Add(new WorldDefinition.Entry(port.Gate, GatePosition(port), false));
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stands the waystone lamp, a footprint of <paramref name="covered"/> cells, on <paramref name="region"/>'s plaza:
+    /// at the first of <see cref="LampOffsets"/> from its waystone's cell where every cell it covers is the region's
+    /// plaza off its roads, free of other props and in one chunk, so it stands beside the waystone, clear of the players
+    /// arriving there, and off the road through the plaza. None where none fits.
+    /// </summary>
+    private void PlaceWaystoneLamp(WorldComposition.Region region, Vector2Int covered)
+    {
+        uint roads = paths & ~plaza;
+        foreach (Vector2Int offset in LampOffsets)
+        {
+            Vector2Int corner = region.SpawnCell + offset;
+            bool fits = ChunkCoords.ChunkOf(corner) == ChunkCoords.ChunkOf(corner + covered - Vector2Int.one);
+            for (int dy = 0; dy < covered.y && fits; dy++)
+            {
+                for (int dx = 0; dx < covered.x && fits; dx++)
+                {
+                    int index = IndexOf(corner.x + dx, corner.y + dy);
+                    fits = index >= 0 && owners[index] == region.Index && (cells[index] & plaza) != 0 && (cells[index] & roads) == 0 && !footprints[index] && !decorated[index];
+                }
+            }
+
+            if (fits)
+            {
+                AddProp(new WorldComposition.Prop(settings.WaystoneLamp, corner, Vector2.zero, covered, region.Key));
+                return;
             }
         }
     }

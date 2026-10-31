@@ -19,34 +19,46 @@ MonoBehaviour:
   - time: 0
     sky: {r: 0.36, g: 0.36, b: 0.48, a: 1}
     sun: {r: 0.4, g: 0.24, b: 0.16, a: 1}
+    nightLights: 0
   - time: 0.06
     sky: {r: 0.5, g: 0.52, b: 0.58, a: 1}
     sun: {r: 0.32, g: 0.27, b: 0.22, a: 1}
+    nightLights: 0
   - time: 0.16
     sky: {r: 0.55, g: 0.57, b: 0.6, a: 1}
     sun: {r: 0.29, g: 0.28, b: 0.26, a: 1}
+    nightLights: 0
   - time: 0.4
     sky: {r: 0.55, g: 0.56, b: 0.58, a: 1}
     sun: {r: 0.32, g: 0.31, b: 0.29, a: 1}
+    nightLights: 0
   - time: 0.56
     sky: {r: 0.5, g: 0.52, b: 0.56, a: 1}
     sun: {r: 0.35, g: 0.33, b: 0.29, a: 1}
+    nightLights: 0
   - time: 0.7
     sky: {r: 0.48, g: 0.48, b: 0.54, a: 1}
     sun: {r: 0.35, g: 0.28, b: 0.22, a: 1}
+    nightLights: 0
   - time: 0.8
     sky: {r: 0.4, g: 0.36, b: 0.46, a: 1}
     sun: {r: 0.38, g: 0.2, b: 0.14, a: 1}
+    nightLights: 0.7
   - time: 0.84
     sky: {r: 0.18, g: 0.19, b: 0.34, a: 1}
     sun: {r: 0, g: 0, b: 0, a: 1}
+    nightLights: 1
   - time: 0.88
     sky: {r: 0.13, g: 0.16, b: 0.3, a: 1}
     sun: {r: 0, g: 0, b: 0, a: 1}
+    nightLights: 1
   - time: 0.96
     sky: {r: 0.16, g: 0.18, b: 0.32, a: 1}
     sun: {r: 0, g: 0, b: 0, a: 1}
+    nightLights: 1
   noonShadowLength: 0.5
   maxShadowLength: 2
   shadowLean: 0.5
+  flickerSteps: 8
+  glowFlickerShare: 0.36
   resyncSeconds: 60

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.U2D;
 
 /// <summary>
@@ -13,7 +15,12 @@ using UnityEngine.U2D;
 /// a variant of <c>BlockingProp</c> or <c>Prop</c> whose <c>Visuals</c> draw the variant's sprite on the base's
 /// rendering layers, which make it cast the sun's shadow, or on the default one alone when the recipe casts none,
 /// whose <see cref="PropFade"/> covers its drawing when the recipe fades (and nothing otherwise) and, when it blocks,
-/// whose collider is its footprint. A prefab is created once and
+/// whose collider is its footprint. A light prop (<see cref="LightRecipe"/>, Docs/Lighting.md, Phase 5) also gets the
+/// glow of its variants laid out as its sheet, <c>Assets/Textures/Props/&lt;name&gt;_Glow.png</c>, as the sheet's
+/// secondary texture <c>_GlowTex</c>, and on each prefab a <c>Light</c> child on the ground under where its drawing
+/// marked its light: a point Light 2D, off, and the <see cref="PropLight"/> that burns it. Its sheet goes in
+/// <c>Assets/Sprites/LightProps</c>, outside the props' atlas, which warns and keeps a mostly empty page when only some
+/// of its sprites have a secondary texture. A prefab is created once and
 /// updated in place afterwards, so its GUID and every placed instance stay, and saved only when it changed. Every
 /// variant is baked before anything is written; a recipe is refused when it cannot bake, when a drawing reaches its
 /// frame's edge, when a blocking variant touches no ground, when a prefab of a variant past the count is left, or when
@@ -23,11 +30,17 @@ using UnityEngine.U2D;
 public static class PropWriter
 {
     public const string SpritesFolder = "Assets/Sprites/Props";
+    public const string LightSpritesFolder = "Assets/Sprites/LightProps";
     public const string PrefabsFolder = "Assets/Prefabs/Props";
     public const string PropPath = PrefabsFolder + "/Prop.prefab";
     public const string BlockingPropPath = PrefabsFolder + "/BlockingProp.prefab";
     public const string VisualsName = "Visuals";
+    public const string LightName = "Light";
+    public const string GlowFolder = "Assets/Textures/Props";
+    public const string GlowTextureName = "_GlowTex";
     public const string AtlasPath = SpritesFolder + "/Props.spriteatlasv2";
+    private const float LightFalloff = 0.5f;
+    private static readonly string[] LitSortingLayers = { "Default", "Terrain", "Entities" };
     private const int AtlasPadding = 2;
     private const int AtlasMaxSize = 4096;
 
@@ -37,8 +50,9 @@ public static class PropWriter
     /// </summary>
     public static IReadOnlyList<string> Generate(PropRecipe recipe)
     {
-        IReadOnlyList<string> written = Generate(recipe, SpritesFolder, PrefabsFolder);
-        if (written == null || !EnsureAtlas(SpritesFolder, AtlasPath))
+        bool light = recipe.Category == PropCategory.Lights;
+        IReadOnlyList<string> written = Generate(recipe, light ? LightSpritesFolder : SpritesFolder, PrefabsFolder, GlowFolder);
+        if (written == null || light || !EnsureAtlas(SpritesFolder, AtlasPath))
         {
             return written;
         }
@@ -78,10 +92,11 @@ public static class PropWriter
     }
 
     /// <summary>
-    /// <see cref="Generate(PropRecipe)"/> into other folders, for tests: the sheet in <paramref name="spritesFolder"/>
-    /// and the prefabs in <paramref name="prefabsFolder"/>'s category folders.
+    /// <see cref="Generate(PropRecipe)"/> into other folders, for tests: the sheet in <paramref name="spritesFolder"/>,
+    /// its glow in <paramref name="glowFolder"/> (beside the sheet when null; never a folder whose textures import as
+    /// sprites) and the prefabs in <paramref name="prefabsFolder"/>'s category folders.
     /// </summary>
-    internal static IReadOnlyList<string> Generate(PropRecipe recipe, string spritesFolder, string prefabsFolder)
+    internal static IReadOnlyList<string> Generate(PropRecipe recipe, string spritesFolder, string prefabsFolder, string glowFolder = null)
     {
         List<PropVariant> variants = null;
         string problem = recipe.CanGenerate(out string cannot) ? null : cannot;
@@ -103,6 +118,12 @@ public static class PropWriter
         if (WriteSheet(recipe, variants, sheet))
         {
             written.Add(sheet);
+        }
+
+        string glow = GlowPath(glowFolder ?? spritesFolder, recipe.PropName);
+        if (WriteGlow(recipe, variants, sheet, glow))
+        {
+            written.Add(glow);
         }
 
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
@@ -175,6 +196,14 @@ public static class PropWriter
     }
 
     /// <summary>
+    /// The path of the glow of the props named <paramref name="propName"/> in <paramref name="folder"/>.
+    /// </summary>
+    public static string GlowPath(string folder, string propName)
+    {
+        return $"{folder}/{propName}_Glow.png";
+    }
+
+    /// <summary>
     /// The path of variant <paramref name="index"/>'s prefab under <paramref name="prefabsFolder"/>.
     /// </summary>
     public static string PrefabPath(string prefabsFolder, PropRecipe recipe, int index)
@@ -208,6 +237,112 @@ public static class PropWriter
         }
 
         return SpriteSheetFiles.WriteSheet(path, width, height, pixels, slices);
+    }
+
+    /// <summary>
+    /// Writes the glow of <paramref name="variants"/> at <paramref name="path"/>, laid out as the sheet, and makes it the
+    /// secondary texture <see cref="GlowTextureName"/> of the sheet at <paramref name="sheet"/>; when no variant glows,
+    /// removes both. Returns whether anything changed.
+    /// </summary>
+    private static bool WriteGlow(PropRecipe recipe, IReadOnlyList<PropVariant> variants, string sheet, string path)
+    {
+        bool glows = false;
+        foreach (PropVariant variant in variants)
+        {
+            glows |= variant.Glows;
+        }
+
+        bool changed = false;
+        SecondarySpriteTexture[] wanted = new SecondarySpriteTexture[0];
+        if (glows)
+        {
+            Vector2Int frame = recipe.FrameSize;
+            int width = frame.x * variants.Count;
+            Color32[] pixels = new Color32[width * frame.y];
+            for (int i = 0; i < variants.Count; i++)
+            {
+                Blit(variants[i].Glow, frame, pixels, width, i * frame.x, 0);
+            }
+
+            changed = WriteGlowTexture(path, width, frame.y, pixels);
+            wanted = new[] { new SecondarySpriteTexture { name = GlowTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path) } };
+        }
+        else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
+        {
+            AssetDatabase.DeleteAsset(path);
+            changed = true;
+        }
+
+        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(sheet);
+        if (!SameSecondaryTextures(importer.secondarySpriteTextures, wanted))
+        {
+            importer.secondarySpriteTextures = wanted;
+            importer.SaveAndReimport();
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Writes <paramref name="pixels"/> as a PNG at <paramref name="path"/> when its bytes changed and imports it as a
+    /// glow: a plain texture, point filtered and clamped, without mipmaps or compression, its colour in sRGB as the
+    /// sheet's. Returns whether the file or its import settings changed.
+    /// </summary>
+    private static bool WriteGlowTexture(string path, int width, int height, Color32[] pixels)
+    {
+        byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
+        bool written = !File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(png);
+        if (written)
+        {
+            TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
+            File.WriteAllBytes(path, png);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        }
+
+        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        int side = Mathf.NextPowerOfTwo(Mathf.Max(width, height));
+        bool changed = importer.textureType != TextureImporterType.Default || !importer.sRGBTexture || importer.filterMode != FilterMode.Point
+            || importer.wrapMode != TextureWrapMode.Clamp || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
+            || importer.npotScale != TextureImporterNPOTScale.None || importer.isReadable || importer.alphaIsTransparency || importer.maxTextureSize < side;
+        if (changed)
+        {
+            importer.textureType = TextureImporterType.Default;
+            importer.sRGBTexture = true;
+            importer.filterMode = FilterMode.Point;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.isReadable = false;
+            importer.alphaIsTransparency = false;
+            importer.maxTextureSize = Mathf.Max(importer.maxTextureSize, side);
+            importer.SaveAndReimport();
+        }
+
+        return written || changed;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> name the same textures in the same order.
+    /// </summary>
+    private static bool SameSecondaryTextures(SecondarySpriteTexture[] a, SecondarySpriteTexture[] b)
+    {
+        a ??= new SecondarySpriteTexture[0];
+        if (a.Length != b.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i].name != b[i].name || a[i].texture != b[i].texture)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -253,7 +388,7 @@ public static class PropWriter
     }
 
     /// <summary>
-    /// Whether <paramref name="root"/>'s sprite, rendering layers, fade or footprint differ from the variant's, setting
+    /// Whether <paramref name="root"/>'s sprite, rendering layers, fade, light or footprint differ from the variant's, setting
     /// them when <paramref name="write"/>.
     /// </summary>
     private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, uint layers, bool write)
@@ -276,6 +411,7 @@ public static class PropWriter
             }
         }
 
+        changed |= ApplyLight(root, recipe as LightRecipe, variant, write);
         if (!recipe.Blocking || !root.TryGetComponent(out BoxCollider2D box))
         {
             return changed;
@@ -293,6 +429,103 @@ public static class PropWriter
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="root"/>'s <c>Light</c> child differs from what a light prop's variant asks for (none for
+    /// any other prop), setting it when <paramref name="write"/>: a point Light 2D on blend style 0 and the
+    /// <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, without shadows, off, where the variant's light
+    /// stands, in the recipe's colour, strength and radius, with the <see cref="PropLight"/> that burns it.
+    /// </summary>
+    private static bool ApplyLight(GameObject root, LightRecipe recipe, PropVariant variant, bool write)
+    {
+        Transform child = root.transform.Find(LightName);
+        if (recipe == null || !variant.HasLight)
+        {
+            if (child != null && write)
+            {
+                Object.DestroyImmediate(child.gameObject, true);
+            }
+
+            return child != null;
+        }
+
+        bool changed = child == null;
+        if (child == null)
+        {
+            if (!write)
+            {
+                return true;
+            }
+
+            child = new GameObject(LightName).transform;
+            child.SetParent(root.transform, false);
+            child.gameObject.AddComponent<Light2D>();
+            child.gameObject.AddComponent<PropLight>();
+        }
+
+        Light2D light = child.GetComponent<Light2D>();
+        PropLight propLight = child.GetComponent<PropLight>();
+        Vector3 position = new(variant.LightOffset.x, variant.LightOffset.y, 0f);
+        Color colour = recipe.LightColour;
+        int[] layers = SortingLayerIds();
+        changed |= child.localPosition != position || light.lightType != Light2D.LightType.Point || light.blendStyleIndex != 0 || light.color != colour
+            || !Mathf.Approximately(light.intensity, recipe.LightIntensity) || !Mathf.Approximately(light.pointLightOuterRadius, recipe.LightRadius)
+            || light.pointLightInnerRadius != 0f || !Mathf.Approximately(light.falloffIntensity, LightFalloff) || light.shadowsEnabled || light.enabled
+            || !SameLayers(light.targetSortingLayers, layers) || propLight.LightSource != light || !Mathf.Approximately(propLight.Intensity, recipe.LightIntensity)
+            || !Mathf.Approximately(propLight.Flicker, recipe.LightFlicker);
+        if (write)
+        {
+            child.localPosition = position;
+            light.lightType = Light2D.LightType.Point;
+            light.blendStyleIndex = 0;
+            light.color = colour;
+            light.intensity = recipe.LightIntensity;
+            light.pointLightInnerRadius = 0f;
+            light.pointLightOuterRadius = recipe.LightRadius;
+            light.falloffIntensity = LightFalloff;
+            light.shadowsEnabled = false;
+            light.targetSortingLayers = layers;
+            light.enabled = false;
+            propLight.Configure(light, recipe.LightIntensity, recipe.LightFlicker);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// The IDs of the sorting layers a prop's light shines on.
+    /// </summary>
+    private static int[] SortingLayerIds()
+    {
+        int[] ids = new int[LitSortingLayers.Length];
+        for (int i = 0; i < ids.Length; i++)
+        {
+            ids[i] = SortingLayer.NameToID(LitSortingLayers[i]);
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> hold the same sorting layer IDs in the same order.
+    /// </summary>
+    private static bool SameLayers(int[] a, int[] b)
+    {
+        if (a == null || a.Length != b.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -22,7 +23,9 @@ public enum ArtPattern
 /// its tone rises from shadow to light (thin blades, lit by how high they reach rather than where they face), and a
 /// cover: another material taken where the surface faces up past a threshold, broken up by value noise. Its pattern
 /// reads world positions as they are, or in a frame of its own: around an axis through an origin, which takes the up
-/// axis's place.
+/// axis's place. A glowing material (a flame, coals, a lantern's glass) is drawn at no less than a share of its own
+/// colour whatever the light in the game, and a flickering one (a flame) shows each pixel now and then in one of its
+/// flicker colours, the tones next to its own (Docs/Lighting.md, Phase 5).
 /// </summary>
 public sealed class ArtMaterial
 {
@@ -33,11 +36,13 @@ public sealed class ArtMaterial
     /// material taken where the world normal's up component plus noise of <paramref name="coverNoise"/> (its full range)
     /// at <paramref name="coverNoiseScale"/> cycles per unit passes <paramref name="coverThreshold"/>, or -1 for none.
     /// A <paramref name="patternAxis"/> other than zero puts the pattern in the frame of that axis through
-    /// <paramref name="patternOrigin"/>, its grooves along it and its rings around it.
+    /// <paramref name="patternOrigin"/>, its grooves along it and its rings around it. <paramref name="glow"/> is the
+    /// share of its own colour it is drawn at whatever the light, 0 for a material that does not glow; a glowing
+    /// material's <paramref name="flicker"/> colours are those its pixels may flicker to, none for a steady glow.
     /// </summary>
     public ArtMaterial(ColourRamp ramp, bool flat = false, bool outlined = true, ArtPattern pattern = ArtPattern.None, float patternScale = 1f,
         int toneOffset = 0, float toneHeight = 0f, int cover = -1, float coverThreshold = 1f, float coverNoise = 0f, float coverNoiseScale = 1f,
-        Vector3 patternOrigin = default, Vector3 patternAxis = default)
+        Vector3 patternOrigin = default, Vector3 patternAxis = default, float glow = 0f, IReadOnlyList<Color32> flicker = null)
     {
         Ramp = ramp;
         Flat = flat;
@@ -53,6 +58,8 @@ public sealed class ArtMaterial
         HasPatternFrame = patternAxis != Vector3.zero;
         PatternOrigin = patternOrigin;
         PatternRotation = HasPatternFrame ? Quaternion.FromToRotation(patternAxis, Vector3.forward) : Quaternion.identity;
+        Glow = Mathf.Clamp01(glow);
+        Flicker = flicker ?? System.Array.Empty<Color32>();
     }
 
     public ColourRamp Ramp { get; }
@@ -69,6 +76,8 @@ public sealed class ArtMaterial
     public float CoverThreshold { get; }
     public float CoverNoise { get; }
     public float CoverNoiseScale { get; }
+    public float Glow { get; }
+    public IReadOnlyList<Color32> Flicker { get; }
 }
 
 /// <summary>

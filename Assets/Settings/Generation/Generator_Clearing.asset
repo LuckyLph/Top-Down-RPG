@@ -162,8 +162,12 @@ MonoBehaviour:
     openCount: 3
     radius: {x: 2, y: 3.5}
     reach: 3
-  campfirePrefab: {fileID: 0}
-  campsiteSeats: []
+  campfirePrefab: {fileID: 3523339191032342359, guid: 8643c5a9162df5549ad1304cfc347808, type: 3}
+  campsiteSeats:
+  - {fileID: 4147772767054363865, guid: bc6a106ee3578664abf4f022e9fb2956, type: 3}
+  - {fileID: 449524861034938983, guid: 23f97504eae3c8c4f89525694255cd21, type: 3}
+  - {fileID: 597677557937875587, guid: 0c17b9b506af658409661d563014b540, type: 3}
+  - {fileID: 5506096395057047867, guid: 5118330fa05751f44995855287879c34, type: 3}
   seatCount: 3
   seatSpacing: 1.5
   campsiteRadius: 3

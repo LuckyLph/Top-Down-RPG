@@ -18,7 +18,8 @@ using UnityEngine;
 /// mob is reachable from the default entry around the props' footprints, every port is linked and the roads and gates
 /// lie on walkable wilds; the wilds' patches meet only grass and the wilds' mobs keep their distances from the entries
 /// and every other mob; each region's props are its layout's, moved, but those that would cross a chunk's border or
-/// stand on or beside its plaza; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
+/// stand on or beside its plaza; a waystone lamp stands on each plaza beside its waystone, off the roads, moving nothing
+/// else; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
 /// beach, the entries, the mobs and each other's footprints, and edge trees only beside regions of grass; and the
 /// derived ids are unique, in the format of the editor's random ids, and stay the same through re-seeding, moving,
 /// re-rolling and composing again. The generators carry the wilds' prop settings of the project's Overworld generator.
@@ -266,6 +267,59 @@ public class WorldGeneratorTests
 
             Assert.That(next, Is.EqualTo(props.Count), $"{region.Key}'s props are its layout's, in order");
             Assert.That(left, Is.LessThan(layout.Props.Count / 20 + 2), $"{region.Key} leaves out only a few props");
+        }
+    }
+
+    /// <summary>
+    /// With a waystone lamp (Docs/Lighting.md, Phase 5), one more prop stands on each region's plaza than without it: the
+    /// lamp, within the plaza's radius of its waystone and more than a cell and a half from it, clear of the players
+    /// arriving there, every cell it covers the region's plaza off its roads and in one chunk; every other prop is the
+    /// composition's without it, in order.
+    /// </summary>
+    [Test]
+    public void AWaystoneLamp_StandsOnEachPlaza_BesideItsWaystone_OffTheRoads()
+    {
+        GameObject lamp = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Lights/LampPost_0.prefab");
+        Assert.That(lamp, Is.Not.Null, "the lamp post");
+        WorldGenerator lit = generators.Overworld("LitOverworld");
+        lit.SetWaystoneLamp(lamp);
+        WorldComposition composed = lit.Compose();
+        List<WorldComposition.Prop> others = new();
+        Dictionary<string, WorldComposition.Prop> added = new();
+        foreach (WorldComposition.Prop prop in composed.Props)
+        {
+            if (prop.Prefab == lamp && !overworld.Props.Exists(other => other.Prefab == lamp && other.Cell == prop.Cell))
+            {
+                Assert.That(added.ContainsKey(prop.Scope), Is.False, $"{prop.Scope} has one waystone lamp");
+                added[prop.Scope] = prop;
+                continue;
+            }
+
+            others.Add(prop);
+        }
+
+        Assert.That(others.Count, Is.EqualTo(overworld.Props.Count), "nothing else is placed or left out");
+        for (int i = 0; i < others.Count; i++)
+        {
+            Assert.That((others[i].Prefab, others[i].Cell), Is.EqualTo((overworld.Props[i].Prefab, overworld.Props[i].Cell)), $"prop {i}");
+        }
+
+        foreach (WorldComposition.Region region in composed.Regions)
+        {
+            Assert.That(added.TryGetValue(region.Key, out WorldComposition.Prop placed), Is.True, $"{region.Key}'s waystone lamp");
+            float distance = Vector2.Distance(placed.Cell + new Vector2(0.5f, 0.5f), region.SpawnCell + new Vector2(0.5f, 0.5f));
+            Assert.That(distance, Is.InRange(1.5f, lit.PlazaRadius), $"{region.Key}'s lamp stands beside its waystone");
+            Assert.That(ChunkCoords.ChunkOf(placed.Cell), Is.EqualTo(ChunkCoords.ChunkOf(placed.Cell + placed.Covered - Vector2Int.one)), $"{region.Key}'s lamp lies in one chunk");
+            for (int dy = 0; dy < placed.Covered.y; dy++)
+            {
+                for (int dx = 0; dx < placed.Covered.x; dx++)
+                {
+                    Vector2Int cell = placed.Cell + new Vector2Int(dx, dy);
+                    Assert.That(composed.RegionAt(cell), Is.EqualTo(region.Index), $"{region.Key}'s lamp at {cell}");
+                    Assert.That(composed.Has(cell, materials.Plaza), Is.True, $"{region.Key}'s lamp at {cell} stands on plaza");
+                    Assert.That(composed.Has(cell, materials.Stone) || composed.Has(cell, materials.Gravel), Is.False, $"{region.Key}'s lamp at {cell} stands off the roads");
+                }
+            }
         }
     }
 

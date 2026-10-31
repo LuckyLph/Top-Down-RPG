@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
 using VContainer;
 
@@ -34,7 +35,9 @@ using VContainer;
 /// <see cref="TerrainBlendRebuilds"/> decides when an inspector change rebuilds it. A chunk of a seamless world
 /// (<see cref="SetChunk"/>) builds its control map over its own cells and a skirt around them, reads its neighbours'
 /// border cells there (<see cref="SetSkirt"/>), draws quads over its own cells only, and takes its coast map from a
-/// texture baked for it (Docs/WorldStreaming.md: Terrain).
+/// texture baked for it (Docs/WorldStreaming.md: Terrain). Ground of a glowing material (lava) lights what lies near it
+/// at night through a Sprite Light 2D drawing a <see cref="TerrainGlowMap"/> (<see cref="GlowLight"/>, Docs/Lighting.md,
+/// Phase 5), off until <see cref="PropLighting"/> burns it.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -82,6 +85,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly ProfilerMarker BuildMarker = new("TerrainBlendRenderer.Build");
     private static readonly ProfilerMarker ControlMapMarker = new("TerrainBlendRenderer.ControlMap");
     private static readonly ProfilerMarker CoastMapMarker = new("TerrainBlendRenderer.CoastMap");
+    private static readonly ProfilerMarker GlowMapMarker = new("TerrainBlendRenderer.GlowMap");
     private static readonly ProfilerMarker ArraysMarker = new("TerrainBlendRenderer.Arrays");
     private static readonly ProfilerMarker ElevationMapMarker = new("TerrainBlendRenderer.ElevationMap");
     private static readonly ProfilerMarker LutMarker = new("TerrainBlendRenderer.Lut");
@@ -102,6 +106,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private const string SoftKeywordName = "_TERRAIN_SOFT";
     private const string RaisedKeywordName = "_TERRAIN_RAISED";
     private static readonly MeshRenderer[] NoChunks = new MeshRenderer[0];
+    private static readonly string[] GlowSortingLayers = { "Default", "Terrain", "Entities" };
 
     [Tooltip("The look shared by every material: the terrain shader, the shared edge settings and the pair rules. Read, never written.")]
     [SerializeField] private TerrainStyle style;
@@ -123,6 +128,10 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Tilemap[] layerTilemaps = new Tilemap[0];
     private TerrainControlMap controlMap;
     private TerrainCoastMap coastMap;
+    private TerrainGlowMap glowMap;
+    private Light2D glowLight;
+    private TerrainMaterial glowMaterial;
+    [NonSerialized] private uint glowBits;
     private TerrainElevationMap elevationMap;
     private Tilemap builtRaisedTilemap;
     [NonSerialized] private bool builtRaised;
@@ -270,6 +279,22 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// The coast map the runtime material reads: the baked one, or the one it builds; null when nothing is built.
     /// </summary>
     internal Texture CoastTexture => material != null ? material.GetTexture(CoastMapId) : null;
+
+    /// <summary>
+    /// The Sprite Light 2D that draws the glow of its glowing ground (lava) over its cells, off until
+    /// <see cref="PropLighting"/> burns it; null when nothing it draws glows (Docs/Lighting.md, Phase 5).
+    /// </summary>
+    public Light2D GlowLight => glowLight;
+
+    /// <summary>
+    /// The strength its glow light shines at at night: its first glowing material's.
+    /// </summary>
+    public float GlowStrength => glowMaterial != null ? glowMaterial.GlowStrength : 0f;
+
+    /// <summary>
+    /// The glow map its glow light draws, null when none of its layers' materials glows.
+    /// </summary>
+    internal TerrainGlowMap GlowMap => glowMap;
 
     /// <summary>
     /// Whether it is built wide: an RGBA32 control map, read by the shader's wide variant (_TERRAIN_WIDE).
@@ -531,6 +556,11 @@ public class TerrainBlendRenderer : MonoBehaviour
                 coastMap.Build(controlMap, waveLayer, bridgeBits);
             }
 
+            if (glowMap != null)
+            {
+                BuildGlow();
+            }
+
             elevationChanged |= builtRaised;
         }
 
@@ -712,6 +742,29 @@ public class TerrainBlendRenderer : MonoBehaviour
             {
                 coastMap = new TerrainCoastMap($"{name} Terrain Coast Map");
                 coastMap.Build(controlMap, waveLayer, bridgeBits);
+            }
+        }
+
+        glowBits = 0u;
+        glowMaterial = null;
+        for (int i = 0; i < count; i++)
+        {
+            if (materials[i].Glows)
+            {
+                glowBits |= 1u << i;
+                if (glowMaterial == null)
+                {
+                    glowMaterial = materials[i];
+                }
+            }
+        }
+
+        if (glowMaterial != null)
+        {
+            using (GlowMapMarker.Auto())
+            {
+                glowMap = new TerrainGlowMap($"{name} Terrain Glow");
+                BuildGlow();
             }
         }
 
@@ -958,6 +1011,55 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// Builds the glow map over its cells (a world chunk's own, else the control map's bounds) from the cells of its
+    /// glowing layers, within the reach and in the colour of the first of their materials, and fits the glow light to
+    /// it: made, off and at no strength, when something glows and it has none, its cookie the map's sprite and its
+    /// corner on the map's first cell; destroyed when nothing glows any more.
+    /// </summary>
+    private void BuildGlow()
+    {
+        BoundsInt bounds = controlMap.Bounds;
+        RectInt area = chunked ? chunkCells : new RectInt(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y);
+        if (!glowMap.Build(controlMap, glowBits, area, glowMaterial.GlowReach))
+        {
+            if (glowLight != null)
+            {
+                DestroyRuntime(glowLight.gameObject);
+                glowLight = null;
+            }
+
+            return;
+        }
+
+        if (glowLight == null)
+        {
+            GameObject glowObject = new($"{name} Terrain Glow") { hideFlags = HideFlags.HideAndDontSave, layer = gameObject.layer };
+            glowObject.SetActive(false);
+            glowObject.transform.SetParent(transform, false);
+            glowLight = glowObject.AddComponent<Light2D>();
+            glowLight.lightCookieSprite = glowMap.Sprite;
+            glowLight.lightType = Light2D.LightType.Sprite;
+            glowLight.blendStyleIndex = 0;
+            glowLight.shadowsEnabled = false;
+            glowLight.intensity = 0f;
+            int[] layerIds = new int[GlowSortingLayers.Length];
+            for (int i = 0; i < layerIds.Length; i++)
+            {
+                layerIds[i] = SortingLayer.NameToID(GlowSortingLayers[i]);
+            }
+
+            glowLight.targetSortingLayers = layerIds;
+            glowLight.enabled = false;
+            glowObject.SetActive(true);
+        }
+
+        RectInt glowing = glowMap.Area;
+        glowLight.transform.localPosition = grid.CellToLocal(new Vector3Int(glowing.xMin, glowing.yMin, 0));
+        glowLight.lightCookieSprite = glowMap.Sprite;
+        glowLight.color = glowMaterial.GlowColour;
+    }
+
+    /// <summary>
     /// Tells the material where the control map lies: the world position of its first cell and its size in cells.
     /// </summary>
     private void UpdateControlRect()
@@ -1143,6 +1245,16 @@ public class TerrainBlendRenderer : MonoBehaviour
         controlMap = null;
         coastMap?.Dispose();
         coastMap = null;
+        if (glowLight != null)
+        {
+            DestroyRuntime(glowLight.gameObject);
+        }
+
+        glowLight = null;
+        glowMap?.Dispose();
+        glowMap = null;
+        glowMaterial = null;
+        glowBits = 0u;
         elevationMap?.Dispose();
         elevationMap = null;
         builtRaisedTilemap = null;

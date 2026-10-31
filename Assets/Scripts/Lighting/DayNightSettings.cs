@@ -2,9 +2,10 @@ using UnityEngine;
 
 /// <summary>
 /// The day and night (Docs/Lighting.md, Phase 3): how long the day and the night last on the world clock, where in the
-/// cycle a new game starts, the sky's and the sun's colours over the cycle, where the sun's shadows fall, and how often
-/// the host sends its world clock to the clients again. The cycle runs from 0 at sunrise, through sunset at the day's
-/// share of it, to the next sunrise at 1. Runtime code only reads it.
+/// cycle a new game starts, the sky's and the sun's colours and how strongly the lights that burn at night shine over the
+/// cycle, where the sun's shadows fall, how the night's lights and glowing pixels flicker (Phase 5), and how often the
+/// host sends its world clock to the clients again. The cycle runs from 0 at sunrise, through sunset at the day's share
+/// of it, to the next sunrise at 1. Runtime code only reads it.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Lighting/Day Night Settings", fileName = "DayNight")]
 public sealed class DayNightSettings : ScriptableObject
@@ -18,7 +19,7 @@ public sealed class DayNightSettings : ScriptableObject
     private float startTime = 0.16f;
 
     [Header("Light")]
-    [SerializeField, Tooltip("The sky's and the sun's colours at times of the cycle, in order of time. Between two keys they blend; past the last, toward the first.")]
+    [SerializeField, Tooltip("The sky's and the sun's colours and the night's lights' share at times of the cycle, in order of time. Between two keys they blend; past the last, toward the first.")]
     private DayLightKey[] keys = new DayLightKey[0];
 
     [Header("Sun")]
@@ -29,6 +30,12 @@ public sealed class DayNightSettings : ScriptableObject
     [SerializeField, Range(0f, 1f), Tooltip("How far a shadow cast across the screen at sunrise or sunset leans toward the camera, as a share of its length across.")]
     private float shadowLean = 0.5f;
 
+    [Header("Night lights")]
+    [SerializeField, Min(1f), Tooltip("How many times a second the night's lights and glowing pixels flicker to a new strength or colour.")]
+    private float flickerSteps = 8f;
+    [SerializeField, Range(0f, 1f), Tooltip("The share of flickering pixels (a flame's) shown in their flicker colour at each step.")]
+    private float glowFlickerShare = 0.36f;
+
     [Header("Sharing")]
     [SerializeField, Min(1f), Tooltip("How often the host sends its world clock to the clients again, in seconds of the world clock, so their day never drifts from its own.")]
     private float resyncSeconds = 60f;
@@ -37,6 +44,8 @@ public sealed class DayNightSettings : ScriptableObject
     public float NightSeconds => nightSeconds;
     public float StartTime => startTime;
     public float ResyncSeconds => resyncSeconds;
+    public float FlickerSteps => flickerSteps;
+    public float GlowFlickerShare => glowFlickerShare;
     public int KeyCount => keys.Length;
 
     /// <summary>
@@ -68,8 +77,9 @@ public sealed class DayNightSettings : ScriptableObject
     }
 
     /// <summary>
-    /// The light at <paramref name="phase"/> of the cycle: each colour blended between the keys either side of it, by
-    /// how far it lies from one to the next, round past the last key to the first. Exactly a key's at its time.
+    /// The light at <paramref name="phase"/> of the cycle: each colour and the night's lights' share blended between the
+    /// keys either side of it, by how far it lies from one to the next, round past the last key to the first. Exactly a
+    /// key's at its time.
     /// </summary>
     public DayLight LightAt(float phase)
     {
@@ -101,7 +111,7 @@ public sealed class DayNightSettings : ScriptableObject
         }
 
         float share = Mathf.Clamp01(into / span);
-        return new DayLight(Color.Lerp(from.Sky, to.Sky, share), Color.Lerp(from.Sun, to.Sun, share));
+        return new DayLight(Color.Lerp(from.Sky, to.Sky, share), Color.Lerp(from.Sun, to.Sun, share), Mathf.Lerp(from.NightLights, to.NightLights, share));
     }
 
     /// <summary>
@@ -131,7 +141,8 @@ public sealed class DayNightSettings : ScriptableObject
     /// <summary>
     /// Creates unsaved settings for tests.
     /// </summary>
-    public static DayNightSettings Create(float day, float night, float start, DayLightKey[] lightKeys, float noonShadow = 0.5f, float maxShadow = 2f, float lean = 0.5f, float resync = 60f)
+    public static DayNightSettings Create(float day, float night, float start, DayLightKey[] lightKeys, float noonShadow = 0.5f, float maxShadow = 2f, float lean = 0.5f, float resync = 60f,
+        float flicker = 8f, float glowFlicker = 0.36f)
     {
         DayNightSettings settings = CreateInstance<DayNightSettings>();
         settings.daySeconds = day;
@@ -142,6 +153,8 @@ public sealed class DayNightSettings : ScriptableObject
         settings.maxShadowLength = maxShadow;
         settings.shadowLean = lean;
         settings.resyncSeconds = resync;
+        settings.flickerSteps = flicker;
+        settings.glowFlickerShare = glowFlicker;
         return settings;
     }
 

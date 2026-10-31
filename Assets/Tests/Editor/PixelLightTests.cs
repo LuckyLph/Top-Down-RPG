@@ -20,7 +20,8 @@ using UnityEngine.Tilemaps;
 /// a larger texture, as the sprite atlas packs props) change light only from one whole art pixel to the next, while the
 /// light does fall off across them. And under the shipped day's afternoon sky and sun (Docs/Lighting.md, Phases 3 and
 /// 4), an outdoor world's ground and sprites draw exactly the pixels today's light draws wherever no sun shadow falls.
-/// Renders from later editor updates, until something is drawn.
+/// At night a sprite's glowing pixels draw at their own colour and flicker to their flicker colour by the glow's flicker
+/// (Phase 5). Renders from later editor updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -33,6 +34,7 @@ public class PixelLightTests
     private const string UrpLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
     private const int ArtPixelsPerUnit = 32;
     private const int Zoom = 3;
+    private static readonly int GlowFlickerId = Shader.PropertyToID("_GlowFlicker");
 
     private readonly List<Object> createdObjects = new();
 
@@ -42,6 +44,7 @@ public class PixelLightTests
     [TearDown]
     public void TearDown()
     {
+        Shader.SetGlobalVector(GlowFlickerId, Vector4.zero);
         foreach (Object created in createdObjects)
         {
             if (created != null)
@@ -307,6 +310,71 @@ public class PixelLightTests
     }
 
     /// <summary>
+    /// At night a sprite's glowing pixels draw at their own colour, as unlit, while its other pixels draw as the same
+    /// sprite without a glow draws them; with the glow's flicker at a share of one every flickering pixel shows its
+    /// flicker colour, and at none its own (Docs/Lighting.md, Phase 5).
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AtNight_GlowingPixels_DrawAtTheirOwnColour_AndFlickerToTheirFlickerColour()
+    {
+        AddGlobalLight(new Color(0.13f, 0.16f, 0.3f), 1f);
+        Color32 own = new(200, 120, 40, 255);
+        Color32 flicker = new(250, 210, 90, 255);
+        Texture2D albedo = SolidTexture(8, 8, own, false);
+        Color32[] glowPixels = new Color32[64];
+        for (int y = 0; y < 8; y++)
+        {
+            for (int x = 0; x < 4; x++)
+            {
+                glowPixels[y * 8 + x] = y >= 4 ? new Color32(flicker.r, flicker.g, flicker.b, 255) : new Color32(0, 0, 0, 255);
+            }
+        }
+
+        Texture2D glow = Texture(8, 8, glowPixels, false);
+        Sprite glowing = Track(Sprite.Create(albedo, new Rect(0f, 0f, 8f, 8f), new Vector2(0.5f, 0f), ArtPixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false,
+            new[] { new SecondarySpriteTexture { name = "_GlowTex", texture = glow } }));
+        SpriteRenderer sprite = AddSprite(albedo, new Rect(0f, 0f, 8f, 8f), new Vector2(-100f, -100f), false);
+        Rect world = new(-100.125f, -100f, 0.25f, 0.25f);
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        Color32[] plain = null;
+        yield return RenderUntilDrawn(null, world, null, false, pixels => plain = pixels);
+
+        sprite.enabled = false;
+        GameObject glowingObject = Track(new GameObject("Glowing"));
+        glowingObject.transform.position = new Vector2(-100f, -100f);
+        SpriteRenderer glowingSprite = glowingObject.AddComponent<SpriteRenderer>();
+        glowingSprite.sprite = glowing;
+        glowingSprite.sortingLayerName = "Entities";
+        glowingSprite.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(SpriteMaterialPath);
+        Shader.SetGlobalVector(GlowFlickerId, Vector4.zero);
+        Color32[] steady = null;
+        yield return RenderUntilDrawn(null, world, null, false, pixels => steady = pixels);
+        Shader.SetGlobalVector(GlowFlickerId, new Vector4(3f, 1f, 0f, 0f));
+        Color32[] flickering = null;
+        yield return RenderUntilDrawn(null, world, null, false, pixels => flickering = pixels);
+
+        for (int y = 0; y < 8; y++)
+        {
+            for (int x = 0; x < 8; x++)
+            {
+                Vector2 at = new(world.xMin + (x + 0.5f) / ArtPixelsPerUnit, world.yMin + (y + 0.5f) / ArtPixelsPerUnit);
+                Color32 before = ArtPixel(plain, width, world, at);
+                Color32 lit = ArtPixel(steady, width, world, at);
+                Color32 shown = ArtPixel(flickering, width, world, at);
+                if (x >= 4)
+                {
+                    Assert.That(lit, Is.EqualTo(before), $"({x}, {y}) does not glow and draws as before.");
+                    Assert.That(shown, Is.EqualTo(before), $"({x}, {y}) does not flicker.");
+                    continue;
+                }
+
+                Assert.That(Near(lit, own), Is.True, $"({x}, {y}) glows at its own colour, not {lit}.");
+                Assert.That(Near(shown, y >= 4 ? flicker : own), Is.True, $"({x}, {y}) shows {shown} at a flicker share of one.");
+            }
+        }
+    }
+
+    /// <summary>
     /// Whether pass <paramref name="pass"/> of the first subshader of <paramref name="shader"/> declares the light
     /// keyword.
     /// </summary>
@@ -322,6 +390,14 @@ public class PixelLightTests
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> differ by at most one in every channel.
+    /// </summary>
+    private static bool Near(Color32 a, Color32 b)
+    {
+        return Mathf.Abs(a.r - b.r) <= 1 && Mathf.Abs(a.g - b.g) <= 1 && Mathf.Abs(a.b - b.b) <= 1;
     }
 
     /// <summary>

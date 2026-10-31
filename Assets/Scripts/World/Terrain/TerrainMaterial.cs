@@ -16,6 +16,8 @@ using UnityEngine;
 /// edge, in the other material's bank colour (grass shows the dirt under it), and casts a shadow on it. A bridge
 /// (planks) lies on what is painted under it, so the layers under it do not go on beneath it, and a material that
 /// turns to its runs turns its textures a quarter where its layer runs left and right, so its boards lie across the run.
+/// A glowing material (lava) lights the ground, props and units near it at night, in its glow colour, through its
+/// renderer's glow light (Docs/Lighting.md, Phase 5).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
@@ -28,6 +30,7 @@ public class TerrainMaterial : ScriptableObject
     public const float MaxSwayAmplitude = 3f;
     public const float MaxSwash = 12f;
     public const float MaxWaveSpacing = 128f;
+    public const float MaxGlowReach = 4f;
 
     /// <summary>
     /// What a material's cell field holds and how its chips or stones meet an edge: none, chips drawn whole or left
@@ -134,6 +137,13 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float bankShadow = 0.25f;
     [Tooltip("Colour of this material's face where a sunken material (water) cuts into it, the bank above a pond's top edge: what the ground shows when cut, such as the dirt under grass.")]
     [SerializeField] private Color bankColour = new(0.38f, 0.29f, 0.2f, 1f);
+    [Header("Glow")]
+    [Tooltip("How strongly it lights what lies near it at night, at its own cells; 0 for a material that does not glow.")]
+    [SerializeField, Min(0f)] private float glowStrength;
+    [Tooltip("How far its glow reaches from its cells, in cells, at most a chunk's skirt, so the glow runs on across chunk borders.")]
+    [SerializeField, Range(0f, MaxGlowReach)] private float glowReach = 2.5f;
+    [Tooltip("The colour of its glow.")]
+    [SerializeField] private Color glowColour = new(1f, 0.51f, 0.2f, 1f);
     [Header("Placement")]
     [Tooltip("Lies on whatever is painted under it, like a dock or a bridge, instead of the layers under it going on beneath it: a lower layer's shape counts this layer's cells only where that layer (or another above it that is no bridge) is painted, so beside it each lower layer keeps its own edge. Without it, the water under a dock's sea end would also reach under its beach end and round off there.")]
     [SerializeField] private bool bridge;
@@ -190,6 +200,10 @@ public class TerrainMaterial : ScriptableObject
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;
+    public bool Glows => glowStrength > 0f && glowReach > 0f;
+    public float GlowStrength => Mathf.Max(glowStrength, 0f);
+    public float GlowReach => Mathf.Clamp(glowReach, 0f, MaxGlowReach);
+    public Color GlowColour => glowColour;
     public bool Bridge => bridge;
     public bool TurnsToRuns => turnToRuns;
     public TerrainStyle.EdgeSettings Edge => edge;
@@ -215,6 +229,17 @@ public class TerrainMaterial : ScriptableObject
         material.height = height;
         material.heightScale = heightScale;
         return material;
+    }
+
+    /// <summary>
+    /// Makes it glow at <paramref name="strength"/> over <paramref name="reach"/> cells in <paramref name="colour"/>, for
+    /// tests.
+    /// </summary>
+    internal void SetGlow(float strength, float reach, Color colour)
+    {
+        glowStrength = strength;
+        glowReach = reach;
+        glowColour = colour;
     }
 
 #if UNITY_EDITOR

@@ -174,6 +174,8 @@ public sealed class WorldGenerator : ScriptableObject
     [SerializeField, Min(0)] private int regionShoreGap = 6;
     [Tooltip("Radius in cells of the disc of plaza under each region's waystone, at its spawn cell.")]
     [SerializeField, Min(0f)] private float plazaRadius = 3f;
+    [Tooltip("A lamp post stood on each waystone's plaza, beside the waystone and off the roads (Docs/Lighting.md, Phase 5); none for none.")]
+    [SerializeField] private GameObject waystoneLamp;
 
     [Header("Roads")]
     [Tooltip("The road links, laid in this order.")]
@@ -242,6 +244,7 @@ public sealed class WorldGenerator : ScriptableObject
     public int RegionGap => regionGap;
     public int RegionShoreGap => regionShoreGap;
     public float PlazaRadius => plazaRadius;
+    public GameObject WaystoneLamp => waystoneLamp;
     public IReadOnlyList<RoadLink> Links => links;
     public int PortLeadIn => portLeadIn;
     public int SplineSpacing => splineSpacing;
@@ -319,6 +322,14 @@ public sealed class WorldGenerator : ScriptableObject
     internal void SetRegions(params RegionPlacement[] placements)
     {
         regions = new List<RegionPlacement>(placements);
+    }
+
+    /// <summary>
+    /// Sets the lamp post stood on each waystone's plaza (none when null), for tests and tools.
+    /// </summary>
+    internal void SetWaystoneLamp(GameObject lamp)
+    {
+        waystoneLamp = lamp;
     }
 
     /// <summary>

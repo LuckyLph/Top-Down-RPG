@@ -160,6 +160,7 @@ public class GameplayLifetimeScope : LifetimeScope
         if (dayNightSettings == null)
         {
             Debug.LogError($"{name} has no {nameof(DayNightSettings)}; the worlds keep their authored light.", this);
+            builder.RegisterEntryPoint<PropLighting>().WithParameter(typeof(DayClock), null).AsSelf();
         }
         else
         {
@@ -167,6 +168,7 @@ public class GameplayLifetimeScope : LifetimeScope
             builder.Register<DayClock>(Lifetime.Singleton);
             builder.RegisterEntryPoint<DayClockSync>().AsSelf();
             builder.RegisterEntryPoint<DayNightPresenter>().AsSelf();
+            builder.RegisterEntryPoint<PropLighting>().AsSelf();
         }
 
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());

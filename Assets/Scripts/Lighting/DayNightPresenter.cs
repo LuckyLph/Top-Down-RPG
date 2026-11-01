@@ -8,9 +8,9 @@ using VContainer.Unity;
 /// outdoor world's global light takes the <see cref="DayClock"/>'s sky and sun together, the light where no sun shadow
 /// falls, and an indoor one keeps its own (<see cref="WorldLighting"/>); the sun's light and shadow vector go to the
 /// shaders (<see cref="SunShadowGlobals"/>), which take the sun away where its shadows fall, while the world shown is
-/// outdoors and the sun is up. Each frame it reads the clock and writes the light to the worlds and the sun to the
-/// shaders only once they have moved by a step too small to see, and the light to a world as it loads. Presentation
-/// each machine draws on its own.
+/// outdoors and the sun is up, unless the lighting dev panel keeps them off. Each frame it reads the clock and writes
+/// the light to the worlds and the sun to the shaders only once they have moved by a step too small to see, and the
+/// light to a world as it loads. Presentation each machine draws on its own.
 /// </summary>
 public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 {
@@ -25,6 +25,7 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     private Vector2 shownShadow;
     private bool casting;
     private bool sunApplied;
+    private LightingOverride sunShadows;
 
     /// <summary>
     /// Creates the presenter of <paramref name="dayClock"/> over <paramref name="loadedWorlds"/>.
@@ -44,6 +45,16 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     /// Whether the sun last written to the shaders casts shadows.
     /// </summary>
     public bool Casting => casting;
+
+    /// <summary>
+    /// Whether the sun's shadows follow the day or are kept off on this machine (the lighting dev panel). There is
+    /// nothing to cast with while the sun is down or the world shown is indoors, so forced on they follow the day.
+    /// </summary>
+    internal LightingOverride SunShadowsOverride
+    {
+        get => sunShadows;
+        set => sunShadows = value;
+    }
 
     /// <summary>
     /// Follows the worlds loading and lights the ones loaded.
@@ -88,11 +99,11 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 
     /// <summary>
     /// Writes the sun of <paramref name="day"/> and <paramref name="sun"/> to the shaders, casting while it is up over an
-    /// outdoor world shown, once it has moved by a step from the sun last written.
+    /// outdoor world shown and its shadows are not kept off, once it has moved by a step from the sun last written.
     /// </summary>
     private void ApplySun(DayLight day, SunState sun)
     {
-        bool casts = sun.IsUp && ShowsOutdoorWorld();
+        bool casts = sun.IsUp && sunShadows != LightingOverride.Off && ShowsOutdoorWorld();
         Color colour = casts ? day.Sun : Color.black;
         Vector2 shadow = casts ? sun.Shadow : Vector2.zero;
         if (sunApplied && casts == casting && Near(colour, shownSun) && (shadow - shownShadow).sqrMagnitude < ShadowStep * ShadowStep)

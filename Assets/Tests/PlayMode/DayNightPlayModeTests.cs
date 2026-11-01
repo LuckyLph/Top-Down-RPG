@@ -10,11 +10,15 @@ using VContainer;
 /// PlayMode tests for the day and night (Docs/Lighting.md, Phase 3): in an offline game the world on screen is lit by
 /// the time of day, which follows the session's world clock, and the dev panel moves this machine's time of day, night
 /// lighting the world with the night sky and burning the night's lights, which the loaded chunks hand over as they load
-/// (Phase 5); and a client joining a host takes the host's time of day from its message.
+/// (Phase 5); a client joining a host takes the host's time of day from its message; and in the Sandbox's lighting
+/// showcase the lighting dev panel teleports the player to a spot, holds the time of day and forces the lights, the
+/// lava's glow, the flicker, the glowing pixels and the sun's shadows.
 /// </summary>
 public class DayNightPlayModeTests
 {
     private const float Step = 1f / 512f;
+    private const string SandboxRootPath = "Assets/Worlds/Sandbox/World_Sandbox.unity";
+    private const string LavaChunkName = "World_Sandbox_1_0";
 
     private InProcessClient client;
     private GameObject panel;
@@ -65,6 +69,89 @@ public class DayNightPlayModeTests
         Assert.That(lighting.Shown, Is.EqualTo(1f), "The night's lights burn at full at night.");
         Assert.That(Shader.GetGlobalVector("_GlowFlicker").y, Is.EqualTo(clock.Settings.GlowFlickerShare), "The flicker goes to the shaders.");
         clock.LocalOffset = 0f;
+    }
+
+    /// <summary>
+    /// In the Sandbox, the lighting panel teleports the player to the lava, where at night held the chunk's prop lights and
+    /// the lava's glow burn; forced off they go out and following the day they burn again; the flicker and the glowing pixels
+    /// go off for the shaders and come back; in the afternoon the sun casts, kept off it does not; and following the
+    /// session again drops the offset and the rate.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator TheLightingPanel_DrivesTheSandboxShowcase()
+    {
+        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath);
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.gameObject.SetActive(false);
+        }
+
+        panel = new GameObject("TestLightingPanel");
+        LightingDebugControls controls = panel.AddComponent<LightingDebugPanel>().Controls();
+        Assert.That(controls, Is.Not.Null, "In a game the panel has its controls.");
+        WorldDefinition sandbox = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
+        int lava = -1;
+        for (int i = 0; i < sandbox.Entries.Count; i++)
+        {
+            lava = sandbox.Entries[i].Name == "lava" ? i : lava;
+        }
+
+        Assert.That(lava, Is.GreaterThanOrEqualTo(0), "The Sandbox has a lava spot.");
+        Assert.That(controls.Teleport(lava + 1), Is.EqualTo("lava"));
+        Vector2 spot = sandbox.ToWorld(sandbox.Entries[lava].Position);
+        PlayerController player = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current.Controller;
+        Assert.That(Vector2.Distance(player.transform.position, spot), Is.LessThan(0.01f), "The player stands on the spot.");
+        yield return SceneBootTestHelper.WaitUntil(() => GlowingGround() != null && LavaChunkLight() != null, "the lava chunk to load");
+
+        controls.ShowKey(8);
+        controls.ToggleHold();
+        DayClock clock = controls.Clock;
+        Assert.That(clock.LocalRate, Is.EqualTo(0f));
+        yield return null;
+        yield return null;
+        Light2D propLight = LavaChunkLight().LightSource;
+        Assert.That(propLight.enabled, Is.True, "At night the chunk's prop lights burn.");
+        Assert.That(GlowingGround().GlowLight.enabled, Is.True, "At night the lava glows.");
+
+        controls.CyclePropLights();
+        controls.CyclePropLights();
+        controls.CycleGroundGlow();
+        controls.CycleGroundGlow();
+        yield return null;
+        Assert.That(propLight.enabled, Is.False, "Forced off, they are out.");
+        Assert.That(GlowingGround().GlowLight.enabled, Is.False, "Forced off, the lava does not glow.");
+        controls.CyclePropLights();
+        controls.CycleGroundGlow();
+        yield return null;
+        Assert.That(propLight.enabled, Is.True, "Following the day, they burn again.");
+        Assert.That(GlowingGround().GlowLight.enabled, Is.True);
+
+        controls.CycleFlicker();
+        controls.CycleGlowingPixels();
+        yield return null;
+        Vector4 flicker = Shader.GetGlobalVector("_GlowFlicker");
+        Assert.That(flicker.y, Is.EqualTo(0f), "Without flicker no pixel flickers.");
+        Assert.That(flicker.z, Is.EqualTo(1f), "The glowing pixels are off.");
+        controls.CycleFlicker();
+        controls.CycleGlowingPixels();
+        yield return null;
+        flicker = Shader.GetGlobalVector("_GlowFlicker");
+        Assert.That(flicker.y, Is.EqualTo(clock.Settings.GlowFlickerShare));
+        Assert.That(flicker.z, Is.EqualTo(0f));
+
+        controls.ShowKey(4);
+        yield return null;
+        Assert.That(controls.Presenter.Casting, Is.True, "In the afternoon the sun casts.");
+        controls.CycleSunShadows();
+        yield return null;
+        Assert.That(controls.Presenter.Casting, Is.False, "Kept off, the sun casts nothing.");
+        controls.CycleSunShadows();
+        yield return null;
+        Assert.That(controls.Presenter.Casting, Is.True);
+
+        controls.FollowSession();
+        Assert.That(clock.LocalRate, Is.EqualTo(1f));
+        Assert.That(clock.LocalOffset, Is.EqualTo(0f));
     }
 
     /// <summary>
@@ -123,6 +210,38 @@ public class DayNightPlayModeTests
         }
 
         Assert.Fail("No world on screen has a global light.");
+        return null;
+    }
+
+    /// <summary>
+    /// The renderer of the Sandbox's lava chunk once it is loaded and glows, else null.
+    /// </summary>
+    private static TerrainBlendRenderer GlowingGround()
+    {
+        foreach (TerrainBlendRenderer renderer in Object.FindObjectsByType<TerrainBlendRenderer>())
+        {
+            if (renderer.gameObject.scene.name == LavaChunkName && renderer.GlowLight != null)
+            {
+                return renderer;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A prop light of the Sandbox's lava chunk (its campfire or a lamp post along the road) once it is loaded, else null.
+    /// </summary>
+    private static PropLight LavaChunkLight()
+    {
+        foreach (PropLight light in Object.FindObjectsByType<PropLight>())
+        {
+            if (light.gameObject.scene.name == LavaChunkName)
+            {
+                return light;
+            }
+        }
+
         return null;
     }
 

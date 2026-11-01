@@ -10,10 +10,11 @@ using UnityEngine.Rendering.Universal;
 /// lengths, its afternoon today's light exactly and its night the night sky; the sun rising in the east, high at noon,
 /// setting in the west and down at night, with shadows long to the lower left and right at either end and short below at
 /// noon; the clock following the session's world clock where game state is decided and a client following the host's
-/// from when it last heard it; the local offset moving one machine's time alone; a loaded save resuming its time of day;
-/// an outdoor world's global lights taking the sky while an indoor one's keep theirs; the presenter lighting the loaded
-/// worlds as the day moves and a world as it loads; the presenter handing the sun to the shaders while it is up
-/// over an outdoor world shown (Docs/Lighting.md, Phase 4), and taking it away at night, indoors and when it stops; and
+/// from when it last heard it; the local offset and the local rate moving, holding and running one machine's time alone
+/// (the dev panels); a loaded save resuming its time of day; an outdoor world's global lights taking the sky while an
+/// indoor one's keep theirs; the presenter lighting the loaded worlds as the day moves and a world as it loads; the
+/// presenter handing the sun to the shaders while it is up over an outdoor world shown (Docs/Lighting.md, Phase 4), and
+/// taking it away at night, indoors, when it stops and while the lighting dev panel keeps the shadows off; and
 /// the night lights' share blending between the keys like the light, the shipped day's off by day and full at night
 /// (Phase 5).
 /// </summary>
@@ -251,6 +252,44 @@ public class DayNightTests
     }
 
     /// <summary>
+    /// The local rate holds this machine's time of day or runs it faster than the session's, keeping the time shown
+    /// where it is as it changes; a time shown at a rate runs on from there; following the session again drops the
+    /// offset and the rate.
+    /// </summary>
+    [Test]
+    public void TheLocalRate_HoldsOrRunsThisMachinesTimeOfDay()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.2f, new[] { new DayLightKey(0f, Color.grey, Color.black) }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        clock.ShowPhase(0.5f);
+        Assert.That(clock.Phase, Is.EqualTo(0.5f).Within(1e-5f));
+        clock.LocalRate = 0f;
+        time.Advance(25f);
+        Assert.That(clock.SessionPhase, Is.EqualTo(0.4f).Within(1e-5f), "The session's time of day runs on.");
+        Assert.That(clock.Phase, Is.EqualTo(0.5f).Within(1e-5f), "Held, this machine's stays.");
+
+        clock.LocalRate = 10f;
+        Assert.That(clock.Phase, Is.EqualTo(0.5f).Within(1e-5f), "Changing the rate keeps the time shown.");
+        time.Advance(2.5f);
+        Assert.That(clock.Phase, Is.EqualTo(0.7f).Within(1e-5f), "At 10 times, 2.5 s of a 125 s cycle move it a fifth.");
+        time.Advance(10f);
+        Assert.That(clock.Phase, Is.EqualTo(0.5f).Within(1e-5f), "It runs round the cycle.");
+
+        clock.ShowPhase(0.1f);
+        Assert.That(clock.Phase, Is.EqualTo(0.1f).Within(1e-5f));
+        time.Advance(1.25f);
+        Assert.That(clock.Phase, Is.EqualTo(0.2f).Within(1e-5f), "A time shown at a rate runs on from there.");
+
+        clock.FollowSession();
+        Assert.That(clock.LocalRate, Is.EqualTo(1f));
+        Assert.That(clock.LocalOffset, Is.EqualTo(0f));
+        Assert.That(clock.Phase, Is.EqualTo(clock.SessionPhase));
+    }
+
+    /// <summary>
     /// A save written at some time of day and loaded in a later session, whose game clock started elsewhere, resumes the
     /// same time of day, since it is kept as the world clock is.
     /// </summary>
@@ -397,6 +436,53 @@ public class DayNightTests
 
         Assert.That(Shader.GetGlobalVector(SunShadowId), Is.EqualTo(Vector4.zero), "Stopping takes the sun away.");
         Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(Vector4.zero));
+    }
+
+    /// <summary>
+    /// Kept off by the lighting dev panel, the sun's shadows are not cast while it is up over the outdoor world shown,
+    /// and the world keeps the sky and the sun together; following the day again, or forced on, they are cast again.
+    /// </summary>
+    [Test]
+    public void ThePresenter_KeepsTheSunsShadowsOff_WhenTheOverrideSaysSo()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f))
+        }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out Light2D sky, out _);
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, outdoor));
+        DayNightPresenter presenter = new(clock, worlds);
+        outdoor.SetShown(true);
+        presenter.Start();
+        try
+        {
+            Assert.That(presenter.Casting, Is.True);
+            presenter.SunShadowsOverride = LightingOverride.Off;
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.False, "Kept off, nothing is cast.");
+            Assert.That(Shader.GetGlobalVector(SunShadowId), Is.EqualTo(Vector4.zero));
+            Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(Vector4.zero));
+            Assert.That((Vector4)sky.color, Is.EqualTo((Vector4)clock.Light.Total).Using(Vector4EqualityComparer(1e-5f)), "The world keeps the sky and the sun together.");
+
+            presenter.SunShadowsOverride = LightingOverride.On;
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.True, "Forced on, they follow the day.");
+            presenter.SunShadowsOverride = LightingOverride.Off;
+            presenter.Tick();
+            presenter.SunShadowsOverride = LightingOverride.Follow;
+            presenter.Tick();
+            Assert.That(presenter.Casting, Is.True);
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
     }
 
     /// <summary>

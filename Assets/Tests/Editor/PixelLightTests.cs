@@ -312,10 +312,11 @@ public class PixelLightTests
     /// <summary>
     /// At night a sprite's glowing pixels draw at their own colour, as unlit, while its other pixels draw as the same
     /// sprite without a glow draws them; with the glow's flicker at a share of one every flickering pixel shows its
-    /// flicker colour, and at none its own (Docs/Lighting.md, Phase 5).
+    /// flicker colour, and at none its own (Docs/Lighting.md, Phase 5); with the glowing pixels turned off (the lighting
+    /// dev panel) every pixel draws as the sprite without a glow draws it, flicker or not.
     /// </summary>
     [UnityTest]
-    public IEnumerator AtNight_GlowingPixels_DrawAtTheirOwnColour_AndFlickerToTheirFlickerColour()
+    public IEnumerator AtNight_GlowingPixels_DrawAtTheirOwnColour_FlickerToTheirFlickerColour_AndTurnOff()
     {
         AddGlobalLight(new Color(0.13f, 0.16f, 0.3f), 1f);
         Color32 own = new(200, 120, 40, 255);
@@ -352,6 +353,9 @@ public class PixelLightTests
         Shader.SetGlobalVector(GlowFlickerId, new Vector4(3f, 1f, 0f, 0f));
         Color32[] flickering = null;
         yield return RenderUntilDrawn(null, world, null, false, pixels => flickering = pixels);
+        Shader.SetGlobalVector(GlowFlickerId, new Vector4(3f, 1f, 1f, 0f));
+        Color32[] off = null;
+        yield return RenderUntilDrawn(null, world, null, false, pixels => off = pixels);
 
         for (int y = 0; y < 8; y++)
         {
@@ -361,6 +365,7 @@ public class PixelLightTests
                 Color32 before = ArtPixel(plain, width, world, at);
                 Color32 lit = ArtPixel(steady, width, world, at);
                 Color32 shown = ArtPixel(flickering, width, world, at);
+                Assert.That(ArtPixel(off, width, world, at), Is.EqualTo(before), $"({x}, {y}) draws as without a glow once glowing pixels are off.");
                 if (x >= 4)
                 {
                     Assert.That(lit, Is.EqualTo(before), $"({x}, {y}) does not glow and draws as before.");

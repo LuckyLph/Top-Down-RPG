@@ -84,3 +84,14 @@ public readonly struct SunState
     public float Elevation { get; }
     public Vector2 Shadow { get; }
 }
+
+/// <summary>
+/// How a part of the lighting is drawn on this machine (the lighting dev panel): following the time of day, forced on
+/// or forced off.
+/// </summary>
+public enum LightingOverride
+{
+    Follow,
+    On,
+    Off
+}

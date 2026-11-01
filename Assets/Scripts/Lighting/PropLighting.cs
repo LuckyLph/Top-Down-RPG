@@ -12,8 +12,9 @@ using VContainer.Unity;
 /// world; at none it is off. A prop light's strength steps by up to its flicker share either way at each of the
 /// settings' flicker steps, by a hash of the step and where it stands, from the clock. It also hands the flicker's step
 /// to the shaders (<c>_GlowFlicker</c>), which show glowing pixels in their flicker colours by it. It writes only when
-/// the share has moved by a step too small to see or a flicker step has passed, allocating nothing. Presentation each
-/// machine draws on its own: nothing is sent, and nothing in the game reads it.
+/// the share has moved by a step too small to see or a flicker step has passed, allocating nothing. The lighting dev
+/// panel may force the prop lights and the ground's glow on or off, still the flicker and turn the glowing pixels off,
+/// on this machine alone. Presentation each machine draws on its own: nothing is sent, and nothing in the game reads it.
 /// </summary>
 public sealed class PropLighting : IStartable, ITickable, IDisposable
 {
@@ -28,6 +29,11 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     private float shown;
     private int shownStep;
     private bool applied;
+    private bool forced;
+    private LightingOverride propLights;
+    private LightingOverride groundGlow;
+    private LightingOverride flicker;
+    private LightingOverride glowingPixels;
 
     /// <summary>
     /// Creates the lighting of the night's lights by <paramref name="day"/>, flickering on <paramref name="time"/>,
@@ -49,6 +55,42 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     /// How many chunks' lights it burns.
     /// </summary>
     public int GroupCount => groups.Count;
+
+    /// <summary>
+    /// Whether the prop lights burn by the time of day, at full or not at all (the lighting dev panel).
+    /// </summary>
+    internal LightingOverride PropLightsOverride
+    {
+        get => propLights;
+        set => Force(ref propLights, value);
+    }
+
+    /// <summary>
+    /// Whether the ground's glow burns by the time of day, at full or not at all (the lighting dev panel).
+    /// </summary>
+    internal LightingOverride GroundGlowOverride
+    {
+        get => groundGlow;
+        set => Force(ref groundGlow, value);
+    }
+
+    /// <summary>
+    /// Whether the prop lights' strength and the glowing pixels flicker, or, off, stand still (the lighting dev panel).
+    /// </summary>
+    internal LightingOverride FlickerOverride
+    {
+        get => flicker;
+        set => Force(ref flicker, value);
+    }
+
+    /// <summary>
+    /// Whether glowing pixels glow, or, off, draw lit like any other (the lighting dev panel).
+    /// </summary>
+    internal LightingOverride GlowingPixelsOverride
+    {
+        get => glowingPixels;
+        set => Force(ref glowingPixels, value);
+    }
 
     /// <summary>
     /// Writes the lights for the first time.
@@ -96,31 +138,34 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Writes every light once the night's lights' share has moved by a step or a flicker step has passed, and the
-    /// flicker's step to the shaders.
+    /// Writes every light once the night's lights' share has moved by a step, a flicker step has passed or an override
+    /// changed, and the flicker's step to the shaders.
     /// </summary>
     public void Tick()
     {
         float share = dayClock != null ? dayClock.Light.NightLights : 1f;
-        int step = dayClock != null ? Mathf.FloorToInt(clock.Time * dayClock.Settings.FlickerSteps) : 0;
-        if (applied && Mathf.Abs(share - shown) < Step && step == shownStep)
+        bool flickers = dayClock != null && flicker != LightingOverride.Off;
+        int step = flickers ? Mathf.FloorToInt(clock.Time * dayClock.Settings.FlickerSteps) : 0;
+        if (applied && !forced && Mathf.Abs(share - shown) < Step && step == shownStep)
         {
             return;
         }
 
-        bool stepped = !applied || step != shownStep;
+        bool stepped = !applied || forced || step != shownStep;
+        bool force = forced;
         shown = share;
         shownStep = step;
         applied = true;
+        forced = false;
         if (stepped)
         {
-            float glowShare = dayClock != null ? dayClock.Settings.GlowFlickerShare : 0f;
-            Shader.SetGlobalVector(GlowFlickerId, new Vector4(step, glowShare, 0f, 0f));
+            float glowShare = flickers ? dayClock.Settings.GlowFlickerShare : 0f;
+            Shader.SetGlobalVector(GlowFlickerId, new Vector4(step, glowShare, glowingPixels == LightingOverride.Off ? 1f : 0f, 0f));
         }
 
         for (int i = 0; i < groups.Count; i++)
         {
-            Write(groups[i], share, step, false);
+            Write(groups[i], share, step, force);
         }
     }
 
@@ -143,46 +188,72 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Writes <paramref name="group"/>'s lights at <paramref name="share"/>, at full indoors, at flicker step
-    /// <paramref name="step"/>: on and at their strength while it is above none, off otherwise. Lights already off stay
-    /// untouched unless <paramref name="force"/>.
+    /// Writes <paramref name="group"/>'s lights and its ground's glow at <paramref name="share"/>, at full indoors, or as
+    /// their overrides force them, the lights at flicker step <paramref name="step"/>: on and at their strength while
+    /// their level is above none, off otherwise. Lights already off stay untouched unless <paramref name="force"/>.
     /// </summary>
-    private static void Write(Group group, float share, int step, bool force)
+    private void Write(Group group, float share, int step, bool force)
     {
         float level = group.Indoors ? 1f : share;
-        bool on = level > 0f;
-        if (!on && !group.On && !force)
+        float lightLevel = Level(propLights, level);
+        bool lightsOn = lightLevel > 0f;
+        if (lightsOn || group.On || force)
+        {
+            group.On = lightsOn;
+            bool flickers = flicker != LightingOverride.Off;
+            for (int i = 0; i < group.Lights.Length; i++)
+            {
+                Light2D light = group.Lights[i];
+                if (light == null)
+                {
+                    continue;
+                }
+
+                light.enabled = lightsOn;
+                if (lightsOn)
+                {
+                    light.intensity = StrengthAt(group.Full[i], flickers ? group.Flicker[i] : 0f, lightLevel, step, group.Seeds[i]);
+                }
+            }
+        }
+
+        float glowLevel = Level(groundGlow, level);
+        bool glowOn = glowLevel > 0f;
+        if (group.Ground == null || (!glowOn && !group.GlowOn && !force))
         {
             return;
         }
 
-        group.On = on;
-        for (int i = 0; i < group.Lights.Length; i++)
-        {
-            Light2D light = group.Lights[i];
-            if (light == null)
-            {
-                continue;
-            }
-
-            light.enabled = on;
-            if (on)
-            {
-                light.intensity = StrengthAt(group.Full[i], group.Flicker[i], level, step, group.Seeds[i]);
-            }
-        }
-
-        if (group.Ground == null)
-        {
-            return;
-        }
-
+        group.GlowOn = glowOn;
         Light2D glow = group.Ground.GlowLight;
         if (glow != null)
         {
-            glow.enabled = on;
-            glow.intensity = group.Ground.GlowStrength * level;
+            glow.enabled = glowOn;
+            glow.intensity = group.Ground.GlowStrength * glowLevel;
         }
+    }
+
+    /// <summary>
+    /// The level a light burns at under <paramref name="mode"/>: <paramref name="level"/> following the time of day,
+    /// full forced on, none forced off.
+    /// </summary>
+    private static float Level(LightingOverride mode, float level)
+    {
+        return mode switch
+        {
+            LightingOverride.On => 1f,
+            LightingOverride.Off => 0f,
+            _ => level
+        };
+    }
+
+    /// <summary>
+    /// Sets <paramref name="field"/> to <paramref name="value"/>, writing every light at the next update when it changed.
+    /// </summary>
+    private void Force(ref LightingOverride field, LightingOverride value)
+    {
+        forced |= field != value;
+        field = value;
     }
 
     /// <summary>
@@ -210,7 +281,7 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
 
     /// <summary>
     /// One chunk's lights: the list it was added with, each light with its full strength, flicker and seed, its
-    /// ground, whether it lies indoors and whether its lights were last left on.
+    /// ground, whether it lies indoors and whether its lights and its ground's glow were last left on.
     /// </summary>
     private sealed class Group
     {
@@ -239,6 +310,7 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
             }
 
             On = true;
+            GlowOn = true;
         }
 
         public IReadOnlyList<PropLight> Source { get; }
@@ -249,5 +321,6 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
         public float[] Flicker { get; }
         public int[] Seeds { get; }
         public bool On { get; set; }
+        public bool GlowOn { get; set; }
     }
 }

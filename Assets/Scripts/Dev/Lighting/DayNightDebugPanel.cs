@@ -44,7 +44,7 @@ public class DayNightDebugPanel : MonoBehaviour
             return false;
         }
 
-        clock.LocalOffset = phase - clock.SessionPhase;
+        clock.ShowPhase(phase);
         return true;
     }
 
@@ -85,7 +85,7 @@ public class DayNightDebugPanel : MonoBehaviour
 
         if (GUILayout.Button("Follow the session"))
         {
-            clock.LocalOffset = 0f;
+            clock.FollowSession();
         }
 
         GUILayout.EndArea();

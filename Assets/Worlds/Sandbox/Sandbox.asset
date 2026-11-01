@@ -35,3 +35,15 @@ MonoBehaviour:
   - name: fromTestlands
     position: {x: 5.5, y: 42}
     waystone: 0
+  - name: campsite
+    position: {x: 23.5, y: 30.5}
+    waystone: 0
+  - name: lava
+    position: {x: 99.5, y: 19.5}
+    waystone: 0
+  - name: plateau
+    position: {x: 108, y: 50}
+    waystone: 0
+  - name: spells
+    position: {x: 91, y: 88}
+    waystone: 0

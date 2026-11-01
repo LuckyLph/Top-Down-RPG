@@ -230,7 +230,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - EditMode: the day clock's arithmetic, the settings' colours and sun at set times, the save's and the join's time; a pooled effect's light; the night lights' share and the presenter burning and flickering a chunk's lights; the glow map; the light props' glow and light as baked and written. Render tests through the pipeline, as the terrain's: today's pixels under the global light alone; a point light changing only at whole art pixels; the shadows at set suns.
 - PlayMode: a session's time of day running and resuming from a save; spell lights in a real cast.
 - `ShaderCompile` after every shader change.
-- Manual: Multiplayer Play Mode checks per phase.
+- Manual: Multiplayer Play Mode checks per phase. The Sandbox's lighting showcase (lamp posts along its road, a campsite, a lava pool with a campfire, trees round its plateau, open ground for spells, and lights in its interior) and the F8 lighting panel, which jumps and steps the time of day, holds it, runs it faster, forces each part of the lighting on or off and teleports to the showcase's spots, show Phases 1 to 5 in one walk (Architecture.md's Dev tools and the Sandbox's row in Scenes).
 
 ## Later
 

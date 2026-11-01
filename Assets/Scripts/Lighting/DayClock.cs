@@ -6,8 +6,8 @@ using UnityEngine;
 /// with the game as the world clock is and a loaded save resumes it. Where game state is decided (offline, the host)
 /// the world clock is the session's own (<see cref="SessionSave.Time"/>); a client takes the host's from the moment it
 /// last heard it (<see cref="Anchor"/>, sent by <see cref="DayClockSync"/>) and counts on from there on the network
-/// time, so every machine of a session sees the same sky; before it first hears it, its own. A local offset moves this
-/// machine's time of day alone (the dev panel). Cosmetic: nothing in the game's rules reads it.
+/// time, so every machine of a session sees the same sky; before it first hears it, its own. A local offset and a local
+/// rate move this machine's time of day alone (the dev panels). Cosmetic: nothing in the game's rules reads it.
 /// </summary>
 public sealed class DayClock
 {
@@ -18,6 +18,8 @@ public sealed class DayClock
     private double anchorWorldTime;
     private double anchorServerTime;
     private float localOffset;
+    private float localRate = 1f;
+    private double rateAnchorWorldTime;
 
     /// <summary>
     /// Creates the clock of <paramref name="daySettings"/> over <paramref name="sessionSave"/>'s world clock, a
@@ -61,13 +63,31 @@ public sealed class DayClock
     public float SessionPhase => settings.PhaseAt(WorldTime);
 
     /// <summary>
-    /// This machine's time of day, the local offset included, in [0, 1): 0 at sunrise, the day's share at sunset.
+    /// How fast this machine's time of day runs against the session's world clock: 1 to run with it, 0 to hold it, more
+    /// to run ahead of it. Changing it keeps the time of day shown where it is; the time is worked out when read, so
+    /// nothing runs per frame.
+    /// </summary>
+    internal float LocalRate
+    {
+        get => localRate;
+        set
+        {
+            float phase = Phase;
+            localRate = Mathf.Max(0f, value);
+            rateAnchorWorldTime = WorldTime;
+            ShowPhase(phase);
+        }
+    }
+
+    /// <summary>
+    /// This machine's time of day, the local offset and rate included, in [0, 1): 0 at sunrise, the day's share at
+    /// sunset.
     /// </summary>
     public float Phase
     {
         get
         {
-            float phase = SessionPhase + localOffset;
+            float phase = SessionPhase + localOffset + RateDrift();
             phase -= Mathf.Floor(phase);
             return phase >= 1f ? 0f : phase;
         }
@@ -75,6 +95,24 @@ public sealed class DayClock
 
     public DayLight Light => settings.LightAt(Phase);
     public SunState Sun => settings.SunAt(Phase);
+
+    /// <summary>
+    /// Moves this machine's time of day to <paramref name="phase"/> of the cycle, running on from there at the local
+    /// rate.
+    /// </summary>
+    internal void ShowPhase(float phase)
+    {
+        LocalOffset = phase - SessionPhase - RateDrift();
+    }
+
+    /// <summary>
+    /// This machine's time of day follows the session's again: no offset, at the session's rate.
+    /// </summary>
+    internal void FollowSession()
+    {
+        localRate = 1f;
+        localOffset = 0f;
+    }
 
     /// <summary>
     /// A client: follows the host's world clock, <paramref name="worldTime"/> at network time
@@ -85,5 +123,20 @@ public sealed class DayClock
         anchorWorldTime = worldTime;
         anchorServerTime = serverTime;
         IsAnchored = true;
+    }
+
+    /// <summary>
+    /// How far the local rate has moved this machine's time of day from the session's since it was set, as a share of
+    /// the cycle in [0, 1).
+    /// </summary>
+    private float RateDrift()
+    {
+        if (localRate == 1f)
+        {
+            return 0f;
+        }
+
+        double cycles = (localRate - 1d) * (WorldTime - rateAnchorWorldTime) / settings.CycleSeconds;
+        return (float)(cycles - System.Math.Floor(cycles));
     }
 }

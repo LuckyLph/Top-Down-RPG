@@ -39,7 +39,8 @@ half3 PixelLit(half3 colour, float2 worldPosition)
 }
 
 // The flicker of glowing pixels (Docs/Lighting.md, Phase 5), which PropLighting sets: x the step it is at, y the share
-// of flickering pixels shown in their flicker colour at a step. Zero, as it is in the editor, shows none.
+// of flickering pixels shown in their flicker colour at a step, z 1 to draw no pixel glowing (the lighting dev panel).
+// Zero, as it is in the editor, shows no flicker and every glow.
 float4 _GlowFlicker;
 
 // A sprite pixel's colour before it is lit, from its glow (_GlowTex: alpha how much it glows, colour the one it flickers

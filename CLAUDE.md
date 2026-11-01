@@ -98,6 +98,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 ## Working conventions
 
 - Ask which branch to work on (`main` or a feature branch) before committing. Use conventional-commit style messages (`feat(ai): ...`, `fix(ai): ...`, `tune(ai): ...`).
+- The game is pre-alpha (Player Settings version `0.1.0-prealpha`). Never change the build version unless the user asks for it, even when the network protocol or a world in the build changes, and keep it a pre-alpha number when they do. Real multiplayer tests with another client wait for the first playable vertical slice; until then design for multiplayer as the docs say, and leave the Multiplayer Play Mode checks to the user.
 - Match surrounding code style: 4-space indent, Allman braces, `private` fields in camelCase without underscore prefix, PascalCase types/members.
 - Avoid code comments. The only comments allowed are class and method descriptors (XML doc summaries). Design rationale, tuning notes, explanations of behaviour, and anything else belongs in a doc file under `Docs/`, not inline in code. Do not leave commented-out code or TODO notes in source.
 - Prefer editing existing files over creating new ones; do not add speculative abstractions.

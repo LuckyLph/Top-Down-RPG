@@ -12,12 +12,15 @@ using VContainer;
 /// lighting the world with the night sky and burning the night's lights, which the loaded chunks hand over as they load
 /// (Phase 5); a client joining a host takes the host's time of day from its message; and in the Sandbox's lighting
 /// showcase the lighting dev panel teleports the player to a spot, holds the time of day and forces the lights, the
-/// lava's glow, the flicker, the glowing pixels, the lights' shadows and the sun's shadows.
+/// lava's glow, the flicker, the glowing pixels, the lights' shadows and the sun's shadows; and in the Overworld the
+/// regions tint the sky as the player goes from one to another, under drifting clouds (Phase 8).
 /// </summary>
 public class DayNightPlayModeTests
 {
     private const float Step = 1f / 512f;
     private const string SandboxRootPath = "Assets/Worlds/Sandbox/World_Sandbox.unity";
+    private const string OverworldRootPath = "Assets/Worlds/Overworld/World_Overworld.unity";
+    private const string SnowfieldSkyPath = "Assets/Data/Lighting/Skies/Sky_Snowfield.asset";
     private const string LavaChunkName = "World_Sandbox_1_0";
     private const string WallsName = "CollisionTilemap";
 
@@ -180,6 +183,47 @@ public class DayNightPlayModeTests
     }
 
     /// <summary>
+    /// In the Overworld (Phase 8), at the Snowfield's waystone the loaded chunks have handed their region skies over and
+    /// the world on screen takes the afternoon's sky and sun in the Snowfield's tint, the clouds forced on drifting over
+    /// the ground; back at the Clearing's waystone it takes the day's own light.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator TheOverworldsRegions_TintTheSky_AsThePlayerGoesFromOneToAnother()
+    {
+        yield return SceneBootTestHelper.BootIntoWorld(OverworldRootPath);
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.gameObject.SetActive(false);
+        }
+
+        panel = new GameObject("TestLightingPanel");
+        LightingDebugControls controls = panel.AddComponent<LightingDebugPanel>().Controls();
+        DayNightPresenter presenter = controls.Presenter;
+        RegionSkies skies = SceneBootTestHelper.ResolveFromGameplay<RegionSkies>();
+        Assert.That(skies.Count, Is.GreaterThan(0), "The loaded chunks hand their skies over.");
+        controls.ShowKey(4);
+        controls.ToggleHold();
+        controls.CycleClouds();
+        Assert.That(controls.Teleport(EntryIndex("snowfield") + 1), Is.EqualTo("snowfield"));
+        RegionSky snowfield = UnityEditor.AssetDatabase.LoadAssetAtPath<RegionSky>(SnowfieldSkyPath);
+        yield return SceneBootTestHelper.WaitUntil(() => Near(presenter.Sky.Tint, snowfield.Tint, 0.01f), "the Snowfield's chunks to load and tint the sky");
+        yield return null;
+        Color total = controls.Clock.Light.Total;
+        Color tint = presenter.Sky.Tint;
+        AssertColour(ShownSky().color, new Color(total.r * tint.r, total.g * tint.g, total.b * tint.b, 1f), Step, "The sky and the sun in the Snowfield's tint.");
+        Assert.That(presenter.Casting, Is.True, "In the afternoon the sun casts.");
+        Assert.That(presenter.CloudCover, Is.GreaterThan(0f), "The clouds forced on cover some ground.");
+        Assert.That(Shader.GetGlobalVector("_SunClouds").w, Is.EqualTo(controls.Clock.Settings.CloudShade), "The clouds go to the shaders.");
+
+        Assert.That(controls.Teleport(EntryIndex("clearing") - EntryIndex("snowfield")), Is.EqualTo("clearing"));
+        yield return null;
+        yield return null;
+        Assert.That(presenter.Sky.Tint, Is.EqualTo(Color.white), "The Clearing keeps the day's own sky.");
+        AssertColour(ShownSky().color, controls.Clock.Light.Total, Step, "The day's own light.");
+        controls.FollowSession();
+    }
+
+    /// <summary>
     /// A client joining a host hears the host's world clock as it joins and from then shows the host's time of day.
     /// </summary>
     [UnityTest]
@@ -213,6 +257,33 @@ public class DayNightPlayModeTests
         float apart = Mathf.Abs(clientClock.Phase - hostClock.Phase);
         Assert.That(Mathf.Min(apart, 1f - apart), Is.LessThan(1e-3f), "Both show the same time of day.");
         clientManager.CustomMessagingManager.UnregisterNamedMessageHandler(DayClockSync.MessageName);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> lies within <paramref name="tolerance"/> of <paramref name="b"/> in every colour
+    /// channel.
+    /// </summary>
+    private static bool Near(Color a, Color b, float tolerance)
+    {
+        return Mathf.Abs(a.r - b.r) <= tolerance && Mathf.Abs(a.g - b.g) <= tolerance && Mathf.Abs(a.b - b.b) <= tolerance;
+    }
+
+    /// <summary>
+    /// The index of the entry named <paramref name="name"/> in the world the local player is in.
+    /// </summary>
+    private static int EntryIndex(string name)
+    {
+        WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
+        for (int i = 0; i < world.Entries.Count; i++)
+        {
+            if (world.Entries[i].Name == name)
+            {
+                return i;
+            }
+        }
+
+        Assert.Fail($"{world.name} has no entry {name}.");
+        return -1;
     }
 
     /// <summary>

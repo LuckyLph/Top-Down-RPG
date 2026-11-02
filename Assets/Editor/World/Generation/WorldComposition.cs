@@ -174,7 +174,8 @@ public sealed class WorldComposition
     /// <summary>
     /// A chunk of the world: its coordinates, whether the world has its scene, the materials it lists (its own cells'
     /// and its neighbours' border strips', <see cref="WorldChunk.SkirtCells"/> wide, in the style's order), the
-    /// materials of its own cells, whether it may be wide (its record), and a hash of its content.
+    /// materials of its own cells, whether it may be wide (its record), the region skies reaching it with their weights
+    /// (<see cref="ChunkSky"/>), and a hash of its content.
     /// </summary>
     public sealed class Chunk
     {
@@ -194,6 +195,16 @@ public sealed class WorldComposition
         public List<TerrainMaterial> Materials { get; } = new();
         public uint ListMask { get; internal set; }
         public uint OwnMask { get; internal set; }
+
+        /// <summary>
+        /// The skies of the regions in or near the chunk, in the order the regions were placed.
+        /// </summary>
+        public List<RegionSky> Skies { get; } = new();
+
+        /// <summary>
+        /// Each of <see cref="Skies"/>' weights at the chunk's samples, as <see cref="ChunkSky"/> holds them.
+        /// </summary>
+        public byte[] SkyWeights { get; internal set; } = System.Array.Empty<byte>();
 
         /// <summary>
         /// A hash of what the chunk holds: each material's cells, its raised ground and its mobs

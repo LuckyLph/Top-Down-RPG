@@ -2551,12 +2551,14 @@ internal sealed class WorldComposer
 
     /// <summary>
     /// Lists each chunk's materials, in row order of the chunks: its own cells' and those of its neighbours' border
-    /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order, and hashes its content
+    /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order; the region skies reaching it with their
+    /// weights (<see cref="RegionSkyField"/>, Docs/Lighting.md, Phase 8); and hashes its content
     /// (<see cref="ChunkContent"/>).
     /// </summary>
     private void ListChunks()
     {
         Vector2Int size = composition.SizeInChunks;
+        RegionSkyField skies = new(composition, settings.SkyBlend);
         for (int cy = 0; cy < size.y; cy++)
         {
             for (int cx = 0; cx < size.x; cx++)
@@ -2576,6 +2578,7 @@ internal sealed class WorldComposer
                     }
                 }
 
+                skies.Plan(chunk);
                 composition.Chunks.Add(chunk);
                 chunk.ContentHash = ChunkContent.Of(composition, coords).Hash();
             }

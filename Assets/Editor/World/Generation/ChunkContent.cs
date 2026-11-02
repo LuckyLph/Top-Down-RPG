@@ -6,8 +6,9 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// What a chunk holds in the terms of its written hash (Docs/WorldGeneration.md: Architecture: Writing): a bit per
 /// ground material of the terrain style's layer order for each of its cells, its raised ground, the spawn points under
-/// its generated root (prefab, cell and id, in order) and the props under its generated props' root (prefab and
-/// position to the pixel, in order). It is read either from a composition (what the writer writes there) or from a
+/// its generated root (prefab, cell and id, in order), the props under its generated props' root (prefab and
+/// position to the pixel, in order) and the region skies its grid's <see cref="ChunkSky"/> holds (Docs/Lighting.md,
+/// Phase 8). It is read either from a composition (what the writer writes there) or from a
 /// chunk's grid (what its scene holds now), and both give the same <see cref="Hash"/> for a chunk just written. Empty
 /// layers, the walls and every object outside the generated roots count for nothing, so the layers a chunk's
 /// <see cref="AreaTerrain"/> keeps, a layer sync adds or a prop placed by hand under the scene's own Props root change
@@ -64,6 +65,8 @@ internal sealed class ChunkContent
     private readonly byte[] raised = new byte[ChunkCoords.Size * ChunkCoords.Size];
     private readonly List<SpawnPoint> spawnPoints = new();
     private readonly List<PropPlace> props = new();
+    private readonly List<string> skies = new();
+    private byte[] skyWeights = System.Array.Empty<byte>();
     private readonly List<string> unlisted = new();
 
     /// <summary>
@@ -106,6 +109,12 @@ internal sealed class ChunkContent
             {
                 content.props.Add(new PropPlace(prop.Prefab != null ? prop.Prefab.name : string.Empty, Pixels(RootOf(prop))));
             }
+        }
+
+        WorldComposition.Chunk chunk = composition.ChunkAt(coords);
+        if (chunk != null)
+        {
+            content.ReadSkies(chunk.Skies, chunk.SkyWeights);
         }
 
         return content;
@@ -182,6 +191,11 @@ internal sealed class ChunkContent
             }
         }
 
+        if (grid.TryGetComponent(out ChunkSky sky))
+        {
+            content.ReadSkies(sky.Skies, sky.Weights);
+        }
+
         return content;
     }
 
@@ -189,7 +203,9 @@ internal sealed class ChunkContent
     /// A 64-bit FNV-1a hash, in hex: for each material of the layer order with cells in the chunk, its name and the
     /// local index of each such cell in row order; then each raised cell's index and kind; then each spawn point's
     /// prefab name, cell and id; then, when it has any, each prop's prefab name and place in pixels, so a chunk without
-    /// props hashes as it did before props were written; then the names of painted materials the order does not list.
+    /// props hashes as it did before props were written; then, when it has any, each region sky's name and its weights
+    /// (Docs/Lighting.md, Phase 8), so a chunk without skies hashes as it did before skies were written; then the names
+    /// of painted materials the order does not list.
     /// </summary>
     public string Hash()
     {
@@ -242,6 +258,20 @@ internal sealed class ChunkContent
             }
         }
 
+        if (skies.Count > 0)
+        {
+            hash = Mix(hash, "skies");
+            foreach (string sky in skies)
+            {
+                hash = Mix(hash, sky);
+            }
+
+            foreach (byte weight in skyWeights)
+            {
+                hash = (hash ^ weight) * Prime;
+            }
+        }
+
         foreach (string material in unlisted)
         {
             hash = Mix(Mix(hash, "unlisted"), material);
@@ -284,6 +314,23 @@ internal sealed class ChunkContent
             }
 
             masks[cell] |= 1u << index;
+        }
+    }
+
+    /// <summary>
+    /// Records the names of <paramref name="regionSkies"/> and a copy of their <paramref name="weights"/>.
+    /// </summary>
+    private void ReadSkies(IReadOnlyList<RegionSky> regionSkies, IReadOnlyList<byte> weights)
+    {
+        foreach (RegionSky sky in regionSkies)
+        {
+            skies.Add(sky != null ? sky.name : string.Empty);
+        }
+
+        skyWeights = new byte[weights.Count];
+        for (int i = 0; i < weights.Count; i++)
+        {
+            skyWeights[i] = weights[i];
         }
     }
 

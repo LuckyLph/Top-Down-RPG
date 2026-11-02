@@ -17,8 +17,9 @@ using Object = UnityEngine.Object;
 /// composition's cells, and a layer neither listed nor kept is removed; its raised tilemap is written, or removed when
 /// it has no raised ground; the base ground layers it lays are appended to its <see cref="AreaTerrain"/>, which is never
 /// removed from or reordered; the spawn points under its grid's <see cref="GeneratedMobSpawnsName"/> become its mobs,
-/// each with its prefab and its derived <see cref="PersistentId"/>; and the prop instances under its grid's
-/// <see cref="GeneratedPropsName"/> become its props. <see cref="Write"/> writes chunks of a world
+/// each with its prefab and its derived <see cref="PersistentId"/>; the prop instances under its grid's
+/// <see cref="GeneratedPropsName"/> become its props; and its grid's <see cref="ChunkSky"/> holds the region skies
+/// reaching it, or goes when none does (Docs/Lighting.md, Phase 8). <see cref="Write"/> writes chunks of a world
 /// one at a time: it creates the missing ones first, leaves the locked ones alone and skips those whose composed hash
 /// equals their record without opening them, refuses, unless forced, a chunk whose scene no longer hashes to its record
 /// (<see cref="ContentHash"/>), and opens, writes, saves and closes the others, recording their hashes; then it sets the
@@ -221,6 +222,7 @@ public static class WorldGenerationWriter
             WriteRaised(grid, raisedCells, raisedTiles, changes);
             WriteMobSpawns(grid, composition, coords, leaveOut);
             WriteProps(grid, composition, coords);
+            WriteSky(grid, composition.ChunkAt(coords));
         }
         finally
         {
@@ -969,6 +971,32 @@ public static class WorldGenerationWriter
             id.FindProperty("id").stringValue = mob.Id;
             id.ApplyModifiedPropertiesWithoutUndo();
         }
+    }
+
+    /// <summary>
+    /// Gives <paramref name="grid"/> a <see cref="ChunkSky"/> holding the region skies reaching <paramref name="chunk"/>
+    /// and their weights, made when missing, or destroys it when no sky reaches the chunk.
+    /// </summary>
+    private static void WriteSky(Grid grid, WorldComposition.Chunk chunk)
+    {
+        bool has = grid.TryGetComponent(out ChunkSky sky);
+        if (chunk == null || chunk.Skies.Count == 0)
+        {
+            if (has)
+            {
+                Object.DestroyImmediate(sky);
+            }
+
+            return;
+        }
+
+        if (!has)
+        {
+            sky = grid.gameObject.AddComponent<ChunkSky>();
+        }
+
+        sky.Configure(chunk.Skies.ToArray(), (byte[])chunk.SkyWeights.Clone());
+        EditorUtility.SetDirty(sky);
     }
 
     /// <summary>

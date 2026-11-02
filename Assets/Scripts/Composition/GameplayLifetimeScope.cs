@@ -6,7 +6,8 @@ using VContainer.Unity;
 /// The composition root of the Gameplay scene, a child of the Main scope and parent of each world's scope:
 /// registers the players, combat (projectiles included), abilities, statuses, hit feedback and pooled effects, HUD,
 /// menus, pointer feedback, the props fading over the local player, the world streaming, the trips between worlds,
-/// waystones and respawns, the day and night, and the saving of world sessions for the session.
+/// waystones and respawns, the day and night with the region skies of the loaded chunks, and the saving of world
+/// sessions for the session.
 /// </summary>
 public class GameplayLifetimeScope : LifetimeScope
 {
@@ -142,6 +143,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         builder.Register<SharedTerrainArrays>(Lifetime.Singleton);
+        builder.Register<RegionSkies>(Lifetime.Singleton);
         if (worldStreamingSettings == null)
         {
             Debug.LogError($"{name} has no {nameof(WorldStreamingSettings)}; no world session can start.", this);

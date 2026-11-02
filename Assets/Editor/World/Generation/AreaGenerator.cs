@@ -130,10 +130,23 @@ public abstract class AreaGenerator : ScriptableObject
     [Tooltip("The tile of a ramp the writer puts on the area's raised tilemap.")]
     [SerializeField] private RaisedGroundTile rampTile;
 
+    [Header("Sky")]
+    [Tooltip("The sky of the region a world places this generator's layout as (Docs/Lighting.md, Phase 8): its tint and cloud cover; none for the day's own.")]
+    [SerializeField] private RegionSky sky;
+
     public int Seed => seed;
     public TerrainStyle TerrainStyle => terrainStyle;
+    public RegionSky Sky => sky;
     public RaisedGroundTile RaisedTile => raisedTile;
     public RaisedGroundTile RampTile => rampTile;
+
+    /// <summary>
+    /// Sets the region sky, for tests.
+    /// </summary>
+    internal void SetSky(RegionSky regionSky)
+    {
+        sky = regionSky;
+    }
 
     /// <summary>
     /// The terrain layers this generator paints, bottom first: only the ones its areas use, at most

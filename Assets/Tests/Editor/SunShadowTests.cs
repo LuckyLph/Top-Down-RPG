@@ -15,8 +15,9 @@ using UnityEngine.Tilemaps;
 /// tip, or it is told to. Rendered through <see cref="TerrainBlendProbe.Render"/> with the shipped day's sun: a tree
 /// and a unit cast their shadows away from the sun at dawn, noon and dusk and never darken themselves, and a unit
 /// standing in the tree's shadow darkens whole; the shadows stay on the world's art pixels as the camera moves by a
-/// fraction of one; and raised ground casts its cliffs' shadow away from the sun, and none on itself. Renders from
-/// later editor updates, until something is drawn.
+/// fraction of one; raised ground casts its cliffs' shadow away from the sun, and none on itself; and clouds drawn into
+/// the mask (Docs/Lighting.md, Phase 8) shade the sunlit ground under them, never a shadow, and a unit under one whole.
+/// Renders from later editor updates, until something is drawn.
 /// </summary>
 public class SunShadowTests
 {
@@ -41,6 +42,7 @@ public class SunShadowTests
     public void TearDown()
     {
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
+        SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
         foreach (Object made in created)
         {
             if (made != null)
@@ -279,6 +281,116 @@ public class SunShadowTests
         Assert.That(IsDarker(cast, open, world, new Vector2(8f, 6f + reach * 0.5f)), Is.True, "The ground below the face at noon.");
         Assert.That(Same(cast, open, world, new Vector2(8f, 6f + reach * 1.5f)), Is.True, "The ground past the noon shadow.");
         Assert.That(Same(cast, open, world, new Vector2(8f, 7f)), Is.True, "The cliff face.");
+    }
+
+    /// <summary>
+    /// At noon, with clouds of 6 units covering 40 % drawn into the mask (Docs/Lighting.md, Phase 8): the sunlit ground
+    /// darkens at every art pixel deep under a cloud, by the share of the sun a cloud takes, and stays as it was at every
+    /// art pixel clear of one; the tree's shadow is no darker under a cloud; a unit whose feet stand under a cloud darkens
+    /// whole; and clouds that cover nothing change no pixel. Each render is compared with the same sun without clouds.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator Clouds_ShadeTheSunlitGround_NeverAShadow_AndAUnitUnderOneWhole()
+    {
+        DayNightSettings day = AssetDatabase.LoadAssetAtPath<DayNightSettings>(DayNightPath);
+        DayNightSettings cloudSettings = Track(DayNightSettings.Create(100f, 25f, 0f, new DayLightKey[0])).WithClouds(6f, 0.4f, 100f, 0.75f, 0.002f, Vector2.zero);
+        SunClouds clouds = new(cloudSettings);
+        Vector2 drift = new(17.3f, 5.1f);
+        float level = clouds.LevelFor(0.4f);
+        TerrainBlendRenderer terrain = AddTerrain(20, 12, null);
+        Vector2 treeFeet = new(5f, 6f);
+        AddCaster(SolidTexture(16, 96, new Color32(200, 120, 60, 255)), treeFeet, PropsLayer);
+        Vector2 unitFeet = Vector2.zero;
+        for (float y = 2f; y < 10f && unitFeet == Vector2.zero; y += 0.25f)
+        {
+            for (float x = 11f; x < 18f; x += 0.25f)
+            {
+                if (clouds.FieldAt(new Vector2(x, y + 2.5f / ArtPixelsPerUnit), drift) > level + 0.05f)
+                {
+                    unitFeet = new Vector2(x, y);
+                    break;
+                }
+            }
+        }
+
+        Assert.That(unitFeet, Is.Not.EqualTo(Vector2.zero), "A place for the unit under a cloud.");
+        AddCaster(SolidTexture(12, 32, new Color32(180, 60, 60, 255)), unitFeet, UnitsLayer);
+        sky = AddGlobalLight();
+        Rect world = new(0f, 0f, 20f, 12f);
+        Color32[] cloudy = null;
+        Color32[] sunny = null;
+        Color32[] unshadowed = null;
+        Color32[] covering = null;
+        SunShadowGlobals.SetClouds(drift, level, 0.75f, 6f, 0.002f);
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => cloudy = pixels);
+        SunShadowGlobals.SetClouds(drift, clouds.LevelFor(0f), 0.75f, 6f, 0.002f);
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => covering = pixels);
+        SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => sunny = pixels);
+        yield return RenderUnderSun(terrain, world, day, Noon, false, pixels => unshadowed = pixels);
+
+        int shaded = 0;
+        int clear = 0;
+        int inShadow = 0;
+        for (int j = 1 * ArtPixelsPerUnit; j < 11 * ArtPixelsPerUnit; j++)
+        {
+            for (int i = 1 * ArtPixelsPerUnit; i < 10 * ArtPixelsPerUnit; i++)
+            {
+                Vector2 point = new((i + 0.5f) / ArtPixelsPerUnit, (j + 0.5f) / ArtPixelsPerUnit);
+                if (Mathf.Abs(point.x - treeFeet.x) < 0.5f && point.y > treeFeet.y - 0.25f)
+                {
+                    continue;
+                }
+
+                float field = clouds.FieldAt(point, drift);
+                bool sunlit = Same(sunny, unshadowed, world, point);
+                if (!sunlit)
+                {
+                    Expect(Same(cloudy, sunny, world, point), $"the tree's shadow at {point} is no darker under a cloud");
+                    inShadow++;
+                }
+                else if (field > level + 0.01f)
+                {
+                    Expect(IsDarker(cloudy, sunny, world, point), $"the ground under a cloud at {point}");
+                    shaded++;
+                }
+                else if (field < level - 0.01f)
+                {
+                    Expect(Same(cloudy, sunny, world, point), $"the ground clear of the clouds at {point}");
+                    clear++;
+                }
+            }
+        }
+
+        Assert.That(shaded, Is.GreaterThan(500), "Ground under the clouds.");
+        Assert.That(clear, Is.GreaterThan(500), "Ground clear of them.");
+        Assert.That(inShadow, Is.GreaterThan(100), "The tree's shadow.");
+
+        int darker = 0;
+        int pixelsOfUnit = 0;
+        for (int y = 1; y < 31; y++)
+        {
+            for (int x = -5; x < 5; x++)
+            {
+                Vector2 point = unitFeet + new Vector2((x + 0.5f) / ArtPixelsPerUnit, (y + 0.5f) / ArtPixelsPerUnit);
+                pixelsOfUnit++;
+                darker += IsDarker(cloudy, sunny, world, point) ? 1 : 0;
+            }
+        }
+
+        Assert.That(darker, Is.EqualTo(pixelsOfUnit), "A unit under a cloud darkens whole.");
+        Assert.That(covering, Is.EqualTo(sunny), "Clouds covering nothing change no pixel.");
+    }
+
+    /// <summary>
+    /// Fails with <paramref name="message"/> unless <paramref name="condition"/>, building the message only then.
+    /// </summary>
+    private static void Expect(bool condition, System.FormattableString message)
+    {
+        if (!condition)
+        {
+            Assert.Fail(message.ToString());
+        }
     }
 
     /// <summary>

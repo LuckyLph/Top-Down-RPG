@@ -57594,6 +57594,7 @@ GameObject:
   - component: {fileID: 999502350}
   - component: {fileID: 999502349}
   - component: {fileID: 999502348}
+  - component: {fileID: 999502354}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -57744,6 +57745,21 @@ Transform:
   - {fileID: 1031957524}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &999502354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 999502347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cd84bac62751fd4d823034fad394d45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ChunkSky
+  skies:
+  - {fileID: 11400000, guid: e79f796d909c9b54ab1fcbf9c1a8b3f6, type: 2}
+  weights: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020d1a1a1a1a180d0d0d0b0300000000072f546b6b6b6b5e5454544c39200200002f6b94b3c0c0c0abababab94805e2402006ba1dbf4fbfbfaf2f2f2f2e5d0945e180080d0fdfffffffffffffffffff8c6802b00abecffffffffffffffffffffffd4802f02c6faffffffffffffffffffffffdf943f04e5ffffffffffffffffffffffffe5943f04ecffffffffffffffffffffffffe5943f04d0f0fdffffffffffffffffffffd8943f0480abd0e5f2fcfffffffffffdecb3802b014c6b8094abc6dfe7f2f2e5d0b3804c0f00
 --- !u!1001 &1003692136
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -5,7 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Tests for the lighting dev panel's logic (<see cref="LightingDebugControls"/>, Architecture.md's Dev tools): jumping
 /// to a light key and stepping the time of day, holding it, running it faster and following the session again through
-/// the day clock's local offset and rate; cycling each override of the presenter and the night's lights; teleporting the
+/// the day clock's local offset and rate; cycling each override of the presenter (the sun's shadows and the clouds) and
+/// the night's lights; teleporting the
 /// local player through the entries of its world, round in either direction; the readout naming the time, how it runs
 /// and the lighting; and controls without a clock, a presenter or the night's lights doing nothing.
 /// </summary>
@@ -149,7 +150,7 @@ public class LightingDebugControlsTests
 
     /// <summary>
     /// The sun's shadows, the flicker, the glowing pixels and the lights' shadows cycle between following the day and off;
-    /// the prop lights and the ground's glow between following the day, on and off.
+    /// the clouds, the prop lights and the ground's glow between following the day, on and off.
     /// </summary>
     [Test]
     public void TheOverrides_CycleThroughTheirStates()
@@ -158,6 +159,13 @@ public class LightingDebugControlsTests
         Assert.That(presenter.SunShadowsOverride, Is.EqualTo(LightingOverride.Off));
         controls.CycleSunShadows();
         Assert.That(presenter.SunShadowsOverride, Is.EqualTo(LightingOverride.Follow));
+
+        controls.CycleClouds();
+        Assert.That(presenter.CloudsOverride, Is.EqualTo(LightingOverride.On));
+        controls.CycleClouds();
+        Assert.That(presenter.CloudsOverride, Is.EqualTo(LightingOverride.Off));
+        controls.CycleClouds();
+        Assert.That(presenter.CloudsOverride, Is.EqualTo(LightingOverride.Follow));
 
         controls.CyclePropLights();
         Assert.That(propLighting.PropLightsOverride, Is.EqualTo(LightingOverride.On));
@@ -211,8 +219,8 @@ public class LightingDebugControlsTests
     }
 
     /// <summary>
-    /// The readout names the time of day by its keys, how it runs, the sun, the sky's and the sun's colours, the night
-    /// lights' share, the chunks the night's lights hold and the casters they keep awake, the spot and the frame rate.
+    /// The readout names the time of day by its keys, how it runs, the sun, the sky's and the sun's colours, the region
+    /// skies' tint and the clouds' cover, the night lights' share, the chunks the night's lights hold and the casters they keep awake, the spot and the frame rate.
     /// </summary>
     [Test]
     public void TheReadout_DescribesTheLighting()
@@ -227,6 +235,7 @@ public class LightingDebugControlsTests
         StringAssert.Contains("held", readout);
         StringAssert.Contains("Sun down", readout);
         StringAssert.Contains("Sky 0.50 0.50 0.50", readout);
+        StringAssert.Contains("Region tint 1.00 1.00 1.00   Clouds 0.00 (region x1.00)", readout);
         StringAssert.Contains("Night lights 1.00", readout);
         StringAssert.Contains("PropLighting holds 0 chunks, 0 casters awake", readout);
         StringAssert.Contains("Spot 2/3 campsite", readout);
@@ -250,6 +259,7 @@ public class LightingDebugControlsTests
             empty.NextRate();
             empty.FollowSession();
             empty.CycleSunShadows();
+            empty.CycleClouds();
             empty.CyclePropLights();
             empty.CycleGroundGlow();
             empty.CycleFlicker();

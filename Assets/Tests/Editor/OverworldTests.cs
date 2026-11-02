@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools.Utils;
 
 /// <summary>
 /// Tests on the committed Overworld (Docs/WorldGeneration.md: Testing), its chunk scenes opened together once for the
@@ -12,7 +13,8 @@ using UnityEngine.SceneManagement;
 /// materials; no coast map is stale and the world validates; on the open chunks' joined navigation every waystone,
 /// gate and mob can be walked to from the default entry across chunk borders; and its campsites, village and waystones
 /// are lit (Docs/Lighting.md, Phase 5), and its gates, its stone roads near them and its regions' spots too (Phase 6);
-/// and its lights cast shadows, no view holding more than eight of them (Phase 7).
+/// its lights cast shadows, no view holding more than eight of them (Phase 7); and each region has its own sky, the
+/// wilds the day's (Phase 8).
 /// </summary>
 public class OverworldTests
 {
@@ -139,6 +141,39 @@ public class OverworldTests
         Assert.That(composition.Props.FindAll(prop => prop.Scope == "coast" && prop.Prefab.name.StartsWith("Brazier")).Count, Is.EqualTo(1), "the Coast's beacon");
         Assert.That(composition.Props.FindAll(prop => prop.Scope == "lakeside" && prop.Prefab.name.StartsWith("Torch")).Count, Is.EqualTo(1), "the dock's torch");
         Assert.That(composition.Props.FindAll(prop => prop.Scope == "snowfield" && prop.Prefab.name.StartsWith("Torch")).Count, Is.EqualTo(1), "the trail's torch");
+    }
+
+    /// <summary>
+    /// The Overworld's region skies (Docs/Lighting.md, Phase 8), read from its chunks as the game reads them: at each
+    /// waystone but the Clearing's, its region's sky, its generator's, to within a hundredth (a sky is full only 8 cells
+    /// inside its region's outline, and blends between samples 4 cells apart); at the Clearing's waystone and its gates,
+    /// out in the wilds, the day's own.
+    /// </summary>
+    [Test]
+    public void EachRegion_HasItsOwnSky_AndTheWildsTheDays()
+    {
+        RegionSkies skies = new();
+        foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
+        {
+            skies.Add(world, chunk.Key, chunk.Value.GetComponent<ChunkSky>());
+        }
+
+        foreach (WorldDefinition.Entry entry in world.Entries)
+        {
+            if (!entry.Waystone && !entry.Name.StartsWith("clearing"))
+            {
+                continue;
+            }
+
+            RegionSkyBlend blend = skies.At(world, entry.Position);
+            WorldComposition.Region region = composition.FindRegion(entry.Name);
+            RegionSky sky = region != null && entry.Waystone ? region.Generator.Sky : null;
+            Color tint = sky != null ? sky.Tint : Color.white;
+            Assert.That(new Vector3(blend.Tint.r, blend.Tint.g, blend.Tint.b), Is.EqualTo(new Vector3(tint.r, tint.g, tint.b)).Using(new Vector3EqualityComparer(0.01f)), $"{entry.Name}'s tint");
+            Assert.That(blend.CloudCover, Is.EqualTo(sky != null ? sky.CloudCover : 1f).Within(0.01f), $"{entry.Name}'s cloud cover");
+        }
+
+        Assert.That(composition.FindRegion("clearing").Generator.Sky == null, Is.True, "the Clearing keeps the day's own sky");
     }
 
     /// <summary>

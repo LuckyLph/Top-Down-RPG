@@ -3,6 +3,8 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.TestTools.Constraints;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for the day and night (Docs/Lighting.md, Phase 3): the time of day from the start time and the world clock
@@ -14,9 +16,11 @@ using UnityEngine.Rendering.Universal;
 /// (the dev panels); a loaded save resuming its time of day; an outdoor world's global lights taking the sky while an
 /// indoor one's keep theirs; the presenter lighting the loaded worlds as the day moves and a world as it loads; the
 /// presenter handing the sun to the shaders while it is up over an outdoor world shown (Docs/Lighting.md, Phase 4), and
-/// taking it away at night, indoors, when it stops and while the lighting dev panel keeps the shadows off; and
+/// taking it away at night, indoors, when it stops and while the lighting dev panel keeps the shadows off;
 /// the night lights' share blending between the keys like the light, the shipped day's off by day and full at night
-/// (Phase 5).
+/// (Phase 5); and the clouds (Phase 8) drifting with the world clock, their cover coming and going and their level
+/// leaving that cover under cloud, the presenter drawing them while the sun casts, and tinting the sky and the sun and
+/// scaling the clouds by the region skies at the local player.
 /// </summary>
 public class DayNightTests
 {
@@ -24,6 +28,8 @@ public class DayNightTests
     private static readonly Color Grey85 = new(0.85f, 0.85f, 0.85f, 1f);
     private static readonly int SunColourId = Shader.PropertyToID("_SunColour");
     private static readonly int SunShadowId = Shader.PropertyToID("_SunShadow");
+    private static readonly int CloudsId = Shader.PropertyToID("_SunClouds");
+    private static readonly int CloudShapeId = Shader.PropertyToID("_SunCloudShape");
 
     private readonly List<Object> created = new();
 
@@ -34,6 +40,7 @@ public class DayNightTests
     public void TearDown()
     {
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
+        SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
         foreach (Object made in created)
         {
             if (made != null)
@@ -483,6 +490,241 @@ public class DayNightTests
         {
             presenter.Dispose();
         }
+    }
+
+    /// <summary>
+    /// The clouds drift with the wind by the world clock, a cloud at a point at one time lying the wind's way on at a
+    /// later one, their drift wrapped to the field's tile; their cover comes and goes between none and the most, the
+    /// same at the same world time, each spell's own at its start, clear and cloudy spells both coming in a hundred; and
+    /// the level for a cover leaves that share of the field above it.
+    /// </summary>
+    [Test]
+    public void TheClouds_DriftWithTheWorldClock_AndTheirCoverComesAndGoes()
+    {
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new DayLightKey[0]))
+            .WithClouds(10f, 0.5f, 100f, 0.75f, 0.03f, new Vector2(0.5f, -0.25f));
+        SunClouds clouds = new(settings);
+        Assert.That(clouds.TileUnits, Is.EqualTo(SunClouds.TileCells * 10f));
+        Assert.That(clouds.DriftAt(0d), Is.EqualTo(Vector2.zero));
+        Vector2 drift = clouds.DriftAt(10d);
+        Assert.That(drift.x, Is.EqualTo(clouds.TileUnits - 5f).Within(1e-4f), "Against the wind, wrapped to the tile.");
+        Assert.That(drift.y, Is.EqualTo(2.5f).Within(1e-4f));
+        Vector2 point = new(33.3f, 71.9f);
+        Vector2 wind = settings.Wind;
+        foreach (double seconds in new[] { 10d, 123.4d, 1234.5d })
+        {
+            Vector2 moved = point + wind * (float)seconds;
+            Assert.That(clouds.FieldAt(moved, clouds.DriftAt(seconds)), Is.EqualTo(clouds.FieldAt(point, clouds.DriftAt(0d))).Within(1e-3f), $"A cloud drifts with the wind ({seconds} s).");
+        }
+
+        float least = 1f;
+        float most = 0f;
+        for (int spell = 0; spell < 100; spell++)
+        {
+            float start = clouds.CoverAt(spell * 100d);
+            float middle = clouds.CoverAt(spell * 100d + 50d);
+            Assert.That(start, Is.InRange(0f, 0.5f));
+            Assert.That(middle, Is.InRange(0f, 0.5f));
+            Assert.That(clouds.CoverAt(spell * 100d + 50d), Is.EqualTo(middle), "The same at the same time.");
+            Assert.That(middle, Is.EqualTo((start + clouds.CoverAt(spell * 100d + 100d)) * 0.5f).Within(1e-5f), "Eased half way at the middle of a spell.");
+            least = Mathf.Min(least, start);
+            most = Mathf.Max(most, start);
+        }
+
+        Assert.That(least, Is.LessThan(0.05f), "A clear spell comes.");
+        Assert.That(most, Is.GreaterThan(0.45f), "A cloudy spell comes.");
+
+        List<float> field = new();
+        for (int y = 0; y < 80; y++)
+        {
+            for (int x = 0; x < 80; x++)
+            {
+                field.Add(SunClouds.Field(new Vector2((x + 0.31f) * SunClouds.TileCells / 80f, (y + 0.77f) * SunClouds.TileCells / 80f)));
+            }
+        }
+
+        foreach (float cover in new[] { 0.2f, 0.45f, 0.8f })
+        {
+            float level = clouds.LevelFor(cover);
+            Assert.That(field.FindAll(value => value > level).Count / (float)field.Count, Is.EqualTo(cover).Within(0.03f), $"Cover {cover}.");
+        }
+
+        Assert.That(field.FindAll(value => value > clouds.LevelFor(0f)), Is.Empty, "None.");
+        Assert.That(field.FindAll(value => value <= clouds.LevelFor(1f)), Is.Empty, "All.");
+    }
+
+    /// <summary>
+    /// While the sun casts over the outdoor world shown, the presenter hands the clouds to the shaders: drifted by the
+    /// world clock, at the level of the day's cover then, taking the settings' shade of the sun away, their size and
+    /// edge; as the world clock runs they drift on. At night, indoors, kept off by the lighting dev panel and once
+    /// disposed no cloud is drawn; forced on, they cover the most.
+    /// </summary>
+    [Test]
+    public void ThePresenter_DrawsTheClouds_WhileTheSunCasts_DriftingWithTheWorldClock()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f))
+        })).WithClouds(10f, 0.5f, 7f, 0.75f, 0.03f, new Vector2(0.5f, -0.25f));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out _, out _);
+        WorldLighting indoor = CreateLighting(WorldLightingProfile.Indoor, out _, out _);
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, outdoor));
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, indoor));
+        DayNightPresenter presenter = new(clock, worlds);
+        SunClouds clouds = presenter.Clouds;
+        float start = 1f;
+        while (start < 40f && (clouds.CoverAt(start) < 0.05f || clouds.CoverAt(start + 1f) < 0.05f))
+        {
+            start += 1f;
+        }
+
+        outdoor.SetShown(true);
+        time.Advance(start);
+        presenter.Start();
+        try
+        {
+            ExpectClouds(clouds, clock.WorldTime, clouds.CoverAt(clock.WorldTime), settings);
+            Assert.That(presenter.CloudCover, Is.EqualTo(clouds.CoverAt(clock.WorldTime)));
+            time.Advance(1f);
+            presenter.Tick();
+            ExpectClouds(clouds, clock.WorldTime, clouds.CoverAt(clock.WorldTime), settings);
+            Assert.That(Shader.GetGlobalVector(CloudShapeId), Is.EqualTo(new Vector4(10f, 0.03f, SunClouds.TileCells, 0f)));
+
+            presenter.CloudsOverride = LightingOverride.On;
+            presenter.Tick();
+            ExpectClouds(clouds, clock.WorldTime, 0.5f, settings);
+            presenter.CloudsOverride = LightingOverride.Off;
+            presenter.Tick();
+            Assert.That(Shader.GetGlobalVector(CloudsId).w, Is.EqualTo(0f), "Kept off.");
+            Assert.That(presenter.CloudCover, Is.EqualTo(0f));
+            presenter.CloudsOverride = LightingOverride.Follow;
+
+            outdoor.SetShown(false);
+            indoor.SetShown(true);
+            presenter.Tick();
+            Assert.That(Shader.GetGlobalVector(CloudsId).w, Is.EqualTo(0f), "Indoors.");
+            indoor.SetShown(false);
+            outdoor.SetShown(true);
+            time.Advance(75f - (float)clock.WorldTime);
+            presenter.Tick();
+            Assert.That(clock.Sun.IsUp, Is.False);
+            Assert.That(Shader.GetGlobalVector(CloudsId).w, Is.EqualTo(0f), "At night.");
+            time.Advance(50f);
+            presenter.CloudsOverride = LightingOverride.On;
+            presenter.Tick();
+            Assert.That(clock.Sun.IsUp, Is.True);
+            Assert.That(Shader.GetGlobalVector(CloudsId).w, Is.EqualTo(0.75f), "By day again.");
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
+
+        Assert.That(Shader.GetGlobalVector(CloudsId), Is.EqualTo(Vector4.zero), "Stopping takes the clouds away.");
+    }
+
+    /// <summary>
+    /// With the local player in a chunk whose region sky is full, the presenter writes the world the day's sky and sun
+    /// together in that sky's tint, hands the shaders the sun in it too, and the clouds the day's cover times the sky's,
+    /// allocating nothing as the player walks there under the clouds; in a chunk without skies, the day's own light; and
+    /// without a local player, the day's own.
+    /// </summary>
+    [Test]
+    public void ThePresenter_TintsTheSkyAndTheSun_ByTheRegionSkiesAtTheLocalPlayer()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f))
+        })).WithClouds(10f, 0.5f, 7f, 0.75f, 0.03f, new Vector2(0.5f, -0.25f));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldDefinition world = Track(ScriptableObject.CreateInstance<WorldDefinition>());
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out Light2D sky, out _);
+        worlds.Add(new LoadedWorld(world, default, null, outdoor));
+        Color cold = new(0.9f, 0.96f, 1.1f, 1f);
+        byte[] weights = new byte[ChunkSky.SamplesPerSky];
+        System.Array.Fill(weights, (byte)255);
+        ChunkSky chunk = Track(new GameObject("Grid")).AddComponent<ChunkSky>();
+        chunk.Configure(new[] { Track(RegionSky.Create(cold, 1.3f)) }, weights);
+        RegionSkies skies = new();
+        skies.Add(world, Vector2Int.zero, chunk);
+        GameObject body = Track(new GameObject("Player"));
+        body.transform.position = new Vector3(10f, 10f, 0f);
+        LocalPlayerTracker players = new();
+        players.Assign(new LocalPlayer(body.AddComponent<PlayerController>()));
+        DayNightPresenter presenter = new(clock, worlds, skies, players);
+        outdoor.SetShown(true);
+        presenter.Start();
+        try
+        {
+            Color total = clock.Light.Total;
+            Color sun = clock.Light.Sun;
+            ExpectTint(presenter.Sky.Tint, cold);
+            Assert.That((Vector4)sky.color, Is.EqualTo(new Vector4(total.r * cold.r, total.g * cold.g, total.b * cold.b, 1f)).Using(Vector4EqualityComparer(1e-5f)));
+            Assert.That(Shader.GetGlobalVector(SunColourId), Is.EqualTo(new Vector4(sun.r * cold.r, sun.g * cold.g, sun.b * cold.b, 0f)).Using(Vector4EqualityComparer(1e-5f)));
+            Assert.That(presenter.CloudCover, Is.EqualTo(Mathf.Clamp01(presenter.Clouds.CoverAt(clock.WorldTime) * 1.3f)).Within(1e-5f));
+
+            void Walk()
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    time.Advance(0.1f);
+                    body.transform.position = new Vector3(10f + i * 0.1f, 10f, 0f);
+                    presenter.Tick();
+                }
+            }
+
+            Walk();
+            presenter.CloudsOverride = LightingOverride.On;
+            Assert.That(() => Walk(), Is.Not.AllocatingGCMemory(), "Walking under the clouds in a region's sky allocates nothing.");
+            presenter.CloudsOverride = LightingOverride.Follow;
+
+            body.transform.position = new Vector3(ChunkCoords.Size + 10f, 10f, 0f);
+            presenter.Tick();
+            ExpectTint(presenter.Sky.Tint, Color.white);
+            Assert.That((Vector4)sky.color, Is.EqualTo((Vector4)clock.Light.Total).Using(Vector4EqualityComparer(1e-5f)), "A chunk without skies: the day's own.");
+
+            body.transform.position = new Vector3(10f, 10f, 0f);
+            players.Assign(null);
+            presenter.Tick();
+            ExpectTint(presenter.Sky.Tint, Color.white);
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Asserts the clouds handed to the shaders are those of <paramref name="clouds"/> at <paramref name="worldTime"/>
+    /// covering <paramref name="cover"/> with <paramref name="settings"/>' shade.
+    /// </summary>
+    private static void ExpectClouds(SunClouds clouds, double worldTime, float cover, DayNightSettings settings)
+    {
+        Vector4 set = Shader.GetGlobalVector(CloudsId);
+        Vector2 drift = clouds.DriftAt(worldTime);
+        Assert.That(cover, Is.GreaterThan(0f), "Some cover to draw.");
+        Assert.That(new Vector2(set.x, set.y), Is.EqualTo(drift), "The drift at the world clock.");
+        Assert.That(set.z, Is.EqualTo(clouds.LevelFor(cover)), "The level of the cover.");
+        Assert.That(set.w, Is.EqualTo(settings.CloudShade), "The shade.");
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="tint"/>'s colour channels are <paramref name="expected"/>'s.
+    /// </summary>
+    private static void ExpectTint(Color tint, Color expected)
+    {
+        Assert.That((Vector4)new Color(tint.r, tint.g, tint.b, 1f), Is.EqualTo((Vector4)new Color(expected.r, expected.g, expected.b, 1f)).Using(Vector4EqualityComparer(1e-5f)));
     }
 
     /// <summary>

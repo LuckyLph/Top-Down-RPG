@@ -3,9 +3,10 @@ using UnityEngine;
 /// <summary>
 /// The day and night (Docs/Lighting.md, Phase 3): how long the day and the night last on the world clock, where in the
 /// cycle a new game starts, the sky's and the sun's colours and how strongly the lights that burn at night shine over the
-/// cycle, where the sun's shadows fall, how the night's lights and glowing pixels flicker (Phase 5), and how often the
-/// host sends its world clock to the clients again. The cycle runs from 0 at sunrise, through sunset at the day's share
-/// of it, to the next sunrise at 1. Runtime code only reads it.
+/// cycle, where the sun's shadows fall, how the night's lights and glowing pixels flicker (Phase 5), the clouds whose
+/// shadows drift over the ground by day (Phase 8), and how often the host sends its world clock to the clients again.
+/// The cycle runs from 0 at sunrise, through sunset at the day's share of it, to the next sunrise at 1. Runtime code only
+/// reads it.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Lighting/Day Night Settings", fileName = "DayNight")]
 public sealed class DayNightSettings : ScriptableObject
@@ -36,6 +37,20 @@ public sealed class DayNightSettings : ScriptableObject
     [SerializeField, Range(0f, 1f), Tooltip("The share of flickering pixels (a flame's) shown in their flicker colour at each step.")]
     private float glowFlickerShare = 0.36f;
 
+    [Header("Clouds")]
+    [SerializeField, Min(0.1f), Tooltip("How large the clouds are: the width of the cells of the first octave of their noise, in units.")]
+    private float cloudSize = 14f;
+    [SerializeField, Range(0f, 1f), Tooltip("The most of the ground the clouds cover, as a share; the cover comes and goes between none and this.")]
+    private float cloudCover = 0.45f;
+    [SerializeField, Min(1f), Tooltip("How long a spell of cloud cover lasts, in seconds of the world clock: the cover eases from one spell's level to the next's over it.")]
+    private float cloudSpellSeconds = 240f;
+    [SerializeField, Range(0f, 1f), Tooltip("The share of the sun a cloud takes away: 1 as much as a caster's shadow.")]
+    private float cloudShade = 0.75f;
+    [SerializeField, Min(0f), Tooltip("How far either side of its edge a cloud's shadow fades, in the noise's own units: 0 for a hard edge.")]
+    private float cloudEdge = 0.03f;
+    [SerializeField, Tooltip("How fast and where the clouds drift, in units a second of the world clock.")]
+    private Vector2 wind = new(0.6f, -0.15f);
+
     [Header("Sharing")]
     [SerializeField, Min(1f), Tooltip("How often the host sends its world clock to the clients again, in seconds of the world clock, so their day never drifts from its own.")]
     private float resyncSeconds = 60f;
@@ -46,6 +61,12 @@ public sealed class DayNightSettings : ScriptableObject
     public float ResyncSeconds => resyncSeconds;
     public float FlickerSteps => flickerSteps;
     public float GlowFlickerShare => glowFlickerShare;
+    public float CloudSize => cloudSize;
+    public float CloudCover => cloudCover;
+    public float CloudSpellSeconds => cloudSpellSeconds;
+    public float CloudShade => cloudShade;
+    public float CloudEdge => cloudEdge;
+    public Vector2 Wind => wind;
     public int KeyCount => keys.Length;
 
     /// <summary>
@@ -139,7 +160,7 @@ public sealed class DayNightSettings : ScriptableObject
     }
 
     /// <summary>
-    /// Creates unsaved settings for tests.
+    /// Creates unsaved settings for tests, without clouds unless <see cref="WithClouds"/> gives them some.
     /// </summary>
     public static DayNightSettings Create(float day, float night, float start, DayLightKey[] lightKeys, float noonShadow = 0.5f, float maxShadow = 2f, float lean = 0.5f, float resync = 60f,
         float flicker = 8f, float glowFlicker = 0.36f)
@@ -155,7 +176,24 @@ public sealed class DayNightSettings : ScriptableObject
         settings.resyncSeconds = resync;
         settings.flickerSteps = flicker;
         settings.glowFlickerShare = glowFlicker;
+        settings.cloudCover = 0f;
         return settings;
+    }
+
+    /// <summary>
+    /// These unsaved settings for tests with clouds: <paramref name="size"/> units across, covering at most
+    /// <paramref name="cover"/> in spells of <paramref name="spellSeconds"/>, taking <paramref name="shade"/> of the sun
+    /// away, their edges fading over <paramref name="edge"/>, drifting with <paramref name="cloudWind"/>.
+    /// </summary>
+    public DayNightSettings WithClouds(float size, float cover, float spellSeconds, float shade, float edge, Vector2 cloudWind)
+    {
+        cloudSize = size;
+        cloudCover = cover;
+        cloudSpellSeconds = spellSeconds;
+        cloudShade = shade;
+        cloudEdge = edge;
+        wind = cloudWind;
+        return this;
     }
 
     /// <summary>

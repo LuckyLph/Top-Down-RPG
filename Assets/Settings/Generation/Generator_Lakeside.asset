@@ -16,6 +16,7 @@ MonoBehaviour:
   terrainStyle: {fileID: 11400000, guid: b706984a97a1ca0448e5324173103dc9, type: 2}
   raisedTile: {fileID: 0}
   rampTile: {fileID: 0}
+  sky: {fileID: 11400000, guid: 9efd4b1929661524289ea8b88c4370c9, type: 2}
   grass:
     tilemapName: GrassTilemap
     tile: {fileID: 11400000, guid: cb278cce678ba9e40925e387e5fcc038, type: 2}

@@ -235,6 +235,10 @@ public sealed class WorldGenerator : ScriptableObject
     [Tooltip("Cells a road lamp keeps from every waystone and gate.")]
     [SerializeField, Min(0f)] private float roadLampEntryClearance = 5f;
 
+    [Header("Skies")]
+    [Tooltip("Cells over which a region's sky blends into the wilds' and its neighbours', centred on its outline (Docs/Lighting.md, Phase 8).")]
+    [SerializeField, Min(1)] private int skyBlend = 16;
+
     [Header("Chunks")]
     [Tooltip("What the generator keeps per chunk: the written hash, locks, wide allowances and wilds seeds.")]
     [SerializeField] private List<ChunkRecord> chunks = new();
@@ -257,6 +261,7 @@ public sealed class WorldGenerator : ScriptableObject
     public int RegionShoreGap => regionShoreGap;
     public float PlazaRadius => plazaRadius;
     public GameObject WaystoneLamp => waystoneLamp;
+    public int SkyBlend => skyBlend;
     public IReadOnlyList<RoadLink> Links => links;
     public int PortLeadIn => portLeadIn;
     public int SplineSpacing => splineSpacing;

@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// What the lighting dev panel does (Docs/Lighting.md), apart from its keys and its drawing, so it can be tested without
 /// input: moves this machine's time of day to a light key, steps it, holds it, runs it faster and lets it follow the
-/// session again, through the <see cref="DayClock"/>'s local offset and rate; forces the sun's shadows, the prop lights,
-/// the ground's glow, the flicker, the glowing pixels and the lights' shadows through the overrides of
+/// session again, through the <see cref="DayClock"/>'s local offset and rate; forces the sun's shadows, the clouds, the
+/// prop lights, the ground's glow, the flicker, the glowing pixels and the lights' shadows through the overrides of
 /// <see cref="DayNightPresenter"/> and
 /// <see cref="PropLighting"/>; teleports the local player to the entries of its world; and writes the readout. Nothing
 /// it changes is saved or sent.
@@ -139,6 +139,18 @@ public sealed class LightingDebugControls
     }
 
     /// <summary>
+    /// The clouds come and go with the world clock, then cover the most the day and the region allow, then none
+    /// (Docs/Lighting.md, Phase 8).
+    /// </summary>
+    public void CycleClouds()
+    {
+        if (presenter != null)
+        {
+            presenter.CloudsOverride = Next(presenter.CloudsOverride);
+        }
+    }
+
+    /// <summary>
     /// The prop lights follow the day, then burn at full, then not at all.
     /// </summary>
     public void CyclePropLights()
@@ -224,7 +236,7 @@ public sealed class LightingDebugControls
 
     /// <summary>
     /// The readout: the time of day, how it runs and whether the sun is up and casts, the sky's and the sun's colours,
-    /// the night lights' share, how many chunks' lights burn and how many casters they hold awake, the spot and
+    /// the region skies' tint and cloud cover at the local player and the clouds' cover, the night lights' share, how many chunks' lights burn and how many casters they hold awake, the spot and
     /// <paramref name="fps"/>.
     /// </summary>
     public string Readout(float fps)
@@ -245,6 +257,13 @@ public sealed class LightingDebugControls
         text.Append(RateText()).Append('\n');
         text.Append("Sun ").Append(sun.IsUp ? $"up, {sun.Elevation:F2} high" : "down").Append(presenter != null && presenter.Casting ? ", casting" : ", not casting").Append('\n');
         text.Append("Sky ").Append(Rgb(light.Sky)).Append("   Sun ").Append(Rgb(light.Sun)).Append('\n');
+        if (presenter != null)
+        {
+            RegionSkyBlend sky = presenter.Sky;
+            text.Append("Region tint ").Append(Rgb(sky.Tint)).Append("   Clouds ").Append(presenter.CloudCover.ToString("F2"))
+                .Append(" (region x").Append(sky.CloudCover.ToString("F2")).Append(")\n");
+        }
+
         text.Append("Night lights ").Append(light.NightLights.ToString("F2"));
         if (propLighting != null)
         {

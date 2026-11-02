@@ -6,9 +6,9 @@ using UnityEngine.Rendering.Universal;
 /// <summary>
 /// <see cref="SunShadowFeature"/>'s pass, before the 2D renderer draws anything (Docs/Lighting.md, Phase 4): draws the
 /// camera's <see cref="SunShadowMask"/>, the props' shadows into the props' texture when they are out of date, then the
-/// props' texture and the units' shadows into the frame's, and hands the frame's texture, its area, its projection and
-/// the casters' rendering layers to the shaders as globals. With no mask to draw the area is set empty, so the lit
-/// shaders read no shadow.
+/// props' texture, the units' shadows and the clouds' (Phase 8, while any cloud takes the sun away) into the frame's,
+/// and hands the frame's texture, its area, its projection and the casters' rendering layers to the shaders as globals.
+/// With no mask to draw the area is set empty, so the lit shaders read no shadow.
 /// </summary>
 public sealed class SunShadowPass : ScriptableRenderPass2D
 {
@@ -26,6 +26,7 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
         internal bool hasCliffs;
         internal TextureHandle under;
         internal bool hasUnder;
+        internal Material clouds;
     }
 
     /// <summary>
@@ -55,11 +56,11 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
         Shader.SetGlobalMatrix(SunShadowGlobals.MaskMatrixId, mask.DrawMatrix);
         if (!mask.PropsCurrent)
         {
-            AddDraw(renderGraph, camera, mask, feature.PropLayers, props, TextureHandle.nullHandle, "Sun Shadows: Props", true);
+            AddDraw(renderGraph, camera, mask, feature.PropLayers, props, TextureHandle.nullHandle, "Sun Shadows: Props", true, null);
             mask.MarkPropsDrawn();
         }
 
-        AddDraw(renderGraph, camera, mask, feature.UnitLayers, frame, props, "Sun Shadows: Units", false);
+        AddDraw(renderGraph, camera, mask, feature.UnitLayers, frame, props, "Sun Shadows: Units", false, SunShadowGlobals.Cloudy() ? feature.CloudMaterial : null);
         Shader.SetGlobalTexture(SunShadowGlobals.MaskId, mask.Frame.rt);
         Shader.SetGlobalVector(SunShadowGlobals.MaskRectId, mask.ShaderRect);
         Shader.SetGlobalInteger(SunShadowGlobals.FeetLayersId, (int)(feature.PropLayers.value | feature.UnitLayers.value));
@@ -67,10 +68,11 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
 
     /// <summary>
     /// Records a draw into <paramref name="target"/>: cleared, or a copy of <paramref name="under"/> when it is valid,
-    /// then the shadows of the culled casters on <paramref name="layers"/>, and with <paramref name="withCliffs"/> those
-    /// of the culled terrain chunks' cliffs.
+    /// then the shadows of the culled casters on <paramref name="layers"/>, with <paramref name="withCliffs"/> those of
+    /// the culled terrain chunks' cliffs, and with <paramref name="clouds"/> the clouds' over the whole mask, each texel
+    /// keeping the most shadow of either.
     /// </summary>
-    private void AddDraw(RenderGraph renderGraph, Camera camera, SunShadowMask mask, RenderingLayerMask layers, TextureHandle target, TextureHandle under, string name, bool withCliffs)
+    private void AddDraw(RenderGraph renderGraph, Camera camera, SunShadowMask mask, RenderingLayerMask layers, TextureHandle target, TextureHandle under, string name, bool withCliffs, Material clouds)
     {
         using IRasterRenderGraphBuilder builder = renderGraph.AddRasterRenderPass(name, out DrawData data);
         SortingSettings sorting = new(camera) { criteria = SortingCriteria.None };
@@ -105,6 +107,7 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
             builder.UseTexture(under);
         }
 
+        data.clouds = clouds;
         builder.SetRenderAttachment(target, 0, AccessFlags.Write);
         builder.AllowPassCulling(false);
         builder.SetRenderFunc(static (DrawData pass, RasterGraphContext context) =>
@@ -122,6 +125,11 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
             if (pass.hasCliffs)
             {
                 context.cmd.DrawRendererList(pass.cliffs);
+            }
+
+            if (pass.clouds != null)
+            {
+                context.cmd.DrawProcedural(Matrix4x4.identity, pass.clouds, 0, MeshTopology.Triangles, 3);
             }
         });
     }

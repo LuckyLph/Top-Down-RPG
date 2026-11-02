@@ -19,8 +19,10 @@ using Object = UnityEngine.Object;
 /// folder under <c>Assets/Dev</c>, deleted after. Each chunk lists its own and its neighbours' strips' materials in the
 /// style's order, each layer holding exactly its composed cells and tile, with its raised ground, its mobs under its
 /// generated root with derived ids the id watcher keeps and its props under its generated props' root where the
-/// composition puts them, with no sorting order written; its <see cref="AreaTerrain"/> is only appended to; the written hash follows paint on any layer,
-/// the generated spawn points and the generated props, and nothing else; objects outside the generated roots (props
+/// composition puts them, with no sorting order written, and its <see cref="ChunkSky"/> holding the region skies
+/// reaching it (Docs/Lighting.md, Phase 8), a chunk none reaches losing a stale one; its <see cref="AreaTerrain"/> is only
+/// appended to; the written hash follows paint on any layer, the generated spawn points, the generated props and the
+/// skies' weights, and nothing else; objects outside the generated roots (props
 /// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances, even past a prop
 /// added in the middle of a chunk's list (a region's light, Docs/Lighting.md, Phase 6); a locked chunk is
 /// never opened, an unchanged one is skipped without being opened, one
@@ -91,8 +93,8 @@ public class WorldGenerationWriterTests
     /// navigation priority and terrain type, holding exactly its material's composed cells of the chunk with its tile;
     /// its raised tilemap holds the composed raised cells and ramps; its mobs stand under its generated root at their
     /// cells' centres with their prefabs and derived ids, which the id watcher keeps; its props stand under its generated
-    /// props' root, of their prefabs and where the composition puts them; the grid is active again and the chunk read
-    /// back hashes as it was composed.
+    /// props' root, of their prefabs and where the composition puts them; its grid holds the region skies reaching it
+    /// and their weights; the grid is active again and the chunk read back hashes as it was composed.
     /// </summary>
     [Test]
     public void WriteChunk_LaysTheChunksList_EachLayerHoldingExactlyItsComposedCells_WithItsRaisedGroundAndMobs()
@@ -164,8 +166,8 @@ public class WorldGenerationWriterTests
 
     /// <summary>
     /// The hash of a written chunk read back from its grid changes with a cell painted on an empty layer its
-    /// <see cref="AreaTerrain"/> keeps, a cell painted on any ground layer, a raised cell, a generated spawn point moved
-    /// and a generated prop moved, and comes back when each is undone; walls, a decor tilemap, a spawn point outside the
+    /// <see cref="AreaTerrain"/> keeps, a cell painted on any ground layer, a raised cell, a generated spawn point moved,
+    /// a generated prop moved and a region sky's weight changed, and comes back when each is undone; walls, a decor tilemap, a spawn point outside the
     /// generated root and a prop placed by hand under the scene's Props root change nothing.
     /// </summary>
     [Test]
@@ -193,6 +195,13 @@ public class WorldGenerationWriterTests
         Transform prop = grid.transform.Find(WorldGenerationWriter.GeneratedPropsName).GetChild(0);
         Vector3 stood = prop.position;
         ExpectChange(grid, coords, composed, "a generated prop moved", () => prop.position = stood + Vector3.right, () => prop.position = stood);
+        ChunkSky sky = grid.GetComponent<ChunkSky>();
+        Assert.That(sky != null, Is.True, "the plateau's chunk lies under the Coast's sky");
+        RegionSky[] skies = new List<RegionSky>(sky.Skies).ToArray();
+        byte[] weights = new List<byte>(sky.Weights).ToArray();
+        byte[] changed = (byte[])weights.Clone();
+        changed[0] = (byte)(255 - changed[0]);
+        ExpectChange(grid, coords, composed, "a sky's weight changed", () => sky.Configure(skies, changed), () => sky.Configure(skies, weights));
 
         DualGridTilemapModule walls = WorldAuthoring.AddWalls(grid);
         walls.SetDataTiles(new List<Vector3Int> { cell });
@@ -202,6 +211,23 @@ public class WorldGenerationWriterTests
         HandSpawnPoint(grid.transform.position + new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f), "hand-made");
         HandProp(grid, cell);
         Assert.That(Hash(grid, coords), Is.EqualTo(composed), "walls, a decor tilemap, a hand-made spawn point and a prop placed by hand change nothing");
+    }
+
+    /// <summary>
+    /// A chunk no region's sky reaches, written over a stale <see cref="ChunkSky"/>, loses it and reads back as composed
+    /// (Docs/Lighting.md, Phase 8).
+    /// </summary>
+    [Test]
+    public void AChunkNoSkyReaches_IsWrittenWithoutOne_AndLosesAStaleOne()
+    {
+        Vector2Int coords = overworld.Chunks.Find(chunk => chunk.Skies.Count == 0).Coords;
+        Vector2Int under = overworld.Chunks.Find(chunk => chunk.Skies.Count > 0).Coords;
+        Grid grid = perTest.NewChunk(overworldGenerator.World, coords);
+        ChunkSky stale = grid.gameObject.AddComponent<ChunkSky>();
+        stale.Configure(new List<RegionSky>(overworld.ChunkAt(under).Skies).ToArray(), overworld.ChunkAt(under).SkyWeights);
+        WorldGenerationWriter.WriteChunk(grid, overworld, coords);
+        Assert.That(grid.GetComponent<ChunkSky>() == null, Is.True, "the stale sky goes");
+        Assert.That(Hash(grid, coords), Is.EqualTo(overworld.ChunkAt(coords).ContentHash));
     }
 
     /// <summary>
@@ -722,6 +748,14 @@ public class WorldGenerationWriterTests
                 BoundsInt blocked = PropGridSnapping.BlockedCells(grid, instance.position, footprint);
                 Assert.That((new Vector2Int(blocked.xMin, blocked.yMin), new Vector2Int(blocked.size.x, blocked.size.y)), Is.EqualTo((props[i].Cell, props[i].Covered)), $"chunk {coords}: prop {i} blocks its composed cells");
             }
+        }
+
+        ChunkSky sky = grid.GetComponent<ChunkSky>();
+        Assert.That(sky != null, Is.EqualTo(chunk.Skies.Count > 0), $"chunk {coords} has a sky only when a region's sky reaches it");
+        if (sky != null)
+        {
+            Assert.That(sky.Skies, Is.EqualTo(chunk.Skies), $"chunk {coords}'s region skies");
+            Assert.That(sky.Weights, Is.EqualTo(chunk.SkyWeights), $"chunk {coords}'s sky weights");
         }
 
         Assert.That(Hash(grid, coords), Is.EqualTo(chunk.ContentHash), $"chunk {coords} read back hashes as composed");

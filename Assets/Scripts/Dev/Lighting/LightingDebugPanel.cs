@@ -3,10 +3,10 @@ using VContainer;
 
 /// <summary>
 /// Dev-only lighting panel (Docs/Lighting.md, Architecture.md's Dev tools): F8 toggles an IMGUI panel at the top right
-/// with a readout of the time of day, the sky, the sun, the night's lights and the frame rate, and the key map; while it
-/// is open its keys move this machine's time of day, force parts of the lighting on or off and teleport the local
-/// player to the entries of its world, through <see cref="LightingDebugControls"/>. Its keys are none that gameplay
-/// binds by default. Nothing it changes is saved or sent. Created once per play session; it finds the Gameplay scope
+/// with a readout of the time of day, the sky, the sun, the region skies, the clouds, the night's lights and the frame
+/// rate, and the key map; while it is open its keys move this machine's time of day, force parts of the lighting on or
+/// off and teleport the local player to the entries of its world, through <see cref="LightingDebugControls"/>. Its
+/// keys are none that gameplay binds by default. Nothing it changes is saved or sent. Created once per play session; it finds the Gameplay scope
 /// when used, because the Gameplay scope cannot reference this assembly, and while closed it only watches for F8.
 /// </summary>
 [DisallowMultipleComponent]
@@ -14,7 +14,7 @@ public class LightingDebugPanel : MonoBehaviour
 {
     private const KeyCode ToggleKey = KeyCode.F8;
     private const float Width = 380f;
-    private const float Height = 260f;
+    private const float Height = 280f;
     private const float Top = 90f;
     private const float ScopeLookupInterval = 1f;
     private const float FpsInterval = 0.5f;
@@ -162,6 +162,9 @@ public class LightingDebugPanel : MonoBehaviour
             case KeyCode.N:
                 lighting.CycleLightShadows();
                 return true;
+            case KeyCode.M:
+                lighting.CycleClouds();
+                return true;
             case KeyCode.T:
                 lighting.Teleport(shift ? -1 : 1);
                 return true;
@@ -178,6 +181,7 @@ public class LightingDebugPanel : MonoBehaviour
         DayNightPresenter presenter = lighting.Presenter;
         PropLighting props = lighting.PropLighting;
         string shadows = presenter != null ? LightingDebugControls.StateText(presenter.SunShadowsOverride) : "-";
+        string clouds = presenter != null ? LightingDebugControls.StateText(presenter.CloudsOverride) : "-";
         string lights = props != null ? LightingDebugControls.StateText(props.PropLightsOverride) : "-";
         string glow = props != null ? LightingDebugControls.StateText(props.GroundGlowOverride) : "-";
         string flicker = props != null ? LightingDebugControls.StateText(props.FlickerOverride) : "-";
@@ -187,7 +191,7 @@ public class LightingDebugPanel : MonoBehaviour
             + "        afternoon, evening, sunset, dusk, night, before dawn\n"
             + ", .  step 15 s (Shift 1.5 s)   P hold   F x1 / x10 / x60\n"
             + "Backspace  follow the session\n"
-            + $"Z sun shadows {shadows}    X prop lights {lights}\n"
+            + $"Z sun shadows {shadows}    M clouds {clouds}    X prop lights {lights}\n"
             + $"C lava glow {glow}    V flicker {flicker}    B glowing pixels {pixels}\n"
             + $"N light shadows {lightShadows}    T / Shift+T  next / previous spot";
     }

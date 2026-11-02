@@ -4,8 +4,9 @@ using UnityEngine;
 /// The global shader properties of the sun's shadows (Docs/Lighting.md, Phase 4), which the lit shaders, the caster
 /// shader and <see cref="SunShadowFeature"/> read: the sun's light (<c>_SunColour</c>), its shadow vector and whether
 /// it casts (<c>_SunShadow</c>), the mask the feature draws (<c>_SunShadowMask</c>, <c>_SunShadowRect</c>,
-/// <c>_SunShadowMaskMatrix</c>), and the rendering layers of the casters, which read their shadow at their feet
-/// (<c>_SunShadowFeetLayers</c>).
+/// <c>_SunShadowMaskMatrix</c>), the rendering layers of the casters, which read their shadow at their feet
+/// (<c>_SunShadowFeetLayers</c>), and the clouds the feature draws into the mask (<c>_SunClouds</c>,
+/// <c>_SunCloudShape</c>, Phase 8).
 /// </summary>
 public static class SunShadowGlobals
 {
@@ -15,6 +16,8 @@ public static class SunShadowGlobals
     public static readonly int MaskRectId = Shader.PropertyToID("_SunShadowRect");
     public static readonly int MaskMatrixId = Shader.PropertyToID("_SunShadowMaskMatrix");
     public static readonly int FeetLayersId = Shader.PropertyToID("_SunShadowFeetLayers");
+    public static readonly int CloudsId = Shader.PropertyToID("_SunClouds");
+    public static readonly int CloudShapeId = Shader.PropertyToID("_SunCloudShape");
 
     /// <summary>
     /// Sets the sun: its light <paramref name="sun"/>, which a sun shadow takes away, and the shadow it casts,
@@ -25,6 +28,26 @@ public static class SunShadowGlobals
     {
         Shader.SetGlobalVector(SunColourId, casts ? new Vector4(sun.r, sun.g, sun.b, 0f) : Vector4.zero);
         Shader.SetGlobalVector(SunShadowId, casts ? new Vector4(shadow.x, shadow.y, 1f, 0f) : Vector4.zero);
+    }
+
+    /// <summary>
+    /// Sets the clouds: their field drifted by <paramref name="drift"/>, a cloud wherever it lies above
+    /// <paramref name="level"/>, taking <paramref name="shade"/> of the sun away (none draws no cloud), their noise's
+    /// cells <paramref name="size"/> units across, their edges fading over <paramref name="edge"/>
+    /// (<see cref="SunClouds"/>).
+    /// </summary>
+    public static void SetClouds(Vector2 drift, float level, float shade, float size, float edge)
+    {
+        Shader.SetGlobalVector(CloudsId, new Vector4(drift.x, drift.y, level, shade));
+        Shader.SetGlobalVector(CloudShapeId, new Vector4(size, edge, SunClouds.TileCells, 0f));
+    }
+
+    /// <summary>
+    /// Whether any cloud takes the sun away, as last set.
+    /// </summary>
+    public static bool Cloudy()
+    {
+        return Shader.GetGlobalVector(CloudsId).w > 0f;
     }
 
     /// <summary>

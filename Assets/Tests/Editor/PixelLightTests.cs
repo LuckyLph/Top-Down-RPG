@@ -11,8 +11,8 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Tests of crisp light (Docs/Lighting.md's Phase 1). The pixel-lit sprite shader and the sun shadows' caster and
-/// cliffs shaders compile for D3D without errors or warnings; only the 2D lit passes of the sprite shader and of the
+/// Tests of crisp light (Docs/Lighting.md's Phase 1). The pixel-lit sprite shader and the sun shadows' caster, cliffs
+/// and clouds (Phase 8) shaders compile for D3D without errors or warnings; only the 2D lit passes of the sprite shader and of the
 /// terrain graph declare the light keyword; the pixel-lit material is
 /// the 2D renderer's default. Rendered through <see cref="TerrainBlendProbe.Render"/>: under a global light alone, a
 /// sprite on the pixel-lit material draws exactly the pixels URP's Sprite-Lit-Default draws, and the terrain draws its
@@ -31,6 +31,7 @@ public class PixelLightTests
     private const string SpriteShaderPath = "Assets/Shaders/Sprites/SpritePixelLit.shader";
     private const string CasterShaderPath = "Assets/Shaders/Sprites/SunShadowCaster.shader";
     private const string CliffsShaderPath = "Assets/Shaders/Terrain/SunShadowCliffs.shader";
+    private const string CloudsShaderPath = "Assets/Shaders/Lighting/SunShadowClouds.shader";
     private const string LightShadowShaderPath = LightShadowResources.ShaderPath;
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string LitLightMode = "Universal2D";
@@ -76,13 +77,14 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// The pixel-lit sprite shader, the sun shadows' caster and cliffs shaders and the lights' projected shadow shader
-    /// import without errors or messages, and every pass compiles for D3D, vertex and fragment, without errors or
+    /// The pixel-lit sprite shader, the sun shadows' caster, cliffs and clouds shaders and the lights' projected shadow
+    /// shader import without errors or messages, and every pass compiles for D3D, vertex and fragment, without errors or
     /// warnings, with and without the light keyword where the pass declares it.
     /// </summary>
     [TestCase(SpriteShaderPath)]
     [TestCase(CasterShaderPath)]
     [TestCase(CliffsShaderPath)]
+    [TestCase(CloudsShaderPath)]
     [TestCase(LightShadowShaderPath)]
     public void TheShader_CompilesForD3DWithoutErrorsOrWarnings(string path)
     {

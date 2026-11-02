@@ -19,7 +19,9 @@ public class ChunkLifetimeScope : LifetimeScope
     /// <see cref="PropFading"/>, and, when it has a <see cref="TerrainBlendRenderer"/>, that renderer, injected with the
     /// Gameplay scope's <see cref="SharedTerrainArrays"/> before it first builds, and, when it has prop lights, props'
     /// shadow casters or a renderer, the <see cref="ChunkPropLights"/> that hands them and its ground's glow to the
-    /// Gameplay scope's <see cref="PropLighting"/>. Without a grid it logs an error and registers neither the navigation nor the mobs.
+    /// Gameplay scope's <see cref="PropLighting"/>, and, when it has a <see cref="ChunkSky"/>, the
+    /// <see cref="ChunkRegionSky"/> that hands it to the Gameplay scope's <see cref="RegionSkies"/>. Without a grid it
+    /// logs an error and registers neither the navigation nor the mobs.
     /// Logs an error and registers nothing without a parent scope, and logs one for every mob placed directly in the
     /// chunk, since mobs come from spawn points.
     /// </summary>
@@ -69,6 +71,12 @@ public class ChunkLifetimeScope : LifetimeScope
                 .WithParameter(lights)
                 .WithParameter(casters)
                 .WithParameter(typeof(TerrainBlendRenderer), ground);
+        }
+
+        ChunkSky sky = SceneQuery.FindFirst<ChunkSky>(gameObject.scene);
+        if (sky != null)
+        {
+            builder.RegisterEntryPoint<ChunkRegionSky>().WithParameter(sky);
         }
 
         NavigationGrid2D navigationGrid = SceneQuery.FindFirst<NavigationGrid2D>(gameObject.scene);

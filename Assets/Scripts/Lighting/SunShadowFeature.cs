@@ -11,8 +11,9 @@ using UnityEngine.SceneManagement;
 /// grid. Casters are sprites whose rendering layers include the props' layers (static: their shadows are drawn again
 /// only when the sun or the view has moved enough, or a scene loaded or unloaded) or the units' layers (drawn every
 /// frame), and terrain chunks on the cliffs' layers, whose raised ground's cliffs are drawn with the props by the
-/// cliffs' shader over the chunks' own material. It draws nothing while the sun casts nothing
-/// (<see cref="SunShadowGlobals"/>), so the lit shaders then take no sun away anywhere.
+/// cliffs' shader over the chunks' own material, and the clouds' shadows over the whole mask by the cloud shader every
+/// frame (Docs/Lighting.md, Phase 8). It draws nothing while the sun casts nothing (<see cref="SunShadowGlobals"/>), so
+/// the lit shaders then take no sun away anywhere.
 /// </summary>
 [DisallowMultipleRendererFeature("Sun Shadows")]
 public sealed class SunShadowFeature : ScriptableRendererFeature
@@ -27,6 +28,8 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     private Shader cliffShader;
     [SerializeField, Tooltip("Rendering layers of the terrain chunks with raised ground, whose cliffs' shadows are drawn with the props'.")]
     private RenderingLayerMask cliffLayers;
+    [SerializeField, Tooltip("The shader that draws the clouds' shadows over the mask (Hidden/TopDownRPG/Sun Shadow Clouds).")]
+    private Shader cloudShader;
     [SerializeField, Min(0f), Tooltip("The tallest caster's height above its feet, in units: how far below the view casters may stand and still be seen, and how far their shadows reach.")]
     private float tallestCaster = 5f;
     [SerializeField, Min(0f), Tooltip("How far the mask reaches past what the view needs, in units, so the camera can move that far before the props' shadows are drawn again.")]
@@ -36,12 +39,30 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
 
     private readonly List<SunShadowMask> masks = new();
     private SunShadowPass pass;
+    private Material cloudMaterial;
 
     public Material CasterMaterial => casterMaterial;
     public RenderingLayerMask PropLayers => propLayers;
     public RenderingLayerMask UnitLayers => unitLayers;
     public Shader CliffShader => cliffShader;
     public RenderingLayerMask CliffLayers => cliffLayers;
+    public Shader CloudShader => cloudShader;
+
+    /// <summary>
+    /// The material the clouds are drawn with, made from the cloud shader the first time; null without one.
+    /// </summary>
+    internal Material CloudMaterial
+    {
+        get
+        {
+            if (cloudMaterial == null && cloudShader != null)
+            {
+                cloudMaterial = CoreUtils.CreateEngineMaterial(cloudShader);
+            }
+
+            return cloudMaterial;
+        }
+    }
 
     /// <summary>
     /// Creates the pass and follows the cameras starting to render and the scenes loading and unloading.
@@ -85,7 +106,7 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     }
 
     /// <summary>
-    /// Stops following the cameras and scenes and releases every mask.
+    /// Stops following the cameras and scenes and releases every mask and the clouds' material.
     /// </summary>
     protected override void Dispose(bool disposing)
     {
@@ -98,6 +119,8 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
         }
 
         masks.Clear();
+        CoreUtils.Destroy(cloudMaterial);
+        cloudMaterial = null;
     }
 
     /// <summary>

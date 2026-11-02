@@ -4,13 +4,15 @@ using UnityEngine;
 using VContainer.Unity;
 
 /// <summary>
-/// Gameplay-scope entry point that lights the loaded worlds by the time of day (Docs/Lighting.md, Phases 3 and 4): each
-/// outdoor world's global light takes the <see cref="DayClock"/>'s sky and sun together, the light where no sun shadow
-/// falls, and an indoor one keeps its own (<see cref="WorldLighting"/>); the sun's light and shadow vector go to the
-/// shaders (<see cref="SunShadowGlobals"/>), which take the sun away where its shadows fall, while the world shown is
-/// outdoors and the sun is up, unless the lighting dev panel keeps them off. Each frame it reads the clock and writes
-/// the light to the worlds and the sun to the shaders only once they have moved by a step too small to see, and the
-/// light to a world as it loads. Presentation each machine draws on its own.
+/// Gameplay-scope entry point that lights the loaded worlds by the time of day (Docs/Lighting.md, Phases 3, 4 and 8):
+/// each outdoor world's global light takes the <see cref="DayClock"/>'s sky and sun together, the light where no sun
+/// shadow falls, and an indoor one keeps its own (<see cref="WorldLighting"/>); the sun's light and shadow vector go to
+/// the shaders (<see cref="SunShadowGlobals"/>), which take the sun away where its shadows fall, while the world shown is
+/// outdoors and the sun is up, unless the lighting dev panel keeps them off; and while it casts, the clouds' shadows
+/// drift with the world clock (<see cref="SunClouds"/>). The sky and the sun take the tint of the region skies around
+/// the local player (<see cref="RegionSkies"/>), and the clouds their cover. Each frame it reads the clock and writes
+/// the light to the worlds and the sun to the shaders only once they have moved by a step too small to see, the clouds
+/// every frame, and the light to a world as it loads. Presentation each machine draws on its own.
 /// </summary>
 public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 {
@@ -19,21 +21,30 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 
     private readonly DayClock clock;
     private readonly Worlds worlds;
+    private readonly RegionSkies regionSkies;
+    private readonly LocalPlayerTracker localPlayer;
+    private readonly SunClouds clouds;
     private Color shown;
     private bool applied;
     private Color shownSun;
     private Vector2 shownShadow;
     private bool casting;
     private bool sunApplied;
+    private bool cloudsCleared;
     private LightingOverride sunShadows;
+    private LightingOverride cloudsOverride;
 
     /// <summary>
-    /// Creates the presenter of <paramref name="dayClock"/> over <paramref name="loadedWorlds"/>.
+    /// Creates the presenter of <paramref name="dayClock"/> over <paramref name="loadedWorlds"/>, tinting the sky by the
+    /// <paramref name="skies"/> around <paramref name="player"/> (none: the day's own sky).
     /// </summary>
-    public DayNightPresenter(DayClock dayClock, Worlds loadedWorlds)
+    public DayNightPresenter(DayClock dayClock, Worlds loadedWorlds, RegionSkies skies = null, LocalPlayerTracker player = null)
     {
         clock = dayClock;
         worlds = loadedWorlds;
+        regionSkies = skies;
+        localPlayer = player;
+        clouds = new SunClouds(dayClock.Settings);
     }
 
     /// <summary>
@@ -47,6 +58,21 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     public bool Casting => casting;
 
     /// <summary>
+    /// The region skies blended at the local player last frame.
+    /// </summary>
+    public RegionSkyBlend Sky { get; private set; } = RegionSkyBlend.None;
+
+    /// <summary>
+    /// The share of the ground under cloud last written, 0 while none is drawn.
+    /// </summary>
+    public float CloudCover { get; private set; }
+
+    /// <summary>
+    /// The clouds the presenter draws.
+    /// </summary>
+    public SunClouds Clouds => clouds;
+
+    /// <summary>
     /// Whether the sun's shadows follow the day or are kept off on this machine (the lighting dev panel). There is
     /// nothing to cast with while the sun is down or the world shown is indoors, so forced on they follow the day.
     /// </summary>
@@ -54,6 +80,16 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     {
         get => sunShadows;
         set => sunShadows = value;
+    }
+
+    /// <summary>
+    /// Whether the clouds come and go with the world clock, cover the most the day and the region allow, or are kept off
+    /// on this machine (the lighting dev panel). They only ever shade the ground while the sun casts.
+    /// </summary>
+    internal LightingOverride CloudsOverride
+    {
+        get => cloudsOverride;
+        set => cloudsOverride = value;
     }
 
     /// <summary>
@@ -66,23 +102,28 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Stops following the worlds and takes the sun away from the shaders.
+    /// Stops following the worlds and takes the sun and the clouds away from the shaders.
     /// </summary>
     public void Dispose()
     {
         worlds.WorldLoaded -= HandleWorldLoaded;
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
+        SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
     }
 
     /// <summary>
-    /// Writes the clock's light to every loaded world once it has moved by a step from the light last written, and the
-    /// sun to the shaders once it has moved by a step or started or stopped casting.
+    /// Writes the clock's light, tinted by the region skies at the local player, to every loaded world once it has
+    /// moved by a step from the light last written, the sun to the shaders once it has moved by a step or started or
+    /// stopped casting, and the clouds while it casts.
     /// </summary>
     public void Tick()
     {
         DayLight day = clock.Light;
-        ApplySun(day, clock.Sun);
-        Color light = day.Total;
+        Sky = LocalSky(out bool outdoors);
+        Color tint = Sky.Tint;
+        ApplySun(day, clock.Sun, tint, outdoors);
+        ApplyClouds();
+        Color light = Tinted(day.Total, tint);
         if (applied && Near(light, shown))
         {
             return;
@@ -98,13 +139,14 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Writes the sun of <paramref name="day"/> and <paramref name="sun"/> to the shaders, casting while it is up over an
-    /// outdoor world shown and its shadows are not kept off, once it has moved by a step from the sun last written.
+    /// Writes the sun of <paramref name="day"/> and <paramref name="sun"/>, tinted by <paramref name="tint"/>, to the
+    /// shaders, casting while it is up over an outdoor world shown and its shadows are not kept off, once it has moved
+    /// by a step from the sun last written.
     /// </summary>
-    private void ApplySun(DayLight day, SunState sun)
+    private void ApplySun(DayLight day, SunState sun, Color tint, bool outdoors)
     {
-        bool casts = sun.IsUp && sunShadows != LightingOverride.Off && ShowsOutdoorWorld();
-        Color colour = casts ? day.Sun : Color.black;
+        bool casts = sun.IsUp && sunShadows != LightingOverride.Off && outdoors;
+        Color colour = casts ? Tinted(day.Sun, tint) : Color.black;
         Vector2 shadow = casts ? sun.Shadow : Vector2.zero;
         if (sunApplied && casts == casting && Near(colour, shownSun) && (shadow - shownShadow).sqrMagnitude < ShadowStep * ShadowStep)
         {
@@ -119,21 +161,69 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Whether the world shown on screen (<see cref="WorldLighting.IsShown"/>) is lit outdoors.
+    /// Writes the clouds to the shaders while the sun casts: drifted by the world clock, covering the day's cover at
+    /// the world clock (the most with the clouds forced on) times the region skies' cover, taking the settings' shade of
+    /// the sun away. Clears them once when the sun stops casting, the clouds are kept off or none would show.
     /// </summary>
-    private bool ShowsOutdoorWorld()
+    private void ApplyClouds()
     {
+        DayNightSettings settings = clock.Settings;
+        double time = clock.WorldTime;
+        float day = cloudsOverride == LightingOverride.On ? settings.CloudCover : clouds.CoverAt(time);
+        float cover = casting && cloudsOverride != LightingOverride.Off ? Mathf.Clamp01(day * Sky.CloudCover) : 0f;
+        if (cover <= 0f || settings.CloudShade <= 0f)
+        {
+            CloudCover = 0f;
+            if (!cloudsCleared)
+            {
+                SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
+                cloudsCleared = true;
+            }
+
+            return;
+        }
+
+        CloudCover = cover;
+        cloudsCleared = false;
+        SunShadowGlobals.SetClouds(clouds.DriftAt(time), clouds.LevelFor(cover), settings.CloudShade, settings.CloudSize, settings.CloudEdge);
+    }
+
+    /// <summary>
+    /// The region skies blended at the local player in the world shown on screen (<see cref="WorldLighting.IsShown"/>),
+    /// the day's own without skies, a local player or a world shown; and whether that world is lit outdoors.
+    /// </summary>
+    private RegionSkyBlend LocalSky(out bool outdoors)
+    {
+        outdoors = false;
         IReadOnlyList<LoadedWorld> loaded = worlds.Loaded;
         for (int i = 0; i < loaded.Count; i++)
         {
             WorldLighting lighting = loaded[i].Lighting;
-            if (lighting != null && lighting.IsShown)
+            if (lighting == null || !lighting.IsShown)
             {
-                return lighting.Profile == WorldLightingProfile.Outdoor;
+                continue;
             }
+
+            outdoors = lighting.Profile == WorldLightingProfile.Outdoor;
+            if (!outdoors || regionSkies == null || localPlayer?.Current == null)
+            {
+                return RegionSkyBlend.None;
+            }
+
+            Transform body = localPlayer.Current.Handle.Transform;
+            WorldDefinition world = loaded[i].Definition;
+            return body != null && world != null ? regionSkies.At(world, world.ToLocal(body.position)) : RegionSkyBlend.None;
         }
 
-        return false;
+        return RegionSkyBlend.None;
+    }
+
+    /// <summary>
+    /// <paramref name="colour"/> tinted by <paramref name="tint"/>, opaque.
+    /// </summary>
+    private static Color Tinted(Color colour, Color tint)
+    {
+        return new Color(colour.r * tint.r, colour.g * tint.g, colour.b * tint.b, 1f);
     }
 
     /// <summary>

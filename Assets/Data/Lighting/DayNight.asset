@@ -61,4 +61,10 @@ MonoBehaviour:
   shadowLean: 0.5
   flickerSteps: 8
   glowFlickerShare: 0.36
+  cloudSize: 14
+  cloudCover: 0.45
+  cloudSpellSeconds: 240
+  cloudShade: 0.75
+  cloudEdge: 0.03
+  wind: {x: 0.6, y: -0.15}
   resyncSeconds: 60

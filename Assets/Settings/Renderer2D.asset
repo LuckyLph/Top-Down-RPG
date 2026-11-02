@@ -24,6 +24,7 @@ MonoBehaviour:
   cliffLayers:
     serializedVersion: 0
     m_Bits: 32
+  cloudShader: {fileID: 4800000, guid: 3a3caddf5d0e26541b9b1ec3f191f2de, type: 3}
   tallestCaster: 5
   margin: 4
   redrawPixels: 1

@@ -95,3 +95,27 @@ public enum LightingOverride
     On,
     Off
 }
+
+/// <summary>
+/// The skies of the regions around a place blended into one (Docs/Lighting.md, Phase 8): the tint the day's sky and sun
+/// take there, and how much of the day's cloud cover lies over it.
+/// </summary>
+public readonly struct RegionSkyBlend
+{
+    /// <summary>
+    /// The day's own sky: no tint, the day's cloud cover.
+    /// </summary>
+    public static readonly RegionSkyBlend None = new(Color.white, 1f);
+
+    /// <summary>
+    /// Creates the blend of <paramref name="skyTint"/> and <paramref name="cover"/>.
+    /// </summary>
+    public RegionSkyBlend(Color skyTint, float cover)
+    {
+        Tint = skyTint;
+        CloudCover = cover;
+    }
+
+    public Color Tint { get; }
+    public float CloudCover { get; }
+}

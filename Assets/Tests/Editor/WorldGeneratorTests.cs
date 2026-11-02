@@ -23,7 +23,8 @@ using UnityEngine;
 /// the wilds' grass, moving nothing but the walk-through props on their cells; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
 /// beach, the entries, the mobs and each other's footprints, and edge trees only beside regions of grass; and the
 /// derived ids are unique, in the format of the editor's random ids, and stay the same through re-seeding, moving,
-/// re-rolling and composing again. The generators carry the wilds' prop settings of the project's Overworld generator.
+/// re-rolling and composing again; and the region skies are full inside their regions, none outside and blend across
+/// their outline, the same along a border in both chunks (Docs/Lighting.md, Phase 8). The generators carry the wilds' prop settings of the project's Overworld generator.
 /// </summary>
 public class WorldGeneratorTests
 {
@@ -920,6 +921,126 @@ public class WorldGeneratorTests
         Assert.That(again.Mobs.ConvertAll(mob => mob.Id), Is.EqualTo(before.Mobs.ConvertAll(mob => mob.Id)), "composed again");
         int kept = ExpectSameIds(before, reseededAndMoved, LavaFields) + ExpectSameIds(before, rerolled.Compose(), "wilds_4_");
         Assert.That(kept, Is.GreaterThan(0), "mobs compared");
+    }
+
+    /// <summary>
+    /// The region skies (Docs/Lighting.md, Phase 8): the chunks near a region whose generator names a sky list it, and
+    /// list only those; a sky weighs full at the samples more than half the blend inside its regions' cells, nothing at
+    /// those more than half the blend outside them and half on their outline, from the nearest cell centres in and out;
+    /// and the samples two chunks share along their border are the same in both.
+    /// </summary>
+    [Test]
+    public void TheRegionSkies_AreFullInsideTheirRegions_NoneOutside_AndBlendAcrossTheirOutline()
+    {
+        float half = overworldGenerator.SkyBlend * 0.5f;
+        int reach = Mathf.CeilToInt(half) + 3;
+        HashSet<RegionSky> named = new();
+        foreach (WorldComposition.Region region in overworld.Regions)
+        {
+            if (region.Generator.Sky != null)
+            {
+                named.Add(region.Generator.Sky);
+            }
+        }
+
+        Assert.That(named.Count, Is.EqualTo(5), "Every region but the Clearing names a sky.");
+        int full = 0;
+        int none = 0;
+        int outline = 0;
+        foreach (WorldComposition.Chunk chunk in overworld.Chunks)
+        {
+            RectInt bounds = ChunkCoords.Bounds(chunk.Coords);
+            Assert.That(chunk.SkyWeights.Length, Is.EqualTo(chunk.Skies.Count * ChunkSky.SamplesPerSky), $"chunk {chunk.Coords}'s samples");
+            for (int s = 0; s < chunk.Skies.Count; s++)
+            {
+                RegionSky sky = chunk.Skies[s];
+                Assert.That(named.Contains(sky), Is.True, $"chunk {chunk.Coords}: {sky} is a region's");
+                for (int j = 0; j < ChunkSky.Samples; j++)
+                {
+                    for (int i = 0; i < ChunkSky.Samples; i++)
+                    {
+                        Vector2Int corner = new(bounds.xMin + i * ChunkSky.Spacing, bounds.yMin + j * ChunkSky.Spacing);
+                        byte weight = chunk.SkyWeights[s * ChunkSky.SamplesPerSky + j * ChunkSky.Samples + i];
+                        SkyDistances(overworld, sky, corner, reach, out float toSky, out float toOther);
+                        if (toOther > half + 0.75f)
+                        {
+                            Expect(weight == 255, $"chunk {chunk.Coords}: {sky.name} full at {corner}, {toOther} cells from the next other cell");
+                            full++;
+                        }
+                        else if (toSky > half + 0.75f)
+                        {
+                            Expect(weight == 0, $"chunk {chunk.Coords}: {sky.name} none at {corner}, {toSky} cells from its nearest");
+                            none++;
+                        }
+                        else if (Mathf.Abs(toSky - toOther) < 1e-3f)
+                        {
+                            Expect(Mathf.Abs(weight - 128) <= 1, $"chunk {chunk.Coords}: {sky.name} half at {corner} on the outline, {weight}");
+                            outline++;
+                        }
+                    }
+                }
+            }
+
+            WorldComposition.Chunk right = overworld.ChunkAt(chunk.Coords + Vector2Int.right);
+            WorldComposition.Chunk up = overworld.ChunkAt(chunk.Coords + Vector2Int.up);
+            foreach (RegionSky sky in named)
+            {
+                for (int k = 0; k < ChunkSky.Samples; k++)
+                {
+                    if (right != null)
+                    {
+                        Expect(SkyWeight(chunk, sky, ChunkSky.Samples - 1, k) == SkyWeight(right, sky, 0, k), $"chunk {chunk.Coords}'s east border, {sky.name} sample {k}");
+                    }
+
+                    if (up != null)
+                    {
+                        Expect(SkyWeight(chunk, sky, k, ChunkSky.Samples - 1) == SkyWeight(up, sky, k, 0), $"chunk {chunk.Coords}'s north border, {sky.name} sample {k}");
+                    }
+                }
+            }
+        }
+
+        Assert.That(full, Is.GreaterThan(0), "Samples deep inside a region.");
+        Assert.That(none, Is.GreaterThan(0), "Samples far outside.");
+        Assert.That(outline, Is.GreaterThan(0), "Samples on an outline.");
+    }
+
+    /// <summary>
+    /// The distances from <paramref name="corner"/> to the nearest centre of a cell under <paramref name="sky"/> and of
+    /// one not, searched within <paramref name="reach"/> cells, each that reach when none lies within it.
+    /// </summary>
+    private static void SkyDistances(WorldComposition composition, RegionSky sky, Vector2Int corner, int reach, out float toSky, out float toOther)
+    {
+        toSky = reach;
+        toOther = reach;
+        for (int dy = -reach; dy < reach; dy++)
+        {
+            for (int dx = -reach; dx < reach; dx++)
+            {
+                Vector2Int cell = corner + new Vector2Int(dx, dy);
+                int region = composition.RegionAt(cell);
+                bool under = region >= 0 && composition.Regions[region].Generator.Sky == sky;
+                float distance = new Vector2(dx + 0.5f, dy + 0.5f).magnitude;
+                if (under)
+                {
+                    toSky = Mathf.Min(toSky, distance);
+                }
+                else
+                {
+                    toOther = Mathf.Min(toOther, distance);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// <paramref name="sky"/>'s weight at sample (<paramref name="i"/>, <paramref name="j"/>) of
+    /// <paramref name="chunk"/>, 0 when the chunk does not list it.
+    /// </summary>
+    private static int SkyWeight(WorldComposition.Chunk chunk, RegionSky sky, int i, int j)
+    {
+        int index = chunk.Skies.IndexOf(sky);
+        return index < 0 ? 0 : chunk.SkyWeights[index * ChunkSky.SamplesPerSky + j * ChunkSky.Samples + i];
     }
 
     /// <summary>

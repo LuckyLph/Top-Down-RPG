@@ -14,7 +14,7 @@ public class LightingDebugPanel : MonoBehaviour
 {
     private const KeyCode ToggleKey = KeyCode.F8;
     private const float Width = 380f;
-    private const float Height = 280f;
+    private const float Height = 296f;
     private const float Top = 90f;
     private const float ScopeLookupInterval = 1f;
     private const float FpsInterval = 0.5f;
@@ -165,6 +165,9 @@ public class LightingDebugPanel : MonoBehaviour
             case KeyCode.M:
                 lighting.CycleClouds();
                 return true;
+            case KeyCode.G:
+                lighting.CycleReflections();
+                return true;
             case KeyCode.T:
                 lighting.Teleport(shift ? -1 : 1);
                 return true;
@@ -182,6 +185,7 @@ public class LightingDebugPanel : MonoBehaviour
         PropLighting props = lighting.PropLighting;
         string shadows = presenter != null ? LightingDebugControls.StateText(presenter.SunShadowsOverride) : "-";
         string clouds = presenter != null ? LightingDebugControls.StateText(presenter.CloudsOverride) : "-";
+        string reflections = presenter != null ? LightingDebugControls.StateText(presenter.ReflectionsOverride) : "-";
         string lights = props != null ? LightingDebugControls.StateText(props.PropLightsOverride) : "-";
         string glow = props != null ? LightingDebugControls.StateText(props.GroundGlowOverride) : "-";
         string flicker = props != null ? LightingDebugControls.StateText(props.FlickerOverride) : "-";
@@ -193,7 +197,8 @@ public class LightingDebugPanel : MonoBehaviour
             + "Backspace  follow the session\n"
             + $"Z sun shadows {shadows}    M clouds {clouds}    X prop lights {lights}\n"
             + $"C lava glow {glow}    V flicker {flicker}    B glowing pixels {pixels}\n"
-            + $"N light shadows {lightShadows}    T / Shift+T  next / previous spot";
+            + $"N light shadows {lightShadows}    G reflections {reflections}\n"
+            + "T / Shift+T  next / previous spot";
     }
 
     /// <summary>

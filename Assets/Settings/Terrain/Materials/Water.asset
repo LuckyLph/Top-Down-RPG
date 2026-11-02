@@ -33,9 +33,34 @@ MonoBehaviour:
   sparkleDuty: 0.2
   rimSwell: 1.5
   swellPeriod: 4.5
+  swash: 0
+  waveSpacing: 0
+  wavePeriod: 3.2
+  waveWidth: 10
+  waveAngle: 8.5
+  waveWholeWithin: 40
+  waveStretch: 0.2
+  waveColour: {r: 0.17, g: 0.37, b: 0.59, a: 1}
+  waveCrestColour: {r: 0.55, g: 0.72, b: 0.85, a: 1}
+  waveTroughColour: {r: 0.05, g: 0.16, b: 0.31, a: 1}
+  washFoamColour: {r: 0.94, g: 0.96, b: 0.97, a: 1}
+  washFoamShadeColour: {r: 0.84, g: 0.89, b: 0.93, a: 1}
+  washFilmColour: {r: 0.59, g: 0.75, b: 0.87, a: 1}
+  washFilmBackColour: {r: 0.44, g: 0.65, b: 0.8, a: 1}
+  washWet: 0.15
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  wholeClumps: 0
   sinkDepth: 4.5
   bankShadow: 0.35
   bankColour: {r: 0.38, g: 0.29, b: 0.2, a: 1}
+  reflection: 1
+  glowStrength: 0
+  glowReach: 2.5
+  glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}
+  bridge: 0
+  turnToRuns: 0
   edge:
     rimWidth: 8
     rim:
@@ -77,3 +102,4 @@ MonoBehaviour:
     softBandWidth: 0
     softBandColour: {r: 0.43137255, g: 0.6745098, b: 0.8, a: 1}
     softWholeStones: 0
+    seamless: 0

@@ -10,14 +10,18 @@ using VContainer.Unity;
 /// the shaders (<see cref="SunShadowGlobals"/>), which take the sun away where its shadows fall, while the world shown is
 /// outdoors and the sun is up, unless the lighting dev panel keeps them off; and while it casts, the clouds' shadows
 /// drift with the world clock (<see cref="SunClouds"/>). The sky and the sun take the tint of the region skies around
-/// the local player (<see cref="RegionSkies"/>), and the clouds their cover. Each frame it reads the clock and writes
-/// the light to the worlds and the sun to the shaders only once they have moved by a step too small to see, the clouds
-/// every frame, and the light to a world as it loads. Presentation each machine draws on its own.
+/// the local player (<see cref="RegionSkies"/>), and the clouds their cover. Water's reflections (Phase 10) take from the
+/// shaders the light of the world shown, the sky every other light adds to, and how strongly water reflects: fully at
+/// night and indoors, by day the settings' <see cref="DayNightSettings.DayReflection"/>, between the two by the night
+/// lights' share, unless the lighting dev panel keeps them off or at full. Each frame it reads the clock and writes the
+/// light to the worlds and the sun and the reflections to the shaders only once they have moved by a step too small to
+/// see, the clouds every frame, and the light to a world as it loads. Presentation each machine draws on its own.
 /// </summary>
 public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 {
     private const float Step = 1f / 512f;
     private const float ShadowStep = 1f / 1024f;
+    internal static readonly int ReflectionId = Shader.PropertyToID("_TerrainReflection");
 
     private readonly DayClock clock;
     private readonly Worlds worlds;
@@ -33,6 +37,9 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     private bool cloudsCleared;
     private LightingOverride sunShadows;
     private LightingOverride cloudsOverride;
+    private LightingOverride reflections;
+    private Vector4 shownReflection;
+    private bool reflectionApplied;
 
     /// <summary>
     /// Creates the presenter of <paramref name="dayClock"/> over <paramref name="loadedWorlds"/>, tinting the sky by the
@@ -93,6 +100,16 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
+    /// Whether water's reflections follow the day, reflect as at night, or are kept off on this machine (the lighting
+    /// dev panel).
+    /// </summary>
+    internal LightingOverride ReflectionsOverride
+    {
+        get => reflections;
+        set => reflections = value;
+    }
+
+    /// <summary>
     /// Follows the worlds loading and lights the ones loaded.
     /// </summary>
     public void Start()
@@ -102,13 +119,14 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Stops following the worlds and takes the sun and the clouds away from the shaders.
+    /// Stops following the worlds and takes the sun, the clouds and water's reflections away from the shaders.
     /// </summary>
     public void Dispose()
     {
         worlds.WorldLoaded -= HandleWorldLoaded;
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
         SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
+        Shader.SetGlobalVector(ReflectionId, Vector4.zero);
     }
 
     /// <summary>
@@ -119,11 +137,12 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     public void Tick()
     {
         DayLight day = clock.Light;
-        Sky = LocalSky(out bool outdoors);
+        Sky = LocalSky(out bool outdoors, out WorldLighting shownLighting);
         Color tint = Sky.Tint;
         ApplySun(day, clock.Sun, tint, outdoors);
         ApplyClouds();
         Color light = Tinted(day.Total, tint);
+        ApplyReflection(day, outdoors ? light : shownLighting != null ? shownLighting.GlobalLight : Color.black, outdoors);
         if (applied && Near(light, shown))
         {
             return;
@@ -189,12 +208,39 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// The region skies blended at the local player in the world shown on screen (<see cref="WorldLighting.IsShown"/>),
-    /// the day's own without skies, a local player or a world shown; and whether that world is lit outdoors.
+    /// Writes water's reflections to the shaders once they have moved by a step: <paramref name="sky"/>, the light of the
+    /// world shown, and how strongly water reflects, by the night lights' share of <paramref name="day"/> outdoors and
+    /// fully indoors, or as the lighting dev panel forces.
     /// </summary>
-    private RegionSkyBlend LocalSky(out bool outdoors)
+    private void ApplyReflection(DayLight day, Color sky, bool outdoors)
+    {
+        float strength = reflections switch
+        {
+            LightingOverride.Off => 0f,
+            LightingOverride.On => 1f,
+            _ => outdoors ? Mathf.Lerp(clock.Settings.DayReflection, 1f, day.NightLights) : 1f
+        };
+        Vector4 reflection = new(sky.r, sky.g, sky.b, strength);
+        if (reflectionApplied && Mathf.Abs(reflection.x - shownReflection.x) < Step && Mathf.Abs(reflection.y - shownReflection.y) < Step
+            && Mathf.Abs(reflection.z - shownReflection.z) < Step && Mathf.Abs(reflection.w - shownReflection.w) < Step)
+        {
+            return;
+        }
+
+        reflectionApplied = true;
+        shownReflection = reflection;
+        Shader.SetGlobalVector(ReflectionId, reflection);
+    }
+
+    /// <summary>
+    /// The region skies blended at the local player in the world shown on screen (<see cref="WorldLighting.IsShown"/>),
+    /// the day's own without skies, a local player or a world shown; whether that world is lit outdoors, and its
+    /// lighting (none without a world shown).
+    /// </summary>
+    private RegionSkyBlend LocalSky(out bool outdoors, out WorldLighting shown)
     {
         outdoors = false;
+        shown = null;
         IReadOnlyList<LoadedWorld> loaded = worlds.Loaded;
         for (int i = 0; i < loaded.Count; i++)
         {
@@ -204,6 +250,7 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
                 continue;
             }
 
+            shown = lighting;
             outdoors = lighting.Profile == WorldLightingProfile.Outdoor;
             if (!outdoors || regionSkies == null || localPlayer?.Current == null)
             {

@@ -55,6 +55,10 @@ MonoBehaviour:
   sinkDepth: 6
   bankShadow: 0.4
   bankColour: {r: 0.54901963, g: 0.4627451, b: 0.32156864, a: 1}
+  reflection: 1
+  glowStrength: 0
+  glowReach: 2.5
+  glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}
   bridge: 0
   turnToRuns: 0
   edge:

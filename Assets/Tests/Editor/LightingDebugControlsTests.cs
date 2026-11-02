@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Tests for the lighting dev panel's logic (<see cref="LightingDebugControls"/>, Architecture.md's Dev tools): jumping
 /// to a light key and stepping the time of day, holding it, running it faster and following the session again through
-/// the day clock's local offset and rate; cycling each override of the presenter (the sun's shadows and the clouds) and
-/// the night's lights; teleporting the
+/// the day clock's local offset and rate; cycling each override of the presenter (the sun's shadows, the clouds and
+/// water's reflections) and the night's lights; teleporting the
 /// local player through the entries of its world, round in either direction; the readout naming the time, how it runs
 /// and the lighting; and controls without a clock, a presenter or the night's lights doing nothing.
 /// </summary>
@@ -150,7 +150,7 @@ public class LightingDebugControlsTests
 
     /// <summary>
     /// The sun's shadows, the flicker, the glowing pixels and the lights' shadows cycle between following the day and off;
-    /// the clouds, the prop lights and the ground's glow between following the day, on and off.
+    /// the clouds, water's reflections, the prop lights and the ground's glow between following the day, on and off.
     /// </summary>
     [Test]
     public void TheOverrides_CycleThroughTheirStates()
@@ -166,6 +166,13 @@ public class LightingDebugControlsTests
         Assert.That(presenter.CloudsOverride, Is.EqualTo(LightingOverride.Off));
         controls.CycleClouds();
         Assert.That(presenter.CloudsOverride, Is.EqualTo(LightingOverride.Follow));
+
+        controls.CycleReflections();
+        Assert.That(presenter.ReflectionsOverride, Is.EqualTo(LightingOverride.On));
+        controls.CycleReflections();
+        Assert.That(presenter.ReflectionsOverride, Is.EqualTo(LightingOverride.Off));
+        controls.CycleReflections();
+        Assert.That(presenter.ReflectionsOverride, Is.EqualTo(LightingOverride.Follow));
 
         controls.CyclePropLights();
         Assert.That(propLighting.PropLightsOverride, Is.EqualTo(LightingOverride.On));
@@ -260,6 +267,7 @@ public class LightingDebugControlsTests
             empty.FollowSession();
             empty.CycleSunShadows();
             empty.CycleClouds();
+            empty.CycleReflections();
             empty.CyclePropLights();
             empty.CycleGroundGlow();
             empty.CycleFlicker();

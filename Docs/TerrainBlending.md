@@ -59,7 +59,8 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 2. Find the corner nearest to the pixel and read the four cells around it from the control map (the dual-grid idea, done in the shader).
 3. For each layer, from the bottom up, decide whether it covers the pixel (below), and composite. When a layer is drawn over another, the shader knows both materials, so it applies that pair's rule.
 4. Interiors sample each material's albedo texture, which repeats every N cells (N per material, 4 by default). Shifting a material's texture by a random offset per cell, to break the repeat further, was tried in Phase 2 and left out (see the Phase 2 notes).
-5. Lighting comes from the Sprite Lit target, as for every sprite.
+5. Lighting comes from the 2D lights, read once at the art pixel's centre (the Sprite Custom Lit target since [Lighting.md](Lighting.md)'s Phase 1).
+6. A layer whose material reflects (water, the shallows and the sea, `TerrainMaterial.Reflection`) adds the lights it reflects where it is the topmost layer shown: a light's glitter path down it below the light, and its glints catching the light (`TerrainBlendReflection.hlsl`, Lighting.md's Phase 10).
 
 ### Crisp
 

@@ -5,11 +5,10 @@ using UnityEngine;
 /// <summary>
 /// What the lighting dev panel does (Docs/Lighting.md), apart from its keys and its drawing, so it can be tested without
 /// input: moves this machine's time of day to a light key, steps it, holds it, runs it faster and lets it follow the
-/// session again, through the <see cref="DayClock"/>'s local offset and rate; forces the sun's shadows, the clouds, the
-/// prop lights, the ground's glow, the flicker, the glowing pixels and the lights' shadows through the overrides of
-/// <see cref="DayNightPresenter"/> and
-/// <see cref="PropLighting"/>; teleports the local player to the entries of its world; and writes the readout. Nothing
-/// it changes is saved or sent.
+/// session again, through the <see cref="DayClock"/>'s local offset and rate; forces the sun's shadows, the clouds,
+/// water's reflections, the prop lights, the ground's glow, the flicker, the glowing pixels and the lights' shadows
+/// through the overrides of <see cref="DayNightPresenter"/> and <see cref="PropLighting"/>; teleports the local player
+/// to the entries of its world; and writes the readout. Nothing it changes is saved or sent.
 /// </summary>
 public sealed class LightingDebugControls
 {
@@ -147,6 +146,17 @@ public sealed class LightingDebugControls
         if (presenter != null)
         {
             presenter.CloudsOverride = Next(presenter.CloudsOverride);
+        }
+    }
+
+    /// <summary>
+    /// Water's reflections follow the day, then reflect as at night, then not at all (Docs/Lighting.md, Phase 10).
+    /// </summary>
+    public void CycleReflections()
+    {
+        if (presenter != null)
+        {
+            presenter.ReflectionsOverride = Next(presenter.ReflectionsOverride);
         }
     }
 

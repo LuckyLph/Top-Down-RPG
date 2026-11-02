@@ -137,6 +137,9 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float bankShadow = 0.25f;
     [Tooltip("Colour of this material's face where a sunken material (water) cuts into it, the bank above a pond's top edge: what the ground shows when cut, such as the dirt under grass.")]
     [SerializeField] private Color bankColour = new(0.38f, 0.29f, 0.2f, 1f);
+    [Header("Reflection")]
+    [Tooltip("How strongly it reflects the lights (Docs/Lighting.md, Phase 10): a light's glitter path down it toward the camera from a light above it on the screen, and its glints catching the light falling on them; 1 for open water, 0 for a material that reflects nothing.")]
+    [SerializeField, Range(0f, 1f)] private float reflection;
     [Header("Glow")]
     [Tooltip("How strongly it lights what lies near it at night, at its own cells; 0 for a material that does not glow.")]
     [SerializeField, Min(0f)] private float glowStrength;
@@ -200,6 +203,7 @@ public class TerrainMaterial : ScriptableObject
     public float SinkDepth => Mathf.Clamp(sinkDepth, 0f, MaxSinkDepth);
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;
+    public float Reflection => Mathf.Clamp01(reflection);
     public bool Glows => glowStrength > 0f && glowReach > 0f;
     public float GlowStrength => Mathf.Max(glowStrength, 0f);
     public float GlowReach => Mathf.Clamp(glowReach, 0f, MaxGlowReach);
@@ -240,6 +244,14 @@ public class TerrainMaterial : ScriptableObject
         glowStrength = strength;
         glowReach = reach;
         glowColour = colour;
+    }
+
+    /// <summary>
+    /// Makes it reflect the lights at <paramref name="strength"/>, for tests.
+    /// </summary>
+    internal void SetReflection(float strength)
+    {
+        reflection = strength;
     }
 
 #if UNITY_EDITOR

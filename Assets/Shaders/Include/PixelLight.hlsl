@@ -14,6 +14,22 @@ float2 PixelLightScreenUV(float2 worldPosition)
     return ComputeScreenPos(clip / clip.w).xy;
 }
 
+// The light of blend style 0 at a world position as its light texture holds it, the light's colours times their
+// intensities: read from the one texel holding that point (see PixelLitShadowed); black where no light reaches the
+// sorting layer drawn (no USE_SHAPE_LIGHT_TYPE_0).
+half3 PixelLightAt(float2 worldPosition)
+{
+#if USE_SHAPE_LIGHT_TYPE_0
+    uint lightWidth;
+    uint lightHeight;
+    _ShapeLightTexture0.GetDimensions(lightWidth, lightHeight);
+    int2 lightTexel = clamp((int2)floor(PixelLightScreenUV(worldPosition) * float2(lightWidth, lightHeight)), int2(0, 0), int2(lightWidth, lightHeight) - 1);
+    return LOAD_TEXTURE2D_LOD(_ShapeLightTexture0, lightTexel, 0).rgb;
+#else
+    return half3(0.0, 0.0, 0.0);
+#endif
+}
+
 // A colour lit by the 2D lights of blend style 0 at a world position, read there once from that style's light texture,
 // with the sun's light taken away by the share shadowed of it a sun shadow covers (SunShadowAt, SunShadowUnder), and
 // combined as CombinedShapeLightShared combines them; unchanged where no light reaches its sorting layer (no
@@ -25,12 +41,7 @@ float2 PixelLightScreenUV(float2 worldPosition)
 half3 PixelLitShadowed(half3 colour, float2 worldPosition, half shadowed)
 {
 #if USE_SHAPE_LIGHT_TYPE_0
-    uint lightWidth;
-    uint lightHeight;
-    _ShapeLightTexture0.GetDimensions(lightWidth, lightHeight);
-    int2 lightTexel = clamp((int2)floor(PixelLightScreenUV(worldPosition) * float2(lightWidth, lightHeight)), int2(0, 0), int2(lightWidth, lightHeight) - 1);
-    half3 light = LOAD_TEXTURE2D_LOD(_ShapeLightTexture0, lightTexel, 0).rgb;
-    light = max(0.0, light - (half3)_SunColour.rgb * shadowed);
+    half3 light = max(0.0, PixelLightAt(worldPosition) - (half3)_SunColour.rgb * shadowed);
     half3 modulate = light * _ShapeLightBlendFactors0.x;
     half3 additive = light * _ShapeLightBlendFactors0.y;
     return max(0.0, _HDREmulationScale * (colour * modulate + additive));

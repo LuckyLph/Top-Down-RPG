@@ -37,6 +37,28 @@ public class WorldLighting : MonoBehaviour
     public bool IsShown => gameObject.activeSelf;
 
     /// <summary>
+    /// The light the world's global lights give, as the 2D renderer's light texture holds it: the first one's colour
+    /// times its intensity; black without one.
+    /// </summary>
+    public Color GlobalLight
+    {
+        get
+        {
+            List<Light2D> lights = GlobalLights();
+            for (int i = 0; i < lights.Count; i++)
+            {
+                if (lights[i] != null)
+                {
+                    Color colour = lights[i].color * lights[i].intensity;
+                    return new Color(colour.r, colour.g, colour.b, 1f);
+                }
+            }
+
+            return Color.black;
+        }
+    }
+
+    /// <summary>
     /// Hides the lights until the presentation shows them, so a world loading beside the one on screen never enables a
     /// second global light, and keeps the global lights from casting shadows (Docs/Lighting.md, Phase 7): URP draws no
     /// global light's shadows, but would still draw a shadow texture for one near a wall or prop.

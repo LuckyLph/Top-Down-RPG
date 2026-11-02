@@ -22,8 +22,10 @@ using UnityEngine.Tilemaps;
 /// 4), an outdoor world's ground and sprites draw exactly the pixels today's light draws wherever no sun shadow falls.
 /// At night a sprite's glowing pixels draw at their own colour and flicker to their flicker colour by the glow's flicker
 /// (Phase 5). A light stopped by a wall's caster (Phase 7) shadows whole art pixels that hold still as the camera moves,
-/// drawn by the 2D renderer's projected shadow shader, ours, which compiles cleanly. Renders from later editor updates,
-/// until something is drawn.
+/// drawn by the 2D renderer's projected shadow shader, ours, which compiles cleanly. Water reflects a light above it on
+/// the screen down itself toward the camera (Phase 10), in whole art pixels that move with the water, never above the
+/// light; ground that reflects nothing, and water with no light about, draw today's pixels. Renders from later editor
+/// updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -49,6 +51,7 @@ public class PixelLightTests
     public void TearDown()
     {
         Shader.SetGlobalVector(GlowFlickerId, Vector4.zero);
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, Vector4.zero);
         foreach (Object created in createdObjects)
         {
             if (created != null)
@@ -313,6 +316,93 @@ public class PixelLightTests
         Assert.That(mixed, Is.EqualTo(0), first);
         Assert.That(under.r, Is.GreaterThan(away.r + 40));
         Assert.That(values.Count, Is.GreaterThan(40));
+    }
+
+    /// <summary>
+    /// Water reflects a light standing above it on the screen (Docs/Lighting.md, Phase 10): with its reflections on, the
+    /// art pixels below the light, toward the camera, draw brighter than with them off, in whole art pixels, while those
+    /// above it and those beside its light's reach draw as with them off; at another time of the water's the reflection
+    /// has moved.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALightAboveWater_IsReflectedDownIt_InWholeArtPixels_MovingWithTheWater()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(30, 60, 110, 255), true), 16, 12, 1f);
+        AddGlobalLight(Color.white, 0.2f);
+        AddPointLight(new Vector2(8.1f, 9.6f), 3f, 1.2f);
+        Rect world = new(4f, 1f, 8f, 10f);
+        Vector2 probe = new(5f, 2f);
+        Color32[] off = null;
+        Color32[] early = null;
+        Color32[] late = null;
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 0f));
+        yield return RenderUntilDrawn(terrain, world, probe, false, drawn => off = drawn);
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 1f));
+        yield return RenderUntilDrawn(terrain, world, probe, false, drawn => early = drawn);
+        terrain.SetFixedTime(0.5f);
+        yield return RenderUntilDrawn(terrain, world, probe, false, drawn => late = drawn);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        int height = Mathf.RoundToInt(world.height * ArtPixelsPerUnit * Zoom);
+        Assert.That(MixedBlocks(early, width, height, out string first), Is.EqualTo(0), first);
+        Assert.That(MixedBlocks(late, width, height, out first), Is.EqualTo(0), first);
+        int brighter = 0;
+        int moved = 0;
+        for (float y = 3f; y < 9f; y += 1f / ArtPixelsPerUnit)
+        {
+            for (float x = 7.2f; x < 9f; x += 1f / ArtPixelsPerUnit)
+            {
+                Vector2 position = new(x, y);
+                Color32 reflected = ArtPixel(early, width, world, position);
+                Color32 plain = ArtPixel(off, width, world, position);
+                Assert.That(reflected.r, Is.GreaterThanOrEqualTo(plain.r), $"{position}: a reflection only adds light.");
+                brighter += reflected.r > plain.r + 20 ? 1 : 0;
+                moved += reflected.Equals(ArtPixel(late, width, world, position)) ? 0 : 1;
+            }
+        }
+
+        Assert.That(brighter, Is.GreaterThan(200), "The light's glitter path runs down the water below it.");
+        Assert.That(moved, Is.GreaterThan(50), "It moves with the water.");
+        for (float x = 6.5f; x < 9.5f; x += 1f / ArtPixelsPerUnit)
+        {
+            Vector2 above = new(x, 10.4f);
+            Assert.That(ArtPixel(early, width, world, above), Is.EqualTo(ArtPixel(off, width, world, above)), $"{above}: nothing is reflected above the light.");
+        }
+
+        for (float y = 2f; y < 9f; y += 1f / ArtPixelsPerUnit)
+        {
+            Vector2 aside = new(4.5f, y);
+            Assert.That(ArtPixel(early, width, world, aside), Is.EqualTo(ArtPixel(off, width, world, aside)), $"{aside}: nor beside the light's reach.");
+        }
+    }
+
+    /// <summary>
+    /// Where nothing reflects, the ground draws today's pixels with water's reflections on (Docs/Lighting.md, Phase 10):
+    /// water with no light about but the sky, and ground that reflects nothing under a point light.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator WhereNothingReflects_TheGroundDrawsTodaysPixels()
+    {
+        TerrainBlendRenderer water = AddTerrain(SolidTexture(128, 128, new Color32(30, 60, 110, 255), true), 16, 12, 1f);
+        AddGlobalLight(Color.white, 0.2f);
+        Rect world = new(4f, 1f, 8f, 10f);
+        Vector2 probe = new(5f, 2f);
+        Color32[] off = null;
+        Color32[] on = null;
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 0f));
+        yield return RenderUntilDrawn(water, world, probe, false, drawn => off = drawn);
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 1f));
+        yield return RenderUntilDrawn(water, world, probe, false, drawn => on = drawn);
+        Assert.That(on, Is.EqualTo(off), "Water with no light but the sky.");
+
+        Object.DestroyImmediate(water.gameObject);
+        TerrainBlendRenderer ground = AddTerrain(SolidTexture(128, 128, new Color32(30, 60, 110, 255), true), 16, 12);
+        AddPointLight(new Vector2(8.1f, 9.6f), 3f, 1.2f);
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 0f));
+        yield return RenderUntilDrawn(ground, world, probe, false, drawn => off = drawn);
+        Shader.SetGlobalVector(DayNightPresenter.ReflectionId, new Vector4(0.2f, 0.2f, 0.2f, 1f));
+        yield return RenderUntilDrawn(ground, world, probe, false, drawn => on = drawn);
+        Assert.That(on, Is.EqualTo(off), "Ground that reflects nothing under a point light.");
     }
 
     /// <summary>
@@ -595,13 +685,14 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// A grid at the origin whose renderer draws one layer, of a material with <paramref name="albedo"/>, over
-    /// <paramref name="columns"/> x <paramref name="rows"/> cells.
+    /// A grid at the origin whose renderer draws one layer, of a material with <paramref name="albedo"/> reflecting the
+    /// lights at <paramref name="reflection"/>, over <paramref name="columns"/> x <paramref name="rows"/> cells.
     /// </summary>
-    private TerrainBlendRenderer AddTerrain(Texture2D albedo, int columns, int rows)
+    private TerrainBlendRenderer AddTerrain(Texture2D albedo, int columns, int rows, float reflection = 0f)
     {
         Texture2D height = TestTerrainStyle.CreateTexture("Height", new Color32(128, 128, 0, 255), createdObjects);
         TerrainMaterial material = TerrainMaterial.Create("Ground", albedo, null, 4, TerrainMaterial.CellMode.None, Color.gray, new TerrainStyle.EdgeSettings(), height);
+        material.SetReflection(reflection);
         createdObjects.Add(material);
         TerrainStyle style = TestTerrainStyle.Create(createdObjects);
         Tile tile = Track(ScriptableObject.CreateInstance<Tile>());

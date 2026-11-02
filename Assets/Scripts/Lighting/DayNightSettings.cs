@@ -4,7 +4,8 @@ using UnityEngine;
 /// The day and night (Docs/Lighting.md, Phase 3): how long the day and the night last on the world clock, where in the
 /// cycle a new game starts, the sky's and the sun's colours and how strongly the lights that burn at night shine over the
 /// cycle, where the sun's shadows fall, how the night's lights and glowing pixels flicker (Phase 5), the clouds whose
-/// shadows drift over the ground by day (Phase 8), and how often the host sends its world clock to the clients again.
+/// shadows drift over the ground by day (Phase 8), how strongly water reflects the lights by day (Phase 10), and how
+/// often the host sends its world clock to the clients again.
 /// The cycle runs from 0 at sunrise, through sunset at the day's share of it, to the next sunrise at 1. Runtime code only
 /// reads it.
 /// </summary>
@@ -51,6 +52,10 @@ public sealed class DayNightSettings : ScriptableObject
     [SerializeField, Tooltip("How fast and where the clouds drift, in units a second of the world clock.")]
     private Vector2 wind = new(0.6f, -0.15f);
 
+    [Header("Water")]
+    [SerializeField, Range(0f, 1f), Tooltip("How strongly water reflects the lights by day, against fully at night: between the two by the night lights' share.")]
+    private float dayReflection = 0.5f;
+
     [Header("Sharing")]
     [SerializeField, Min(1f), Tooltip("How often the host sends its world clock to the clients again, in seconds of the world clock, so their day never drifts from its own.")]
     private float resyncSeconds = 60f;
@@ -67,6 +72,7 @@ public sealed class DayNightSettings : ScriptableObject
     public float CloudShade => cloudShade;
     public float CloudEdge => cloudEdge;
     public Vector2 Wind => wind;
+    public float DayReflection => dayReflection;
     public int KeyCount => keys.Length;
 
     /// <summary>

@@ -11,6 +11,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/Architecture.md` is the code map (assemblies, boot/scene flow, DI scopes, one section per system, configs, events, tests, known gaps). Read it to orient before working on an unfamiliar system. Keep it current: any change that adds, removes, renames or rewires a type, system, scope registration, event, config asset or test suite must update the matching section in the same commit. Fixing an item listed under "Known gaps and oddities" means removing it from that list.
 
+`Docs/Roadmap.md` lists every plan and where it stands, what comes next, and the features planned for later that have no plan of their own yet (multiplayer testing among them). Keep it current: update it when a plan is added, a phase lands, a branch merges into `main`, or work moves to later.
+
 `Docs/Multiplayer.md` is the plan for online co-op (host-and-play, 2–4 players). Follow its "Rules for new code" in all new work, and tick off its phase checklist as steps land.
 
 `Docs/PlayerControls.md` is the spec for the click-to-move controls and ability rework. Follow it when working on player input, movement, auto attacks or abilities, and tick off its phase checklist as steps land.
@@ -98,7 +100,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 ## Working conventions
 
 - Ask which branch to work on (`main` or a feature branch) before committing. Use conventional-commit style messages (`feat(ai): ...`, `fix(ai): ...`, `tune(ai): ...`).
-- The game is pre-alpha (Player Settings version `0.1.0-prealpha`). Never change the build version unless the user asks for it, even when the network protocol or a world in the build changes, and keep it a pre-alpha number when they do. Real multiplayer tests with another client wait for the first playable vertical slice; until then design for multiplayer as the docs say, and leave the Multiplayer Play Mode checks to the user.
+- The game is pre-alpha (Player Settings version `0.1.0-prealpha`). Never change the build version unless the user asks for it, even when the network protocol or a world in the build changes, and keep it a pre-alpha number when they do. Testing multiplayer by hand (Multiplayer Play Mode, a second machine) is a later feature of its own (`Docs/Roadmap.md`) and out of scope until then: design every feature for multiplayer as the docs say and cover it with the PlayMode tests that run in the editor (the in-process host and client), but give feature plans no Multiplayer Play Mode checks or checkboxes.
 - Match surrounding code style: 4-space indent, Allman braces, `private` fields in camelCase without underscore prefix, PascalCase types/members.
 - Avoid code comments. The only comments allowed are class and method descriptors (XML doc summaries). Design rationale, tuning notes, explanations of behaviour, and anything else belongs in a doc file under `Docs/`, not inline in code. Do not leave commented-out code or TODO notes in source.
 - Prefer editing existing files over creating new ones; do not add speculative abstractions.

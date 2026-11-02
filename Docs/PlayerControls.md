@@ -203,7 +203,6 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 ### Phase 5: attack move
 - [x] `AttackMove` action on A (rebindable), `IPlayerInput.AttackMovePressedThisFrame` and `PlayerCommand.AttackMovePressed`.
 - [x] The AttackMove order, `IUnitQueries.NearestEnemyInRange` and the acquire range in `PlayerControlSettings`; the red attack-move marker.
-- [ ] Checked in Multiplayer Play Mode: the host and a client attack-move into the same pack.
 
 ### Later
 - Real ability effects through `AbilityService`, with visuals reacting to cast events on every machine. Started by [DamageAndStatusEffects.md](DamageAndStatusEffects.md) Phase 5: every targeting mode can carry a `Hit`, a heal and an area, resolved on the host when the cast completes (Bolt, Whirl, Smite and Mend use them). Cast visuals came with [Animation.md](Animation.md)'s Phase 5: every ability plays its cast clip on every machine (its gather as long as the cast time, its release when the cast completes, a follow-through), the class casts with a light at the hand and the Continue casts drawn over the run. Abilities that move the caster (Leap, Lunge, Charge, Roll) are still to come; they cast standing in their own poses meanwhile.
@@ -215,7 +214,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 - EditMode (with `ManualClock` and fakes): every `PlayerOrders` transition, including pause and resume around casts and Stop clearing the paused order; range checks; target loss; cooldowns and each failure reason; each targeting and movement mode; unit filters (enemy, ally, the caster as an ally); buffering (non-bufferable fails, bufferable fires after the running cast, newest press wins, expiry, dropped on a new order or Stop, re-validated when it fires); target picker rules (closest living unit, the dead ignored, right team, no line-of-sight test); attack move (walks to its point with nothing in range, takes the enemy in range closest to its point, walks on after a kill, Stop, clicks, paused by casts) and the nearest-enemy query (collider range, the dead, props and players ignored); input service bindings and the UI-blocking check; path follower parity with the old mob agent.
 - PlayMode: in the Clearing, a right click behind a wall paths around it; clicking a mob behind a wall gives an attack order that paths around and kills it; two players walk through each other; a client's cast reaches the host's `AbilityService` exactly once (including one aimed at the host's player as an ally) and the client's facing reaches the host's copy; a dead player's orders are cleared; an attack move past a mob kills it and walks on to its point.
-- Manual: Multiplayer Play Mode with 2 and 4 players, moving, attacking the same mob, attack-moving into the same pack and casting every blank, plus a late join during combat.
+- Manual, kept for the multiplayer testing feature ([Roadmap.md](Roadmap.md)): Multiplayer Play Mode with 2 and 4 players, moving, attacking the same mob, attack-moving into the same pack and casting every blank, plus a late join during combat.
 
 ## Open questions
 

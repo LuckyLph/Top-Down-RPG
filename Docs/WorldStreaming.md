@@ -520,7 +520,6 @@ Notes:
 - [x] Per-chunk terrain sync.
 - [x] The player id in the join payload, and a joining client spawns in its saved world (nothing is saved per player until Phase 8, so every joining player starts at the starting world's entry; `PlayerStarts.TryGetSaved` is the seam).
 - [x] Remove `NetworkAreaSync`, area announcements and `AreaEpoch`.
-- [ ] Multiplayer Play Mode check with 2 and 4 players: spread over one world, then in different worlds, travelling while others fight (steps below).
 
 Notes:
 
@@ -687,7 +686,7 @@ A review of Phases 1 to 9 on `main` found these, fixed with tests on `feature/ch
   - a trip offline leaving game time running in the session case;
   - a dead player respawning at its nearest discovered waystone, offline and for an in-process client (Phase 9).
 - **Online tests.** An in-process client test where the host reloads Gameplay freezes the editor. Trips no longer reload Gameplay, so chunk and trip tests stay within one session (`NetworkWorldsPlayModeTests`, `NetworkSessionPlayModeTests` against `InProcessHost`), and a hosted session no longer restarts.
-- **Manual:** Multiplayer Play Mode (Phase 7's steps):
+- **Manual**, kept for the multiplayer testing feature ([Roadmap.md](Roadmap.md)): Multiplayer Play Mode (Phase 7's steps):
   - two players walk to opposite corners of a world and back;
   - one enters a dungeon while the other keeps fighting outside;
   - the host enters a dungeon while a client fights outside.

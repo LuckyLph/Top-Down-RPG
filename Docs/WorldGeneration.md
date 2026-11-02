@@ -472,7 +472,6 @@ Notes (the measurement helper, under `Assets/Editor/Spike`, was deleted before t
 - [x] The world created with the World Editor at the first free slot, listed in `GameScenes` but not yet the starting world; its generator asset set from Phase 0's decisions; composed with no warnings, written, its coasts baked, its ids repaired and validated; the scenes checked for churn (a second write changes nothing).
 - [x] Every region edge, shore, plaza and road join looked at in the editor, in crisp and soft, and signed off.
 - [x] Tests: `OverworldTests` (EditMode) and `OverworldPlayModeTests` (PlayMode).
-- [ ] Multiplayer Play Mode check with 2 and 4 players (steps added to this phase's notes): players spread over regions, a client in a region the host is not in, a late joiner in another region, respawns at different regions' waystones.
 - [x] Docs: Architecture.md's World and Worlds and streaming (the Overworld), and WorldStreaming.md's Decisions (The first world) and Authoring (Generators).
 
 Notes (the helper that made the generator asset and the captures, under `Assets/Editor/Spike`, was deleted before the commit):
@@ -607,7 +606,7 @@ A review of Phases 0 to 5 on `main` found these, fixed with tests on `feature/ch
     - from the menu with the project's own GameScenes: New Game, and Host Game with no save and a joining player the host does not know, start at `clearing`.
   - `WorldPersistencePlayModeTests`: a place saved on the Sandbox's pond starts on the nearest walkable cell, offline on Continue and on the host for a joining player it knows, and is saved there; a place saved in the Overworld's open sea starts at the player's nearest discovered waystone.
   - The tests that boot into Testlands stay on it, and every boot gets the test copy of GameScenes starting at Testlands' `start` (Phase 5).
-- **Manual:** Multiplayer Play Mode, Phase 4's steps.
+- **Manual**, kept for the multiplayer testing feature ([Roadmap.md](Roadmap.md)): Multiplayer Play Mode, Phase 4's steps.
 
 ## Open questions
 

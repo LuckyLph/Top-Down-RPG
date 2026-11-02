@@ -320,7 +320,6 @@ Checked with `TerrainBlendProbe` in the Village Forest, through a brush and its 
 - [x] `AreaLayoutWriter`, `AreaGenerator.TerrainLayer` and the generator assets (a layer's navigation priority and sorting order come from its place in the list, as the renderer requires, instead of fields of their own); `AreaTerrain` layers as plain tilemaps with fill tiles (the Phase 3 `Tile_*` ground tiles); `StressTestMap`.
 - [x] `Area_Clearing`, `Area_VillageForest` and `Area_StressTest` migrated; the ground rule tiles and tilesets removed.
 - [x] Walls at 32 px.
-- [ ] Checked in Multiplayer Play Mode: an edit on the host shows on clients, a late joiner sees every edit. The EditMode and PlayMode replication tests pass on plain layers; the check by hand is still to do, with the steps in [Multiplayer.md](Multiplayer.md#checking-runtime-terrain-edits).
 
 #### Phase 4 notes
 
@@ -454,7 +453,7 @@ Checked with `TerrainBlendProbe`, with the editor unfocused:
 - EditMode, runtime layers: `AreaTerrain` on plain layers with fill tiles, on the host and replicated; `StressTestMap`'s ground as a plain tilemap.
 - EditMode, Phase 5: sand's lit crests lie over their shaded troughs, mud's puddles are shaded under their top-left bank and lit on their bottom-right edge, water's net breathes between two courses half a period apart and sparkles at its knots, and only water's height holds glint phases; an animated material's settings reach its layer row and a still one's leave it empty; the project's water is animated and meets sand without an outline; a fixed time reaches the runtime material; Convert Ground creates a missing layer empty at its place; the generators lay sand, mud and water out empty; on the writer's layers water blocks a cell and mud can be walked.
 - Art: `TerrainBlendProbe.CheckBlobs` finds no detached blobs or holes on the converted areas.
-- Manual: screenshots of both areas in both looks; seams across cell borders; lighting under the Global Light 2D; Multiplayer Play Mode as in Phase 4.
+- Manual: screenshots of both areas in both looks; seams across cell borders; lighting under the Global Light 2D. Checking runtime edits in Multiplayer Play Mode waits for the multiplayer testing feature ([Roadmap.md](Roadmap.md)); the EditMode and PlayMode replication tests cover them until then.
 
 ## Open questions
 

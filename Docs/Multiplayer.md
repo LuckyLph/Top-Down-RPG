@@ -138,7 +138,7 @@ Save data decisions (format version 2 since [WorldStreaming.md](WorldStreaming.m
 
 - EditMode: all new plain-class logic (registry, targeting, commands, respawn rules) with fakes, as today.
 - PlayMode: host and client in the same process for spawn, replication and damage flows.
-- Manual: Multiplayer Play Mode with 2 and 4 players, following [WorldStreaming.md](WorldStreaming.md#checking-with-multiplayer-play-mode)'s steps for seamless worlds online.
+- Manual: Multiplayer Play Mode with 2 and 4 players, following [WorldStreaming.md](WorldStreaming.md#checking-with-multiplayer-play-mode)'s steps for seamless worlds online. Testing by hand like this is a later feature of its own ([Roadmap.md](Roadmap.md)); until then features are checked by the EditMode and PlayMode tests alone, and feature plans carry no Multiplayer Play Mode checks (CLAUDE.md).
 
 ### Running two players in the editor
 

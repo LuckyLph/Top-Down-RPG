@@ -173,7 +173,6 @@ Nothing is replicated. Bindings only change which device control drives the loca
 
 - [x] `IMenuInput.MenuPressedThisFrame` and enabling the `Menus` map, `GameplayInputGate` blocks, `TimeFreeze` with `TransitionTimeFreeze` moved onto it.
 - [x] `GameMenu` prefab and `GameMenuController`: Resume, Options, Leave game, Quit, host confirmations, pause in single player.
-- [ ] Checked in Multiplayer Play Mode: a client and the host each rebind and play; the menu pauses no one, the host included when it is alone; a client leaving and the host leaving.
 
 ### Review follow-ups
 
@@ -196,7 +195,7 @@ Nothing is replicated. Bindings only change which device control drives the loca
 - EditMode, content: `RebindableActions.asset` matches the map; the project asset's default bindings have no duplicates among rebindable actions; the `Player` and `Menus` maps hold only the expected actions.
 - EditMode, pause: `TimeFreeze` is 0 while any owner holds it and 1 after the last release or on dispose; a transition during a pause keeps it at 0 until both end; `GameMenuController` holds it only with no active session, releases it on close and on destroy.
 - EditMode, gate and menus: the `Player` map stays disabled while a block is held and comes back when the last one is released; `GameMenuController` on a `MenuStack` with a fake `IMenuInput` opens, closes, never handles two levels in one frame, and ignores input during transitions; `AbilityBarPresenter` labels follow `BindingsChanged`.
-- Manual: rebind every action from the main menu and in game, restart and check they stuck; AZERTY labels; in single player the menu freezes mobs, cooldowns and statuses and Leave game from a pause reaches the menu; Multiplayer Play Mode with 2 and 4 players as in Phase 3.
+- Manual: rebind every action from the main menu and in game, restart and check they stuck; AZERTY labels; in single player the menu freezes mobs, cooldowns and statuses and Leave game from a pause reaches the menu. Multiplayer Play Mode with 2 and 4 players waits for the multiplayer testing feature ([Roadmap.md](Roadmap.md)).
 
 ## Open questions
 

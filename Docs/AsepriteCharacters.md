@@ -154,7 +154,6 @@ Phase 1 notes:
 - [x] A character drawn by hand plays in game from its imported set: a player look (Decisions: Looks) with its locomotion settings and the clips its weapons and abilities need, missing ones listed by Generate.
 - [x] Saving a `.aseprite` file regenerates the sheets and sets that use it, once per save, without touching other sets.
 - [x] PlayMode: the hand-drawn character walks and runs at its speeds, its contact frame shows on the update its hit lands, its casts release on completion, and its hit-stop and flash work as the rogue's.
-- [ ] Checked in Multiplayer Play Mode with a host and a client, one baked and one hand-drawn: each sees the other's gaits, attacks and casts.
 
 Phase 2 notes:
 
@@ -163,7 +162,7 @@ Phase 2 notes:
 - **Looks.** `PlayerLook` on the player shows a look of the catalog on its `CharacterVisuals` (`SetLook`, which builds the animator again). The local player follows the look its settings name from the moment it is bound (`PlayerBinder.BindLocal`): Testlands boots offline, where the player is never spawned on the network, so following it from the network spawn alone left it the rogue. `PlayerNetworkSync` writes the owner's look index to an owner-written network variable, which copies show, at spawn too. The weapon and the cast visuals keep the clips they looked up only while the visuals draw the set they came from, so a look changed mid-game plays its own attacks and casts. In the options a Character section above the controls has a Look row cycling the catalog, saved at once and shown on the local player straight away, in game too.
 - **Regenerating on save** queues every recipe using an imported file and generates them on the editor's next update, once the import is over; regenerating the unchanged Bandit read its 17 files and wrote nothing in 0.75 s. An editor in the background runs that update late, but a file saved in Aseprite only imports once the editor has focus anyway.
 - **Tests**: `CharacterLookTests`, look tests in `PlayerBinderTests`, `PlayerCastVisualsTests`, `OptionsMenuControllerTests` and `CharacterPrefabTests` (every look holds every clip the player plays), the regeneration test in `AsepriteCharacterTests`, and in PlayMode `HandDrawnCharacterPlayModeTests` (the Bandit in Testlands) and `NetworkLooksPlayModeTests` (a client's look reaching the host, a late joiner seeing the host's).
-- **Left for the Multiplayer Play Mode check**, by hand: open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2 (its settings file is its own), choose Options > Character > Look > Bandit in Player 2's main menu, host from the main editor as the rogue and join from Player 2. Each should see the other's walk, run, sword, greatsword and bow attacks and casts in the other's look; changing Player 2's look in its in-game options should change it on the host too.
+- **Kept for the multiplayer testing feature ([Roadmap.md](Roadmap.md))**, by hand (no plan checks multiplayer by hand until then; CLAUDE.md): open `Window > Multiplayer > Multiplayer Play Mode` and activate Player 2 (its settings file is its own), choose Options > Character > Look > Bandit in Player 2's main menu, host from the main editor as the rogue and join from Player 2. Each should see the other's walk, run, sword, greatsword and bow attacks and casts in the other's look; changing Player 2's look in its in-game options should change it on the host too.
 
 ### Phase 3: effects and projectiles
 
@@ -205,7 +204,7 @@ Phase 4 notes:
 - EditMode, effects and projectiles (Phase 3): each file reads as its rows (eight tags, or the whole file); each validation rule of an effect's and a projectile's file, of their variants and of their recipes fails with its message; the baked impact, death puff and arrow written as files give sheets byte for byte the baked ones and sprite sets equal to the baked ones, and generating again writes nothing; slice IDs survive a frame added and removed, a layer added and the canvas resized, and a broken edit writes nothing; saving their files regenerates their recipes; the inspectors read the files as Generate does.
 - EditMode, the lantern (Phase 4): a clip's three lantern layers read by name, shown or hidden, none drawn into the frames, the glow only over the lantern and the light's pixel from the feet; each lantern rule fails with its message; the rogue's baked lantern written on its layers gives its baked lantern sheet and glow byte for byte, every slice's rect and pivot and each light within half a pixel, and the file without it loses them; every look carries the lantern where the rogue's hangs.
 - PlayMode: a character built from an imported set (from the helper's files, so no hand-drawn art is needed in tests) runs the animator tests that matter for the contract: gaits by speed, the contact frame at contact, the release at completion, the hold.
-- Manual: a real hand-drawn character in play and in Multiplayer Play Mode (Phase 2).
+- Manual: a real hand-drawn character in play (Phase 2).
 
 ## Open questions
 

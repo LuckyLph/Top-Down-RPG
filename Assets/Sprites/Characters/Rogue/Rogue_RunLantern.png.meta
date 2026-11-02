@@ -1,0 +1,1593 @@
+fileFormatVersion: 2
+guid: 7aebeeb9ea5450348a72eba460d769a8
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2207309285421140787
+    second: Rogue_RunLantern_0
+  - first:
+      213: -8530136454736625216
+    second: Rogue_RunLantern_1
+  - first:
+      213: 8197398451376144438
+    second: Rogue_RunLantern_2
+  - first:
+      213: 5069636475903337074
+    second: Rogue_RunLantern_3
+  - first:
+      213: 7267764413787539740
+    second: Rogue_RunLantern_4
+  - first:
+      213: -1391895199527866379
+    second: Rogue_RunLantern_5
+  - first:
+      213: 8504762089455021243
+    second: Rogue_RunLantern_6
+  - first:
+      213: 5182643719008452104
+    second: Rogue_RunLantern_7
+  - first:
+      213: 7722928875522978159
+    second: Rogue_RunLantern_8
+  - first:
+      213: -3100709652488254034
+    second: Rogue_RunLantern_9
+  - first:
+      213: -4775189662202462654
+    second: Rogue_RunLantern_10
+  - first:
+      213: 3114647016544335469
+    second: Rogue_RunLantern_11
+  - first:
+      213: 4381867634544117266
+    second: Rogue_RunLantern_12
+  - first:
+      213: -142136801524818417
+    second: Rogue_RunLantern_13
+  - first:
+      213: 8334127014163098864
+    second: Rogue_RunLantern_14
+  - first:
+      213: 5389764727873181795
+    second: Rogue_RunLantern_15
+  - first:
+      213: -762328175853995687
+    second: Rogue_RunLantern_16
+  - first:
+      213: 8102122654994484413
+    second: Rogue_RunLantern_17
+  - first:
+      213: -3445140542343100103
+    second: Rogue_RunLantern_18
+  - first:
+      213: -6859142519090089953
+    second: Rogue_RunLantern_19
+  - first:
+      213: -7060836075307563513
+    second: Rogue_RunLantern_20
+  - first:
+      213: -1785023216682213963
+    second: Rogue_RunLantern_21
+  - first:
+      213: 3636290726012756449
+    second: Rogue_RunLantern_22
+  - first:
+      213: 1024121908848820920
+    second: Rogue_RunLantern_23
+  - first:
+      213: -4583247685570861416
+    second: Rogue_RunLantern_24
+  - first:
+      213: -4966732069306289134
+    second: Rogue_RunLantern_25
+  - first:
+      213: -8460326876552568549
+    second: Rogue_RunLantern_26
+  - first:
+      213: 1664032073719355131
+    second: Rogue_RunLantern_27
+  - first:
+      213: 4337207781708262362
+    second: Rogue_RunLantern_28
+  - first:
+      213: 1632636463077543922
+    second: Rogue_RunLantern_29
+  - first:
+      213: 1335305503459573085
+    second: Rogue_RunLantern_30
+  - first:
+      213: 8372655395271165475
+    second: Rogue_RunLantern_31
+  - first:
+      213: -7964658834241920580
+    second: Rogue_RunLantern_32
+  - first:
+      213: -3883228731052208118
+    second: Rogue_RunLantern_33
+  - first:
+      213: -8089887492586153615
+    second: Rogue_RunLantern_34
+  - first:
+      213: -8655018008399168723
+    second: Rogue_RunLantern_35
+  - first:
+      213: 1837777123187067989
+    second: Rogue_RunLantern_36
+  - first:
+      213: -7093470870314626409
+    second: Rogue_RunLantern_37
+  - first:
+      213: 6701509729764044589
+    second: Rogue_RunLantern_38
+  - first:
+      213: -4169743106260185490
+    second: Rogue_RunLantern_39
+  - first:
+      213: -2992760446225420638
+    second: Rogue_RunLantern_40
+  - first:
+      213: 4054068933099400961
+    second: Rogue_RunLantern_41
+  - first:
+      213: -2226422307652718466
+    second: Rogue_RunLantern_42
+  - first:
+      213: -3434194181588036136
+    second: Rogue_RunLantern_43
+  - first:
+      213: 8600084453186615868
+    second: Rogue_RunLantern_44
+  - first:
+      213: -7169550257412726779
+    second: Rogue_RunLantern_45
+  - first:
+      213: -7577982558656794275
+    second: Rogue_RunLantern_46
+  - first:
+      213: 8851873750807059279
+    second: Rogue_RunLantern_47
+  - first:
+      213: 6997766232895558061
+    second: Rogue_RunLantern_48
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 98
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 4, y: -6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 68b3d79aba0b5c14eb8fcd6e21650e65
+      internalID: -653577215
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 98
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.14285715, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 27317280f1b6b4a449f9a82aef083a03
+      internalID: -1058236801
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 98
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.90909094}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 83c6aa9e9dbf72c4c8bf230de2ca6818
+      internalID: 1348642467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 98
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.44444445, y: -0.72727275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 46e6c4ec7918d5f4ca65cdd1a95be437
+      internalID: 346936597
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 98
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -1, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ca49b22f36f8de94185756002502b0a5
+      internalID: -1042524552
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 98
+        width: 4
+        height: 5
+      alignment: 9
+      pivot: {x: -0.25, y: -1.4}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8845515101e81c34994711341847345c
+      internalID: 1562093836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 98
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 4, y: -8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 33244284677122a49adb35e24a17211b
+      internalID: 1886866768
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 84
+        width: 3
+        height: 3
+      alignment: 9
+      pivot: {x: 4.6666665, y: -1.3333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 760d5e3c809b63044b90c53d1a0dc1dd
+      internalID: 2059368678
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 70
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.375, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b0777c59367512142a4d67e2550f0b5b
+      internalID: -807181805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 70
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2af3d8e1213d3fe46b242deb09472bb2
+      internalID: -824278218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 70
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 2.75, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3981c3372eafc8d4bb4387ada406b5ca
+      internalID: 1179436648
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 70
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 2.75, y: -0.8181818}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: de40b41b10cfce34fb5375223ba85f87
+      internalID: 172219480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 70
+        width: 4
+        height: 14
+      alignment: 9
+      pivot: {x: 2.75, y: -0.5714286}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f92b6973ed62c5947b771ceaece7b014
+      internalID: 272317576
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 70
+        width: 4
+        height: 14
+      alignment: 9
+      pivot: {x: 2.75, y: -0.42857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 915fdf576f698e74492ebbd1a8b2162f
+      internalID: 106453677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 70
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 2.75, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fcd4e0bfb994a1e4cab0194eb1083334
+      internalID: 2057356319
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 70
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b7ce1a1b974075c47a2eff84854818cb
+      internalID: -2102853299
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.72727275, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8a6cfa7bc607bb347a4ccd45f7ee0c50
+      internalID: -1825895320
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.8181818, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e57c9afdc8eb3d34a8fdc0a6395eab75
+      internalID: 269415227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.3, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c01808b64890b2a4b903f8b94f16ebea
+      internalID: -1893780941
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.4545455, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: abd208f8913391c4aa99e49a0a6fc908
+      internalID: -1750452319
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 56
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5454545, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 437de719d34c3814faf48bbd52963af8
+      internalID: 68854983
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55d4e87ba7e01f344be2777a467107f4
+      internalID: -1490473413
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1818181, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9f6c3ecb5ab542a4183922b60ef92642
+      internalID: -421015443
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 703b6bb4ab85db349aae861ce8409e0a
+      internalID: 575129722
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d2000c09e9343b5429ee6ae0aed6d586
+      internalID: 1261813839
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.3, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2cfa8f0e9c78d344d9de1661c5db4e7b
+      internalID: -1324740674
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.8888889, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 544ffd99194ad504ca29e8e95b538caf
+      internalID: 1189087097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e4d39d7ee0ae72488073415aaafee4d
+      internalID: -12945020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 42
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.3, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 45b780500b2d749489b0520fe91a6a13
+      internalID: 1840781650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 42
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.2, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 175ad53aeda37c24084c1830854c6dbf
+      internalID: -2061559037
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.8888889, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a95d476079dbe7b448bf67e210a485e6
+      internalID: -306184640
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.4, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 67a27b050ed4dfd4d9a5efe4304edc51
+      internalID: -1058853156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.16666667, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 64dd08fead070694fb826abbf8aed90a
+      internalID: -1031229776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 28
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.2, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 016b2b525723ad44e992da26d5df6c85
+      internalID: 536562606
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.33333334, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e48552ecc8d15cb428a3631d6f84d60e
+      internalID: -1208085498
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5833333, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a9b0c914526896d4fbf55bfeb9c39363
+      internalID: -1771194177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5833333, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cf6d802fff08bd146800f041a471a54b
+      internalID: -1901924201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5, y: 0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0f789c1bea48bbe4795f5c3cee785b6a
+      internalID: 456317491
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 28
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.2, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: acd0bb6a674310a4cb66fbf163eeb116
+      internalID: 575709966
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9e0bda96f7ff4d84b8aafbd13c8a3cea
+      internalID: -1727762474
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 14
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5d99f6280386db4aa5981b2dcde53f2
+      internalID: -1805486980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa3d49a1e3e6b36498d8951e93c2fe42
+      internalID: 1746832841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 14
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 316a62b7cefaad641aca0f6379180aa7
+      internalID: -817409935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 830c449208de5fb4ca3796dc16f94041
+      internalID: 1746269093
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 68bd459caf4ec924b834c74ff0e183e2
+      internalID: -1910457364
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0fdcd65ac89f83a4b8d9ce58e8bf2eef
+      internalID: 833820501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 14
+        width: 6
+        height: 14
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 011d3aa65d8affb4e86839059ce437d1
+      internalID: 2089715274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5029fec724cfe542b9cc612c5b7b433
+      internalID: 1945332482
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 6
+        height: 8
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 14465b42af171424b9ca8068a4e4020b
+      internalID: -1875329318
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 4
+        height: 8
+      alignment: 9
+      pivot: {x: -1.25, y: -0.875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8d5a8a827ad5ad4b97130f7253daa6d
+      internalID: 30557437
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.625, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2d1eba7993c1630439e6f07d98985583
+      internalID: -595980387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.45454547, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6b98170f9c1a39042a3de6d84cd2f2ce
+      internalID: 279345617
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: -0.41666666, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 260fc45a96a643e4eaeded4f5fa3eb7c
+      internalID: 1163194096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 0
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.6666667, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f7f496d14efb74b4895b01ed802fb157
+      internalID: 613349151
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 11
+        height: 11
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c87d15c666ecd644cba32e072ef93e40
+      internalID: -1078033708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_RunLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: 0, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0aaac1bd2546d98408dc3531ba12153e
+      internalID: -1862750103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: c64ecaf528431e343b28ec7e4bd5f251
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: b90afffefb9f5f94fae75e8ef211bc67, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_RunLantern_E_1: -653577215
+      Rogue_RunLantern_E_2: -1058236801
+      Rogue_RunLantern_E_3: 1348642467
+      Rogue_RunLantern_E_4: 346936597
+      Rogue_RunLantern_E_5: -1042524552
+      Rogue_RunLantern_E_6: 1562093836
+      Rogue_RunLantern_E_7: 1886866768
+      Rogue_RunLantern_NE_0: 2059368678
+      Rogue_RunLantern_NW_0: -1825895320
+      Rogue_RunLantern_NW_1: 269415227
+      Rogue_RunLantern_NW_2: -1893780941
+      Rogue_RunLantern_NW_3: -1750452319
+      Rogue_RunLantern_NW_4: 68854983
+      Rogue_RunLantern_NW_5: -1490473413
+      Rogue_RunLantern_NW_6: -421015443
+      Rogue_RunLantern_NW_7: 575129722
+      Rogue_RunLantern_N_0: -807181805
+      Rogue_RunLantern_N_1: -824278218
+      Rogue_RunLantern_N_2: 1179436648
+      Rogue_RunLantern_N_3: 172219480
+      Rogue_RunLantern_N_4: 272317576
+      Rogue_RunLantern_N_5: 106453677
+      Rogue_RunLantern_N_6: 2057356319
+      Rogue_RunLantern_N_7: -2102853299
+      Rogue_RunLantern_SE_0: -1875329318
+      Rogue_RunLantern_SE_1: 30557437
+      Rogue_RunLantern_SE_2: -595980387
+      Rogue_RunLantern_SE_3: 279345617
+      Rogue_RunLantern_SE_4: 1163194096
+      Rogue_RunLantern_SE_5: 613349151
+      Rogue_RunLantern_SE_6: -1078033708
+      Rogue_RunLantern_SE_7: -1862750103
+      Rogue_RunLantern_SW_0: -1031229776
+      Rogue_RunLantern_SW_1: 536562606
+      Rogue_RunLantern_SW_2: -1208085498
+      Rogue_RunLantern_SW_3: -1771194177
+      Rogue_RunLantern_SW_4: -1901924201
+      Rogue_RunLantern_SW_5: 456317491
+      Rogue_RunLantern_SW_6: 575709966
+      Rogue_RunLantern_SW_7: -1727762474
+      Rogue_RunLantern_S_0: -1805486980
+      Rogue_RunLantern_S_1: 1746832841
+      Rogue_RunLantern_S_2: -817409935
+      Rogue_RunLantern_S_3: 1746269093
+      Rogue_RunLantern_S_4: -1910457364
+      Rogue_RunLantern_S_5: 833820501
+      Rogue_RunLantern_S_6: 2089715274
+      Rogue_RunLantern_S_7: 1945332482
+      Rogue_RunLantern_W_0: 1261813839
+      Rogue_RunLantern_W_1: -1324740674
+      Rogue_RunLantern_W_2: 1189087097
+      Rogue_RunLantern_W_3: -12945020
+      Rogue_RunLantern_W_4: 1840781650
+      Rogue_RunLantern_W_5: -2061559037
+      Rogue_RunLantern_W_6: -306184640
+      Rogue_RunLantern_W_7: -1058853156
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

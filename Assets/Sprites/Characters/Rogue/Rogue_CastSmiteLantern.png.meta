@@ -1,0 +1,1609 @@
+fileFormatVersion: 2
+guid: fcdd5c271cec2294c85eaad2b8ddafce
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3219149310905850280
+    second: Rogue_CastSmiteLantern_0
+  - first:
+      213: -6095208762946423214
+    second: Rogue_CastSmiteLantern_1
+  - first:
+      213: -1821381327384248463
+    second: Rogue_CastSmiteLantern_2
+  - first:
+      213: 8560298075034771795
+    second: Rogue_CastSmiteLantern_3
+  - first:
+      213: -1706836326005159999
+    second: Rogue_CastSmiteLantern_4
+  - first:
+      213: 8043464146011461383
+    second: Rogue_CastSmiteLantern_5
+  - first:
+      213: -1563512435297541075
+    second: Rogue_CastSmiteLantern_6
+  - first:
+      213: -1828240467567994078
+    second: Rogue_CastSmiteLantern_7
+  - first:
+      213: -6422752648606985721
+    second: Rogue_CastSmiteLantern_8
+  - first:
+      213: -5371218656624646642
+    second: Rogue_CastSmiteLantern_9
+  - first:
+      213: 50438169544010826
+    second: Rogue_CastSmiteLantern_10
+  - first:
+      213: -2334799422468481259
+    second: Rogue_CastSmiteLantern_11
+  - first:
+      213: 8518304897003489879
+    second: Rogue_CastSmiteLantern_12
+  - first:
+      213: 8217245663828647443
+    second: Rogue_CastSmiteLantern_13
+  - first:
+      213: 4149914016558185311
+    second: Rogue_CastSmiteLantern_14
+  - first:
+      213: -1053447113855719033
+    second: Rogue_CastSmiteLantern_15
+  - first:
+      213: 330422922292699512
+    second: Rogue_CastSmiteLantern_16
+  - first:
+      213: -2633812049820956966
+    second: Rogue_CastSmiteLantern_17
+  - first:
+      213: 483773193966087803
+    second: Rogue_CastSmiteLantern_18
+  - first:
+      213: 6395084956804882808
+    second: Rogue_CastSmiteLantern_19
+  - first:
+      213: -7938430723463923286
+    second: Rogue_CastSmiteLantern_20
+  - first:
+      213: -8906666386157121210
+    second: Rogue_CastSmiteLantern_21
+  - first:
+      213: -8976555204666435630
+    second: Rogue_CastSmiteLantern_22
+  - first:
+      213: 4451309452080938195
+    second: Rogue_CastSmiteLantern_23
+  - first:
+      213: -2102430669945616396
+    second: Rogue_CastSmiteLantern_24
+  - first:
+      213: 6641841064582783216
+    second: Rogue_CastSmiteLantern_25
+  - first:
+      213: 4638975032661633075
+    second: Rogue_CastSmiteLantern_26
+  - first:
+      213: -3188211933115805974
+    second: Rogue_CastSmiteLantern_27
+  - first:
+      213: -2829286555227441804
+    second: Rogue_CastSmiteLantern_28
+  - first:
+      213: -7291915931748028439
+    second: Rogue_CastSmiteLantern_29
+  - first:
+      213: 5327897039167467029
+    second: Rogue_CastSmiteLantern_30
+  - first:
+      213: 7831964834003499273
+    second: Rogue_CastSmiteLantern_31
+  - first:
+      213: 6115640608214688955
+    second: Rogue_CastSmiteLantern_32
+  - first:
+      213: -3405712726473776790
+    second: Rogue_CastSmiteLantern_33
+  - first:
+      213: 3196161361750656838
+    second: Rogue_CastSmiteLantern_34
+  - first:
+      213: -8639181460201045277
+    second: Rogue_CastSmiteLantern_35
+  - first:
+      213: -7020252582304232157
+    second: Rogue_CastSmiteLantern_36
+  - first:
+      213: 4886252699710517091
+    second: Rogue_CastSmiteLantern_37
+  - first:
+      213: -5588799182244441775
+    second: Rogue_CastSmiteLantern_38
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 98
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 72daaa7a28999424d8619407bae3cc6a
+      internalID: -1994677725
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 98
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: -1, y: -0.46153846}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cf660a82f51005b4ab8f36dec33d3328
+      internalID: -1085726635
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 98
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.625, y: -0.7692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41a57f1134020e04f89b6dc64c7a8155
+      internalID: 1198884928
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 98
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.7777778, y: -0.9230769}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f25994b488d4e7546ab8d607e47f0508
+      internalID: 1078582395
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 98
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b94155b7a909fbd49acd729057a45d78
+      internalID: -1525626499
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 84
+        width: 4
+        height: 4
+      alignment: 9
+      pivot: {x: -1.25, y: -3.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a10bb243d8375384eabfbbc3bac5f77d
+      internalID: -383646606
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 84
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.8333333, y: -1.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 44d29d9d11a9e5d4298abaaec0372209
+      internalID: 2010126363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 84
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1965124e7cb1f9c459e37669ba740885
+      internalID: 1183234096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 84
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ceb4037df8768c4fbef9021073c4999
+      internalID: 1771952883
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 84
+        width: 3
+        height: 9
+      alignment: 9
+      pivot: {x: 4, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 045d65a1261d76440bc3b000b80859aa
+      internalID: 91808777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 70
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c08ac2d9feefa246abc7454bcc1969b
+      internalID: -250538905
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 70
+        width: 3
+        height: 11
+      alignment: 9
+      pivot: {x: 3.3333333, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a9a775b45c1df824babea4f9db7ca64f
+      internalID: 1724696765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 70
+        width: 2
+        height: 3
+      alignment: 9
+      pivot: {x: 4.5, y: -5.6666665}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: deccd51a5a5f52246bf85187840ba88e
+      internalID: 1576486730
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 70
+        width: 2
+        height: 8
+      alignment: 9
+      pivot: {x: 4.5, y: -2.375}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0edebea3794d51f41a28e7d6ae252c7d
+      internalID: 1514357320
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 70
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f2c0cc810461e041b46e9277e5a4cad
+      internalID: 437517546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 70
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e50950364542ee241bf4fde5dbaf8f55
+      internalID: 1302885666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 70
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 329ea9181396ff74eb86d7f1e527657b
+      internalID: 1686677790
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 70
+        width: 5
+        height: 14
+      alignment: 9
+      pivot: {x: 2.2, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 886898c72a0c4fc4c89a66d42140288b
+      internalID: -353651740
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 56
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1d2296e3cb02aa24eaf5ec27a932b46e
+      internalID: 672450365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.2, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f2d5a9faa771364398980951b99e8ad
+      internalID: -1930873484
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 56
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5, y: -0.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4e8223a505a74784fa7902d0fc01034b
+      internalID: -389571888
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 56
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5454545, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21e5d56b17e582845ace10a6b0616770
+      internalID: 269127865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7fcd86fa63b4ff34b8c2c2b92ece2f17
+      internalID: 2038720776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c4cdb7ebd73c814087ed16bf6126b13
+      internalID: -573576728
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c13524ef5f939ae47869827e71eeff68
+      internalID: 1806667981
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 56
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 1.1, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 162d3c5663350364a94b4ac4dd2dee8b
+      internalID: -1312396132
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4fd43978b505b954593691ef7b5dffa9
+      internalID: -701543335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.8888889, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 42dbdecc21f21984cb5f926e74447baf
+      internalID: 1475284813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.4444444, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dc8a9d236abf53d4d9a84218380ef9ce
+      internalID: -611078139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.7777778, y: -0.61538464}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7ecad0e662481c44a86218a11a242f9a
+      internalID: 1061846262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 823367c9c85965245b4ad96f06be1d27
+      internalID: -1995185427
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ce691f00cb235c41921d66540147937
+      internalID: -1032426020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.33333334, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: efbe3b79d61a9bd4f9ae9f2759e65ba3
+      internalID: -414140347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a5537653c6ae9874499ccc0fa5628afc
+      internalID: 325984400
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 28
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1559b96f0c937bf40901c614354b48fe
+      internalID: -341647034
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 28
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: 0.33333334, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 537809fca42786746bc5f3e2dcb1c91e
+      internalID: 1001516344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.75, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b327b5d5f0c63e6418b19370c56f6cbe
+      internalID: -801536351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9166667, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f3f0e32b5e2b374f8ac8a939796c327
+      internalID: 1074258864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 28
+        width: 12
+        height: 14
+      alignment: 9
+      pivot: {x: -0.083333336, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 68d1c31711184df44b879789a1a33b36
+      internalID: 548087713
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 28
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: -0.083333336, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e69164b989150284e9a5ec14662271f6
+      internalID: -992048786
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.09090909, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 67f07ffee9238b647b09e902edbaa59b
+      internalID: 2815541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 28
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 51432ee43e547574b8b44c8c851c577b
+      internalID: 566961045
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cf805344dac1ff9428b8cdc635b625a2
+      internalID: 1720519408
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff1e006ab0b0e6f40bbbc5e138674125
+      internalID: -454045685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f15c7efd02fa09a47954a4b2d6232222
+      internalID: 686957805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 14
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.1, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4b38fbae0a3aac24f8f95e72a1b72b8b
+      internalID: -274721179
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aba08d2eef168e54b89bdd12a4ea782d
+      internalID: 1462411617
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 14
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c5357ceb64c3507458a29108d92d98e5
+      internalID: -1190079962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a430d3befba7ad4ab8c709e4f33eb11
+      internalID: -1454889503
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 14
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fdbd42eb5a7e4524ab8af89446086adc
+      internalID: -456436208
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d2b5ff431b389c4199f4f1f5753c242
+      internalID: 389486535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 299af14c0e1b3ac479d0825cd061c36f
+      internalID: 429042204
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.36363637, y: -0.46153846}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c706a55e33b6afb409f877bd488229f4
+      internalID: 1589718275
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.41666666, y: -0.53846157}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eae493b9b84aead4f8b0b5e897958271
+      internalID: 831439687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 5
+        height: 8
+      alignment: 9
+      pivot: {x: -0.4, y: -0.875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1b994f6770f5b5247ba1669eef79fb70
+      internalID: -1463216449
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 0
+        width: 7
+        height: 10
+      alignment: 9
+      pivot: {x: -0.2857143, y: -0.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2461468f2ebfa2a4e8147463f9c4fbae
+      internalID: 441492545
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.2857143, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 16a5c087044d7124f8e55c5066e4afbe
+      internalID: -820534808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastSmiteLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6cf0c78a8d81884418405f667967654a
+      internalID: 1490797252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 8999be75d76400e408448faa7bcb71ed
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 73c4484bbfba8cd4e9dfc5a60431b41c, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_CastSmiteLantern_E_0: -1994677725
+      Rogue_CastSmiteLantern_E_1: -1085726635
+      Rogue_CastSmiteLantern_E_2: 1198884928
+      Rogue_CastSmiteLantern_E_3: 1078582395
+      Rogue_CastSmiteLantern_E_7: -1525626499
+      Rogue_CastSmiteLantern_NE_2: -383646606
+      Rogue_CastSmiteLantern_NE_3: 2010126363
+      Rogue_CastSmiteLantern_NE_4: 1183234096
+      Rogue_CastSmiteLantern_NE_5: 1771952883
+      Rogue_CastSmiteLantern_NE_6: 91808777
+      Rogue_CastSmiteLantern_NW_0: 672450365
+      Rogue_CastSmiteLantern_NW_1: -1930873484
+      Rogue_CastSmiteLantern_NW_2: -389571888
+      Rogue_CastSmiteLantern_NW_3: 269127865
+      Rogue_CastSmiteLantern_NW_4: 2038720776
+      Rogue_CastSmiteLantern_NW_5: -573576728
+      Rogue_CastSmiteLantern_NW_6: 1806667981
+      Rogue_CastSmiteLantern_NW_7: -1312396132
+      Rogue_CastSmiteLantern_N_0: -250538905
+      Rogue_CastSmiteLantern_N_1: 1724696765
+      Rogue_CastSmiteLantern_N_2: 1576486730
+      Rogue_CastSmiteLantern_N_3: 1514357320
+      Rogue_CastSmiteLantern_N_4: 437517546
+      Rogue_CastSmiteLantern_N_5: 1302885666
+      Rogue_CastSmiteLantern_N_6: 1686677790
+      Rogue_CastSmiteLantern_N_7: -353651740
+      Rogue_CastSmiteLantern_SE_0: 389486535
+      Rogue_CastSmiteLantern_SE_1: 429042204
+      Rogue_CastSmiteLantern_SE_2: 1589718275
+      Rogue_CastSmiteLantern_SE_3: 831439687
+      Rogue_CastSmiteLantern_SE_4: -1463216449
+      Rogue_CastSmiteLantern_SE_5: 441492545
+      Rogue_CastSmiteLantern_SE_6: -820534808
+      Rogue_CastSmiteLantern_SE_7: 1490797252
+      Rogue_CastSmiteLantern_SW_0: -341647034
+      Rogue_CastSmiteLantern_SW_1: 1001516344
+      Rogue_CastSmiteLantern_SW_2: -801536351
+      Rogue_CastSmiteLantern_SW_3: 1074258864
+      Rogue_CastSmiteLantern_SW_4: 548087713
+      Rogue_CastSmiteLantern_SW_5: -992048786
+      Rogue_CastSmiteLantern_SW_6: 2815541
+      Rogue_CastSmiteLantern_SW_7: 566961045
+      Rogue_CastSmiteLantern_S_0: 1720519408
+      Rogue_CastSmiteLantern_S_1: -454045685
+      Rogue_CastSmiteLantern_S_2: 686957805
+      Rogue_CastSmiteLantern_S_3: -274721179
+      Rogue_CastSmiteLantern_S_4: 1462411617
+      Rogue_CastSmiteLantern_S_5: -1190079962
+      Rogue_CastSmiteLantern_S_6: -1454889503
+      Rogue_CastSmiteLantern_S_7: -456436208
+      Rogue_CastSmiteLantern_W_0: -701543335
+      Rogue_CastSmiteLantern_W_1: 1475284813
+      Rogue_CastSmiteLantern_W_2: -611078139
+      Rogue_CastSmiteLantern_W_3: 1061846262
+      Rogue_CastSmiteLantern_W_4: -1995185427
+      Rogue_CastSmiteLantern_W_5: -1032426020
+      Rogue_CastSmiteLantern_W_6: -414140347
+      Rogue_CastSmiteLantern_W_7: 325984400
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

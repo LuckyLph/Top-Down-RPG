@@ -183,6 +183,7 @@ Phase 3 notes:
 - Switching the game's impact, death puff and arrow to files drawn by hand, once they are drawn (Phase 3 notes).
 - Fewer directions, if hand-drawing 8 proves too costly (Open questions).
 - Watching for a file that changed outside Unity while the editor was closed (Unity reimports it on startup; the postprocessor covers that once Phase 2 lands).
+- A carried lantern for a character drawn by hand (Lighting.md's Phase 9): the baked rogue's lantern is a layer of its own over its frames with a light per frame, and a hand-drawn look (the Bandit) has neither, so its lantern shows nothing. The files would need the lantern on a layer of its own, read into the clip's lantern layer, and a marker for where its light shines from.
 
 ## Testing
 

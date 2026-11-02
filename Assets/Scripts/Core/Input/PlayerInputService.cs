@@ -15,6 +15,7 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     public const string AttackMoveActionName = "AttackMove";
     public const string PointActionName = "Point";
     public const string StopActionName = "Stop";
+    public const string LanternActionName = "Lantern";
     public const string AbilityActionPrefix = "Ability";
     public const string UIMapName = "UI";
     public const string CancelActionName = "Cancel";
@@ -26,6 +27,7 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     private readonly InputAction attackMoveAction;
     private readonly InputAction pointAction;
     private readonly InputAction stopAction;
+    private readonly InputAction lanternAction;
     private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
     private readonly InputAction cancelAction;
     private readonly InputActionMap menusMap;
@@ -44,6 +46,7 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
         attackMoveAction = playerMap?.FindAction(AttackMoveActionName, false);
         pointAction = playerMap?.FindAction(PointActionName, false);
         stopAction = playerMap?.FindAction(StopActionName, false);
+        lanternAction = playerMap?.FindAction(LanternActionName, false);
         cancelAction = actions != null ? actions.FindAction($"{UIMapName}/{CancelActionName}", false) : null;
         menusMap = actions != null ? actions.FindActionMap(MenusMapName, false) : null;
         menuAction = menusMap?.FindAction(MenuActionName, false);
@@ -55,11 +58,11 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
             hasAllAbilities &= abilityActions[i] != null;
         }
 
-        if (moveClickAction == null || attackMoveAction == null || pointAction == null || stopAction == null || !hasAllAbilities || cancelAction == null || menuAction == null)
+        if (moveClickAction == null || attackMoveAction == null || pointAction == null || stopAction == null || lanternAction == null || !hasAllAbilities || cancelAction == null || menuAction == null)
         {
             Debug.LogError(
                 $"{nameof(PlayerInputService)} needs an input asset with a '{PlayerMapName}' map containing " +
-                $"'{MoveClickActionName}', '{AttackMoveActionName}', '{PointActionName}', '{StopActionName}' and " +
+                $"'{MoveClickActionName}', '{AttackMoveActionName}', '{PointActionName}', '{StopActionName}', '{LanternActionName}' and " +
                 $"'{AbilityActionName(0)}' to '{AbilityActionName(AbilitySlots.Count - 1)}' actions, " +
                 $"a '{UIMapName}' map with a '{CancelActionName}' action and a '{MenusMapName}' map with a '{MenuActionName}' action.");
         }
@@ -73,6 +76,7 @@ public sealed class PlayerInputService : IPlayerInput, IMenuInput, IDisposable
     public bool MoveHeld => GameplayEnabled && moveClickAction != null && moveClickAction.IsPressed();
     public bool AttackMovePressedThisFrame => GameplayEnabled && attackMoveAction != null && attackMoveAction.WasPressedThisFrame();
     public bool StopPressedThisFrame => GameplayEnabled && stopAction != null && stopAction.WasPressedThisFrame();
+    public bool LanternPressedThisFrame => GameplayEnabled && lanternAction != null && lanternAction.WasPressedThisFrame();
     public bool BackPressedThisFrame => cancelAction != null && cancelAction.enabled && cancelAction.WasPressedThisFrame();
     public bool MenuPressedThisFrame => menuAction != null && menuAction.enabled && menuAction.WasPressedThisFrame();
 

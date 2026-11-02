@@ -15,8 +15,12 @@ using UnityEngine;
 /// <see cref="CharacterAnimationSet"/>, <c>&lt;sheet name&gt;_AnimationSet.asset</c> beside the sheets: per clip its
 /// sprites by direction and frame (and gait frame, for a motion drawn over a gait, whose sheet columns run gait frame
 /// by gait frame), each frame's duration at natural speed, its gait, whether it is armed, its contact (release) frame,
-/// a gait's natural speed (<see cref="NaturalSpeed"/>) and, for a cast with a light, the light each sprite casts and
-/// its colour (<see cref="Lights"/>); the asset keeps its GUID and is saved only when it changed.
+/// a gait's natural speed (<see cref="NaturalSpeed"/>), for a cast with a light, the light each sprite casts and
+/// its colour (<see cref="Lights"/>), and for a character carrying a lantern, each sprite's lantern layer and the light
+/// the lantern casts (<see cref="LanternLights"/>); the asset keeps its GUID and is saved only when it changed. The
+/// lantern's layer of each clip is a sheet of its own, <c>&lt;sheet name&gt;_&lt;clip&gt;Lantern.png</c>, packed
+/// tightly (<see cref="PackLantern"/>), with its glow beside it in <see cref="GlowRoot"/> as its secondary texture
+/// <c>_GlowTex</c>; a recipe without a lantern has neither.
 /// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
 /// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) goes through
 /// <see cref="SpriteSheetFiles"/> and is shared with <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn
@@ -25,6 +29,8 @@ using UnityEngine;
 public static class CharacterSheetWriter
 {
     public const string Root = "Assets/Sprites/Characters";
+    public const string GlowRoot = "Assets/Textures/Characters";
+    public const string LanternSuffix = "Lantern";
     public const int PixelsPerUnit = 32;
 
     /// <summary>
@@ -48,6 +54,10 @@ public static class CharacterSheetWriter
             CharacterClip clip = sheet.Clip;
             WriteSheet(recipe.SheetName, clip.Name, clip.FrameSize, clip.Pivot, sheet.FrameCount, sheet.Pixels);
             paths.Add(SheetPath(recipe, clip));
+            if (WriteLantern(recipe.SheetName, sheet))
+            {
+                paths.Add(SheetPath(recipe.SheetName, clip.Name + LanternSuffix));
+            }
         }
 
         string setPath = SetPath(recipe);
@@ -79,6 +89,96 @@ public static class CharacterSheetWriter
         }
 
         return SpriteSheetFiles.WriteSheet(SheetPath(sheetName, clipName), columns * frameSize.x, CharacterDirections.Count * frameSize.y, pixels, slices);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="sheet"/>'s lantern layer packed (<see cref="PackLantern"/>) as the sheet
+    /// <c>&lt;clip&gt;Lantern</c> among <paramref name="sheetName"/>'s, with its glow in <see cref="GlowRoot"/> as its
+    /// secondary texture <c>_GlowTex</c>; for a sheet without a lantern, deletes any written before. Returns whether the
+    /// sheet has a lantern.
+    /// </summary>
+    public static bool WriteLantern(string sheetName, CharacterSheet sheet)
+    {
+        string clipName = sheet.Clip.Name + LanternSuffix;
+        string path = SheetPath(sheetName, clipName);
+        string glowPath = GlowPath(sheetName, clipName);
+        if (!sheet.HasLantern)
+        {
+            foreach (string stale in new[] { path, glowPath })
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(stale) != null)
+                {
+                    AssetDatabase.DeleteAsset(stale);
+                }
+            }
+
+            return false;
+        }
+
+        IReadOnlyList<SpriteSheetFiles.Slice> slices = PackLantern(sheetName, sheet, out Vector2Int size, out Color32[] pixels, out Color32[] glow);
+        TerrainMaterialWriter.EnsureFolder(FolderOf(sheetName));
+        SpriteSheetFiles.WriteSheet(path, size.x, size.y, pixels, slices);
+        SpriteSheetFiles.WriteGlow(glowPath, size.x, size.y, glow);
+        SpriteSheetFiles.SetSecondaryTextures(path, new[] { new SecondarySpriteTexture { name = SpriteSheetFiles.GlowTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(glowPath) } });
+        return true;
+    }
+
+    /// <summary>
+    /// <paramref name="sheet"/>'s lantern layer packed tightly: each frame's pixels cut to the box around them and laid
+    /// in a cell of the clip's largest box, the cells in the sheet's own layout (a row per direction, east at the top),
+    /// and its glow laid out alike. Each slice, named as the sheet's own frames under the clip <c>&lt;clip&gt;Lantern</c>,
+    /// covers its frame's box and is pivoted on the feet, outside the box as they usually are, so drawn at the
+    /// character's feet it lands where the lantern was drawn. A frame where the body hides the whole lantern has no
+    /// slice.
+    /// </summary>
+    public static IReadOnlyList<SpriteSheetFiles.Slice> PackLantern(string sheetName, CharacterSheet sheet, out Vector2Int size, out Color32[] pixels, out Color32[] glow)
+    {
+        CharacterClip clip = sheet.Clip;
+        Vector2Int frameSize = clip.FrameSize;
+        int columns = sheet.FrameCount;
+        RectInt[] boxes = new RectInt[CharacterDirections.Count * columns];
+        Vector2Int cell = Vector2Int.zero;
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            for (int column = 0; column < columns; column++)
+            {
+                RectInt box = LanternBox(sheet, CharacterSheet.FrameRect(direction, column, frameSize));
+                boxes[direction * columns + column] = box;
+                cell = Vector2Int.Max(cell, box.size);
+            }
+        }
+
+        size = new Vector2Int(Mathf.Max(1, columns * cell.x), Mathf.Max(1, CharacterDirections.Count * cell.y));
+        pixels = new Color32[size.x * size.y];
+        glow = new Color32[pixels.Length];
+        List<SpriteSheetFiles.Slice> slices = new();
+        string clipName = clip.Name + LanternSuffix;
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            for (int column = 0; column < columns; column++)
+            {
+                RectInt box = boxes[direction * columns + column];
+                if (box.width == 0)
+                {
+                    continue;
+                }
+
+                RectInt frame = CharacterSheet.FrameRect(direction, column, frameSize);
+                RectInt target = CharacterSheet.FrameRect(direction, column, cell);
+                for (int y = 0; y < box.height; y++)
+                {
+                    int from = (frame.y + box.y + y) * sheet.Width + frame.x + box.x;
+                    int to = (target.y + y) * size.x + target.x;
+                    System.Array.Copy(sheet.LanternPixels, from, pixels, to, box.width);
+                    System.Array.Copy(sheet.LanternGlow, from, glow, to, box.width);
+                }
+
+                Vector2 pivot = SpriteSheetFiles.Slice.PivotOn(clip.Pivot - box.position, box.size);
+                slices.Add(new SpriteSheetFiles.Slice(SliceName(sheetName, clipName, direction, column), new Rect(target.x, target.y, box.width, box.height), pivot));
+            }
+        }
+
+        return slices;
     }
 
     /// <summary>
@@ -142,7 +242,9 @@ public static class CharacterSheetWriter
             Sprite[] ordered = SheetSprites(recipe.SheetName, clip.Name, columns);
             float[] seconds = Enumerable.Range(0, frames).Select(clip.Motion.FrameSeconds).ToArray();
             CharacterFrameLight[] lights = Lights(sheet, out Color lightColour);
-            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames, lightColour, lights));
+            Sprite[] lantern = sheet.HasLantern ? SheetSprites(recipe.SheetName, clip.Name + LanternSuffix, columns) : null;
+            clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames, lightColour, lights,
+                lantern, LanternLights(sheet)));
         }
 
         return CharacterAnimationSet.Create(clips);
@@ -174,6 +276,27 @@ public static class CharacterSheetWriter
     }
 
     /// <summary>
+    /// The light the lantern casts on each of <paramref name="sheet"/>'s frames, in the order of
+    /// <see cref="SheetSprites"/>: where it shines from, the glass's middle, in units from the feet, at full strength,
+    /// whether or not the body hides it (Docs/Lighting.md, Phase 9). Null for a sheet without a lantern.
+    /// </summary>
+    public static CharacterFrameLight[] LanternLights(CharacterSheet sheet)
+    {
+        if (!sheet.HasLantern)
+        {
+            return null;
+        }
+
+        CharacterFrameLight[] lights = new CharacterFrameLight[sheet.LanternCentres.Length];
+        for (int i = 0; i < lights.Length; i++)
+        {
+            lights[i] = new CharacterFrameLight(sheet.LanternCentres[i] / PixelsPerUnit, 1f);
+        }
+
+        return lights;
+    }
+
+    /// <summary>
     /// Writes the unsaved set <paramref name="fresh"/> at <paramref name="path"/>: creates the asset from it, or copies
     /// it over the existing asset when they differ, keeping its GUID, and destroys it. Returns whether the asset was
     /// created or changed.
@@ -197,6 +320,14 @@ public static class CharacterSheetWriter
     public static string FolderOf(string sheetName)
     {
         return $"{Root}/{sheetName}";
+    }
+
+    /// <summary>
+    /// The path of the glow beside sheet <paramref name="clipName"/> among the sheets named <paramref name="sheetName"/>.
+    /// </summary>
+    public static string GlowPath(string sheetName, string clipName)
+    {
+        return $"{GlowRoot}/{sheetName}/{sheetName}_{clipName}_Glow.png";
     }
 
     /// <summary>
@@ -231,6 +362,35 @@ public static class CharacterSheetWriter
     public static string SliceName(string sheetName, string clipName, int direction, int frame)
     {
         return $"{sheetName}_{clipName}_{CharacterDirections.Name(direction)}_{frame}";
+    }
+
+    /// <summary>
+    /// The box, within <paramref name="frame"/> of <paramref name="sheet"/>'s lantern layer, around every pixel the
+    /// lantern changed, from the frame's bottom left; empty when it changed none.
+    /// </summary>
+    private static RectInt LanternBox(CharacterSheet sheet, RectInt frame)
+    {
+        int minX = int.MaxValue;
+        int minY = int.MaxValue;
+        int maxX = -1;
+        int maxY = -1;
+        for (int y = 0; y < frame.height; y++)
+        {
+            for (int x = 0; x < frame.width; x++)
+            {
+                if (sheet.LanternPixels[(frame.y + y) * sheet.Width + frame.x + x].a == 0)
+                {
+                    continue;
+                }
+
+                minX = Mathf.Min(minX, x);
+                minY = Mathf.Min(minY, y);
+                maxX = Mathf.Max(maxX, x);
+                maxY = Mathf.Max(maxY, y);
+            }
+        }
+
+        return maxX < 0 ? new RectInt(0, 0, 0, 0) : new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
     /// <summary>

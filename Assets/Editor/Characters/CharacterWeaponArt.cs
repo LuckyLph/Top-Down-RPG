@@ -71,6 +71,13 @@ public sealed class CharacterWeaponArt : ScriptableObject
 
     public WeaponKind Kind => kind;
     public bool TwoHanded => twoHanded;
+
+    /// <summary>
+    /// Whether the weapon takes the left hand: a bow, held in it, or a two-handed blade, gripped with it. A carried
+    /// lantern hangs at the hip meanwhile (<see cref="CharacterLanternArt"/>).
+    /// </summary>
+    public bool TakesLeftHand => kind == WeaponKind.Bow || twoHanded;
+
     public float LeftGripOffset => leftGripOffset;
     public float Pommel => pommel;
     public float GuardAt => guardAt;

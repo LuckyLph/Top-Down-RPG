@@ -17,8 +17,8 @@ public class PlayerInputServiceTests
     private InputActionAsset actions;
 
     /// <summary>
-    /// Builds an action asset with the player map (move click, attack move, point, stop and one action per ability
-    /// slot), a UI map with submit and cancel, and a menus map with the menu key.
+    /// Builds an action asset with the player map (move click, attack move, point, stop, the lantern and one action per
+    /// ability slot), a UI map with submit and cancel, and a menus map with the menu key.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -29,6 +29,7 @@ public class PlayerInputServiceTests
         playerMap.AddAction(PlayerInputService.AttackMoveActionName, InputActionType.Button, "<Keyboard>/a");
         playerMap.AddAction(PlayerInputService.PointActionName, InputActionType.Value, "<Pointer>/position");
         playerMap.AddAction(PlayerInputService.StopActionName, InputActionType.Button, "<Keyboard>/s");
+        playerMap.AddAction(PlayerInputService.LanternActionName, InputActionType.Button, "<Keyboard>/l");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
             playerMap.AddAction(PlayerInputService.AbilityActionName(slot), InputActionType.Button, $"<Keyboard>/{AbilityKeys[slot]}");
@@ -70,7 +71,8 @@ public class PlayerInputServiceTests
     }
 
     /// <summary>
-    /// With gameplay disabled, the pointer reads zero and no move, attack move, stop or ability press is reported.
+    /// With gameplay disabled, the pointer reads zero and no move, attack move, stop, lantern or ability press is
+    /// reported.
     /// </summary>
     [Test]
     public void DisabledGameplay_ReadsNeutralInput()
@@ -83,6 +85,7 @@ public class PlayerInputServiceTests
         Assert.That(service.MoveHeld, Is.False);
         Assert.That(service.AttackMovePressedThisFrame, Is.False);
         Assert.That(service.StopPressedThisFrame, Is.False);
+        Assert.That(service.LanternPressedThisFrame, Is.False);
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
             Assert.That(service.WasAbilityPressedThisFrame(slot), Is.False);
@@ -179,7 +182,8 @@ public class PlayerInputServiceTests
 
     /// <summary>
     /// The project input asset binds move to the right mouse button, attack move to A, point to the pointer position,
-    /// stop to S and the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without logging an error.
+    /// stop to S, the lantern to L and the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without
+    /// logging an error.
     /// </summary>
     [Test]
     public void ProjectAsset_BindsMouseMoveStopAndAbilityKeys()
@@ -192,6 +196,7 @@ public class PlayerInputServiceTests
         AssertBoundTo(playerMap, PlayerInputService.AttackMoveActionName, "<Keyboard>/a");
         AssertBoundTo(playerMap, PlayerInputService.PointActionName, "<Pointer>/position");
         AssertBoundTo(playerMap, PlayerInputService.StopActionName, "<Keyboard>/s");
+        AssertBoundTo(playerMap, PlayerInputService.LanternActionName, "<Keyboard>/l");
         for (int slot = 0; slot < AbilitySlots.Count; slot++)
         {
             AssertBoundTo(playerMap, PlayerInputService.AbilityActionName(slot), $"<Keyboard>/{AbilityKeys[slot]}");
@@ -209,7 +214,7 @@ public class PlayerInputServiceTests
     {
         InputActionAsset projectActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ProjectActionsPath);
         InputActionMap playerMap = projectActions.FindActionMap(PlayerInputService.PlayerMapName, true);
-        string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.AttackMoveActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName }
+        string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.AttackMoveActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName, PlayerInputService.LanternActionName }
             .Concat(Enumerable.Range(0, AbilitySlots.Count).Select(PlayerInputService.AbilityActionName))
             .ToArray();
 

@@ -1,0 +1,1642 @@
+fileFormatVersion: 2
+guid: 2fac2003efee0854a87f94e6f283acae
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4693940018260252642
+    second: Rogue_CastChargeLantern_0
+  - first:
+      213: -2157569388933256194
+    second: Rogue_CastChargeLantern_1
+  - first:
+      213: 3094776861409226108
+    second: Rogue_CastChargeLantern_2
+  - first:
+      213: 3272593271943746322
+    second: Rogue_CastChargeLantern_3
+  - first:
+      213: -1971243258818017068
+    second: Rogue_CastChargeLantern_4
+  - first:
+      213: -5010784286815547115
+    second: Rogue_CastChargeLantern_5
+  - first:
+      213: -8104177205717633298
+    second: Rogue_CastChargeLantern_6
+  - first:
+      213: 2365546821356193125
+    second: Rogue_CastChargeLantern_7
+  - first:
+      213: -7901328177239907840
+    second: Rogue_CastChargeLantern_8
+  - first:
+      213: 1098586115497280028
+    second: Rogue_CastChargeLantern_9
+  - first:
+      213: 4158361691813781399
+    second: Rogue_CastChargeLantern_10
+  - first:
+      213: -2521441059472993684
+    second: Rogue_CastChargeLantern_11
+  - first:
+      213: -2597551405521629756
+    second: Rogue_CastChargeLantern_12
+  - first:
+      213: 2461965346992025823
+    second: Rogue_CastChargeLantern_13
+  - first:
+      213: -8704796201776723894
+    second: Rogue_CastChargeLantern_14
+  - first:
+      213: 1113852250295341147
+    second: Rogue_CastChargeLantern_15
+  - first:
+      213: -3691470662373649013
+    second: Rogue_CastChargeLantern_16
+  - first:
+      213: 1413897966645840064
+    second: Rogue_CastChargeLantern_17
+  - first:
+      213: -919568347197725146
+    second: Rogue_CastChargeLantern_18
+  - first:
+      213: 1263835196783245452
+    second: Rogue_CastChargeLantern_19
+  - first:
+      213: 7782990257620298655
+    second: Rogue_CastChargeLantern_20
+  - first:
+      213: -4400907934994422270
+    second: Rogue_CastChargeLantern_21
+  - first:
+      213: 5821141374527067179
+    second: Rogue_CastChargeLantern_22
+  - first:
+      213: 2789572208058214153
+    second: Rogue_CastChargeLantern_23
+  - first:
+      213: 2824774057101000594
+    second: Rogue_CastChargeLantern_24
+  - first:
+      213: -4535802258631455140
+    second: Rogue_CastChargeLantern_25
+  - first:
+      213: -3581323416799472364
+    second: Rogue_CastChargeLantern_26
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 1, y: -6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d2483bf87927e294a851b5c7d442efbb
+      internalID: -145063279
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 105
+        width: 1
+        height: 3
+      alignment: 9
+      pivot: {x: -3, y: -2}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8707b270a5c0ee94e9c0572d1769c66d
+      internalID: 1296068997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 105
+        width: 1
+        height: 4
+      alignment: 9
+      pivot: {x: -3, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b5ccee7074b2214438d1bff087586197
+      internalID: 1047723335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 105
+        width: 1
+        height: 2
+      alignment: 9
+      pivot: {x: -3, y: -4}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e2ff08f8ad69750499e8925255ed9773
+      internalID: 1351676692
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 2, y: -7}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00108dae30cefd645a319e8265a7f23d
+      internalID: -712014004
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 90
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 6, y: -2}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 301dfc21cfebaea4ebc1354b2a23ca39
+      internalID: 1937323791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 90
+        width: 3
+        height: 7
+      alignment: 9
+      pivot: {x: 4, y: -1.1428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00141b61ef2a5d440b9b765731f54fc5
+      internalID: -819246771
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 90
+        width: 5
+        height: 11
+      alignment: 9
+      pivot: {x: 2.6, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dd80e71e8d709644ab35bb7eb1320a97
+      internalID: -501123472
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 90
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8757e0c80a567d349a0d18898148ad5d
+      internalID: -920823643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 90
+        width: 5
+        height: 12
+      alignment: 9
+      pivot: {x: 2.2, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21d9f6d4b5354464c8659bbbba4512d5
+      internalID: 1209393174
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 90
+        width: 5
+        height: 12
+      alignment: 9
+      pivot: {x: 2.2, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa1028413c6e9a24fb2560ced78556f0
+      internalID: -2139793682
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 90
+        width: 5
+        height: 10
+      alignment: 9
+      pivot: {x: 2.4, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bf86969674252d24697fd3d26a5d1f85
+      internalID: 1874041744
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NE_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 90
+        width: 3
+        height: 7
+      alignment: 9
+      pivot: {x: 4, y: -1.1428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e6c6a9e2e4927c5438010684668d843d
+      internalID: 1412240345
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 75
+        width: 6
+        height: 14
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e18642d3b9c885342abd469dfadb2653
+      internalID: -1284312144
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 75
+        width: 6
+        height: 14
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2643e555c3f8a954ca04292a6d979c72
+      internalID: 1209196524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 75
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.625, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ecb7f440592aab34583a4613593d5ae8
+      internalID: -599130353
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 75
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: 1.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0f66f4f75e02d53458c58e2dd2e0cefd
+      internalID: -284971287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 75
+        width: 8
+        height: 15
+      alignment: 9
+      pivot: {x: 1.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4ab031379665dfb4781559669c64ae7e
+      internalID: 154283087
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 75
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 83f9383e8626d9446a687c13feac4110
+      internalID: 1554940081
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 75
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5af057632cea4074cb82cfb5c7e123fc
+      internalID: -995440317
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 75
+        width: 6
+        height: 15
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 699d93a7d313ede4eb13ff10a1d1a74e
+      internalID: 1636572607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 650067f7e8ffa1e4ab25e0b8149c9025
+      internalID: -17897885
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9089b87ac6dc2f54da5858d1832524e0
+      internalID: -1179539984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 60
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b1600c7114b3c044ea69259e55152661
+      internalID: 1580355293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 60
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.90909094, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dbcf6298e5b88074abab23106f15c9d8
+      internalID: 1189157467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 60
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 1.0909091, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 46385fb375fc6514a9e3c4bd8212512b
+      internalID: 1318434545
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 60
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 1.0909091, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 021f2a4e47ebe014a8e592f862daabe8
+      internalID: 839543760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 60
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2, y: 0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c39b8e90fdfa7df4f96f35db29dbfeb4
+      internalID: -1237496038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78b7f4ccd99894c4ea5b76d9c167236c
+      internalID: -1054402756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.5, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cdb8f4c8b6c1f2147b38d0b38411030d
+      internalID: -98084108
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9363eb0b698224642b0ba1e389164b88
+      internalID: -54881479
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 45
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.4, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f7a1dda7e16cd85499201f6365feaea3
+      internalID: 827956870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.4, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c5a7e2d8b4920ac4d97cc50fa0a3ef4e
+      internalID: -1274775708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6, y: 0.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5b1c27e4e1e1b084587a7c1c8f2c3db3
+      internalID: -660276394
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 45
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: 0.6, y: 0.26666668}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 860a1f5380760a84587111de0d37a1c5
+      internalID: 1027689553
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.5, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d47d27b1ebe8b3c4baf74ab7db3390ed
+      internalID: -330148739
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.5, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fff38bf01d0e2cc47942f14486a6c0e4
+      internalID: -1484339423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.09090909, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06c2f3e9fadae3342b6a29fca46f3ba2
+      internalID: -517027145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.2, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fabd054ab4827254daaebc315e959d4e
+      internalID: -798428156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 30
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e2477c253a5c3f4d98a1f9ac9bf017a
+      internalID: 2060096326
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 30
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 379e37135ae2c514d8c31efc6111523a
+      internalID: 592426381
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bc0534446294b304fb6c6386942f91d3
+      internalID: 1701427883
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5fab807a2ef20d41a29ec5f748cc518
+      internalID: 805391219
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.09090909, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 31e889e55fd23c74cba9a948633bbc10
+      internalID: 511858904
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 30
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: -0.2, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab795e8afcdc55d45989d5afa6a85fdc
+      internalID: 1903903350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1253ca199014a424fb3fc185ce54da56
+      internalID: -1349594877
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2c9f92ac2b68a64db9811184d0aa7ed
+      internalID: 1483784050
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f4d4b51a097523a4baa1c0f46749518f
+      internalID: -128130982
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 15
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a11bd0eb532a201459bf266053aac4b7
+      internalID: -1006698909
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 025274fe5f61c6649bc3bbcbd8494c6e
+      internalID: -229432123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ad086dbaa867642419a9ba38b32742c9
+      internalID: -1838329170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 97914b7412125f64a88f42bc26759d7d
+      internalID: 1520777796
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb1c1598f6382e048afd9ee1ddf1ea67
+      internalID: -996859159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24db85c79ba660e42aa0a1374815e9b8
+      internalID: 2009493349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 0
+        width: 6
+        height: 9
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.8888889}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a1d0f7d3774ab243a7af3bc6dba1977
+      internalID: -1991700893
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 0
+        width: 6
+        height: 8
+      alignment: 9
+      pivot: {x: -0.8333333, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8df9a7791b295bc45bec4e7b4ec0a0f0
+      internalID: -566880156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 0
+        width: 6
+        height: 7
+      alignment: 9
+      pivot: {x: -0.8333333, y: -1.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 639482c9bf41b1b4c9c75f3f1d747ec2
+      internalID: -1980766808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.27272728}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b669278341cdca143ba9b65a6d938767
+      internalID: 399657674
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 0
+        width: 8
+        height: 11
+      alignment: 9
+      pivot: {x: -0.5, y: -0.27272728}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 616361b2fd3b2c147ae48a38b93bdb56
+      internalID: 1463915897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8c331e3d67efe834ebf70fcfcc86f7b9
+      internalID: -222310956
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastChargeLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.6363636}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9de3e0daba0470b4d84aa5a3559a0f3b
+      internalID: -1936610870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: a38ea14f0d6b1704d907774508f755b9
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 9caf263b6a6830e448f5814e688bd256, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_CastChargeLantern_E_2: -145063279
+      Rogue_CastChargeLantern_E_4: 1296068997
+      Rogue_CastChargeLantern_E_5: 1047723335
+      Rogue_CastChargeLantern_E_6: 1351676692
+      Rogue_CastChargeLantern_E_7: -712014004
+      Rogue_CastChargeLantern_NE_0: 1937323791
+      Rogue_CastChargeLantern_NE_1: -819246771
+      Rogue_CastChargeLantern_NE_2: -501123472
+      Rogue_CastChargeLantern_NE_3: -920823643
+      Rogue_CastChargeLantern_NE_4: 1209393174
+      Rogue_CastChargeLantern_NE_5: -2139793682
+      Rogue_CastChargeLantern_NE_6: 1874041744
+      Rogue_CastChargeLantern_NE_7: 1412240345
+      Rogue_CastChargeLantern_NW_0: -17897885
+      Rogue_CastChargeLantern_NW_1: -1179539984
+      Rogue_CastChargeLantern_NW_2: 1580355293
+      Rogue_CastChargeLantern_NW_3: 1189157467
+      Rogue_CastChargeLantern_NW_4: 1318434545
+      Rogue_CastChargeLantern_NW_5: 839543760
+      Rogue_CastChargeLantern_NW_6: -1237496038
+      Rogue_CastChargeLantern_NW_7: -1054402756
+      Rogue_CastChargeLantern_N_0: -1284312144
+      Rogue_CastChargeLantern_N_1: 1209196524
+      Rogue_CastChargeLantern_N_2: -599130353
+      Rogue_CastChargeLantern_N_3: -284971287
+      Rogue_CastChargeLantern_N_4: 154283087
+      Rogue_CastChargeLantern_N_5: 1554940081
+      Rogue_CastChargeLantern_N_6: -995440317
+      Rogue_CastChargeLantern_N_7: 1636572607
+      Rogue_CastChargeLantern_SE_0: 2009493349
+      Rogue_CastChargeLantern_SE_1: -1991700893
+      Rogue_CastChargeLantern_SE_2: -566880156
+      Rogue_CastChargeLantern_SE_3: -1980766808
+      Rogue_CastChargeLantern_SE_4: 399657674
+      Rogue_CastChargeLantern_SE_5: 1463915897
+      Rogue_CastChargeLantern_SE_6: -222310956
+      Rogue_CastChargeLantern_SE_7: -1936610870
+      Rogue_CastChargeLantern_SW_0: -517027145
+      Rogue_CastChargeLantern_SW_1: -798428156
+      Rogue_CastChargeLantern_SW_2: 2060096326
+      Rogue_CastChargeLantern_SW_3: 592426381
+      Rogue_CastChargeLantern_SW_4: 1701427883
+      Rogue_CastChargeLantern_SW_5: 805391219
+      Rogue_CastChargeLantern_SW_6: 511858904
+      Rogue_CastChargeLantern_SW_7: 1903903350
+      Rogue_CastChargeLantern_S_0: -1349594877
+      Rogue_CastChargeLantern_S_1: 1483784050
+      Rogue_CastChargeLantern_S_2: -128130982
+      Rogue_CastChargeLantern_S_3: -1006698909
+      Rogue_CastChargeLantern_S_4: -229432123
+      Rogue_CastChargeLantern_S_5: -1838329170
+      Rogue_CastChargeLantern_S_6: 1520777796
+      Rogue_CastChargeLantern_S_7: -996859159
+      Rogue_CastChargeLantern_W_0: -98084108
+      Rogue_CastChargeLantern_W_1: -54881479
+      Rogue_CastChargeLantern_W_2: 827956870
+      Rogue_CastChargeLantern_W_3: -1274775708
+      Rogue_CastChargeLantern_W_4: -660276394
+      Rogue_CastChargeLantern_W_5: 1027689553
+      Rogue_CastChargeLantern_W_6: -330148739
+      Rogue_CastChargeLantern_W_7: -1484339423
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

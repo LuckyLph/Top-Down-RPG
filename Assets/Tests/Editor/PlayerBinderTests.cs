@@ -4,8 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="PlayerBinder"/> binding local and remote players into the registry and the local player
-/// tracker, the local player drawing the look its settings choose and a remote one keeping its own, plus the damage
-/// service's authority check.
+/// tracker, the local player drawing the look its settings choose and deciding its lantern and a remote one keeping
+/// its own and leaving its lantern to its owner, plus the damage service's authority check.
 /// </summary>
 public class PlayerBinderTests
 {
@@ -153,6 +153,24 @@ public class PlayerBinderTests
         Assert.That(damageService.ApplyDamage(receiver, 3).Resolved, Is.False);
         Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
         Assert.That(published, Is.EqualTo(0));
+    }
+
+    /// <summary>
+    /// Binding the local player has it decide when its lantern burns; a remote copy leaves that to its owner.
+    /// </summary>
+    [Test]
+    public void BindLocal_HasTheLanternDecided_AndBindRemoteLeavesItToItsOwner()
+    {
+        PlayerController local = CreatePlayer();
+        PlayerLantern localLantern = local.gameObject.AddComponent<PlayerLantern>();
+        PlayerController remote = CreatePlayer();
+        PlayerLantern remoteLantern = remote.gameObject.AddComponent<PlayerLantern>();
+
+        binder.BindLocal(local);
+        binder.BindRemote(remote);
+
+        Assert.That(localLantern.Deciding, Is.True);
+        Assert.That(remoteLantern.Deciding, Is.False);
     }
 
     /// <summary>

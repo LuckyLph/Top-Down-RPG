@@ -110,6 +110,7 @@ MonoBehaviour:
     weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
+  lantern: {fileID: 11400000, guid: e06c18a4c68226746ae68188aa064bac, type: 2}
   thigh: 7
   shin: 7
   ankle: 1.5
@@ -123,6 +124,9 @@ MonoBehaviour:
   torsoRadius: {x: 3.2, y: 3.5}
   limbThickness: 1
   handRadius: 1.5
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
   bootSize: 1.1
   hoodSize: 1.08
   hoodTip: {x: 1.35, y: 0.6}
@@ -138,9 +142,6 @@ MonoBehaviour:
   capeStrips: 5
   capeHem: 0.45
   capeLining: 1
-  lightThreshold: 0.64
-  shadowThreshold: 0.28
-  innerLineGap: 2.6
   cloak:
     outline:
       serializedVersion: 2

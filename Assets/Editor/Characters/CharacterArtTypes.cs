@@ -4,8 +4,9 @@ using UnityEngine;
 /// <summary>
 /// What a pixel of a character frame is made of. Each material is drawn in its own <see cref="ColourRamp"/>: the
 /// character's from its <see cref="CharacterRecipe"/>, the weapon's and the effects' from its
-/// <see cref="CharacterWeaponArt"/>, and a cast's light (its rim, glow and core) from the motion's light colours.
-/// <see cref="CharacterMaterials"/> says which are flat and which draw no outline.
+/// <see cref="CharacterWeaponArt"/>, a cast's light (its rim, glow and core) from the motion's light colours, and the
+/// lantern's from its <see cref="CharacterLanternArt"/>. <see cref="CharacterMaterials"/> says which are flat and which
+/// draw no outline.
 /// </summary>
 public enum CharacterMaterial
 {
@@ -47,7 +48,11 @@ public enum CharacterMaterial
     Dust,
     LightRim,
     LightGlow,
-    LightCore
+    LightCore,
+    LanternIron,
+    LanternBrass,
+    LanternGlass,
+    LanternWick
 }
 
 /// <summary>
@@ -82,7 +87,11 @@ public enum CharacterPart
     LeftEar,
     RightEar,
     Snout,
-    Tail
+    Tail,
+    Lantern,
+    LanternBail,
+    LanternGlass,
+    LanternWick
 }
 
 /// <summary>
@@ -182,12 +191,28 @@ public static class CharacterMaterials
     /// </summary>
     public static bool IsLight(CharacterMaterial material)
     {
-        return material >= CharacterMaterial.LightRim;
+        return material >= CharacterMaterial.LightRim && material <= CharacterMaterial.LightCore;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="material"/> is part of the lantern, coloured by its art.
+    /// </summary>
+    public static bool IsLantern(CharacterMaterial material)
+    {
+        return material >= CharacterMaterial.LanternIron;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="material"/> glows: the lantern's glass and the wick inside it.
+    /// </summary>
+    public static bool Glows(CharacterMaterial material)
+    {
+        return material == CharacterMaterial.LanternGlass || material == CharacterMaterial.LanternWick;
     }
 
     /// <summary>
     /// Whether <paramref name="material"/> is drawn in its middle tone whatever its surface faces: the face, the inside
-    /// of the hood, the eyes, the inside of the ears, the smears and a cast's light.
+    /// of the hood, the eyes, the inside of the ears, the smears, a cast's light and the lantern's glass and wick.
     /// </summary>
     public static bool IsFlat(CharacterMaterial material)
     {
@@ -204,6 +229,8 @@ public static class CharacterMaterials
             case CharacterMaterial.LightRim:
             case CharacterMaterial.LightGlow:
             case CharacterMaterial.LightCore:
+            case CharacterMaterial.LanternGlass:
+            case CharacterMaterial.LanternWick:
                 return true;
             default:
                 return false;
@@ -212,7 +239,7 @@ public static class CharacterMaterials
 
     /// <summary>
     /// Whether <paramref name="material"/> lines its edges: everything but the face's materials, the thin bow string,
-    /// shaft and fletching, the smears and the dust.
+    /// shaft and fletching, the smears, the dust and the lantern's glass and wick.
     /// </summary>
     public static bool HasOutline(CharacterMaterial material)
     {
@@ -231,6 +258,8 @@ public static class CharacterMaterials
             case CharacterMaterial.SmearMiddle:
             case CharacterMaterial.SmearOld:
             case CharacterMaterial.Dust:
+            case CharacterMaterial.LanternGlass:
+            case CharacterMaterial.LanternWick:
                 return false;
             default:
                 return true;

@@ -15,11 +15,11 @@ public class InputBindingsTests
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
     private const string RebindableActionsPath = "Assets/Data/Input/RebindableActions.asset";
 
-    private static readonly string[] RebindableNames = { "MoveClick", "AttackMove", "Stop", "Ability1", "Ability2", "Ability3", "Ability4", "Ability5", "Ability6" };
+    private static readonly string[] RebindableNames = { "MoveClick", "AttackMove", "Stop", "Ability1", "Ability2", "Ability3", "Ability4", "Ability5", "Ability6", "Lantern" };
 
     private static readonly string[] DefaultPaths =
     {
-        "<Mouse>/rightButton", "<Keyboard>/a", "<Keyboard>/s", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/1", "<Keyboard>/2",
+        "<Mouse>/rightButton", "<Keyboard>/a", "<Keyboard>/s", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/1", "<Keyboard>/2", "<Keyboard>/l",
     };
 
     private InputActionAsset actions;
@@ -54,8 +54,8 @@ public class InputBindingsTests
     }
 
     /// <summary>
-    /// The project's rebindable list holds move, attack move, stop and the six abilities in menu order, each with a
-    /// label and a section, and the bindings expose one entry per action.
+    /// The project's rebindable list holds move, attack move, stop, the six abilities and the lantern in menu order,
+    /// each with a label and a section, and the bindings expose one entry per action.
     /// </summary>
     [Test]
     public void ProjectList_HasTheGameplayActionsInMenuOrder_WithLabelsAndSections()

@@ -9,7 +9,8 @@ using UnityEngine.Rendering;
 /// Tests for how sprites sort (Docs/WorldScale.md, Phase 1): by the 2D renderer's custom axis, at a constant order
 /// within each sorting layer. Every prefab's renderers draw on their own layer, a group on another layer than the one
 /// around it sorting at the root, and every renderer on the Entities layer draws at order 0, sorted by a sorting group
-/// at its prefab's root or by its sprite's pivot on the root. Rendered through the project's pipeline, the real prefabs
+/// at its prefab's root or by its sprite's pivot on the root, but a character's lantern layer, at 1 inside its group,
+/// over its body (Docs/Lighting.md, Phase 9). Rendered through the project's pipeline, the real prefabs
 /// draw in the same order low in a world and in the sixteenth row of a 16-row world: a unit behind and in front of a
 /// tree, an impact over the unit it hits and a death puff in front of a tree behind it.
 /// </summary>
@@ -64,7 +65,8 @@ public class SpriteSortingTests
     /// Every renderer of every prefab under the prefab folders draws on its own sorting layer: in a sorting group, the
     /// group's layer is its own, and a group on another layer than the group around it sorts at the root. Every renderer
     /// on the Entities layer draws at order 0, sorted by a group at its prefab's root, on that layer at order 0, or by
-    /// its sprite's pivot lying on the root. No prefab holds a missing script.
+    /// its sprite's pivot lying on the root; a character's lantern layer draws at 1 inside such a group, so it covers
+    /// the body it is drawn for. No prefab holds a missing script.
     /// </summary>
     [Test]
     public void EveryPrefab_SortsOnTheEntitiesLayerAtOrder0_AsAGroupAtItsRootOrByItsPivot()
@@ -100,7 +102,10 @@ public class SpriteSortingTests
                 }
 
                 sorted++;
-                Assert.That(renderer.sortingOrder, Is.Zero, name);
+                CharacterVisuals character = renderer.GetComponentInParent<CharacterVisuals>(true);
+                bool lantern = character != null && character.LanternRenderer == renderer;
+                Assert.That(renderer.sortingOrder, Is.EqualTo(lantern ? 1 : 0), name);
+                Assert.That(!lantern || group != null, Is.True, $"{name} draws over its body inside the character's group.");
                 if (group != null)
                 {
                     grouped++;

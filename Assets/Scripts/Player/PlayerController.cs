@@ -11,8 +11,9 @@ using UnityEditor;
 /// their motor, facing and swing requests. The weapon's attack hears of the orders the player gives (its cancel
 /// rules), ends on a stun, a cast, a teleport or death, and moves on after the swing; the motor stands still while an
 /// attack runs. Feeds the player's status crowd control into the orders and its slow, stun or root into the motor's
-/// speed scale. Remote copies only show replicated movement. Draws gizmos for the ability side of its orders: the
-/// target of a CastWhenInRange approach and a buffered cast.
+/// speed scale. The lantern key lights or puts out the player's <see cref="PlayerLantern"/>. Remote copies only show
+/// replicated movement. Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach and a
+/// buffered cast.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerMotor2D))]
@@ -32,6 +33,7 @@ public class PlayerController : MonoBehaviour
     private IClock clock = UnityClock.Shared;
     private PlayerOrders orders;
     private StatusEffects statuses;
+    private PlayerLantern lantern;
     private bool simulatesMovement = true;
 
     /// <summary>
@@ -197,8 +199,8 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// One frame of control: reads a command, ticks the orders with the player's state and crowd control, applies the
-    /// result, and scales the motor speed by the status movement scale, or holds it still while an attack runs. Does
-    /// nothing on a remote copy.
+    /// result, scales the motor speed by the status movement scale, or holds it still while an attack runs, and passes
+    /// the lantern key on to the lantern. Does nothing on a remote copy.
     /// </summary>
     internal void Tick()
     {
@@ -221,6 +223,10 @@ public class PlayerController : MonoBehaviour
         Apply(orders.Tick(command, context), controls);
         bool attacking = weaponController != null && weaponController.IsAttacking;
         playerMotor.SetSpeedScale(attacking ? 0f : statuses != null ? statuses.MovementScale : 1f);
+        if (command.LanternPressed && lantern != null)
+        {
+            lantern.Toggle();
+        }
     }
 
     /// <summary>
@@ -291,6 +297,7 @@ public class PlayerController : MonoBehaviour
         }
 
         statuses = GetComponent<StatusEffects>();
+        lantern = GetComponent<PlayerLantern>();
         IAbilityCaster caster = abilities != null ? abilities : null;
         orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>(), controlSettings.EnemyLayers), caster);
     }

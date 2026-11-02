@@ -5,7 +5,8 @@ using UnityEngine;
 /// its feet on the ground. Feet and hands are IK targets with a pole each for the knee or elbow; the spine leans
 /// forward by <see cref="Lean"/> degrees and turns the shoulders by <see cref="Twist"/> (positive turns the right
 /// shoulder back); the hips turn by <see cref="HipTwist"/>, or against the shoulders by a third when it is null. It also
-/// carries the weapon's state and the cape's flow and phase. <see cref="CharacterRig.Solve"/> turns it into joints.
+/// carries the weapon's state, the cape's flow and phase and a carried lantern's swing. <see cref="CharacterRig.Solve"/>
+/// turns it into joints.
 /// </summary>
 public sealed class CharacterPose
 {
@@ -60,4 +61,9 @@ public sealed class CharacterPose
     /// Where the cape's ripple is, in strides (0 to 1).
     /// </summary>
     public float CapePhase { get; set; }
+
+    /// <summary>
+    /// How far a carried lantern swings with the stride, -1 to 1 of its swing: 0 standing and in keyed motions.
+    /// </summary>
+    public float LanternSwing { get; set; }
 }

@@ -42,7 +42,7 @@ public static class PropWriter
     public const string VisualsName = "Visuals";
     public const string LightName = "Light";
     public const string GlowFolder = "Assets/Textures/Props";
-    public const string GlowTextureName = "_GlowTex";
+    public const string GlowTextureName = SpriteSheetFiles.GlowTextureName;
     public const string AtlasPath = SpritesFolder + "/Props.spriteatlasv2";
     public const string FlamesMaterialPath = "Assets/Materials/SpritePixelLitFlames.mat";
     public const string FlameFramesName = "_FlameFrames";
@@ -374,7 +374,7 @@ public static class PropWriter
                 }
             }
 
-            changed = WriteGlowTexture(path, width, frame.y * frames, pixels);
+            changed = SpriteSheetFiles.WriteGlow(path, width, frame.y * frames, pixels);
             wanted = new[] { new SecondarySpriteTexture { name = GlowTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path) } };
         }
         else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
@@ -383,76 +383,7 @@ public static class PropWriter
             changed = true;
         }
 
-        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(sheet);
-        if (!SameSecondaryTextures(importer.secondarySpriteTextures, wanted))
-        {
-            importer.secondarySpriteTextures = wanted;
-            importer.SaveAndReimport();
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    /// <summary>
-    /// Writes <paramref name="pixels"/> as a PNG at <paramref name="path"/> when its bytes changed and imports it as a
-    /// glow: a plain texture, point filtered and clamped, without mipmaps or compression, its colour in sRGB as the
-    /// sheet's. Returns whether the file or its import settings changed.
-    /// </summary>
-    private static bool WriteGlowTexture(string path, int width, int height, Color32[] pixels)
-    {
-        byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
-        bool written = !File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(png);
-        if (written)
-        {
-            TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
-            File.WriteAllBytes(path, png);
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-        }
-
-        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
-        int side = Mathf.NextPowerOfTwo(Mathf.Max(width, height));
-        bool changed = importer.textureType != TextureImporterType.Default || !importer.sRGBTexture || importer.filterMode != FilterMode.Point
-            || importer.wrapMode != TextureWrapMode.Clamp || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
-            || importer.npotScale != TextureImporterNPOTScale.None || importer.isReadable || importer.alphaIsTransparency || importer.maxTextureSize < side;
-        if (changed)
-        {
-            importer.textureType = TextureImporterType.Default;
-            importer.sRGBTexture = true;
-            importer.filterMode = FilterMode.Point;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.mipmapEnabled = false;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.npotScale = TextureImporterNPOTScale.None;
-            importer.isReadable = false;
-            importer.alphaIsTransparency = false;
-            importer.maxTextureSize = Mathf.Max(importer.maxTextureSize, side);
-            importer.SaveAndReimport();
-        }
-
-        return written || changed;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="a"/> and <paramref name="b"/> name the same textures in the same order.
-    /// </summary>
-    private static bool SameSecondaryTextures(SecondarySpriteTexture[] a, SecondarySpriteTexture[] b)
-    {
-        a ??= new SecondarySpriteTexture[0];
-        if (a.Length != b.Length)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < a.Length; i++)
-        {
-            if (a[i].name != b[i].name || a[i].texture != b[i].texture)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return SpriteSheetFiles.SetSecondaryTextures(sheet, wanted) || changed;
     }
 
     /// <summary>

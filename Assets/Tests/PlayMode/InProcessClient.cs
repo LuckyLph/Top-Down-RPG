@@ -120,8 +120,9 @@ public sealed class InProcessClient : IDisposable
     /// players' worlds and trips (with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
     /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
-    /// own player follows) and, given <paramref name="hitFeedbackSettings"/>, the hit feedback presenter (not started)
-    /// kicking <paramref name="cameraKick"/>.
+    /// own player follows), the night lights' presenter without a day clock (not started, so its own player's lantern
+    /// never lights itself and burns only on its key) and, given <paramref name="hitFeedbackSettings"/>, the hit feedback
+    /// presenter (not started) kicking <paramref name="cameraKick"/>.
     /// </summary>
     public static IObjectResolver BuildContainer(
         PlayerRegistry players,
@@ -178,6 +179,7 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
         builder.RegisterInstance(new UserSettings(new MemorySaveStore()));
+        builder.Register(resolver => new PropLighting(null, resolver.Resolve<IClock>(), resolver.Resolve<Worlds>()), Lifetime.Singleton);
         return builder.Build();
     }
 
@@ -438,6 +440,7 @@ public sealed class InProcessClient : IDisposable
         public bool MoveHeld { get; set; }
         public bool AttackMovePressedThisFrame { get; set; }
         public bool StopPressedThisFrame { get; set; }
+        public bool LanternPressedThisFrame { get; set; }
 
         public int AbilityPressedThisFrame { get; set; } = -1;
 

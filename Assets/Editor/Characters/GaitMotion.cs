@@ -7,7 +7,8 @@ using UnityEngine;
 /// mid-stance when walking, lowest when running), the body leans, the arms swing against the legs and the shoulders
 /// twist with them, and the cape flows. Frame 0 has the left foot planted in front, so every gait starts at the same
 /// place in the stride. Strides scale with the recipe's legs and arm swings with its arms; a carried weapon changes the
-/// arm that holds it (<see cref="CharacterWeaponArt.Carry"/>). It names its gait (walk, run or sprint), and its ground
+/// arm that holds it (<see cref="CharacterWeaponArt.Carry"/>). A carried lantern swings twice a cycle, a little behind
+/// the pelvis's bob (<see cref="CharacterPose.LanternSwing"/>). It names its gait (walk, run or sprint), and its ground
 /// speed is how fast a planted foot slides back: the speed at which the feet do not slide.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Gait Motion", fileName = "Motion_Gait")]
@@ -15,6 +16,7 @@ public sealed class GaitMotion : CharacterMotion
 {
     public const float TunedLegLength = 14f;
     public const float TunedArmLength = 10.4f;
+    private const float LanternLag = 0.15f;
 
     [Header("Cycle")]
     [Tooltip("Which gait this is: the runtime picks it by speed between the others.")]
@@ -122,7 +124,8 @@ public sealed class GaitMotion : CharacterMotion
             LeftPole = new Vector3(-0.2f, -1f, -0.5f),
             RightPole = new Vector3(0.2f, -1f, -0.5f),
             CapeFlow = capeFlow,
-            CapePhase = phase
+            CapePhase = phase,
+            LanternSwing = Mathf.Sin(2f * Mathf.PI * (2f * phase + LanternLag))
         };
 
         if (weapon != null)

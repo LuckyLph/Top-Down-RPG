@@ -4,8 +4,8 @@ using UnityEngine;
 /// <summary>
 /// An editor-only cast drawn over a gait's legs (Docs/Animation.md, Phase 5): every frame of a keyed motion, the upper
 /// body, over every frame of a gait, the legs, so a cast made while running keeps the stride. Frame
-/// <c>g * K + f</c> is the keyed motion's frame f (of K) over gait frame g. The feet, the pelvis's height and the cape's
-/// flow and ripple come from the gait; the shoulders' twist, the head, the hands, elbows and weapon from the keyed
+/// <c>g * K + f</c> is the keyed motion's frame f (of K) over gait frame g. The feet, the pelvis's height, the cape's
+/// flow and ripple and a carried lantern's swing come from the gait; the shoulders' twist, the head, the hands, elbows and weapon from the keyed
 /// motion, the hands kept where they were relative to the shoulders; the spine leans as the keyed motion plus a share
 /// of the gait's lean, and the hips turn against the gait's shoulders, as the run's do. Frame durations, the release
 /// frame, smears, effects and light are the keyed motion's; smears sample it over the frame's own gait frame.
@@ -78,7 +78,7 @@ public sealed class OverGaitMotion : CharacterMotion
     }
 
     /// <summary>
-    /// <paramref name="upperPose"/> over <paramref name="legs"/>: the legs' feet, pelvis height and cape, the upper
+    /// <paramref name="upperPose"/> over <paramref name="legs"/>: the legs' feet, pelvis height, cape and lantern swing, the upper
     /// pose's twist, head, arms and weapon with its hands moved as far as its shoulders moved, its lean plus
     /// <paramref name="leanShare"/> of the legs', and the hips turned against the legs' shoulders.
     /// </summary>
@@ -102,7 +102,8 @@ public sealed class OverGaitMotion : CharacterMotion
             Arrow = upperPose.Arrow,
             Kick = upperPose.Kick,
             CapeFlow = legs.CapeFlow,
-            CapePhase = legs.CapePhase
+            CapePhase = legs.CapePhase,
+            LanternSwing = legs.LanternSwing
         };
 
         Vector3 moved = ShoulderMiddle(recipe, pose, weapon) - ShoulderMiddle(recipe, upperPose, weapon);

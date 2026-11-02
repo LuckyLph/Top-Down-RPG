@@ -44,6 +44,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Body plans | Each kind of character is a body plan of its own over the shared rig, motions, canvas and shading: a recipe kind with its look and palette and a painter of its own (the rogue's and the Weasel's), rather than one recipe-driven body both would use. Decided in Phase 7. |
 | Mob attacks | A mob's attack is a timeline on its config (a windup, its telegraph; a contact, when its hit resolves; a recovery), its direction locked at the start and its hit landing on every unit then in an area ahead of it, so stepping back or aside before contact dodges it. The pose is the telegraph; no ground marker. Decided in Phase 7. |
 | Casts | One keyed clip per ability with a release frame, played on a timeline: the gather as long as the cast time (a channel when longer than 0.5 s), the release from the moment the cast completes, a follow-through that moving cuts short. Class casts throw a light baked at the casting hand. A Continue cast is also baked over the run's frames, so the legs keep running under it. Decided in Phase 5. |
+| Lantern | A carried lantern ([Lighting.md](Lighting.md)'s Phase 9) is drawn by the rig on every frame of every clip, in the left hand or, while the clip's weapon takes that hand, at the left hip, and baked as a layer of its own over the frames: the pixels it changes, which a second renderer draws over the body only while it burns, so the body's sheets are the same with or without it. Decided with the user on Lighting.md's Phase 9 previews. |
 
 ## The character rig
 
@@ -62,6 +63,7 @@ What the editor tool draws (Phase 1). It was settled on Python mockups (Phase 0)
 - Outline: every empty pixel beside the character takes the darkest colour of the nearest part next to it. Inside, a pixel beside a part that is nearer by more than a gap takes its own darkest colour, so an arm in front of the torso is lined.
 - The face is placed on the hood by direction: each pixel of the hood's front knows its angle from the face's middle, the hood's opening, the shadow inside its rim, the bangs, the mask and the eyes are regions of those angles, so the face lines up in every direction. The head is tilted toward the camera (20 degrees) so the face is not foreshortened by the view.
 - The cape is strips hanging from the shoulders to a hem, black outside and red inside (two layers), flowing back and up with speed and rippling with the stride.
+- A carried lantern (Lighting.md's Phase 9, `CharacterLanternArt`, named by the recipe) is drawn after the whole frame, so the baker can shade the frame without it first: a brass bail, an iron pyramid roof with a knob, a box of glass between four iron corner bars with the wick showing through, and an iron base, its sides square to the character's right. It hangs plumb from the left hand, or from a hook at the left hip while the weapon takes that hand, swinging with a gait's stride; its glass and wick are flat, unlined and glowing. The baker marks where its light shines from, the glass's middle, whether or not the body hides it.
 
 ### Motions
 
@@ -74,12 +76,13 @@ What the editor tool draws (Phase 1). It was settled on Python mockups (Phase 0)
 
 - Blade: grip, pommel, crossguard and a tapering blade; one-handed in the right hand, or two-handed with the left hand on the grip below the right.
 - Bow: a longbow about as tall as the character, in the left hand, its limbs tapering from the grip to the tips and bending further as it is drawn, the string from the tips to the nock (the right hand while drawing), an arrow while nocked.
+- A bow and a two-handed blade take the left hand (`CharacterWeaponArt.TakesLeftHand`), so a carried lantern hangs at the hip in their clips, appearing there on the first windup frame as the weapon appears in the hands.
 
 ## Runtime (Phases 2 to 5)
 
-- `CharacterAnimationSet` (runtime ScriptableObject the baker writes): per clip, the sprites per direction and frame (and gait frame, for a cast drawn over a gait), each frame's duration at natural speed, and markers: the contact frame of an attack (Phase 3) or the release frame of a cast (Phase 5), the natural speed of a gait (the distance its feet travel per second at its natural rate, east or west).
+- `CharacterAnimationSet` (runtime ScriptableObject the baker writes): per clip, the sprites per direction and frame (and gait frame, for a cast drawn over a gait), each frame's duration at natural speed, and markers: the contact frame of an attack (Phase 3) or the release frame of a cast (Phase 5), the natural speed of a gait (the distance its feet travel per second at its natural rate, east or west). For a character carrying a lantern, each sprite's lantern layer (null where the body hides the whole lantern) and the light the lantern casts, from sheets of their own packed tightly beside the clips' (Lighting.md's Phase 9).
 - `CharacterAnimator` (plain class): a locomotion layer (idle, walk, run, sprint), an action layer (an attack or cast playing its timeline) above it, and the hit-stop's hold over both. It returns the sprite to show; it allocates nothing per frame and runs on an injected clock, so EditMode tests drive it. The hit flash is the renderer's, not the animator's (Phase 6).
-- A component on the character's visuals applies the sprite and asks the animator each frame, fed by the motor (velocity, facing), the weapon (attack phases) and the abilities (casts). It replaces the player's and mobs' Mecanim controllers.
+- A component on the character's visuals applies the sprite and asks the animator each frame, fed by the motor (velocity, facing), the weapon (attack phases) and the abilities (casts). It replaces the player's and mobs' Mecanim controllers. While a carried lantern burns it also puts the frame's lantern layer on a second renderer, drawn over the body inside the character's sorting group, and its light where the frame hangs it.
 - Direction: the nearest of 8 to the facing, kept until the facing is a margin past the boundary, so it does not flicker.
 - Locomotion: the gait whose speed band holds the current speed, with hysteresis; playback rate is speed over the gait's natural speed, clamped; a switch keeps the normalised phase.
 - Action: each phase of the attack timeline plays its frames stretched to that phase's duration, so the contact frame shows exactly when the hit lands, at any attack speed. A cast plays the same way on its own timeline (Phase 5), its release frame on the update the cast completes.
@@ -128,7 +131,7 @@ Animation is never replicated; every machine derives it from replicated gameplay
 - Character, effect and projectile sprites are never scaled or rotated at runtime; new directions are baked or drawn.
 - Every character frame comes from the baker, or from an Aseprite file imported through its recipe ([AsepriteCharacters.md](AsepriteCharacters.md)). Change the look or a motion in its recipe, or the drawing in its file, and generate again.
 - Every effect frame comes from an effect recipe (`EffectSheetWriter`) and every projectile direction from a weapon sprite recipe (`WeaponSpriteWriter`), or from Aseprite files imported through an Aseprite effect or projectile recipe, which write the same `EffectSprites` and `DirectionalSprites` through the same writers ([AsepriteCharacters.md](AsepriteCharacters.md)'s Phase 3). An effect shows every frame as long, its `EffectSprites`' one frame duration.
-- A frame's pivot is the character's feet, so `YPositionSorter` sorts characters by where they stand.
+- A frame's pivot is the character's feet, so `YPositionSorter` sorts characters by where they stand. A lantern layer's slices are pivoted on the feet too, outside their own box, so they land where the lantern was drawn.
 - A weapon only shows in the clips that use it (its attacks and its own abilities' casts); standing, moving and casting a class ability the character is unarmed. Its first and last frames show it at full length from the front, since they are where it appears and goes.
 
 ## Phases
@@ -284,4 +287,4 @@ Review notes (after Phase 7, before merging):
 ## Open questions
 
 - Which cancel rules to keep, after trying both in play.
-- Whether equipment should show outside attacks after all. If it should, the baker would draw the weapon as separate layers (behind the body, the body, in front of it) so that bodies and weapons combine freely, instead of carried clips baked per weapon.
+- Whether equipment should show outside attacks after all. If it should, the baker would draw the weapon as separate layers (behind the body, the body, in front of it) so that bodies and weapons combine freely, instead of carried clips baked per weapon. The lantern's layer (Lighting.md's Phase 9) shows a cheaper way for a piece that does not move the body: the pixels it changes on each frame, drawn over the body, which carries the depth test's answer and costs a few percent of the sheets.

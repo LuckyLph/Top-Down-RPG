@@ -2,10 +2,10 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// The light a frame of a <see cref="CharacterAnimationClip"/> casts on what is around it (Docs/Lighting.md, Phase 2):
-/// where the glow drawn on the frame shines from, in units from the feet on the screen, and how strongly, 0 (no light)
-/// to 1 (the clip's brightest). The character baker writes it from where it draws a cast's light; nothing changes it
-/// at runtime.
+/// The light a frame of a <see cref="CharacterAnimationClip"/> casts on what is around it (Docs/Lighting.md, Phases 2
+/// and 9): where the glow drawn on the frame, or the lantern carried on it, shines from, in units from the feet on the
+/// screen, and how strongly, 0 (no light) to 1 (the clip's brightest). The character baker writes it from where it draws
+/// a cast's light or the lantern's glass; nothing changes it at runtime.
 /// </summary>
 [Serializable]
 public struct CharacterFrameLight

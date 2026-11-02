@@ -11,7 +11,10 @@ using VContainer;
 /// A player's look (<see cref="SetLook"/>) swaps the set and settings; the weapon and the casts look their clips up
 /// again in the new set. With a cast light (Docs/Lighting.md, Phase 2), the light each sprite's glow casts shows with
 /// that sprite: where the glow shines from, at the cast light's intensity times the frame's strength, in its clip's
-/// light colour, and off for a sprite without one. Visual only, on every machine that plays the casts.
+/// light colour, and off for a sprite without one. Visual only, on every machine that plays the casts. A character
+/// carrying a lantern (Docs/Lighting.md, Phase 9) shows it while it burns (<see cref="ShowLantern"/>): the lantern's
+/// layer of each sprite on a renderer of its own drawn over the body, and its light where the frame hangs it, at the
+/// intensity it burns at; out, neither shows.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -29,16 +32,28 @@ public class CharacterVisuals : MonoBehaviour
     [SerializeField, Min(0f), Tooltip("The cast light's intensity at a frame's full strength, the glow's brightest.")]
     private float castLightIntensity = 1f;
 
+    [SerializeField, Tooltip("The renderer drawing a carried lantern's layer over the body: a child of this object, above the body in the character's sorting group, with no sprite while the lantern is out. None for a character without a lantern.")]
+    private SpriteRenderer lanternRenderer;
+
+    [SerializeField, Tooltip("The light a carried lantern casts, on a child of this object and off while the lantern is out. None for a character without a lantern.")]
+    private Light2D lanternLight;
+
     private SpriteRenderer spriteRenderer;
     private IClock clock = UnityClock.Shared;
     private CharacterAnimator animator;
     private Vector2 velocity;
     private Vector2 facing = Vector2.down;
     private Sprite shown;
+    private Sprite shownLantern;
+    private bool lanternLit;
+    private float lanternIntensity;
 
     public CharacterAnimationSet AnimationSet => animationSet;
     public CharacterLocomotionSettings Locomotion => locomotion;
     public Light2D CastLight => castLight;
+    public SpriteRenderer LanternRenderer => lanternRenderer;
+    public Light2D LanternLight => lanternLight;
+    public bool LanternLit => lanternLit;
 
     /// <summary>
     /// The animator, built on first use; null without a set or settings.
@@ -58,13 +73,18 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Turns the cast light off while nothing animates.
+    /// Turns the cast and lantern lights off while nothing animates.
     /// </summary>
     private void OnDisable()
     {
         if (castLight != null)
         {
             castLight.enabled = false;
+        }
+
+        if (lanternLight != null)
+        {
+            lanternLight.enabled = false;
         }
     }
 
@@ -102,6 +122,16 @@ public class CharacterVisuals : MonoBehaviour
         locomotion = settings;
         animator = null;
         shown = null;
+    }
+
+    /// <summary>
+    /// Shows the carried lantern burning, its light at <paramref name="intensity"/> at a frame's full strength, or out
+    /// when not <paramref name="lit"/>, from the next update on.
+    /// </summary>
+    public void ShowLantern(bool lit, float intensity)
+    {
+        lanternLit = lit;
+        lanternIntensity = intensity;
     }
 
     /// <summary>
@@ -204,6 +234,7 @@ public class CharacterVisuals : MonoBehaviour
 
         Sprite sprite = current.Update(velocity, facing);
         ShowLight(current.Light, current.LightColour);
+        ShowLanternFrame(current.Lantern, current.LanternLight);
         if (sprite == null || ReferenceEquals(sprite, shown))
         {
             return;
@@ -229,6 +260,15 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
+    /// Sets the lantern's renderer and light in code, for tests that build the visuals without their prefab.
+    /// </summary>
+    internal void ConfigureLantern(SpriteRenderer renderer, Light2D light)
+    {
+        lanternRenderer = renderer;
+        lanternLight = light;
+    }
+
+    /// <summary>
     /// Shows <paramref name="light"/>, the light of the sprite shown, on the cast light: where it shines from, its
     /// strength times the cast light's intensity, in <paramref name="colour"/>; off for a frame without light. Writes
     /// only what changed.
@@ -241,33 +281,66 @@ public class CharacterVisuals : MonoBehaviour
         }
 
         bool lit = light.IsLit && colour.a > 0f;
-        if (castLight.enabled != lit)
-        {
-            castLight.enabled = lit;
-        }
-
-        if (!lit)
+        if (!Place(castLight, lit, light, castLightIntensity))
         {
             return;
-        }
-
-        Transform lightTransform = castLight.transform;
-        Vector3 position = new(light.Offset.x, light.Offset.y, 0f);
-        if (lightTransform.localPosition != position)
-        {
-            lightTransform.localPosition = position;
-        }
-
-        float intensity = castLightIntensity * light.Strength;
-        if (castLight.intensity != intensity)
-        {
-            castLight.intensity = intensity;
         }
 
         if (castLight.color != colour)
         {
             castLight.color = colour;
         }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="layer"/>, the lantern's layer over the sprite shown, and <paramref name="light"/>, the
+    /// light it casts, while the lantern burns; neither while it is out. Writes only what changed.
+    /// </summary>
+    private void ShowLanternFrame(Sprite layer, CharacterFrameLight light)
+    {
+        Sprite wanted = lanternLit ? layer : null;
+        if (lanternRenderer != null && !ReferenceEquals(wanted, shownLantern))
+        {
+            shownLantern = wanted;
+            lanternRenderer.sprite = wanted;
+        }
+
+        if (lanternLight != null)
+        {
+            Place(lanternLight, lanternLit && light.IsLit, light, lanternIntensity);
+        }
+    }
+
+    /// <summary>
+    /// Turns <paramref name="target"/> on when <paramref name="lit"/>, where <paramref name="light"/> shines from, at
+    /// its strength times <paramref name="intensity"/>, or off; returns whether it is on. Writes only what changed.
+    /// </summary>
+    private static bool Place(Light2D target, bool lit, CharacterFrameLight light, float intensity)
+    {
+        if (target.enabled != lit)
+        {
+            target.enabled = lit;
+        }
+
+        if (!lit)
+        {
+            return false;
+        }
+
+        Transform lightTransform = target.transform;
+        Vector3 position = new(light.Offset.x, light.Offset.y, 0f);
+        if (lightTransform.localPosition != position)
+        {
+            lightTransform.localPosition = position;
+        }
+
+        float strength = intensity * light.Strength;
+        if (target.intensity != strength)
+        {
+            target.intensity = strength;
+        }
+
+        return true;
     }
 
     /// <summary>

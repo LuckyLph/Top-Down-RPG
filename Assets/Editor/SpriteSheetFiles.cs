@@ -13,10 +13,13 @@ using UnityEngine;
 /// the sheet is reimported only when anything changed. A sheet already imported gets its new slices before its new
 /// pixels import, so one that lost frames never imports with slices past its edge, and a sheet larger than its import's
 /// maximum size gets the size it needs. An asset written beside a sheet keeps its GUID and is saved only when it
-/// changed.
+/// changed. A glow written beside a sheet (<see cref="WriteGlow"/>) is a plain texture the sheet takes as a secondary
+/// texture (<see cref="SetSecondaryTextures"/>), the props' and the characters' lanterns' alike.
 /// </summary>
 public static class SpriteSheetFiles
 {
+    public const string GlowTextureName = "_GlowTex";
+
     /// <summary>
     /// Writes <paramref name="pixels"/> (rows from the bottom) as a PNG at <paramref name="path"/> when its bytes
     /// changed, imports it as a pixel art sprite sheet and gives it exactly <paramref name="slices"/>. Returns whether
@@ -47,6 +50,84 @@ public static class SpriteSheetFiles
         }
 
         return written || changed;
+    }
+
+    /// <summary>
+    /// Writes <paramref name="pixels"/> as a PNG at <paramref name="path"/> when its bytes changed and imports it as a
+    /// glow: a plain texture with no sprites, point filtered and clamped, without mipmaps or compression, its colour in
+    /// sRGB as the sheet's. A new glow is imported first as one clear pixel with those settings, so the project's 2D
+    /// import, which cuts a new file into sprites on its first import, finds nothing to cut. Returns whether the file
+    /// or its import settings changed.
+    /// </summary>
+    public static bool WriteGlow(string path, int width, int height, Color32[] pixels)
+    {
+        int side = Mathf.NextPowerOfTwo(Mathf.Max(width, height));
+        bool created = AssetImporter.GetAtPath(path) == null;
+        if (created)
+        {
+            TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
+            File.WriteAllBytes(path, TerrainMaterialWriter.EncodePng(1, 1, new Color32[1]));
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            ApplyGlowSettings((TextureImporter)AssetImporter.GetAtPath(path), side);
+        }
+
+        byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
+        bool written = !File.ReadAllBytes(path).SequenceEqual(png);
+        if (written)
+        {
+            File.WriteAllBytes(path, png);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        }
+
+        bool changed = ApplyGlowSettings((TextureImporter)AssetImporter.GetAtPath(path), side);
+        return created || written || changed;
+    }
+
+    /// <summary>
+    /// Gives a glow's importer its settings (see <see cref="WriteGlow"/>), a maximum size of at least
+    /// <paramref name="side"/>, reimporting it when any changed. Returns whether any did.
+    /// </summary>
+    private static bool ApplyGlowSettings(TextureImporter importer, int side)
+    {
+        bool changed = importer.textureType != TextureImporterType.Default || importer.spriteImportMode != SpriteImportMode.None || !importer.sRGBTexture
+            || importer.filterMode != FilterMode.Point || importer.wrapMode != TextureWrapMode.Clamp || importer.mipmapEnabled
+            || importer.textureCompression != TextureImporterCompression.Uncompressed || importer.npotScale != TextureImporterNPOTScale.None
+            || importer.isReadable || importer.alphaIsTransparency || importer.maxTextureSize < side;
+        if (!changed)
+        {
+            return false;
+        }
+
+        importer.textureType = TextureImporterType.Default;
+        importer.spriteImportMode = SpriteImportMode.None;
+        importer.sRGBTexture = true;
+        importer.filterMode = FilterMode.Point;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        importer.mipmapEnabled = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.npotScale = TextureImporterNPOTScale.None;
+        importer.isReadable = false;
+        importer.alphaIsTransparency = false;
+        importer.maxTextureSize = Mathf.Max(importer.maxTextureSize, side);
+        importer.SaveAndReimport();
+        return true;
+    }
+
+    /// <summary>
+    /// Gives the sheet at <paramref name="sheet"/> exactly the secondary textures <paramref name="wanted"/>, reimporting
+    /// it when they differ. Returns whether they changed.
+    /// </summary>
+    public static bool SetSecondaryTextures(string sheet, SecondarySpriteTexture[] wanted)
+    {
+        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(sheet);
+        if (SameSecondaryTextures(importer.secondarySpriteTextures, wanted))
+        {
+            return false;
+        }
+
+        importer.secondarySpriteTextures = wanted;
+        importer.SaveAndReimport();
+        return true;
     }
 
     /// <summary>
@@ -84,6 +165,28 @@ public static class SpriteSheetFiles
 
         Object.DestroyImmediate(fresh);
         return changed;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> name the same textures in the same order.
+    /// </summary>
+    private static bool SameSecondaryTextures(SecondarySpriteTexture[] a, SecondarySpriteTexture[] b)
+    {
+        a ??= new SecondarySpriteTexture[0];
+        if (a.Length != b.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i].name != b[i].name || a[i].texture != b[i].texture)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

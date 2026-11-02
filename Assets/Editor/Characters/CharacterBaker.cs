@@ -7,14 +7,17 @@ using UnityEngine;
 /// frame, pixels rows from the bottom, the frames whose drawing reached their edge (named "direction frame"), which
 /// the inspector warns about, and where each frame's cast light shines from and how strongly
 /// (<see cref="CharacterCanvas.LightCentre"/>, <see cref="CharacterCanvas.LightStrength"/>), direction by direction and
-/// within each frame by frame.
+/// within each frame by frame. For a character carrying a lantern, also its layer: laid out as the sheet, the pixels the
+/// lantern changes on each frame (every other pixel clear), so drawn over the sheet they give the frame drawn with it,
+/// which of those pixels glow, and where the lantern shines from on each frame.
 /// </summary>
 public sealed class CharacterSheet
 {
     /// <summary>
     /// Creates the sheet of <paramref name="clip"/> from its pixels.
     /// </summary>
-    public CharacterSheet(CharacterClip clip, int frameCount, Color32[] pixels, IReadOnlyList<string> framesAtEdge, Vector2[] lightCentres, float[] lightStrengths)
+    public CharacterSheet(CharacterClip clip, int frameCount, Color32[] pixels, IReadOnlyList<string> framesAtEdge, Vector2[] lightCentres, float[] lightStrengths,
+        Color32[] lanternPixels = null, Color32[] lanternGlow = null, Vector2[] lanternCentres = null)
     {
         Clip = clip;
         FrameCount = frameCount;
@@ -24,6 +27,9 @@ public sealed class CharacterSheet
         FramesAtEdge = framesAtEdge;
         LightCentres = lightCentres;
         LightStrengths = lightStrengths;
+        LanternPixels = lanternPixels;
+        LanternGlow = lanternGlow;
+        LanternCentres = lanternCentres;
     }
 
     public CharacterClip Clip { get; }
@@ -44,6 +50,28 @@ public sealed class CharacterSheet
     public float[] LightStrengths { get; }
 
     /// <summary>
+    /// The lantern's layer, laid out as <see cref="Pixels"/>: the pixels it changes, clear elsewhere; null without one.
+    /// </summary>
+    public Color32[] LanternPixels { get; }
+
+    /// <summary>
+    /// Which of the lantern layer's pixels glow, its glass and wick, in alpha, laid out as <see cref="Pixels"/>; null
+    /// without a lantern.
+    /// </summary>
+    public Color32[] LanternGlow { get; }
+
+    /// <summary>
+    /// Where each frame's lantern shines from, in pixels from the feet on the screen, whether or not the body hides it;
+    /// null without a lantern.
+    /// </summary>
+    public Vector2[] LanternCentres { get; }
+
+    /// <summary>
+    /// Whether the clip's frames carry a lantern.
+    /// </summary>
+    public bool HasLantern => LanternPixels != null;
+
+    /// <summary>
     /// Where frame <paramref name="frame"/> of direction <paramref name="direction"/> lies on a sheet of frames of
     /// <paramref name="size"/>, in pixels from the bottom left: direction 0 in the top row.
     /// </summary>
@@ -59,8 +87,10 @@ public sealed class CharacterSheet
 /// height, outline included: estimated from its height at one pixel per unit, then moved in steps of half a percent
 /// while rounding leaves it a pixel off. Each frame is posed by its clip's motion, solved by <see cref="CharacterRig"/>, drawn by
 /// the recipe's <see cref="CharacterPainter"/> onto a <see cref="CharacterCanvas"/> of the clip's frame size with the feet on its
-/// pivot, and shaded with the recipe's, the weapon's and the motion's light colours. The same recipe always gives the
-/// same pixels.
+/// pivot, and shaded with the recipe's, the weapon's and the motion's light colours. A recipe carrying a lantern has it
+/// painted over each frame once the frame is shaded (<see cref="DrawLantern"/>), and the pixels that changed are the
+/// frame's lantern layer, so the sheets themselves stay as they are without it. The same recipe always gives the same
+/// pixels.
 /// </summary>
 public sealed class CharacterBaker
 {
@@ -114,6 +144,10 @@ public sealed class CharacterBaker
         List<string> atEdge = new();
         Vector2[] lightCentres = new Vector2[CharacterDirections.Count * frames];
         float[] lightStrengths = new float[lightCentres.Length];
+        bool carries = recipe.Lantern != null;
+        Color32[] lanternPixels = carries ? new Color32[pixels.Length] : null;
+        Color32[] lanternGlow = carries ? new Color32[pixels.Length] : null;
+        Vector2[] lanternCentres = carries ? new Vector2[lightCentres.Length] : null;
         for (int direction = 0; direction < CharacterDirections.Count; direction++)
         {
             for (int frame = 0; frame < frames; frame++)
@@ -132,10 +166,42 @@ public sealed class CharacterBaker
                 {
                     Array.Copy(colours, y * size.x, pixels, (rect.y + y) * width + rect.x, size.x);
                 }
+
+                if (!carries)
+                {
+                    continue;
+                }
+
+                DrawLantern(clip, direction, frame, canvas);
+                lanternCentres[direction * frames + frame] = canvas.LanternCentre;
+                Color32[] carried = Shade(canvas, clip.Weapon, clip.Motion.Light);
+                if (TouchesEdge(carried, size) && !atEdge.Contains($"{CharacterDirections.Name(direction)} {frame}"))
+                {
+                    atEdge.Add($"{CharacterDirections.Name(direction)} {frame}");
+                }
+
+                for (int y = 0; y < size.y; y++)
+                {
+                    for (int x = 0; x < size.x; x++)
+                    {
+                        int i = y * size.x + x;
+                        if (carried[i].Equals(colours[i]))
+                        {
+                            continue;
+                        }
+
+                        int o = (rect.y + y) * width + rect.x + x;
+                        lanternPixels[o] = carried[i];
+                        if (canvas.IsFilled(x, y) && CharacterMaterials.Glows(canvas.MaterialAt(x, y)))
+                        {
+                            lanternGlow[o] = new Color32(0, 0, 0, 255);
+                        }
+                    }
+                }
             }
         }
 
-        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths);
+        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths, lanternPixels, lanternGlow, lanternCentres);
     }
 
     /// <summary>
@@ -163,6 +229,23 @@ public sealed class CharacterBaker
     }
 
     /// <summary>
+    /// Paints the recipe's lantern over <paramref name="canvas"/>, frame <paramref name="frame"/> of
+    /// <paramref name="clip"/> facing direction <paramref name="direction"/> as <see cref="Render"/> drew it, hanging as
+    /// that frame's pose holds it (see <see cref="CharacterPainter.PaintLantern"/>); nothing without a lantern.
+    /// </summary>
+    public void DrawLantern(CharacterClip clip, int direction, int frame, CharacterCanvas canvas)
+    {
+        if (recipe.Lantern == null)
+        {
+            return;
+        }
+
+        CharacterPose pose = clip.Motion.PoseAt(frame, recipe, clip.Weapon);
+        CharacterJoints joints = CharacterRig.Solve(recipe, pose, clip.Weapon);
+        recipe.CreatePainter(clip.Weapon, canvas).PaintLantern(recipe.Lantern, CharacterDirections.Angle(direction), pose, joints);
+    }
+
+    /// <summary>
     /// The colours of a drawn frame, with the recipe's colours for the character and <paramref name="weapon"/>'s for
     /// the weapon and its effects.
     /// </summary>
@@ -173,8 +256,9 @@ public sealed class CharacterBaker
 
     /// <summary>
     /// The colours of a drawn frame, with the recipe's colours for the character, <paramref name="weapon"/>'s for the
-    /// weapon and its effects, and <paramref name="light"/> for a cast's light: its rim, glow and core each flat in
-    /// the light's shadow, middle and light colours, outlined in its outline colour.
+    /// weapon and its effects, <paramref name="light"/> for a cast's light (its rim, glow and core each flat in the
+    /// light's shadow, middle and light colours, outlined in its outline colour) and the recipe's lantern's for the
+    /// lantern.
     /// </summary>
     public Color32[] Shade(CharacterCanvas canvas, CharacterWeaponArt weapon, ColourRamp light)
     {
@@ -186,6 +270,12 @@ public sealed class CharacterBaker
             {
                 Color32 tone = material == CharacterMaterial.LightRim ? light.Shadow : material == CharacterMaterial.LightGlow ? light.Middle : light.Light;
                 ramps[i] = new ColourRamp(light.Outline, tone, tone, tone);
+                continue;
+            }
+
+            if (CharacterMaterials.IsLantern(material))
+            {
+                ramps[i] = recipe.Lantern != null ? recipe.Lantern.Ramp(material) : default;
                 continue;
             }
 

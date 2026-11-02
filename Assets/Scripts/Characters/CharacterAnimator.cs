@@ -11,8 +11,9 @@ using UnityEngine;
 /// without one stops as soon as the character moves after its release frame showed (the follow-through is cut). A hold
 /// (<see cref="Hold"/>, a hit-stop) keeps the sprite of its first update on screen for a while: the action keeps its
 /// time underneath and the locomotion layer stands still (a moving cast keeps its held frame over legs that run on), so
-/// once the hold ends the action shows the frame for the real time, and the stride goes on where it stopped. Allocates
-/// nothing per update, so EditMode tests drive it on a manual clock.
+/// once the hold ends the action shows the frame for the real time, and the stride goes on where it stopped. Each sprite
+/// comes with what its clip says about it: a cast's light and, for a character carrying a lantern, the lantern's layer
+/// and light, held with it. Allocates nothing per update, so EditMode tests drive it on a manual clock.
 /// </summary>
 public sealed class CharacterAnimator
 {
@@ -60,6 +61,18 @@ public sealed class CharacterAnimator
     /// The colour of <see cref="Light"/>: its clip's light colour.
     /// </summary>
     public Color LightColour { get; private set; }
+
+    /// <summary>
+    /// The lantern's layer over the sprite the last update showed (Docs/Lighting.md, Phase 9), held with its sprite;
+    /// null where the body hides the whole lantern or the clip carries none.
+    /// </summary>
+    public Sprite Lantern { get; private set; }
+
+    /// <summary>
+    /// The light the lantern casts on the sprite the last update showed, held with its sprite; none for a clip carrying
+    /// no lantern.
+    /// </summary>
+    public CharacterFrameLight LanternLight { get; private set; }
 
     /// <summary>
     /// Whether the last update showed a cast's clip drawn over a gait, the legs running on.
@@ -189,6 +202,7 @@ public sealed class CharacterAnimator
                     int heldGaitFrame = GaitFrameOf(action.MovingClip);
                     Sprite = action.MovingSpriteAt(Direction, shownActionFrame, heldGaitFrame);
                     ShowLight(action.MovingLightAt(Direction, shownActionFrame, heldGaitFrame), action.MovingClip);
+                    ShowLantern(action.MovingClip, shownActionFrame, heldGaitFrame);
                 }
 
                 return Sprite;
@@ -214,11 +228,13 @@ public sealed class CharacterAnimator
                 int gaitFrame = GaitFrameOf(action.MovingClip);
                 Sprite = action.MovingSpriteAt(Direction, action.Frame, gaitFrame);
                 ShowLight(action.MovingLightAt(Direction, action.Frame, gaitFrame), action.MovingClip);
+                ShowLantern(action.MovingClip, action.Frame, gaitFrame);
                 return Sprite;
             }
 
             Sprite = action.Sprite;
             ShowLight(action.Light, action.Clip);
+            ShowLantern(action.Clip, action.Frame, 0);
             return Sprite;
         }
 
@@ -231,6 +247,7 @@ public sealed class CharacterAnimator
         actionMovedLegs = false;
         Sprite = locomotion.SpriteFacing(Direction);
         ShowLight(default, null);
+        ShowLantern(locomotion.Clip, locomotion.Frame, 0);
         return Sprite;
     }
 
@@ -265,6 +282,16 @@ public sealed class CharacterAnimator
     {
         Light = light;
         LightColour = light.IsLit && clip != null ? clip.LightColour : default;
+    }
+
+    /// <summary>
+    /// Keeps the lantern's layer and light of <paramref name="clip"/>'s frame <paramref name="frame"/> over gait frame
+    /// <paramref name="gaitFrame"/> in the direction shown; none without a clip.
+    /// </summary>
+    private void ShowLantern(CharacterAnimationClip clip, int frame, int gaitFrame)
+    {
+        Lantern = clip != null ? clip.LanternAt(Direction, frame, gaitFrame) : null;
+        LanternLight = clip != null ? clip.LanternLightAt(Direction, frame, gaitFrame) : default;
     }
 
     /// <summary>

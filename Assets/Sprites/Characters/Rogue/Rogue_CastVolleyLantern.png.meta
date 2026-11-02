@@ -1,0 +1,1627 @@
+fileFormatVersion: 2
+guid: 864ea53020777fe47a1fa30442584aa3
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 499194945212371549
+    second: Rogue_CastVolleyLantern_0
+  - first:
+      213: 5508122362450746063
+    second: Rogue_CastVolleyLantern_1
+  - first:
+      213: -6722543349277398746
+    second: Rogue_CastVolleyLantern_2
+  - first:
+      213: -7417569594837345727
+    second: Rogue_CastVolleyLantern_3
+  - first:
+      213: 3619156434662611355
+    second: Rogue_CastVolleyLantern_4
+  - first:
+      213: 2995964413144775142
+    second: Rogue_CastVolleyLantern_5
+  - first:
+      213: 6459084537457345926
+    second: Rogue_CastVolleyLantern_6
+  - first:
+      213: 6572622889761859485
+    second: Rogue_CastVolleyLantern_7
+  - first:
+      213: 4277100498797276159
+    second: Rogue_CastVolleyLantern_8
+  - first:
+      213: -8484221891836726204
+    second: Rogue_CastVolleyLantern_9
+  - first:
+      213: -2189797752116003526
+    second: Rogue_CastVolleyLantern_10
+  - first:
+      213: -4462203908086230501
+    second: Rogue_CastVolleyLantern_11
+  - first:
+      213: 6108028155160198415
+    second: Rogue_CastVolleyLantern_12
+  - first:
+      213: 3385046205999307002
+    second: Rogue_CastVolleyLantern_13
+  - first:
+      213: -7594226621318684570
+    second: Rogue_CastVolleyLantern_14
+  - first:
+      213: 3810010267114962858
+    second: Rogue_CastVolleyLantern_15
+  - first:
+      213: 2300173087973163252
+    second: Rogue_CastVolleyLantern_16
+  - first:
+      213: -6430120459747540450
+    second: Rogue_CastVolleyLantern_17
+  - first:
+      213: -4526830911600869757
+    second: Rogue_CastVolleyLantern_18
+  - first:
+      213: -2730670659138412291
+    second: Rogue_CastVolleyLantern_19
+  - first:
+      213: 4981132049509682163
+    second: Rogue_CastVolleyLantern_20
+  - first:
+      213: -3980556519383196200
+    second: Rogue_CastVolleyLantern_21
+  - first:
+      213: 5940599698139838835
+    second: Rogue_CastVolleyLantern_22
+  - first:
+      213: 7463961164000499599
+    second: Rogue_CastVolleyLantern_23
+  - first:
+      213: 3486844799060688958
+    second: Rogue_CastVolleyLantern_24
+  - first:
+      213: 7707703081289216072
+    second: Rogue_CastVolleyLantern_25
+  - first:
+      213: 81056404668702805
+    second: Rogue_CastVolleyLantern_26
+  - first:
+      213: -6012331244422038759
+    second: Rogue_CastVolleyLantern_27
+  - first:
+      213: -2086530459504130492
+    second: Rogue_CastVolleyLantern_28
+  - first:
+      213: -814766474164868662
+    second: Rogue_CastVolleyLantern_29
+  - first:
+      213: -3823769994914114398
+    second: Rogue_CastVolleyLantern_30
+  - first:
+      213: -1349632083147567691
+    second: Rogue_CastVolleyLantern_31
+  - first:
+      213: -6088337568380260564
+    second: Rogue_CastVolleyLantern_32
+  - first:
+      213: -3922467556615753701
+    second: Rogue_CastVolleyLantern_33
+  - first:
+      213: 4739451925766581016
+    second: Rogue_CastVolleyLantern_34
+  - first:
+      213: -751773136115503584
+    second: Rogue_CastVolleyLantern_35
+  - first:
+      213: -3689484395857447961
+    second: Rogue_CastVolleyLantern_36
+  - first:
+      213: -6421866175999716718
+    second: Rogue_CastVolleyLantern_37
+  - first:
+      213: -3480915904465673338
+    second: Rogue_CastVolleyLantern_38
+  - first:
+      213: -3656080488185629232
+    second: Rogue_CastVolleyLantern_39
+  - first:
+      213: -3719383899751061953
+    second: Rogue_CastVolleyLantern_40
+  - first:
+      213: -713574591671768270
+    second: Rogue_CastVolleyLantern_41
+  - first:
+      213: -5063852780061976523
+    second: Rogue_CastVolleyLantern_42
+  - first:
+      213: -904864877316860432
+    second: Rogue_CastVolleyLantern_43
+  - first:
+      213: 1890392628043264536
+    second: Rogue_CastVolleyLantern_44
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -4, y: -14}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 710257c7cf3191f44a98452cff7b092c
+      internalID: 8764028
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 105
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: -1.3333334, y: -2.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b99780e459fb27845b295ca4537adf32
+      internalID: -2144890050
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 105
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: -1.6666666, y: -2.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e82527a4de413674282bae6ab082d022
+      internalID: -1470576654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 105
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5cddd17708125254ba43bdebcb3184ba
+      internalID: 274324818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 105
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ee07521dcd93db846b7cdd92e9a23e44
+      internalID: -1748593926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 105
+        width: 6
+        height: 9
+      alignment: 9
+      pivot: {x: -0.33333334, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9516f70e420382444b1ec05eec0701e7
+      internalID: 2009243787
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 105
+        width: 6
+        height: 9
+      alignment: 9
+      pivot: {x: -0.33333334, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00c5c180c97f9894bb027eea29671bb7
+      internalID: 517308537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -4, y: -17}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aba3c9cc175f6e74aa3918eef7061f48
+      internalID: -310005674
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 90
+        width: 3
+        height: 6
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.8333333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8432b3565a387064b8c661093a81fcc4
+      internalID: -573732711
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 90
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7a523953bb5d4e94c83ca700b2d4f78d
+      internalID: -41321609
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 90
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e66d065898a3d1e43a0ec87461442b3a
+      internalID: -427923738
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 90
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: 1, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 219d5511dbfcfc74cb687aab3dceff67
+      internalID: 303400248
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 90
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: 1.3333334, y: -1.2}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 687942b920314534a83657d515139e4a
+      internalID: -969628529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 75
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.6, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7e6652decdb090140b88e9d7f30a86af
+      internalID: -132991824
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 75
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d0eb4fe05ccf75448893d4ddc7ff18cc
+      internalID: -191008104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 75
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 6, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 601110fe126c11b4ab6c19ca00ab76db
+      internalID: 1349309765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 75
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 6, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cb6affef9e431cd42acce96cf582fb67
+      internalID: 1010543096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 75
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41949387d7a574f418d39e64feba1db7
+      internalID: 35239995
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.3333334, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3234573ffb8539f45ae2ccc60519083b
+      internalID: 772362441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 60
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.5, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 343c954deacfa6d44a106fd06db96ca6
+      internalID: 2115897611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e39d0cac5ffc97949b3c05c933bea2a9
+      internalID: 1141478661
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff726213f9ac1904eafc1534e6145d44
+      internalID: -1489925052
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7ddbfc9ad69ec6c4ea43d74968eea200
+      internalID: 1147280870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 50c0be7993ac0d4419752a8736638180
+      internalID: 1091703190
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8df7aa61f21e38d4bac40e11af3e1bbc
+      internalID: -139610822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 60
+        width: 8
+        height: 15
+      alignment: 9
+      pivot: {x: 1.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f01c773b1f85e524db7be67cb62a9b2f
+      internalID: 1932190880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dbdcbf54b12a6cc48a513869f8eae6be
+      internalID: -140830587
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55e425ab16357db4a91e8059f6d854f9
+      internalID: 1087919629
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d27d106726fbc5142bcd05815b7fad6f
+      internalID: 969192652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e2974ea93ee0f6643aeb88a8f52a3829
+      internalID: 609023413
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 653cf736d007ae448897478f48230427
+      internalID: 848412727
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24d91c8354140d146a4c83608c3f6d91
+      internalID: -410545799
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 0.8888889, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 770208f6fc4133244b6cdd3ddf35f683
+      internalID: 1593639741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 0.625, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9dd7185aac205be4db6cb9bcd0c9584f
+      internalID: -958161109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1c8f7d59ec35fa4b93a31f1d1a76ba9
+      internalID: -793766135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c4752de15b546e441b60ac61f04e3b32
+      internalID: -795297765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d8523dc611329c47a89610bafd3ec88
+      internalID: 865524691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f5f2bae33b506b4cac4fc310b2c63dd
+      internalID: 584591956
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0e27da605f0a80c488a034849cddb6f8
+      internalID: -1187153268
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 70082636dcc436141b52dab712b957f4
+      internalID: -1871103166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c3df65c27f93e146b7f255df743f8cf
+      internalID: -330148505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 30
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: -0.1, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5d305fa46e858b2498cf3cce82d7e35c
+      internalID: 610058098
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.625, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f843b39139a45e84c84b42eb34636fc6
+      internalID: -1094561105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 32939d148545d4a4d99d7b6771cda9c4
+      internalID: 432235041
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f15c3f770817af243a81a30de9b0fce6
+      internalID: 265784026
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2d5e077c8e15ac142a5a55f52de43df6
+      internalID: 2017839690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f316d7db68b7f534991a128bb8cf1d47
+      internalID: 1884668419
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: de956a038e5731f48b6c7f5b845751a6
+      internalID: 365829657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9c5a551fc6c795246920494a45aad12e
+      internalID: 634183971
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 15
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9bf3b167d0b68f544b0916c5ed73a4bf
+      internalID: -362364270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 10
+      alignment: 9
+      pivot: {x: -0.2, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5743d608bfbc8cd42a2fde0e936b7085
+      internalID: -63785959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 0
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: -0.25, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 75410525d44bcd1419bcecaadc5b3a40
+      internalID: 5124798
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9d9af306e3ec1d449b0c167561b3ace0
+      internalID: -1117943912
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8fb0f58a8a5ca74fa0f1a31dcfb6a3f
+      internalID: -1654770128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 0
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8bf1f803cbcdad48b518f2572c7b213
+      internalID: 300741590
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 0
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b598ae3ddab04342a3ee0a08e65f251
+      internalID: -620943398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 36ddf3ca3949e3d45970dba511208cca
+      internalID: 2104230092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastVolleyLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 0
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: -0.25, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9affb1bcbd4c3f74399cd42c0573a01d
+      internalID: -1361873039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: db7882607b589d6488dd63aebac2ea6f
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 0d00bbd7d0a337d4f94589bc041361be, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_CastVolleyLantern_E_0: 8764028
+      Rogue_CastVolleyLantern_E_1: -2144890050
+      Rogue_CastVolleyLantern_E_2: -1470576654
+      Rogue_CastVolleyLantern_E_3: 274324818
+      Rogue_CastVolleyLantern_E_4: -1748593926
+      Rogue_CastVolleyLantern_E_5: 2009243787
+      Rogue_CastVolleyLantern_E_6: 517308537
+      Rogue_CastVolleyLantern_E_7: -310005674
+      Rogue_CastVolleyLantern_NE_2: -573732711
+      Rogue_CastVolleyLantern_NE_3: -41321609
+      Rogue_CastVolleyLantern_NE_4: -427923738
+      Rogue_CastVolleyLantern_NE_5: 303400248
+      Rogue_CastVolleyLantern_NE_6: -969628529
+      Rogue_CastVolleyLantern_NW_0: 772362441
+      Rogue_CastVolleyLantern_NW_1: 2115897611
+      Rogue_CastVolleyLantern_NW_2: 1141478661
+      Rogue_CastVolleyLantern_NW_3: -1489925052
+      Rogue_CastVolleyLantern_NW_4: 1147280870
+      Rogue_CastVolleyLantern_NW_5: 1091703190
+      Rogue_CastVolleyLantern_NW_6: -139610822
+      Rogue_CastVolleyLantern_NW_7: 1932190880
+      Rogue_CastVolleyLantern_N_0: -132991824
+      Rogue_CastVolleyLantern_N_1: -191008104
+      Rogue_CastVolleyLantern_N_2: 1349309765
+      Rogue_CastVolleyLantern_N_6: 1010543096
+      Rogue_CastVolleyLantern_N_7: 35239995
+      Rogue_CastVolleyLantern_SE_0: -63785959
+      Rogue_CastVolleyLantern_SE_1: 5124798
+      Rogue_CastVolleyLantern_SE_2: -1117943912
+      Rogue_CastVolleyLantern_SE_3: -1654770128
+      Rogue_CastVolleyLantern_SE_4: 300741590
+      Rogue_CastVolleyLantern_SE_5: -620943398
+      Rogue_CastVolleyLantern_SE_6: 2104230092
+      Rogue_CastVolleyLantern_SE_7: -1361873039
+      Rogue_CastVolleyLantern_SW_0: -793766135
+      Rogue_CastVolleyLantern_SW_1: -795297765
+      Rogue_CastVolleyLantern_SW_2: 865524691
+      Rogue_CastVolleyLantern_SW_3: 584591956
+      Rogue_CastVolleyLantern_SW_4: -1187153268
+      Rogue_CastVolleyLantern_SW_5: -1871103166
+      Rogue_CastVolleyLantern_SW_6: -330148505
+      Rogue_CastVolleyLantern_SW_7: 610058098
+      Rogue_CastVolleyLantern_S_0: -1094561105
+      Rogue_CastVolleyLantern_S_1: 432235041
+      Rogue_CastVolleyLantern_S_2: 265784026
+      Rogue_CastVolleyLantern_S_3: 2017839690
+      Rogue_CastVolleyLantern_S_4: 1884668419
+      Rogue_CastVolleyLantern_S_5: 365829657
+      Rogue_CastVolleyLantern_S_6: 634183971
+      Rogue_CastVolleyLantern_S_7: -362364270
+      Rogue_CastVolleyLantern_W_0: -140830587
+      Rogue_CastVolleyLantern_W_1: 1087919629
+      Rogue_CastVolleyLantern_W_2: 969192652
+      Rogue_CastVolleyLantern_W_3: 609023413
+      Rogue_CastVolleyLantern_W_4: 848412727
+      Rogue_CastVolleyLantern_W_5: -410545799
+      Rogue_CastVolleyLantern_W_6: 1593639741
+      Rogue_CastVolleyLantern_W_7: -958161109
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

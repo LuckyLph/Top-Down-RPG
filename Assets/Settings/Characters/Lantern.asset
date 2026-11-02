@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7755558c60413df458280fb8bf188045, type: 3}
+  m_Name: Lantern
+  m_EditorClassIdentifier: TopDownRPG.Editor::CharacterLanternArt
+  size: 1.4
+  bailDrop: 1.1
+  bailRadius: 0.25
+  roofHeight: 1.3
+  eave: 0.5
+  glassHalfWidth: 1.7
+  glassHeight: 4
+  baseHeight: 0.6
+  baseOverhang: 0.35
+  barRadius: 0.4
+  knobRadius: 0.55
+  wickRadius: 0.7
+  wickDrop: 0.3
+  handDrop: 0.4
+  hipHook: {x: -5.6, y: 0.6, z: 1}
+  hipTilt: {x: 6, y: 0.15}
+  swingDegrees: 12
+  handSwingShare: 0.6
+  iron:
+    outline:
+      serializedVersion: 2
+      rgba: 4279899156
+    shadow:
+      serializedVersion: 2
+      rgba: 4281740844
+    middle:
+      serializedVersion: 2
+      rgba: 4283845704
+    light:
+      serializedVersion: 2
+      rgba: 4286214252
+  brass:
+    outline:
+      serializedVersion: 2
+      rgba: 4278983210
+    shadow:
+      serializedVersion: 2
+      rgba: 4280175210
+    middle:
+      serializedVersion: 2
+      rgba: 4281627290
+    light:
+      serializedVersion: 2
+      rgba: 4283474120
+  glass:
+    serializedVersion: 2
+    rgba: 4285451519
+  wick:
+    serializedVersion: 2
+    rgba: 4291097343

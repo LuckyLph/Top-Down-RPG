@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -10,6 +11,7 @@ public sealed class CharacterCanvas : ArtCanvas
 {
     private Vector2 lightSum;
     private int lightsMarked;
+    private Vector2 lanternCentre;
 
     /// <summary>
     /// Creates an empty frame of <paramref name="width"/> x <paramref name="height"/> pixels whose world origin falls on
@@ -31,6 +33,27 @@ public sealed class CharacterCanvas : ArtCanvas
     /// lights marked (between the hands, for a light at both); zero when none is drawn.
     /// </summary>
     public Vector2 LightCentre => lightsMarked > 0 ? lightSum / lightsMarked : Vector2.zero;
+
+    /// <summary>
+    /// Whether a carried lantern is drawn on the frame.
+    /// </summary>
+    public bool HasLantern { get; private set; }
+
+    /// <summary>
+    /// Where the lantern drawn on the frame shines from, in pixels from the pivot on the screen: its glass's middle;
+    /// zero when none is drawn.
+    /// </summary>
+    public Vector2 LanternCentre => lanternCentre;
+
+    /// <summary>
+    /// Marks the lantern's light shining from <paramref name="world"/>, whether or not the body hides it.
+    /// </summary>
+    public void MarkLantern(Vector3 world)
+    {
+        Vector3 view = Project(world);
+        lanternCentre = new Vector2(view.x, view.y);
+        HasLantern = true;
+    }
 
     /// <summary>
     /// Marks a cast's light shining from <paramref name="world"/> at <paramref name="strength"/>, whether or not the
@@ -78,11 +101,21 @@ public sealed class CharacterCanvas : ArtCanvas
 
     /// <summary>
     /// Draws a sphere of <paramref name="radius"/> rig units, at least <paramref name="minRadius"/> pixels, around
-    /// <paramref name="world"/> (see <see cref="ArtCanvas.Sphere"/>).
+    /// <paramref name="world"/>, its depth moved by <paramref name="depthOffset"/> pixels (see
+    /// <see cref="ArtCanvas.Sphere"/>).
     /// </summary>
-    public void Sphere(Vector3 world, float radius, CharacterMaterial value, CharacterPart owner, float minRadius = 0f)
+    public void Sphere(Vector3 world, float radius, CharacterMaterial value, CharacterPart owner, float minRadius = 0f, float depthOffset = 0f)
     {
-        Sphere(world, radius, (int)value, (int)owner, minRadius);
+        Sphere(world, radius, (int)value, (int)owner, minRadius, null, 0f, depthOffset);
+    }
+
+    /// <summary>
+    /// Draws the solid inside every plane of <paramref name="planes"/> within <paramref name="bounds"/> (see
+    /// <see cref="ArtCanvas.Convex"/>).
+    /// </summary>
+    public void Convex(IReadOnlyList<Vector4> planes, Bounds bounds, CharacterMaterial value, CharacterPart owner)
+    {
+        Convex(planes, bounds, (int)value, (int)owner);
     }
 
     /// <summary>

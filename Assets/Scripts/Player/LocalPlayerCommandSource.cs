@@ -54,7 +54,7 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
         bool wantsTarget = movePressed || moveHeld || abilitySlot != PlayerCommand.NoAbility;
         UnitTarget target = wantsTarget && picker != null ? picker.Pick(pointerWorld) : default;
 
-        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot, input.AttackMovePressedThisFrame);
+        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot, input.AttackMovePressedThisFrame, input.LanternPressedThisFrame);
     }
 
     /// <summary>

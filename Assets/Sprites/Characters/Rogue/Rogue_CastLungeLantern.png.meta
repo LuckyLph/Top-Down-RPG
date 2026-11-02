@@ -1,0 +1,1527 @@
+fileFormatVersion: 2
+guid: be84330525c35194a97ef8ebe96490b4
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -407780152166016384
+    second: Rogue_CastLungeLantern_0
+  - first:
+      213: -991354555123592126
+    second: Rogue_CastLungeLantern_1
+  - first:
+      213: 6371924736649506828
+    second: Rogue_CastLungeLantern_2
+  - first:
+      213: -7696650889778206912
+    second: Rogue_CastLungeLantern_3
+  - first:
+      213: 5185843240501543381
+    second: Rogue_CastLungeLantern_4
+  - first:
+      213: -4353912721576711388
+    second: Rogue_CastLungeLantern_5
+  - first:
+      213: -8266386657020634330
+    second: Rogue_CastLungeLantern_6
+  - first:
+      213: 2425067361773883421
+    second: Rogue_CastLungeLantern_7
+  - first:
+      213: 8257416340909275372
+    second: Rogue_CastLungeLantern_8
+  - first:
+      213: 2815833461387031956
+    second: Rogue_CastLungeLantern_9
+  - first:
+      213: -1648645868108905081
+    second: Rogue_CastLungeLantern_10
+  - first:
+      213: 102844190651072507
+    second: Rogue_CastLungeLantern_11
+  - first:
+      213: 2525096746310567414
+    second: Rogue_CastLungeLantern_12
+  - first:
+      213: -129183806960407268
+    second: Rogue_CastLungeLantern_13
+  - first:
+      213: 7475823175615623261
+    second: Rogue_CastLungeLantern_14
+  - first:
+      213: 5617404753616559785
+    second: Rogue_CastLungeLantern_15
+  - first:
+      213: 1699530320122624206
+    second: Rogue_CastLungeLantern_16
+  - first:
+      213: 2930747806284762147
+    second: Rogue_CastLungeLantern_17
+  - first:
+      213: -2485139157173104706
+    second: Rogue_CastLungeLantern_18
+  - first:
+      213: -6134088105272326948
+    second: Rogue_CastLungeLantern_19
+  - first:
+      213: 199928666963445044
+    second: Rogue_CastLungeLantern_20
+  - first:
+      213: -5198885730911691388
+    second: Rogue_CastLungeLantern_21
+  - first:
+      213: 8667424107137332467
+    second: Rogue_CastLungeLantern_22
+  - first:
+      213: 1710808212722946002
+    second: Rogue_CastLungeLantern_23
+  - first:
+      213: -1027139520015696286
+    second: Rogue_CastLungeLantern_24
+  - first:
+      213: -7631542994043557093
+    second: Rogue_CastLungeLantern_25
+  - first:
+      213: -110382839787797848
+    second: Rogue_CastLungeLantern_26
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 91
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d10dff9800a250e46b5afc1afa41b8e6
+      internalID: 1022046296
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 91
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: 0.25, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e9b423cbcb99d88458b4ce812bbfd60b
+      internalID: -643755335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 91
+        width: 5
+        height: 9
+      alignment: 9
+      pivot: {x: -0.8, y: -1.1111112}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 57268ec23a25efa4a9dbad2dd49f5a47
+      internalID: -1096652739
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 91
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: -0.6666667, y: -0.8181818}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5c64c70de03cb0041b0cbff2d3a2478c
+      internalID: -760336393
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 91
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 2.25, y: -0.90909094}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 779b7631409bf1c499f83c8b8f2fac24
+      internalID: -950516886
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 91
+        width: 3
+        height: 11
+      alignment: 9
+      pivot: {x: 3, y: -0.8181818}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 30f7b067c038a0144a5825087c3e48e2
+      internalID: 1863711816
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 91
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 72d051ba6093e1f4b8c7bf05c8343417
+      internalID: 248029094
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 78
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 2, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4b8a2572c3d3c564aa6b634c48a24ec9
+      internalID: -1734730258
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 78
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: 2, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d17b46971914e9d498d1f8900edd05f3
+      internalID: -1422468947
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 78
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bd96a683a0b010f46a3e3b4c1c1d3190
+      internalID: -1627400950
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 65
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 13f7aaad6eac1e545aea48543227500a
+      internalID: 160855569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 65
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9dbbef4148db30f4d90625f27a8f277a
+      internalID: -620544137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 65
+        width: 2
+        height: 11
+      alignment: 9
+      pivot: {x: 5, y: -0.6363636}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 298cf5611caf2764f8ca71196e9e39dd
+      internalID: 1772740806
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 65
+        width: 2
+        height: 10
+      alignment: 9
+      pivot: {x: 5, y: -0.9}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aafeba08189a3f8478a7b8c9fe589bab
+      internalID: -1415601873
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 65
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1287c4e478680a040b3569b956defcbd
+      internalID: 1871777679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 65
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d3287084a9d13f6449bde76f1787fc18
+      internalID: -1892332186
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 65
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2c4cc0faff62c0b4080167f37efa1b63
+      internalID: 1194993674
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 65
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d1883f31c9e6e9d409228c6568148c57
+      internalID: 1716192891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 52
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 09ed71968a752f343b12b6712c6c63ec
+      internalID: -1074530451
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 52
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: 1.375, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8c0a1beecdd1cbe4e9def992c75a7026
+      internalID: -1790512434
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 52
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.4444444, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 84890f2f53521914684ccf4dbdbd5e3f
+      internalID: 1899207592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 52
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5555556, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b021b7d3054316c499ec0804be1b5c92
+      internalID: -1383333719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23adc4b8a61b5ff4eaaa3f9853247989
+      internalID: -1638294461
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 52
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1331a6a9091c1f9469222995d88e2998
+      internalID: 1834231838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 52
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1332df002ba10014cb1bd087735e7920
+      internalID: 1647410564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 52
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1111112, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1706f59200c7b34e98e12f0b2d69562
+      internalID: -1864661475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 99d32ec2b729f5a41acba6e1343c22ce
+      internalID: 1938295320
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 173bb170a337bc74eae9601ae44f8b3c
+      internalID: 1625186879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 49d7cbaeae7e2db49b8801b9651fbc63
+      internalID: 1755394741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1111112, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 18a058726998d774dbc212502810f251
+      internalID: 1286413560
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5935d42d81a2edb4a99c6302bb004069
+      internalID: 1160660120
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 551ad9d8531185549bdd93f24bc03327
+      internalID: -1851658115
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 39
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aa56b3c831c36dc47a9cc9eab129f234
+      internalID: -2070464759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b74a1dca92ba5d845bc6c8258e66599f
+      internalID: -974878393
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 26
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 38b197aeafef84544a546067c6d18357
+      internalID: -160832875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 26
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c2cc740cd310878418e64ed9b3943417
+      internalID: -331179097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.41666666, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0e34c7e8d071600489c6c86efeb1ba53
+      internalID: -1041832654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ecf8667a154a3e942b5d795e1d34b651
+      internalID: -1238537884
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 26
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f0214fd763926df468f03a660d837285
+      internalID: -705711653
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 26
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 86f046580fcf0dc47b6fcecd4bf888e2
+      internalID: -453265897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 26
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: -0.083333336, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8ea110cedeb93c2499970f5db04986ba
+      internalID: -1228925293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 26
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0151d57d68a03c144922c3a24cec69ad
+      internalID: 303300998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 744f91c584bd4ac42a0e60cc11445c7f
+      internalID: 1293120896
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 13
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7e83b3fd31ac9044cb8030a57c66757a
+      internalID: -1153900573
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c121dd1d15ed8674689795bfbfd108e8
+      internalID: -1624544792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 31dbdd47f4af98144a1684340c9dc2ce
+      internalID: 1044786828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 13
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -1, y: -0.53846157}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 96390bda09e4ead499b2545d1ac47265
+      internalID: -1319368679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 13
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8281ebd06749c5b4a8aa60622abe18bc
+      internalID: -192515234
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 13
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 19124bad6e98c3e4f9767cfeb1b7087d
+      internalID: -149890949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ca07c64864a085c4096d6b9a41fff915
+      internalID: -50468178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c39d09d09a9581d45bb4a9fd76bff548
+      internalID: 1093060643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2d054b2a4878dc5468a135e744f493da
+      internalID: 552533716
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0d6ea83fca104444f95973740f230a98
+      internalID: 356553735
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c1e965110617c0c4a843903aefd8c219
+      internalID: 1761467872
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.2857143, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eccffb387d3774347ae3dbd239b3e2d7
+      internalID: -334182127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastLungeLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: af5e36611ba3ba242a7a099f84f595d6
+      internalID: -827060343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 8c00cc59fa052f74f859e123eafccc2d
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 105a22c67860588489739a0d2a470e56, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_CastLungeLantern_E_0: 1022046296
+      Rogue_CastLungeLantern_E_1: -643755335
+      Rogue_CastLungeLantern_E_2: -1096652739
+      Rogue_CastLungeLantern_E_3: -760336393
+      Rogue_CastLungeLantern_E_4: -950516886
+      Rogue_CastLungeLantern_E_5: 1863711816
+      Rogue_CastLungeLantern_E_7: 248029094
+      Rogue_CastLungeLantern_NE_4: -1734730258
+      Rogue_CastLungeLantern_NE_5: -1422468947
+      Rogue_CastLungeLantern_NE_6: -1627400950
+      Rogue_CastLungeLantern_NW_0: -1074530451
+      Rogue_CastLungeLantern_NW_1: -1790512434
+      Rogue_CastLungeLantern_NW_2: 1899207592
+      Rogue_CastLungeLantern_NW_3: -1383333719
+      Rogue_CastLungeLantern_NW_4: -1638294461
+      Rogue_CastLungeLantern_NW_5: 1834231838
+      Rogue_CastLungeLantern_NW_6: 1647410564
+      Rogue_CastLungeLantern_NW_7: -1864661475
+      Rogue_CastLungeLantern_N_0: 160855569
+      Rogue_CastLungeLantern_N_1: -620544137
+      Rogue_CastLungeLantern_N_2: 1772740806
+      Rogue_CastLungeLantern_N_3: -1415601873
+      Rogue_CastLungeLantern_N_4: 1871777679
+      Rogue_CastLungeLantern_N_5: -1892332186
+      Rogue_CastLungeLantern_N_6: 1194993674
+      Rogue_CastLungeLantern_N_7: 1716192891
+      Rogue_CastLungeLantern_SE_0: 1093060643
+      Rogue_CastLungeLantern_SE_1: 552533716
+      Rogue_CastLungeLantern_SE_2: 356553735
+      Rogue_CastLungeLantern_SE_3: 1761467872
+      Rogue_CastLungeLantern_SE_6: -334182127
+      Rogue_CastLungeLantern_SE_7: -827060343
+      Rogue_CastLungeLantern_SW_0: -160832875
+      Rogue_CastLungeLantern_SW_1: -331179097
+      Rogue_CastLungeLantern_SW_2: -1041832654
+      Rogue_CastLungeLantern_SW_3: -1238537884
+      Rogue_CastLungeLantern_SW_4: -705711653
+      Rogue_CastLungeLantern_SW_5: -453265897
+      Rogue_CastLungeLantern_SW_6: -1228925293
+      Rogue_CastLungeLantern_SW_7: 303300998
+      Rogue_CastLungeLantern_S_0: 1293120896
+      Rogue_CastLungeLantern_S_1: -1153900573
+      Rogue_CastLungeLantern_S_2: -1624544792
+      Rogue_CastLungeLantern_S_3: 1044786828
+      Rogue_CastLungeLantern_S_4: -1319368679
+      Rogue_CastLungeLantern_S_5: -192515234
+      Rogue_CastLungeLantern_S_6: -149890949
+      Rogue_CastLungeLantern_S_7: -50468178
+      Rogue_CastLungeLantern_W_0: 1938295320
+      Rogue_CastLungeLantern_W_1: 1625186879
+      Rogue_CastLungeLantern_W_2: 1755394741
+      Rogue_CastLungeLantern_W_3: 1286413560
+      Rogue_CastLungeLantern_W_4: 1160660120
+      Rogue_CastLungeLantern_W_5: -1851658115
+      Rogue_CastLungeLantern_W_6: -2070464759
+      Rogue_CastLungeLantern_W_7: -974878393
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

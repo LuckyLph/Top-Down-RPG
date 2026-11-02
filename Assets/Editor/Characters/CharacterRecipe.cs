@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// An editor-only recipe for a character's sprite sheets (Docs/Animation.md, The character rig), made like the
 /// terrain and wall recipes: the skeleton's sizes in rig units, the shading, the height the standing character is drawn
-/// at, and the clips to bake, each a motion with an optional weapon in a frame of its own size. Each body plan is a kind
+/// at, the clips to bake, each a motion with an optional weapon in a frame of its own size, and the lantern it carries,
+/// if any, baked as a layer of its own over every clip (Docs/Lighting.md, Phase 9). Each body plan is a kind
 /// of recipe holding its own look and palette and making its own <see cref="CharacterPainter"/>: the rogue
 /// (<see cref="RogueRecipe"/>) and the Weasel (<see cref="WeaselRecipe"/>); the rig, the motions, the canvas and the
 /// shading are shared. <see cref="CharacterBaker"/> draws them without touching an asset, the same recipe always giving
@@ -20,6 +21,8 @@ public abstract class CharacterRecipe : ScriptableObject
     [SerializeField, Range(16, 96)] private int targetHeight = 46;
     [Tooltip("The clips to bake, one sheet each.")]
     [SerializeField] private List<CharacterClip> clips = new();
+    [Tooltip("The lantern the character carries, baked as a layer of its own over every clip, or none.")]
+    [SerializeField] private CharacterLanternArt lantern;
 
     [Header("Body (rig units)")]
     [SerializeField, Min(1f)] private float thigh = 7f;
@@ -52,6 +55,7 @@ public abstract class CharacterRecipe : ScriptableObject
     public string SheetName => sheetName;
     public int TargetHeight => targetHeight;
     public IReadOnlyList<CharacterClip> Clips => clips;
+    public CharacterLanternArt Lantern => lantern;
     public float Thigh => thigh;
     public float Shin => shin;
     public float Ankle => ankle;

@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// How a unit shows the hits it takes and lands (Docs/Animation.md, Phase 6), played by
 /// <see cref="HitFeedbackPresenter"/> from the hits each machine learns of. Its body sprite flashes through a property
-/// block on its flash-capable material (<c>TopDownRPG/Sprite Pixel Lit</c>); its animation holds through its
+/// block on its flash-capable material (<c>TopDownRPG/Sprite Pixel Lit</c>), a carried lantern's layer with it; its
+/// animation holds through its
 /// <see cref="CharacterVisuals"/>; and the transform holding the sprite is nudged by whole pixels away from the hit and
 /// back, while the body and its colliders stay put. Visual only, timed on <see cref="Time.deltaTime"/>, each from the
 /// frame it starts; nothing shows while the unit is disabled (dead), and disabling puts everything back. Allocates
@@ -18,6 +19,8 @@ public class HitFeedback : MonoBehaviour
 
     [SerializeField, Tooltip("The body's sprite renderer, drawn with a material that can flash (TopDownRPG/Sprite Pixel Lit).")]
     private SpriteRenderer body;
+    [SerializeField, Tooltip("The renderer of a carried lantern's layer over the body, flashed with it; none for a unit without a lantern.")]
+    private SpriteRenderer lantern;
     [SerializeField, Tooltip("The transform holding the body's sprite, nudged by whole pixels; never the root, so the body and its colliders stay put.")]
     private Transform visuals;
     [SerializeField, Tooltip("The character animator's visuals, which hold the animation.")]
@@ -28,6 +31,7 @@ public class HitFeedback : MonoBehaviour
     private float impactHeight = 0.7f;
 
     private MaterialPropertyBlock block;
+    private MaterialPropertyBlock lanternBlock;
     private Vector3 restPosition;
     private float flashLeft;
     private bool flashFresh;
@@ -40,6 +44,7 @@ public class HitFeedback : MonoBehaviour
 
     public float ImpactHeight => impactHeight;
     public SpriteRenderer Body => body;
+    public SpriteRenderer Lantern => lantern;
     public Transform Visuals => visuals;
 
     internal bool IsFlashing => flashLeft > 0f;
@@ -121,6 +126,14 @@ public class HitFeedback : MonoBehaviour
         block.SetColor(FlashColorId, colour);
         block.SetFloat(FlashAmountId, amount);
         body.SetPropertyBlock(block);
+        if (lantern != null)
+        {
+            lanternBlock ??= new MaterialPropertyBlock();
+            lantern.GetPropertyBlock(lanternBlock);
+            lanternBlock.SetColor(FlashColorId, colour);
+            lanternBlock.SetFloat(FlashAmountId, amount);
+            lantern.SetPropertyBlock(lanternBlock);
+        }
     }
 
     /// <summary>
@@ -283,7 +296,7 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>
-    /// Ends the flash: the body draws as its material does.
+    /// Ends the flash: the body and the lantern draw as their material does.
     /// </summary>
     private void ClearFlash()
     {
@@ -291,6 +304,11 @@ public class HitFeedback : MonoBehaviour
         if (body != null)
         {
             body.SetPropertyBlock(null);
+        }
+
+        if (lantern != null)
+        {
+            lantern.SetPropertyBlock(null);
         }
     }
 

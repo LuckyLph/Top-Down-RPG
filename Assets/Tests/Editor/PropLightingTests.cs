@@ -148,6 +148,45 @@ public class PropLightingTests
     }
 
     /// <summary>
+    /// The share the night lights burn at in the world shown, which a player's lantern lights itself by (Docs/Lighting.md,
+    /// Phase 9): the time of day's in an outdoor world shown or with none shown, all of them in an indoor world shown,
+    /// whatever the time; and the flicker's step it lights them at, none without a day clock.
+    /// </summary>
+    [Test]
+    public void TheNightLightsShown_AreTheTimeOfDaysOutdoors_AndAllOfThemIndoors()
+    {
+        WorldLighting outdoor = CreateWorldLighting(WorldLightingProfile.Outdoor, out WorldDefinition outdoorWorld);
+        WorldLighting indoor = CreateWorldLighting(WorldLightingProfile.Indoor, out WorldDefinition indoorWorld);
+        Worlds worlds = new();
+        worlds.Add(new LoadedWorld(outdoorWorld, default, null, outdoor));
+        worlds.Add(new LoadedWorld(indoorWorld, default, null, indoor));
+        PropLighting lighting = new(day, time, worlds);
+        lighting.Start();
+        Assert.That(lighting.NightLightsShown, Is.Zero, "No world shown: the time of day's, none at sunrise.");
+
+        outdoor.SetShown(true);
+        Assert.That(lighting.NightLightsShown, Is.Zero, "Outdoors at sunrise.");
+        time.Advance(105f);
+        lighting.Tick();
+        Assert.That(lighting.NightLightsShown, Is.EqualTo(1f), "Outdoors at night.");
+        Assert.That(lighting.FlickerStep, Is.EqualTo(840), "Eight steps a second.");
+
+        time.Advance(20f);
+        lighting.Tick();
+        outdoor.SetShown(false);
+        indoor.SetShown(true);
+        Assert.That(lighting.Shown, Is.Zero, "Sunrise again.");
+        Assert.That(lighting.NightLightsShown, Is.EqualTo(1f), "Indoors every night light burns, by day too.");
+        lighting.Dispose();
+
+        PropLighting withoutClock = new(null, time, new Worlds());
+        withoutClock.Start();
+        Assert.That(withoutClock.NightLightsShown, Is.EqualTo(1f), "Without a day clock the night lights burn at full.");
+        Assert.That(withoutClock.FlickerStep, Is.Zero, "and nothing flickers.");
+        withoutClock.Dispose();
+    }
+
+    /// <summary>
     /// A chunk added at night burns at once, and once taken back its lights are no longer written.
     /// </summary>
     [Test]
@@ -493,6 +532,19 @@ public class PropLightingTests
         root.SetActive(true);
         Assert.That(renderer.GlowLight, Is.Not.Null, "The renderer glows.");
         return renderer;
+    }
+
+    /// <summary>
+    /// A world of <paramref name="profile"/>'s lighting, not shown, and its definition.
+    /// </summary>
+    private WorldLighting CreateWorldLighting(WorldLightingProfile profile, out WorldDefinition world)
+    {
+        world = Track(ScriptableObject.CreateInstance<WorldDefinition>());
+        GameObject lightingObject = Track(new GameObject($"WorldLighting_{profile}"));
+        lightingObject.SetActive(false);
+        WorldLighting worldLighting = lightingObject.AddComponent<WorldLighting>();
+        worldLighting.Configure(profile);
+        return worldLighting;
     }
 
     /// <summary>

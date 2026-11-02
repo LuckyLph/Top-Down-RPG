@@ -1,0 +1,1604 @@
+fileFormatVersion: 2
+guid: 06dc0730dc560754bbd78653d6750f2c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2486465254892196664
+    second: Rogue_CastBoltLantern_0
+  - first:
+      213: -5335267463648860455
+    second: Rogue_CastBoltLantern_1
+  - first:
+      213: 437961775481017958
+    second: Rogue_CastBoltLantern_2
+  - first:
+      213: -699301008792836140
+    second: Rogue_CastBoltLantern_3
+  - first:
+      213: -932285385837959038
+    second: Rogue_CastBoltLantern_4
+  - first:
+      213: -3971308988980693693
+    second: Rogue_CastBoltLantern_5
+  - first:
+      213: -7129569739935932611
+    second: Rogue_CastBoltLantern_6
+  - first:
+      213: -6750072999820093998
+    second: Rogue_CastBoltLantern_7
+  - first:
+      213: -51165282999785565
+    second: Rogue_CastBoltLantern_8
+  - first:
+      213: -6961524666021009300
+    second: Rogue_CastBoltLantern_9
+  - first:
+      213: 3654351498486096866
+    second: Rogue_CastBoltLantern_10
+  - first:
+      213: -2978389836433763991
+    second: Rogue_CastBoltLantern_11
+  - first:
+      213: 6599761180996679917
+    second: Rogue_CastBoltLantern_12
+  - first:
+      213: -869839551761143655
+    second: Rogue_CastBoltLantern_13
+  - first:
+      213: 6245407945117814602
+    second: Rogue_CastBoltLantern_14
+  - first:
+      213: -8642567913314894729
+    second: Rogue_CastBoltLantern_15
+  - first:
+      213: -2012090497894059167
+    second: Rogue_CastBoltLantern_16
+  - first:
+      213: -252593708239580908
+    second: Rogue_CastBoltLantern_17
+  - first:
+      213: -7337184734243187764
+    second: Rogue_CastBoltLantern_18
+  - first:
+      213: 6636045722929589771
+    second: Rogue_CastBoltLantern_19
+  - first:
+      213: -1362299776165257709
+    second: Rogue_CastBoltLantern_20
+  - first:
+      213: 3211885278169118707
+    second: Rogue_CastBoltLantern_21
+  - first:
+      213: -5809039537562472528
+    second: Rogue_CastBoltLantern_22
+  - first:
+      213: 5842582702317982658
+    second: Rogue_CastBoltLantern_23
+  - first:
+      213: -7915311845769127974
+    second: Rogue_CastBoltLantern_24
+  - first:
+      213: 148914863139062642
+    second: Rogue_CastBoltLantern_25
+  - first:
+      213: 212937745109770005
+    second: Rogue_CastBoltLantern_26
+  - first:
+      213: -7844171740640728489
+    second: Rogue_CastBoltLantern_27
+  - first:
+      213: 2611449807198836035
+    second: Rogue_CastBoltLantern_28
+  - first:
+      213: 580783566238225211
+    second: Rogue_CastBoltLantern_29
+  - first:
+      213: 5841153375046207879
+    second: Rogue_CastBoltLantern_30
+  - first:
+      213: 4587319347836345833
+    second: Rogue_CastBoltLantern_31
+  - first:
+      213: 8742571774477678029
+    second: Rogue_CastBoltLantern_32
+  - first:
+      213: -4660960944044689211
+    second: Rogue_CastBoltLantern_33
+  - first:
+      213: -2230899122453809866
+    second: Rogue_CastBoltLantern_34
+  - first:
+      213: -5576273441473424611
+    second: Rogue_CastBoltLantern_35
+  - first:
+      213: 6036676571051407063
+    second: Rogue_CastBoltLantern_36
+  - first:
+      213: -2083540354528837141
+    second: Rogue_CastBoltLantern_37
+  - first:
+      213: 7370109292608779120
+    second: Rogue_CastBoltLantern_38
+  - first:
+      213: -5990209229691749666
+    second: Rogue_CastBoltLantern_39
+  - first:
+      213: 7965830558086589325
+    second: Rogue_CastBoltLantern_40
+  - first:
+      213: -3853828394748134219
+    second: Rogue_CastBoltLantern_41
+  - first:
+      213: -7138659535412256320
+    second: Rogue_CastBoltLantern_42
+  - first:
+      213: -4478154462226588861
+    second: Rogue_CastBoltLantern_43
+  - first:
+      213: -387712828356261812
+    second: Rogue_CastBoltLantern_44
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 98
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9d30112d129b194fb5d05f7b694bc9f
+      internalID: 137230922
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 98
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.22222222, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cf035e8f8148df04188370b0b7847b3d
+      internalID: -1851865734
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 98
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5714286, y: -0.6923077}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 46181633185c5d549b30a16c78d0ff0d
+      internalID: -1760569841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 98
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.5555556, y: -0.9166667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a0a33582d9cee734e8d5b3f363377d82
+      internalID: -1079970737
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 98
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3ccea62b2b6e5ff45bc4b9dd2a80a75b
+      internalID: -32224458
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 84
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: -1.6666666, y: -4.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b5d18e967e1d943449ac21d463859b8b
+      internalID: 620685226
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 84
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: 2.3333333, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 395b2afd17bddc7489435fbab1efe1ef
+      internalID: 1285311813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 84
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 3.25, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5fd2b6fb43446424fbc1e0098303cf00
+      internalID: 344267038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 84
+        width: 3
+        height: 9
+      alignment: 9
+      pivot: {x: 4, y: -0.7777778}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 62d126783cd8c7c41af59b1fd7cd4965
+      internalID: -1586030283
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 70
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f0a540e35357b444ca0e06ef25ac1afd
+      internalID: 908678008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 70
+        width: 3
+        height: 13
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f1ed66d8fb22b5d49a3d5d6c484ea4d3
+      internalID: -1929216747
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 70
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 48747c7fd24bd8b4d844bfba4dea77a5
+      internalID: -1851442948
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 70
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 3, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: afe34cd9ec3688544ba75120849bb5a7
+      internalID: 2016551376
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 70
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d2add40ef5461f643bc500683ab86fce
+      internalID: 1655474026
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 70
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a6ba59e27613ca144ae33ced8a1d8de3
+      internalID: 446897673
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 70
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2f493cd8630749f41b8c4b81848e88a7
+      internalID: 78580497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 70
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 96d6fe47843b0534580edeeaf8136365
+      internalID: -2061933501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 56
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5cbd6a613e718d24f8451fec25adae62
+      internalID: 1719023907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5747aedd613d12645adfac7518b00192
+      internalID: 1631981831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4130bc7d530266458ea3b007a18f408
+      internalID: -289768828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5454545, y: -0.61538464}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 86101bbc5db099c429c74c611ce3a710
+      internalID: 1107380910
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4345e0efed58c0247b0cdf47b5331bd7
+      internalID: 2082329370
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8ebf1df97b3f001438ea32274e627b11
+      internalID: 1247828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cbf934ecaae0b7440bbfd68b9eb2c0c9
+      internalID: -627684049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1e05e44435978154b974cbcfd2822b65
+      internalID: -528308556
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 228a9b6c07d0b8346a16ea429e3c474d
+      internalID: -647950467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.7777778, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 810bcc04241c49944a1bb3d42f65258d
+      internalID: 1045302892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.2222222, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9a01520f2a429544684d695192792fc7
+      internalID: -1386912960
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78d9f5c40576680409b41dd74bb7ec2c
+      internalID: -737761241
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0483c698b5f4c4e4aa8c7c588a6540cb
+      internalID: -1481219879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c2089561401908418b3886941985f60
+      internalID: -2060538387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.3, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 88a07814c037e854491bc02fe42a6c64
+      internalID: -384455858
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 903f7f718f816af44bda7a7191ab08b8
+      internalID: -482810272
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 28
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5d742d2e1726eac47a37596597177515
+      internalID: -2063823710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b894d50160e1885408e6ca8afa553cd8
+      internalID: 2021940830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3a2df708f0b1b6b47ac92c8a8c01da13
+      internalID: 1092551691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3668c9ece8994684d815993a6b252a43
+      internalID: -376330578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.16666667, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 264ad4e35429fc34f9f75fffebffef7a
+      internalID: 1198320386
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 989fd3db61b4d52428c5d5bc1cb50178
+      internalID: -2131877632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 28
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00928b50488c2f04ea988c0a8cb726b3
+      internalID: 283721626
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 28
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d4c473ec02474174c98999c2d8c4372b
+      internalID: 1405855384
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 40ab6a85a81f68c449b0625b520cc88f
+      internalID: 1748131247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 14
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 29e2a7b8a0fb7ee429ca808d858fa03d
+      internalID: -1748471918
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 09a835b713ed6f3469a3a8515703fd5f
+      internalID: -1791103926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 14
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.2, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e0130852724a1c24ea4634ef3a7bc3ed
+      internalID: 1839485940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 14
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8924d4c224014be47b923365ab21775e
+      internalID: -1491799429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2e9bf398cae2ee04284cb06b921895a8
+      internalID: -153198715
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eec4e004c5b8b224e826af1bb9b773a1
+      internalID: -383085497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 14
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 85a4c638510b0554a8e3ed230f3a0b71
+      internalID: -1295855657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e2e926617aa1d94daf71f760f53ffdc
+      internalID: -1100452776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: abff3697252ae694fbbb6892b8dcb600
+      internalID: 63278232
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6c3b56566bb8dff4a90280a4a55d5f84
+      internalID: -1259816064
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.54545456, y: -0.46153846}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1d2edef7f6406fe4ea061addbbbb9c84
+      internalID: 578637487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 7
+        height: 7
+      alignment: 9
+      pivot: {x: -0.14285715, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5597b2c3073bea94ba007a3d1b794ebb
+      internalID: -1170401537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 0
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: -0.125, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e929280493004494e9bbb8004c6fcba5
+      internalID: 1070759437
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: -0.125, y: -0.7777778}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 518775c1c0d1ddd4c9dbb250adddd8da
+      internalID: -209558021
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rogue_CastBoltLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8443b5b59553cf4ab6b94e0fe3c8f95
+      internalID: 514124850
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e8f5651457c76741b45c62347040bed
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 8eb08da221539d74c979a5bc0a5b0c79, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Rogue_CastBoltLantern_E_0: 137230922
+      Rogue_CastBoltLantern_E_1: -1851865734
+      Rogue_CastBoltLantern_E_2: -1760569841
+      Rogue_CastBoltLantern_E_3: -1079970737
+      Rogue_CastBoltLantern_E_7: -32224458
+      Rogue_CastBoltLantern_NE_3: 620685226
+      Rogue_CastBoltLantern_NE_4: 1285311813
+      Rogue_CastBoltLantern_NE_5: 344267038
+      Rogue_CastBoltLantern_NE_6: -1586030283
+      Rogue_CastBoltLantern_NW_0: 1719023907
+      Rogue_CastBoltLantern_NW_1: 1631981831
+      Rogue_CastBoltLantern_NW_2: -289768828
+      Rogue_CastBoltLantern_NW_3: 1107380910
+      Rogue_CastBoltLantern_NW_4: 2082329370
+      Rogue_CastBoltLantern_NW_5: 1247828
+      Rogue_CastBoltLantern_NW_6: -627684049
+      Rogue_CastBoltLantern_NW_7: -528308556
+      Rogue_CastBoltLantern_N_0: 908678008
+      Rogue_CastBoltLantern_N_1: -1929216747
+      Rogue_CastBoltLantern_N_2: -1851442948
+      Rogue_CastBoltLantern_N_3: 2016551376
+      Rogue_CastBoltLantern_N_4: 1655474026
+      Rogue_CastBoltLantern_N_5: 446897673
+      Rogue_CastBoltLantern_N_6: 78580497
+      Rogue_CastBoltLantern_N_7: -2061933501
+      Rogue_CastBoltLantern_SE_0: -1100452776
+      Rogue_CastBoltLantern_SE_1: 63278232
+      Rogue_CastBoltLantern_SE_2: -1259816064
+      Rogue_CastBoltLantern_SE_3: 578637487
+      Rogue_CastBoltLantern_SE_4: -1170401537
+      Rogue_CastBoltLantern_SE_5: 1070759437
+      Rogue_CastBoltLantern_SE_6: -209558021
+      Rogue_CastBoltLantern_SE_7: 514124850
+      Rogue_CastBoltLantern_SW_0: -2063823710
+      Rogue_CastBoltLantern_SW_1: 2021940830
+      Rogue_CastBoltLantern_SW_2: 1092551691
+      Rogue_CastBoltLantern_SW_3: -376330578
+      Rogue_CastBoltLantern_SW_4: 1198320386
+      Rogue_CastBoltLantern_SW_5: -2131877632
+      Rogue_CastBoltLantern_SW_6: 283721626
+      Rogue_CastBoltLantern_SW_7: 1405855384
+      Rogue_CastBoltLantern_S_0: 1748131247
+      Rogue_CastBoltLantern_S_1: -1748471918
+      Rogue_CastBoltLantern_S_2: -1791103926
+      Rogue_CastBoltLantern_S_3: 1839485940
+      Rogue_CastBoltLantern_S_4: -1491799429
+      Rogue_CastBoltLantern_S_5: -153198715
+      Rogue_CastBoltLantern_S_6: -383085497
+      Rogue_CastBoltLantern_S_7: -1295855657
+      Rogue_CastBoltLantern_W_0: -647950467
+      Rogue_CastBoltLantern_W_1: 1045302892
+      Rogue_CastBoltLantern_W_2: -1386912960
+      Rogue_CastBoltLantern_W_3: -737761241
+      Rogue_CastBoltLantern_W_4: -1481219879
+      Rogue_CastBoltLantern_W_5: -2060538387
+      Rogue_CastBoltLantern_W_6: -384455858
+      Rogue_CastBoltLantern_W_7: -482810272
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

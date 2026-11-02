@@ -17,22 +17,31 @@ using UnityEngine;
 /// it links to; hidden layers, layers in a hidden group and reference layers are left out, and transparent pixels are
 /// written clear. A cel's z-index is not read (the importer's parser keeps it to itself), so layers always draw in their
 /// order. The contact (release) frame is the one with the user data <see cref="ContactMarker"/> on any of its cels,
-/// hidden or not. Every problem found is reported naming the file, and the tag and frame where it has one, frames
-/// counted from 1 as Aseprite shows them; a file with a problem gives no sheet.
+/// hidden or not. A character's clip may carry a lantern (Docs/AsepriteCharacters.md, Phase 4) on three layers read by
+/// their names, shown or hidden, and never drawn into its frames: <see cref="LanternLayer"/>, the lantern as it shows
+/// over the body, drawn as the frames are; <see cref="LanternGlowLayer"/>, whose pixels mark which of the lantern's
+/// glow; and <see cref="LanternLightLayer"/>, one pixel a frame where its light shines from. Every problem found is
+/// reported naming the file, and the tag and frame where it has one, frames counted from 1 as Aseprite shows them; a
+/// file with a problem gives no sheet.
 /// </summary>
 public static class AsepriteClipReader
 {
     public const string ContactMarker = "contact";
+    public const string LanternLayer = "Lantern";
+    public const string LanternGlowLayer = "LanternGlow";
+    public const string LanternLightLayer = "LanternLight";
+
+    private static readonly Color32 Glowing = new(0, 0, 0, 255);
 
     /// <summary>
     /// Reads the clip at <paramref name="path"/>, a gait (no frame marked) or, for <see cref="CharacterGait.None"/>, an
     /// attack or a cast (one frame marked in every direction, the same one), whose feet stand on the
-    /// <paramref name="feet"/> pixel from the canvas's bottom left.
+    /// <paramref name="feet"/> pixel from the canvas's bottom left, and the lantern it carries, if any.
     /// </summary>
     public static AsepriteClipFrames Read(string path, CharacterGait gait, Vector2Int feet)
     {
         string unmarked = gait == CharacterGait.None ? null : $"a {gait.ToString().ToLowerInvariant()}";
-        return Read(path, CharacterDirections.Count, feet, "feet", unmarked, false);
+        return Read(path, CharacterDirections.Count, feet, "feet", unmarked, false, true);
     }
 
     /// <summary>
@@ -42,7 +51,7 @@ public static class AsepriteClipReader
     /// </summary>
     public static AsepriteClipFrames ReadEffect(string path, bool directional, Vector2Int pivot)
     {
-        return Read(path, directional ? CharacterDirections.Count : 1, pivot, "pivot", "an effect", true);
+        return Read(path, directional ? CharacterDirections.Count : 1, pivot, "pivot", "an effect", true, false);
     }
 
     /// <summary>
@@ -52,16 +61,17 @@ public static class AsepriteClipReader
     /// </summary>
     public static AsepriteClipFrames ReadDirections(string path, Vector2Int tip)
     {
-        return Read(path, 1, tip, "tip", "a projectile", false);
+        return Read(path, 1, tip, "tip", "a projectile", false, false);
     }
 
     /// <summary>
     /// Reads the file at <paramref name="path"/> as <paramref name="directionCount"/> directions (eight tags, or the
     /// whole file for one), pivoted on the <paramref name="pivot"/> pixel (named <paramref name="pivotName"/> in
     /// messages). Marks are refused when <paramref name="unmarked"/> names what has none, else each direction marks one
-    /// frame, the same; with <paramref name="evenDurations"/> every frame shows as long as the first.
+    /// frame, the same; with <paramref name="evenDurations"/> every frame shows as long as the first. A file that
+    /// <paramref name="carries"/> may hold a lantern's layers; elsewhere their names mean nothing.
     /// </summary>
-    private static AsepriteClipFrames Read(string path, int directionCount, Vector2Int pivot, string pivotName, string unmarked, bool evenDurations)
+    private static AsepriteClipFrames Read(string path, int directionCount, Vector2Int pivot, string pivotName, string unmarked, bool evenDurations, bool carries)
     {
         string file = Path.GetFileName(path);
         List<string> problems = new();
@@ -91,7 +101,11 @@ public static class AsepriteClipReader
         }
 
         List<LayerChunk> layers = parsed.frameData.SelectMany(f => f.chunks.OfType<LayerChunk>()).ToList();
-        bool[] drawn = DrawnLayers(file, layers, problems);
+        int lantern = carries ? RoleLayer(file, layers, LanternLayer, problems) : -1;
+        int glow = carries ? RoleLayer(file, layers, LanternGlowLayer, problems) : -1;
+        int light = carries ? RoleLayer(file, layers, LanternLightLayer, problems) : -1;
+        bool[] drawn = DrawnLayers(file, layers, new[] { lantern, glow, light }, problems);
+        CheckLantern(file, layers, drawn, lantern, glow, light, problems);
         Sequence[] directions = directionCount == 1 ? new[] { new Sequence(null, 0, parsed.noOfFrames - 1) } : DirectionTags(file, parsed, problems);
         if (directions == null)
         {
@@ -173,6 +187,14 @@ public static class AsepriteClipReader
         int width = frames * size.x;
         Color32[] sheet = new Color32[width * directionCount * size.y];
         Color32[] canvas = new Color32[size.x * size.y];
+        bool carried = lantern >= 0;
+        Color32[] lanternPixels = carried ? new Color32[sheet.Length] : null;
+        Color32[] lanternGlow = carried ? new Color32[sheet.Length] : null;
+        Vector2[] lanternCentres = carried ? new Vector2[directionCount * frames] : null;
+        Color32[] marks = carried ? new Color32[canvas.Length] : null;
+        bool[] lanternOnly = Only(layers.Count, lantern);
+        bool[] glowOnly = Only(layers.Count, glow);
+        bool[] lightOnly = Only(layers.Count, light);
         for (int direction = 0; direction < directionCount; direction++)
         {
             for (int frame = 0; frame < frames; frame++)
@@ -196,6 +218,35 @@ public static class AsepriteClipReader
                 {
                     problems.Add($"{where}: empty.");
                 }
+
+                if (!carried)
+                {
+                    continue;
+                }
+
+                Draw(parsed, index, layers, lanternOnly, size, canvas, where, problems);
+                Draw(parsed, index, layers, glowOnly, size, marks, where, problems);
+                for (int y = 0; y < size.y; y++)
+                {
+                    for (int x = 0; x < size.x; x++)
+                    {
+                        Color32 pixel = canvas[y * size.x + x];
+                        if (pixel.a == 0)
+                        {
+                            continue;
+                        }
+
+                        int o = (rect.y + size.y - 1 - y) * width + rect.x + x;
+                        lanternPixels[o] = pixel;
+                        if (marks[y * size.x + x].a > 0)
+                        {
+                            lanternGlow[o] = Glowing;
+                        }
+                    }
+                }
+
+                Draw(parsed, index, layers, lightOnly, size, marks, where, problems);
+                lanternCentres[direction * frames + frame] = LightMark(marks, size, pivot, where, problems);
             }
         }
 
@@ -204,7 +255,125 @@ public static class AsepriteClipReader
             return AsepriteClipFrames.Failed(problems);
         }
 
-        return new AsepriteClipFrames(size, directionCount, frames, sheet, milliseconds.Select(ms => ms / 1000f).ToArray(), contact, problems);
+        return new AsepriteClipFrames(size, directionCount, frames, sheet, milliseconds.Select(ms => ms / 1000f).ToArray(), contact, problems, lanternPixels, lanternGlow, lanternCentres);
+    }
+
+    /// <summary>
+    /// The layer named <paramref name="name"/>, or -1 when there is none; reports a second layer of the name and one
+    /// that is not an image layer.
+    /// </summary>
+    private static int RoleLayer(string file, IReadOnlyList<LayerChunk> layers, string name, List<string> problems)
+    {
+        int found = -1;
+        int count = 0;
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (layers[i].name != name)
+            {
+                continue;
+            }
+
+            count++;
+            if (found < 0)
+            {
+                found = i;
+            }
+        }
+
+        if (count > 1)
+        {
+            problems.Add($"{file}: {count} layers named {name}; a lantern has one.");
+        }
+
+        if (found >= 0 && layers[found].layerType != LayerTypes.Normal)
+        {
+            problems.Add($"{file}, layer {name}: a {layers[found].layerType.ToString().ToLowerInvariant()} layer; the {name} layer is an image layer.");
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Reports what a lantern's layers need: a <see cref="LanternGlowLayer"/> or <see cref="LanternLightLayer"/> only
+    /// beside a <see cref="LanternLayer"/>, a lantern with its light's layer, blending normally, and no drawn layer over
+    /// it, since it shows over the whole body.
+    /// </summary>
+    private static void CheckLantern(string file, IReadOnlyList<LayerChunk> layers, bool[] drawn, int lantern, int glow, int light, List<string> problems)
+    {
+        if (lantern < 0)
+        {
+            foreach (int role in new[] { glow, light })
+            {
+                if (role >= 0)
+                {
+                    problems.Add($"{file}, layer {layers[role].name}: no {LanternLayer} layer beside it.");
+                }
+            }
+
+            return;
+        }
+
+        if (light < 0)
+        {
+            problems.Add($"{file}: a {LanternLayer} layer but no {LanternLightLayer} layer; mark where its light shines from with one pixel a frame on a layer named {LanternLightLayer}.");
+        }
+
+        if (layers[lantern].blendMode != BlendModes.Normal)
+        {
+            problems.Add($"{file}, layer {LanternLayer}: blends by {layers[lantern].blendMode}; the lantern draws normally over the body.");
+        }
+
+        for (int i = lantern + 1; i < layers.Count; i++)
+        {
+            if (drawn[i])
+            {
+                problems.Add($"{file}, layer {layers[i].name}: drawn over the {LanternLayer} layer, which shows over the whole body; move it below.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Which of <paramref name="count"/> layers to draw to draw only layer <paramref name="layer"/>.
+    /// </summary>
+    private static bool[] Only(int count, int layer)
+    {
+        bool[] only = new bool[count];
+        if (layer >= 0)
+        {
+            only[layer] = true;
+        }
+
+        return only;
+    }
+
+    /// <summary>
+    /// Where the one pixel of <paramref name="marks"/> (rows from the top) marks the lantern's light, its middle in
+    /// pixels from the <paramref name="pivot"/> pixel's bottom left corner, rows up; reports a frame with none or more.
+    /// </summary>
+    private static Vector2 LightMark(Color32[] marks, Vector2Int size, Vector2Int pivot, string where, List<string> problems)
+    {
+        int count = 0;
+        Vector2 centre = Vector2.zero;
+        for (int y = 0; y < size.y; y++)
+        {
+            for (int x = 0; x < size.x; x++)
+            {
+                if (marks[y * size.x + x].a > 0)
+                {
+                    count++;
+                    centre = new Vector2(x + 0.5f - pivot.x, size.y - y - 0.5f - pivot.y);
+                }
+            }
+        }
+
+        if (count != 1)
+        {
+            problems.Add(count == 0
+                ? $"{where}: no {LanternLightLayer} pixel; mark where the lantern's light shines from with one."
+                : $"{where}: {count} {LanternLightLayer} pixels; mark one.");
+        }
+
+        return centre;
     }
 
     /// <summary>
@@ -228,11 +397,12 @@ public static class AsepriteClipReader
     }
 
     /// <summary>
-    /// Which layers are drawn: the visible image layers whose groups are all visible, reference layers left out.
-    /// Reports a drawn layer or one of its groups that does not blend normally (or a group not at full opacity, which
-    /// Aseprite would draw on its own first) and a visible tilemap layer, neither of which is drawn here.
+    /// Which layers are drawn: the visible image layers whose groups are all visible, reference layers and the
+    /// lantern's <paramref name="roles"/> left out. Reports a drawn layer or one of its groups that does not blend
+    /// normally (or a group not at full opacity, which Aseprite would draw on its own first) and a visible tilemap
+    /// layer, neither of which is drawn here.
     /// </summary>
-    private static bool[] DrawnLayers(string file, IReadOnlyList<LayerChunk> layers, List<string> problems)
+    private static bool[] DrawnLayers(string file, IReadOnlyList<LayerChunk> layers, int[] roles, List<string> problems)
     {
         bool[] drawn = new bool[layers.Count];
         int[] parents = new int[layers.Count];
@@ -248,7 +418,7 @@ public static class AsepriteClipReader
         for (int i = 0; i < layers.Count; i++)
         {
             LayerChunk layer = layers[i];
-            if (layer.layerType == LayerTypes.Group || !Shows(layers, parents, i))
+            if (layer.layerType == LayerTypes.Group || Array.IndexOf(roles, i) >= 0 || !Shows(layers, parents, i))
             {
                 continue;
             }
@@ -436,7 +606,7 @@ public static class AsepriteClipReader
     /// Aseprite's normal blend (<c>rgba_blender_normal</c>) of <paramref name="source"/> over
     /// <paramref name="backdrop"/> at <paramref name="opacity"/> (0 to 255), in its integer arithmetic.
     /// </summary>
-    private static Color32 BlendNormal(Color32 backdrop, Color32 source, int opacity)
+    internal static Color32 BlendNormal(Color32 backdrop, Color32 source, int opacity)
     {
         if (backdrop.a == 0)
         {
@@ -489,14 +659,18 @@ public static class AsepriteClipReader
 /// <summary>
 /// One file read by <see cref="AsepriteClipReader"/>: its canvas size, its directions and frames a direction, its sheet's
 /// pixels (rows from the bottom, a row of frames per direction, the first on top), each frame's duration in seconds, its
-/// contact (release) frame or -1, and the problems found; a file with problems has no sheet.
+/// contact (release) frame or -1, and the problems found; a file with problems has no sheet. For a clip carrying a
+/// lantern, also its layer laid out as the sheet (the lantern's pixels, clear elsewhere), which of those glow, and where
+/// its light shines from on each frame.
 /// </summary>
 public sealed class AsepriteClipFrames
 {
     /// <summary>
-    /// Creates a file read whole, or one with <paramref name="clipProblems"/>.
+    /// Creates a file read whole, or one with <paramref name="clipProblems"/>, carrying a lantern when
+    /// <paramref name="lanternPixels"/> is given.
     /// </summary>
-    public AsepriteClipFrames(Vector2Int frameSize, int directionCount, int frameCount, Color32[] pixels, float[] frameSeconds, int contactFrame, IReadOnlyList<string> clipProblems)
+    public AsepriteClipFrames(Vector2Int frameSize, int directionCount, int frameCount, Color32[] pixels, float[] frameSeconds, int contactFrame, IReadOnlyList<string> clipProblems,
+        Color32[] lanternPixels = null, Color32[] lanternGlow = null, Vector2[] lanternCentres = null)
     {
         FrameSize = frameSize;
         DirectionCount = directionCount;
@@ -505,6 +679,9 @@ public sealed class AsepriteClipFrames
         FrameSeconds = frameSeconds;
         ContactFrame = contactFrame;
         Problems = clipProblems;
+        LanternPixels = lanternPixels;
+        LanternGlow = lanternGlow;
+        LanternCentres = lanternCentres;
     }
 
     public Vector2Int FrameSize { get; }
@@ -517,6 +694,48 @@ public sealed class AsepriteClipFrames
     public bool IsValid => Problems.Count == 0 && Pixels != null;
     public int SheetWidth => FrameCount * FrameSize.x;
     public int SheetHeight => DirectionCount * FrameSize.y;
+
+    /// <summary>
+    /// The lantern's layer, laid out as <see cref="Pixels"/>: its pixels as they show over the body, clear elsewhere;
+    /// null without a lantern.
+    /// </summary>
+    public Color32[] LanternPixels { get; }
+
+    /// <summary>
+    /// Which of the lantern layer's pixels glow, in alpha, laid out as <see cref="Pixels"/>; null without a lantern.
+    /// </summary>
+    public Color32[] LanternGlow { get; }
+
+    /// <summary>
+    /// Where the lantern's light shines from on each frame, direction by direction and within each frame by frame, in
+    /// pixels from the feet; null without a lantern.
+    /// </summary>
+    public Vector2[] LanternCentres { get; }
+
+    public bool HasLantern => LanternPixels != null;
+
+    /// <summary>
+    /// The sheet as the game shows it while the lantern burns: the lantern's layer drawn over <see cref="Pixels"/>
+    /// with Aseprite's normal blend; the sheet itself without a lantern.
+    /// </summary>
+    public Color32[] CarriedPixels()
+    {
+        if (!HasLantern)
+        {
+            return Pixels;
+        }
+
+        Color32[] carried = (Color32[])Pixels.Clone();
+        for (int i = 0; i < carried.Length; i++)
+        {
+            if (LanternPixels[i].a > 0)
+            {
+                carried[i] = AsepriteClipReader.BlendNormal(carried[i], LanternPixels[i], 255);
+            }
+        }
+
+        return carried;
+    }
 
     /// <summary>
     /// A file that could not be read whole, holding only its problems.

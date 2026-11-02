@@ -1,0 +1,1926 @@
+fileFormatVersion: 2
+guid: fd001bf6181501b4182b45b6efddb9f5
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2961306257789996088
+    second: Bandit_GreatswordCleaveLantern_0
+  - first:
+      213: -4846069405216986470
+    second: Bandit_GreatswordCleaveLantern_1
+  - first:
+      213: 875278807730395296
+    second: Bandit_GreatswordCleaveLantern_2
+  - first:
+      213: 5568879681902372810
+    second: Bandit_GreatswordCleaveLantern_3
+  - first:
+      213: -4153156598501086990
+    second: Bandit_GreatswordCleaveLantern_4
+  - first:
+      213: 3438975389212585834
+    second: Bandit_GreatswordCleaveLantern_5
+  - first:
+      213: -3845948296987071643
+    second: Bandit_GreatswordCleaveLantern_6
+  - first:
+      213: -1851608410704343389
+    second: Bandit_GreatswordCleaveLantern_7
+  - first:
+      213: -3918484623685688177
+    second: Bandit_GreatswordCleaveLantern_8
+  - first:
+      213: 5245829675657268906
+    second: Bandit_GreatswordCleaveLantern_9
+  - first:
+      213: -9079772608203591433
+    second: Bandit_GreatswordCleaveLantern_10
+  - first:
+      213: -1892063949726395526
+    second: Bandit_GreatswordCleaveLantern_11
+  - first:
+      213: 537699516017183453
+    second: Bandit_GreatswordCleaveLantern_12
+  - first:
+      213: -4594844301870287693
+    second: Bandit_GreatswordCleaveLantern_13
+  - first:
+      213: -2971450408747291881
+    second: Bandit_GreatswordCleaveLantern_14
+  - first:
+      213: -5913892181631196420
+    second: Bandit_GreatswordCleaveLantern_15
+  - first:
+      213: 702579555459212280
+    second: Bandit_GreatswordCleaveLantern_16
+  - first:
+      213: -1601978882227073834
+    second: Bandit_GreatswordCleaveLantern_17
+  - first:
+      213: -2766905887698033698
+    second: Bandit_GreatswordCleaveLantern_18
+  - first:
+      213: 6348169343875571311
+    second: Bandit_GreatswordCleaveLantern_19
+  - first:
+      213: -6225089913153787573
+    second: Bandit_GreatswordCleaveLantern_20
+  - first:
+      213: 6569301909875010513
+    second: Bandit_GreatswordCleaveLantern_21
+  - first:
+      213: 6841236924709820226
+    second: Bandit_GreatswordCleaveLantern_22
+  - first:
+      213: -6484524099943398679
+    second: Bandit_GreatswordCleaveLantern_23
+  - first:
+      213: -9160995087288885358
+    second: Bandit_GreatswordCleaveLantern_24
+  - first:
+      213: -4450977333846786040
+    second: Bandit_GreatswordCleaveLantern_25
+  - first:
+      213: 4107219937621434998
+    second: Bandit_GreatswordCleaveLantern_26
+  - first:
+      213: 6276455931624287158
+    second: Bandit_GreatswordCleaveLantern_27
+  - first:
+      213: -6183996002874902783
+    second: Bandit_GreatswordCleaveLantern_28
+  - first:
+      213: 1959821876927815640
+    second: Bandit_GreatswordCleaveLantern_29
+  - first:
+      213: -1020394088923268656
+    second: Bandit_GreatswordCleaveLantern_30
+  - first:
+      213: 7021690480570206524
+    second: Bandit_GreatswordCleaveLantern_31
+  - first:
+      213: -6361279590136056949
+    second: Bandit_GreatswordCleaveLantern_32
+  - first:
+      213: 7743387057112028726
+    second: Bandit_GreatswordCleaveLantern_33
+  - first:
+      213: -2645513577341101758
+    second: Bandit_GreatswordCleaveLantern_34
+  - first:
+      213: -1624937915994257307
+    second: Bandit_GreatswordCleaveLantern_35
+  - first:
+      213: -8162421285421903339
+    second: Bandit_GreatswordCleaveLantern_36
+  - first:
+      213: 3664693789160411439
+    second: Bandit_GreatswordCleaveLantern_37
+  - first:
+      213: -5184187769720879855
+    second: Bandit_GreatswordCleaveLantern_38
+  - first:
+      213: 6003254275083256505
+    second: Bandit_GreatswordCleaveLantern_39
+  - first:
+      213: -1726198642652746714
+    second: Bandit_GreatswordCleaveLantern_40
+  - first:
+      213: 8943570816777056068
+    second: Bandit_GreatswordCleaveLantern_41
+  - first:
+      213: -7115047774500346051
+    second: Bandit_GreatswordCleaveLantern_42
+  - first:
+      213: -7469275824819649626
+    second: Bandit_GreatswordCleaveLantern_43
+  - first:
+      213: -3638728005071213058
+    second: Bandit_GreatswordCleaveLantern_44
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 2, y: -7}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b398b070a20eadf49a8ca7af081e875a
+      internalID: -824846184
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 105
+        width: 1
+        height: 2
+      alignment: 9
+      pivot: {x: 2, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ce37361e5b15cad44a25e79793d8b8e6
+      internalID: -569770524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 1, y: -6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d0a88f5aff3423b46995a4448c936cbe
+      internalID: 1961642336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 1, y: -6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94343122c15397b48b7f1dae48b71709
+      internalID: -129563827
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 105
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: -1.5, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ece021691201d24c92cbf7efb833d86
+      internalID: 412864039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -4, y: -6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0ff35e2549c241f41878d1089c32da69
+      internalID: -1134071912
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 105
+        width: 1
+        height: 3
+      alignment: 9
+      pivot: {x: -4, y: -2}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9feee9f52d3f8ed4fbfc6716b3e4c477
+      internalID: -464811489
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_E_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -3, y: -9}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bb6807599e603b442b9edf670281541d
+      internalID: 915015836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 90
+        width: 2
+        height: 3
+      alignment: 9
+      pivot: {x: 6, y: -2.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0ff5b44c944b0a04fa61fc1e826fd407
+      internalID: 278574506
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 90
+        width: 3
+        height: 6
+      alignment: 9
+      pivot: {x: 4.3333335, y: -1.1666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c224d6fb3611a149b53d701c6603248
+      internalID: 692923166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 90
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 3.25, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 634f118228664bc41839b470e196a0c2
+      internalID: 367019703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 90
+        width: 5
+        height: 10
+      alignment: 9
+      pivot: {x: 2.8, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7e71591fb29ce24d91bb9c0b2c81c1c
+      internalID: -1877052785
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 90
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: 4.3333335, y: -1.4}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8984e2e8f38eded4eae3d1c612156150
+      internalID: -2089811760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 90
+        width: 2
+        height: 9
+      alignment: 9
+      pivot: {x: 5, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fe8d46ab5f7bfc74a8c83f8c0fd2b202
+      internalID: -508723404
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 90
+        width: 3
+        height: 7
+      alignment: 9
+      pivot: {x: 3.3333333, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 73e130cc831660a40808b5f618e36253
+      internalID: -209674262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 90
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 5, y: -1.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6f5cf439748bd274ea95f28e4645dae1
+      internalID: 496318891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NE_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 90
+        width: 2
+        height: 1
+      alignment: 9
+      pivot: {x: 5.5, y: -11}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d782c46289712d14fa1d21fcf04aa012
+      internalID: -282856715
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 75
+        width: 6
+        height: 15
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 12577024bfbff1a4aba0590ec589834b
+      internalID: -285702328
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 75
+        width: 6
+        height: 14
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03c1ae1f43ac58f408c5bdb951295523
+      internalID: 1989434737
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 75
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.625, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8d465ee5b5b106e488599ab8a261a7ba
+      internalID: 822544553
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 75
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: 1.625, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1a4dfae12e8209b4ca0db2c77a0a73f6
+      internalID: -558708924
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 75
+        width: 6
+        height: 14
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 42898836295bd3f4d81e1bafe7c0046f
+      internalID: 1195383769
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 75
+        width: 8
+        height: 15
+      alignment: 9
+      pivot: {x: 1.625, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b10d4caab5ff0d04ba26b8c3fb110b47
+      internalID: -887678548
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 75
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 584373bf073f1284a863dc5d66370ed1
+      internalID: -452510227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 75
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f273009d4c0f4644f95f3474938a219f
+      internalID: 1773451181
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_N_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 75
+        width: 6
+        height: 15
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4baabb4615926f7499c21f90dc8405fb
+      internalID: 904705029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 46a54c4589fa34b44b3620fbfce4b8b3
+      internalID: -1279550905
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b64b997136b057744aed713349dd77da
+      internalID: 1452080076
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 60
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d368eb6d313b2034db223d4bad85047b
+      internalID: 1033711593
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 60
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.9, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9c2f1c4c4916e36468caa3fcb902e502
+      internalID: -1747149644
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 60
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 1.2222222, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 975e7d63686f5b8429ec7905d9f86277
+      internalID: 87189452
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 60
+        width: 12
+        height: 15
+      alignment: 9
+      pivot: {x: 1.0833334, y: 0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fed8d3bffdd631346a05cd04d348aeca
+      internalID: -1472396065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 60
+        width: 12
+        height: 15
+      alignment: 9
+      pivot: {x: 1.0833334, y: 0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a3917638d12d4b2409cc7b440b839b66
+      internalID: -863612505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 60
+        width: 11
+        height: 15
+      alignment: 9
+      pivot: {x: 1.1818181, y: 0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a37ef099929c6694bae6739ba82c14b6
+      internalID: -1587279826
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_NW_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 60
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: 1.2, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8c5e55143bad082449158526a7bad52f
+      internalID: 715573685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.5, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d9a834cf675de541ad1324f5f92394e
+      internalID: -832744509
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.4, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d8a5ffdb607911e479738c4895d9f9d1
+      internalID: 245269053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.3, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bd0870b9d76fadc49a42e96a99c57731
+      internalID: -533005650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 45
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f8a4a607862da804387a6ad5224aebde
+      internalID: 32178078
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.4, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6a3e286b62418db4cbbac92c88a38c27
+      internalID: 906753420
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.7, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4500ee0faa417f5449f8104e15bef489
+      internalID: 1173005003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 45
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.7, y: 0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b07503bc9cf9eaf4fb897ba543b3028b
+      internalID: -1590233271
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.7, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ccd5bdee00bfa9542a9d438e58f36469
+      internalID: -1884737229
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_W_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6, y: 0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b7bae4d4d6885ae4eadb85be25db8a93
+      internalID: -1179608986
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 30
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: -0.2, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c4a68a751cf5e9a4781d95179d0a91b3
+      internalID: -469769025
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c6e6f293f363e2459aac504412a1814
+      internalID: -2049218334
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41aa4523100aa73449b2bfb381b4b6ec
+      internalID: -2001691191
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 30
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.16666667, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 398e6d41841ba304f9357abdae9ba1fe
+      internalID: -1125112234
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 30
+        width: 12
+        height: 14
+      alignment: 9
+      pivot: {x: -0.083333336, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: db30fb3979506154a90a38a17706a4e5
+      internalID: -1975752757
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 305874f3c4e30994e83593822506d92b
+      internalID: 2046432447
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 30
+        width: 11
+        height: 15
+      alignment: 9
+      pivot: {x: 0.09090909, y: 0.26666668}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 60bd601c9a1d02547bfb742cab390abb
+      internalID: 811626150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 97370d011138b674a81b719cb06c7486
+      internalID: -1323972387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SW_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 30
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: -0.1, y: 0.13333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 84e0d8d4498607e418db8feef0247526
+      internalID: 470735782
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91fdb1f2ddb5674439b1ebbdb88424ca
+      internalID: 1991194020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c63244bb6c203824192fbccab7ef328e
+      internalID: -1386837892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8da4eb1b4945ce428db8a54ff9c6cb5
+      internalID: -261608396
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c123afb5bc512e49aacf78850e6f0bd
+      internalID: 773332753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.85714287, y: -0.14285715}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ea48de4fe721cfc46af150ddf9383112
+      internalID: 1254660297
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7504780726ad436429ec135ff084fe46
+      internalID: -2145397708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 15
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 57add92446a27ba44844fe2dcca15c48
+      internalID: 2054599517
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 15
+        width: 7
+        height: 14
+      alignment: 9
+      pivot: {x: -0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a4d250c301be5854fae25de6d35b8729
+      internalID: -1869220868
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_S_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 15
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: -0.625, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ecc52379f96d87e4098449df0bda8bbd
+      internalID: 767581745
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4aab95cd83ab7564ea2334338eca2a4b
+      internalID: -1389934526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.6363636}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5bf9462df8473174582dae999a577f88
+      internalID: 1434623086
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 8
+        height: 11
+      alignment: 9
+      pivot: {x: -0.25, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f7b73ef27594dc84e9caa0e5a3e76520
+      internalID: 1577077624
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 8
+        height: 11
+      alignment: 9
+      pivot: {x: -0.25, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 44190a320ba313947908ad0670a50434
+      internalID: 1320452736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b20098071ecd9bc4abf8d11c6861660f
+      internalID: 993272922
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.27272728}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: edc40199dfd426340b75c2c404fa3110
+      internalID: 1053685955
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.2, y: -0.27272728}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aad4ae2282d147040b5bd0e3f6442692
+      internalID: 2089628261
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d1bf51ef177ad534a918d38638b295fd
+      internalID: 282343497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_GreatswordCleaveLantern_SE_8
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: -0.2, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6d750dfc18c3198478597b708c6efc78
+      internalID: 1889414668
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 45f91d41e78bbc84a971ecea5c9efb76
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 5db52f0dda017c445b44bda1c0f037bc, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_GreatswordCleaveLantern_E_0: -824846184
+      Bandit_GreatswordCleaveLantern_E_1: -569770524
+      Bandit_GreatswordCleaveLantern_E_3: 1961642336
+      Bandit_GreatswordCleaveLantern_E_4: -129563827
+      Bandit_GreatswordCleaveLantern_E_5: 412864039
+      Bandit_GreatswordCleaveLantern_E_6: -1134071912
+      Bandit_GreatswordCleaveLantern_E_7: -464811489
+      Bandit_GreatswordCleaveLantern_E_8: 915015836
+      Bandit_GreatswordCleaveLantern_NE_0: 278574506
+      Bandit_GreatswordCleaveLantern_NE_1: 692923166
+      Bandit_GreatswordCleaveLantern_NE_2: 367019703
+      Bandit_GreatswordCleaveLantern_NE_3: -1877052785
+      Bandit_GreatswordCleaveLantern_NE_4: -2089811760
+      Bandit_GreatswordCleaveLantern_NE_5: -508723404
+      Bandit_GreatswordCleaveLantern_NE_6: -209674262
+      Bandit_GreatswordCleaveLantern_NE_7: 496318891
+      Bandit_GreatswordCleaveLantern_NE_8: -282856715
+      Bandit_GreatswordCleaveLantern_NW_0: -1279550905
+      Bandit_GreatswordCleaveLantern_NW_1: 1452080076
+      Bandit_GreatswordCleaveLantern_NW_2: 1033711593
+      Bandit_GreatswordCleaveLantern_NW_3: -1747149644
+      Bandit_GreatswordCleaveLantern_NW_4: 87189452
+      Bandit_GreatswordCleaveLantern_NW_5: -1472396065
+      Bandit_GreatswordCleaveLantern_NW_6: -863612505
+      Bandit_GreatswordCleaveLantern_NW_7: -1587279826
+      Bandit_GreatswordCleaveLantern_NW_8: 715573685
+      Bandit_GreatswordCleaveLantern_N_0: -285702328
+      Bandit_GreatswordCleaveLantern_N_1: 1989434737
+      Bandit_GreatswordCleaveLantern_N_2: 822544553
+      Bandit_GreatswordCleaveLantern_N_3: -558708924
+      Bandit_GreatswordCleaveLantern_N_4: 1195383769
+      Bandit_GreatswordCleaveLantern_N_5: -887678548
+      Bandit_GreatswordCleaveLantern_N_6: -452510227
+      Bandit_GreatswordCleaveLantern_N_7: 1773451181
+      Bandit_GreatswordCleaveLantern_N_8: 904705029
+      Bandit_GreatswordCleaveLantern_SE_0: -1389934526
+      Bandit_GreatswordCleaveLantern_SE_1: 1434623086
+      Bandit_GreatswordCleaveLantern_SE_2: 1577077624
+      Bandit_GreatswordCleaveLantern_SE_3: 1320452736
+      Bandit_GreatswordCleaveLantern_SE_4: 993272922
+      Bandit_GreatswordCleaveLantern_SE_5: 1053685955
+      Bandit_GreatswordCleaveLantern_SE_6: 2089628261
+      Bandit_GreatswordCleaveLantern_SE_7: 282343497
+      Bandit_GreatswordCleaveLantern_SE_8: 1889414668
+      Bandit_GreatswordCleaveLantern_SW_0: -469769025
+      Bandit_GreatswordCleaveLantern_SW_1: -2049218334
+      Bandit_GreatswordCleaveLantern_SW_2: -2001691191
+      Bandit_GreatswordCleaveLantern_SW_3: -1125112234
+      Bandit_GreatswordCleaveLantern_SW_4: -1975752757
+      Bandit_GreatswordCleaveLantern_SW_5: 2046432447
+      Bandit_GreatswordCleaveLantern_SW_6: 811626150
+      Bandit_GreatswordCleaveLantern_SW_7: -1323972387
+      Bandit_GreatswordCleaveLantern_SW_8: 470735782
+      Bandit_GreatswordCleaveLantern_S_0: 1991194020
+      Bandit_GreatswordCleaveLantern_S_1: -1386837892
+      Bandit_GreatswordCleaveLantern_S_2: -261608396
+      Bandit_GreatswordCleaveLantern_S_3: 773332753
+      Bandit_GreatswordCleaveLantern_S_4: 1254660297
+      Bandit_GreatswordCleaveLantern_S_5: -2145397708
+      Bandit_GreatswordCleaveLantern_S_6: 2054599517
+      Bandit_GreatswordCleaveLantern_S_7: -1869220868
+      Bandit_GreatswordCleaveLantern_S_8: 767581745
+      Bandit_GreatswordCleaveLantern_W_0: -832744509
+      Bandit_GreatswordCleaveLantern_W_1: 245269053
+      Bandit_GreatswordCleaveLantern_W_2: -533005650
+      Bandit_GreatswordCleaveLantern_W_3: 32178078
+      Bandit_GreatswordCleaveLantern_W_4: 906753420
+      Bandit_GreatswordCleaveLantern_W_5: 1173005003
+      Bandit_GreatswordCleaveLantern_W_6: -1590233271
+      Bandit_GreatswordCleaveLantern_W_7: -1884737229
+      Bandit_GreatswordCleaveLantern_W_8: -1179608986
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

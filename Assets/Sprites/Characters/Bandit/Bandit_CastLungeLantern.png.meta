@@ -1,0 +1,1527 @@
+fileFormatVersion: 2
+guid: 3697b79fc1bff0945a9fb5d722f1e9a9
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 5726817907232017559
+    second: Bandit_CastLungeLantern_0
+  - first:
+      213: -8399928151147432436
+    second: Bandit_CastLungeLantern_1
+  - first:
+      213: 4119548712191982808
+    second: Bandit_CastLungeLantern_2
+  - first:
+      213: -1017050680274237460
+    second: Bandit_CastLungeLantern_3
+  - first:
+      213: -8243474434884504115
+    second: Bandit_CastLungeLantern_4
+  - first:
+      213: 6991946622703989533
+    second: Bandit_CastLungeLantern_5
+  - first:
+      213: 1304741715906791747
+    second: Bandit_CastLungeLantern_6
+  - first:
+      213: -7591981666562249846
+    second: Bandit_CastLungeLantern_7
+  - first:
+      213: -8774203764821024231
+    second: Bandit_CastLungeLantern_8
+  - first:
+      213: 4926439796939235949
+    second: Bandit_CastLungeLantern_9
+  - first:
+      213: -8024891404381710034
+    second: Bandit_CastLungeLantern_10
+  - first:
+      213: -2284254935538293029
+    second: Bandit_CastLungeLantern_11
+  - first:
+      213: -3974230465541783922
+    second: Bandit_CastLungeLantern_12
+  - first:
+      213: 2555948105600729806
+    second: Bandit_CastLungeLantern_13
+  - first:
+      213: -2588750723247707244
+    second: Bandit_CastLungeLantern_14
+  - first:
+      213: -8343028212635628359
+    second: Bandit_CastLungeLantern_15
+  - first:
+      213: 7413102821800687151
+    second: Bandit_CastLungeLantern_16
+  - first:
+      213: -455464085255459802
+    second: Bandit_CastLungeLantern_17
+  - first:
+      213: -7816600002415689140
+    second: Bandit_CastLungeLantern_18
+  - first:
+      213: 8884795209562760551
+    second: Bandit_CastLungeLantern_19
+  - first:
+      213: -4857300025061884994
+    second: Bandit_CastLungeLantern_20
+  - first:
+      213: 6917869532936602278
+    second: Bandit_CastLungeLantern_21
+  - first:
+      213: 6714772166869208897
+    second: Bandit_CastLungeLantern_22
+  - first:
+      213: 1749019114402196214
+    second: Bandit_CastLungeLantern_23
+  - first:
+      213: -6765233054998562876
+    second: Bandit_CastLungeLantern_24
+  - first:
+      213: 4774539593976966174
+    second: Bandit_CastLungeLantern_25
+  - first:
+      213: 41933369903936701
+    second: Bandit_CastLungeLantern_26
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 91
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4df236202563d4b47b4055311443129b
+      internalID: 85873876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 91
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: 0.25, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a4941f017a765964682964821ce300f4
+      internalID: -211645254
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 91
+        width: 5
+        height: 9
+      alignment: 9
+      pivot: {x: -0.8, y: -1.1111112}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 80887a4f99878684fa10d12ab36841a1
+      internalID: -715526703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 91
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: -0.6666667, y: -0.8181818}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 01d979cfd7822da41a93a3317024ef66
+      internalID: -1040527921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 91
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 2.25, y: -0.90909094}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8acf0d70253123541aef5503e5ccbd90
+      internalID: -198443831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 91
+        width: 3
+        height: 11
+      alignment: 9
+      pivot: {x: 3, y: -0.8181818}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5035121da130f3c42a74f232d40d6391
+      internalID: -1119822380
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 91
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: df961654e8f39c5469137692d18d58d3
+      internalID: -1766629820
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 78
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 2, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c958ef045c3328e48b675f3e3901276a
+      internalID: -1535662246
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 78
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: 2, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f88128ff517d15c49944cf8d8249828b
+      internalID: -108441805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 78
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: 2.1666667, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0e57e3be37f33944ca57888c5c20f2ea
+      internalID: 588210778
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 65
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e33b3ea29edf3949a17c3c0ac91431b
+      internalID: -1671269195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 65
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b5a075bc109f8846a3a618c474fb8cb
+      internalID: -2071728813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 65
+        width: 2
+        height: 11
+      alignment: 9
+      pivot: {x: 5, y: -0.6363636}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3df2a11fa501a6a45a4bd53688926131
+      internalID: -425933772
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 65
+        width: 2
+        height: 10
+      alignment: 9
+      pivot: {x: 5, y: -0.9}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5894ff2ec11b2cd49bd7813eb55c830d
+      internalID: -374684453
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 65
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e13bd92cdc397f64a8a19f9c6b0d0037
+      internalID: 577669431
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 65
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9e59db8223805a4a90b82b19fb07df9
+      internalID: -441398754
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 65
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d17749b86e2dc5478a95ff028f202bb
+      internalID: 862326269
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 65
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a94ed91e88d99d540a4167ce14980851
+      internalID: 1231210187
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 52
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0ec2b8d5256b44f4e9d0219580de669a
+      internalID: 2045986572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 52
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: 1.375, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bab3c0ccd4862054aa4ef2e13aa67dd4
+      internalID: 453024179
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 52
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.4444444, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c51d78a7a4d251141a76e05911f6a488
+      internalID: 964069202
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 52
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5555556, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24d6c2f7f9f39c04f9ff2822549a9fff
+      internalID: 442269123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d206f80637b3a954098fa4314b0da58f
+      internalID: -1558121266
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 52
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c546cdf22ff38a64280e6239e30bde3b
+      internalID: 2122709834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 52
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 67f0e26e8cdea2e4aa68955a093dd732
+      internalID: -508104812
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 52
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1111112, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb91b93456752b24b85022bf9b16e67e
+      internalID: 1279849960
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: da389f33ba32b0c44b925de41455df5f
+      internalID: 221007671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 38ee788b9ef2422428aa27090609ab5b
+      internalID: 1608064260
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 32cacaee3beeeb641becc895e773ed76
+      internalID: 364471599
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1111112, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 16b9991bfdaf00946804727d3183728f
+      internalID: -1315062769
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1f4206c67755d0c4fb121d223c100bae
+      internalID: 1695235482
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4075a74c173a8c942aa4b3c9917ac1a5
+      internalID: 1749182686
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 39
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1a259c836507cf94a9b1ebc739a09873
+      internalID: -1774489486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 39
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1257291263b57f94585b7dcefcd4195e
+      internalID: -2090504867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 26
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23207035fb5e56245a9acdafcef780c0
+      internalID: -1167615640
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 26
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a64eee67eb80954ab916504bba305df
+      internalID: 1778928351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.41666666, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f742150eb6efc2447b5f5e3c391b8149
+      internalID: -58481968
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c3c14b0886de8574a848560bbc9f2569
+      internalID: -295068211
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 26
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1b1d461bb526ea47acc478286271ff2
+      internalID: 1197107234
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 26
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a70a169a9bb05a643ba4cff6f7bb91c4
+      internalID: 597846899
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 26
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: -0.083333336, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cc42ac925f0dd1241b5b8fa15d3dc53d
+      internalID: 1989117569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 26
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06193586634fef94b9eaac9e609f6632
+      internalID: 1139203079
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa2218311836dca4f8f65f3f057ed33e
+      internalID: 103774625
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 13
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 04c61812791f2e14c8b07fb2bf84f60b
+      internalID: -1462917440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b45aae834b1f0b448b579d0f11a56b00
+      internalID: -1534208182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e08ad9511be07eb4180c045d8126c9f2
+      internalID: 1094040202
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 13
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -1, y: -0.53846157}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 07614aee3cbec704ea86f581a2bd9e0d
+      internalID: 1797500687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 13
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e830f0791bed37e47a6b79ebc7416351
+      internalID: 1974863536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 13
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 109dd7f85574d9e4784369194c610bc6
+      internalID: 1034826039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f8a453da354fd2c4c9655e0198371273
+      internalID: -1376548907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8c44eba50339f8a468ac9e929ed5bfac
+      internalID: 1569012559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: da78ccded694db54897c7646bfec1a24
+      internalID: -270927577
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 599ba9de6ff152a43ab6a554dbf057c0
+      internalID: 1873372677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.4, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 647ec5d3b739d434aa3711b7b5de2ace
+      internalID: -1586568124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.2857143, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 035f2def546c3ee43ab99d1864dd953a
+      internalID: 1652723500
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastLungeLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6aaffd82660ca1845bd30c844a821e44
+      internalID: 869479453
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 28240c24101227a4c9c2349873fd1abe
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 17e8188ca6622064192f2c7705a2d40e, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_CastLungeLantern_E_0: 85873876
+      Bandit_CastLungeLantern_E_1: -211645254
+      Bandit_CastLungeLantern_E_2: -715526703
+      Bandit_CastLungeLantern_E_3: -1040527921
+      Bandit_CastLungeLantern_E_4: -198443831
+      Bandit_CastLungeLantern_E_5: -1119822380
+      Bandit_CastLungeLantern_E_7: -1766629820
+      Bandit_CastLungeLantern_NE_4: -1535662246
+      Bandit_CastLungeLantern_NE_5: -108441805
+      Bandit_CastLungeLantern_NE_6: 588210778
+      Bandit_CastLungeLantern_NW_0: 2045986572
+      Bandit_CastLungeLantern_NW_1: 453024179
+      Bandit_CastLungeLantern_NW_2: 964069202
+      Bandit_CastLungeLantern_NW_3: 442269123
+      Bandit_CastLungeLantern_NW_4: -1558121266
+      Bandit_CastLungeLantern_NW_5: 2122709834
+      Bandit_CastLungeLantern_NW_6: -508104812
+      Bandit_CastLungeLantern_NW_7: 1279849960
+      Bandit_CastLungeLantern_N_0: -1671269195
+      Bandit_CastLungeLantern_N_1: -2071728813
+      Bandit_CastLungeLantern_N_2: -425933772
+      Bandit_CastLungeLantern_N_3: -374684453
+      Bandit_CastLungeLantern_N_4: 577669431
+      Bandit_CastLungeLantern_N_5: -441398754
+      Bandit_CastLungeLantern_N_6: 862326269
+      Bandit_CastLungeLantern_N_7: 1231210187
+      Bandit_CastLungeLantern_SE_0: 1569012559
+      Bandit_CastLungeLantern_SE_1: -270927577
+      Bandit_CastLungeLantern_SE_2: 1873372677
+      Bandit_CastLungeLantern_SE_3: -1586568124
+      Bandit_CastLungeLantern_SE_6: 1652723500
+      Bandit_CastLungeLantern_SE_7: 869479453
+      Bandit_CastLungeLantern_SW_0: -1167615640
+      Bandit_CastLungeLantern_SW_1: 1778928351
+      Bandit_CastLungeLantern_SW_2: -58481968
+      Bandit_CastLungeLantern_SW_3: -295068211
+      Bandit_CastLungeLantern_SW_4: 1197107234
+      Bandit_CastLungeLantern_SW_5: 597846899
+      Bandit_CastLungeLantern_SW_6: 1989117569
+      Bandit_CastLungeLantern_SW_7: 1139203079
+      Bandit_CastLungeLantern_S_0: 103774625
+      Bandit_CastLungeLantern_S_1: -1462917440
+      Bandit_CastLungeLantern_S_2: -1534208182
+      Bandit_CastLungeLantern_S_3: 1094040202
+      Bandit_CastLungeLantern_S_4: 1797500687
+      Bandit_CastLungeLantern_S_5: 1974863536
+      Bandit_CastLungeLantern_S_6: 1034826039
+      Bandit_CastLungeLantern_S_7: -1376548907
+      Bandit_CastLungeLantern_W_0: 221007671
+      Bandit_CastLungeLantern_W_1: 1608064260
+      Bandit_CastLungeLantern_W_2: 364471599
+      Bandit_CastLungeLantern_W_3: -1315062769
+      Bandit_CastLungeLantern_W_4: 1695235482
+      Bandit_CastLungeLantern_W_5: 1749182686
+      Bandit_CastLungeLantern_W_6: -1774489486
+      Bandit_CastLungeLantern_W_7: -2090504867
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

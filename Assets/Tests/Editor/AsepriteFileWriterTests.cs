@@ -12,7 +12,8 @@ using UnityEngine;
 /// data come back exactly as written; a whole canvas is cropped to its opaque pixels as Aseprite saves it, and an empty
 /// one leaves no cel; the rogue's baked Run and SwordSlash written in the plan's conventions read back as their sheets:
 /// the canvas the size of a frame, eight direction tags in order, each frame's duration in whole milliseconds, the
-/// contact marker on the contact frame in every direction and nowhere else, and every frame's pixels.
+/// contact marker on the contact frame in every direction and nowhere else, every frame's pixels, and the lantern the
+/// rogue carries on its three layers.
 /// </summary>
 public class AsepriteFileWriterTests
 {
@@ -111,9 +112,12 @@ public class AsepriteFileWriterTests
 
     /// <summary>
     /// The rogue's baked Run and SwordSlash, written from their sheets, read back in the plan's conventions: a canvas the
-    /// size of a frame, one visible layer, eight forward tags named after the directions in order over each direction's
-    /// frames, each frame's duration in whole milliseconds, the contact marker only on the contact frame's cel in every
-    /// direction, and each frame's cel holding exactly that frame's pixels.
+    /// size of a frame, the visible body layer, eight forward tags named after the directions in order over each
+    /// direction's frames, each frame's duration in whole milliseconds, the contact marker only on the contact frame's
+    /// body cel in every direction, and each frame's body cel holding exactly that frame's pixels; above it the lantern's
+    /// layers (Docs/AsepriteCharacters.md, Phase 4): the visible Lantern layer's cel holding the frame's lantern layer
+    /// (none where the body hides it), the hidden LanternGlow and LanternLight layers, the light's cel the one pixel
+    /// holding the frame's light.
     /// </summary>
     [Test]
     public void FromSheet_RoguesRunAndSwordSlash_FollowTheConventions()
@@ -132,8 +136,11 @@ public class AsepriteFileWriterTests
 
             Assert.That((file.width, file.height), Is.EqualTo(((ushort)size.x, (ushort)size.y)), clipName);
             Assert.That(file.noOfFrames, Is.EqualTo(CharacterDirections.Count * frames), clipName);
-            LayerChunk layer = file.frameData[0].chunks.OfType<LayerChunk>().Single();
-            Assert.That((layer.flags & LayerFlags.Visible) != 0, Is.True, clipName);
+            LayerChunk[] layers = file.frameData[0].chunks.OfType<LayerChunk>().ToArray();
+            Assert.That(layers.Select(l => (l.name, (l.flags & LayerFlags.Visible) != 0)), Is.EqualTo(new[]
+            {
+                ("Body", true), (AsepriteClipReader.LanternLayer, true), (AsepriteClipReader.LanternGlowLayer, false), (AsepriteClipReader.LanternLightLayer, false)
+            }), clipName);
             TagData[] tags = file.frameData[0].chunks.OfType<TagsChunk>().Single().tagData.ToArray();
             Assert.That(tags.Select(t => t.name), Is.EqualTo(Enumerable.Range(0, CharacterDirections.Count).Select(CharacterDirections.Name)), clipName);
             for (int direction = 0; direction < CharacterDirections.Count; direction++)
@@ -145,10 +152,16 @@ public class AsepriteFileWriterTests
                     string where = $"{clipName} {CharacterDirections.Name(direction)} {frame}";
                     FrameData data = file.frameData[direction * frames + frame];
                     Assert.That(data.frameDuration, Is.EqualTo(Mathf.RoundToInt(clip.Motion.FrameSeconds(frame) * 1000f)), where);
-                    CellChunk cel = data.chunks.OfType<CellChunk>().Single();
+                    CellChunk cel = data.chunks.OfType<CellChunk>().Single(c => c.layerIndex == 0);
                     string marker = cel.dataChunk?.text;
                     Assert.That(marker, Is.EqualTo(frame == clip.Motion.ContactFrame ? AsepriteFileWriter.ContactMarker : null), where);
-                    Assert.That(Canvas(cel, size).SequenceEqual(SheetFrame(sheet, direction, frame)), Is.True, where);
+                    Assert.That(Canvas(cel, size).SequenceEqual(SheetFrame(sheet, sheet.Pixels, direction, frame)), Is.True, where);
+                    CellChunk lantern = data.chunks.OfType<CellChunk>().SingleOrDefault(c => c.layerIndex == 1);
+                    int[] lanternFrame = SheetFrame(sheet, sheet.LanternPixels, direction, frame);
+                    Assert.That(lantern == null ? lanternFrame.All(p => p == 0) : Canvas(lantern, size).SequenceEqual(lanternFrame), Is.True, where);
+                    CellChunk light = data.chunks.OfType<CellChunk>().Single(c => c.layerIndex == 3);
+                    Vector2Int marked = Vector2Int.FloorToInt(sheet.LanternCentres[direction * frames + frame] + clip.Pivot);
+                    Assert.That((light.posX, light.posY, light.width, light.height), Is.EqualTo(((short)marked.x, (short)(size.y - 1 - marked.y), (ushort)1, (ushort)1)), where);
                 }
             }
         }
@@ -206,16 +219,17 @@ public class AsepriteFileWriterTests
     }
 
     /// <summary>
-    /// Frame <paramref name="frame"/> of <paramref name="direction"/> on <paramref name="sheet"/>, row by row from the top.
+    /// Frame <paramref name="frame"/> of <paramref name="direction"/> of <paramref name="layer"/>, laid out as
+    /// <paramref name="sheet"/>'s pixels (its pixels or its lantern's layer), row by row from the top.
     /// </summary>
-    private static int[] SheetFrame(CharacterSheet sheet, int direction, int frame)
+    private static int[] SheetFrame(CharacterSheet sheet, Color32[] layer, int direction, int frame)
     {
         Vector2Int size = sheet.Clip.FrameSize;
         RectInt rect = CharacterSheet.FrameRect(direction, frame, size);
         Color32[] pixels = new Color32[size.x * size.y];
         for (int y = 0; y < size.y; y++)
         {
-            System.Array.Copy(sheet.Pixels, (rect.y + size.y - 1 - y) * sheet.Width + rect.x, pixels, y * size.x, size.x);
+            System.Array.Copy(layer, (rect.y + size.y - 1 - y) * sheet.Width + rect.x, pixels, y * size.x, size.x);
         }
 
         return Packed(pixels);

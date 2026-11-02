@@ -1,0 +1,1604 @@
+fileFormatVersion: 2
+guid: 95ca73d3de416804dbf20d15792301ef
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 5703582490839527722
+    second: Bandit_CastBoltLantern_0
+  - first:
+      213: 989684382285552993
+    second: Bandit_CastBoltLantern_1
+  - first:
+      213: 8391562318938114410
+    second: Bandit_CastBoltLantern_2
+  - first:
+      213: 4612749138414341332
+    second: Bandit_CastBoltLantern_3
+  - first:
+      213: -1985219930317423461
+    second: Bandit_CastBoltLantern_4
+  - first:
+      213: -7260597808473484870
+    second: Bandit_CastBoltLantern_5
+  - first:
+      213: 3573268001459784631
+    second: Bandit_CastBoltLantern_6
+  - first:
+      213: -6373065474447009181
+    second: Bandit_CastBoltLantern_7
+  - first:
+      213: -1077024095151197558
+    second: Bandit_CastBoltLantern_8
+  - first:
+      213: -684083125074251487
+    second: Bandit_CastBoltLantern_9
+  - first:
+      213: -6188327353444715374
+    second: Bandit_CastBoltLantern_10
+  - first:
+      213: -5887003647378755027
+    second: Bandit_CastBoltLantern_11
+  - first:
+      213: -3381277807642916675
+    second: Bandit_CastBoltLantern_12
+  - first:
+      213: 8112745448175755442
+    second: Bandit_CastBoltLantern_13
+  - first:
+      213: -1326014630124184544
+    second: Bandit_CastBoltLantern_14
+  - first:
+      213: -1147119473906660023
+    second: Bandit_CastBoltLantern_15
+  - first:
+      213: 197385089820683777
+    second: Bandit_CastBoltLantern_16
+  - first:
+      213: -2328077044821064785
+    second: Bandit_CastBoltLantern_17
+  - first:
+      213: 3613636442980704177
+    second: Bandit_CastBoltLantern_18
+  - first:
+      213: 4088387135789299173
+    second: Bandit_CastBoltLantern_19
+  - first:
+      213: 5068854051694522313
+    second: Bandit_CastBoltLantern_20
+  - first:
+      213: -8607819947662867047
+    second: Bandit_CastBoltLantern_21
+  - first:
+      213: 1015654476067096662
+    second: Bandit_CastBoltLantern_22
+  - first:
+      213: -5818562911413137892
+    second: Bandit_CastBoltLantern_23
+  - first:
+      213: -1799808402495655966
+    second: Bandit_CastBoltLantern_24
+  - first:
+      213: -6996065027999156840
+    second: Bandit_CastBoltLantern_25
+  - first:
+      213: 864806477746611544
+    second: Bandit_CastBoltLantern_26
+  - first:
+      213: 8313818165357335470
+    second: Bandit_CastBoltLantern_27
+  - first:
+      213: 5928064610347889863
+    second: Bandit_CastBoltLantern_28
+  - first:
+      213: -2868424912102780554
+    second: Bandit_CastBoltLantern_29
+  - first:
+      213: 6494320458631546850
+    second: Bandit_CastBoltLantern_30
+  - first:
+      213: 657922002797142235
+    second: Bandit_CastBoltLantern_31
+  - first:
+      213: -3947356033282321315
+    second: Bandit_CastBoltLantern_32
+  - first:
+      213: -6670129402722534674
+    second: Bandit_CastBoltLantern_33
+  - first:
+      213: -2191421801358387167
+    second: Bandit_CastBoltLantern_34
+  - first:
+      213: 3049778984175722791
+    second: Bandit_CastBoltLantern_35
+  - first:
+      213: 2995154526497156054
+    second: Bandit_CastBoltLantern_36
+  - first:
+      213: 8676142079802992367
+    second: Bandit_CastBoltLantern_37
+  - first:
+      213: -2772851773763125225
+    second: Bandit_CastBoltLantern_38
+  - first:
+      213: 3859039938598992647
+    second: Bandit_CastBoltLantern_39
+  - first:
+      213: 157916964206634982
+    second: Bandit_CastBoltLantern_40
+  - first:
+      213: -5454851722221580857
+    second: Bandit_CastBoltLantern_41
+  - first:
+      213: -6753985084747667744
+    second: Bandit_CastBoltLantern_42
+  - first:
+      213: 6210089979592980089
+    second: Bandit_CastBoltLantern_43
+  - first:
+      213: -5625204646582634525
+    second: Bandit_CastBoltLantern_44
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 98
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5ce24605df94f774fb7241e25dd23848
+      internalID: 1502738434
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 98
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.22222222, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b80fe598a1c5ea549a6d7fc23bf090ba
+      internalID: 1166189291
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 98
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5714286, y: -0.6923077}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 106fec6fc686ef445b4a45a409c45f17
+      internalID: 884605928
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 98
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.5555556, y: -0.9166667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 550129e858a1962488030980d556a3f4
+      internalID: 1862529537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 98
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3a750a0d67d58b443aa74aea3ff66ecd
+      internalID: -79867467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 84
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: -1.6666666, y: -4.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 70b12a4f6f6031548ad12654fe79c7e2
+      internalID: -155185022
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 84
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: 2.3333333, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 84d28ee1958283549b443bd5a33d2b90
+      internalID: 1900167182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 84
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 3.25, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0caa778767a1e024198232934a626310
+      internalID: -1667496761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 84
+        width: 3
+        height: 9
+      alignment: 9
+      pivot: {x: 4, y: -0.7777778}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 84b91dac1202c6747b88d0cc417a20cf
+      internalID: 1523745230
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 70
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cc5922faa0b249042a541c1641beebe6
+      internalID: -750325800
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 70
+        width: 3
+        height: 13
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 913cee40668ebca44a199048ed34936e
+      internalID: -1898875303
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 70
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 27bac7c2f59bf7d4f8dae42b0d5ebd4a
+      internalID: -1589991210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 70
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 3, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8cfffca45f8954d41a42d71ecc0da46a
+      internalID: -1656200972
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 70
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eb2b3b963ce9bc7468ebbc055198ecfb
+      internalID: 530059630
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 70
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f1b3e6c96ae22d4589856216e356aba
+      internalID: -1151958251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 70
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0b50d671c10bf0c4fb24e81787795d9e
+      internalID: -348747617
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 70
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fdb4bb24f6fb9504a923381c1aadbff8
+      internalID: 1944532159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 56
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a07b68a1c59e80a49ac92c48e39888bb
+      internalID: 40222877
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 70c63a63c7aefed4ca8ffe6f6a0a0c1b
+      internalID: -844958643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f075136be1b1e044939653d3f90e5a2
+      internalID: -1177394284
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5454545, y: -0.61538464}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 83ab7121967e33c4e895e8d8c7af1086
+      internalID: -265367893
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2eb456926ca70f44094eec770b88460f
+      internalID: -1572207140
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.9, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aea53ee4eb7beb14c9dd9c5f90ea37ab
+      internalID: 337110137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c5649ef800d8ec046b16b8934c36af8d
+      internalID: 1689763398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0d32c4c064f62ea48918742c77168af5
+      internalID: 972285433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bcbe296dc48c1ec47973b840c1906834
+      internalID: 1054366444
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.7777778, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 04a3d64b53b6656449841121660b593c
+      internalID: 1576069703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.2222222, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 64f259c2fe0cb464f96a1d5f12955631
+      internalID: -1307856021
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d9d1e00598d0e3248b8c3ed21c1be833
+      internalID: -1830529495
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5cf88b71d99d9d14c8dbc600acc9f422
+      internalID: 2104036522
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 31a508fbc6c04d44d810ac4741128f9d
+      internalID: 885988670
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 42
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.3, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6ce82f4f32ce6e94186178ecdece8436
+      internalID: -1434234043
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a383802668ca1234e81f95206a9d2ba2
+      internalID: 1219265732
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 28
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f1050faf02c32944a0bbcdaffcbe34a
+      internalID: 512001967
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b8895ba4725eb524eb9a2c0f47b40b1a
+      internalID: 969809354
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.5, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e4474ebd067f8db4ca814e058e822d27
+      internalID: 40876130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0141c0d1ea20025468493047efc16b92
+      internalID: 1874266270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 28
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.16666667, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ea8c783bc65c3b34dbdddebf1bc0fd81
+      internalID: -595466574
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 32d0faba17506694d9e2a69446b749d4
+      internalID: -1958642141
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 28
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.2, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9dcee942069856242b5eea211ec78a63
+      internalID: -334099434
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 28
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0b0ac203ece45d345b5be7961787c214
+      internalID: 1723875974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 27526349494f29e4486fe5a9eae55f14
+      internalID: -516061964
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 14
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 92cd6fd8c058dfb448ac4b2d3375fe6f
+      internalID: 694925182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d305abea23904f747b93749473c97583
+      internalID: 778950799
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 14
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.2, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1bcce440a6bfa0b47b67413239884654
+      internalID: -927330817
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 14
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24435d7479916034cbe9ef935cc8e438
+      internalID: -1458362092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 486f5478fc80c5e47974cfef630ffcb9
+      internalID: -881696450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c312d69aace75024abeb4a032b5c4862
+      internalID: -600807018
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 14
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 43535e27a7d4cbe4bbdc8830dfe9d94f
+      internalID: -1938246748
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7b7dba186be5cb4aa4d7215749a1359
+      internalID: 1608535841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 0
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 02569ecc454b505408530071e936fda6
+      internalID: 1799665930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2a0ad3dcc1001904ab2ea289eef64b3d
+      internalID: 963686058
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.54545456, y: -0.46153846}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c3ca16f936ae32409cdb603064b090d
+      internalID: -924060028
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 7
+        height: 7
+      alignment: 9
+      pivot: {x: -0.14285715, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c1f5e308099810f41a6d90eaea048878
+      internalID: -1610382169
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 60
+        y: 0
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: -0.125, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c8dc9e72f078254f9e2ffc024fb6dd1
+      internalID: 516418944
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 0
+        width: 8
+        height: 9
+      alignment: 9
+      pivot: {x: -0.125, y: -0.7777778}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ee1bfcc5190d50a4197a6930fb552257
+      internalID: 1516772605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastBoltLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 0
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e1d83e258ed128499542dc18cc85bf0
+      internalID: 740192118
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: f4f425b2bb48c8840ac7af1f5068a58d
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 55d3b3acbd644d740a7f2eef3d373848, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_CastBoltLantern_E_0: 1502738434
+      Bandit_CastBoltLantern_E_1: 1166189291
+      Bandit_CastBoltLantern_E_2: 884605928
+      Bandit_CastBoltLantern_E_3: 1862529537
+      Bandit_CastBoltLantern_E_7: -79867467
+      Bandit_CastBoltLantern_NE_3: -155185022
+      Bandit_CastBoltLantern_NE_4: 1900167182
+      Bandit_CastBoltLantern_NE_5: -1667496761
+      Bandit_CastBoltLantern_NE_6: 1523745230
+      Bandit_CastBoltLantern_NW_0: 40222877
+      Bandit_CastBoltLantern_NW_1: -844958643
+      Bandit_CastBoltLantern_NW_2: -1177394284
+      Bandit_CastBoltLantern_NW_3: -265367893
+      Bandit_CastBoltLantern_NW_4: -1572207140
+      Bandit_CastBoltLantern_NW_5: 337110137
+      Bandit_CastBoltLantern_NW_6: 1689763398
+      Bandit_CastBoltLantern_NW_7: 972285433
+      Bandit_CastBoltLantern_N_0: -750325800
+      Bandit_CastBoltLantern_N_1: -1898875303
+      Bandit_CastBoltLantern_N_2: -1589991210
+      Bandit_CastBoltLantern_N_3: -1656200972
+      Bandit_CastBoltLantern_N_4: 530059630
+      Bandit_CastBoltLantern_N_5: -1151958251
+      Bandit_CastBoltLantern_N_6: -348747617
+      Bandit_CastBoltLantern_N_7: 1944532159
+      Bandit_CastBoltLantern_SE_0: 1608535841
+      Bandit_CastBoltLantern_SE_1: 1799665930
+      Bandit_CastBoltLantern_SE_2: 963686058
+      Bandit_CastBoltLantern_SE_3: -924060028
+      Bandit_CastBoltLantern_SE_4: -1610382169
+      Bandit_CastBoltLantern_SE_5: 516418944
+      Bandit_CastBoltLantern_SE_6: 1516772605
+      Bandit_CastBoltLantern_SE_7: 740192118
+      Bandit_CastBoltLantern_SW_0: 512001967
+      Bandit_CastBoltLantern_SW_1: 969809354
+      Bandit_CastBoltLantern_SW_2: 40876130
+      Bandit_CastBoltLantern_SW_3: 1874266270
+      Bandit_CastBoltLantern_SW_4: -595466574
+      Bandit_CastBoltLantern_SW_5: -1958642141
+      Bandit_CastBoltLantern_SW_6: -334099434
+      Bandit_CastBoltLantern_SW_7: 1723875974
+      Bandit_CastBoltLantern_S_0: -516061964
+      Bandit_CastBoltLantern_S_1: 694925182
+      Bandit_CastBoltLantern_S_2: 778950799
+      Bandit_CastBoltLantern_S_3: -927330817
+      Bandit_CastBoltLantern_S_4: -1458362092
+      Bandit_CastBoltLantern_S_5: -881696450
+      Bandit_CastBoltLantern_S_6: -600807018
+      Bandit_CastBoltLantern_S_7: -1938246748
+      Bandit_CastBoltLantern_W_0: 1054366444
+      Bandit_CastBoltLantern_W_1: 1576069703
+      Bandit_CastBoltLantern_W_2: -1307856021
+      Bandit_CastBoltLantern_W_3: -1830529495
+      Bandit_CastBoltLantern_W_4: 2104036522
+      Bandit_CastBoltLantern_W_5: 885988670
+      Bandit_CastBoltLantern_W_6: -1434234043
+      Bandit_CastBoltLantern_W_7: 1219265732
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -162,7 +162,7 @@ public class GameplayLifetimeScope : LifetimeScope
         if (dayNightSettings == null)
         {
             Debug.LogError($"{name} has no {nameof(DayNightSettings)}; the worlds keep their authored light.", this);
-            builder.RegisterEntryPoint<PropLighting>().WithParameter(typeof(DayClock), null).AsSelf();
+            builder.RegisterEntryPoint<PropLighting>().WithParameter(typeof(DayClock), (object)null).AsSelf();
         }
         else
         {

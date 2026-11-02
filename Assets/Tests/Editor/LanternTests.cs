@@ -15,9 +15,10 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// layer and light, held with its sprite and over a gait; the visuals drawing the layer and casting its light only while
 /// it burns, beside a cast's light; showing it allocating nothing; the owner's lantern lighting itself at sunset and
 /// going out at sunrise, the key's choice holding until the next of those, and a copy showing its owner's choice; its
-/// light flickering within its share; the rogue's set carrying it on every frame as the baker draws it, hanging plumb
-/// from the left hand or, while a weapon takes that hand, at the hip; the layer over a sheet being the frame drawn with
-/// the lantern, glowing at its glass; the layer packed tightly with its slices pivoted on the feet and written with its
+/// light flickering within its share; the rogue's set carrying it on every frame as the baker draws it, and every
+/// look's (the Bandit's from its files' lantern layers) where the rogue's hangs; hanging plumb from the left hand or,
+/// while a weapon takes that hand, at the hip; the layer over a sheet being the frame drawn with the lantern, glowing
+/// at its glass; the layer packed tightly with its slices pivoted on the feet and written with its
 /// glow; a hit's flash covering it with the body; the player prefab carrying it; and the lantern key, rebindable,
 /// reaching the local player's lantern.
 /// </summary>
@@ -28,6 +29,7 @@ public class LanternTests
     private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
     private const string ActionsPath = "Assets/InputSystem_Actions.inputactions";
     private const string RebindablePath = "Assets/Data/Input/RebindableActions.asset";
+    private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
     private const float Intensity = 0.8f;
     private const int Release = 4;
     private const int HiddenRunFrame = 3;
@@ -338,6 +340,49 @@ public class LanternTests
                     Assert.That(Vector2.Distance(actual.Offset, expected.Offset), Is.LessThan(1e-5f), $"{name} {direction} {column}");
                     bool drawn = LayerPixels(sheet, direction, column) > 0;
                     Assert.That(shipped.LanternAt(direction, column, 0) != null, Is.EqualTo(drawn), $"{name} {direction} {column}: a layer exactly where the lantern shows.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Every look of the catalog carries the lantern on every clip: the Bandit's, read from its files' lantern layers
+    /// (Docs/AsepriteCharacters.md, Phase 4), has a layer on exactly the rogue's frames, cut and pivoted as the rogue's,
+    /// and its light within half a pixel of the rogue's at full strength, its light's pixel marked in the file.
+    /// </summary>
+    [Test]
+    public void EveryLook_CarriesTheLantern_WhereTheRoguesHangs()
+    {
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        CharacterAnimationSet rogue = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath);
+        Assert.That(looks.Count, Is.GreaterThan(1));
+        for (int i = 0; i < looks.Count; i++)
+        {
+            CharacterLook look = looks.Get(i);
+            foreach (CharacterAnimationClip clip in look.AnimationSet.Clips)
+            {
+                string name = $"{look.Name} {clip.Name}";
+                Assert.That(clip.HasLantern, Is.True, name);
+                CharacterAnimationClip baked = rogue.Find(clip.Name);
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    for (int frame = 0; frame < clip.FrameCount; frame++)
+                    {
+                        string where = $"{name} {CharacterDirections.Name(direction)} {frame}";
+                        Sprite layer = clip.LanternAt(direction, frame, 0);
+                        Sprite bakedLayer = baked.LanternAt(direction, frame, 0);
+                        Assert.That(layer != null, Is.EqualTo(bakedLayer != null), where);
+                        if (layer != null)
+                        {
+                            Assert.That((layer.rect, layer.pivot), Is.EqualTo((bakedLayer.rect, bakedLayer.pivot)), where);
+                        }
+
+                        CharacterFrameLight light = clip.LanternLightAt(direction, frame, 0);
+                        CharacterFrameLight bakedLight = baked.LanternLightAt(direction, frame, 0);
+                        Assert.That(light.Strength, Is.EqualTo(1f), where);
+                        Assert.That(Mathf.Abs(light.Offset.x - bakedLight.Offset.x), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
+                        Assert.That(Mathf.Abs(light.Offset.y - bakedLight.Offset.y), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
+                    }
                 }
             }
         }

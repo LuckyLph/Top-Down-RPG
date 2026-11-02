@@ -1,0 +1,1595 @@
+fileFormatVersion: 2
+guid: 5f59759b1180d0e48ab0ff626451bd65
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2605388687948966355
+    second: Bandit_CastWhirlLantern_0
+  - first:
+      213: -5594314276072581831
+    second: Bandit_CastWhirlLantern_1
+  - first:
+      213: 7828885898922708418
+    second: Bandit_CastWhirlLantern_2
+  - first:
+      213: -3748627038460007304
+    second: Bandit_CastWhirlLantern_3
+  - first:
+      213: -374669163496862274
+    second: Bandit_CastWhirlLantern_4
+  - first:
+      213: 6246038311547753912
+    second: Bandit_CastWhirlLantern_5
+  - first:
+      213: 2923885053347461384
+    second: Bandit_CastWhirlLantern_6
+  - first:
+      213: -559637533570480420
+    second: Bandit_CastWhirlLantern_7
+  - first:
+      213: -712386155766970551
+    second: Bandit_CastWhirlLantern_8
+  - first:
+      213: -6675828370226272577
+    second: Bandit_CastWhirlLantern_9
+  - first:
+      213: -6213009479419123116
+    second: Bandit_CastWhirlLantern_10
+  - first:
+      213: 432918695965375069
+    second: Bandit_CastWhirlLantern_11
+  - first:
+      213: 8394409316421445811
+    second: Bandit_CastWhirlLantern_12
+  - first:
+      213: -5244667338801828943
+    second: Bandit_CastWhirlLantern_13
+  - first:
+      213: -5809475021858657653
+    second: Bandit_CastWhirlLantern_14
+  - first:
+      213: -1217603600180950374
+    second: Bandit_CastWhirlLantern_15
+  - first:
+      213: -2608840861449546493
+    second: Bandit_CastWhirlLantern_16
+  - first:
+      213: 3543935051847695339
+    second: Bandit_CastWhirlLantern_17
+  - first:
+      213: 7266409988282469665
+    second: Bandit_CastWhirlLantern_18
+  - first:
+      213: 7213145047847055006
+    second: Bandit_CastWhirlLantern_19
+  - first:
+      213: 9222815677762323905
+    second: Bandit_CastWhirlLantern_20
+  - first:
+      213: -7175608856524217609
+    second: Bandit_CastWhirlLantern_21
+  - first:
+      213: -7640760334982012163
+    second: Bandit_CastWhirlLantern_22
+  - first:
+      213: 1541626733741247171
+    second: Bandit_CastWhirlLantern_23
+  - first:
+      213: -6396185061127979328
+    second: Bandit_CastWhirlLantern_24
+  - first:
+      213: -4898587337100764264
+    second: Bandit_CastWhirlLantern_25
+  - first:
+      213: -8821297635941038476
+    second: Bandit_CastWhirlLantern_26
+  - first:
+      213: 3010956927653909644
+    second: Bandit_CastWhirlLantern_27
+  - first:
+      213: 3042019577977596577
+    second: Bandit_CastWhirlLantern_28
+  - first:
+      213: -5519940865807859382
+    second: Bandit_CastWhirlLantern_29
+  - first:
+      213: 3469130260999014573
+    second: Bandit_CastWhirlLantern_30
+  - first:
+      213: -3304277374710062028
+    second: Bandit_CastWhirlLantern_31
+  - first:
+      213: 6733243109331713610
+    second: Bandit_CastWhirlLantern_32
+  - first:
+      213: 1508093232242176157
+    second: Bandit_CastWhirlLantern_33
+  - first:
+      213: 8252763803766157457
+    second: Bandit_CastWhirlLantern_34
+  - first:
+      213: 6073276133631631836
+    second: Bandit_CastWhirlLantern_35
+  - first:
+      213: -2799576533429520979
+    second: Bandit_CastWhirlLantern_36
+  - first:
+      213: 1644104616514768844
+    second: Bandit_CastWhirlLantern_37
+  - first:
+      213: 6605667537377445881
+    second: Bandit_CastWhirlLantern_38
+  - first:
+      213: -4803105062939981389
+    second: Bandit_CastWhirlLantern_39
+  - first:
+      213: 5826381621132931064
+    second: Bandit_CastWhirlLantern_40
+  - first:
+      213: 7037519064194159137
+    second: Bandit_CastWhirlLantern_41
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 98
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f342bbe21eb0aa14da96cb902d429587
+      internalID: 1116146057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 98
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: 0.125, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 209b395ab1ebc4a45858743c5fa2608d
+      internalID: 943535261
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 98
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.6666667, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 338386ac162cc0b489d1ecc847bb464a
+      internalID: 2010733402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 98
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.53846157}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55bdbcec45f85804396b6d5a968235e3
+      internalID: 1544608451
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 98
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 1, y: -3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b2b709902e210404e98613e2d1a5f2e5
+      internalID: -1669261546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 84
+        width: 2
+        height: 1
+      alignment: 9
+      pivot: {x: -3, y: -12}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2bf6e2ea1e01e704abd426bb9baead28
+      internalID: 1228277480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 84
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: 7, y: -4}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 993b7f215b4047e42b34257c73d9ef01
+      internalID: -576714323
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 84
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: 2, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c49e6f3c2623f44380f971bcc90f34f
+      internalID: -1622361638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 84
+        width: 4
+        height: 9
+      alignment: 9
+      pivot: {x: 3.25, y: -0.5555556}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c2264e89885d3c40b607908264552c6
+      internalID: 1912408854
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 70
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.2, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e90d6ed3ce994104bb3ed4886d31ade2
+      internalID: 596158675
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 70
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 3.6666667, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 249b06f0f8d333f46b3fd16607e6f937
+      internalID: -1232663733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 70
+        width: 2
+        height: 10
+      alignment: 9
+      pivot: {x: 5, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e2a83f5f2bacd94199049d36c7db6fa
+      internalID: 832632362
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 70
+        width: 2
+        height: 10
+      alignment: 9
+      pivot: {x: 4.5, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4bfa23a928a0b8a498d62e31cd0ca497
+      internalID: 2044809959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 70
+        width: 7
+        height: 9
+      alignment: 9
+      pivot: {x: 1.7142857, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 83b3f7c005d86484e849d02da4e14f28
+      internalID: 1573976676
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 70
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d031d0268f9d74b468c8ae14c4c71b54
+      internalID: -2077551085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 70
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1883b0e59f8bc544bda6fce1343884f
+      internalID: 742825682
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 70
+        width: 5
+        height: 14
+      alignment: 9
+      pivot: {x: 2.2, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 74be3e544ddb6fd40b7fa9fab9aafdb4
+      internalID: -1251321588
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 56
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f25a892e9d06c84c9ab4237743bebac
+      internalID: -1425189650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.3333334, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d7140cc5c969d7c40964b2b8db19134c
+      internalID: -57438112
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 56
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b146d8b271be324f8005d5cfe2e4099
+      internalID: 1538631867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 56
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: 2, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b38a53769ca6d004d99a2fe53d65a4b4
+      internalID: 1103412244
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 56
+        width: 10
+        height: 10
+      alignment: 9
+      pivot: {x: 0.9, y: -0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ecab64279e553f841895a963cc5b45b8
+      internalID: 480241446
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 56
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a574eb6508d4dc44f8562bfd5e08b450
+      internalID: 856801092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 56
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.8, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 92accf80148f9bd4e86e808a9a45aaf6
+      internalID: 469489003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 56
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1.1111112, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4b230f127b286d84d8fba52caa4a64f7
+      internalID: -1135711592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.5555556, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8216dae22ce2ddc40accd21367e1ee07
+      internalID: 165773836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.7777778, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0f640ffc4f01b344584d7ea16d70c679
+      internalID: 1399824363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1111112, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7b0d1e7ea04e9b40bca861c0789bc34
+      internalID: 1730247218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d5522a832b184c548a12791a058ba071
+      internalID: 1176310315
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 42
+        width: 9
+        height: 10
+      alignment: 9
+      pivot: {x: 0.11111111, y: -0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bc6872a3045b839499fc5587e7186d31
+      internalID: -36539924
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 42
+        width: 9
+        height: 11
+      alignment: 9
+      pivot: {x: 0, y: -0.09090909}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21b2efbc47ee3c14da4915ede7485cda
+      internalID: 499828305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 42
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: 0.11111111, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c20737e64eeca04497271f343aa24e9
+      internalID: 74074365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 42
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0.44444445, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 106921dd6872b1d43b56b045fc191207
+      internalID: -726061501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 28
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.11111111, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 61bedf0a16bb2a34bbe7f5ea97103826
+      internalID: -2110773551
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 28
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0.2, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f8cff4b0cc097044a92e62426a69dbb6
+      internalID: 1900855331
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.54545456, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ad4bb68cd6c50914eb77fac35cbeaa28
+      internalID: 434290604
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 131a396f1877a4d4784112e068f1139c
+      internalID: -82216375
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 28
+        width: 11
+        height: 10
+      alignment: 9
+      pivot: {x: -0.27272728, y: -0.3}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4337c2249be7e64ea05251beef85385
+      internalID: 1628921107
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 28
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: -0.4, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7465de42664dd4741a82525c719da29d
+      internalID: 1542655503
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 28
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 86c9eaaac14613a46b8b4b981772d4cb
+      internalID: 1523760443
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 28
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 70b5d4ffa5352dc45b3460c29a52d4ce
+      internalID: 17180657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e08ececd06f0a3645af4242a7a36f0cc
+      internalID: 1897485080
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8d81830af48de044b8941a57388f14f
+      internalID: -1106525595
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 14
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1be71141ef9dfc84ea0d71aab85b8d4a
+      internalID: -1304892930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 14
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7002a72d18de3e943a359092b9ac5176
+      internalID: -6097306
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 14
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -1, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21c369e1e61e73545afd31040b1538a5
+      internalID: -143619347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 14
+        width: 7
+        height: 11
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a69e130e82f0b724fb2c40e285ce6823
+      internalID: 379496321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 14
+        width: 7
+        height: 12
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.41666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f9efbeeca53203641ba73f7e6c148171
+      internalID: 2035603442
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 14
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a11d7a3ccade3148aeace1599acf621
+      internalID: -832281100
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: -0.1, y: -0.36363637}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 321b6a2a7302bb946b21141d021de7f3
+      internalID: -1632987538
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 0
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: -0.09090909, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a305486631946974d8aec71918c1ff31
+      internalID: -760107423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 0
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.4, y: -0.21428572}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a2648280a03135a4c9fccb3d37157f40
+      internalID: -1903454217
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.27272728, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c9afe2080b20cdd40bfe04fe55f9504f
+      internalID: -1783271367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 0
+        width: 3
+        height: 7
+      alignment: 9
+      pivot: {x: -2, y: -1.7142857}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 563ed34d9721eb74ba57d899bd7eb6ba
+      internalID: -460996244
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 0
+        width: 2
+        height: 1
+      alignment: 9
+      pivot: {x: -3, y: -17}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bfefcd076edd8144ab86b61bf5f924d7
+      internalID: -1112239892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 0
+        width: 7
+        height: 10
+      alignment: 9
+      pivot: {x: -0.14285715, y: -0.7}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 69e251593747926439bb0a5d62462f16
+      internalID: 1224232564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastWhirlLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 0
+        width: 9
+        height: 9
+      alignment: 9
+      pivot: {x: -0.11111111, y: -0.7777778}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f55d33be54e2ed498b58bfa40c5aa0f
+      internalID: -910648602
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 74f186d17656e67478824312dd2cf687
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: cb5ee7d758429fa4d8bae6ac12e99a0e, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_CastWhirlLantern_E_0: 1116146057
+      Bandit_CastWhirlLantern_E_1: 943535261
+      Bandit_CastWhirlLantern_E_2: 2010733402
+      Bandit_CastWhirlLantern_E_3: 1544608451
+      Bandit_CastWhirlLantern_E_7: -1669261546
+      Bandit_CastWhirlLantern_NE_3: 1228277480
+      Bandit_CastWhirlLantern_NE_4: -576714323
+      Bandit_CastWhirlLantern_NE_5: -1622361638
+      Bandit_CastWhirlLantern_NE_6: 1912408854
+      Bandit_CastWhirlLantern_NW_0: -1425189650
+      Bandit_CastWhirlLantern_NW_1: -57438112
+      Bandit_CastWhirlLantern_NW_2: 1538631867
+      Bandit_CastWhirlLantern_NW_3: 1103412244
+      Bandit_CastWhirlLantern_NW_4: 480241446
+      Bandit_CastWhirlLantern_NW_5: 856801092
+      Bandit_CastWhirlLantern_NW_6: 469489003
+      Bandit_CastWhirlLantern_NW_7: -1135711592
+      Bandit_CastWhirlLantern_N_0: 596158675
+      Bandit_CastWhirlLantern_N_1: -1232663733
+      Bandit_CastWhirlLantern_N_2: 832632362
+      Bandit_CastWhirlLantern_N_3: 2044809959
+      Bandit_CastWhirlLantern_N_4: 1573976676
+      Bandit_CastWhirlLantern_N_5: -2077551085
+      Bandit_CastWhirlLantern_N_6: 742825682
+      Bandit_CastWhirlLantern_N_7: -1251321588
+      Bandit_CastWhirlLantern_SE_0: -1632987538
+      Bandit_CastWhirlLantern_SE_1: -760107423
+      Bandit_CastWhirlLantern_SE_2: -1903454217
+      Bandit_CastWhirlLantern_SE_3: -1783271367
+      Bandit_CastWhirlLantern_SE_4: -460996244
+      Bandit_CastWhirlLantern_SE_5: -1112239892
+      Bandit_CastWhirlLantern_SE_6: 1224232564
+      Bandit_CastWhirlLantern_SE_7: -910648602
+      Bandit_CastWhirlLantern_SW_0: -2110773551
+      Bandit_CastWhirlLantern_SW_1: 1900855331
+      Bandit_CastWhirlLantern_SW_2: 434290604
+      Bandit_CastWhirlLantern_SW_3: -82216375
+      Bandit_CastWhirlLantern_SW_4: 1628921107
+      Bandit_CastWhirlLantern_SW_5: 1542655503
+      Bandit_CastWhirlLantern_SW_6: 1523760443
+      Bandit_CastWhirlLantern_SW_7: 17180657
+      Bandit_CastWhirlLantern_S_0: 1897485080
+      Bandit_CastWhirlLantern_S_1: -1106525595
+      Bandit_CastWhirlLantern_S_2: -1304892930
+      Bandit_CastWhirlLantern_S_3: -6097306
+      Bandit_CastWhirlLantern_S_4: -143619347
+      Bandit_CastWhirlLantern_S_5: 379496321
+      Bandit_CastWhirlLantern_S_6: 2035603442
+      Bandit_CastWhirlLantern_S_7: -832281100
+      Bandit_CastWhirlLantern_W_0: 165773836
+      Bandit_CastWhirlLantern_W_1: 1399824363
+      Bandit_CastWhirlLantern_W_2: 1730247218
+      Bandit_CastWhirlLantern_W_3: 1176310315
+      Bandit_CastWhirlLantern_W_4: -36539924
+      Bandit_CastWhirlLantern_W_5: 499828305
+      Bandit_CastWhirlLantern_W_6: 74074365
+      Bandit_CastWhirlLantern_W_7: -726061501
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

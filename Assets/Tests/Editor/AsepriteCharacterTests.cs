@@ -16,9 +16,10 @@ using Object = UnityEngine.Object;
 /// refuses what it cannot write; the inspector reads a clip again when its file changes; saving files regenerates the
 /// recipe using them, once, and no other; the clips a prefab plays are listed; the rogue's baked clips written as files
 /// and generated give sheets byte for byte the baked ones and a set equal to the baked one, and generating again writes
-/// nothing; and generating after a frame is added, the directions are moved within the file, a layer is added or the
-/// canvas is resized keeps the ID of every slice still drawn. Imported files and generated sheets live in folders of
-/// their own, deleted after each test.
+/// nothing; generating after a frame is added, the directions are moved within the file, a layer is added or the
+/// canvas is resized keeps the ID of every slice still drawn; and a clip's lantern (Phase 4) is read from its three
+/// layers, each broken lantern reported, the rogue's lantern written on them giving its baked lantern sheet and glow.
+/// Imported files and generated sheets live in folders of their own, deleted after each test.
 /// </summary>
 public class AsepriteCharacterTests
 {
@@ -63,6 +64,7 @@ public class AsepriteCharacterTests
         tempFolders.Clear();
         AssetDatabase.DeleteAsset(CharacterSheetWriter.FolderOf(Character));
         AssetDatabase.DeleteAsset(CharacterSheetWriter.FolderOf(OtherCharacter));
+        AssetDatabase.DeleteAsset($"{CharacterSheetWriter.GlowRoot}/{Character}");
         AssetDatabase.DeleteAsset(OutsideFolder);
         if (createdArtFolder != null)
         {
@@ -158,6 +160,71 @@ public class AsepriteCharacterTests
     }
 
     /// <summary>
+    /// A clip's lantern is read from its three layers by name, shown or hidden (its glow's and light's here hidden), and
+    /// none is drawn into the frames: the Lantern layer's pixels as its layer, those the LanternGlow layer draws over
+    /// glowing (not where it draws past the lantern), and the LanternLight layer's one pixel as where its light shines
+    /// from, its middle from the feet, on a frame the body hides the lantern on too; drawn over the frames the layer gives
+    /// them as Aseprite shows them. An effect's file draws layers of those names as any other.
+    /// </summary>
+    [Test]
+    public void Read_ALanternsLayers_GiveItsLayerGlowAndLight_OutsideTheFrames()
+    {
+        Color32 iron = new(60, 50, 40, 255);
+        Color32 glass = new(255, 204, 110, 255);
+        Color32 clear = new(0, 0, 0, 0);
+        const int hidden = 3;
+        const int low = 4;
+        AsepriteFileWriter writer = Clip();
+        int lantern = writer.AddLayer(AsepriteClipReader.LanternLayer);
+        int glow = writer.AddLayer(AsepriteClipReader.LanternGlowLayer, false);
+        int light = writer.AddLayer(AsepriteClipReader.LanternLightLayer, false);
+        for (int frame = 0; frame < writer.FrameCount; frame++)
+        {
+            if (frame != hidden)
+            {
+                writer.SetCel(lantern, frame, new RectInt(4, 4, 2, 2), new[] { iron, glass, iron, glass });
+            }
+
+            writer.SetCel(glow, frame, new RectInt(5, 3, 1, 3), Enumerable.Repeat(AsepriteFileWriter.GlowMark, 3).ToArray());
+            writer.SetCel(light, frame, frame == low ? new RectInt(6, 7, 1, 1) : new RectInt(5, 5, 1, 1), new[] { AsepriteFileWriter.LightMark });
+        }
+
+        string path = WriteTemp(writer);
+
+        AsepriteClipFrames frames = AsepriteClipReader.Read(path, CharacterGait.Run, SmallFeet);
+
+        Assert.That(frames.Problems, Is.Empty);
+        Assert.That(frames.HasLantern, Is.True);
+        Color32[] carried = frames.CarriedPixels();
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            for (int frame = 0; frame < 2; frame++)
+            {
+                int index = direction * 2 + frame;
+                string where = $"{direction} {frame}";
+                bool shows = index != hidden;
+                Assert.That(SheetPixel(frames, direction, frame, 4, 4), Is.EqualTo(Colour(direction, frame)), $"{where}: the body without the lantern");
+                Assert.That(SheetPixel(frames, direction, frame, 5, 4), Is.EqualTo(clear), $"{where}: the body without the lantern");
+                Assert.That(SheetPixel(frames, frames.LanternPixels, direction, frame, 4, 4), Is.EqualTo(shows ? iron : clear), where);
+                Assert.That(SheetPixel(frames, frames.LanternPixels, direction, frame, 5, 5), Is.EqualTo(shows ? glass : clear), where);
+                Assert.That(SheetPixel(frames, frames.LanternPixels, direction, frame, 2, 2), Is.EqualTo(clear), where);
+                Assert.That(SheetPixel(frames, frames.LanternGlow, direction, frame, 5, 4).a, Is.EqualTo(shows ? 255 : 0), $"{where}: the glass glows");
+                Assert.That(SheetPixel(frames, frames.LanternGlow, direction, frame, 4, 4).a, Is.EqualTo(0), $"{where}: the iron does not");
+                Assert.That(SheetPixel(frames, frames.LanternGlow, direction, frame, 5, 3).a, Is.EqualTo(0), $"{where}: nor the glow past the lantern");
+                Assert.That(frames.LanternCentres[index], Is.EqualTo(index == low ? new Vector2(3.5f, -0.5f) : new Vector2(2.5f, 1.5f)), where);
+                Assert.That(SheetPixel(frames, carried, direction, frame, 4, 4), Is.EqualTo(shows ? iron : Colour(direction, frame)), where);
+                Assert.That(SheetPixel(frames, carried, direction, frame, 2, 2), Is.EqualTo(Colour(direction, frame)), where);
+            }
+        }
+
+        AsepriteClipFrames effect = AsepriteClipReader.ReadEffect(path, true, SmallFeet);
+        Assert.That(effect.Problems, Is.Empty);
+        Assert.That(effect.HasLantern, Is.False);
+        Assert.That(SheetPixel(effect, 0, 0, 5, 4), Is.EqualTo(glass));
+        Assert.That(SheetPixel(effect, 0, 0, 5, 5), Is.EqualTo(glass), "Hidden layers of those names are left out of an effect as any other.");
+    }
+
+    /// <summary>
     /// Each validation rule reports a broken file, naming the file and, where it has them, the tag and the frame, and
     /// gives no sheet.
     /// </summary>
@@ -177,6 +244,14 @@ public class AsepriteCharacterTests
     [TestCase("group opacity", "Bandit_Run.aseprite, group Gear: blends by Normal at opacity 128; a group must blend normally at full opacity.")]
     [TestCase("feet outside", "Bandit_Run.aseprite: the feet pixel (8, 0) lies outside its 8 x 8 canvas.")]
     [TestCase("not a file", "Bandit_Run.aseprite: could not be read as an Aseprite file.")]
+    [TestCase("lantern unlit", "Bandit_Run.aseprite: a Lantern layer but no LanternLight layer;")]
+    [TestCase("light unmarked", "Bandit_Run.aseprite, tag NW, frame 1 (Aseprite frame 7): no LanternLight pixel;")]
+    [TestCase("light marked twice", "Bandit_Run.aseprite, tag E, frame 2 (Aseprite frame 2): 2 LanternLight pixels; mark one.")]
+    [TestCase("lantern under a layer", "Bandit_Run.aseprite, layer Cloak: drawn over the Lantern layer, which shows over the whole body; move it below.")]
+    [TestCase("glow alone", "Bandit_Run.aseprite, layer LanternGlow: no Lantern layer beside it.")]
+    [TestCase("lantern twice", "Bandit_Run.aseprite: 2 layers named Lantern; a lantern has one.")]
+    [TestCase("lantern blend mode", "Bandit_Run.aseprite, layer Lantern: blends by Multiply; the lantern draws normally over the body.")]
+    [TestCase("lantern group", "Bandit_Run.aseprite, layer Lantern: a group layer; the Lantern layer is an image layer.")]
     public void Read_ABrokenClip_ReportsWhereItIsBroken(string broken, string expected)
     {
         CharacterGait gait = CharacterGait.None;
@@ -235,6 +310,41 @@ public class AsepriteCharacterTests
             case "feet outside":
                 writer = Clip(marked: eachRelease);
                 feet = new Vector2Int(8, 0);
+                break;
+            case "lantern unlit":
+                writer = Clip(marked: eachRelease);
+                writer.SetCel(writer.AddLayer(AsepriteClipReader.LanternLayer), 0, new RectInt(6, 2, 1, 1), new[] { Colour(1, 1) });
+                break;
+            case "light unmarked":
+                writer = Clip(marked: eachRelease);
+                AddLantern(writer, frame => frame == 6);
+                break;
+            case "light marked twice":
+                writer = Clip(marked: eachRelease);
+                writer.SetCel(AddLantern(writer), 1, new RectInt(6, 3, 2, 1), Enumerable.Repeat(AsepriteFileWriter.LightMark, 2).ToArray());
+                break;
+            case "lantern under a layer":
+                writer = Clip(marked: eachRelease);
+                AddLantern(writer);
+                writer.SetCel(writer.AddLayer("Cloak"), 0, new RectInt(2, 2, 1, 1), new[] { Colour(1, 1) });
+                break;
+            case "glow alone":
+                writer = Clip(marked: eachRelease);
+                writer.AddLayer(AsepriteClipReader.LanternGlowLayer, false);
+                break;
+            case "lantern twice":
+                writer = Clip(marked: eachRelease);
+                AddLantern(writer);
+                writer.AddLayer(AsepriteClipReader.LanternLayer);
+                break;
+            case "lantern blend mode":
+                writer = Clip(marked: eachRelease);
+                writer.AddLayer(AsepriteClipReader.LanternLayer, blendMode: AsepriteFileWriter.BlendMultiply);
+                writer.AddLayer(AsepriteClipReader.LanternLightLayer, false);
+                break;
+            case "lantern group":
+                writer = Clip(marked: eachRelease);
+                writer.AddGroup(AsepriteClipReader.LanternLayer);
                 break;
         }
 
@@ -537,6 +647,72 @@ public class AsepriteCharacterTests
     }
 
     /// <summary>
+    /// The rogue's baked run, carrying its lantern, written as a file by the Phase 0 helper (the lantern on its three
+    /// layers) and generated gives the baked body sheet, lantern sheet and glow byte for byte, the glow as the lantern
+    /// sheet's secondary texture, every lantern slice's rect and pivot, and each frame's light at full strength within
+    /// half a pixel of the baked one (its pixel holds the baked light); generating again writes nothing; and the file
+    /// written again without its lantern loses the lantern sheet, its glow and the set's lantern.
+    /// </summary>
+    [Test]
+    public void Generate_TheRoguesLanternOnItsLayers_GivesTheBakedLanternSheetAndGlow()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
+        CharacterClip run = rogue.Clips.Single(c => c.Name == "Run");
+        CharacterSheet sheet = new CharacterBaker(rogue).Bake(run);
+        CharacterAnimationClip baked = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath).Find("Run");
+        string lanternName = "Run" + CharacterSheetWriter.LanternSuffix;
+        string lanternPath = CharacterSheetWriter.SheetPath(Character, lanternName);
+        string glowPath = CharacterSheetWriter.GlowPath(Character, lanternName);
+        Object file = Import(AsepriteFileWriter.FromSheet(sheet), "Run");
+        AsepriteCharacterRecipe recipe = Recipe(Character, new AsepriteClip(file, CharacterGait.Run, false, baked.NaturalSpeed, run.Pivot));
+
+        AsepriteReport report = AsepriteCharacterWriter.Generate(recipe);
+
+        Assert.That(report.Problems, Is.Empty);
+        Assert.That(report.Written, Does.Contain(lanternPath));
+        Assert.That(File.ReadAllBytes(CharacterSheetWriter.SheetPath(Character, "Run")), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.SheetPath(rogue, run))));
+        Assert.That(File.ReadAllBytes(lanternPath), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.SheetPath(rogue.SheetName, lanternName))));
+        Assert.That(File.ReadAllBytes(glowPath), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.GlowPath(rogue.SheetName, lanternName))));
+        SecondarySpriteTexture secondary = ((TextureImporter)AssetImporter.GetAtPath(lanternPath)).secondarySpriteTextures.Single();
+        Assert.That(secondary.name, Is.EqualTo(SpriteSheetFiles.GlowTextureName));
+        Assert.That(AssetDatabase.GetAssetPath(secondary.texture), Is.EqualTo(glowPath));
+        CharacterAnimationClip clip = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(Character)).Find("Run");
+        Assert.That(clip.HasLantern, Is.True);
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            for (int frame = 0; frame < clip.FrameCount; frame++)
+            {
+                string where = $"{CharacterDirections.Name(direction)} {frame}";
+                Sprite layer = clip.LanternAt(direction, frame, 0);
+                Sprite bakedLayer = baked.LanternAt(direction, frame, 0);
+                Assert.That(layer != null, Is.EqualTo(bakedLayer != null), where);
+                if (layer != null)
+                {
+                    Assert.That(layer.name, Is.EqualTo(CharacterSheetWriter.SliceName(Character, lanternName, direction, frame)), where);
+                    Assert.That((layer.rect, layer.pivot), Is.EqualTo((bakedLayer.rect, bakedLayer.pivot)), where);
+                }
+
+                CharacterFrameLight light = clip.LanternLightAt(direction, frame, 0);
+                Vector2 bakedLight = baked.LanternLightAt(direction, frame, 0).Offset;
+                Assert.That(light.Strength, Is.EqualTo(1f), where);
+                Assert.That(Mathf.Abs(light.Offset.x - bakedLight.x), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
+                Assert.That(Mathf.Abs(light.Offset.y - bakedLight.y), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
+            }
+        }
+
+        AsepriteReport again = AsepriteCharacterWriter.Generate(recipe);
+        Assert.That(again.Written, Is.Empty);
+        Assert.That(again.Problems, Is.Empty);
+
+        Import(AsepriteFileWriter.FromSheet(new CharacterSheet(run, sheet.FrameCount, sheet.Pixels, sheet.FramesAtEdge, sheet.LightCentres, sheet.LightStrengths)), "Run");
+        AsepriteReport without = AsepriteCharacterWriter.Generate(recipe);
+        Assert.That(without.Problems, Is.Empty);
+        Assert.That(AssetDatabase.LoadMainAssetAtPath(lanternPath), Is.Null);
+        Assert.That(AssetDatabase.LoadMainAssetAtPath(glowPath), Is.Null);
+        Assert.That(AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(Character)).Find("Run").HasLantern, Is.False);
+    }
+
+    /// <summary>
     /// Checks a generation after an edit: no problem, the sheet's slices are every direction's
     /// <paramref name="frames"/> frames, each slice drawn before keeps its sprite ID, and the set's run points at the
     /// sheet's slices by direction and frame.
@@ -679,6 +855,27 @@ public class AsepriteCharacterTests
     }
 
     /// <summary>
+    /// Adds a lantern to a <see cref="Clip"/>'s file: a Lantern layer drawing a pixel at (6, 2) from the top left on
+    /// every frame, and a hidden LanternLight layer marking (6, 3), but on the frames <paramref name="unlit"/> picks.
+    /// Returns the light's layer.
+    /// </summary>
+    private static int AddLantern(AsepriteFileWriter writer, Func<int, bool> unlit = null)
+    {
+        int lantern = writer.AddLayer(AsepriteClipReader.LanternLayer);
+        int light = writer.AddLayer(AsepriteClipReader.LanternLightLayer, false);
+        for (int frame = 0; frame < writer.FrameCount; frame++)
+        {
+            writer.SetCel(lantern, frame, new RectInt(6, 2, 1, 1), new[] { new Color32(255, 204, 110, 255) });
+            if (unlit?.Invoke(frame) != true)
+            {
+                writer.SetCel(light, frame, new RectInt(6, 3, 1, 1), new[] { AsepriteFileWriter.LightMark });
+            }
+        }
+
+        return light;
+    }
+
+    /// <summary>
     /// The colour of frame <paramref name="frame"/> of <paramref name="direction"/> in <see cref="Clip"/>'s files.
     /// </summary>
     private static Color32 Colour(int direction, int frame)
@@ -692,8 +889,18 @@ public class AsepriteCharacterTests
     /// </summary>
     private static Color32 SheetPixel(AsepriteClipFrames frames, int direction, int frame, int x, int y)
     {
+        return SheetPixel(frames, frames.Pixels, direction, frame, x, y);
+    }
+
+    /// <summary>
+    /// The pixel at (<paramref name="x"/>, <paramref name="y"/>) from the top left of frame <paramref name="frame"/> of
+    /// <paramref name="direction"/> of <paramref name="sheet"/>, laid out as a read clip's sheet (its pixels, its
+    /// lantern's layer or glow).
+    /// </summary>
+    private static Color32 SheetPixel(AsepriteClipFrames frames, Color32[] sheet, int direction, int frame, int x, int y)
+    {
         RectInt rect = CharacterSheet.FrameRect(direction, frame, frames.FrameSize);
-        return frames.Pixels[(rect.y + frames.FrameSize.y - 1 - y) * frames.SheetWidth + rect.x + x];
+        return sheet[(rect.y + frames.FrameSize.y - 1 - y) * frames.SheetWidth + rect.x + x];
     }
 
     /// <summary>

@@ -10,7 +10,8 @@ using Object = UnityEngine.Object;
 /// <see cref="AsepriteEffectRecipeEditor"/>, <see cref="AsepriteProjectileRecipeEditor"/>): one file read as Generate
 /// reads it (<see cref="AsepriteClipReader"/>), read again only when the recipe's settings or the file (its write time
 /// and length) changed; its problems, or its sheet in a texture: one frame drawn large on the grass's colour with the
-/// pivot pixel's corner crossed, one direction playing at the file's frame durations, and the whole sheet.
+/// pivot pixel's corner crossed, one direction playing at the file's frame durations, and the whole sheet; a clip
+/// carrying a lantern shows it over the body, as the game does while it burns.
 /// </summary>
 internal sealed class AsepritePreview
 {
@@ -73,7 +74,7 @@ internal sealed class AsepritePreview
             };
         }
 
-        texture.SetPixels32(Frames.Pixels);
+        texture.SetPixels32(Frames.CarriedPixels());
         texture.Apply();
     }
 

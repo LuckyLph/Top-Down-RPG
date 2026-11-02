@@ -179,7 +179,7 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
         builder.RegisterInstance(new UserSettings(new MemorySaveStore()));
-        builder.Register(resolver => new PropLighting(null, resolver.Resolve<IClock>(), resolver.Resolve<Worlds>()), Lifetime.Singleton);
+        builder.Register<PropLighting>(Lifetime.Singleton).WithParameter(typeof(DayClock), (object)null);
         return builder.Build();
     }
 

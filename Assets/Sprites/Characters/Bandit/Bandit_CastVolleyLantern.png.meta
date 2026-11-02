@@ -1,0 +1,1627 @@
+fileFormatVersion: 2
+guid: e983262cad0e8374d84d4d67a6b1042b
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -506127363515663892
+    second: Bandit_CastVolleyLantern_0
+  - first:
+      213: -1559654560292803869
+    second: Bandit_CastVolleyLantern_1
+  - first:
+      213: -2177160576654014798
+    second: Bandit_CastVolleyLantern_2
+  - first:
+      213: 8028483615571831529
+    second: Bandit_CastVolleyLantern_3
+  - first:
+      213: -6993471589042981991
+    second: Bandit_CastVolleyLantern_4
+  - first:
+      213: 2308021845446042423
+    second: Bandit_CastVolleyLantern_5
+  - first:
+      213: 6813866174338694688
+    second: Bandit_CastVolleyLantern_6
+  - first:
+      213: -8668889853045065039
+    second: Bandit_CastVolleyLantern_7
+  - first:
+      213: -5921056071515729121
+    second: Bandit_CastVolleyLantern_8
+  - first:
+      213: -478940253929085085
+    second: Bandit_CastVolleyLantern_9
+  - first:
+      213: 1306535479817451484
+    second: Bandit_CastVolleyLantern_10
+  - first:
+      213: -7160803467910280259
+    second: Bandit_CastVolleyLantern_11
+  - first:
+      213: -6171466934398289704
+    second: Bandit_CastVolleyLantern_12
+  - first:
+      213: 7487440418193704481
+    second: Bandit_CastVolleyLantern_13
+  - first:
+      213: 2957252795773731608
+    second: Bandit_CastVolleyLantern_14
+  - first:
+      213: -3402277469603252372
+    second: Bandit_CastVolleyLantern_15
+  - first:
+      213: 9214006454943709430
+    second: Bandit_CastVolleyLantern_16
+  - first:
+      213: -6071277294051622044
+    second: Bandit_CastVolleyLantern_17
+  - first:
+      213: 4023647025028358411
+    second: Bandit_CastVolleyLantern_18
+  - first:
+      213: 6562024139937225101
+    second: Bandit_CastVolleyLantern_19
+  - first:
+      213: 81171359888648568
+    second: Bandit_CastVolleyLantern_20
+  - first:
+      213: 6400663663152605254
+    second: Bandit_CastVolleyLantern_21
+  - first:
+      213: 4432947009342317862
+    second: Bandit_CastVolleyLantern_22
+  - first:
+      213: 4562777644721681558
+    second: Bandit_CastVolleyLantern_23
+  - first:
+      213: -393516643031500031
+    second: Bandit_CastVolleyLantern_24
+  - first:
+      213: -4764875316000034241
+    second: Bandit_CastVolleyLantern_25
+  - first:
+      213: -9195420137232492178
+    second: Bandit_CastVolleyLantern_26
+  - first:
+      213: 4998516812858680680
+    second: Bandit_CastVolleyLantern_27
+  - first:
+      213: -542937311140641414
+    second: Bandit_CastVolleyLantern_28
+  - first:
+      213: 5648640805825544033
+    second: Bandit_CastVolleyLantern_29
+  - first:
+      213: -5185674961608725848
+    second: Bandit_CastVolleyLantern_30
+  - first:
+      213: 7020175103407634611
+    second: Bandit_CastVolleyLantern_31
+  - first:
+      213: 5611626683985839858
+    second: Bandit_CastVolleyLantern_32
+  - first:
+      213: -1854224212835398375
+    second: Bandit_CastVolleyLantern_33
+  - first:
+      213: -8804373778256649853
+    second: Bandit_CastVolleyLantern_34
+  - first:
+      213: -8593082036378263746
+    second: Bandit_CastVolleyLantern_35
+  - first:
+      213: -7125705491538765819
+    second: Bandit_CastVolleyLantern_36
+  - first:
+      213: 5331485262966389478
+    second: Bandit_CastVolleyLantern_37
+  - first:
+      213: -8808026442052783995
+    second: Bandit_CastVolleyLantern_38
+  - first:
+      213: 3593795397652365533
+    second: Bandit_CastVolleyLantern_39
+  - first:
+      213: 7155508796821339047
+    second: Bandit_CastVolleyLantern_40
+  - first:
+      213: -305467154168365319
+    second: Bandit_CastVolleyLantern_41
+  - first:
+      213: 5587392618460651070
+    second: Bandit_CastVolleyLantern_42
+  - first:
+      213: -2112254572294860996
+    second: Bandit_CastVolleyLantern_43
+  - first:
+      213: -9121114773239251195
+    second: Bandit_CastVolleyLantern_44
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -4, y: -14}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a97d1d5d6ca33bc4e95ab6de29a7a52f
+      internalID: 1844309824
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 105
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: -1.3333334, y: -2.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0133b27c908a38342ae735ef3197d98d
+      internalID: -411044760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 105
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: -1.6666666, y: -2.6}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03262f50ec2102e41bafb360c266ed99
+      internalID: -818090105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 105
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3e4f1af7d8169014987c1521643705fd
+      internalID: -559221559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 105
+        width: 6
+        height: 10
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d4ae13de36bd3964c86361dcfec4c489
+      internalID: -1775180711
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 105
+        width: 6
+        height: 9
+      alignment: 9
+      pivot: {x: -0.33333334, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3d6041b7a3d509e4391f28840bcd68f2
+      internalID: -228338238
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 105
+        width: 6
+        height: 9
+      alignment: 9
+      pivot: {x: -0.33333334, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ffa06a5ad5517be4195e66de293d3ad9
+      internalID: -885205751
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 105
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: -4, y: -17}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a748b70c19d77c54ba5e952852e19493
+      internalID: -922182055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 90
+        width: 3
+        height: 6
+      alignment: 9
+      pivot: {x: 1.3333334, y: -0.8333333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94daefea78205874b908ebcfed88b054
+      internalID: 135418883
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 90
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2fbd080da4089ef4bbd47a300e5af468
+      internalID: -1716454113
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 90
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: 1, y: -1.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 98d8bf01c212a2b4cb2621f9ff2613e4
+      internalID: -767754214
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 90
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: 1, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f873ed86b7121334cab1cc3632286b7a
+      internalID: 841346375
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 90
+        width: 3
+        height: 5
+      alignment: 9
+      pivot: {x: 1.3333334, y: -1.2}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3791a4844288bf8429b3270123ae32fb
+      internalID: 1312841139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 75
+        width: 5
+        height: 13
+      alignment: 9
+      pivot: {x: 2.6, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cae52e830d18042418489f1fada75dd0
+      internalID: 371667587
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 75
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 50e33a570fa0262408321c363f9c0346
+      internalID: 404695850
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 75
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 6, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e1817712539c5a740b66318fd0222767
+      internalID: -1387601802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 75
+        width: 2
+        height: 4
+      alignment: 9
+      pivot: {x: 6, y: -1.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cdee3038742cb3e468caa53678ed8f3b
+      internalID: 1913396818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 75
+        width: 3
+        height: 12
+      alignment: 9
+      pivot: {x: 4, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a05ed1688f9a3574f9570ba7303b8937
+      internalID: -1570888630
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 60
+        width: 9
+        height: 15
+      alignment: 9
+      pivot: {x: 1.3333334, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ef4ab1e6b55d070479ddc18f4c712316
+      internalID: -1646396430
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 60
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1.5, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a24bc42fc7233cf4d85e8778ef731084
+      internalID: -1464758607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bad53906328bab945a8b69ea133ef982
+      internalID: 1736460116
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 32ad6adbfe358e44cb4286d6a9b154a2
+      internalID: 1921249342
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9226aa003ce41944fb664366922f8df3
+      internalID: 1128048836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0794aef0febdffa4abb9ee1fa3c36414
+      internalID: 1527434351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 60
+        width: 7
+        height: 15
+      alignment: 9
+      pivot: {x: 1.8571428, y: -0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e1e604a9aa5b26a47aebf7f1a8c654a8
+      internalID: 1735380949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 60
+        width: 8
+        height: 15
+      alignment: 9
+      pivot: {x: 1.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fe875c7a12bf1f1408eeea067f38ee9d
+      internalID: -1319341147
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 45
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 62f713f3209d7984d909e499cbd912ff
+      internalID: 1197407953
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bcc30d248dec6bf41863fa414a9acf8d
+      internalID: -49384570
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6185708a5e1f26845a1118f2107fc775
+      internalID: 405960915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb7b9afeb93a9a747aadf3bece500a06
+      internalID: 1986116367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 95e2707b86bc6b84dba22394876f220d
+      internalID: 1719670620
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 219b8211beea19343bf3882ecf841685
+      internalID: -1817288486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 45
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: 0.8888889, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2f6bb93f8652f104ebf38e0c5b1abee4
+      internalID: -310270847
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 45
+        width: 8
+        height: 14
+      alignment: 9
+      pivot: {x: 0.625, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d88581cfd9e69184387deb5fbef76dde
+      internalID: 1469101200
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: -0.1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b5a134b8eef17de43b333fe7f32a9435
+      internalID: -1026506359
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1217af29026a2b345a177718c6370f83
+      internalID: 1951232880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 30
+        width: 10
+        height: 14
+      alignment: 9
+      pivot: {x: 0.1, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3ad3ee1dea78b834c8a38b10a5c101d3
+      internalID: -694365089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ca73881e0c8d5f4789919ed1cf4b694
+      internalID: -1589788127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22683b78eeb43814fab3cb1b8b5d88f7
+      internalID: -650682921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.27272728, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2e1c8a8a77742b943b95598d1b6f3416
+      internalID: 1329911139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 30
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: 0.18181819, y: 0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3705eb5fc0452c349b7b25645a25bafd
+      internalID: 477806539
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 30
+        width: 10
+        height: 15
+      alignment: 9
+      pivot: {x: -0.1, y: 0.06666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 74dffda1c67bf1a468cbe02c9bed48ed
+      internalID: -570423664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.625, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 439ec7053266ea9408666b1b9616cc15
+      internalID: 371685622
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0d2de5f4dd0d5a14098a1175ce55d22a
+      internalID: -1511627575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb23bd3d733cff54e955b5e8b9e962fe
+      internalID: -421807303
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 29c60e0f23cceb243b66de04f24005ef
+      internalID: -1516258592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ddb59268e328b3045a6a6585f2667b9c
+      internalID: 404544969
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 15
+        width: 8
+        height: 13
+      alignment: 9
+      pivot: {x: -0.375, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06959e1e42bd51647be33c318965c1d5
+      internalID: -1436392321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 15
+        width: 9
+        height: 14
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.071428575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 623741e252252b24ab79adbd10a916ab
+      internalID: 777578864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 15
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.71428573, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bbbca62ecaa7b974680d0449ce1709d5
+      internalID: -469564399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 10
+        height: 10
+      alignment: 9
+      pivot: {x: -0.2, y: -0.8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bc2493c2d12719a4a87b88e5e76e47b5
+      internalID: -856472610
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 0
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: -0.25, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dd8fa6cdccec7024fbac9fc3695f19fe
+      internalID: -1724176416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2f6f3551c4030b40b0f32737136ea7b
+      internalID: -1200854635
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.30769232}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 620b7604058d2d44ab6ed88a552b8c70
+      internalID: 1710717753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 0
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 99a5b2a012bd7a747be4a4820682e83e
+      internalID: -1365999193
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 55
+        y: 0
+        width: 11
+        height: 14
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.2857143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1df3aab84b8f7b144b80baceb7e96bef
+      internalID: -416327466
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.18181819, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6957e7772f848554992746267882cb9f
+      internalID: 463161766
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_CastVolleyLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 0
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: -0.25, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 614f7d098c9115b4b89c430bdb151cb4
+      internalID: -2050588820
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 94a7db30006270a40b7c2355620bb259
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: d217438306d61ef4eb761996e25b6265, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_CastVolleyLantern_E_0: 1844309824
+      Bandit_CastVolleyLantern_E_1: -411044760
+      Bandit_CastVolleyLantern_E_2: -818090105
+      Bandit_CastVolleyLantern_E_3: -559221559
+      Bandit_CastVolleyLantern_E_4: -1775180711
+      Bandit_CastVolleyLantern_E_5: -228338238
+      Bandit_CastVolleyLantern_E_6: -885205751
+      Bandit_CastVolleyLantern_E_7: -922182055
+      Bandit_CastVolleyLantern_NE_2: 135418883
+      Bandit_CastVolleyLantern_NE_3: -1716454113
+      Bandit_CastVolleyLantern_NE_4: -767754214
+      Bandit_CastVolleyLantern_NE_5: 841346375
+      Bandit_CastVolleyLantern_NE_6: 1312841139
+      Bandit_CastVolleyLantern_NW_0: -1646396430
+      Bandit_CastVolleyLantern_NW_1: -1464758607
+      Bandit_CastVolleyLantern_NW_2: 1736460116
+      Bandit_CastVolleyLantern_NW_3: 1921249342
+      Bandit_CastVolleyLantern_NW_4: 1128048836
+      Bandit_CastVolleyLantern_NW_5: 1527434351
+      Bandit_CastVolleyLantern_NW_6: 1735380949
+      Bandit_CastVolleyLantern_NW_7: -1319341147
+      Bandit_CastVolleyLantern_N_0: 371667587
+      Bandit_CastVolleyLantern_N_1: 404695850
+      Bandit_CastVolleyLantern_N_2: -1387601802
+      Bandit_CastVolleyLantern_N_6: 1913396818
+      Bandit_CastVolleyLantern_N_7: -1570888630
+      Bandit_CastVolleyLantern_SE_0: -856472610
+      Bandit_CastVolleyLantern_SE_1: -1724176416
+      Bandit_CastVolleyLantern_SE_2: -1200854635
+      Bandit_CastVolleyLantern_SE_3: 1710717753
+      Bandit_CastVolleyLantern_SE_4: -1365999193
+      Bandit_CastVolleyLantern_SE_5: -416327466
+      Bandit_CastVolleyLantern_SE_6: 463161766
+      Bandit_CastVolleyLantern_SE_7: -2050588820
+      Bandit_CastVolleyLantern_SW_0: -1026506359
+      Bandit_CastVolleyLantern_SW_1: 1951232880
+      Bandit_CastVolleyLantern_SW_2: -694365089
+      Bandit_CastVolleyLantern_SW_3: -1589788127
+      Bandit_CastVolleyLantern_SW_4: -650682921
+      Bandit_CastVolleyLantern_SW_5: 1329911139
+      Bandit_CastVolleyLantern_SW_6: 477806539
+      Bandit_CastVolleyLantern_SW_7: -570423664
+      Bandit_CastVolleyLantern_S_0: 371685622
+      Bandit_CastVolleyLantern_S_1: -1511627575
+      Bandit_CastVolleyLantern_S_2: -421807303
+      Bandit_CastVolleyLantern_S_3: -1516258592
+      Bandit_CastVolleyLantern_S_4: 404544969
+      Bandit_CastVolleyLantern_S_5: -1436392321
+      Bandit_CastVolleyLantern_S_6: 777578864
+      Bandit_CastVolleyLantern_S_7: -469564399
+      Bandit_CastVolleyLantern_W_0: 1197407953
+      Bandit_CastVolleyLantern_W_1: -49384570
+      Bandit_CastVolleyLantern_W_2: 405960915
+      Bandit_CastVolleyLantern_W_3: 1986116367
+      Bandit_CastVolleyLantern_W_4: 1719670620
+      Bandit_CastVolleyLantern_W_5: -1817288486
+      Bandit_CastVolleyLantern_W_6: -310270847
+      Bandit_CastVolleyLantern_W_7: 1469101200
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

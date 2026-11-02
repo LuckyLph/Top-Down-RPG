@@ -9,9 +9,12 @@ using UnityEngine;
 /// IDs by name), then the runtime <see cref="CharacterAnimationSet"/> beside the sheets
 /// (<see cref="CharacterSheetWriter.WriteSet"/>, keeping its GUID): per clip its sprites by direction and frame, the
 /// file's frame durations, its gait, whether it is armed, its contact (release) frame and a walk's, run's or sprint's
-/// natural speed. A clip with a problem is reported and left out of the set; the others are written. The clips the
-/// recipe's prefab plays and the set lacks are reported too (<see cref="CharacterClipNeeds"/>). An unchanged sheet or
-/// set is not rewritten.
+/// natural speed. A clip carrying a lantern also gets its lantern's layer written as the baker writes the rogue's
+/// (<see cref="CharacterSheetWriter.WriteLantern(string, string, Vector2Int, Vector2Int, int, Color32[], Color32[])"/>:
+/// <c>&lt;clip&gt;Lantern.png</c>, packed, with its glow) and, in the set, each sprite's lantern layer and the light it
+/// casts; a clip without one loses any written before. A clip with a problem is reported and left out of the set; the
+/// others are written. The clips the recipe's prefab plays and the set lacks are reported too
+/// (<see cref="CharacterClipNeeds"/>). An unchanged sheet or set is not rewritten.
 /// </summary>
 public static class AsepriteCharacterWriter
 {
@@ -45,8 +48,16 @@ public static class AsepriteCharacterWriter
                 report.Written.Add(CharacterSheetWriter.SheetPath(character, name));
             }
 
+            string lanternName = name + CharacterSheetWriter.LanternSuffix;
+            if (CharacterSheetWriter.WriteLantern(character, name, frames.FrameSize, clip.Feet, frames.FrameCount, frames.LanternPixels, frames.LanternGlow))
+            {
+                report.Written.Add(CharacterSheetWriter.SheetPath(character, lanternName));
+            }
+
             Sprite[] sprites = CharacterSheetWriter.SheetSprites(character, name, frames.FrameCount);
-            clips.Add(CharacterAnimationClip.Create(name, clip.Gait, clip.Armed, sprites, frames.FrameSeconds, clip.Moves ? clip.NaturalSpeed : 0f, frames.ContactFrame));
+            Sprite[] lantern = frames.HasLantern ? CharacterSheetWriter.SheetSprites(character, lanternName, frames.FrameCount) : null;
+            clips.Add(CharacterAnimationClip.Create(name, clip.Gait, clip.Armed, sprites, frames.FrameSeconds, clip.Moves ? clip.NaturalSpeed : 0f, frames.ContactFrame,
+                clipLanternSprites: lantern, clipLanternLights: CharacterSheetWriter.LanternLights(frames.LanternCentres)));
         }
 
         string setPath = CharacterSheetWriter.SetPath(character);

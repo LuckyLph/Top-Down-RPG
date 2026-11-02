@@ -20,6 +20,8 @@ public sealed class AsepriteFileWriter
     public const int BlendMultiply = 1;
     public const int LoopForward = 0;
     public const int LoopReverse = 1;
+    public static readonly Color32 GlowMark = new(255, 0, 255, 255);
+    public static readonly Color32 LightMark = new(255, 255, 0, 255);
 
     private const int HeaderBytes = 128;
     private const ushort FileMagic = 0xA5E0;
@@ -63,10 +65,12 @@ public sealed class AsepriteFileWriter
 
     /// <summary>
     /// Writes the rogue's baked <paramref name="sheet"/> in the conventions of Docs/AsepriteCharacters.md: a canvas the
-    /// size of its frames, so the feet stand on the baked pivot's pixel; one layer; each direction's frames in turn, in
-    /// <see cref="CharacterDirections"/> order, under a tag named after the direction; each frame's duration rounded
-    /// to whole milliseconds; and <see cref="ContactMarker"/> as the user data of the contact (release) frame's cel in
-    /// every direction. A clip drawn over a gait gets its sheet's columns as frames, gait frame by gait frame.
+    /// size of its frames, so the feet stand on the baked pivot's pixel; a layer, Body; each direction's frames in turn,
+    /// in <see cref="CharacterDirections"/> order, under a tag named after the direction; each frame's duration rounded
+    /// to whole milliseconds; and <see cref="ContactMarker"/> as the user data of the contact (release) frame's body cel
+    /// in every direction. A clip drawn over a gait gets its sheet's columns as frames, gait frame by gait frame. A sheet
+    /// carrying a lantern gets its three layers above the body: the lantern's layer, then hidden, its glowing pixels in
+    /// <see cref="GlowMark"/> and the pixel its light shines from in <see cref="LightMark"/>.
     /// </summary>
     public static AsepriteFileWriter FromSheet(CharacterSheet sheet)
     {
@@ -74,6 +78,10 @@ public sealed class AsepriteFileWriter
         Vector2Int size = clip.FrameSize;
         AsepriteFileWriter writer = new(size.x, size.y);
         int layer = writer.AddLayer("Body");
+        bool carries = sheet.HasLantern;
+        int lantern = carries ? writer.AddLayer(AsepriteClipReader.LanternLayer) : -1;
+        int glow = carries ? writer.AddLayer(AsepriteClipReader.LanternGlowLayer, false) : -1;
+        int light = carries ? writer.AddLayer(AsepriteClipReader.LanternLightLayer, false) : -1;
         int contact = clip.Motion.ContactFrame;
         Color32[] canvas = new Color32[size.x * size.y];
         for (int direction = 0; direction < CharacterDirections.Count; direction++)
@@ -83,18 +91,43 @@ public sealed class AsepriteFileWriter
             {
                 int frame = writer.AddFrame(Mathf.RoundToInt(clip.Motion.FrameSeconds(column) * 1000f));
                 RectInt rect = CharacterSheet.FrameRect(direction, column, size);
-                for (int y = 0; y < size.y; y++)
+                CopyFrame(sheet.Pixels, sheet.Width, rect, canvas);
+                writer.SetImage(layer, frame, canvas, column == contact ? ContactMarker : null);
+                if (!carries)
                 {
-                    Array.Copy(sheet.Pixels, (rect.y + size.y - 1 - y) * sheet.Width + rect.x, canvas, y * size.x, size.x);
+                    continue;
                 }
 
-                writer.SetImage(layer, frame, canvas, column == contact ? ContactMarker : null);
+                CopyFrame(sheet.LanternPixels, sheet.Width, rect, canvas);
+                writer.SetImage(lantern, frame, canvas);
+                CopyFrame(sheet.LanternGlow, sheet.Width, rect, canvas);
+                for (int i = 0; i < canvas.Length; i++)
+                {
+                    canvas[i] = canvas[i].a > 0 ? GlowMark : default;
+                }
+
+                writer.SetImage(glow, frame, canvas);
+                Vector2 centre = sheet.LanternCentres[direction * sheet.FrameCount + column];
+                Vector2Int marked = Vector2Int.FloorToInt(centre + clip.Pivot);
+                writer.SetCel(light, frame, new RectInt(marked.x, size.y - 1 - marked.y, 1, 1), new[] { LightMark });
             }
 
             writer.AddTag(CharacterDirections.Name(direction), first, writer.FrameCount - 1);
         }
 
         return writer;
+    }
+
+    /// <summary>
+    /// Copies the frame at <paramref name="rect"/> of a sheet <paramref name="sheetWidth"/> pixels wide (rows from the
+    /// bottom) into <paramref name="canvas"/>, rows from the top as the file stores them.
+    /// </summary>
+    private static void CopyFrame(Color32[] sheet, int sheetWidth, RectInt rect, Color32[] canvas)
+    {
+        for (int y = 0; y < rect.height; y++)
+        {
+            Array.Copy(sheet, (rect.y + rect.height - 1 - y) * sheetWidth + rect.x, canvas, y * rect.width, rect.width);
+        }
     }
 
     /// <summary>

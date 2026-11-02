@@ -1,0 +1,1611 @@
+fileFormatVersion: 2
+guid: 9fb6e847b11f41e4da4b6d4ab588922d
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -6577243433058382950
+    second: Bandit_SprintLantern_0
+  - first:
+      213: 2815215440657008391
+    second: Bandit_SprintLantern_1
+  - first:
+      213: -6627277033151441379
+    second: Bandit_SprintLantern_2
+  - first:
+      213: 4574534017652140363
+    second: Bandit_SprintLantern_3
+  - first:
+      213: -1601949811558289688
+    second: Bandit_SprintLantern_4
+  - first:
+      213: -754864412248757112
+    second: Bandit_SprintLantern_5
+  - first:
+      213: 7342037714855122432
+    second: Bandit_SprintLantern_6
+  - first:
+      213: 71863576734639281
+    second: Bandit_SprintLantern_7
+  - first:
+      213: 2103843229934964656
+    second: Bandit_SprintLantern_8
+  - first:
+      213: 3328297627747223538
+    second: Bandit_SprintLantern_9
+  - first:
+      213: 1082097829804356662
+    second: Bandit_SprintLantern_10
+  - first:
+      213: 1284246936397913725
+    second: Bandit_SprintLantern_11
+  - first:
+      213: -326240695954602286
+    second: Bandit_SprintLantern_12
+  - first:
+      213: 8590626571969955290
+    second: Bandit_SprintLantern_13
+  - first:
+      213: -217958510218440002
+    second: Bandit_SprintLantern_14
+  - first:
+      213: 656809007818214787
+    second: Bandit_SprintLantern_15
+  - first:
+      213: -3760813613380316473
+    second: Bandit_SprintLantern_16
+  - first:
+      213: 4796866287533022957
+    second: Bandit_SprintLantern_17
+  - first:
+      213: -713395649737855397
+    second: Bandit_SprintLantern_18
+  - first:
+      213: -5061721484228146164
+    second: Bandit_SprintLantern_19
+  - first:
+      213: 3299415672900112351
+    second: Bandit_SprintLantern_20
+  - first:
+      213: 6199861094633795022
+    second: Bandit_SprintLantern_21
+  - first:
+      213: 7625559593655373865
+    second: Bandit_SprintLantern_22
+  - first:
+      213: 278594299403352835
+    second: Bandit_SprintLantern_23
+  - first:
+      213: 6711052823702712925
+    second: Bandit_SprintLantern_24
+  - first:
+      213: -7209682257531429289
+    second: Bandit_SprintLantern_25
+  - first:
+      213: 3696606346828253358
+    second: Bandit_SprintLantern_26
+  - first:
+      213: -5345677413116042053
+    second: Bandit_SprintLantern_27
+  - first:
+      213: -731749854948522869
+    second: Bandit_SprintLantern_28
+  - first:
+      213: -5359173898624495526
+    second: Bandit_SprintLantern_29
+  - first:
+      213: -543776446654587328
+    second: Bandit_SprintLantern_30
+  - first:
+      213: -6422603610163816268
+    second: Bandit_SprintLantern_31
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 91
+        width: 1
+        height: 3
+      alignment: 9
+      pivot: {x: 5, y: -1.6666666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b5e44ad48a29d9449b2e468a7b380592
+      internalID: 1126302077
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 91
+        width: 6
+        height: 11
+      alignment: 9
+      pivot: {x: -0.33333334, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 12656211bf829ac4ca113e1307994cff
+      internalID: -845921094
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 91
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.6666667, y: -0.61538464}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 07a5a37a8533b36478ccc392e6616c0c
+      internalID: -821007379
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 91
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: -0.6, y: -0.5833333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f30172086acbb9e41ad3e0c4998eaa6e
+      internalID: -1839511831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 91
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.5555556, y: -0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 89a3731a26f38984db987291e1696f3e
+      internalID: -775321987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 91
+        width: 4
+        height: 6
+      alignment: 9
+      pivot: {x: -0.5, y: -1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d9541d7649b98cb4385d01daf8b6c94e
+      internalID: 1314603277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_E_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 91
+        width: 1
+        height: 1
+      alignment: 9
+      pivot: {x: 4, y: -8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3021150458c96f243b13a2e0e4e66100
+      internalID: 1414233787
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 78
+        width: 8
+        height: 5
+      alignment: 9
+      pivot: {x: 1.75, y: -0.4}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 80f9ff7a74c2faf4497fc81bd2e289e4
+      internalID: -700846426
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NE_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 78
+        width: 2
+        height: 2
+      alignment: 9
+      pivot: {x: -3, y: -8}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fe1c4c84b85173d4da3ae3d1ae0b7a90
+      internalID: -2094836213
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NE_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 78
+        width: 3
+        height: 4
+      alignment: 9
+      pivot: {x: -2, y: -3.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fd3e19bb47d495646a16493fb38e00c7
+      internalID: 1276762626
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NE_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 78
+        width: 2
+        height: 1
+      alignment: 9
+      pivot: {x: -2.5, y: -10}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3613ce1c3e93cdb4da4a1711a3996a89
+      internalID: -1566561825
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 65
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: 1.375, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ba821e277f9e9da4fa4e4ac7a1ad1d8a
+      internalID: 1429240561
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 65
+        width: 8
+        height: 12
+      alignment: 9
+      pivot: {x: 1.375, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a8dc657585f2a1468c30fbd9fa1b70b
+      internalID: 1000754579
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 65
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8dace94f89c27a340b39f3ba51bf4ccf
+      internalID: 204662789
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 65
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 2.75, y: -0.8333333}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5b7342e833e0dba4eae42792a827f191
+      internalID: 880758318
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 65
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.6923077}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b8aeaa987c77c584caf5120317f1c856
+      internalID: 1089824581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 65
+        width: 4
+        height: 11
+      alignment: 9
+      pivot: {x: 2.75, y: -0.6363636}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 67c003301a8e53f40b14785dafb76c18
+      internalID: -760958979
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 65
+        width: 4
+        height: 13
+      alignment: 9
+      pivot: {x: 2.75, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 879ed1759672fee449936aa55089679e
+      internalID: 1692378128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_N_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 65
+        width: 4
+        height: 12
+      alignment: 9
+      pivot: {x: 2.75, y: -0.25}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4e4b627b3536fba499b35b8100ea6ca7
+      internalID: 319104538
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6363636, y: 0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cd7528624408bfa4dad89d439f7d64d8
+      internalID: -1775531816
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 52
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.75, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f224bb589b36fc43a1b8f0c1bbdc4fc
+      internalID: -541450350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 52
+        width: 11
+        height: 12
+      alignment: 9
+      pivot: {x: 1.2727273, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9e26322383241e4a95befeaed1802d1
+      internalID: 456032480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5454545, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cbf5b5ac8cfaff144a50b8b29f057708
+      internalID: 1377821033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 52
+        width: 13
+        height: 13
+      alignment: 9
+      pivot: {x: 1.4615384, y: -0.3846154}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 66b2e027345545d4babe85f58ae5be3a
+      internalID: 1260725138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 1.5454545, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c30f1bc2510d07644bd52c991434bade
+      internalID: -1963095428
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 52
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: 1.1666666, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f58e03da89b78244aa48a25976dac1c8
+      internalID: -1054421050
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_NW_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 52
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0.90909094, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 85ad89dcfceff364fbb8da2fc800db88
+      internalID: 761399144
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a32a1a48ee9686541aaaf18d6e00c0f3
+      internalID: -697710577
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 39
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.3, y: 0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 53a21f5a4fe820648adcbbf316e68758
+      internalID: -1563493388
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c2b70c6e52a952f44b1c2370b639ff05
+      internalID: 948879958
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 39
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 1.5, y: -0.16666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cdad1937b8cc2d2458eea34acc396b40
+      internalID: -1632238166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 39
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.6, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8777c00a885bcd6468a810906a89ace1
+      internalID: -285993864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 39
+        width: 10
+        height: 13
+      alignment: 9
+      pivot: {x: 1.4, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 76a5c5263814b11458867fa1b8fb87bc
+      internalID: -1128425038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 39
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: 1, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0d3d25fe4f553594ca1d99ffb3cf608c
+      internalID: 30709603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_W_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 39
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.4, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 68e45971af3b4a2449215c28ace78432
+      internalID: -335640390
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.16666667, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dcdc425fea8b4b74dbef59b95d7607d6
+      internalID: -1526176581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 26
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.33333334, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 82d95385dddc81248bd5a08414a9049e
+      internalID: 313789460
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 26
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: 0.41666666, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d446c5bc871f5b942a32f1d49be5be44
+      internalID: -15798070
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a9a115c02de7d504e8c83c2a1f798e9d
+      internalID: 1975314887
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.75, y: 0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 272724b20674c9c46b5acb8e02338c14
+      internalID: -1777478876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 26
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: 0.6666667, y: 0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71a7ab41489cd8b4a911841d82a79459
+      internalID: 386360973
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 26
+        width: 10
+        height: 12
+      alignment: 9
+      pivot: {x: 0.3, y: 0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3bcec03f290c41e4ea262f642a98848f
+      internalID: -1140411519
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SW_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 26
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: 0, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ebe6cf31735171c4f8c7ffd01791667a
+      internalID: 922742107
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6df3af85907918947993fc34ece8da0c
+      internalID: -1661932798
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 13
+        width: 6
+        height: 13
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f9f602a3ab882b246b0a605adf3fcfc4
+      internalID: -542035526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 950a0f8cd1c5b754bbef63d28f58b260
+      internalID: -394231329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 13
+        width: 9
+        height: 12
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f717dc61a8d18c469faa87025aee60e
+      internalID: 651915001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 509a4c2c2c6e137409e15cc693d83feb
+      internalID: 517754994
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 13
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.22222222, y: 0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3b04dbe668eb90b42b580d86a5038f1c
+      internalID: -1368637703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 13
+        width: 7
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5714286, y: -0.07692308}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f657ea9d267a51840b76edc2c065dc3d
+      internalID: 64973013
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_S_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 13
+        width: 6
+        height: 12
+      alignment: 9
+      pivot: {x: -0.8333333, y: -0.33333334}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 60895a79e4968434cb1fa8ffe75d0330
+      internalID: 863378930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 5
+        height: 9
+      alignment: 9
+      pivot: {x: -0.4, y: -0.6666667}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ae9ecc2ed3892b941aa03f15cb43b38b
+      internalID: -1371946378
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 0
+        width: 4
+        height: 8
+      alignment: 9
+      pivot: {x: -1.25, y: -0.75}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5827efab9f31adc43a0bf88a78946433
+      internalID: -857425736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_2
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 0
+        width: 9
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5555556, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dd9bdea792988354a9d382a4b3df5dd4
+      internalID: -501546887
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_3
+      rect:
+        serializedVersion: 2
+        x: 39
+        y: 0
+        width: 11
+        height: 13
+      alignment: 9
+      pivot: {x: -0.54545456, y: -0.23076923}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9cba7ad2af698024185e89305ee8bed4
+      internalID: -355464961
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_4
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 0
+        width: 12
+        height: 13
+      alignment: 9
+      pivot: {x: -0.5, y: -0.15384616}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4dc606940e7eb8841be9338bdde762d1
+      internalID: 2102887036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_5
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 0
+        width: 12
+        height: 12
+      alignment: 9
+      pivot: {x: -0.41666666, y: -0.083333336}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c2c12920d4ab5454ea511520364d4739
+      internalID: 1166107540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_6
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 0
+        width: 12
+        height: 11
+      alignment: 9
+      pivot: {x: -0.16666667, y: -0.45454547}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5f90bd9e3af34941a0010852111adc5
+      internalID: 1997096090
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bandit_SprintLantern_SE_7
+      rect:
+        serializedVersion: 2
+        x: 91
+        y: 0
+        width: 10
+        height: 11
+      alignment: 9
+      pivot: {x: 0, y: -0.54545456}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a827b2c2fc7503541add03c92ecfcfb0
+      internalID: -604275638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: d77d176af14d2f44a986628983a879da
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 94b12f4f2f851a2429b0ef2ac0ab56b8, type: 3}
+      name: _GlowTex
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Bandit_SprintLantern_E_1: 1126302077
+      Bandit_SprintLantern_E_2: -845921094
+      Bandit_SprintLantern_E_3: -821007379
+      Bandit_SprintLantern_E_4: -1839511831
+      Bandit_SprintLantern_E_5: -775321987
+      Bandit_SprintLantern_E_6: 1314603277
+      Bandit_SprintLantern_E_7: 1414233787
+      Bandit_SprintLantern_NE_0: -700846426
+      Bandit_SprintLantern_NE_3: -2094836213
+      Bandit_SprintLantern_NE_4: 1276762626
+      Bandit_SprintLantern_NE_5: -1566561825
+      Bandit_SprintLantern_NW_0: -1775531816
+      Bandit_SprintLantern_NW_1: -541450350
+      Bandit_SprintLantern_NW_2: 456032480
+      Bandit_SprintLantern_NW_3: 1377821033
+      Bandit_SprintLantern_NW_4: 1260725138
+      Bandit_SprintLantern_NW_5: -1963095428
+      Bandit_SprintLantern_NW_6: -1054421050
+      Bandit_SprintLantern_NW_7: 761399144
+      Bandit_SprintLantern_N_0: 1429240561
+      Bandit_SprintLantern_N_1: 1000754579
+      Bandit_SprintLantern_N_2: 204662789
+      Bandit_SprintLantern_N_3: 880758318
+      Bandit_SprintLantern_N_4: 1089824581
+      Bandit_SprintLantern_N_5: -760958979
+      Bandit_SprintLantern_N_6: 1692378128
+      Bandit_SprintLantern_N_7: 319104538
+      Bandit_SprintLantern_SE_0: -1371946378
+      Bandit_SprintLantern_SE_1: -857425736
+      Bandit_SprintLantern_SE_2: -501546887
+      Bandit_SprintLantern_SE_3: -355464961
+      Bandit_SprintLantern_SE_4: 2102887036
+      Bandit_SprintLantern_SE_5: 1166107540
+      Bandit_SprintLantern_SE_6: 1997096090
+      Bandit_SprintLantern_SE_7: -604275638
+      Bandit_SprintLantern_SW_0: -1526176581
+      Bandit_SprintLantern_SW_1: 313789460
+      Bandit_SprintLantern_SW_2: -15798070
+      Bandit_SprintLantern_SW_3: 1975314887
+      Bandit_SprintLantern_SW_4: -1777478876
+      Bandit_SprintLantern_SW_5: 386360973
+      Bandit_SprintLantern_SW_6: -1140411519
+      Bandit_SprintLantern_SW_7: 922742107
+      Bandit_SprintLantern_S_0: -1661932798
+      Bandit_SprintLantern_S_1: -542035526
+      Bandit_SprintLantern_S_2: -394231329
+      Bandit_SprintLantern_S_3: 651915001
+      Bandit_SprintLantern_S_4: 517754994
+      Bandit_SprintLantern_S_5: -1368637703
+      Bandit_SprintLantern_S_6: 64973013
+      Bandit_SprintLantern_S_7: 863378930
+      Bandit_SprintLantern_W_0: -697710577
+      Bandit_SprintLantern_W_1: -1563493388
+      Bandit_SprintLantern_W_2: 948879958
+      Bandit_SprintLantern_W_3: -1632238166
+      Bandit_SprintLantern_W_4: -285993864
+      Bandit_SprintLantern_W_5: -1128425038
+      Bandit_SprintLantern_W_6: 30709603
+      Bandit_SprintLantern_W_7: -335640390
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

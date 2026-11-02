@@ -1050,7 +1050,7 @@ Tests build their own grids, tilemaps and GameObjects and destroy them in `TearD
 - When the run ends it writes `Temp/TestRunSummary.txt` (`SummaryPath`, written whole through a temporary file and deleted when a run starts): `PASSED` or `FAILED` with the filter, the counts and the run's length, the slowest test classes and tests with their times (`slowest` of each, 8 by default), and a `FAIL` line per failed test with the first line of its message; `ERROR` and the message when the run could not go. Its callbacks are registered on every domain load, so a PlayMode run writes it too.
 - Waiting: a shell loop until the file exists, run in the background, which then prints it and `git status` of ProjectSettings and the scenes (a run can leave churn there).
 - Checks that run for every cell or pixel (the area generation and terrain recipe tests) go through an `Expect(condition, message)` helper rather than `Assert.That`, which costs a few microseconds a call even when it passes, its message formatted and a constraint result built; `Expect` formats its message only on failure.
-- Explicit tests run only when named or when their category is: the pathfinding benchmarks (`Benchmark`) and the terrain shader's compile test (`ShaderCompile`, about three and a quarter minutes, with a timeout of its own past the Test Framework's default of three minutes), run after a shader change and before merging one.
+- Explicit tests run only when named or when their category is: the pathfinding benchmarks (`Benchmark`) and the terrain shader's compile test (`ShaderCompile`, about three and a half minutes, with a timeout of its own past the Test Framework's default of three minutes), run after a shader change and before merging one.
 
 ### EditMode (`Assets/Tests/Editor`)
 

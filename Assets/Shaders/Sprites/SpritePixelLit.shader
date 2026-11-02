@@ -6,6 +6,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
         [NoScaleOffset] _GlowTex("Glow", 2D) = "black" {}
         _FlashColor("Flash Color", Color) = (1,1,1,1)
         _FlashAmount("Flash Amount", Range(0, 1)) = 0
+        _FlameFrames("Flame Frames", Float) = 1
 
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("RendererColor", Color) = (1,1,1,1)
@@ -63,6 +64,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 half4 _Color;
                 half4 _FlashColor;
                 half _FlashAmount;
+                float _FlameFrames;
             CBUFFER_END
 
             Varyings LitVertex(Attributes input)
@@ -74,8 +76,9 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 input.positionOS = UnityFlipSprite(input.positionOS, unity_SpriteProps.xy);
                 o.positionCS = TransformObjectToHClip(input.positionOS);
                 o.positionWS = TransformObjectToWorld(input.positionOS).xy;
-                o.shadowed = (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xy) : -1.0;
-                o.uv = input.uv;
+                float2 origin = TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xy;
+                o.shadowed = (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(origin) : -1.0;
+                o.uv = PixelFlameFrame(input.uv, origin, _FlameFrames);
                 o.color = input.color * _Color * unity_SpriteColor;
                 return o;
             }
@@ -136,6 +139,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 half4 _Color;
                 half4 _FlashColor;
                 half _FlashAmount;
+                float _FlameFrames;
             CBUFFER_END
 
             Varyings UnlitVertex(Attributes input)

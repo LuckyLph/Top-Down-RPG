@@ -220,6 +220,7 @@ MonoBehaviour:
   plateauSize: {x: 6, y: 4}
   rampWidth: 2
   plateauMargin: 3
+  beaconPrefab: {fileID: 3844868937041742124, guid: 290fc3b26bc21d6408ae5181aebe2c8e, type: 3}
   mobPrefab: {fileID: 9074636745028169715, guid: 8ecfe08abcf601f469cb9eb8e9e2dc63, type: 3}
   mobCount: 4
   mobDistanceFromSpawn: 14

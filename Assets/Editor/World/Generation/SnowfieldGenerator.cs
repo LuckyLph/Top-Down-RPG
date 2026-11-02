@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Lays out a snowfield: a field of snow ringed by pines, with a frozen lake of ice in its northern half and a hole of
 /// open water in the ice, a stone road crossing the south from west to east, a gravel trail from the road towards the
-/// lake that stops short of the ice, and a campsite (a campfire and seats on a patch of trodden dirt) on the open snow.
+/// lake that stops short of the ice with a torch at its end, and a campsite (a campfire and seats on a patch of trodden dirt) on the open snow.
 /// The party spawns on the road. Blocking props stay off the ice and the snow beside it, the paths, a clearance beside
 /// them and the ground around the spawn; every mob, and the trail, can be walked to from the spawn. Snow is the
 /// builder's ground, the layer every other one lies on, as grass is in the other generators.
@@ -17,6 +17,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
     private const int MinHolePiece = 4;
     private const int IceGap = 2;
     private const int CampsiteIceMargin = 2;
+    private const int TrailTorchReach = 3;
 
     /// <summary>
     /// The part of the snowfield a scatter layer fills: the band along its edge, the snow near the frozen lake, or the
@@ -91,6 +92,8 @@ public sealed class SnowfieldGenerator : AreaGenerator
     [SerializeField, Range(0f, 0.4f)] private float roadMeander = 0.12f;
     [Tooltip("Width in cells of the gravel trail from the road towards the lake.")]
     [SerializeField, Min(1)] private int trailWidth = 2;
+    [Tooltip("Stands beside the trail's end, east of it (Docs/Lighting.md, Phase 6); none for none.")]
+    [SerializeField] private GameObject trailTorchPrefab;
     [Tooltip("Cells beside every path kept free of blocking props.")]
     [SerializeField, Min(0)] private int pathClearance = 1;
 
@@ -130,6 +133,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
     public int HoleCount => holeCount;
     public int HoleMargin => holeMargin;
     public int PathClearance => pathClearance;
+    public GameObject TrailTorchPrefab => trailTorchPrefab;
     public int SpawnClearRadius => spawnClearRadius;
     public GameObject CampfirePrefab => campfirePrefab;
     public IReadOnlyList<GameObject> CampsiteSeats => campsiteSeats;
@@ -158,7 +162,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
 
     /// <summary>
     /// The state of one generation: the shared builder with the cells laid so far, the road's samples, the lake's
-    /// centre and how many steps each snow cell lies from the ice.
+    /// centre, the trail's end and how many steps each snow cell lies from the ice.
     /// </summary>
     private sealed class Run
     {
@@ -172,6 +176,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
         private readonly float halfWidth;
         private readonly float halfHeight;
         private Vector2 lakeCentre;
+        private Vector3Int? trailEnd;
 
         /// <summary>
         /// Prepares a generation of <paramref name="generator"/>'s settings from <paramref name="seed"/>.
@@ -190,8 +195,8 @@ public sealed class SnowfieldGenerator : AreaGenerator
         /// <summary>
         /// Lays the snow, the road, the frozen lake and the trail towards it, picks the spawn, keeps blocking props off
         /// the ice and its shore, scatters the props layer by layer, spreads the mobs, checks that the trail can be
-        /// walked to, then lays the holes in the ice and the campsite from the detail stream, so they move nothing laid
-        /// before them.
+        /// walked to, then lays the holes in the ice and the campsite from the detail stream and the trail's torch, so they
+        /// move nothing laid before them.
         /// </summary>
         public AreaLayout Build()
         {
@@ -218,6 +223,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
             builder.StartDetailStream();
             LayHoles();
             LayCampsite();
+            LayTrailTorch();
             return builder.Layout;
         }
 
@@ -323,6 +329,7 @@ public sealed class SnowfieldGenerator : AreaGenerator
                 return;
             }
 
+            trailEnd = target;
             Vector2 end = new(target.x + 0.5f, target.y + 0.5f);
             Vector2 start = road[0];
             foreach (Vector2 sample in road)
@@ -498,6 +505,26 @@ public sealed class SnowfieldGenerator : AreaGenerator
             HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, dirt, settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => IceDistance(cell) > clear && !nearPaths.Contains(cell));
+        }
+
+        /// <summary>
+        /// Stands the trail's torch beside its end (Docs/Lighting.md, Phase 6), last, drawing nothing from the streams: on
+        /// the snow nearest the point a cell east of the trail's width from its end, off the paths, the ice and the snow
+        /// beside it, where it stands with no open water round it (<see cref="AreaLayoutBuilder.PlaceLightNear"/>). Warns
+        /// when no snow there holds it.
+        /// </summary>
+        private void LayTrailTorch()
+        {
+            if (settings.trailTorchPrefab == null || trailEnd == null)
+            {
+                return;
+            }
+
+            Vector2 target = new(trailEnd.Value.x + 0.5f + settings.trailWidth * 0.5f + 1f, trailEnd.Value.y + 0.5f);
+            if (builder.PlaceLightNear(settings.trailTorchPrefab, target, TrailTorchReach, cell => !builder.IsPath(cell) && IceDistance(cell) > 1, cell => !water.Contains(cell)) == null)
+            {
+                builder.Layout.Warnings.Add("No snow beside the trail's end holds its torch.");
+            }
         }
 
         /// <summary>

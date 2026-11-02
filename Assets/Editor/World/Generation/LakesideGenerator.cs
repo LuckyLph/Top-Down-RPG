@@ -6,8 +6,8 @@ using UnityEngine;
 /// Lays out a lakeside: a grass blob ringed by trees, with a lake in its northern half, a sandy beach on the lake's
 /// southern shore and a muddy marsh around the rest of it, a stone road crossing the south from west to east, a gravel
 /// trail from the road down to the beach, patches of mud and of dry grass on the open grass, small shallow ponds
-/// apart from the lake, a wooden dock from the trail's end across the beach into the lake, tall grass along the trees
-/// and the marsh and flower meadows on the open grass. The party spawns on the road. Blocking props stay off the water,
+/// apart from the lake, a wooden dock from the trail's end across the beach into the lake with a torch at its foot, tall
+/// grass along the trees and the marsh and flower meadows on the open grass. The party spawns on the road. Blocking props stay off the water,
 /// the beach, the mud, the paths, a clearance beside them and the ground around the spawn; every mob, and the beach,
 /// can be walked to from the spawn.
 /// </summary>
@@ -18,6 +18,7 @@ public sealed class LakesideGenerator : AreaGenerator
     private const int MinDryGrassFragment = 4;
     private const int MinPondPiece = 4;
     private const int MinPatchPiece = 4;
+    private const int DockTorchReach = 3;
     private const int MeadowCentreClearance = 2;
 
     /// <summary>
@@ -134,6 +135,8 @@ public sealed class LakesideGenerator : AreaGenerator
     [SerializeField] private Vector2Int dockReach = new(4, 6);
     [Tooltip("Cells around the dock's part over the lake that must be water (or the beach it starts from), so its sides and end meet only water.")]
     [SerializeField, Min(1)] private int dockClearance = 2;
+    [Tooltip("Stands beside the dock's foot, west of its first row (Docs/Lighting.md, Phase 6); none for none.")]
+    [SerializeField] private GameObject dockTorchPrefab;
 
     [Header("Paths")]
     [Tooltip("Width in cells of the stone road crossing the south of the area from west to east.")]
@@ -178,6 +181,7 @@ public sealed class LakesideGenerator : AreaGenerator
     public int DockWidth => dockWidth;
     public Vector2Int DockReach => dockReach;
     public int DockClearance => dockClearance;
+    public GameObject DockTorchPrefab => dockTorchPrefab;
     public int PathClearance => pathClearance;
     public int RoadMargin => roadMargin;
     public int SpawnClearRadius => spawnClearRadius;
@@ -252,7 +256,7 @@ public sealed class LakesideGenerator : AreaGenerator
         /// the spawn, keeps blocking props off the open ground, scatters the props layer by layer, spreads the mobs,
         /// checks that the beach can be walked to, then lays the dry grass, the shallow ponds, the dock, the tall grass
         /// and the meadows from the detail stream, so they move nothing laid before them, drying the bushes that stand
-        /// wholly on the dry grass or the tall grass.
+        /// wholly on the dry grass or the tall grass, then the weeds and the dock's torch.
         /// </summary>
         public AreaLayout Build()
         {
@@ -286,6 +290,7 @@ public sealed class LakesideGenerator : AreaGenerator
             builder.SwapProps(settings.dryBushes, cell => dryGrass.Contains(cell) || tallGrass.Contains(cell));
             LayMeadows();
             LayWeeds();
+            LayDockTorch();
             return builder.Layout;
         }
 
@@ -879,6 +884,36 @@ public sealed class LakesideGenerator : AreaGenerator
         {
             HashSet<Vector3Int> nearMud = AreaLayoutBuilder.CellsNear(builder.Layout.TerrainCells(settings.mud), settings.weedPatches.Reach);
             builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach || nearMud.Contains(cell));
+        }
+
+        /// <summary>
+        /// Stands the dock's torch beside its foot (Docs/Lighting.md, Phase 6), last, drawing nothing from the streams: on
+        /// the ground nearest the cell west of the dock's first row, off the paths, the dock and the water, the beach
+        /// included, with ground that can be walked all round it, so the beach can still be walked
+        /// (<see cref="AreaLayoutBuilder.PlaceLightNear"/>). Warns when no ground there holds it.
+        /// </summary>
+        private void LayDockTorch()
+        {
+            if (settings.dockTorchPrefab == null || planks.Count == 0)
+            {
+                return;
+            }
+
+            Vector3Int foot = new(int.MaxValue, int.MaxValue, 0);
+            foreach (Vector3Int cell in planks)
+            {
+                if (cell.y < foot.y || (cell.y == foot.y && cell.x < foot.x))
+                {
+                    foot = cell;
+                }
+            }
+
+            Vector2 target = new(foot.x - 0.5f, foot.y + 0.5f);
+            Predicate<Vector3Int> allowed = cell => !builder.IsPath(cell) && !planks.Contains(cell) && !water.Contains(cell) && !shallows.Contains(cell);
+            if (builder.PlaceLightNear(settings.dockTorchPrefab, target, DockTorchReach, allowed, cell => !water.Contains(cell)) == null)
+            {
+                builder.Layout.Warnings.Add("No ground beside the dock's foot holds its torch.");
+            }
         }
 
         /// <summary>

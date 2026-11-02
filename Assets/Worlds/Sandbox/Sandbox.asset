@@ -47,3 +47,6 @@ MonoBehaviour:
   - name: spells
     position: {x: 91, y: 88}
     waystone: 0
+  - name: walls
+    position: {x: 67.5, y: 23.5}
+    waystone: 0

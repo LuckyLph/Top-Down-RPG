@@ -6,8 +6,8 @@ using UnityEngine;
 /// A world's generation settings (Docs/WorldGeneration.md): the <see cref="WorldDefinition"/> it composes, a world seed,
 /// the materials the world lays itself, the sea around the land and its beach, the regions (<see cref="RegionPlacement"/>)
 /// and the gaps between them, the road links between their ports (<see cref="RoadLink"/>), the waystones' plazas and the
-/// gates, the wilds' patches and mobs per chunk, a record per chunk (<see cref="ChunkRecord"/>) and the names of the
-/// entries the writer last set on the world.
+/// gates, the wilds' patches and mobs per chunk, the torches at the gates and the lamps along the roads, a record per
+/// chunk (<see cref="ChunkRecord"/>) and the names of the entries the writer last set on the world.
 /// <see cref="Compose"/> composes the world in memory, the same settings always giving the same
 /// <see cref="WorldComposition"/>. Editor-only data, edited by editor tools only.
 /// </summary>
@@ -223,6 +223,18 @@ public sealed class WorldGenerator : ScriptableObject
     [Tooltip("The wilds' scatter layers per chunk, placed in this order: earlier layers take the room first.")]
     [SerializeField] private List<WildsScatter> wildsProps = new();
 
+    [Header("Lights")]
+    [Tooltip("Torches stood in a pair at each gate, either side of its road, the first on its west or south side and the second (or the first again) on the other (Docs/Lighting.md, Phase 6); none for none.")]
+    [SerializeField] private List<GameObject> gateTorches = new();
+    [Tooltip("A lamp post stood along the stone roads near the gates; none for none. The gravel roads stay dark.")]
+    [SerializeField] private GameObject roadLamp;
+    [Tooltip("Cells along a road between two road lamps.")]
+    [SerializeField, Min(1f)] private float roadLampSpacing = 12f;
+    [Tooltip("How far from a gate a road lamp may stand, in cells; past it the road stays dark.")]
+    [SerializeField, Min(0f)] private float roadLampReach = 30f;
+    [Tooltip("Cells a road lamp keeps from every waystone and gate.")]
+    [SerializeField, Min(0f)] private float roadLampEntryClearance = 5f;
+
     [Header("Chunks")]
     [Tooltip("What the generator keeps per chunk: the written hash, locks, wide allowances and wilds seeds.")]
     [SerializeField] private List<ChunkRecord> chunks = new();
@@ -265,6 +277,11 @@ public sealed class WorldGenerator : ScriptableObject
     public int PropPathClearance => propPathClearance;
     public float PropEntryClearance => propEntryClearance;
     public IReadOnlyList<WildsScatter> WildsProps => wildsProps;
+    public IReadOnlyList<GameObject> GateTorches => gateTorches;
+    public GameObject RoadLamp => roadLamp;
+    public float RoadLampSpacing => roadLampSpacing;
+    public float RoadLampReach => roadLampReach;
+    public float RoadLampEntryClearance => roadLampEntryClearance;
     public IReadOnlyList<ChunkRecord> Chunks => chunks;
     public IReadOnlyList<string> WrittenEntries => writtenEntries;
 
@@ -330,6 +347,16 @@ public sealed class WorldGenerator : ScriptableObject
     internal void SetWaystoneLamp(GameObject lamp)
     {
         waystoneLamp = lamp;
+    }
+
+    /// <summary>
+    /// Sets the torches stood at the gates and the lamp post stood along the stone roads (none when empty or null), for
+    /// tests and tools.
+    /// </summary>
+    internal void SetLights(IEnumerable<GameObject> torches, GameObject lamp)
+    {
+        gateTorches = new List<GameObject>(torches);
+        roadLamp = lamp;
     }
 
     /// <summary>

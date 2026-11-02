@@ -11,7 +11,8 @@ using UnityEngine.SceneManagement;
 /// starting world at its default entry; every chunk draws 16 layers or fewer and together they lay all eighteen
 /// materials; no coast map is stale and the world validates; on the open chunks' joined navigation every waystone,
 /// gate and mob can be walked to from the default entry across chunk borders; and its campsites, village and waystones
-/// are lit (Docs/Lighting.md, Phase 5).
+/// are lit (Docs/Lighting.md, Phase 5), and its gates, its stone roads near them and its regions' spots too (Phase 6);
+/// and its lights cast shadows, no view holding more than eight of them (Phase 7).
 /// </summary>
 public class OverworldTests
 {
@@ -123,6 +124,24 @@ public class OverworldTests
     }
 
     /// <summary>
+    /// The Overworld's lights of Docs/Lighting.md's Phase 6: a pair of torches at each of its thirteen gates, lamp posts
+    /// along its stone roads near them, braziers at either end of the Lava Fields' causeway and a beacon on the Coast's
+    /// plateau, a torch at the Lakeside's dock and one at the Snowfield's trail's end.
+    /// </summary>
+    [Test]
+    public void ItsGatesRoadsAndRegionsSpots_AreLit()
+    {
+        int gates = composition.Entries.FindAll(entry => !entry.Waystone).Count;
+        Assert.That(gates, Is.EqualTo(13), "the gates");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "gates" && prop.Prefab.name.StartsWith("Torch")).Count, Is.EqualTo(gates * 2), "two torches at each gate");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "roads" && prop.Prefab.name.StartsWith("LampPost")).Count, Is.GreaterThanOrEqualTo(20), "lamp posts along the roads");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "lavaFields" && prop.Prefab.name.StartsWith("Brazier")).Count, Is.EqualTo(2), "the causeway's braziers");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "coast" && prop.Prefab.name.StartsWith("Brazier")).Count, Is.EqualTo(1), "the Coast's beacon");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "lakeside" && prop.Prefab.name.StartsWith("Torch")).Count, Is.EqualTo(1), "the dock's torch");
+        Assert.That(composition.Props.FindAll(prop => prop.Scope == "snowfield" && prop.Prefab.name.StartsWith("Torch")).Count, Is.EqualTo(1), "the trail's torch");
+    }
+
+    /// <summary>
     /// The Overworld's lights that are not spells (Docs/Lighting.md, Phase 5): a campfire at each of the four campsites,
     /// the Clearing's, the Snowfield's, the Coast's and the Lava Fields', lamp posts along the Village Forest's street
     /// and a lamp post on every waystone's plaza, within its radius of the waystone; the chunks hold a prop light for each
@@ -180,6 +199,39 @@ public class OverworldTests
 
         Assert.That(inScenes, Is.EqualTo(lights), "the chunks hold a light for each light prop");
         Assert.That(glows, Is.True, "the Lava Fields' ground glows");
+    }
+
+    /// <summary>
+    /// Every light prop of the Overworld casts shadows (Docs/Lighting.md, Phase 7), and no view of 20 x 11.25 units,
+    /// 1920 x 1080 screen pixels at 3 to an art pixel, holds more than the budget of 8 casting lights.
+    /// </summary>
+    [Test]
+    public void ItsLightsCast_AndNoViewHoldsMoreThanEightOfThem()
+    {
+        const int budget = 8;
+        Vector2 view = new(20f, 11.25f);
+        List<Vector2> casting = new();
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            PropLight light = prop.Prefab.GetComponentInChildren<PropLight>(true);
+            if (light != null)
+            {
+                Assert.That(light.LightSource.shadowsEnabled, Is.True, $"{prop.Prefab.name} casts.");
+                casting.Add(prop.Cell + new Vector2(0.5f, 0.5f));
+            }
+        }
+
+        int most = 0;
+        foreach (Vector2 left in casting)
+        {
+            foreach (Vector2 bottom in casting)
+            {
+                int inView = casting.FindAll(at => at.x >= left.x && at.x <= left.x + view.x && at.y >= bottom.y && at.y <= bottom.y + view.y).Count;
+                most = Mathf.Max(most, inView);
+            }
+        }
+
+        Assert.That(most, Is.InRange(1, budget), "the most casting lights a view holds");
     }
 
     /// <summary>

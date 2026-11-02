@@ -4,19 +4,29 @@ using UnityEngine;
 /// <summary>
 /// One baked variant of a prop: its pixels in the recipe's frame (rows from the bottom), its glow (each pixel's alpha how
 /// much it glows, all 0 for a prop that does not glow, and its colour the one it flickers to, black for a pixel that
-/// does not flicker), its footprint and the box around its drawing in frame pixels, whether the drawing reached the
-/// frame's edge, and a light prop's light: where it stands on the sprite, in units from the base (on the ground under
-/// where the drawing marked it), and how strongly it shines.
+/// does not flicker), the same for each frame of a moving flame's loop, the first being those, its footprint and the box
+/// around its drawing in frame pixels, measured on the first frame, whether the drawing of any frame reached the frame's
+/// edge, and a light prop's light: where it stands on the sprite, in units from the base (on the ground under where the
+/// drawing marked it), and how strongly it shines.
 /// </summary>
 public sealed class PropVariant
 {
     /// <summary>
-    /// Creates a baked variant.
+    /// Creates a baked variant of one frame.
     /// </summary>
     public PropVariant(Color32[] pixels, Color32[] glow, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
+        : this(new[] { pixels }, new[] { glow }, footprint, drawn, atEdge, hasLight, lightOffset, lightStrength)
     {
-        Pixels = pixels;
-        Glow = glow;
+    }
+
+    /// <summary>
+    /// Creates a baked variant of the frames of <paramref name="framePixels"/> and <paramref name="frameGlow"/>, the
+    /// first the one its footprint, drawing and light were measured on.
+    /// </summary>
+    public PropVariant(IReadOnlyList<Color32[]> framePixels, IReadOnlyList<Color32[]> frameGlow, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
+    {
+        FramePixels = framePixels;
+        FrameGlow = frameGlow;
         Footprint = footprint;
         Drawn = drawn;
         AtEdge = atEdge;
@@ -25,8 +35,10 @@ public sealed class PropVariant
         LightStrength = lightStrength;
     }
 
-    public Color32[] Pixels { get; }
-    public Color32[] Glow { get; }
+    public Color32[] Pixels => FramePixels[0];
+    public Color32[] Glow => FrameGlow[0];
+    public IReadOnlyList<Color32[]> FramePixels { get; }
+    public IReadOnlyList<Color32[]> FrameGlow { get; }
     public RectInt Footprint { get; }
     public RectInt Drawn { get; }
     public bool AtEdge { get; }
@@ -35,17 +47,20 @@ public sealed class PropVariant
     public float LightStrength { get; }
 
     /// <summary>
-    /// Whether any of its pixels glows.
+    /// Whether any of its pixels glows, in any frame.
     /// </summary>
     public bool Glows
     {
         get
         {
-            foreach (Color32 value in Glow)
+            foreach (Color32[] frame in FrameGlow)
             {
-                if (value.a > 0)
+                foreach (Color32 value in frame)
                 {
-                    return true;
+                    if (value.a > 0)
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -69,7 +84,8 @@ public sealed class PropVariant
 /// base, both widened to lie evenly around the base, so the root snaps onto whole pixels. Its shadow is the sun's, cast
 /// from its sprite in the game (Docs/Lighting.md, Phase 4), so none is baked. A glowing material's pixels go into its
 /// glow with their flicker colours, and a light prop's light stands on the ground under where its drawing marks it
-/// (Phase 5). The same recipe always gives the same pixels.
+/// (Phase 5). A recipe of more than one frame, a moving flame (Phase 6), draws each frame from the same stream at its
+/// share of the loop. The same recipe always gives the same pixels.
 /// </summary>
 public static class PropBaker
 {
@@ -93,11 +109,40 @@ public static class PropBaker
     }
 
     /// <summary>
-    /// Draws variant <paramref name="index"/> of <paramref name="recipe"/>.
+    /// Draws variant <paramref name="index"/> of <paramref name="recipe"/>, each of its frames at its share of the loop.
     /// </summary>
     public static PropVariant Bake(PropRecipe recipe, int index)
     {
-        ArtCanvas canvas = Render(recipe, index, out PropDrawing drawing);
+        PropVariant first = BakeFrame(recipe, index, 0f);
+        int frames = recipe.Frames;
+        if (frames <= 1)
+        {
+            return first;
+        }
+
+        Color32[][] pixels = new Color32[frames][];
+        Color32[][] glow = new Color32[frames][];
+        pixels[0] = first.Pixels;
+        glow[0] = first.Glow;
+        bool atEdge = first.AtEdge;
+        for (int f = 1; f < frames; f++)
+        {
+            PropVariant frame = BakeFrame(recipe, index, f / (float)frames);
+            pixels[f] = frame.Pixels;
+            glow[f] = frame.Glow;
+            atEdge |= frame.AtEdge;
+        }
+
+        return new PropVariant(pixels, glow, first.Footprint, first.Drawn, atEdge, first.HasLight, first.LightOffset, first.LightStrength);
+    }
+
+    /// <summary>
+    /// Draws variant <paramref name="index"/> of <paramref name="recipe"/> at <paramref name="phase"/> of a moving
+    /// flame's loop.
+    /// </summary>
+    private static PropVariant BakeFrame(PropRecipe recipe, int index, float phase)
+    {
+        ArtCanvas canvas = Render(recipe, index, out PropDrawing drawing, phase);
         Vector3 noise = new(drawing.Range(0f, NoiseRange), drawing.Range(0f, NoiseRange), drawing.Range(0f, NoiseRange));
         Color32[] pixels = canvas.Shade(drawing.Materials, recipe.LightThreshold, recipe.ShadowThreshold, recipe.InnerLineGap, noise);
         RectInt drawn = DrawnBounds(pixels, recipe.FrameSize);
@@ -139,13 +184,14 @@ public static class PropBaker
     }
 
     /// <summary>
-    /// Draws variant <paramref name="index"/> of <paramref name="recipe"/> unshaded, so tests can read what each pixel
-    /// is; <paramref name="drawing"/> holds its materials and stream.
+    /// Draws variant <paramref name="index"/> of <paramref name="recipe"/> unshaded, at <paramref name="phase"/> of a
+    /// moving flame's loop, so tests can read what each pixel is; <paramref name="drawing"/> holds its materials and
+    /// stream.
     /// </summary>
-    public static ArtCanvas Render(PropRecipe recipe, int index, out PropDrawing drawing)
+    public static ArtCanvas Render(PropRecipe recipe, int index, out PropDrawing drawing, float phase = 0f)
     {
         ArtCanvas canvas = new(recipe.FrameSize.x, recipe.FrameSize.y, recipe.BasePixel, PixelsPerCell) { HidesBelowGround = true };
-        drawing = new PropDrawing(canvas, new System.Random(VariantSeed(recipe.Seed, index)));
+        drawing = new PropDrawing(canvas, new System.Random(VariantSeed(recipe.Seed, index)), phase);
         recipe.Draw(drawing);
         return canvas;
     }

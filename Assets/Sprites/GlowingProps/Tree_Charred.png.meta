@@ -1,31 +1,31 @@
 fileFormatVersion: 2
-guid: 698f39374f38d1d4cbeda6fa1affc32c
+guid: 6db06d3446608f0429305f90786c613a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -3055490709703861066
-    second: StumpSmall_Charred_0
+      213: 816154449537104517
+    second: Tree_Charred_0
   - first:
-      213: 7410641973709789093
-    second: StumpSmall_Charred_1
+      213: -3417104876737142665
+    second: Tree_Charred_1
   - first:
-      213: -66877962102946262
-    second: StumpSmall_Charred_2
+      213: 6510091337065044706
+    second: Tree_Charred_2
   - first:
-      213: 2067286900215461547
-    second: StumpSmall_Charred_3
+      213: -1133663761251752049
+    second: Tree_Charred_3
   - first:
-      213: -1404051031684469085
-    second: StumpSmall_Charred_4
+      213: 993990532841743
+    second: Tree_Charred_4
   - first:
-      213: -5444986715108289875
-    second: StumpSmall_Charred_5
+      213: 3058152727925968800
+    second: Tree_Charred_5
   - first:
-      213: -1581130989110409344
-    second: StumpSmall_Charred_6
+      213: -757704377417044034
+    second: Tree_Charred_6
   - first:
-      213: -3368231495502468856
-    second: StumpSmall_Charred_7
+      213: -3431644271121096769
+    second: Tree_Charred_7
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -160,89 +160,89 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: StumpSmall_Charred_0
+      name: Tree_Charred_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 32
-        height: 30
+        width: 128
+        height: 128
       alignment: 9
-      pivot: {x: 0.5, y: 0.33333334}
+      pivot: {x: 0.5, y: 0.09375}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 6bc58916367b895d0800000000000000
-      internalID: -3055490709703861066
+      spriteID: 58a738ec520935b00800000000000000
+      internalID: 816154449537104517
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: StumpSmall_Charred_1
+      name: Tree_Charred_1
       rect:
         serializedVersion: 2
-        x: 32
+        x: 128
         y: 0
-        width: 32
-        height: 30
+        width: 128
+        height: 128
       alignment: 9
-      pivot: {x: 0.5, y: 0.33333334}
+      pivot: {x: 0.5, y: 0.09375}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5a75290ac93e7d660800000000000000
-      internalID: 7410641973709789093
+      spriteID: 770e3dd18310490d0800000000000000
+      internalID: -3417104876737142665
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: StumpSmall_Charred_2
+      name: Tree_Charred_2
       rect:
         serializedVersion: 2
-        x: 64
+        x: 256
         y: 0
-        width: 32
-        height: 30
+        width: 128
+        height: 128
       alignment: 9
-      pivot: {x: 0.5, y: 0.33333334}
+      pivot: {x: 0.5, y: 0.09375}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a264d8909d6621ff0800000000000000
-      internalID: -66877962102946262
+      spriteID: 2ea1c11449d785a50800000000000000
+      internalID: 6510091337065044706
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: StumpSmall_Charred_3
+      name: Tree_Charred_3
       rect:
         serializedVersion: 2
-        x: 96
+        x: 384
         y: 0
-        width: 32
-        height: 30
+        width: 128
+        height: 128
       alignment: 9
-      pivot: {x: 0.5, y: 0.33333334}
+      pivot: {x: 0.5, y: 0.09375}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ba639289b7a70bc10800000000000000
-      internalID: 2067286900215461547
+      spriteID: f872bd7c0da6440f0800000000000000
+      internalID: -1133663761251752049
       vertices: []
       indices: 
       edges: []
@@ -251,20 +251,22 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 12278f08f13d1094ebb410d18dc74167
+    spriteID: 347286e5c713d1749b5ff9c5152380ad
     internalID: 0
     vertices: []
     indices: 
     edges: []
     weights: []
-    secondaryTextures: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 818f0ffc7f484674bad652b3fcd23277, type: 3}
+      name: _GlowTex
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      StumpSmall_Charred_0: -3055490709703861066
-      StumpSmall_Charred_1: 7410641973709789093
-      StumpSmall_Charred_2: -66877962102946262
-      StumpSmall_Charred_3: 2067286900215461547
+      Tree_Charred_0: 816154449537104517
+      Tree_Charred_1: -3417104876737142665
+      Tree_Charred_2: 6510091337065044706
+      Tree_Charred_3: -1133663761251752049
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

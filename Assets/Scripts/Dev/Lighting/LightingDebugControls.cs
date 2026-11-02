@@ -6,7 +6,8 @@ using UnityEngine;
 /// What the lighting dev panel does (Docs/Lighting.md), apart from its keys and its drawing, so it can be tested without
 /// input: moves this machine's time of day to a light key, steps it, holds it, runs it faster and lets it follow the
 /// session again, through the <see cref="DayClock"/>'s local offset and rate; forces the sun's shadows, the prop lights,
-/// the ground's glow, the flicker and the glowing pixels through the overrides of <see cref="DayNightPresenter"/> and
+/// the ground's glow, the flicker, the glowing pixels and the lights' shadows through the overrides of
+/// <see cref="DayNightPresenter"/> and
 /// <see cref="PropLighting"/>; teleports the local player to the entries of its world; and writes the readout. Nothing
 /// it changes is saved or sent.
 /// </summary>
@@ -182,6 +183,17 @@ public sealed class LightingDebugControls
     }
 
     /// <summary>
+    /// The prop lights cast their shadows, or cast none (Docs/Lighting.md, Phase 7).
+    /// </summary>
+    public void CycleLightShadows()
+    {
+        if (propLighting != null)
+        {
+            propLighting.LightShadowsOverride = propLighting.LightShadowsOverride == LightingOverride.Off ? LightingOverride.Follow : LightingOverride.Off;
+        }
+    }
+
+    /// <summary>
     /// Teleports the local player to the entry <paramref name="steps"/> entries on from the last one it was sent to in
     /// its world (the first, going forward, when none was). Returns the entry's name, or null when its world has none.
     /// </summary>
@@ -212,7 +224,8 @@ public sealed class LightingDebugControls
 
     /// <summary>
     /// The readout: the time of day, how it runs and whether the sun is up and casts, the sky's and the sun's colours,
-    /// the night lights' share, how many chunks' lights burn, the spot and <paramref name="fps"/>.
+    /// the night lights' share, how many chunks' lights burn and how many casters they hold awake, the spot and
+    /// <paramref name="fps"/>.
     /// </summary>
     public string Readout(float fps)
     {
@@ -235,7 +248,8 @@ public sealed class LightingDebugControls
         text.Append("Night lights ").Append(light.NightLights.ToString("F2"));
         if (propLighting != null)
         {
-            text.Append(", PropLighting holds ").Append(propLighting.GroupCount).Append(propLighting.GroupCount == 1 ? " chunk" : " chunks");
+            text.Append(", PropLighting holds ").Append(propLighting.GroupCount).Append(propLighting.GroupCount == 1 ? " chunk" : " chunks")
+                .Append(", ").Append(propLighting.AwakeCasters).Append(propLighting.AwakeCasters == 1 ? " caster awake" : " casters awake");
         }
 
         text.Append("\nSpot ").Append(SpotText());

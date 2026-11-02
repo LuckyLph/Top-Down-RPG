@@ -317,16 +317,23 @@ MonoBehaviour:
     count: 25
     spacing: 3
     zone: 2
+  gateTorches:
+  - {fileID: 3051071036216269714, guid: ae26353a53c75f4438e731771bf0481f, type: 3}
+  - {fileID: 275005458861810045, guid: 9d2af6fbe5b6ddb46b27255fa086b7c5, type: 3}
+  roadLamp: {fileID: 3389624742728205493, guid: 441361268c466c348a7d85d3989bebc3, type: 3}
+  roadLampSpacing: 12
+  roadLampReach: 30
+  roadLampEntryClearance: 5
   chunks:
   - coords: {x: 0, y: 0}
-    writtenHash: f791cb9e306a2c89
+    writtenHash: 1627a18d3dde738a
     mobIds:
     - e2cb1571c467585a35c461e7f94ed76d
     locked: 0
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 1, y: 0}
-    writtenHash: 835b37e6e77d2e1f
+    writtenHash: 4b64fe73eb1c2547
     mobIds:
     - c8052070b55360000d735c73a1c2a174
     - 19a2ebe9516f996907a1c9ae1fcbae5b
@@ -335,7 +342,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 2, y: 0}
-    writtenHash: 677f515d6ad25ec0
+    writtenHash: c900e4614028594b
     mobIds:
     - bacc3333a5a2c43bede9b7e19f8996c2
     - 6f9bb59d263cbc58f24d745ba70d9151
@@ -343,7 +350,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 3, y: 0}
-    writtenHash: ef10bc18f304acb4
+    writtenHash: 3d8451f0ec1eb5c6
     mobIds:
     - a47c8cf11f84d4b8dab0e10c58e1dc43
     - 738a3578b573058a8107e07986a45b18
@@ -359,14 +366,14 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 0, y: 1}
-    writtenHash: 28c48e3bbdcea879
+    writtenHash: 88d5694d9e4b2307
     mobIds:
     - d1844934028a6edf2728d7e3bb2907af
     locked: 0
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 1, y: 1}
-    writtenHash: b587214b1ba3dbc9
+    writtenHash: 59c7f7f40b497d0e
     mobIds:
     - afb8d0a6299799b74c22a49e27337388
     - ad75cd8e1fb11c53eda8945bfb586459
@@ -378,7 +385,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 2, y: 1}
-    writtenHash: ef46d9e9303abc15
+    writtenHash: 7cbad0b35dbc4d2b
     mobIds:
     - e86d47295c2afd2d270b7a5a0589b75c
     - 7461bc2aace8fbef8666ef6e8e00c704
@@ -386,7 +393,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 3, y: 1}
-    writtenHash: f42e1ad014f6cbf6
+    writtenHash: e50956de808926cf
     mobIds:
     - f383f8836d2f30e9ecaba4a1f9468d42
     - 69432331281ceb46e17bb66c02ccb5eb
@@ -405,14 +412,14 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 0, y: 2}
-    writtenHash: 575bbffd958cac55
+    writtenHash: 1f6b4d39593c1734
     mobIds:
     - 4e42a2c52f66774c1fe22ebd9dd524cf
     locked: 0
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 1, y: 2}
-    writtenHash: 4b23dc0d8d231a16
+    writtenHash: ff0b4dcf12c04ce0
     mobIds:
     - 651d62604af66e72be68fe294b229aec
     - db9fe8aa0c2f38887eb513d7d1a1c152
@@ -423,7 +430,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 2, y: 2}
-    writtenHash: 5102a35e7c2590b7
+    writtenHash: 7c51c501dd909f66
     mobIds:
     - 3ff9d2897df3e92a755b0a9d5adffd36
     - 32534edc2d0ac56408e38b45cbd2ed4a
@@ -431,7 +438,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 3, y: 2}
-    writtenHash: fe9c385208a8127b
+    writtenHash: 639db4f1387c6020
     mobIds:
     - ab73ef2bb02e01ba933001e1d6005388
     - 16db10b1095fa8f55bc45c85f508bd95
@@ -471,7 +478,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 3, y: 3}
-    writtenHash: 1166df765e91df33
+    writtenHash: 618477536056ba6e
     mobIds:
     - b6045c36c04717fafe3be6a558175667
     - 73d0a4c27aac25d0b99c8906eecd4a34

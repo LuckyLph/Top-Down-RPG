@@ -10,8 +10,9 @@ using Random = System.Random;
 /// Composition), in order: the regions laid from their seeds and moved into place cell for cell, with their outlines,
 /// ports and spawn cells; the land, the sea and the world's beach, joined to a sea region's own coast; the wilds' grass;
 /// the roads between the ports, each the cheapest route over the wilds sampled into a spline; the waystones with their
-/// plazas, and the gates; the wilds' patches, mobs, groves and props, per chunk on a stream of its own; each chunk's
-/// material list and content hash; and the checks, each a warning. The regions' props come with their layouts, but for
+/// plazas, and the gates; the wilds' patches, mobs, groves and props, per chunk on a stream of its own; the torches at
+/// the gates and the lamps along the stone roads, after everything else; each chunk's material list and content hash;
+/// and the checks, each a warning. The regions' props come with their layouts, but for
 /// a blocking prop whose footprint would cross a chunk's border and those a waystone's plaza covers. Every cell's materials are a bit per material of the style's layer
 /// order in a dense array over the world, with the region owning each cell and its raised ground beside them, and
 /// every step walks ordered lists or the arrays in row order, never a hash set, so the same settings always give the
@@ -38,6 +39,9 @@ internal sealed class WorldComposer
     private const byte Far = byte.MaxValue;
     private const string MobKind = "mob";
     private const int ListedInWarning = 3;
+    private const int RoadSearch = 12;
+    private const string GatesScope = "gates";
+    private const string RoadsScope = "roads";
 
     private static readonly Vector2Int[] Neighbours4 = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
     private static readonly Vector2Int[] Neighbours8 =
@@ -304,6 +308,7 @@ internal sealed class WorldComposer
         Timed("Roads", LayRoads);
         Timed("Waystones and gates", PlaceEntries);
         Timed("Wilds", LayWilds);
+        Timed("Lights", LayLights);
         Timed("Chunks", ListChunks);
         Timed("Checks", Check);
         layouts.Clear();
@@ -1797,6 +1802,217 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
+    /// Step 9, after everything else, so nothing laid before moves (Docs/Lighting.md, Phase 6), drawing nothing from any
+    /// stream: a pair of the gate torches at each gate, on the first cell off its road either side of it, across the
+    /// road from the gate; then lamp posts along each stone road, its spline sampled from its course, the road lamp
+    /// spacing apart along it from half of it, at points within the road lamp reach of a gate and no nearer a waystone
+    /// or a gate than the road lamp entry clearance, each on the first cell beside the road, across the road from the
+    /// last lamp where it stands there, else on the same side (<see cref="TryPlaceLight"/>). The gravel roads stay
+    /// dark.
+    /// </summary>
+    private void LayLights()
+    {
+        List<Vector2> gates = new();
+        List<GameObject> torches = new();
+        foreach (GameObject torch in settings.GateTorches)
+        {
+            if (torch != null)
+            {
+                torches.Add(torch);
+            }
+        }
+
+        foreach (WorldComposition.Region region in composition.Regions)
+        {
+            foreach (WorldComposition.Port port in region.Ports)
+            {
+                if (port.Gate == null)
+                {
+                    continue;
+                }
+
+                Vector2 gate = GatePosition(port);
+                gates.Add(gate);
+                if (torches.Count == 0)
+                {
+                    continue;
+                }
+
+                Vector2Int across = port.Side == PortSide.East || port.Side == PortSide.West ? Vector2Int.up : Vector2Int.right;
+                Vector2Int cell = Vector2Int.FloorToInt(gate);
+                for (int side = 0; side < 2; side++)
+                {
+                    Vector2Int step = side == 0 ? -across : across;
+                    for (int k = 1; k <= RoadSearch; k++)
+                    {
+                        Vector2Int at = cell + step * k;
+                        int index = IndexOf(at.x, at.y);
+                        if (index >= 0 && (cells[index] & paths) != 0)
+                        {
+                            continue;
+                        }
+
+                        if (index >= 0)
+                        {
+                            TryPlaceLight(torches[side % torches.Count], at, GatesScope, false);
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (settings.RoadLamp == null)
+        {
+            return;
+        }
+
+        List<Vector2> entries = new();
+        foreach (WorldDefinition.Entry entry in composition.Entries)
+        {
+            entries.Add(entry.Position);
+        }
+
+        foreach (WorldComposition.Road road in composition.Roads)
+        {
+            if (road.Material != settings.Materials.Stone)
+            {
+                continue;
+            }
+
+            List<Vector2> samples = new();
+            AreaLayoutBuilder.SampleSpline(road.Course, samples);
+            float travelled = settings.RoadLampSpacing * 0.5f;
+            int side = 1;
+            for (int i = 1; i < samples.Count - 1; i++)
+            {
+                travelled += Vector2.Distance(samples[i], samples[i - 1]);
+                Vector2 point = samples[i];
+                if (travelled < settings.RoadLampSpacing || !IsNear(gates, point, settings.RoadLampReach) || IsNear(entries, point, settings.RoadLampEntryClearance))
+                {
+                    continue;
+                }
+
+                Vector2 along = (samples[i + 1] - samples[i - 1]).normalized;
+                Vector2 normal = new(-along.y, along.x);
+                foreach (int tried in new[] { side, -side })
+                {
+                    if (TryPlaceRoadLamp(point, normal * tried))
+                    {
+                        travelled = 0f;
+                        side = -tried;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stands the road lamp on the first cell beside the road from <paramref name="point"/> on it towards
+    /// <paramref name="outward"/>: stepping half a cell at a time until off the paths, then half a cell more, on a cell a
+    /// step from the road (<see cref="TryPlaceLight"/>, with no other footprint beside it). Returns whether it stood.
+    /// </summary>
+    private bool TryPlaceRoadLamp(Vector2 point, Vector2 outward)
+    {
+        Vector2 at = point;
+        for (int step = 0; step < RoadSearch * 2; step++)
+        {
+            at += outward * 0.5f;
+            int index = IndexAt(at);
+            if (index < 0 || (cells[index] & paths) == 0)
+            {
+                break;
+            }
+        }
+
+        at += outward * 0.5f;
+        Vector2Int cell = Vector2Int.FloorToInt(at);
+        int target = IndexOf(cell.x, cell.y);
+        return target >= 0 && roadSteps[target] == 1 && TryPlaceLight(settings.RoadLamp, cell, RoadsScope, true);
+    }
+
+    /// <summary>
+    /// Stands the blocking light prop <paramref name="prefab"/> with its footprint's bottom-left cell on
+    /// <paramref name="corner"/>, placed by <paramref name="scope"/>, when every cell it covers lies in one chunk on the
+    /// wilds' grass and its patches (off the roads, the plazas and the beach) that no blocking prop holds, a cell from
+    /// every mob, and, when <paramref name="alone"/>, with no other footprint beside it; the walk-through props on those
+    /// cells are taken off. Returns whether it stood.
+    /// </summary>
+    private bool TryPlaceLight(GameObject prefab, Vector2Int corner, string scope, bool alone)
+    {
+        if (!PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+        {
+            return false;
+        }
+
+        Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+        RectInt block = new(corner, covered);
+        uint grassy = grass | weeds | meadow | tallGrass;
+        if (ChunkCoords.ChunkOf(corner) != ChunkCoords.ChunkOf(corner + covered - Vector2Int.one))
+        {
+            return false;
+        }
+
+        for (int dy = -1; dy <= covered.y; dy++)
+        {
+            for (int dx = -1; dx <= covered.x; dx++)
+            {
+                int index = IndexOf(corner.x + dx, corner.y + dy);
+                bool inside = dx >= 0 && dy >= 0 && dx < covered.x && dy < covered.y;
+                if (inside && (index < 0 || owners[index] != WorldComposition.Wilds || (cells[index] & ~grassy) != 0 || footprints[index]))
+                {
+                    return false;
+                }
+
+                bool beside = !inside && (dx < 0 || dx >= covered.x) != (dy < 0 || dy >= covered.y);
+                if (alone && beside && index >= 0 && footprints[index])
+                {
+                    return false;
+                }
+            }
+        }
+
+        foreach (WorldComposition.Mob mob in composition.Mobs)
+        {
+            if (mob.Cell.x >= block.xMin - 1 && mob.Cell.x <= block.xMax && mob.Cell.y >= block.yMin - 1 && mob.Cell.y <= block.yMax)
+            {
+                return false;
+            }
+        }
+
+        for (int i = composition.Props.Count - 1; i >= 0; i--)
+        {
+            WorldComposition.Prop prop = composition.Props[i];
+            if (!prop.Blocks && block.Contains(prop.Cell))
+            {
+                MarkProp(prop, false);
+                composition.Props.RemoveAt(i);
+            }
+        }
+
+        AddProp(new WorldComposition.Prop(prefab, corner, Vector2.zero, covered, scope));
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="point"/> lies within <paramref name="distance"/> of a point of <paramref name="points"/>.
+    /// </summary>
+    private static bool IsNear(List<Vector2> points, Vector2 point, float distance)
+    {
+        foreach (Vector2 other in points)
+        {
+            if (Vector2.Distance(other, point) <= distance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// The seed of the chunk at <paramref name="coords"/>'s wilds stream, from the world's seed, its coordinates and
     /// <paramref name="wildsSeed"/>.
     /// </summary>
@@ -2388,7 +2604,7 @@ internal sealed class WorldComposer
     }
 
     /// <summary>
-    /// Step 9. The checks, each a warning: the placement (every region on the land and on chunks the world has,
+    /// Step 10. The checks, each a warning: the placement (every region on the land and on chunks the world has,
     /// <see cref="WorldGenerator.RegionGap"/> from every other and <see cref="WorldGenerator.RegionShoreGap"/> from the
     /// beach, a sea region's ocean joining the sea), the layer lists, reachability from the default entry, the ids, and
     /// every port linked.

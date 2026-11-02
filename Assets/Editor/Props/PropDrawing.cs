@@ -14,12 +14,14 @@ public sealed class PropDrawing
     private int nextPart;
 
     /// <summary>
-    /// Creates the drawing of a variant on <paramref name="canvas"/>, drawing from <paramref name="random"/>.
+    /// Creates the drawing of a variant on <paramref name="canvas"/>, drawing from <paramref name="random"/>, at
+    /// <paramref name="phase"/> of a moving flame's loop (0 for its first frame).
     /// </summary>
-    public PropDrawing(ArtCanvas canvas, System.Random random)
+    public PropDrawing(ArtCanvas canvas, System.Random random, float phase = 0f)
     {
         Canvas = canvas;
         Random = random;
+        Phase = phase;
     }
 
     /// <summary>
@@ -29,6 +31,7 @@ public sealed class PropDrawing
 
     public ArtCanvas Canvas { get; }
     public System.Random Random { get; }
+    public float Phase { get; }
     public IReadOnlyList<ArtMaterial> Materials => materials;
     public bool HasLight { get; private set; }
     public Vector3 LightAt { get; private set; }

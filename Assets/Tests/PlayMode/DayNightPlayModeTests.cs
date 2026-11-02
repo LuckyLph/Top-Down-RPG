@@ -12,13 +12,14 @@ using VContainer;
 /// lighting the world with the night sky and burning the night's lights, which the loaded chunks hand over as they load
 /// (Phase 5); a client joining a host takes the host's time of day from its message; and in the Sandbox's lighting
 /// showcase the lighting dev panel teleports the player to a spot, holds the time of day and forces the lights, the
-/// lava's glow, the flicker, the glowing pixels and the sun's shadows.
+/// lava's glow, the flicker, the glowing pixels, the lights' shadows and the sun's shadows.
 /// </summary>
 public class DayNightPlayModeTests
 {
     private const float Step = 1f / 512f;
     private const string SandboxRootPath = "Assets/Worlds/Sandbox/World_Sandbox.unity";
     private const string LavaChunkName = "World_Sandbox_1_0";
+    private const string WallsName = "CollisionTilemap";
 
     private InProcessClient client;
     private GameObject panel;
@@ -74,8 +75,10 @@ public class DayNightPlayModeTests
     /// <summary>
     /// In the Sandbox, the lighting panel teleports the player to the lava, where at night held the chunk's prop lights and
     /// the lava's glow burn; forced off they go out and following the day they burn again; the flicker and the glowing pixels
-    /// go off for the shaders and come back; in the afternoon the sun casts, kept off it does not; and following the
-    /// session again drops the offset and the rate.
+    /// go off for the shaders and come back; at the spot where a lamp meets a wall and trees the burning lights cast and
+    /// wake the props' casters near them, the walls cast and the sky casts nothing, and with the lights' shadows kept off
+    /// every caster sleeps (Phase 7); in the afternoon the sun casts, kept off it does not; and following the session
+    /// again drops the offset and the rate.
     /// </summary>
     [UnityTest]
     public IEnumerator TheLightingPanel_DrivesTheSandboxShowcase()
@@ -138,6 +141,28 @@ public class DayNightPlayModeTests
         flicker = Shader.GetGlobalVector("_GlowFlicker");
         Assert.That(flicker.y, Is.EqualTo(clock.Settings.GlowFlickerShare));
         Assert.That(flicker.z, Is.EqualTo(0f));
+
+        int walls = -1;
+        for (int i = 0; i < sandbox.Entries.Count; i++)
+        {
+            walls = sandbox.Entries[i].Name == "walls" ? i : walls;
+        }
+
+        Assert.That(walls, Is.GreaterThanOrEqualTo(0), "The Sandbox has a spot where a lamp meets a wall and trees.");
+        Assert.That(controls.Teleport(walls - lava), Is.EqualTo("walls"));
+        PropLighting lighting = controls.PropLighting;
+        yield return SceneBootTestHelper.WaitUntil(() => lighting.AwakeCasters > 0, "the burning lights to wake the props' casters near them");
+        Assert.That(ShownSky().shadowsEnabled, Is.False, "The sky casts nothing.");
+        Assert.That(propLight.shadowsEnabled, Is.True, "A prop light casts.");
+        Assert.That(WallsCaster().enabled, Is.True, "The walls stop the light.");
+        controls.CycleLightShadows();
+        yield return null;
+        Assert.That(lighting.AwakeCasters, Is.Zero, "With the lights' shadows kept off, every caster sleeps.");
+        Assert.That(propLight.shadowsEnabled, Is.False);
+        controls.CycleLightShadows();
+        yield return null;
+        Assert.That(lighting.AwakeCasters, Is.GreaterThan(0), "Following again, the burning lights wake their casters.");
+        Assert.That(propLight.shadowsEnabled, Is.True);
 
         controls.ShowKey(4);
         yield return null;
@@ -226,6 +251,23 @@ public class DayNightPlayModeTests
             }
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// The shadow caster of the Sandbox lava chunk's walls.
+    /// </summary>
+    private static ShadowCaster2D WallsCaster()
+    {
+        foreach (ShadowCaster2D caster in Object.FindObjectsByType<ShadowCaster2D>())
+        {
+            if (caster.gameObject.scene.name == LavaChunkName && caster.gameObject.name == WallsName)
+            {
+                return caster;
+            }
+        }
+
+        Assert.Fail("The lava chunk's walls have no shadow caster.");
         return null;
     }
 

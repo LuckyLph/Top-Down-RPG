@@ -490,6 +490,111 @@ public sealed class PropCover
 }
 
 /// <summary>
+/// Embers smouldering in charred wood (Docs/Lighting.md, Phase 6): glowing cracks in the bark, thickest near the ground
+/// and thinning out up to a height, and glowing patches in a cut end. A crack runs where value noise over the wood's world
+/// position lies near its middle, inside patches of a coarser noise that shrink with height; the embers' pixels take a
+/// glowing material of their own, flat, which no cover lies on and which touches the ground as the wood did, so the
+/// footprint stays, and may flicker between its tones.
+/// </summary>
+[Serializable]
+public sealed class PropEmbers
+{
+    private static readonly Vector3 PatchOffset = new(31.7f, 11.3f, 5.1f);
+
+    [Tooltip("Whether embers smoulder in the wood.")]
+    [SerializeField] private bool enabled;
+    [Tooltip("The embers' colours: they are drawn in the middle tone and may flicker to the shadow and light tones.")]
+    [SerializeField] private ColourRamp colours;
+    [Tooltip("How much of its own colour an ember is drawn at whatever the light.")]
+    [SerializeField, Range(0f, 1f)] private float glow = 0.75f;
+    [Tooltip("Whether the embers' pixels flicker between their tones.")]
+    [SerializeField] private bool flickers;
+    [Tooltip("How wide a crack is, as a share of the noise's range either side of its middle.")]
+    [SerializeField, Range(0f, 0.5f)] private float crack = 0.06f;
+    [Tooltip("The share of the bark the cracks run through at the ground, thinning to none at the height.")]
+    [SerializeField, Range(0f, 1f)] private float coverage = 0.5f;
+    [Tooltip("The share of a cut end that smoulders.")]
+    [SerializeField, Range(0f, 1f)] private float endCoverage = 0.2f;
+    [Tooltip("How high the cracks reach, in cells.")]
+    [SerializeField, Min(0f)] private float height = 0.7f;
+    [Tooltip("The cracks' noise cycles per cell.")]
+    [SerializeField, Min(0.1f)] private float noiseScale = 5f;
+
+    /// <summary>
+    /// Creates no embers, for Unity serialization.
+    /// </summary>
+    public PropEmbers()
+    {
+    }
+
+    /// <summary>
+    /// Creates embers in <paramref name="emberColours"/>, smouldering when <paramref name="smoulder"/>, at the settled
+    /// look's glow and spread, steady.
+    /// </summary>
+    public PropEmbers(bool smoulder, ColourRamp emberColours)
+    {
+        enabled = smoulder;
+        colours = emberColours;
+    }
+
+    /// <summary>
+    /// Adds the embers' material to <paramref name="drawing"/> when they smoulder and returns its id, or -1.
+    /// </summary>
+    public int Add(PropDrawing drawing)
+    {
+        if (!enabled)
+        {
+            return -1;
+        }
+
+        IReadOnlyList<Color32> flicker = flickers ? new[] { colours.Shadow, colours.Light } : null;
+        return drawing.AddMaterial(new ArtMaterial(new ColourRamp(colours.Middle, colours.Middle, colours.Middle, colours.Middle), true, glow: glow, flicker: flicker), true);
+    }
+
+    /// <summary>
+    /// Turns the pixels of <paramref name="bark"/> materials along the cracks, and of <paramref name="ends"/> materials in
+    /// the patches, into embers of <paramref name="emberId"/>; nothing for -1.
+    /// </summary>
+    public void Apply(PropDrawing drawing, int emberId, int[] bark, int[] ends)
+    {
+        if (emberId < 0)
+        {
+            return;
+        }
+
+        ArtCanvas canvas = drawing.Canvas;
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                if (!canvas.IsFilled(x, y))
+                {
+                    continue;
+                }
+
+                int id = canvas.MaterialIdAt(x, y);
+                Vector3 p = canvas.WorldPositionAt(x, y);
+                float patch = ArtNoise.Value(p * noiseScale * 0.4f + PatchOffset);
+                bool ember = false;
+                if (System.Array.IndexOf(ends, id) >= 0)
+                {
+                    ember = patch > 1f - endCoverage || Mathf.Abs(ArtNoise.Value(p * noiseScale) - 0.5f) < crack;
+                }
+                else if (System.Array.IndexOf(bark, id) >= 0 && p.z < height)
+                {
+                    ember = Mathf.Abs(ArtNoise.Value(p * noiseScale) - 0.5f) < crack && patch > 1f - coverage * (1f - p.z / height);
+                }
+
+                if (ember)
+                {
+                    canvas.SetMaterialId(x, y, emberId);
+                }
+            }
+        }
+    }
+}
+
+/// <summary>
 /// A pine's crown (Docs/PropGeneration.md, Phase 0 notes): tiers hanging under their apexes around the world's up axis,
 /// each a field marched along the view rays whose radius below its apex grows as a power of its depth below it (flat on
 /// top, steep at the edge), its lower edge cut in teeth whose tips hang lower and reach further out. The radii shrink

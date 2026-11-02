@@ -810,8 +810,8 @@ public sealed class VillageForestGenerator : AreaGenerator
         /// Stands lamp posts along the street through the village, about the configured spacing apart, alternately
         /// north and south of it just beyond its clearance, and outside the lots, so those north of it stand between
         /// the yards rather than in their fences. Laid last, from the detail stream: a lamp post goes only where no
-        /// blocking prop or mob stands, taking the walk-through props off its cells (<see cref="TryPlaceLamp"/>), so
-        /// nothing else moves.
+        /// reservation, blocking prop or mob holds, taking the walk-through props off its cells
+        /// (<see cref="AreaLayoutBuilder.TryPlaceLight"/>), so nothing else moves.
         /// </summary>
         private void PlaceLampPosts()
         {
@@ -840,46 +840,12 @@ public sealed class VillageForestGenerator : AreaGenerator
                 }
 
                 Vector3Int cell = AreaLayoutBuilder.CellAt(street[i] + normal * (north ? offset : -offset));
-                if (regions.TryGetValue(cell, out Region region) && region == Region.Village && !IsInLot(cell) && TryPlaceLamp(lamp, cell))
+                if (regions.TryGetValue(cell, out Region region) && region == Region.Village && !IsInLot(cell) && builder.TryPlaceLight(lamp, cell, part => !builder.Reserved.Contains(part)))
                 {
                     travelled = 0f;
                     north = !north;
                 }
             }
-        }
-
-        /// <summary>
-        /// Stands <paramref name="lamp"/> with its footprint's bottom-left cell on <paramref name="corner"/> when every
-        /// cell it covers is ground that no reservation, blocking prop or mob holds, first taking off the walk-through
-        /// props standing on those cells. Returns whether it was placed.
-        /// </summary>
-        private bool TryPlaceLamp(GameObject lamp, Vector3Int corner)
-        {
-            if (!PropGridSnapping.TryGetFootprint(lamp, out Rect footprint))
-            {
-                return false;
-            }
-
-            RectInt block = new((Vector2Int)corner, PropGridSnapping.CellsCovered(footprint, Vector2.one));
-            foreach (Vector2Int cell in block.allPositionsWithin)
-            {
-                Vector3Int part = new(cell.x, cell.y, 0);
-                if (!builder.Ground.Contains(part) || builder.Reserved.Contains(part) || builder.Occupied.Contains(part))
-                {
-                    return false;
-                }
-            }
-
-            foreach (AreaLayout.Mob mob in builder.Layout.Mobs)
-            {
-                if (block.Contains((Vector2Int)mob.Cell))
-                {
-                    return false;
-                }
-            }
-
-            builder.RemoveProps(cell => block.Contains((Vector2Int)cell), true);
-            return builder.TryPlaceFootprint(lamp, corner);
         }
 
         /// <summary>

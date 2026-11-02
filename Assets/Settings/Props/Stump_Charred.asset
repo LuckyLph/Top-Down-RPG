@@ -98,3 +98,25 @@ MonoBehaviour:
     facing: 0.88
     noise: 0.6
     noiseScale: 6
+  embers:
+    enabled: 1
+    colours:
+      outline:
+        serializedVersion: 2
+        rgba: 4278454842
+      shadow:
+        serializedVersion: 2
+        rgba: 4278723210
+      middle:
+        serializedVersion: 2
+        rgba: 4279910600
+      light:
+        serializedVersion: 2
+        rgba: 4282425599
+    glow: 0.75
+    flickers: 0
+    crack: 0.06
+    coverage: 0.5
+    endCoverage: 0.2
+    height: 0.7
+    noiseScale: 5

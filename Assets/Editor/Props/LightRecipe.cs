@@ -2,18 +2,24 @@ using UnityEngine;
 
 /// <summary>
 /// The shape of a light prop: a campfire (a ring of stones round a bed of coals, logs leaning together over it and
-/// tongues of flame rising between them) or a lamp post (a post on an iron foot with a lantern on its top).
+/// tongues of flame rising between them), a lamp post (a post on an iron foot with a lantern on its top), a torch (a
+/// pole staked among stones with a burning wrapped head) or a brazier (an iron bowl of coals on three legs, burning).
 /// </summary>
 public enum LightForm
 {
     Campfire,
-    LampPost
+    LampPost,
+    Torch,
+    Brazier
 }
 
 /// <summary>
-/// A light prop (Docs/Lighting.md, Phase 5): a campfire or a lamp post, drawn on the props' canvas, its flame, coals or
-/// glass glowing and its flame's pixels flickering between its tones, with the place its light shines from marked and
-/// the light's colour, strength, radius and flicker for the prop writer, which puts the light on its prefab.
+/// A light prop (Docs/Lighting.md, Phases 5 and 6): a campfire, a lamp post, a torch or a brazier, drawn on the props'
+/// canvas, its flame, coals or glass glowing and its flame's pixels flickering between its tones, with the place its
+/// light shines from marked and the light's colour, strength, radius and flicker for the prop writer, which puts the
+/// light on its prefab. A campfire's, a torch's and a brazier's flame moves: each variant is baked as a loop of
+/// <see cref="FlameFrames"/> frames, its tongues swelling and swaying round it and its tallest shedding a lick of flame,
+/// which the sprite shader steps through; a lamp post's wick stands still behind its glass.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Light Recipe", fileName = "Campfire")]
 public sealed class LightRecipe : PropRecipe
@@ -38,8 +44,20 @@ public sealed class LightRecipe : PropRecipe
     private const float RoofOverhang = 0.035f;
     private const float FinialRadius = 0.03f;
     private const float WickRadius = 0.05f;
+    private const float FlamePulse = 0.2f;
+    private const float FlameSway = 0.045f;
+    private const float LickRise = 0.22f;
+    private const float LickShare = 0.55f;
+    private const float StakeStone = 0.05f;
+    private const float CollarHeight = 0.04f;
+    private const int BowlSides = 10;
 
-    [Tooltip("A campfire or a lamp post.")]
+    /// <summary>
+    /// How many frames a moving flame loops through, one a flicker step: the flames material's <c>_FlameFrames</c>.
+    /// </summary>
+    public const int FlameFrames = 6;
+
+    [Tooltip("A campfire, a lamp post, a torch or a brazier.")]
     [SerializeField] private LightForm form = LightForm.Campfire;
 
     [Header("Campfire (cells)")]
@@ -68,6 +86,25 @@ public sealed class LightRecipe : PropRecipe
     [SerializeField, Min(0.05f)] private float lanternWidth = 0.24f;
     [SerializeField, Min(0.05f)] private float lanternHeight = 0.3f;
 
+    [Header("Torch (cells)")]
+    [Tooltip("How high the torch's pole stands to the foot of its head.")]
+    [SerializeField, Min(0.2f)] private float poleHeight = 1.05f;
+    [SerializeField, Min(0.01f)] private float poleRadius = 0.04f;
+    [Tooltip("The wrapped head's radius and height.")]
+    [SerializeField] private Vector2 head = new(0.065f, 0.15f);
+
+    [Header("Brazier (cells)")]
+    [Tooltip("How high the bowl's floor stands on its legs.")]
+    [SerializeField, Min(0.1f)] private float standHeight = 0.42f;
+    [Tooltip("The bowl's radius at its rim and how deep it is.")]
+    [SerializeField] private Vector2 bowl = new(0.27f, 0.14f);
+    [Tooltip("How far the legs' feet stand out from the middle.")]
+    [SerializeField, Min(0.05f)] private float legSpread = 0.22f;
+
+    [Header("Flame")]
+    [Tooltip("Whether the flame moves, a loop of frames the sprite shader steps through, or stands still; a lamp post's wick always stands still.")]
+    [SerializeField] private bool flameMoves = true;
+
     [Header("Light")]
     [Tooltip("The light's colour.")]
     [SerializeField] private Color32 lightColour = new(255, 186, 104, 255);
@@ -84,6 +121,8 @@ public sealed class LightRecipe : PropRecipe
     [SerializeField] private ColourRamp charred = Ramp(0x0e0a0a, 0x241a16, 0x3a2a22, 0x5a4434);
     [SerializeField] private ColourRamp coals = Ramp(0x1c0c08, 0x4a1a0e, 0x8a2e12, 0xd85a1a);
     [SerializeField] private ColourRamp iron = Ramp(0x14141a, 0x2c2e36, 0x484c56, 0x6c707a);
+    [Tooltip("A torch's wrapped head.")]
+    [SerializeField] private ColourRamp wrap = Ramp(0x140e0c, 0x2e221c, 0x4a382c, 0x6a5240);
     [Tooltip("The flame's tones from its edge in: its outer, middle and core colours (the shadow, middle and light of the ramp).")]
     [SerializeField] private ColourRamp flame = Ramp(0x8a2a10, 0xe65c1e, 0xfa9c2c, 0xffe278);
     [Tooltip("The lantern's glass, and the wick's flame inside it as its light colour.")]
@@ -96,15 +135,25 @@ public sealed class LightRecipe : PropRecipe
     public float LightFlicker => lightFlicker;
 
     /// <inheritdoc />
+    public override int Frames => form != LightForm.LampPost && flameMoves ? FlameFrames : 1;
+
+    /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
     {
-        if (form == LightForm.LampPost)
+        switch (form)
         {
-            DrawLampPost(drawing);
-        }
-        else
-        {
-            DrawCampfire(drawing);
+            case LightForm.LampPost:
+                DrawLampPost(drawing);
+                break;
+            case LightForm.Torch:
+                DrawTorch(drawing);
+                break;
+            case LightForm.Brazier:
+                DrawBrazier(drawing);
+                break;
+            default:
+                DrawCampfire(drawing);
+                break;
         }
     }
 
@@ -119,9 +168,6 @@ public sealed class LightRecipe : PropRecipe
         int coalsId = drawing.AddMaterial(new ArtMaterial(coals, pattern: ArtPattern.Speckle, patternScale: 0.3f, glow: 1f), false);
         int woodId = drawing.AddMaterial(new ArtMaterial(wood, pattern: ArtPattern.Bark, patternScale: 24f), false);
         int charredId = drawing.AddMaterial(new ArtMaterial(charred), false);
-        int outerId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Shadow), true, false, glow: 1f, flicker: new[] { flame.Middle }), false);
-        int middleId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Middle), true, false, glow: 1f, flicker: new[] { flame.Shadow, flame.Light }), false);
-        int coreId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Light), true, false, glow: 1f, flicker: new[] { flame.Middle }), false);
         ArtCanvas canvas = drawing.Canvas;
 
         float turn = drawing.Range(0f, 2f * Mathf.PI);
@@ -151,18 +197,7 @@ public sealed class LightRecipe : PropRecipe
             canvas.Capsule(middle, top, logRadius, logRadius * 0.85f, charredId, part);
         }
 
-        int flamePart = drawing.NewPart();
-        for (int k = 0; k < tongues; k++)
-        {
-            float height = k == 0 ? flameHeight.y : drawing.Range(flameHeight);
-            float spread = k == 0 ? 0f : FlameSpread;
-            Vector3 foot = new(drawing.Range(-spread, spread), drawing.Range(-spread, spread) * 0.5f, FlameFoot);
-            Vector3 tip = foot + new Vector3(drawing.Range(-FlameLean, FlameLean), 0f, height);
-            float width = flameWidth * (k == 0 ? 1f : drawing.Range(0.7f, 0.9f));
-            Tongue(canvas, foot, tip, width, outerId, flamePart, 0f);
-            Tongue(canvas, foot, Vector3.Lerp(foot, tip, MiddleShare), width * MiddleShare, middleId, flamePart, -width * PropBaker.PixelsPerCell);
-            Tongue(canvas, foot, Vector3.Lerp(foot, tip, CoreShare), width * CoreShare, coreId, flamePart, -2f * width * PropBaker.PixelsPerCell);
-        }
+        Flame(drawing, Vector3.zero, tongues, flameHeight, flameWidth, FlameSpread);
 
         drawing.MarkLight(new Vector3(0f, 0f, FlameFoot + flameHeight.x * 0.5f), 1f);
     }
@@ -220,6 +255,125 @@ public sealed class LightRecipe : PropRecipe
         canvas.Sphere(apex, FinialRadius, topIron, drawing.NewPart());
 
         drawing.MarkLight(middle, 1f);
+    }
+
+    /// <summary>
+    /// A standing torch: a wooden pole staked among a few stones, an iron collar, a wrapped head and a small flame on
+    /// it; the light shines from under the flame.
+    /// </summary>
+    private void DrawTorch(PropDrawing drawing)
+    {
+        int stoneId = drawing.AddMaterial(new ArtMaterial(stone, pattern: ArtPattern.Speckle, patternScale: 0.1f), true);
+        int woodId = drawing.AddMaterial(new ArtMaterial(wood, pattern: ArtPattern.Bark, patternScale: 24f), true);
+        int ironId = drawing.AddMaterial(new ArtMaterial(iron), false);
+        int wrapId = drawing.AddMaterial(new ArtMaterial(wrap, pattern: ArtPattern.Rings, patternScale: 40f), false);
+        ArtCanvas canvas = drawing.Canvas;
+
+        float turn = drawing.Range(0f, 2f * Mathf.PI);
+        for (int k = 0; k < 3; k++)
+        {
+            float angle = turn + k * 2f * Mathf.PI / 3f + drawing.Range(-0.4f, 0.4f);
+            float size = StakeStone * drawing.Range(0.8f, 1.2f);
+            Vector3 at = new(Mathf.Cos(angle) * (poleRadius + size * 0.9f), Mathf.Sin(angle) * (poleRadius + size * 0.9f), size * StoneSink);
+            canvas.Ellipsoid(at, Vector3.right * size, Vector3.up * size * 0.85f, Vector3.forward * size * 0.7f, stoneId, drawing.NewPart());
+        }
+
+        canvas.Capsule(new Vector3(0f, 0f, -0.02f), new Vector3(0f, 0f, poleHeight), poleRadius, poleRadius * 0.85f, woodId, drawing.NewPart());
+        canvas.Capsule(new Vector3(0f, 0f, poleHeight - CollarHeight), new Vector3(0f, 0f, poleHeight), poleRadius * 1.5f, poleRadius * 1.5f, ironId, drawing.NewPart());
+        canvas.Capsule(new Vector3(0f, 0f, poleHeight), new Vector3(0f, 0f, poleHeight + head.y), head.x, head.x * 1.1f, wrapId, drawing.NewPart());
+        Vector3 foot = new(0f, 0f, poleHeight + head.y * 0.75f);
+        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread);
+        drawing.MarkLight(foot, 1f);
+    }
+
+    /// <summary>
+    /// A brazier: an iron bowl on three splayed legs, filled with glowing coals heaped over its rim, flames rising from
+    /// them; the light shines from under the flame.
+    /// </summary>
+    private void DrawBrazier(PropDrawing drawing)
+    {
+        int ironId = drawing.AddMaterial(new ArtMaterial(iron), true);
+        int bowlId = drawing.AddMaterial(new ArtMaterial(iron), false);
+        int coalsId = drawing.AddMaterial(new ArtMaterial(coals, pattern: ArtPattern.Speckle, patternScale: 0.3f, glow: 1f), false);
+        ArtCanvas canvas = drawing.Canvas;
+
+        float floor = standHeight;
+        float rim = standHeight + bowl.y;
+        float bottom = bowl.x * 0.55f;
+        float turn = drawing.Range(0f, 2f * Mathf.PI);
+        int legs = drawing.NewPart();
+        for (int k = 0; k < 3; k++)
+        {
+            float angle = turn + k * 2f * Mathf.PI / 3f;
+            Vector3 outward = new(Mathf.Cos(angle), Mathf.Sin(angle), 0f);
+            canvas.Capsule(outward * legSpread + Vector3.forward * 0.02f, outward * bottom * 0.8f + Vector3.forward * (floor + bowl.y * 0.3f), 0.028f, 0.024f, ironId, legs);
+        }
+
+        Vector4[] planes = new Vector4[BowlSides + 2];
+        float dr = bowl.x - bottom;
+        for (int k = 0; k < BowlSides; k++)
+        {
+            float angle = turn + k * 2f * Mathf.PI / BowlSides;
+            Vector3 n = new Vector3(Mathf.Cos(angle) * bowl.y, Mathf.Sin(angle) * bowl.y, -dr).normalized;
+            Vector3 on = new(Mathf.Cos(angle) * bottom, Mathf.Sin(angle) * bottom, floor);
+            planes[k] = new Vector4(n.x, n.y, n.z, Vector3.Dot(n, on));
+        }
+
+        planes[BowlSides] = new Vector4(0f, 0f, 1f, rim);
+        planes[BowlSides + 1] = new Vector4(0f, 0f, -1f, -floor);
+        canvas.Convex(planes, new Bounds(new Vector3(0f, 0f, (floor + rim) * 0.5f), new Vector3(bowl.x * 2.4f, bowl.x * 2.4f, bowl.y * 1.2f)), bowlId, drawing.NewPart());
+        float heap = bowl.x * 0.86f;
+        canvas.Ellipsoid(new Vector3(0f, 0f, rim - 0.01f), Vector3.right * heap, Vector3.up * heap, Vector3.forward * CoalsHeight * 1.2f, coalsId, drawing.NewPart());
+        Vector3 foot = new(0f, 0f, rim);
+        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread);
+        drawing.MarkLight(foot, 1f);
+    }
+
+    /// <summary>
+    /// Tongues of flame rising from around <paramref name="centre"/>, the first the tallest, each three flat, unlined,
+    /// glowing layers drawn nearer the camera in turn, each layer's pixels flickering to the next layer's tone. A moving
+    /// flame (more than one frame) swells and sways each tongue round its loop at the drawing's phase, from offsets of
+    /// its own, and its tallest tongue sheds a lick of flame that rises and shrinks.
+    /// </summary>
+    private void Flame(PropDrawing drawing, Vector3 centre, int count, Vector2 heights, float width, float spread)
+    {
+        int outerId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Shadow), true, false, glow: 1f, flicker: new[] { flame.Middle }), false);
+        int middleId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Middle), true, false, glow: 1f, flicker: new[] { flame.Shadow, flame.Light }), false);
+        int coreId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Light), true, false, glow: 1f, flicker: new[] { flame.Middle }), false);
+        ArtCanvas canvas = drawing.Canvas;
+        int part = drawing.NewPart();
+        bool moving = Frames > 1;
+        float turn = 2f * Mathf.PI * drawing.Phase;
+        for (int k = 0; k < count; k++)
+        {
+            float height = k == 0 ? heights.y : drawing.Range(heights);
+            float reach = k == 0 ? 0f : spread;
+            Vector3 foot = centre + new Vector3(drawing.Range(-reach, reach), drawing.Range(-reach, reach) * 0.5f, FlameFoot);
+            Vector3 tip = foot + new Vector3(drawing.Range(-FlameLean, FlameLean), 0f, height);
+            float radius = width * (k == 0 ? 1f : drawing.Range(0.7f, 0.9f));
+            if (moving)
+            {
+                float swell = drawing.Range(0f, 2f * Mathf.PI);
+                float sway = drawing.Range(0f, 2f * Mathf.PI);
+                float scale = 1f + FlamePulse * Mathf.Sin(turn + swell);
+                tip = foot + new Vector3(tip.x - foot.x + FlameSway * (Mathf.Sin(turn + sway) + 0.5f * Mathf.Sin(2f * turn + swell)), 0f, height * scale);
+                radius *= 1f + FlamePulse * 0.4f * Mathf.Sin(turn + swell + 1f);
+                if (k == 0)
+                {
+                    float rise = Mathf.Repeat(drawing.Phase + swell / (2f * Mathf.PI), 1f);
+                    if (rise < LickShare)
+                    {
+                        float t = rise / LickShare;
+                        Vector3 lick = tip + new Vector3(FlameSway * Mathf.Sin(turn + sway), 0f, LickRise * height * t);
+                        canvas.Sphere(lick, Mathf.Lerp(radius * 0.38f, radius * 0.12f, t), outerId, part);
+                    }
+                }
+            }
+
+            Tongue(canvas, foot, tip, radius, outerId, part, 0f);
+            Tongue(canvas, foot, Vector3.Lerp(foot, tip, MiddleShare), radius * MiddleShare, middleId, part, -radius * PropBaker.PixelsPerCell);
+            Tongue(canvas, foot, Vector3.Lerp(foot, tip, CoreShare), radius * CoreShare, coreId, part, -2f * radius * PropBaker.PixelsPerCell);
+        }
     }
 
     /// <summary>

@@ -1,31 +1,43 @@
 fileFormatVersion: 2
-guid: 6db06d3446608f0429305f90786c613a
+guid: 6f0a809dbfc1f3f4aa0d3edb8196f99c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 816154449537104517
-    second: Tree_Charred_0
+      213: 6294297277211375775
+    second: Brazier_0
   - first:
-      213: -3417104876737142665
-    second: Tree_Charred_1
+      213: -7828977342338513445
+    second: Brazier_1
   - first:
-      213: 6510091337065044706
-    second: Tree_Charred_2
+      213: -3552970056342645636
+    second: Brazier_2
   - first:
-      213: -1133663761251752049
-    second: Tree_Charred_3
+      213: -7320097879632847686
+    second: Brazier_3
   - first:
-      213: 993990532841743
-    second: Tree_Charred_4
+      213: -7939310646965136395
+    second: Brazier_4
   - first:
-      213: 3058152727925968800
-    second: Tree_Charred_5
+      213: 2714324605258041706
+    second: Brazier_5
   - first:
-      213: -757704377417044034
-    second: Tree_Charred_6
+      213: 2601219527361201735
+    second: Brazier_6
   - first:
-      213: -3431644271121096769
-    second: Tree_Charred_7
+      213: 2297770591503190540
+    second: Brazier_7
+  - first:
+      213: -3348440925755205780
+    second: Brazier_8
+  - first:
+      213: -2856396311352015779
+    second: Brazier_9
+  - first:
+      213: 7090441298860677674
+    second: Brazier_10
+  - first:
+      213: -6053839004627979812
+    second: Brazier_11
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -69,7 +81,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 32
@@ -160,89 +172,45 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Tree_Charred_0
+      name: Brazier_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 128
-        height: 128
+        width: 40
+        height: 56
       alignment: 9
-      pivot: {x: 0.5, y: 0.09375}
+      pivot: {x: 0.5, y: 0.14285715}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 58a738ec520935b00800000000000000
-      internalID: 816154449537104517
+      spriteID: f9874e66606d95750800000000000000
+      internalID: 6294297277211375775
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Tree_Charred_1
+      name: Brazier_1
       rect:
         serializedVersion: 2
-        x: 128
+        x: 40
         y: 0
-        width: 128
-        height: 128
+        width: 40
+        height: 56
       alignment: 9
-      pivot: {x: 0.5, y: 0.09375}
+      pivot: {x: 0.5, y: 0.14285715}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 770e3dd18310490d0800000000000000
-      internalID: -3417104876737142665
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_2
-      rect:
-        serializedVersion: 2
-        x: 256
-        y: 0
-        width: 128
-        height: 128
-      alignment: 9
-      pivot: {x: 0.5, y: 0.09375}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2ea1c11449d785a50800000000000000
-      internalID: 6510091337065044706
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Tree_Charred_3
-      rect:
-        serializedVersion: 2
-        x: 384
-        y: 0
-        width: 128
-        height: 128
-      alignment: 9
-      pivot: {x: 0.5, y: 0.09375}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f872bd7c0da6440f0800000000000000
-      internalID: -1133663761251752049
+      spriteID: bd5c45b3692e95390800000000000000
+      internalID: -7828977342338513445
       vertices: []
       indices: 
       edges: []
@@ -251,20 +219,20 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 347286e5c713d1749b5ff9c5152380ad
+    spriteID: ed17f64d1d37a854ab657335d2180719
     internalID: 0
     vertices: []
     indices: 
     edges: []
     weights: []
-    secondaryTextures: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 303750cb882a30f4495e633fc25c20a7, type: 3}
+      name: _GlowTex
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Tree_Charred_0: 816154449537104517
-      Tree_Charred_1: -3417104876737142665
-      Tree_Charred_2: 6510091337065044706
-      Tree_Charred_3: -1133663761251752049
+      Brazier_0: 6294297277211375775
+      Brazier_1: -7828977342338513445
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Lays out a coast: grass ringed by trees, with a sandy beach along its northern edge giving onto the ocean, which
 /// runs out to the map's edge. A stone road crosses the south from west to east, a
-/// gravel trail runs from it to the beach, and a campsite (a campfire and seats on a patch of trodden dirt) stands on
-/// the open grass. The party spawns on the road. Blocking props stay off the beach, the sea, the paths, a clearance
+/// gravel trail runs from it to the beach, a campsite (a campfire and seats on a patch of trodden dirt) stands on
+/// the open grass, and a plateau of raised grass carries a brazier as a beacon. The party spawns on the road. Blocking props stay off the beach, the sea, the paths, a clearance
 /// beside them and the ground around the spawn; the beach, the trail and every mob can be walked to from the spawn, and
 /// the ocean, which cannot be walked, keeps every unit off the map's northern edge.
 /// </summary>
@@ -122,6 +122,8 @@ public sealed class CoastGenerator : AreaGenerator
     [SerializeField, Min(1)] private int rampWidth = 2;
     [Tooltip("Cells of grass the plateau keeps from the coast, the paths, the campsite and the spawn's disc; it keeps a cell from every mob.")]
     [SerializeField, Min(1)] private int plateauMargin = 3;
+    [Tooltip("Stands on the plateau's top, nearest its middle, as a beacon (Docs/Lighting.md, Phase 6); none for none.")]
+    [SerializeField] private GameObject beaconPrefab;
 
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
@@ -142,6 +144,7 @@ public sealed class CoastGenerator : AreaGenerator
     public Vector2 PlateauSize => plateauSize;
     public int RampWidth => rampWidth;
     public int PlateauMargin => plateauMargin;
+    public GameObject BeaconPrefab => beaconPrefab;
     public MobController MobPrefab => mobPrefab;
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
@@ -199,7 +202,8 @@ public sealed class CoastGenerator : AreaGenerator
         /// <summary>
         /// Lays the grass, the coast's bands, the road and the trail to the beach, picks the spawn, keeps blocking props
         /// off the coast, scatters the props layer by layer, spreads the mobs, checks that the beach and the trail can be
-        /// walked to, then lays the campsite from the detail stream, so it moves nothing laid before it.
+        /// walked to, then lays the campsite, the plateau and the weeds from the detail stream and the beacon on the
+        /// plateau last, so they move nothing laid before them.
         /// </summary>
         public AreaLayout Build()
         {
@@ -227,6 +231,7 @@ public sealed class CoastGenerator : AreaGenerator
             LayCampsite();
             LayPlateau();
             LayWeeds();
+            LayBeacon();
             return builder.Layout;
         }
 
@@ -653,6 +658,39 @@ public sealed class CoastGenerator : AreaGenerator
         private void LayWeeds()
         {
             builder.LayWeeds(builder.Layout.TerrainCells(settings.weeds), settings.weedPatches, cell => builder.EdgeDistance(cell) <= settings.borderDepth + settings.weedPatches.Reach);
+        }
+
+        /// <summary>
+        /// Stands the beacon on the plateau's top (Docs/Lighting.md, Phase 6), last, drawing nothing from the streams:
+        /// on the cell nearest the plateau's middle (the mean of its cells' centres) whose eight neighbours and itself are
+        /// raised, no ramp and off the cliff's face, where it stands (<see cref="AreaLayoutBuilder.PlaceLightNear"/>).
+        /// Warns when the plateau has no room for it.
+        /// </summary>
+        private void LayBeacon()
+        {
+            HashSet<Vector3Int> raised = builder.Layout.Raised;
+            HashSet<Vector3Int> ramps = builder.Layout.Ramps;
+            if (settings.beaconPrefab == null || raised.Count == 0)
+            {
+                return;
+            }
+
+            float faceHeight = settings.TerrainStyle != null ? settings.TerrainStyle.CliffHeight / TerrainStyle.PixelsPerCell : 0f;
+            int rows = RaisedGround.RowsReached(faceHeight);
+            Vector2 middle = Vector2.zero;
+            foreach (Vector3Int cell in raised)
+            {
+                middle += new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+            }
+
+            middle /= raised.Count;
+            bool IsTop(Vector3Int cell) => raised.Contains(cell) && !ramps.Contains(cell) && !RaisedGround.IsOnFace(raised, ramps, cell, rows);
+            bool Inside(Vector3Int cell) => IsTop(cell) && AreaLayoutBuilder.AllWithin(cell, 1, IsTop);
+            int reach = Mathf.CeilToInt(Mathf.Max(settings.plateauSize.x, settings.plateauSize.y)) + 1;
+            if (builder.PlaceLightNear(settings.beaconPrefab, middle, reach, Inside, IsTop) == null)
+            {
+                builder.Layout.Warnings.Add("The plateau's top has no room for the beacon.");
+            }
         }
 
         /// <summary>

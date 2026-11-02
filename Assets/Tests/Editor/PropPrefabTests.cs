@@ -11,7 +11,9 @@ using UnityEngine.Tilemaps;
 /// and every variant of them added there, laid out like the player and mob prefabs (the root at the base, a
 /// <c>Visuals</c> child on it holding the sprite pivoted on the base, which it sorts by with nothing running, and which
 /// casts the sun's shadow), the props fading over their own drawing, the light props carrying their light, off until it
-/// burns, and their glow, the footprints of blocking props, and how a placed prop blocks navigation.
+/// burns, and their glow, the moving flames drawing with the flames material and the charred props glowing, every glowing
+/// sheet outside the props' atlas (Docs/Lighting.md, Phase 6), the footprints of blocking props, the shadow casters over
+/// them that stop a light, and the lights' shadows (Phase 7), and how a placed prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -65,7 +67,8 @@ public class PropPrefabTests
     /// Every prop keeps its sprite renderer on a visible <c>Visuals</c> child on the root, as units do, drawn on the
     /// Entities sorting layer at order 0 and sorted by the 2D renderer's custom axis at its sprite's pivot, its base, as
     /// units sort at their feet, with no script on it, so nothing runs when a prop starts; a sprite, where it has one,
-    /// pivoted on its base, so the root lies inside it; the root itself draws nothing.
+    /// pivoted on its base, so the root lies inside it; the root itself draws nothing. The only script on it is a blocking
+    /// prop's shadow caster, off until a burning light wakes it.
     /// </summary>
     [Test]
     public void Props_KeepTheirSpriteOnAVisualsChild_AtTheirBase()
@@ -88,7 +91,10 @@ public class PropPrefabTests
 
             Assert.That(renderer.sortingOrder, Is.Zero, propPrefab.name);
             Assert.That(renderer.spriteSortPoint, Is.EqualTo(SpriteSortPoint.Pivot), $"{propPrefab.name} should sort at its base.");
-            Assert.That(visuals.GetComponents<MonoBehaviour>(), Is.Empty, $"{propPrefab.name}'s visuals run nothing.");
+            foreach (MonoBehaviour behaviour in visuals.GetComponents<MonoBehaviour>())
+            {
+                Assert.That(behaviour is ShadowCaster2D && !behaviour.enabled, Is.True, $"{propPrefab.name}'s visuals run nothing.");
+            }
         }
     }
 
@@ -116,10 +122,10 @@ public class PropPrefabTests
     }
 
     /// <summary>
-    /// Every light prop (Docs/Lighting.md, Phase 5) blocks and carries its light in a <c>Light</c> child: a point Light
-    /// 2D on blend style 0 and the <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, without shadows,
-    /// off until it burns, and the <see cref="PropLight"/> that burns it, at a strength above none; its sprite glows,
-    /// through its sheet's secondary texture <c>_GlowTex</c>. No other prop has a light.
+    /// Every light prop (Docs/Lighting.md, Phases 5 and 6) blocks and carries its light in a <c>Light</c> child: a point Light
+    /// 2D on blend style 0 and the <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, casting hard shadows
+    /// at full (Phase 7), off until it burns, and the <see cref="PropLight"/> that burns it, at a strength above none; its
+    /// sprite glows, through its sheet's secondary texture <c>_GlowTex</c>. No other prop has a light.
     /// </summary>
     [Test]
     public void LightProps_CarryTheirLight_OffUntilItBurns_AndGlow()
@@ -128,7 +134,7 @@ public class PropPrefabTests
             .Select(AssetDatabase.GUIDToAssetPath)
             .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
             .ToList();
-        Assert.That(lights.Select(p => p.name), Does.Contain("Campfire_0").And.Contain("LampPost_0"));
+        Assert.That(lights.Select(p => p.name), Does.Contain("Campfire_0").And.Contain("LampPost_0").And.Contain("Torch_0").And.Contain("Torch_1").And.Contain("Brazier_0").And.Contain("Brazier_1"));
         int[] litLayers = { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain"), SortingLayer.NameToID("Entities") };
         foreach (GameObject propPrefab in lights)
         {
@@ -137,7 +143,9 @@ public class PropPrefabTests
             Assert.That(light, Is.Not.Null, propPrefab.name);
             Assert.That(light.lightType, Is.EqualTo(Light2D.LightType.Point), propPrefab.name);
             Assert.That(light.blendStyleIndex, Is.EqualTo(0), propPrefab.name);
-            Assert.That(light.shadowsEnabled, Is.False, propPrefab.name);
+            Assert.That(light.shadowsEnabled, Is.True, $"{propPrefab.name}'s light casts shadows.");
+            Assert.That(light.shadowIntensity, Is.EqualTo(1f), propPrefab.name);
+            Assert.That(light.shadowSoftness, Is.Zero, propPrefab.name);
             Assert.That(light.enabled, Is.False, $"{propPrefab.name}'s light is off until it burns.");
             Assert.That(light.targetSortingLayers, Is.EqualTo(litLayers), propPrefab.name);
             PropLight propLight = light.GetComponent<PropLight>();
@@ -156,6 +164,50 @@ public class PropPrefabTests
             {
                 Assert.That(propPrefab.GetComponentInChildren<PropLight>(true), Is.Null, $"{propPrefab.name} has no light.");
             }
+        }
+    }
+
+    /// <summary>
+    /// The campfires', torches' and braziers' flames move (Docs/Lighting.md, Phase 6): they draw with the flames material,
+    /// the lit shader stepping through <see cref="LightRecipe.FlameFrames"/> rows of their sheet, which holds that many
+    /// frames over the sliced one, meshed as full rectangles; every other prop draws with the lit material. The charred
+    /// trees and stumps glow with their embers. Every sheet with a glow lies in the glowing props' folder, outside the
+    /// props' atlas, and every other in the props' folder, which the atlas packs.
+    /// </summary>
+    [Test]
+    public void MovingFlames_DrawWithTheFlamesMaterial_AndGlowingSheetsLieOutsideTheAtlas()
+    {
+        Material lit = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/SpritePixelLit.mat");
+        Material flames = AssetDatabase.LoadAssetAtPath<Material>(PropWriter.FlamesMaterialPath);
+        Assert.That(flames.shader, Is.EqualTo(lit.shader));
+        Assert.That(flames.GetFloat(PropWriter.FlameFramesName), Is.EqualTo(LightRecipe.FlameFrames));
+        string[] moving = { "Campfire_", "Torch_", "Brazier_" };
+        string[] charred = { "Tree_Charred_", "Stump_Charred_", "StumpSmall_Charred_" };
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            SpriteRenderer visuals = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>();
+            Sprite sprite = visuals.sprite;
+            if (sprite == null)
+            {
+                Assert.That(visuals.sharedMaterial, Is.EqualTo(lit), $"{propPrefab.name}, a base, draws with the lit material.");
+                continue;
+            }
+
+            bool moves = moving.Any(prefix => propPrefab.name.StartsWith(prefix, System.StringComparison.Ordinal));
+            Assert.That(visuals.sharedMaterial, Is.EqualTo(moves ? flames : lit), propPrefab.name);
+            string sheet = AssetDatabase.GetAssetPath(sprite);
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(sheet).height, Is.EqualTo(moves ? sprite.rect.height * LightRecipe.FlameFrames : sprite.rect.height), $"{propPrefab.name}'s sheet's rows.");
+            TextureImporterSettings settings = new();
+            ((TextureImporter)AssetImporter.GetAtPath(sheet)).ReadTextureSettings(settings);
+            Assert.That(settings.spriteMeshType, Is.EqualTo(moves ? SpriteMeshType.FullRect : SpriteMeshType.Tight), propPrefab.name);
+            bool glows = sprite.GetSecondaryTextureCount() > 0;
+            if (charred.Any(prefix => propPrefab.name.StartsWith(prefix, System.StringComparison.Ordinal)))
+            {
+                Assert.That(glows, Is.True, $"{propPrefab.name} smoulders.");
+            }
+
+            string folder = glows ? PropWriter.GlowingSpritesFolder : PropWriter.SpritesFolder;
+            Assert.That(System.IO.Path.GetDirectoryName(sheet).Replace('\\', '/'), Is.EqualTo(folder), $"{propPrefab.name}'s sheet lies in {folder}.");
         }
     }
 
@@ -228,6 +280,45 @@ public class PropPrefabTests
             Assert.That(box.min.y, Is.GreaterThanOrEqualTo(drawn.min.y - OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
             Assert.That(box.max.y, Is.LessThanOrEqualTo(drawn.max.y + OnePixel), $"{propPrefab.name}'s footprint should lie under its sprite.");
         }
+    }
+
+    /// <summary>
+    /// Every blocking prop that is no light prop stops a light (Docs/Lighting.md, Phase 7): its <c>Visuals</c> carry a
+    /// Shadow Caster 2D, off until a burning light wakes it, shaped as the box of its footprint, casting onto the
+    /// <c>Default</c> and <c>Terrain</c> sorting layers only; a light prop, whose light stands inside it, and a
+    /// walk-through prop carry none.
+    /// </summary>
+    [Test]
+    public void BlockingProps_CarryAShadowCasterOverTheirFootprint_OffUntilALightWakesIt()
+    {
+        GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath);
+        int[] ground = { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain") };
+        int casting = 0;
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            ShadowCaster2D[] casters = propPrefab.GetComponentsInChildren<ShadowCaster2D>(true);
+            bool blocks = PrefabUtility.GetCorrespondingObjectFromSource(propPrefab) == blocking;
+            if (!blocks || propPrefab.transform.Find(LightName) != null)
+            {
+                Assert.That(casters, Is.Empty, $"{propPrefab.name} stops no light.");
+                continue;
+            }
+
+            Assert.That(casters.Length, Is.EqualTo(1), propPrefab.name);
+            ShadowCaster2D caster = casters[0];
+            Assert.That(caster.transform, Is.SameAs(Child(propPrefab, VisualsName)), $"{propPrefab.name}'s caster is on its visuals.");
+            Assert.That(caster.enabled, Is.False, $"{propPrefab.name}'s caster is off until a light wakes it.");
+            Assert.That(caster.castingOption, Is.EqualTo(ShadowCaster2D.ShadowCastingOptions.CastShadow), propPrefab.name);
+            BoxCollider2D box = propPrefab.GetComponent<BoxCollider2D>();
+            Vector2 min = box.offset - box.size * 0.5f;
+            Vector2 max = box.offset + box.size * 0.5f;
+            Assert.That(caster.shapePath, Is.EqualTo(new[] { new Vector3(min.x, min.y), new Vector3(max.x, min.y), new Vector3(max.x, max.y), new Vector3(min.x, max.y) }), $"{propPrefab.name}'s caster is its footprint.");
+            SerializedProperty layers = new SerializedObject(caster).FindProperty("m_ApplyToSortingLayers");
+            Assert.That(Enumerable.Range(0, layers.arraySize).Select(i => layers.GetArrayElementAtIndex(i).intValue), Is.EqualTo(ground), $"{propPrefab.name} shadows the ground only.");
+            casting++;
+        }
+
+        Assert.That(casting, Is.GreaterThan(80), "The trees, bushes, rocks and wood stop lights.");
     }
 
     /// <summary>

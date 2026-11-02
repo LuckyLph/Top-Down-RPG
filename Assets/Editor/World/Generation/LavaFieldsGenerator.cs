@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Lays out lava fields: scorched earth ringed by dead trees and dark rock, crossed from north to south by a river of
 /// lava with pools of lava beside it, a stone road crossing the south from west to east over a causeway of earth where
-/// the river stops short of it, a gravel trail from the road towards the lava that stops short of it, and a campsite
-/// (a campfire and seats) on the open earth. The party spawns on the road. Lava cannot be walked: it keeps a cell of
+/// the river stops short of it, a brazier at either end of the causeway, a gravel trail from the road towards the lava
+/// that stops short of it, and a campsite (a campfire and seats) on the open earth. The party spawns on the road. Lava cannot be walked: it keeps a cell of
 /// earth from every path and from the spawn's ground, blocking props stay off it and the earth beside it, mobs stand
 /// clear of it, and the trail and every mob can be walked to from the spawn around it. Dirt is the builder's ground,
 /// the layer every other one lies on, as grass is in most other generators.
@@ -20,6 +20,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
     private const int CampsiteLavaMargin = 2;
     private const float TrailLeadIn = 3f;
     private const float TrailNorth = 6f;
+    private const int CausewayReach = 4;
 
     /// <summary>
     /// The part of the lava fields a scatter layer fills: the band along its edge, the earth near the lava, or the rest
@@ -108,6 +109,10 @@ public sealed class LavaFieldsGenerator : AreaGenerator
     [Tooltip("Radius in cells of the campsite, before its outline wobbles: the earth there is cleared of props and plants.")]
     [SerializeField, Min(1f)] private float campsiteRadius = 3f;
 
+    [Header("Causeway")]
+    [Tooltip("Braziers stood at either end of the causeway, the first north of the road and the second south of it (Docs/Lighting.md, Phase 6); none for none.")]
+    [SerializeField] private List<GameObject> causewayBraziers = new();
+
     [Header("Mobs")]
     [SerializeField] private MobController mobPrefab;
     [SerializeField, Min(0)] private int mobCount = 4;
@@ -122,6 +127,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
     public GameObject CampfirePrefab => campfirePrefab;
     public IReadOnlyList<GameObject> CampsiteSeats => campsiteSeats;
     public float CampsiteRadius => campsiteRadius;
+    public IReadOnlyList<GameObject> CausewayBraziers => causewayBraziers;
     public MobController MobPrefab => mobPrefab;
     public int MobCount => mobCount;
     public float MobDistanceFromSpawn => mobDistanceFromSpawn;
@@ -144,8 +150,8 @@ public sealed class LavaFieldsGenerator : AreaGenerator
     }
 
     /// <summary>
-    /// The state of one generation: the shared builder with the cells laid so far, the road's samples and how many
-    /// steps each ground cell lies from the lava.
+    /// The state of one generation: the shared builder with the cells laid so far, the road's and the river's samples,
+    /// the river's cells and how many steps each ground cell lies from the lava.
     /// </summary>
     private sealed class Run
     {
@@ -153,6 +159,8 @@ public sealed class LavaFieldsGenerator : AreaGenerator
         private readonly AreaLayoutBuilder builder;
         private readonly HashSet<Vector3Int> lava;
         private readonly List<Vector2> road = new();
+        private readonly List<Vector2> river = new();
+        private readonly HashSet<Vector3Int> riverCells = new(CellComparer.Instance);
         private Dictionary<Vector3Int, int> lavaDistance = new(CellComparer.Instance);
         private readonly float halfWidth;
         private readonly float halfHeight;
@@ -173,7 +181,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
         /// Lays the earth and the road, picks the spawn, lays the lava river and pools clear of the road and the spawn,
         /// then the trail towards the lava, keeps blocking props off the lava and the earth beside it, scatters the props
         /// layer by layer, spreads the mobs, checks that the trail can be walked to, then lays the campsite from the
-        /// detail stream, so it moves nothing laid before it.
+        /// detail stream and the causeway's braziers, so they move nothing laid before them.
         /// </summary>
         public AreaLayout Build()
         {
@@ -199,6 +207,7 @@ public sealed class LavaFieldsGenerator : AreaGenerator
             CheckTrail(reachable);
             builder.StartDetailStream();
             LayCampsite();
+            LayCausewayBraziers();
             return builder.Layout;
         }
 
@@ -258,15 +267,15 @@ public sealed class LavaFieldsGenerator : AreaGenerator
                 new(course + builder.Range(-1f, 1f) * meander, -halfHeight * 0.5f),
                 new(course + builder.Range(-1f, 1f) * meander, -halfHeight - 3f)
             };
-            List<Vector2> samples = new();
-            AreaLayoutBuilder.SampleSpline(points, samples);
-            HashSet<Vector3Int> river = new(CellComparer.Instance);
-            builder.Paint(samples, settings.riverWidth, river);
+            AreaLayoutBuilder.SampleSpline(points, river);
+            HashSet<Vector3Int> painted = new(CellComparer.Instance);
+            builder.Paint(river, settings.riverWidth, painted);
             foreach (Vector3Int cell in builder.OrderedGround)
             {
-                if (river.Contains(cell) && allowed(cell))
+                if (painted.Contains(cell) && allowed(cell))
                 {
                     lava.Add(cell);
+                    riverCells.Add(cell);
                 }
             }
 
@@ -507,6 +516,107 @@ public sealed class LavaFieldsGenerator : AreaGenerator
             HashSet<Vector3Int> nearPaths = AreaLayoutBuilder.CellsNear(builder.PathCells(), Mathf.CeilToInt(clear));
             AreaLayoutBuilder.Campsite campsite = new(settings.campfirePrefab, settings.campsiteSeats, settings.seatCount, settings.seatSpacing, settings.campsiteRadius);
             builder.LayCampsite(campsite, new HashSet<Vector3Int>(CellComparer.Instance), settings.borderDepth, settings.pathClearance, settings.spawnClearRadius, cell => LavaDistance(cell) > clear && !nearPaths.Contains(cell));
+        }
+
+        /// <summary>
+        /// Stands a brazier at either end of the causeway (Docs/Lighting.md, Phase 6), last, drawing nothing from the
+        /// streams: where the road comes nearest the river's course, the first of the causeway braziers north of the road,
+        /// two cells west of the westmost lava cell of the river's row nearest the road there, and the second (or the
+        /// first again) south of it, two cells east of the eastmost cell of its row, each on the nearest earth off the
+        /// reserved cells (the paths, the cells beside them, the lava and the earth beside it, the spawn's ground) where
+        /// it stands with earth all round it (<see cref="AreaLayoutBuilder.PlaceLightNear"/>), or, where that bank has
+        /// no room (a pool beside the river), on the other bank, two cells past that row's other end. Warns when neither
+        /// has room.
+        /// </summary>
+        private void LayCausewayBraziers()
+        {
+            if (settings.causewayBraziers.Count == 0 || road.Count == 0 || riverCells.Count == 0)
+            {
+                return;
+            }
+
+            Vector2 crossing = road[0];
+            float nearest = float.MaxValue;
+            foreach (Vector2 point in road)
+            {
+                foreach (Vector2 course in river)
+                {
+                    float distance = (point - course).sqrMagnitude;
+                    if (distance < nearest)
+                    {
+                        nearest = distance;
+                        crossing = point;
+                    }
+                }
+            }
+
+            for (int side = 0; side < 2; side++)
+            {
+                GameObject brazier = settings.causewayBraziers[side % settings.causewayBraziers.Count];
+                int step = side == 0 ? -1 : 1;
+                Vector3Int? end = RiverEnd(crossing, side == 0);
+                if (brazier == null || end == null)
+                {
+                    continue;
+                }
+
+                bool placed = false;
+                foreach (int bank in new[] { step, -step })
+                {
+                    Vector3Int edge = end.Value;
+                    while (IsRiver(edge + new Vector3Int(bank, 0, 0)))
+                    {
+                        edge += new Vector3Int(bank, 0, 0);
+                    }
+
+                    Vector2 target = new(edge.x + 0.5f + 2f * bank, edge.y + 0.5f);
+                    placed = builder.PlaceLightNear(brazier, target, CausewayReach, cell => !builder.Reserved.Contains(cell), cell => !lava.Contains(cell)) != null;
+                    if (placed)
+                    {
+                        break;
+                    }
+                }
+
+                if (!placed)
+                {
+                    builder.Layout.Warnings.Add($"No earth near the causeway's {(side == 0 ? "north" : "south")} end holds its brazier.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// The river's lava cell nearest <paramref name="crossing"/>, north of it (<paramref name="north"/>) or south of
+        /// it, in row order among the nearest; null when the river has none there.
+        /// </summary>
+        private Vector3Int? RiverEnd(Vector2 crossing, bool north)
+        {
+            Vector3Int? end = null;
+            float best = float.MaxValue;
+            foreach (Vector3Int cell in builder.OrderedGround)
+            {
+                float rise = cell.y + 0.5f - crossing.y;
+                if (!IsRiver(cell) || (north ? rise <= 0f : rise >= 0f))
+                {
+                    continue;
+                }
+
+                float distance = (new Vector2(cell.x + 0.5f, cell.y + 0.5f) - crossing).sqrMagnitude;
+                if (distance < best)
+                {
+                    best = distance;
+                    end = cell;
+                }
+            }
+
+            return end;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="cell"/> is lava of the river, rather than of a pool.
+        /// </summary>
+        private bool IsRiver(Vector3Int cell)
+        {
+            return riverCells.Contains(cell) && lava.Contains(cell);
         }
 
         /// <summary>

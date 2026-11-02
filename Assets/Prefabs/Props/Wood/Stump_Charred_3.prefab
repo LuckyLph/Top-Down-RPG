@@ -83,5 +83,65 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7919108565012500966, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1189474934636116771}
   m_SourcePrefab: {fileID: 100100000, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
+--- !u!1 &3278617677049584076 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7919108565012500966, guid: 53e394846a1191b448fb4d2f9caf8fdd, type: 3}
+  m_PrefabInstance: {fileID: 4654943143694272554}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1189474934636116771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3278617677049584076}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db70e0ea77f5ac47a8f4565a9406397, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.ShadowCaster2D
+  m_ShadowGroup: 0
+  m_Priority: 0
+  m_ComponentVersion: 5
+  m_HasRenderer: 0
+  m_UseRendererSilhouette: 1
+  m_CastsShadows: 1
+  m_SelfShadows: 0
+  m_AlphaCutoff: 0.1
+  m_ApplyToSortingLayers: 000000009770897d
+  m_ShapePath:
+  - {x: -0.40625, y: -0.1875, z: 0}
+  - {x: 0.40625, y: -0.1875, z: 0}
+  - {x: 0.40625, y: 0.1875, z: 0}
+  - {x: -0.40625, y: 0.1875, z: 0}
+  m_ShapePathHash: 436477713
+  m_InstanceId: 0
+  m_ShadowShape2DComponent: {fileID: 0}
+  m_ShadowShape2DProvider:
+    rid: -2
+  m_ShadowCastingSource: 1
+  m_ShadowMesh:
+    m_Mesh: {fileID: 0}
+    m_LocalBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0.40625, y: 0.1875, z: 0}
+    m_EdgeProcessing: 0
+    m_TrimEdge: 0
+    m_FlipX: 0
+    m_FlipY: 0
+    m_InitialTrim: 0.06
+  m_CastingOption: 1
+  m_PreviousTrimEdge: 0
+  m_PreviousEdgeProcessing: -1
+  m_PreviousShadowCastingSource: -1
+  m_PreviousShadowShape2DSource: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

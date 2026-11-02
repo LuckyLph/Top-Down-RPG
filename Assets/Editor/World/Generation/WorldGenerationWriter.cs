@@ -973,10 +973,12 @@ public static class WorldGenerationWriter
 
     /// <summary>
     /// Makes the prop instances under <paramref name="grid"/>'s <see cref="GeneratedPropsName"/> the props of the chunk
-    /// at <paramref name="coords"/>, in the composition's order: an instance already there of the same prefab is reused
-    /// in its place, so an unchanged prop keeps its place in the scene file, another is made in the chunk's scene and put
-    /// there, the rest destroyed; each stands where <see cref="ChunkContent.RootOf"/> puts it on the grid. The root is
-    /// made when missing and destroyed when the chunk has no props.
+    /// at <paramref name="coords"/>, in the composition's order, each standing where <see cref="ChunkContent.RootOf"/>
+    /// puts it on the grid: an instance already there of the same prefab standing at the same place is reused, so an
+    /// unchanged prop keeps its object in the scene file even when props were added or removed before it in the list,
+    /// else one of the same prefab at the same index, moved; another is made in the chunk's scene, the rest destroyed,
+    /// and the instances put in the composition's order. The root is made when missing and destroyed when the chunk has
+    /// no props.
     /// </summary>
     private static void WriteProps(Grid grid, WorldComposition composition, Vector2Int coords)
     {
@@ -1000,34 +1002,85 @@ public static class WorldGenerationWriter
 
         Vector3 origin = grid.CellToWorld(Vector3Int.zero);
         Scene scene = grid.gameObject.scene;
+        List<GameObject> existing = new();
+        Dictionary<GameObject, List<int>> byPrefab = new();
+        for (int i = 0; i < root.childCount; i++)
+        {
+            GameObject child = root.GetChild(i).gameObject;
+            existing.Add(child);
+            GameObject source = PrefabUtility.GetCorrespondingObjectFromSource(child);
+            if (source == null)
+            {
+                continue;
+            }
+
+            if (!byPrefab.TryGetValue(source, out List<int> same))
+            {
+                same = new List<int>();
+                byPrefab[source] = same;
+            }
+
+            same.Add(i);
+        }
+
+        bool[] used = new bool[existing.Count];
+        GameObject[] instances = new GameObject[props.Count];
+        Vector3[] positions = new Vector3[props.Count];
         for (int i = 0; i < props.Count; i++)
         {
-            WorldComposition.Prop prop = props[i];
-            GameObject instance = i < root.childCount ? root.GetChild(i).gameObject : null;
-            if (instance != null && PrefabUtility.GetCorrespondingObjectFromSource(instance) != prop.Prefab)
+            Vector2 local = ChunkContent.RootOf(props[i]);
+            positions[i] = new Vector3(origin.x + local.x * grid.cellSize.x, origin.y + local.y * grid.cellSize.y, 0f);
+            if (!byPrefab.TryGetValue(props[i].Prefab, out List<int> same))
             {
-                Object.DestroyImmediate(instance);
-                instance = null;
+                continue;
             }
 
-            if (instance == null)
+            foreach (int j in same)
             {
-                instance = (GameObject)PrefabUtility.InstantiatePrefab(prop.Prefab, scene);
-                instance.transform.SetParent(root, false);
-                instance.transform.SetSiblingIndex(i);
-            }
-
-            Vector2 local = ChunkContent.RootOf(prop);
-            Vector3 position = new(origin.x + local.x * grid.cellSize.x, origin.y + local.y * grid.cellSize.y, 0f);
-            if (instance.transform.position != position)
-            {
-                instance.transform.position = position;
+                if (!used[j] && existing[j].transform.position == positions[i])
+                {
+                    used[j] = true;
+                    instances[i] = existing[j];
+                    break;
+                }
             }
         }
 
-        for (int i = root.childCount - 1; i >= props.Count; i--)
+        for (int i = 0; i < props.Count; i++)
         {
-            Object.DestroyImmediate(root.GetChild(i).gameObject);
+            if (instances[i] == null && i < existing.Count && !used[i] && PrefabUtility.GetCorrespondingObjectFromSource(existing[i]) == props[i].Prefab)
+            {
+                used[i] = true;
+                instances[i] = existing[i];
+            }
+        }
+
+        for (int j = existing.Count - 1; j >= 0; j--)
+        {
+            if (!used[j])
+            {
+                Object.DestroyImmediate(existing[j]);
+            }
+        }
+
+        for (int i = 0; i < props.Count; i++)
+        {
+            GameObject instance = instances[i];
+            if (instance == null)
+            {
+                instance = (GameObject)PrefabUtility.InstantiatePrefab(props[i].Prefab, scene);
+                instance.transform.SetParent(root, false);
+            }
+
+            if (instance.transform.GetSiblingIndex() != i)
+            {
+                instance.transform.SetSiblingIndex(i);
+            }
+
+            if (instance.transform.position != positions[i])
+            {
+                instance.transform.position = positions[i];
+            }
         }
     }
 

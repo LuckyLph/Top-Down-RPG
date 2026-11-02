@@ -14,8 +14,13 @@ using UnityEngine.TestTools;
 /// and, after a change, keeps every prefab's GUID and every slice's ID; a recipe that fades covers each variant's
 /// drawing with its prefab's fade, and one that does not covers nothing; a recipe casting no shadow draws on the
 /// default rendering layer alone, and one casting it again on the base's; a light prop writes its glow as its sheet's
-/// secondary texture and a light on each prefab, and a prop that does not glow neither; lowering the variant count while
-/// a dropped variant's prefab is left, or changing whether it blocks once its prefabs exist, is refused.
+/// secondary texture and a light on each prefab, and a prop that does not glow neither; a moving flame writes its frames
+/// in rows, imported as full rectangles, its prefabs drawing with the flames material, and a still one one row on the
+/// lit material; a sheet that starts or stops glowing moves between the props' folder and the glowing one with its
+/// slices; lowering the variant count while a dropped variant's prefab is left, or changing whether it blocks once its
+/// prefabs exist, is refused. A blocking prop's <c>Visuals</c> carry a Shadow Caster 2D over its footprint, off, casting
+/// onto the ground's sorting layers, and its light props' lights cast hard shadows at full, while a walk-through prop and
+/// a light prop carry no caster (Docs/Lighting.md, Phase 7).
 /// </summary>
 public class PropWriterTests
 {
@@ -23,6 +28,7 @@ public class PropWriterTests
     private const string Sprites = Folder + "/Sprites";
     private const string Prefabs = Folder + "/Prefabs";
     private const string Glows = Folder + "/Glow";
+    private const string GlowingSprites = Folder + "/GlowingSprites";
     private const string Name = "TestBush";
     private const string LightName = "TestFire";
     private const float Unit = PropBaker.PixelsPerCell;
@@ -98,11 +104,11 @@ public class PropWriterTests
     }
 
     /// <summary>
-    /// A light prop's glow goes beside its sheet in the glow folder, laid out as the sheet, each pixel's alpha its glow
-    /// and its colour the one it flickers to, as the sheet's secondary texture <c>_GlowTex</c>, imported as a plain
-    /// point-filtered texture; each prefab carries a <c>Light</c> child where its light stands: a point Light 2D, off,
-    /// in the recipe's colour, strength and radius on the lit sorting layers, and the <see cref="PropLight"/> that burns
-    /// it. Generating again writes nothing.
+    /// A light prop's glow goes beside its sheet in the glow folder, laid out as the sheet with every frame of its moving
+    /// flame, each pixel's alpha its glow and its colour the one it flickers to, as the sheet's secondary texture
+    /// <c>_GlowTex</c>, imported as a plain point-filtered texture; each prefab carries a <c>Light</c> child where its
+    /// light stands: a point Light 2D, off, in the recipe's colour, strength and radius on the lit sorting layers, and the
+    /// <see cref="PropLight"/> that burns it. Generating again writes nothing.
     /// </summary>
     [Test]
     public void Generate_ALightProp_WritesItsGlowAsTheSheetsSecondaryTexture_AndALightOnEachPrefab()
@@ -137,16 +143,20 @@ public class PropWriterTests
             Texture2D file = new(2, 2);
             file.LoadImage(System.IO.File.ReadAllBytes(glow));
             Color32[] glowPixels = file.GetPixels32();
-            Assert.That(new Vector2Int(file.width, file.height), Is.EqualTo(new Vector2Int(96, 48)));
+            int frames = LightRecipe.FlameFrames;
+            Assert.That(new Vector2Int(file.width, file.height), Is.EqualTo(new Vector2Int(96, 48 * frames)));
             Object.DestroyImmediate(file);
             for (int i = 0; i < 2; i++)
             {
                 PropVariant variant = PropBaker.Bake(campfire, i);
-                for (int y = 0; y < 48; y++)
+                for (int f = 0; f < frames; f++)
                 {
-                    for (int x = 0; x < 48; x++)
+                    for (int y = 0; y < 48; y++)
                     {
-                        Assert.That(glowPixels[y * 96 + i * 48 + x], Is.EqualTo(variant.Glow[y * 48 + x]), $"Variant {i}'s glow at ({x}, {y}).");
+                        for (int x = 0; x < 48; x++)
+                        {
+                            Assert.That(glowPixels[(f * 48 + y) * 96 + i * 48 + x], Is.EqualTo(variant.FrameGlow[f][y * 48 + x]), $"Variant {i}'s glow in frame {f} at ({x}, {y}).");
+                        }
                     }
                 }
 
@@ -161,7 +171,10 @@ public class PropWriterTests
                 Assert.That(light.intensity, Is.EqualTo(campfire.LightIntensity));
                 Assert.That(light.pointLightOuterRadius, Is.EqualTo(campfire.LightRadius));
                 Assert.That(light.blendStyleIndex, Is.EqualTo(0));
-                Assert.That(light.shadowsEnabled, Is.False);
+                Assert.That(light.shadowsEnabled, Is.True, "A prop light casts shadows.");
+                Assert.That(light.shadowIntensity, Is.EqualTo(1f), "Its shadows take all its light.");
+                Assert.That(light.shadowSoftness, Is.Zero, "Its shadows have hard edges.");
+                Assert.That(Visuals(prefab).GetComponent<ShadowCaster2D>(), Is.Null, "A light's own prop casts nothing: its light stands inside it.");
                 Assert.That(light.targetSortingLayers, Is.EqualTo(new[] { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain"), SortingLayer.NameToID("Entities") }));
                 PropLight propLight = child.GetComponent<PropLight>();
                 Assert.That(propLight.LightSource, Is.EqualTo(light));
@@ -174,6 +187,118 @@ public class PropWriterTests
         finally
         {
             Object.DestroyImmediate(campfire);
+        }
+    }
+
+    /// <summary>
+    /// A moving flame's sheet holds each variant's frames in rows over the first, which alone is sliced, imported as full
+    /// rectangles so a frame reaching past the first's outline draws, and its prefabs draw with the flames material,
+    /// stepping through as many rows; set still, the same recipe writes one row of tight sprites drawn with the lit
+    /// material, its prefabs and slices kept (Docs/Lighting.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void Generate_AMovingFlame_WritesItsFramesInRows_OnTheFlamesMaterial_AndAStillOneOneRow()
+    {
+        LightRecipe torch = ScriptableObject.CreateInstance<LightRecipe>();
+        try
+        {
+            SerializedObject settings = new(torch);
+            settings.FindProperty("propName").stringValue = LightName;
+            settings.FindProperty("category").enumValueIndex = (int)PropCategory.Lights;
+            settings.FindProperty("form").enumValueIndex = (int)LightForm.Torch;
+            settings.FindProperty("variantCount").intValue = 2;
+            settings.FindProperty("frameSize").vector2IntValue = new Vector2Int(24, 64);
+            settings.FindProperty("basePixel").vector2IntValue = new Vector2Int(12, 6);
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            PropWriter.Generate(torch, Sprites, Prefabs, Glows);
+
+            string sheet = PropWriter.SheetPath(Sprites, LightName);
+            Dictionary<string, long> ids = SliceIds(sheet);
+            Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
+            Assert.That(sprites.Keys, Is.EquivalentTo(new[] { $"{LightName}_0", $"{LightName}_1" }), "Only the first frame is sliced.");
+            Assert.That(sprites[$"{LightName}_1"].rect, Is.EqualTo(new Rect(24f, 0f, 24f, 64f)));
+            Assert.That(sprites[$"{LightName}_0"].texture.height, Is.EqualTo(64 * LightRecipe.FlameFrames));
+            Assert.That(MeshType(sheet), Is.EqualTo(SpriteMeshType.FullRect));
+            Texture2D file = new(2, 2);
+            file.LoadImage(System.IO.File.ReadAllBytes(sheet));
+            Color32[] pixels = file.GetPixels32();
+            Object.DestroyImmediate(file);
+            PropVariant variant = PropBaker.Bake(torch, 1);
+            for (int f = 0; f < LightRecipe.FlameFrames; f++)
+            {
+                for (int y = 0; y < 64; y++)
+                {
+                    for (int x = 0; x < 24; x++)
+                    {
+                        Assert.That(pixels[(f * 64 + y) * 48 + 24 + x], Is.EqualTo(variant.FramePixels[f][y * 24 + x]), $"Frame {f} at ({x}, {y}).");
+                    }
+                }
+            }
+
+            Material flames = AssetDatabase.LoadAssetAtPath<Material>(PropWriter.FlamesMaterialPath);
+            Assert.That(flames.GetFloat(PropWriter.FlameFramesName), Is.EqualTo(LightRecipe.FlameFrames));
+            Assert.That(flames.shader, Is.EqualTo(Visuals(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PropPath)).sharedMaterial.shader));
+            Assert.That(Visuals(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PrefabPath(Prefabs, torch, 0))).sharedMaterial, Is.EqualTo(flames));
+
+            settings.FindProperty("flameMoves").boolValue = false;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            PropWriter.Generate(torch, Sprites, Prefabs, Glows);
+            Assert.That(SpriteSheetFiles.SpritesByName(sheet)[$"{LightName}_0"].texture.height, Is.EqualTo(64));
+            Assert.That(MeshType(sheet), Is.EqualTo(SpriteMeshType.Tight));
+            Assert.That(SliceIds(sheet), Is.EqualTo(ids), "Every slice keeps its ID.");
+            GameObject still = AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PrefabPath(Prefabs, torch, 0));
+            Assert.That(Visuals(still).sharedMaterial, Is.EqualTo(Visuals(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PropPath)).sharedMaterial));
+        }
+        finally
+        {
+            Object.DestroyImmediate(torch);
+        }
+    }
+
+    /// <summary>
+    /// A sheet that starts glowing (a charred tree given embers, Docs/Lighting.md, Phase 6) moves from the props' sprites
+    /// folder to the glowing one, outside the props' atlas, keeping its GUID and its slices' IDs, with its glow beside it;
+    /// one that stops glowing moves back without a glow.
+    /// </summary>
+    [Test]
+    public void Generate_ASheetThatStartsOrStopsGlowing_MovesWithItsSlices()
+    {
+        TreeRecipe tree = Object.Instantiate(AssetDatabase.LoadAssetAtPath<TreeRecipe>("Assets/Settings/Props/Tree_Charred.asset"));
+        try
+        {
+            SerializedObject settings = new(tree);
+            settings.FindProperty("propName").stringValue = Name;
+            settings.FindProperty("variantCount").intValue = 1;
+            settings.FindProperty("embers").FindPropertyRelative("enabled").boolValue = false;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            PropWriter.Generate(tree, Sprites, GlowingSprites, Prefabs, Glows, out bool glows);
+            string plain = PropWriter.SheetPath(Sprites, Name);
+            string glowing = PropWriter.SheetPath(GlowingSprites, Name);
+            Assert.That(glows, Is.False);
+            string guid = AssetDatabase.AssetPathToGUID(plain);
+            Dictionary<string, long> ids = SliceIds(plain);
+
+            settings.FindProperty("embers").FindPropertyRelative("enabled").boolValue = true;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            IReadOnlyList<string> written = PropWriter.Generate(tree, Sprites, GlowingSprites, Prefabs, Glows, out glows);
+            Assert.That(glows, Is.True);
+            Assert.That(written, Does.Contain(glowing).And.Contain(PropWriter.GlowPath(Glows, Name)));
+            Assert.That(AssetImporter.GetAtPath(plain), Is.Null, "The sheet left the props' folder.");
+            Assert.That(AssetDatabase.AssetPathToGUID(glowing), Is.EqualTo(guid), "The sheet kept its GUID.");
+            Assert.That(SliceIds(glowing), Is.EqualTo(ids), "Every slice keeps its ID.");
+            Assert.That(((TextureImporter)AssetImporter.GetAtPath(glowing)).secondarySpriteTextures.Length, Is.EqualTo(1));
+
+            settings.FindProperty("embers").FindPropertyRelative("enabled").boolValue = false;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            PropWriter.Generate(tree, Sprites, GlowingSprites, Prefabs, Glows, out glows);
+            Assert.That(glows, Is.False);
+            Assert.That(AssetDatabase.AssetPathToGUID(plain), Is.EqualTo(guid), "The sheet moved back.");
+            Assert.That(((TextureImporter)AssetImporter.GetAtPath(plain)).secondarySpriteTextures, Is.Empty);
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(PropWriter.GlowPath(Glows, Name)), Is.Null);
+        }
+        finally
+        {
+            Object.DestroyImmediate(tree);
         }
     }
 
@@ -268,8 +393,48 @@ public class PropWriterTests
     }
 
     /// <summary>
-    /// A walk-through recipe makes variants of <c>Prop</c> without a collider, and once they exist, making it block is
-    /// refused.
+    /// Each blocking variant's <c>Visuals</c> carry a Shadow Caster 2D, off until a burning light wakes it: shaped by
+    /// URP's shape editor as the box of its footprint, its collider's, without URP's edge clipping or trim, casting a
+    /// light's shadow onto the <c>Default</c> and <c>Terrain</c> sorting layers only and leaving its own sprite lit, with
+    /// no shape provider of URP's left on it. Generating again writes nothing.
+    /// </summary>
+    [Test]
+    public void Generate_ABlockingProp_GivesItsVisualsAShadowCasterOverItsFootprint_OffUntilALightWakesIt()
+    {
+        PropWriter.Generate(recipe, Sprites, Prefabs);
+
+        int[] ground = { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain") };
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(i));
+            ShadowCaster2D caster = Visuals(prefab).GetComponent<ShadowCaster2D>();
+            Assert.That(caster, Is.Not.Null, $"Variant {i} casts.");
+            Assert.That(caster.enabled, Is.False, "Off until a burning light wakes it.");
+            Assert.That(caster.castingOption, Is.EqualTo(ShadowCaster2D.ShadowCastingOptions.CastShadow));
+            BoxCollider2D box = prefab.GetComponent<BoxCollider2D>();
+            Vector2 min = box.offset - box.size * 0.5f;
+            Vector2 max = box.offset + box.size * 0.5f;
+            Assert.That(caster.shapePath, Is.EqualTo(new[] { new Vector3(min.x, min.y), new Vector3(max.x, min.y), new Vector3(max.x, max.y), new Vector3(min.x, max.y) }));
+            SerializedObject serialized = new(caster);
+            Assert.That(serialized.FindProperty("m_ShadowCastingSource").intValue, Is.EqualTo(1), "Shaped by URP's shape editor.");
+            Assert.That(serialized.FindProperty("m_ShapePathHash").intValue, Is.Not.Zero, "It builds its shadow from the shape as it first wakes.");
+            Assert.That(serialized.FindProperty("m_ShadowMesh.m_EdgeProcessing").intValue, Is.Zero, "No edge clipping.");
+            Assert.That(serialized.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue, Is.Zero, "No trim.");
+            Assert.That(serialized.FindProperty("m_ShadowShape2DComponent").objectReferenceValue, Is.Null, "No shape provider of URP's.");
+            SerializedProperty layers = serialized.FindProperty("m_ApplyToSortingLayers");
+            Assert.That(layers.arraySize, Is.EqualTo(ground.Length));
+            for (int l = 0; l < ground.Length; l++)
+            {
+                Assert.That(layers.GetArrayElementAtIndex(l).intValue, Is.EqualTo(ground[l]), "It shadows the ground's sorting layers only.");
+            }
+        }
+
+        Assert.That(PropWriter.Generate(recipe, Sprites, Prefabs), Is.Empty);
+    }
+
+    /// <summary>
+    /// A walk-through recipe makes variants of <c>Prop</c> without a collider or a shadow caster, and once they exist,
+    /// making it block is refused.
     /// </summary>
     [Test]
     public void Generate_AWalkThroughRecipe_MakesPropVariantsWithoutACollider_AndCannotThenBlock()
@@ -282,11 +447,30 @@ public class PropWriterTests
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(0));
         Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(prefab), Is.EqualTo(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PropPath)));
         Assert.That(prefab.GetComponentsInChildren<Collider2D>(true), Is.Empty);
+        Assert.That(prefab.GetComponentsInChildren<ShadowCaster2D>(true), Is.Empty, "A walk-through prop stops no light.");
 
         settings.FindProperty("blocking").boolValue = true;
         settings.ApplyModifiedPropertiesWithoutUndo();
         LogAssert.Expect(LogType.Error, new Regex("not a variant of BlockingProp"));
         Assert.That(PropWriter.Generate(recipe, Sprites, Prefabs), Is.Null);
+    }
+
+    /// <summary>
+    /// How the sprites of the sheet at <paramref name="sheet"/> are meshed.
+    /// </summary>
+    private static SpriteMeshType MeshType(string sheet)
+    {
+        TextureImporterSettings settings = new();
+        ((TextureImporter)AssetImporter.GetAtPath(sheet)).ReadTextureSettings(settings);
+        return settings.spriteMeshType;
+    }
+
+    /// <summary>
+    /// The renderer of <paramref name="prefab"/>'s <c>Visuals</c>.
+    /// </summary>
+    private static SpriteRenderer Visuals(GameObject prefab)
+    {
+        return prefab.transform.Find(PropWriter.VisualsName).GetComponent<SpriteRenderer>();
     }
 
     /// <summary>

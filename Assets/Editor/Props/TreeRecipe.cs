@@ -14,7 +14,8 @@ public enum TreeForm
 /// A tree (Docs/PropGeneration.md) on a tapering trunk with roots splayed over the ground. Round: branches reach into a
 /// crown of leaf clumps (<see cref="PropCrown"/>), its top on screen at the tree's height. A pine: a short trunk under
 /// tiers of streaked needles (<see cref="PropPine"/>). Bare: a trunk forking into twisted limbs (<see cref="PropLimbs"/>),
-/// as a dead or charred tree. Any of them can take a cover where it faces up (<see cref="PropCover"/>: snow, ash).
+/// as a dead or charred tree, with embers smouldering in its bark (<see cref="PropEmbers"/>, Docs/Lighting.md's Phase 6).
+/// Any of them can take a cover where it faces up (<see cref="PropCover"/>: snow, ash).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Tree Recipe", fileName = "Tree_Broadleaf")]
 public sealed class TreeRecipe : PropRecipe
@@ -69,6 +70,9 @@ public sealed class TreeRecipe : PropRecipe
 
     [Header("Cover")]
     [SerializeField] private PropCover cover = new(false, Ramp(0x5a6a8c, 0xa9b8d6, 0xd6e0f0, 0xf6f9ff), 0.55f, 0.35f, 6f);
+
+    [Header("Embers")]
+    [SerializeField] private PropEmbers embers = new(false, Ramp(0x3a0a04, 0x8a2208, 0xc8401a, 0xffa040));
 
     /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
@@ -138,5 +142,6 @@ public sealed class TreeRecipe : PropRecipe
         int twigId = drawing.AddMaterial(cover.Under(bark, coverId, ArtPattern.Bark, barkGrooves, false), true);
         int trunk = limbs.Draw(drawing, height, trunkRadius, barkId, twigId);
         roots.Draw(drawing, trunkRadius, barkId, trunk);
+        embers.Apply(drawing, embers.Add(drawing), new[] { barkId, twigId }, new int[0]);
     }
 }

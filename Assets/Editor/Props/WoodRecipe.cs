@@ -17,7 +17,8 @@ public enum WoodForm
 /// (<see cref="PropRoots"/>). A log: a fallen trunk lying sunk a little into the ground, turned from lying east and
 /// west, bowed and tapering, its broken ends (where the surface faces along it) wood with rings around its axis, its
 /// bark grooved along it, with a few branch stubs; a fallen log, or driftwood in bleached colours. Either can take a
-/// cover where it faces up (<see cref="PropCover"/>: moss, snow, ash).
+/// cover where it faces up (<see cref="PropCover"/>: moss, snow, ash), and a stump embers smouldering in its bark and
+/// cut end (<see cref="PropEmbers"/>, Docs/Lighting.md's Phase 6).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Wood Recipe", fileName = "Stump_Oak")]
 public sealed class WoodRecipe : PropRecipe
@@ -91,6 +92,9 @@ public sealed class WoodRecipe : PropRecipe
     [Header("Cover")]
     [SerializeField] private PropCover cover = new(false, Ramp(0x1c3412, 0x3e6a24, 0x5e8e30, 0x92b648), 0.85f, 0.5f, 6f);
 
+    [Header("Embers")]
+    [SerializeField] private PropEmbers embers = new(false, Ramp(0x3a0a04, 0x8a2208, 0xc8401a, 0xffa040));
+
     /// <inheritdoc />
     public override void Draw(PropDrawing drawing)
     {
@@ -119,6 +123,7 @@ public sealed class WoodRecipe : PropRecipe
         int part = drawing.NewPart();
         drawing.Canvas.Field(field, new Bounds((min + max) * 0.5f, max - min), (position, surfaceNormal) => surfaceNormal.z > cutFacing ? endId : barkId, part);
         roots.Draw(drawing, radius, barkId, part);
+        embers.Apply(drawing, embers.Add(drawing), new[] { barkId }, new[] { endId });
     }
 
     /// <summary>

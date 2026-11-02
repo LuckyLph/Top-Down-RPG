@@ -21,7 +21,9 @@ using UnityEngine.Tilemaps;
 /// light does fall off across them. And under the shipped day's afternoon sky and sun (Docs/Lighting.md, Phases 3 and
 /// 4), an outdoor world's ground and sprites draw exactly the pixels today's light draws wherever no sun shadow falls.
 /// At night a sprite's glowing pixels draw at their own colour and flicker to their flicker colour by the glow's flicker
-/// (Phase 5). Renders from later editor updates, until something is drawn.
+/// (Phase 5). A light stopped by a wall's caster (Phase 7) shadows whole art pixels that hold still as the camera moves,
+/// drawn by the 2D renderer's projected shadow shader, ours, which compiles cleanly. Renders from later editor updates,
+/// until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -29,6 +31,7 @@ public class PixelLightTests
     private const string SpriteShaderPath = "Assets/Shaders/Sprites/SpritePixelLit.shader";
     private const string CasterShaderPath = "Assets/Shaders/Sprites/SunShadowCaster.shader";
     private const string CliffsShaderPath = "Assets/Shaders/Terrain/SunShadowCliffs.shader";
+    private const string LightShadowShaderPath = LightShadowResources.ShaderPath;
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string LitLightMode = "Universal2D";
     private const string UrpLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
@@ -73,13 +76,14 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// The pixel-lit sprite shader and the sun shadows' caster and cliffs shaders import without errors or messages,
-    /// and every pass compiles for D3D, vertex and fragment, without errors or warnings, with and without the light
-    /// keyword where the pass declares it.
+    /// The pixel-lit sprite shader, the sun shadows' caster and cliffs shaders and the lights' projected shadow shader
+    /// import without errors or messages, and every pass compiles for D3D, vertex and fragment, without errors or
+    /// warnings, with and without the light keyword where the pass declares it.
     /// </summary>
     [TestCase(SpriteShaderPath)]
     [TestCase(CasterShaderPath)]
     [TestCase(CliffsShaderPath)]
+    [TestCase(LightShadowShaderPath)]
     public void TheShader_CompilesForD3DWithoutErrorsOrWarnings(string path)
     {
         Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
@@ -310,6 +314,74 @@ public class PixelLightTests
     }
 
     /// <summary>
+    /// The 2D renderer draws the shadows of lights with our projected shadow shader (Docs/Lighting.md, Phase 7), which
+    /// decides each shadow texel by the art pixel it lies in, set in URP's global settings.
+    /// </summary>
+    [Test]
+    public void TheRenderersProjectedShadowShader_IsTheArtGridOne()
+    {
+        Assert.That(LightShadowResources.Current, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Shader>(LightShadowShaderPath)));
+    }
+
+    /// <summary>
+    /// A white point light casting shadows over a grey ground under a dim global light, with a wall east of it (a box
+    /// Shadow Caster 2D), darkens the ground behind the wall and leaves the ground before it as it was without the wall;
+    /// every 3 x 3 block of screen pixels, one art pixel, is one colour, the shadow's slanted edges included; and moved
+    /// by quarters of a screen pixel, the camera sees every art pixel in the same colour to within 2 levels, so the
+    /// shadow's edge stays on the art grid (Docs/Lighting.md, Phase 7).
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALightStoppedByAWall_ShadowsWholeArtPixels_ThatHoldStillAsTheCameraMoves()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(150, 150, 150, 255), true), 16, 12);
+        AddGlobalLight(Color.white, 0.2f);
+        AddPointLight(new Vector2(5.1f, 6.05f), 6f, 1f, true);
+        ShadowCaster2D wall = AddWallCaster(new Rect(7f, 5f, 1f, 2.5f));
+        Rect world = new(4f, 3f, 8f, 6f);
+        Vector2 behind = new(8.6f, 6.25f);
+        Vector2 before = new(6.5f, 6.25f);
+        wall.enabled = false;
+        Color32[] open = null;
+        yield return RenderUntilDrawn(terrain, world, before, false, pixels => open = pixels);
+        wall.enabled = true;
+        wall.Update();
+        Color32[] walled = null;
+        yield return RenderUntilDrawn(terrain, world, before, false, pixels => walled = pixels);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        Assert.That(ArtPixel(walled, width, world, behind).r, Is.LessThan(ArtPixel(open, width, world, behind).r - 20), "The wall's shadow falls behind it.");
+        Assert.That(ArtPixel(walled, width, world, before), Is.EqualTo(ArtPixel(open, width, world, before)), "The ground before the wall keeps its light.");
+        Assert.That(MixedBlocks(walled, width, Mathf.RoundToInt(world.height * ArtPixelsPerUnit * Zoom), out string first), Is.Zero, first);
+
+        int moved = 0;
+        string worst = null;
+        foreach (float offset in new[] { 0.25f, 0.5f, 0.75f, 1.25f })
+        {
+            float shift = offset / (ArtPixelsPerUnit * Zoom);
+            Rect shifted = new(world.x + shift, world.y + shift * 0.4f, world.width, world.height);
+            Color32[] shiftedPixels = null;
+            yield return RenderUntilDrawn(terrain, shifted, before, false, pixels => shiftedPixels = pixels);
+            for (float y = world.yMin + 1f; y < world.yMax - 1f; y += 1f / ArtPixelsPerUnit)
+            {
+                for (float x = world.xMin + 1f; x < world.xMax - 1f; x += 1f / ArtPixelsPerUnit)
+                {
+                    Vector2 centre = new(x + 0.5f / ArtPixelsPerUnit, y + 0.5f / ArtPixelsPerUnit);
+                    Color32 still = ScreenPixel(walled, width, world, centre);
+                    Color32 seen = ScreenPixel(shiftedPixels, width, shifted, centre);
+                    int change = Mathf.Max(Mathf.Abs(still.r - seen.r), Mathf.Max(Mathf.Abs(still.g - seen.g), Mathf.Abs(still.b - seen.b)));
+                    if (change > 2)
+                    {
+                        moved++;
+                        worst ??= $"the art pixel at {centre} moved by {change} levels with the camera {offset} screen pixels on";
+                    }
+                }
+            }
+        }
+
+        Assert.That(moved, Is.Zero, worst);
+    }
+
+    /// <summary>
     /// At night a sprite's glowing pixels draw at their own colour, as unlit, while its other pixels draw as the same
     /// sprite without a glow draws them; with the glow's flicker at a share of one every flickering pixel shows its
     /// flicker colour, and at none its own (Docs/Lighting.md, Phase 5); with the glowing pixels turned off (the lighting
@@ -377,6 +449,77 @@ public class PixelLightTests
                 Assert.That(Near(shown, y >= 4 ? flicker : own), Is.True, $"({x}, {y}) shows {shown} at a flicker share of one.");
             }
         }
+    }
+
+    /// <summary>
+    /// A moving flame's sprite, cut from the bottom row of a sheet of four frames in rows, draws its first frame while
+    /// nothing flickers (the editor) and, at each flicker step, the frame <see cref="PropLighting.FlameFrameAt"/> picks
+    /// for where it stands, on the flames material's frame count (Docs/Lighting.md, Phase 6); two flames side by side
+    /// show their own frames.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AMovingFlame_DrawsTheFrameItsPlaceAndTheFlickerStepPick()
+    {
+        const int frames = 4;
+        Color32[] colours = { new(255, 0, 0, 255), new(0, 255, 0, 255), new(0, 0, 255, 255), new(255, 255, 0, 255) };
+        Color32[] sheet = new Color32[8 * 8 * frames];
+        for (int i = 0; i < sheet.Length; i++)
+        {
+            sheet[i] = colours[i / 64];
+        }
+
+        AddGlobalLight(Color.white, 1f);
+        Texture2D texture = Texture(8, 8 * frames, sheet, false);
+        Material flames = Track(new Material(AssetDatabase.LoadAssetAtPath<Material>(SpriteMaterialPath)));
+        flames.SetFloat("_FlameFrames", frames);
+        Vector2[] places = { new(-100f, -100f), new(-99.5f, -100f) };
+        foreach (Vector2 place in places)
+        {
+            AddSprite(texture, new Rect(0f, 0f, 8f, 8f), place, false).sharedMaterial = flames;
+        }
+
+        Rect world = new(-100.25f, -100f, 1f, 0.25f);
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        Color32[] still = null;
+        yield return RenderUntilDrawn(null, world, places[0] + new Vector2(0f, 0.1f), false, pixels => still = pixels);
+        foreach (Vector2 place in places)
+        {
+            Assert.That(FrameShown(ArtPixel(still, width, world, place + new Vector2(0f, 0.1f)), colours), Is.EqualTo(0), $"The flame at {place} stands on its first frame.");
+        }
+
+        for (int step = 0; step < 6; step++)
+        {
+            Shader.SetGlobalVector(GlowFlickerId, new Vector4(step, 0.36f, 0f, 0f));
+            Color32[] shown = null;
+            yield return RenderUntilDrawn(null, world, places[0] + new Vector2(0f, 0.1f), false, pixels => shown = pixels);
+            foreach (Vector2 place in places)
+            {
+                int frame = FrameShown(ArtPixel(shown, width, world, place + new Vector2(0f, 0.1f)), colours);
+                Assert.That(frame, Is.EqualTo(PropLighting.FlameFrameAt(place, step, frames)), $"The flame at {place} at step {step}.");
+            }
+        }
+
+        Assert.That(PropLighting.FlameFrameAt(places[0], 0, frames), Is.Not.EqualTo(PropLighting.FlameFrameAt(places[1], 0, frames)), "The two flames start on frames of their own.");
+    }
+
+    /// <summary>
+    /// The index of the colour of <paramref name="colours"/> nearest <paramref name="pixel"/>.
+    /// </summary>
+    private static int FrameShown(Color32 pixel, Color32[] colours)
+    {
+        int best = -1;
+        int nearest = int.MaxValue;
+        for (int i = 0; i < colours.Length; i++)
+        {
+            int distance = Mathf.Abs(pixel.r - colours[i].r) + Mathf.Abs(pixel.g - colours[i].g) + Mathf.Abs(pixel.b - colours[i].b);
+            if (distance < nearest)
+            {
+                nearest = distance;
+                best = i;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>
@@ -510,10 +653,10 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// A white point light on every sorting layer, of blend style 0, its mesh built at once, since a light builds it
-    /// only in its LateUpdate.
+    /// A white point light on every sorting layer, of blend style 0, casting hard shadows at full when
+    /// <paramref name="casts"/>, its mesh built at once, since a light builds it only in its LateUpdate.
     /// </summary>
-    private void AddPointLight(Vector2 position, float radius, float intensity)
+    private void AddPointLight(Vector2 position, float radius, float intensity, bool casts = false)
     {
         GameObject lightObject = Track(new GameObject("Point Light 2D"));
         lightObject.transform.position = position;
@@ -525,8 +668,76 @@ public class PixelLightTests
         light.pointLightInnerRadius = 0f;
         light.falloffIntensity = 0.5f;
         light.blendStyleIndex = 0;
+        light.shadowsEnabled = casts;
+        light.shadowIntensity = 1f;
+        light.shadowSoftness = 0f;
         typeof(Light2D).GetMethod("UpdateMesh", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(light, new object[] { true });
         typeof(Light2D).GetMethod("UpdateBoundingSphere", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(light, null);
+    }
+
+    /// <summary>
+    /// A wall's Shadow Caster 2D over <paramref name="box"/>, shaped by URP's shape editor without edge clipping or
+    /// trim, as the props' are written, ready to cast.
+    /// </summary>
+    private ShadowCaster2D AddWallCaster(Rect box)
+    {
+        ShadowCaster2D caster = Track(new GameObject("Wall")).AddComponent<ShadowCaster2D>();
+        SerializedObject serialized = new(caster);
+        serialized.FindProperty("m_ShadowCastingSource").intValue = 1;
+        SerializedProperty path = serialized.FindProperty("m_ShapePath");
+        Vector3[] corners = { new(box.xMin, box.yMin), new(box.xMax, box.yMin), new(box.xMax, box.yMax), new(box.xMin, box.yMax) };
+        path.arraySize = corners.Length;
+        for (int i = 0; i < corners.Length; i++)
+        {
+            path.GetArrayElementAtIndex(i).vector3Value = corners[i];
+        }
+
+        serialized.FindProperty("m_ShapePathHash").intValue = 1;
+        serialized.FindProperty("m_ShadowMesh.m_EdgeProcessing").intValue = 0;
+        serialized.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        caster.Update();
+        return caster;
+    }
+
+    /// <summary>
+    /// How many art pixels, blocks of <see cref="Zoom"/> x <see cref="Zoom"/> screen pixels, of a render
+    /// <paramref name="width"/> x <paramref name="height"/> are not one colour, naming the first in
+    /// <paramref name="first"/>.
+    /// </summary>
+    private static int MixedBlocks(Color32[] pixels, int width, int height, out string first)
+    {
+        int mixed = 0;
+        first = null;
+        for (int by = 0; by < height; by += Zoom)
+        {
+            for (int bx = 0; bx < width; bx += Zoom)
+            {
+                Color32 corner = pixels[by * width + bx];
+                for (int i = 0; i < Zoom * Zoom; i++)
+                {
+                    if (!pixels[(by + i / Zoom) * width + bx + i % Zoom].Equals(corner))
+                    {
+                        mixed++;
+                        first ??= $"art pixel ({bx / Zoom}, {by / Zoom}) is not one colour";
+                        break;
+                    }
+                }
+            }
+        }
+
+        return mixed;
+    }
+
+    /// <summary>
+    /// The rendered colour of the screen pixel holding <paramref name="position"/> in a render of
+    /// <paramref name="world"/>, which need not start on an art pixel.
+    /// </summary>
+    private static Color32 ScreenPixel(Color32[] pixels, int width, Rect world, Vector2 position)
+    {
+        int x = Mathf.FloorToInt((position.x - world.xMin) * ArtPixelsPerUnit * Zoom);
+        int y = Mathf.FloorToInt((position.y - world.yMin) * ArtPixelsPerUnit * Zoom);
+        return pixels[y * width + x];
     }
 
     /// <summary>

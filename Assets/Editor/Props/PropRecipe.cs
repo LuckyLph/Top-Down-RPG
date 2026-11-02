@@ -79,6 +79,12 @@ public abstract class PropRecipe : ScriptableObject
     public TerrainMaterial[] PreviewTerrains => previewTerrains;
 
     /// <summary>
+    /// How many frames each variant's sheet holds: a moving flame's loop (Docs/Lighting.md, Phase 6), its frames in rows
+    /// over the first, the one sliced; 1 for a still prop.
+    /// </summary>
+    public virtual int Frames => 1;
+
+    /// <summary>
     /// Draws one variant onto <paramref name="drawing"/>, in cells with the base at the world origin, drawing every
     /// random value from its random stream.
     /// </summary>

@@ -21,7 +21,8 @@ using Object = UnityEngine.Object;
 /// generated root with derived ids the id watcher keeps and its props under its generated props' root where the
 /// composition puts them, with no sorting order written; its <see cref="AreaTerrain"/> is only appended to; the written hash follows paint on any layer,
 /// the generated spawn points and the generated props, and nothing else; objects outside the generated roots (props
-/// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances; a locked chunk is
+/// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances, even past a prop
+/// added in the middle of a chunk's list (a region's light, Docs/Lighting.md, Phase 6); a locked chunk is
 /// never opened, an unchanged one is skipped without being opened, one
 /// changed by hand is refused unless forced; a second write changes no file; and the written world validates, bakes
 /// its coasts and keeps its derived ids through Repair ids; an entry moves only once the chunk under its new place is
@@ -255,6 +256,66 @@ public class WorldGenerationWriterTests
 
             firstProps = written;
         }
+    }
+
+    /// <summary>
+    /// A prop added in the middle of a chunk's list (the Lava Fields' causeway brazier, among the region's props and
+    /// before the wilds', Docs/Lighting.md, Phase 6) only adds its object: written over the chunk as written without it,
+    /// every instance there stays, and it is the one new object; written back without it, only it goes.
+    /// </summary>
+    [Test]
+    public void ARewrite_AddingAPropInTheMiddleOfTheList_KeepsEveryOtherInstance()
+    {
+        LavaFieldsGenerator cold = perTest.Track(Object.Instantiate((LavaFieldsGenerator)TestWorldGenerators.Area("LavaFields")));
+        SerializedObject settings = new(cold);
+        settings.FindProperty("causewayBraziers").arraySize = 0;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        WorldGenerator unlit = perTest.Overworld("UnlitCauseway");
+        List<RegionPlacement> placements = new();
+        foreach (RegionPlacement placement in overworldGenerator.Regions)
+        {
+            placements.Add(new RegionPlacement(placement.Key, placement.Key == TestWorldGenerators.LavaFields ? cold : placement.Generator, placement.Cell));
+        }
+
+        unlit.SetRegions(placements.ToArray());
+        WorldComposition without = unlit.Compose();
+        List<GameObject> braziers = new(((LavaFieldsGenerator)TestWorldGenerators.Area("LavaFields")).CausewayBraziers);
+        WorldComposition.Prop brazier = overworld.Props.Find(prop => prop.Scope == TestWorldGenerators.LavaFields && braziers.Contains(prop.Prefab));
+        Assert.That(brazier.Prefab, Is.Not.Null, "the causeway's brazier");
+        Vector2Int coords = brazier.Chunk;
+        List<WorldComposition.Prop> listed = overworld.Props.FindAll(prop => prop.Chunk == coords);
+        Assert.That(listed.IndexOf(brazier), Is.LessThan(listed.Count - 1), "the brazier lies in the middle of its chunk's list");
+        Grid grid = perTest.NewChunk(overworldGenerator.World, coords);
+
+        Assert.That(WorldGenerationWriter.WriteChunk(grid, without, coords), Is.Not.Null);
+        List<GameObject> before = PropInstances(grid);
+        Assert.That(WorldGenerationWriter.WriteChunk(grid, overworld, coords), Is.Not.Null);
+        List<GameObject> after = PropInstances(grid);
+        Assert.That(after.Count, Is.EqualTo(before.Count + 1));
+        foreach (GameObject kept in before)
+        {
+            Assert.That(after.Contains(kept), Is.True, $"{kept.name} is kept");
+        }
+
+        GameObject added = after.Find(instance => !before.Contains(instance));
+        Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(added), Is.EqualTo(brazier.Prefab), "the brazier is the new object");
+        Assert.That(added.transform.GetSiblingIndex(), Is.EqualTo(listed.IndexOf(brazier)), "in its place in the list");
+        Assert.That(WorldGenerationWriter.WriteChunk(grid, without, coords), Is.Not.Null);
+        Assert.That(PropInstances(grid), Is.EqualTo(before), "written back, only the brazier goes");
+    }
+
+    /// <summary>
+    /// The prop instances under <paramref name="grid"/>'s generated props' root, in order.
+    /// </summary>
+    private static List<GameObject> PropInstances(Grid grid)
+    {
+        List<GameObject> instances = new();
+        foreach (Transform prop in grid.transform.Find(WorldGenerationWriter.GeneratedPropsName))
+        {
+            instances.Add(prop.gameObject);
+        }
+
+        return instances;
     }
 
     /// <summary>

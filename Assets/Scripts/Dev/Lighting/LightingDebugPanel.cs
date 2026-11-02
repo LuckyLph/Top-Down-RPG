@@ -159,6 +159,9 @@ public class LightingDebugPanel : MonoBehaviour
             case KeyCode.B:
                 lighting.CycleGlowingPixels();
                 return true;
+            case KeyCode.N:
+                lighting.CycleLightShadows();
+                return true;
             case KeyCode.T:
                 lighting.Teleport(shift ? -1 : 1);
                 return true;
@@ -179,13 +182,14 @@ public class LightingDebugPanel : MonoBehaviour
         string glow = props != null ? LightingDebugControls.StateText(props.GroundGlowOverride) : "-";
         string flicker = props != null ? LightingDebugControls.StateText(props.FlickerOverride) : "-";
         string pixels = props != null ? LightingDebugControls.StateText(props.GlowingPixelsOverride) : "-";
+        string lightShadows = props != null ? LightingDebugControls.StateText(props.LightShadowsOverride) : "-";
         return "3 4 5 6 7 8 9 0 - =  sunrise, early morning, morning, noon,\n"
             + "        afternoon, evening, sunset, dusk, night, before dawn\n"
             + ", .  step 15 s (Shift 1.5 s)   P hold   F x1 / x10 / x60\n"
             + "Backspace  follow the session\n"
             + $"Z sun shadows {shadows}    X prop lights {lights}\n"
             + $"C lava glow {glow}    V flicker {flicker}    B glowing pixels {pixels}\n"
-            + "T / Shift+T  next / previous spot";
+            + $"N light shadows {lightShadows}    T / Shift+T  next / previous spot";
     }
 
     /// <summary>

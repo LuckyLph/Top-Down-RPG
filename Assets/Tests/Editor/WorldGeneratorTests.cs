@@ -19,7 +19,8 @@ using UnityEngine;
 /// lie on walkable wilds; the wilds' patches meet only grass and the wilds' mobs keep their distances from the entries
 /// and every other mob; each region's props are its layout's, moved, but those that would cross a chunk's border or
 /// stand on or beside its plaza; a waystone lamp stands on each plaza beside its waystone, off the roads, moving nothing
-/// else; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
+/// else; a pair of torches stands at each gate and lamp posts along the stone roads near the gates, beside the roads on
+/// the wilds' grass, moving nothing but the walk-through props on their cells; the wilds' props stand on the wilds' grass inside their chunks, clear of the paths, the
 /// beach, the entries, the mobs and each other's footprints, and edge trees only beside regions of grass; and the
 /// derived ids are unique, in the format of the editor's random ids, and stay the same through re-seeding, moving,
 /// re-rolling and composing again. The generators carry the wilds' prop settings of the project's Overworld generator.
@@ -321,6 +322,143 @@ public class WorldGeneratorTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// With gate torches and a road lamp (Docs/Lighting.md, Phase 6): two torches stand at each gate, the first on its
+    /// west or south side and the second on the other, each on the first cell off the road across it from the gate; lamp
+    /// posts stand along the stone roads, none along the gravel ones, each on the wilds' grass beside a stone road, within
+    /// the road lamp reach of a gate and no nearer a waystone or a gate than the entry clearance, half the spacing or more
+    /// from each other; no light stands on or beside a mob; every other prop is the composition's without them, in order,
+    /// but the walk-through props on the lights' cells, and the mobs are the same, from the same scopes and ordinals,
+    /// which their ids derive from.
+    /// </summary>
+    [Test]
+    public void GateTorchesAndRoadLamps_StandBesideTheRoads_MovingNothingElse()
+    {
+        GameObject[] torches =
+        {
+            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Lights/Torch_0.prefab"),
+            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Lights/Torch_1.prefab")
+        };
+        GameObject lamp = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Props/Lights/LampPost_0.prefab");
+        WorldGenerator lit = generators.Overworld("RoadLitOverworld");
+        lit.SetLights(torches, lamp);
+        WorldComposition composed = lit.Compose();
+        List<WorldComposition.Prop> gateTorches = composed.Props.FindAll(prop => prop.Scope == "gates");
+        List<WorldComposition.Prop> roadLamps = composed.Props.FindAll(prop => prop.Scope == "roads");
+        List<WorldComposition.Prop> others = composed.Props.FindAll(prop => prop.Scope != "gates" && prop.Scope != "roads");
+        HashSet<Vector2Int> lightCells = new();
+        foreach (WorldComposition.Prop light in composed.Props)
+        {
+            if (light.Scope == "gates" || light.Scope == "roads")
+            {
+                lightCells.Add(light.Cell);
+            }
+        }
+
+        int next = 0;
+        foreach (WorldComposition.Prop prop in overworld.Props)
+        {
+            if (next < others.Count && (others[next].Prefab, others[next].Cell, others[next].Offset) == (prop.Prefab, prop.Cell, prop.Offset))
+            {
+                next++;
+                continue;
+            }
+
+            Assert.That(prop.Blocks, Is.False, $"{prop.Prefab.name} at {prop.Cell} left out");
+            Assert.That(lightCells.Contains(prop.Cell), Is.True, $"{prop.Prefab.name} at {prop.Cell} left out off the lights");
+        }
+
+        Assert.That(next, Is.EqualTo(others.Count), "nothing else is placed");
+        Assert.That(composed.Mobs.Count, Is.EqualTo(overworld.Mobs.Count));
+        for (int i = 0; i < composed.Mobs.Count; i++)
+        {
+            Assert.That((composed.Mobs[i].Cell, composed.Mobs[i].Scope, composed.Mobs[i].Ordinal), Is.EqualTo((overworld.Mobs[i].Cell, overworld.Mobs[i].Scope, overworld.Mobs[i].Ordinal)), $"mob {i}");
+        }
+
+        List<Vector2> gates = new();
+        List<Vector2> entries = new();
+        foreach (WorldDefinition.Entry entry in composed.Entries)
+        {
+            entries.Add(entry.Position);
+            if (!entry.Waystone)
+            {
+                gates.Add(entry.Position);
+            }
+        }
+
+        Assert.That(gateTorches.Count, Is.EqualTo(gates.Count * 2), "two torches at each gate");
+        foreach (Vector2 gate in gates)
+        {
+            List<WorldComposition.Prop> pair = gateTorches.FindAll(torch => Vector2.Distance(torch.Cell + new Vector2(0.5f, 0.5f), gate) <= 3.5f);
+            Assert.That(pair.Count, Is.EqualTo(2), $"the gate at {gate}'s torches");
+            pair.Sort((a, b) => (a.Cell.x + a.Cell.y).CompareTo(b.Cell.x + b.Cell.y));
+            Assert.That((pair[0].Prefab, pair[1].Prefab), Is.EqualTo((torches[0], torches[1])), $"the gate at {gate}'s torches in order");
+            Vector2Int gateCell = Vector2Int.FloorToInt(gate);
+            Assert.That(pair[0].Cell.x == gateCell.x || pair[0].Cell.y == gateCell.y, Is.True, $"the gate at {gate}'s torches stand across the road from it");
+            foreach (WorldComposition.Prop torch in pair)
+            {
+                AssertBesideTheRoad(composed, torch.Cell, $"the gate at {gate}'s torch at {torch.Cell}");
+            }
+        }
+
+        Assert.That(roadLamps.Count, Is.GreaterThan(10), "lamps along the roads");
+        foreach (WorldComposition.Prop roadLamp in roadLamps)
+        {
+            Vector2 at = roadLamp.Cell + new Vector2(0.5f, 0.5f);
+            Assert.That(roadLamp.Prefab, Is.EqualTo(lamp));
+            bool besideStone = false;
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    besideStone |= composed.Has(roadLamp.Cell + new Vector2Int(dx, dy), materials.Stone);
+                }
+            }
+
+            Assert.That(besideStone, Is.True, $"the lamp at {roadLamp.Cell} stands beside a stone road");
+            AssertBesideTheRoad(composed, roadLamp.Cell, $"the lamp at {roadLamp.Cell}");
+            Assert.That(gates.Exists(gate => Vector2.Distance(gate, at) <= lit.RoadLampReach + 3f), Is.True, $"the lamp at {roadLamp.Cell} stands near a gate");
+            Assert.That(entries.TrueForAll(entry => Vector2.Distance(entry, at) >= lit.RoadLampEntryClearance - 2f), Is.True, $"the lamp at {roadLamp.Cell} keeps from the entries");
+            foreach (WorldComposition.Prop other in roadLamps)
+            {
+                if (other.Cell != roadLamp.Cell)
+                {
+                    Assert.That(Vector2.Distance(other.Cell, roadLamp.Cell), Is.GreaterThanOrEqualTo(lit.RoadLampSpacing * 0.5f), $"the lamps at {roadLamp.Cell} and {other.Cell}");
+                }
+            }
+        }
+
+        foreach (Vector2Int cell in lightCells)
+        {
+            foreach (WorldComposition.Mob mob in composed.Mobs)
+            {
+                Assert.That(Mathf.Abs(mob.Cell.x - cell.x) > 1 || Mathf.Abs(mob.Cell.y - cell.y) > 1, Is.True, $"the light at {cell} beside the mob at {mob.Cell}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="cell"/> is wilds ground of grass and its patches, off the roads and the beach, beside a
+    /// road cell.
+    /// </summary>
+    private void AssertBesideTheRoad(WorldComposition composed, Vector2Int cell, string what)
+    {
+        Assert.That(composed.RegionAt(cell), Is.EqualTo(WorldComposition.Wilds), $"{what} stands in the wilds");
+        TerrainMaterial top = composed.TopAt(cell);
+        Assert.That(top == materials.Grass || top == materials.Weeds || top == materials.Meadow || top == materials.TallGrass, Is.True, $"{what} stands on the wilds' grass, not {top}");
+        bool beside = false;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                Vector2Int near = cell + new Vector2Int(dx, dy);
+                beside |= composed.Has(near, materials.Stone) || composed.Has(near, materials.Gravel);
+            }
+        }
+
+        Assert.That(beside, Is.True, $"{what} stands beside the road");
     }
 
     /// <summary>

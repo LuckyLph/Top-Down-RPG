@@ -7,14 +7,17 @@ using UnityEngine;
 /// <summary>
 /// Tests for the prop baker (Docs/PropGeneration.md, Testing): each kind and form of recipe bakes the same pixels for
 /// the same seed and different ones for different variants; every variant of every recipe asset keeps its drawing
-/// inside its frame, stands on its base pixel and, when it blocks, has a footprint centred on its base inside its frame;
+/// inside its frame, stands on its base pixel (a brazier on legs round it) and, when it blocks, has a footprint centred
+/// on its base inside its frame;
 /// a bush's flowers only recolour its crown, in one
 /// colour a variant; a crown drawing its lower clumps in front shows the lower of two overlapping clumps, one picking
 /// from several places spreads its clumps and one tapered grows them from its top to its foot; a log lies across its base with its broken ends showing; a pine stands on a trunk that shows under
 /// its tiers; a bare tree's twigs are unlined; a crag blocks only its own foot; a cover lies only where it is enabled;
 /// a light prop glows only where its flame, coals or glass are drawn, its flame's pixels flickering to the tones next to
-/// theirs, and stands its light on the ground under where it shines from (Docs/Lighting.md, Phase 5); and a recipe
-/// refuses names and frames it cannot bake.
+/// theirs, and stands its light on the ground under where it shines from (Docs/Lighting.md, Phases 5 and 6); a moving
+/// flame bakes a loop of frames whose flame moves, a still one and a lamp's one frame; charred wood smoulders with
+/// steady embers in its bark and cut ends, keeping its footprint (Phase 6); and a recipe refuses names and frames it
+/// cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
@@ -60,6 +63,8 @@ public class PropRecipeTests
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Fern)]
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Blades)]
     [TestCase(typeof(PlantRecipe), "form", (int)PlantForm.Mushrooms)]
+    [TestCase(typeof(LightRecipe), "form", (int)LightForm.Torch)]
+    [TestCase(typeof(LightRecipe), "form", (int)LightForm.Brazier)]
     [TestCase(typeof(LightRecipe), null, 0)]
     public void Bake_SameSeed_GivesTheSamePixels_AndOtherVariantsOthers(System.Type kind, string setting, int value)
     {
@@ -98,7 +103,7 @@ public class PropRecipeTests
                 PropVariant variant = PropBaker.Bake(recipe, i);
                 string name = $"{recipe.name} {i}";
                 Assert.That(variant.AtEdge, Is.False, $"{name} reaches its frame's edge.");
-                Assert.That(variant.Pixels[basePixel.y * frame.x + basePixel.x].a, Is.EqualTo(255), $"{name} should stand on its base pixel.");
+                Assert.That(variant.Pixels[basePixel.y * frame.x + basePixel.x].a == 255 || StandsOnLegs(variant, frame, basePixel), Is.True, $"{name} should stand on its base pixel.");
                 if (!recipe.Blocking)
                 {
                     continue;
@@ -344,16 +349,22 @@ public class PropRecipeTests
     }
 
     /// <summary>
-    /// A campfire glows only on the pixels of its glowing materials (its flame and coals), each at its material's glow,
-    /// its flame's flickering to one of the tones next to theirs and nothing else flickering, its outline and stones not
-    /// glowing; a lamp post's glass and wick glow without flickering; and each stands its light on the ground under where
-    /// it shines from, at its base. A prop that does not glow has no glow and no light.
+    /// A campfire, a torch and a brazier glow only on the pixels of their glowing materials (their flame and coals), each
+    /// at its material's glow, their flame's flickering to one of the tones next to theirs and nothing else flickering,
+    /// their outline, stones, wood and iron not glowing; a lamp post's glass and wick glow without flickering; and each
+    /// stands its light on the ground under where it shines from, at its base. A prop that does not glow has no glow and
+    /// no light.
     /// </summary>
     [Test]
     public void LightProps_GlowWhereTheirFlameOrGlassIs_AndStandTheirLightUnderIt()
     {
-        LightRecipe campfire = Track(ScriptableObject.CreateInstance<LightRecipe>());
-        AssertGlow(campfire, true);
+        foreach (LightForm form in new[] { LightForm.Campfire, LightForm.Torch, LightForm.Brazier })
+        {
+            LightRecipe fire = Track(ScriptableObject.CreateInstance<LightRecipe>());
+            Set(fire, "form", (int)form);
+            AssertGlow(fire, true);
+        }
+
         LightRecipe lamp = Track(ScriptableObject.CreateInstance<LightRecipe>());
         Set(lamp, "form", (int)LightForm.LampPost);
         AssertGlow(lamp, false);
@@ -361,6 +372,152 @@ public class PropRecipeTests
         PropVariant rock = PropBaker.Bake(Track(ScriptableObject.CreateInstance<RockRecipe>()), 0);
         Assert.That(rock.Glows, Is.False);
         Assert.That(rock.HasLight, Is.False);
+    }
+
+    /// <summary>
+    /// A campfire's, a torch's and a brazier's flame moves (Docs/Lighting.md, Phase 6): each variant bakes a loop of
+    /// <see cref="LightRecipe.FlameFrames"/> frames, the first its pixels, each glowing, inside its frame and unlike the
+    /// one before, while the lowest row of its drawing, on the ground under the flame, stays; a flame set still and a lamp
+    /// post's wick bake one frame.
+    /// </summary>
+    [Test]
+    public void MovingFlames_BakeALoopOfFrames_AndStillOnesOne()
+    {
+        foreach (LightForm form in new[] { LightForm.Campfire, LightForm.Torch, LightForm.Brazier })
+        {
+            LightRecipe fire = Track(ScriptableObject.CreateInstance<LightRecipe>());
+            Set(fire, "form", (int)form);
+            Assert.That(fire.Frames, Is.EqualTo(LightRecipe.FlameFrames), $"{form} moves.");
+            PropVariant variant = PropBaker.Bake(fire, 0);
+            Assert.That(variant.FramePixels.Count, Is.EqualTo(LightRecipe.FlameFrames), form.ToString());
+            Assert.That(variant.FrameGlow.Count, Is.EqualTo(LightRecipe.FlameFrames), form.ToString());
+            Assert.That(variant.Pixels, Is.SameAs(variant.FramePixels[0]), $"{form}'s first frame is its pixels.");
+            Assert.That(variant.AtEdge, Is.False, $"{form}'s frames stay inside the frame.");
+            int width = fire.FrameSize.x;
+            for (int f = 0; f < LightRecipe.FlameFrames; f++)
+            {
+                Color32[] frame = variant.FramePixels[f];
+                Color32[] before = variant.FramePixels[(f + LightRecipe.FlameFrames - 1) % LightRecipe.FlameFrames];
+                Assert.That(variant.FrameGlow[f].Any(g => g.a > 0), Is.True, $"{form}'s frame {f} glows.");
+                Assert.That(Enumerable.Range(0, frame.Length).Count(i => !frame[i].Equals(before[i])), Is.GreaterThan(4), $"{form}'s flame moves into frame {f}.");
+                for (int x = 0; x < width; x++)
+                {
+                    int i = variant.Drawn.yMin * width + x;
+                    Assert.That(frame[i], Is.EqualTo(variant.Pixels[i]), $"{form}'s frame {f} stands on the same ground at ({x}, {variant.Drawn.yMin}).");
+                }
+            }
+        }
+
+        LightRecipe still = Track(ScriptableObject.CreateInstance<LightRecipe>());
+        Set(still, "flameMoves", 0);
+        Assert.That(still.Frames, Is.EqualTo(1));
+        Assert.That(PropBaker.Bake(still, 0).FramePixels.Count, Is.EqualTo(1));
+        LightRecipe lamp = Track(ScriptableObject.CreateInstance<LightRecipe>());
+        Set(lamp, "form", (int)LightForm.LampPost);
+        Assert.That(lamp.Frames, Is.EqualTo(1), "A lamp's wick stands still.");
+        Assert.That(PropBaker.Bake(lamp, 0).FramePixels.Count, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// The charred trees and stumps (Docs/Lighting.md, Phase 6) smoulder: some of each variant's pixels glow, at the
+    /// embers' share and without flickering, while the same recipe without embers glows nowhere; every pixel that does
+    /// not glow and does not touch an ember is the one drawn without embers, and the footprint stays. Other wood has no
+    /// embers.
+    /// </summary>
+    [Test]
+    public void CharredWood_SmouldersSteadily_KeepingItsDrawingAndFootprint()
+    {
+        foreach (string name in new[] { "Tree_Charred", "Stump_Charred", "StumpSmall_Charred" })
+        {
+            PropRecipe charred = AssetDatabase.LoadAssetAtPath<PropRecipe>($"{RecipesFolder}/{name}.asset");
+            PropRecipe cold = Track(Object.Instantiate(charred));
+            SerializedObject settings = new(cold);
+            settings.FindProperty("embers").FindPropertyRelative("enabled").boolValue = false;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            int width = charred.FrameSize.x;
+            for (int v = 0; v < charred.VariantCount; v++)
+            {
+                PropVariant hot = PropBaker.Bake(charred, v);
+                PropVariant plain = PropBaker.Bake(cold, v);
+                Assert.That(plain.Glows, Is.False, $"{name} {v} without embers does not glow.");
+                Assert.That(hot.Footprint, Is.EqualTo(plain.Footprint), $"{name} {v} keeps its footprint.");
+                int embers = 0;
+                int drawn = 0;
+                for (int i = 0; i < hot.Pixels.Length; i++)
+                {
+                    drawn += hot.Pixels[i].a > 0 ? 1 : 0;
+                    Color32 glow = hot.Glow[i];
+                    if (glow.a > 0)
+                    {
+                        embers++;
+                        Assert.That(glow, Is.EqualTo(new Color32(0, 0, 0, 191)), $"{name} {v}'s ember {i} glows steady at three quarters.");
+                        continue;
+                    }
+
+                    if (!TouchesGlow(hot.Glow, i, width))
+                    {
+                        Assert.That(hot.Pixels[i], Is.EqualTo(plain.Pixels[i]), $"{name} {v}'s pixel {i} is drawn as without embers.");
+                    }
+                }
+
+                Assert.That(embers, Is.GreaterThan(0), $"{name} {v} smoulders.");
+                Assert.That(embers, Is.LessThan(drawn / 4), $"{name} {v}'s embers are a few cracks and patches.");
+            }
+        }
+
+        foreach (string name in new[] { "Stump_Oak", "Log_Oak", "Driftwood" })
+        {
+            PropRecipe wood = AssetDatabase.LoadAssetAtPath<PropRecipe>($"{RecipesFolder}/{name}.asset");
+            Assert.That(PropBaker.Bake(wood, 0).Glows, Is.False, $"{name} does not smoulder.");
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="variant"/> stands on legs round its <paramref name="basePixel"/>, as a brazier's tripod
+    /// does: drawn pixels inside its footprint both left and right of the base pixel's column.
+    /// </summary>
+    private static bool StandsOnLegs(PropVariant variant, Vector2Int frame, Vector2Int basePixel)
+    {
+        bool left = false;
+        bool right = false;
+        RectInt footprint = variant.Footprint;
+        for (int y = footprint.yMin; y < footprint.yMax; y++)
+        {
+            for (int x = footprint.xMin; x < footprint.xMax; x++)
+            {
+                if (variant.Pixels[y * frame.x + x].a > 0)
+                {
+                    left |= x < basePixel.x;
+                    right |= x > basePixel.x;
+                }
+            }
+        }
+
+        return left && right;
+    }
+
+    /// <summary>
+    /// Whether pixel <paramref name="index"/> of a frame <paramref name="width"/> wide has a glowing pixel of
+    /// <paramref name="glow"/> among its 8 neighbours.
+    /// </summary>
+    private static bool TouchesGlow(Color32[] glow, int index, int width)
+    {
+        int x = index % width;
+        int y = index / width;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < width && ny >= 0 && ny * width + nx < glow.Length && glow[ny * width + nx].a > 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

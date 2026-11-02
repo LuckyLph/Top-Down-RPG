@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 550d0f0e1a1fd144bb8bd41c9a32394e, type: 3}
+  m_Name: Torch
+  m_EditorClassIdentifier: TopDownRPG.Editor::LightRecipe
+  propName: Torch
+  category: 5
+  seed: 1
+  variantCount: 2
+  frameSize: {x: 24, y: 64}
+  basePixel: {x: 12, y: 6}
+  blocking: 1
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  fades: 0
+  previewTerrains:
+  - {fileID: 11400000, guid: 934366ed636546f4eb02cbc4d03db679, type: 2}
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 2
+  ringRadius: 0.36
+  stones: 8
+  stoneSize: {x: 0.08, y: 0.11}
+  logs: 4
+  logHeight: 0.22
+  logRadius: 0.045
+  tongues: 3
+  flameHeight: {x: 0.2, y: 0.36}
+  flameWidth: 0.085
+  postHeight: 1.7
+  postRadius: 0.06
+  lanternWidth: 0.24
+  lanternHeight: 0.3
+  poleHeight: 1.05
+  poleRadius: 0.04
+  head: {x: 0.075, y: 0.15}
+  standHeight: 0.42
+  bowl: {x: 0.27, y: 0.14}
+  legSpread: 0.22
+  flameMoves: 1
+  lightColour:
+    serializedVersion: 2
+    rgba: 4284526847
+  lightIntensity: 1
+  lightRadius: 3.5
+  lightFlicker: 0.15
+  stone:
+    outline:
+      serializedVersion: 2
+      rgba: 4281215014
+    shadow:
+      serializedVersion: 2
+      rgba: 4285293150
+    middle:
+      serializedVersion: 2
+      rgba: 4287793798
+    light:
+      serializedVersion: 2
+      rgba: 4290033332
+  wood:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280035902
+    middle:
+      serializedVersion: 2
+      rgba: 4281352800
+    light:
+      serializedVersion: 2
+      rgba: 4282672778
+  charred:
+    outline:
+      serializedVersion: 2
+      rgba: 4278848014
+    shadow:
+      serializedVersion: 2
+      rgba: 4279638564
+    middle:
+      serializedVersion: 2
+      rgba: 4280429114
+    light:
+      serializedVersion: 2
+      rgba: 4281615450
+  coals:
+    outline:
+      serializedVersion: 2
+      rgba: 4278717468
+    shadow:
+      serializedVersion: 2
+      rgba: 4279114314
+    middle:
+      serializedVersion: 2
+      rgba: 4279381642
+    light:
+      serializedVersion: 2
+      rgba: 4279917272
+  iron:
+    outline:
+      serializedVersion: 2
+      rgba: 4279899156
+    shadow:
+      serializedVersion: 2
+      rgba: 4281740844
+    middle:
+      serializedVersion: 2
+      rgba: 4283845704
+    light:
+      serializedVersion: 2
+      rgba: 4286214252
+  wrap:
+    outline:
+      serializedVersion: 2
+      rgba: 4278980116
+    shadow:
+      serializedVersion: 2
+      rgba: 4280033838
+    middle:
+      serializedVersion: 2
+      rgba: 4281088074
+    light:
+      serializedVersion: 2
+      rgba: 4282405482
+  flame:
+    outline:
+      serializedVersion: 2
+      rgba: 4279249546
+    shadow:
+      serializedVersion: 2
+      rgba: 4280179942
+    middle:
+      serializedVersion: 2
+      rgba: 4281113850
+    light:
+      serializedVersion: 2
+      rgba: 4286112511
+  glass:
+    outline:
+      serializedVersion: 2
+      rgba: 4279515754
+    shadow:
+      serializedVersion: 2
+      rgba: 4282026712
+    middle:
+      serializedVersion: 2
+      rgba: 4285451519
+    light:
+      serializedVersion: 2
+      rgba: 4291097343

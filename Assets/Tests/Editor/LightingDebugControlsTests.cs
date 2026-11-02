@@ -148,8 +148,8 @@ public class LightingDebugControlsTests
     }
 
     /// <summary>
-    /// The sun's shadows, the flicker and the glowing pixels cycle between following the day and off; the prop lights
-    /// and the ground's glow between following the day, on and off.
+    /// The sun's shadows, the flicker, the glowing pixels and the lights' shadows cycle between following the day and off;
+    /// the prop lights and the ground's glow between following the day, on and off.
     /// </summary>
     [Test]
     public void TheOverrides_CycleThroughTheirStates()
@@ -177,6 +177,11 @@ public class LightingDebugControlsTests
 
         controls.CycleGlowingPixels();
         Assert.That(propLighting.GlowingPixelsOverride, Is.EqualTo(LightingOverride.Off));
+
+        controls.CycleLightShadows();
+        Assert.That(propLighting.LightShadowsOverride, Is.EqualTo(LightingOverride.Off));
+        controls.CycleLightShadows();
+        Assert.That(propLighting.LightShadowsOverride, Is.EqualTo(LightingOverride.Follow));
         Assert.That(LightingDebugControls.StateText(LightingOverride.Off), Is.EqualTo("OFF"));
         Assert.That(LightingDebugControls.StateText(LightingOverride.On), Is.EqualTo("ON"));
         Assert.That(LightingDebugControls.StateText(LightingOverride.Follow), Is.EqualTo("follow"));
@@ -207,7 +212,7 @@ public class LightingDebugControlsTests
 
     /// <summary>
     /// The readout names the time of day by its keys, how it runs, the sun, the sky's and the sun's colours, the night
-    /// lights' share, the chunks the night's lights hold, the spot and the frame rate.
+    /// lights' share, the chunks the night's lights hold and the casters they keep awake, the spot and the frame rate.
     /// </summary>
     [Test]
     public void TheReadout_DescribesTheLighting()
@@ -223,7 +228,7 @@ public class LightingDebugControlsTests
         StringAssert.Contains("Sun down", readout);
         StringAssert.Contains("Sky 0.50 0.50 0.50", readout);
         StringAssert.Contains("Night lights 1.00", readout);
-        StringAssert.Contains("PropLighting holds 0 chunks", readout);
+        StringAssert.Contains("PropLighting holds 0 chunks, 0 casters awake", readout);
         StringAssert.Contains("Spot 2/3 campsite", readout);
 
         controls.StepTime(3, false);
@@ -249,6 +254,7 @@ public class LightingDebugControlsTests
             empty.CycleGroundGlow();
             empty.CycleFlicker();
             empty.CycleGlowingPixels();
+            empty.CycleLightShadows();
         });
         Assert.That(empty.Teleport(1), Is.Null);
         StringAssert.Contains("No day clock", empty.Readout(0f));

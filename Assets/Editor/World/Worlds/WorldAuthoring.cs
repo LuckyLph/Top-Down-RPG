@@ -332,6 +332,35 @@ public static class WorldAuthoring
     }
 
     /// <summary>
+    /// Gives <paramref name="walls"/>, a walls' data tilemap, the Shadow Caster 2D the walls prefab carries
+    /// (Docs/Lighting.md, Phase 7), unless it has one, as one undo step: shaped by the walls' collider through URP's
+    /// collider shape, on every sorting layer, the walls' own cells left lit, without URP's trim so a shadow starts at the
+    /// walls' cells. Returns the caster, or null with an error when URP shapes it from anything but the collider.
+    /// </summary>
+    public static ShadowCaster2D AddWallShadows(GameObject walls)
+    {
+        if (walls.TryGetComponent(out ShadowCaster2D caster))
+        {
+            return caster;
+        }
+
+        TilemapCollider2D collider = walls.GetComponent<TilemapCollider2D>();
+        caster = Undo.AddComponent<ShadowCaster2D>(walls);
+        SerializedObject serialized = new(caster);
+        if (collider == null || serialized.FindProperty("m_ShadowShape2DComponent").objectReferenceValue != collider)
+        {
+            Debug.LogError($"{walls.name}: its shadow caster is not shaped by the walls' collider.", walls);
+            Undo.DestroyObjectImmediate(caster);
+            return null;
+        }
+
+        serialized.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(walls);
+        return caster;
+    }
+
+    /// <summary>
     /// Gives <paramref name="grid"/> a raised tilemap its terrain renderer draws and its navigation reads the cliff of,
     /// as one undo step, or returns the one it has.
     /// </summary>

@@ -526,6 +526,106 @@ internal sealed class AreaLayoutBuilder
     }
 
     /// <summary>
+    /// Stands the blocking light prop <paramref name="prefab"/> (Docs/Lighting.md, Phases 5 and 6) with its footprint's
+    /// bottom-left cell on <paramref name="corner"/> when every cell it covers is ground that passes
+    /// <paramref name="allowed"/> and that no blocking prop or mob holds, first taking off the walk-through props standing
+    /// on those cells, so nothing else moves. Draws nothing from the random streams. Returns whether it stood.
+    /// </summary>
+    public bool TryPlaceLight(GameObject prefab, Vector3Int corner, Predicate<Vector3Int> allowed)
+    {
+        if (prefab == null || !PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+        {
+            return false;
+        }
+
+        Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+        RectInt block = new((Vector2Int)corner, covered);
+        foreach (Vector2Int cell in block.allPositionsWithin)
+        {
+            Vector3Int part = new(cell.x, cell.y, 0);
+            if (!Ground.Contains(part) || Occupied.Contains(part) || !allowed(part))
+            {
+                return false;
+            }
+        }
+
+        foreach (AreaLayout.Mob mob in Layout.Mobs)
+        {
+            if (block.Contains((Vector2Int)mob.Cell))
+            {
+                return false;
+            }
+        }
+
+        RemoveProps(cell => block.Contains((Vector2Int)cell), true);
+        Cover(prefab, corner, covered, null);
+        return true;
+    }
+
+    /// <summary>
+    /// Stands the light prop <paramref name="prefab"/> on the cell nearest <paramref name="target"/>, within
+    /// <paramref name="reach"/> cells of the cell holding it, where it stands (<see cref="TryPlaceLight"/>) and closes no
+    /// way: every cell round its footprint (8 neighbours) is ground that passes <paramref name="walkable"/> and that no
+    /// blocking prop holds, so whatever could be walked to still can. Cells are tried by the distance of their centre
+    /// from the target, then in row order. Returns the cell it stood on, or null.
+    /// </summary>
+    public Vector3Int? PlaceLightNear(GameObject prefab, Vector2 target, int reach, Predicate<Vector3Int> allowed, Predicate<Vector3Int> walkable)
+    {
+        if (prefab == null || !PropGridSnapping.TryGetFootprint(prefab, out Rect footprint))
+        {
+            return null;
+        }
+
+        Vector2Int covered = PropGridSnapping.CellsCovered(footprint, Vector2.one);
+        Vector3Int centre = CellAt(target);
+        List<Vector3Int> cells = new();
+        for (int dy = -reach; dy <= reach; dy++)
+        {
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                cells.Add(centre + new Vector3Int(dx, dy, 0));
+            }
+        }
+
+        cells.Sort((a, b) =>
+        {
+            int order = (new Vector2(a.x + 0.5f, a.y + 0.5f) - target).sqrMagnitude.CompareTo((new Vector2(b.x + 0.5f, b.y + 0.5f) - target).sqrMagnitude);
+            return order != 0 ? order : a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x);
+        });
+        foreach (Vector3Int cell in cells)
+        {
+            if (LeavesWayRound(cell, covered, walkable) && TryPlaceLight(prefab, cell, allowed))
+            {
+                return cell;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether every cell round the <paramref name="covered"/> block from <paramref name="corner"/> (8 neighbours) is
+    /// ground that passes <paramref name="walkable"/> and that no blocking prop holds.
+    /// </summary>
+    private bool LeavesWayRound(Vector3Int corner, Vector2Int covered, Predicate<Vector3Int> walkable)
+    {
+        for (int dy = -1; dy <= covered.y; dy++)
+        {
+            for (int dx = -1; dx <= covered.x; dx++)
+            {
+                bool inside = dx >= 0 && dy >= 0 && dx < covered.x && dy < covered.y;
+                Vector3Int cell = corner + new Vector3Int(dx, dy, 0);
+                if (!inside && (!Ground.Contains(cell) || !walkable(cell) || Occupied.Contains(cell)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Whether every cell of the <paramref name="covered"/> block from <paramref name="corner"/> is ground that is not
     /// reserved, covered or decorated.
     /// </summary>

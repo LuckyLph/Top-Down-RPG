@@ -30,6 +30,8 @@ using Object = UnityEngine.Object;
 /// the Lava Fields generator lays a lava river and pools that keep a cell of earth from the paths and stay off the
 /// spawn's ground, the road crossing the river on earth, an unbroken trail that stops short of the lava and a campsite
 /// away from it, with props off and beside the lava and every mob and the trail within the spawn's reach around it; the
+/// regions' torches and braziers stand where their regions call for them (Docs/Lighting.md, Phase 6: either end of the
+/// Lava Fields' causeway, the Coast's plateau, the Lakeside's dock's foot, the Snowfield's trail's end); the
 /// terrain each generator lays from its detail stream leaves the rest of its layout where it was, and the Lakeside's
 /// ponds leave its dry grass where it was and its dock everything else; the same seed gives the same layout; the
 /// project's style lists every ground material in the shared draw order, the project's generators list only the layers
@@ -154,8 +156,9 @@ public class AreaGenerationTests
     /// The project's generators fill every scatter layer with the generated props (Docs/PropGeneration.md, Phase 5) and
     /// lay every layout without a warning, their mobs spread over it: each layer lists props of the props' folder, for
     /// every seed each places some, and every prop comes from a layer but the generator's own light props and the seats
-    /// around them (Docs/Lighting.md, Phase 5): the campfire, laid at every seed, and its seats at the campsites, and the
-    /// Village Forest's lamp posts; the assets set no building or other village furniture.
+    /// around them (Docs/Lighting.md, Phases 5 and 6): the campfire, laid at every seed, and its seats at the campsites,
+    /// the Village Forest's lamp posts and the regions' torches and braziers; the assets set no building or other village
+    /// furniture.
     /// </summary>
     [TestCase(ClearingGeneratorPath)]
     [TestCase(VillageForestGeneratorPath)]
@@ -842,7 +845,8 @@ public class AreaGenerationTests
     /// dock width wide, whose bottom row covers the trail's last cell, whose cells are sand, the trail's gravel or water,
     /// with at least the fewest rows of the dock reach over open water up to its far end; the cells beside its rows on the
     /// beach are sand, water or gravel, and every cell within the dock clearance of its rows over the water is water or
-    /// sand, so it lies off the ponds, the mud and the grass; no prop stands on or beside it; and it adds no third look
+    /// sand, so it lies off the ponds, the mud and the grass; no prop stands on or beside it but its torch (Docs/Lighting.md,
+    /// Phase 6); and it adds no third look
     /// under a rounded corner: at every corner of its cells, whatever shows under a rounded corner there is painted in
     /// that cell or showed there without the dock too.
     /// </summary>
@@ -908,6 +912,14 @@ public class AreaGenerationTests
                 props.Add(prop.Cell);
             }
 
+            foreach (AreaLayout.Prop prop in layout.Props)
+            {
+                if (prop.Prefab == lakeside.DockTorchPrefab)
+                {
+                    props.Remove(prop.Cell);
+                }
+            }
+
             foreach (Vector3Int cell in dock)
             {
                 foreach (Vector3Int near in CellsWithin(cell, 1))
@@ -925,8 +937,8 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The Lakeside's dock, laid last, leaves everything laid before it where it was: with the dock turned off (a dock
-    /// reach of 0), every other layer, the spawn and every mob are the same, and so is every prop but the walk-through
-    /// props the dock removed, all of them on, beside or up to three rows below it.
+    /// reach of 0), every other layer, the spawn and every mob are the same, and so is every prop but the dock's torch
+    /// and the walk-through props the dock removed, all of them on, beside or up to three rows below it.
     /// </summary>
     [Test]
     public void TheLakesidesDock_LeavesTheRestOfItsLayoutWhereItWas()
@@ -966,7 +978,7 @@ public class AreaGenerationTests
 
             foreach (AreaLayout.Prop prop in full.Props)
             {
-                Expect(HasProp(plain, prop), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
+                Expect(HasProp(plain, prop) || prop.Prefab == lakeside.DockTorchPrefab, $"seed {seed}: {prop.Prefab.name} at {prop.Cell} added");
             }
 
             foreach (AreaLayout.Prop prop in plain.Props)
@@ -974,7 +986,7 @@ public class AreaGenerationTests
                 if (!HasProp(full, prop))
                 {
                     Expect(!PropGridSnapping.TryGetFootprint(prop.Prefab, out _), $"seed {seed}: blocking {prop.Prefab.name} removed");
-                    Expect(near.Contains(prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the dock");
+                    Expect(near.Contains(prop.Cell) || full.Props.Exists(torch => torch.Prefab == lakeside.DockTorchPrefab && torch.Cell == prop.Cell), $"seed {seed}: {prop.Prefab.name} at {prop.Cell} removed away from the dock");
                 }
             }
         }
@@ -2254,8 +2266,9 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For every Lakeside seed each blocking footprint covers dry grass that is neither beach nor mud, no other
-    /// footprint covers it and no path lies within the clearance; each walk-through prop stands on such grass off the
-    /// paths, not beside the water and outside every footprint.
+    /// footprint covers it and no path lies within the clearance, but the dock's torch's (Docs/Lighting.md, Phase 6),
+    /// which stands by the dock's foot, the beach included; each walk-through prop stands on such grass off the paths,
+    /// not beside the water and outside every footprint.
     /// </summary>
     [Test]
     public void LakesideLayouts_KeepPropsOffTheWaterTheBeachAndTheMud()
@@ -2278,8 +2291,13 @@ public class AreaGenerationTests
 
                 foreach (Vector3Int cell in CoveredCells(prop, footprint))
                 {
-                    Expect(grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !mud.Contains(cell), $"seed {seed}: {prop.Prefab.name} on open grass at {cell}");
                     Expect(footprints.Add(cell), $"seed {seed}: two footprints on {cell}");
+                    if (prop.Prefab == lakeside.DockTorchPrefab)
+                    {
+                        continue;
+                    }
+
+                    Expect(grass.Contains(cell) && !water.Contains(cell) && !sand.Contains(cell) && !mud.Contains(cell), $"seed {seed}: {prop.Prefab.name} on open grass at {cell}");
                     foreach (Vector3Int near in CellsWithin(cell, lakeside.PathClearance))
                     {
                         Expect(!paths.Contains(near), $"seed {seed}: a prop at {cell} beside a path");
@@ -2307,7 +2325,8 @@ public class AreaGenerationTests
 
     /// <summary>
     /// For every Lakeside seed the spawn can walk (4-connected, around the footprints and the water) to every beach
-    /// cell and to all the configured mobs, which stand on dry ground far enough from the spawn and from each other.
+    /// cell but the one the dock's torch stands on, and to all the configured mobs, which stand on dry ground far enough
+    /// from the spawn and from each other.
     /// </summary>
     [Test]
     public void LakesideLayouts_LetTheSpawnWalkToTheBeachAndEveryMob()
@@ -2320,7 +2339,9 @@ public class AreaGenerationTests
             HashSet<Vector3Int> footprints = Footprints(layout);
             HashSet<Vector3Int> reachable = Reachable(layout.SpawnCell, cell => grass.Contains(cell) && !water.Contains(cell) && !footprints.Contains(cell));
 
-            Expect(reachable.IsSupersetOf(Cells(layout, "Sand")), $"seed {seed}: the whole beach can be walked to");
+            HashSet<Vector3Int> beach = new(Cells(layout, "Sand"), CellComparer.Instance);
+            beach.ExceptWith(footprints);
+            Expect(reachable.IsSupersetOf(beach), $"seed {seed}: the whole beach can be walked to");
             Assert.That(layout.Mobs.Count, Is.EqualTo(lakeside.MobCount), $"seed {seed}");
             for (int i = 0; i < layout.Mobs.Count; i++)
             {
@@ -3075,12 +3096,128 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// For every seed the regions' torches and braziers stand where their regions call for them (Docs/Lighting.md,
+    /// Phase 6), each on a cell of its own that no mob holds: the Lava Fields' two braziers either side of the road where
+    /// the river meets it, two to seven cells off the road and the lava; the Coast's beacon on the plateau's top, off its
+    /// face and its ramp, with the plateau all round it; the Lakeside's torch within three cells of the dock's foot, off
+    /// the paths, the dock and the water; and the Snowfield's torch within a few cells of the trail, off the paths and two
+    /// cells or more from the ice.
+    /// </summary>
+    [Test]
+    public void TheRegionsLights_StandWhereTheirRegionsCallForThem()
+    {
+        for (int seed = 1; seed <= SeedCount; seed++)
+        {
+            AreaLayout scorched = Layout(lavaFields, seed);
+            HashSet<Vector3Int> lava = Cells(scorched, "Lava");
+            HashSet<Vector3Int> road = Cells(scorched, "Stone");
+            List<Vector3Int> braziers = RegionLights(scorched, lavaFields);
+            Assert.That(braziers.Count, Is.EqualTo(2), $"seed {seed}: the causeway's braziers");
+            int north = 0;
+            foreach (Vector3Int cell in braziers)
+            {
+                float fromLava = NearestDistance(cell, lava);
+                float fromRoad = NearestDistance(cell, road);
+                Expect(fromLava >= 2f && fromLava <= 7f, $"seed {seed}: the brazier at {cell} lies {fromLava} from the lava");
+                Expect(fromRoad >= 2f && fromRoad <= 7f, $"seed {seed}: the brazier at {cell} lies {fromRoad} from the road");
+                bool roadBelow = false;
+                foreach (Vector3Int stone in road)
+                {
+                    roadBelow |= stone.x == cell.x && stone.y < cell.y;
+                }
+
+                north += roadBelow ? 1 : 0;
+            }
+
+            Expect(north == 1, $"seed {seed}: one brazier either side of the road");
+
+            AreaLayout coastal = Layout(coast, seed);
+            List<Vector3Int> beacons = RegionLights(coastal, coast);
+            Assert.That(beacons.Count, Is.EqualTo(1), $"seed {seed}: the beacon");
+            Expect(!coastal.Ramps.Contains(beacons[0]), $"seed {seed}: the beacon stands off the ramp");
+            foreach (Vector3Int cell in CellsWithin(beacons[0], 1))
+            {
+                Expect(coastal.Raised.Contains(cell), $"seed {seed}: the beacon at {beacons[0]} has the plateau all round it");
+            }
+
+            AreaLayout lakeLayout = Layout(lakeside, seed);
+            HashSet<Vector3Int> planks = Cells(lakeLayout, "Planks");
+            HashSet<Vector3Int> water = Cells(lakeLayout, "Water");
+            HashSet<Vector3Int> lakePaths = new(Cells(lakeLayout, "Gravel"), CellComparer.Instance);
+            lakePaths.UnionWith(Cells(lakeLayout, "Stone"));
+            List<Vector3Int> dockTorches = RegionLights(lakeLayout, lakeside);
+            Assert.That(dockTorches.Count, Is.EqualTo(1), $"seed {seed}: the dock's torch");
+            int foot = int.MaxValue;
+            foreach (Vector3Int cell in planks)
+            {
+                foot = Mathf.Min(foot, cell.y);
+            }
+
+            Vector3Int dockTorch = dockTorches[0];
+            Expect(!planks.Contains(dockTorch) && !water.Contains(dockTorch) && !lakePaths.Contains(dockTorch), $"seed {seed}: the dock's torch at {dockTorch} stands off the dock, the water and the paths");
+            Expect(NearestDistance(dockTorch, planks) <= 4f && Mathf.Abs(dockTorch.y - foot) <= 3, $"seed {seed}: the dock's torch at {dockTorch} stands by the dock's foot");
+
+            AreaLayout snowy = Layout(snowfield, seed);
+            HashSet<Vector3Int> trail = Cells(snowy, "Gravel");
+            HashSet<Vector3Int> ice = Cells(snowy, "Ice");
+            List<Vector3Int> trailTorches = RegionLights(snowy, snowfield);
+            Assert.That(trailTorches.Count, Is.EqualTo(1), $"seed {seed}: the trail's torch");
+            Vector3Int trailTorch = trailTorches[0];
+            Expect(!trail.Contains(trailTorch) && !Cells(snowy, "Stone").Contains(trailTorch), $"seed {seed}: the trail's torch stands off the paths");
+            Expect(NearestDistance(trailTorch, trail) <= 4f, $"seed {seed}: the trail's torch at {trailTorch} stands beside the trail");
+            Expect(NearestDistance(trailTorch, ice) >= 2f, $"seed {seed}: the trail's torch at {trailTorch} keeps a cell of snow from the ice");
+
+            foreach (AreaLayout layout in new[] { scorched, coastal, lakeLayout, snowy })
+            {
+                foreach (AreaLayout.Mob mob in layout.Mobs)
+                {
+                    Expect(!braziers.Contains(mob.Cell) && !beacons.Contains(mob.Cell) && mob.Cell != dockTorch && mob.Cell != trailTorch, $"seed {seed}: a light on the mob at {mob.Cell}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The cells of the torches and braziers <paramref name="target"/> stood in <paramref name="layout"/>.
+    /// </summary>
+    private static List<Vector3Int> RegionLights(AreaLayout layout, AreaGenerator target)
+    {
+        List<Vector3Int> cells = new();
+        foreach (AreaLayout.Prop prop in layout.Props)
+        {
+            if (IsRegionLight(target, prop.Prefab))
+            {
+                cells.Add(prop.Cell);
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="prefab"/> is one of the torches and braziers <paramref name="target"/> stands in its region
+    /// (Docs/Lighting.md, Phase 6).
+    /// </summary>
+    private static bool IsRegionLight(AreaGenerator target, GameObject prefab)
+    {
+        return target switch
+        {
+            LavaFieldsGenerator scorched => ListContains(scorched.CausewayBraziers, prefab),
+            CoastGenerator coastal => prefab == coastal.BeaconPrefab,
+            LakesideGenerator lake => prefab == lake.DockTorchPrefab,
+            SnowfieldGenerator snowy => prefab == snowy.TrailTorchPrefab,
+            _ => false
+        };
+    }
+
+    /// <summary>
     /// For each generator, the terrain it lays from its detail stream at the end (the Clearing's campsite, the Village
     /// Forest's dirt, tall grass, meadows and lamp posts, the Lakeside's dry grass, shallow ponds, tall grass and
-    /// meadows, the Snowfield's holes and campsite) leaves the rest of the layout where it was: generated by a copy of
-    /// the generator with those steps turned off, every other layer, every mob and the spawn are the same, and so is
-    /// every prop, but for the campfires and seats and the props they replaced, all of them within the campsite's radius
-    /// plus three cells of the campfire, the lamp posts and the plants they took off their cells,
+    /// meadows, the Snowfield's holes and campsite) and the torches and braziers laid after it leave the rest of the
+    /// layout where it was: generated by a copy of the generator with those steps turned off, every other layer, every
+    /// mob and the spawn are the same, and so is every prop, but for the campfires and seats and the props they replaced,
+    /// all of them within the campsite's radius plus three cells of the campfire, the lamp posts, torches and braziers and
+    /// the plants they took off their cells,
     /// the plants the ponds removed, on, beside or just below them, the plants the tall grass removed, on it, and the
     /// bushes dried on the dry grass and the tall grass.
     /// </summary>
@@ -3113,16 +3250,19 @@ public class AreaGenerationTests
         {
             settings.FindProperty("holeCount").intValue = 0;
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+            settings.FindProperty("trailTorchPrefab").objectReferenceValue = null;
             added = new[] { "Water", "Dirt" };
         }
         else if (target is CoastGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
             settings.FindProperty("plateauSize").vector2Value = Vector2.zero;
+            settings.FindProperty("beaconPrefab").objectReferenceValue = null;
         }
         else if (target is LavaFieldsGenerator)
         {
             settings.FindProperty("campfirePrefab").objectReferenceValue = null;
+            settings.FindProperty("causewayBraziers").arraySize = 0;
             added = new string[0];
         }
         else
@@ -3131,6 +3271,7 @@ public class AreaGenerationTests
             settings.FindProperty("shallowPondCount").intValue = 0;
             settings.FindProperty("tallGrassCount").intValue = 0;
             settings.FindProperty("meadowCount").intValue = 0;
+            settings.FindProperty("dockTorchPrefab").objectReferenceValue = null;
             added = new[] { "DryGrass", "TallGrass", "Meadow" };
         }
 
@@ -3198,7 +3339,7 @@ public class AreaGenerationTests
                         campsite.Add(cell);
                     }
                 }
-                else if (target is VillageForestGenerator village && prop.Prefab == village.LampPostPrefab)
+                else if ((target is VillageForestGenerator village && prop.Prefab == village.LampPostPrefab) || IsRegionLight(target, prop.Prefab))
                 {
                     campsite.Add(prop.Cell);
                 }
@@ -3858,14 +3999,20 @@ public class AreaGenerationTests
             case SnowfieldGenerator snowfield:
                 campfire = snowfield.CampfirePrefab;
                 seats = snowfield.CampsiteSeats;
+                own.Add(snowfield.TrailTorchPrefab);
                 break;
             case CoastGenerator coast:
                 campfire = coast.CampfirePrefab;
                 seats = coast.CampsiteSeats;
+                own.Add(coast.BeaconPrefab);
                 break;
             case LavaFieldsGenerator lavaFields:
                 campfire = lavaFields.CampfirePrefab;
                 seats = lavaFields.CampsiteSeats;
+                own.UnionWith(lavaFields.CausewayBraziers);
+                break;
+            case LakesideGenerator lakesideGenerator:
+                own.Add(lakesideGenerator.DockTorchPrefab);
                 break;
             case VillageForestGenerator village:
                 own.Add(village.LampPostPrefab);

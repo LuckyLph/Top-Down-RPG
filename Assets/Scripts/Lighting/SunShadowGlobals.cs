@@ -4,9 +4,10 @@ using UnityEngine;
 /// The global shader properties of the sun's shadows (Docs/Lighting.md, Phase 4), which the lit shaders, the caster
 /// shader and <see cref="SunShadowFeature"/> read: the sun's light (<c>_SunColour</c>), its shadow vector and whether
 /// it casts (<c>_SunShadow</c>), the mask the feature draws (<c>_SunShadowMask</c>, <c>_SunShadowRect</c>,
-/// <c>_SunShadowMaskMatrix</c>), the rendering layers of the casters, which read their shadow at their feet
-/// (<c>_SunShadowFeetLayers</c>), and the clouds the feature draws into the mask (<c>_SunClouds</c>,
-/// <c>_SunCloudShape</c>, Phase 8).
+/// <c>_SunShadowMaskMatrix</c>), the ground beside it (<c>_SunShadowGround</c>) and the tallest caster's height, as far
+/// as a shadow reaches from raised ground (<c>_SunShadowTallest</c>, Phase 11), the rendering layers of the casters,
+/// which read their shadow at their feet (<c>_SunShadowFeetLayers</c>), and the clouds the feature draws into the mask
+/// (<c>_SunClouds</c>, <c>_SunCloudShape</c>, Phase 8).
 /// </summary>
 public static class SunShadowGlobals
 {
@@ -15,6 +16,8 @@ public static class SunShadowGlobals
     public static readonly int MaskId = Shader.PropertyToID("_SunShadowMask");
     public static readonly int MaskRectId = Shader.PropertyToID("_SunShadowRect");
     public static readonly int MaskMatrixId = Shader.PropertyToID("_SunShadowMaskMatrix");
+    public static readonly int GroundId = Shader.PropertyToID("_SunShadowGround");
+    public static readonly int TallestId = Shader.PropertyToID("_SunShadowTallest");
     public static readonly int FeetLayersId = Shader.PropertyToID("_SunShadowFeetLayers");
     public static readonly int CloudsId = Shader.PropertyToID("_SunClouds");
     public static readonly int CloudShapeId = Shader.PropertyToID("_SunCloudShape");

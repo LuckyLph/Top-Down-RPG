@@ -8,10 +8,10 @@ using UnityEngine.SceneManagement;
 /// The 2D renderer's feature that draws the sun shadow mask (Docs/Lighting.md, Phase 4) before each frame
 /// (<see cref="SunShadowPass"/>): the casters' own sprite renderers drawn with the caster material, each sprite laid on
 /// the ground away from the sun from its feet, into a <see cref="SunShadowMask"/> per camera aligned to the world's art
-/// grid. Casters are sprites whose rendering layers include the props' layers (static: their shadows are drawn again
+/// grid, a caster on raised ground's top apart from one on level ground (Phase 11). Casters are sprites whose rendering layers include the props' layers (static: their shadows are drawn again
 /// only when the sun or the view has moved enough, or a scene loaded or unloaded) or the units' layers (drawn every
 /// frame), and terrain chunks on the cliffs' layers, whose raised ground's cliffs are drawn with the props by the
-/// cliffs' shader over the chunks' own material, and the clouds' shadows over the whole mask by the cloud shader every
+/// cliffs' shader over the chunks' own material, as is the ground they stand on, before the props (its second pass), and the clouds' shadows over the whole mask by the cloud shader every
 /// frame (Docs/Lighting.md, Phase 8). It draws nothing while the sun casts nothing (<see cref="SunShadowGlobals"/>), so
 /// the lit shaders then take no sun away anywhere.
 /// </summary>
@@ -47,6 +47,7 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     public Shader CliffShader => cliffShader;
     public RenderingLayerMask CliffLayers => cliffLayers;
     public Shader CloudShader => cloudShader;
+    public float TallestCaster => tallestCaster;
 
     /// <summary>
     /// The material the clouds are drawn with, made from the cloud shader the first time; null without one.

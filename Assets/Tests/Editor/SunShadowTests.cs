@@ -15,8 +15,11 @@ using UnityEngine.Tilemaps;
 /// tip, or it is told to. Rendered through <see cref="TerrainBlendProbe.Render"/> with the shipped day's sun: a tree
 /// and a unit cast their shadows away from the sun at dawn, noon and dusk and never darken themselves, and a unit
 /// standing in the tree's shadow darkens whole; the shadows stay on the world's art pixels as the camera moves by a
-/// fraction of one; raised ground casts its cliffs' shadow away from the sun, and none on itself; and clouds drawn into
-/// the mask (Docs/Lighting.md, Phase 8) shade the sunlit ground under them, never a shadow, and a unit under one whole.
+/// fraction of one; raised ground casts its cliffs' shadow away from the sun, and none on itself; shadows know the
+/// ground's height (Phase 11): a caster on raised ground's top casts down its cliff, its shadow dropping past the face
+/// to the level ground below, where a unit standing in it darkens whole, and a caster beside raised ground shadows its
+/// top only with its parts higher than the cliff, the cliff face taking neither; and clouds drawn into the mask
+/// (Docs/Lighting.md, Phase 8) shade the sunlit ground under them, never a shadow, and a unit under one whole.
 /// Renders from later editor updates, until something is drawn.
 /// </summary>
 public class SunShadowTests
@@ -281,6 +284,94 @@ public class SunShadowTests
         Assert.That(IsDarker(cast, open, world, new Vector2(8f, 6f + reach * 0.5f)), Is.True, "The ground below the face at noon.");
         Assert.That(Same(cast, open, world, new Vector2(8f, 6f + reach * 1.5f)), Is.True, "The ground past the noon shadow.");
         Assert.That(Same(cast, open, world, new Vector2(8f, 7f)), Is.True, "The cliff face.");
+    }
+
+    /// <summary>
+    /// A caster 3 units tall on raised ground's top, near its front edge, at noon (Docs/Lighting.md, Phase 11): it shadows
+    /// the top in front of it, never the cliff face under the edge, and the part of its shadow past the edge drops to the
+    /// level ground below, the cliff's height times the sun's shadow vector further and that height lower on the screen
+    /// (SunShadowDrop), just past the cliff's own shadow and no further; a unit standing there darkens whole. Each render
+    /// is compared with the same sun but no caster, after a first render that compiles the mask's shaders in the editor.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ACasterOnRaisedGround_CastsDownItsCliff_PastItsFace()
+    {
+        DayNightSettings day = AssetDatabase.LoadAssetAtPath<DayNightSettings>(DayNightPath);
+        TerrainBlendRenderer terrain = AddTerrain(16, 12, new RectInt(6, 6, 4, 4));
+        sky = AddGlobalLight();
+        Rect world = new(0f, 0f, 16f, 12f);
+        SpriteRenderer caster = AddCaster(SolidTexture(16, 96, new Color32(200, 120, 60, 255)), new Vector2(8f, 8.6f), PropsLayer);
+        Vector2 shadow = day.SunAt(Noon).Shadow;
+        float cliff = 2f;
+        float offTop = (8.6f - 8f) / -shadow.y;
+        float dropped = 8.6f + 3f * shadow.y + cliff * (shadow.y - 1f);
+        Color32[] cast = null;
+        Color32[] open = null;
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => cast = pixels);
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => cast = pixels);
+        caster.enabled = false;
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => open = pixels);
+        Assert.That(offTop, Is.LessThan(3f), "The caster's shadow runs off the top.");
+        Assert.That(IsDarker(cast, open, world, new Vector2(8f, 8.6f + offTop * 0.5f * shadow.y)), Is.True, "The top in front of the caster.");
+        Assert.That(Same(cast, open, world, new Vector2(8f, 7.5f)), Is.True, "The cliff face under the edge.");
+        Assert.That(Same(cast, open, world, new Vector2(8f, 6.5f)), Is.True, "The cliff face's foot.");
+        Assert.That(IsDarker(cast, open, world, new Vector2(8f, dropped + 0.2f)), Is.True, "The level ground the shadow drops to.");
+        Assert.That(Same(cast, open, world, new Vector2(8f, dropped - 0.2f)), Is.True, "The level ground past the dropped shadow.");
+
+        caster.enabled = true;
+        Vector2 unitFeet = new(8f, dropped + 0.1f);
+        SpriteRenderer unit = AddCaster(SolidTexture(12, 32, new Color32(180, 60, 60, 255)), unitFeet, UnitsLayer);
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => cast = pixels);
+        caster.enabled = false;
+        yield return RenderUnderSun(terrain, world, day, Noon, true, pixels => open = pixels);
+        int darker = 0;
+        int pixelsOfUnit = 0;
+        for (int y = 1; y < 31; y++)
+        {
+            for (int x = -5; x < 5; x++)
+            {
+                Vector2 point = unitFeet + new Vector2((x + 0.5f) / ArtPixelsPerUnit, (y + 0.5f) / ArtPixelsPerUnit);
+                pixelsOfUnit++;
+                darker += IsDarker(cast, open, world, point) ? 1 : 0;
+            }
+        }
+
+        Assert.That(unit.enabled, Is.True);
+        Assert.That(darker, Is.EqualTo(pixelsOfUnit), "A unit where the shadow drops darkens whole.");
+    }
+
+    /// <summary>
+    /// A caster 4 units tall on the level ground west of raised ground, at dusk (Docs/Lighting.md, Phase 11): its parts
+    /// higher than the cliff shadow the top, where their shadow clears the plateau's side, the cliff's height times the
+    /// sun's shadow vector nearer it and that height higher on the screen than on the level ground (SunShadowDrop); its
+    /// lower parts' shadow stops at the side, so neither the top's edge nor the cliff face it would lie across flat takes
+    /// it. Each render is compared with the same sun but no caster, after a first render that compiles the mask's shaders
+    /// in the editor.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ACasterBesideRaisedGround_ShadowsItsTop_OnlyAboveItsCliff()
+    {
+        DayNightSettings day = AssetDatabase.LoadAssetAtPath<DayNightSettings>(DayNightPath);
+        TerrainBlendRenderer terrain = AddTerrain(16, 12, new RectInt(6, 6, 4, 4));
+        sky = AddGlobalLight();
+        Rect world = new(0f, 0f, 16f, 12f);
+        Vector2 feet = new(4.5f, 8.8f);
+        SpriteRenderer caster = AddCaster(SolidTexture(16, 128, new Color32(200, 120, 60, 255)), feet, PropsLayer);
+        Vector2 shadow = day.SunAt(Dusk).Shadow;
+        Vector2 drop = 2f * (shadow - Vector2.up);
+        Color32[] cast = null;
+        Color32[] open = null;
+        yield return RenderUnderSun(terrain, world, day, Dusk, true, pixels => cast = pixels);
+        yield return RenderUnderSun(terrain, world, day, Dusk, true, pixels => cast = pixels);
+        caster.enabled = false;
+        yield return RenderUnderSun(terrain, world, day, Dusk, true, pixels => open = pixels);
+        Vector2 high = feet + 3.5f * shadow - drop;
+        Vector2 low = feet + 2f * shadow;
+        Vector2 edge = feet + (feet.y - 8.1f) / -shadow.y * shadow;
+        Assert.That(new RectInt(6, 8, 4, 2).Contains(Vector2Int.FloorToInt(high)), Is.True, "The high part's shadow lies on the top.");
+        Assert.That(IsDarker(cast, open, world, high), Is.True, "The top, where the parts higher than the cliff cast.");
+        Assert.That(Same(cast, open, world, low), Is.True, "The cliff face the lower parts' shadow would lie across.");
+        Assert.That(Same(cast, open, world, edge + new Vector2(0.2f, 0f)), Is.True, "The top's edge the lower parts' shadow would lie across.");
     }
 
     /// <summary>

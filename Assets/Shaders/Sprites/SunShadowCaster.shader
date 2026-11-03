@@ -14,11 +14,12 @@ Shader "TopDownRPG/Sun Shadow Caster"
             Name "SunShadowCaster"
             Tags { "LightMode" = "SunShadowCaster" }
 
-            Blend Off
+            BlendOp Max
+            Blend One One
             Cull Off
             ZWrite Off
             ZTest Always
-            ColorMask R
+            ColorMask RGB
 
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
@@ -41,6 +42,7 @@ Shader "TopDownRPG/Sun Shadow Caster"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float height : TEXCOORD1;
+                nointerpolation float2 ground : TEXCOORD2;
             };
 
             TEXTURE2D(_MainTex);
@@ -48,7 +50,8 @@ Shader "TopDownRPG/Sun Shadow Caster"
 
             // A caster's sprite laid on the ground away from the sun: each point as high above the sprite's pivot, its
             // feet, as height lands that height times the sun's shadow vector from the feet, at its own distance across,
-            // so the silhouette is flipped at its base, stretched and leaned; drawn into the sun shadow mask's art pixels.
+            // so the silhouette is flipped at its base, stretched and leaned; drawn into the sun shadow mask's art pixels,
+            // with the ground under its feet (SunShadowGroundAt: what it is, and the cliff's height near raised ground).
             Varyings CasterVertex(Attributes input)
             {
                 Varyings o = (Varyings)0;
@@ -62,11 +65,14 @@ Shader "TopDownRPG/Sun Shadow Caster"
                 o.positionCS = mul(_SunShadowMaskMatrix, float4(ground, 0.0, 1.0));
                 o.uv = input.uv;
                 o.height = height;
+                o.ground = SunShadowGroundAt(floor(feet * ART_PIXELS_PER_UNIT));
                 return o;
             }
 
             // Shadow where the sprite is opaque above its feet; the part below them, which lies on the ground already,
-            // casts nothing.
+            // casts nothing. A caster standing on raised ground's top casts into the mask's green, the tops' shadows; one
+            // on level ground into its red, and its parts higher than a cliff near it into its blue too, the parts whose
+            // shadow can clear a plateau's side and fall on its top (Docs/Lighting.md, Phase 11).
             half4 CasterFragment(Varyings input) : SV_Target
             {
                 half alpha = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).a;
@@ -75,7 +81,13 @@ Shader "TopDownRPG/Sun Shadow Caster"
                     discard;
                 }
 
-                return half4(1.0, 1.0, 1.0, 1.0);
+                if (input.ground.x > 0.75)
+                {
+                    return half4(0.0, 1.0, 0.0, 1.0);
+                }
+
+                half tall = input.ground.y > 0.0 && input.height * ART_PIXELS_PER_UNIT > input.ground.y ? 1.0 : 0.0;
+                return half4(1.0, 0.0, tall, 1.0);
             }
             ENDHLSL
         }

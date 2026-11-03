@@ -13,7 +13,7 @@ Shader "Hidden/TopDownRPG/Sun Shadow Clouds"
             Cull Off
             ZWrite Off
             ZTest Always
-            ColorMask R
+            ColorMask RGBA
 
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -96,14 +96,16 @@ Shader "Hidden/TopDownRPG/Sun Shadow Clouds"
                 return field * 2.0;
             }
 
-            // The share of the sun the clouds take away at the mask's art pixel.
+            // The share of the sun the clouds take away at the mask's art pixel, from the level ground, the tops and the
+            // cliff faces alike (the mask's red, green and alpha; Docs/Lighting.md, Phase 11).
             half4 CloudFragment(Varyings input) : SV_Target
             {
                 float2 worldPixel = _SunShadowRect.xy + floor(input.positionCS.xy);
                 float field = CloudField((worldPixel + 0.5) / ART_PIXELS_PER_UNIT);
                 float edge = max(_SunCloudShape.y, 1e-4);
                 half cover = (half)smoothstep(_SunClouds.z - edge, _SunClouds.z + edge, field);
-                return half4(cover * (half)_SunClouds.w, 0.0, 0.0, 0.0);
+                half shade = cover * (half)_SunClouds.w;
+                return half4(shade, shade, 0.0, shade);
             }
             ENDHLSL
         }

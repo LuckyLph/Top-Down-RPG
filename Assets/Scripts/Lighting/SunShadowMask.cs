@@ -4,9 +4,12 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// One camera's sun shadow mask (Docs/Lighting.md, Phase 4): two textures of one texel per art pixel over an area of the
-/// world aligned to its art grid, so the mask never moves against the ground as the camera does. The props' texture
-/// holds the shadows of the static casters and is drawn again only when <see cref="PropsCurrent"/> turns false: the
+/// One camera's sun shadow mask (Docs/Lighting.md, Phase 4): textures of one texel per art pixel over an area of the
+/// world aligned to its art grid, so the mask never moves against the ground as the camera does: the props' and the
+/// frame's, each holding the shadows on the level ground, on raised ground's tops, from the level casters' parts higher
+/// than a cliff and from the clouds in its four channels, and the ground's, what the ground is at each art pixel and the
+/// cliff's height near raised ground (Phase 11). The props' texture and the ground's hold the static casters' shadows
+/// and the terrain and are drawn again only when <see cref="PropsCurrent"/> turns false: the
 /// view leaving the area (which is centred again on it, with a margin), the sun's shadow vector moving about
 /// <c>redrawPixels</c> art pixels at the tip of the tallest caster's shadow, or <see cref="Invalidate"/>; the frame's
 /// texture is the props' with the units' shadows drawn over it, every frame. The area covers the view, the feet of
@@ -23,6 +26,7 @@ public sealed class SunShadowMask : IDisposable
     private readonly Plane[] planes = new Plane[6];
     private RTHandle props;
     private RTHandle frame;
+    private RTHandle ground;
     private RectInt area;
     private Vector2 drawnShadow;
 
@@ -37,6 +41,7 @@ public sealed class SunShadowMask : IDisposable
     public Camera Camera { get; }
     public RTHandle Props => props;
     public RTHandle Frame => frame;
+    public RTHandle Ground => ground;
 
     /// <summary>
     /// The area the mask covers, in art pixels of the world.
@@ -166,8 +171,9 @@ public sealed class SunShadowMask : IDisposable
         if (props == null || props.rt.width != width || props.rt.height != height)
         {
             Release();
-            props = RTHandles.Alloc(width, height, GraphicsFormat.R8_UNorm, filterMode: FilterMode.Point, wrapMode: TextureWrapMode.Clamp, name: "SunShadowProps");
-            frame = RTHandles.Alloc(width, height, GraphicsFormat.R8_UNorm, filterMode: FilterMode.Point, wrapMode: TextureWrapMode.Clamp, name: "SunShadowMask");
+            props = RTHandles.Alloc(width, height, GraphicsFormat.R8G8B8A8_UNorm, filterMode: FilterMode.Point, wrapMode: TextureWrapMode.Clamp, name: "SunShadowProps");
+            frame = RTHandles.Alloc(width, height, GraphicsFormat.R8G8B8A8_UNorm, filterMode: FilterMode.Point, wrapMode: TextureWrapMode.Clamp, name: "SunShadowMask");
+            ground = RTHandles.Alloc(width, height, GraphicsFormat.R8G8_UNorm, filterMode: FilterMode.Point, wrapMode: TextureWrapMode.Clamp, name: "SunShadowGround");
         }
 
         PropsCurrent = false;
@@ -233,7 +239,9 @@ public sealed class SunShadowMask : IDisposable
     {
         props?.Release();
         frame?.Release();
+        ground?.Release();
         props = null;
         frame = null;
+        ground = null;
     }
 }

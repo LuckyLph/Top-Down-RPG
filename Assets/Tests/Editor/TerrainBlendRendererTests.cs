@@ -673,6 +673,50 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A layer with waves rolls them in toward a coast on its east as toward one on its north (Docs/LightingGaps.md,
+    /// Phase 1): the ground and sea of <see cref="ALayerWithWaves_RollsThemInTowardItsCoast"/> turned on its side, the
+    /// sea in the left six columns, its waves turned 20 degrees. Along a row in the middle of the sea the waves' bands
+    /// lie a spacing apart, not stretched by the turn, and a quarter of a second later each has moved 3 to 5 px toward
+    /// the coast; and each band's front lies the tangent of the angle times 16 px nearer the coast in the row 16 px
+    /// higher, so the fronts turn from the coast. Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ALayerWithWaves_RollsThemInTowardACoastOnItsSide()
+    {
+        TerrainBlendRenderer renderer = WavesRenderer(14, 6, 0f, out Color32 blue, true, 20f);
+        Rect world = new(0f, 0f, 12f, 14f);
+        yield return RenderUntilDrawn(renderer, world, new Vector2Int(300, 224));
+
+        List<int> before = BandFrontsAlongRow(renderer, world, 0f, blue, 216);
+        List<int> after = BandFrontsAlongRow(renderer, world, 0.25f, blue, 216);
+        List<int> higher = BandFrontsAlongRow(renderer, world, 0f, blue, 232);
+        int turn = Mathf.RoundToInt(16f * Mathf.Tan(20f * Mathf.Deg2Rad));
+
+        Assert.That(before.Count, Is.GreaterThanOrEqualTo(2), "waves cross the row");
+        for (int i = 0; i < before.Count; i++)
+        {
+            int front = before[i];
+            if (front + 5 <= 168)
+            {
+                Assert.That(after.Exists(moved => moved >= front + 3 && moved <= front + 5), Is.True, $"the band at {front} moves 4 px toward the coast");
+                Assert.That(after.Contains(front), Is.False, $"the band at {front} moves");
+            }
+
+            if (front + turn + 1 <= 168)
+            {
+                Assert.That(higher.Exists(turned => Mathf.Abs(turned - front - turn) <= 1), Is.True, $"the band at {front} lies {turn} px nearer the coast 16 px higher");
+            }
+
+            if (i > 0)
+            {
+                Assert.That(front - before[i - 1], Is.InRange(30, 34), $"the band at {front} lies a spacing from the last");
+            }
+        }
+
+        renderer.SetFixedTime(null);
+    }
+
+    /// <summary>
     /// A layer with waves and swash washes up over the layer it meets as each wave arrives, never further than its
     /// swash, and without swash draws nothing past its edge. Green ground fills an 8 x 4 block and a blue sea its bottom
     /// two rows, with no rim, outline or shadow; its waves arrive every second and its swash, 6 px, draws every colour
@@ -1164,12 +1208,13 @@ public class TerrainBlendRendererTests
 
     /// <summary>
     /// A renderer over green ground filling 12 x <paramref name="rows"/> cells (8 wide when only 4 rows) and a blue sea
-    /// filling its bottom <paramref name="seaRows"/> rows with waves: 32 px apart on a 2 s period at 8 frames per second
-    /// for the ground's 14 rows, or 16 px apart on a 1 s period for the 4 rows, 6 px wide, square to the coast, whole
-    /// everywhere, red with a yellow crest and a black trough, and <paramref name="swash"/> pixels of swash, every colour
-    /// of which is white. Neither layer draws a rim, outline or shadow.
+    /// filling its bottom <paramref name="seaRows"/> rows, or with <paramref name="seaWest"/> its left as many columns,
+    /// with waves: 32 px apart on a 2 s period at 8 frames per second for the ground's 14 rows, or 16 px apart on a 1 s
+    /// period for the 4 rows, 6 px wide, turned <paramref name="angle"/> degrees from the coast, whole everywhere, red
+    /// with a yellow crest and a black trough, and <paramref name="swash"/> pixels of swash, every colour of which is
+    /// white. Neither layer draws a rim, outline or shadow.
     /// </summary>
-    private TerrainBlendRenderer WavesRenderer(int rows, int seaRows, float swash, out Color32 blue)
+    private TerrainBlendRenderer WavesRenderer(int rows, int seaRows, float swash, out Color32 blue, bool seaWest = false, float angle = 0f)
     {
         Color32 green = new(40, 160, 40, 255);
         blue = new Color32(30, 60, 200, 255);
@@ -1185,7 +1230,7 @@ public class TerrainBlendRendererTests
         settings.FindProperty("waveSpacing").floatValue = tall ? 32f : 16f;
         settings.FindProperty("wavePeriod").floatValue = tall ? 2f : 1f;
         settings.FindProperty("waveWidth").floatValue = 6f;
-        settings.FindProperty("waveAngle").floatValue = 0f;
+        settings.FindProperty("waveAngle").floatValue = angle;
         settings.FindProperty("waveWholeWithin").floatValue = 1000f;
         settings.FindProperty("waveColour").colorValue = new Color(1f, 0.1f, 0.1f);
         settings.FindProperty("waveCrestColour").colorValue = new Color(1f, 1f, 0f);
@@ -1210,7 +1255,7 @@ public class TerrainBlendRendererTests
             for (int y = 0; y < rows; y++)
             {
                 land.SetTile(new Vector3Int(x, y, 0), tile);
-                if (y < seaRows)
+                if (seaWest ? x < seaRows : y < seaRows)
                 {
                     water.SetTile(new Vector3Int(x, y, 0), tile);
                 }
@@ -1269,6 +1314,34 @@ public class TerrainBlendRendererTests
             if (inBand && !wave)
             {
                 fronts.Add(y - 1);
+            }
+
+            inBand = wave;
+        }
+
+        Object.DestroyImmediate(pixels);
+        return fronts;
+    }
+
+    /// <summary>
+    /// The columns, left to right, of the shoreward fronts of the waves' bands along <paramref name="row"/> of a sea in
+    /// the left columns, from 24 px to 168 px (well inside the sea and clear of the coast's last pixels and of the
+    /// map's edge), rendered at <paramref name="time"/>: the right column of each run of columns not showing the sea's
+    /// own colour.
+    /// </summary>
+    private static List<int> BandFrontsAlongRow(TerrainBlendRenderer renderer, Rect world, float time, Color32 sea, int row)
+    {
+        renderer.SetFixedTime(time);
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        List<int> fronts = new();
+        bool inBand = false;
+        for (int x = 24; x <= 168; x++)
+        {
+            Color32 pixel = pixels.GetPixel(x, row);
+            bool wave = pixel.r != sea.r || pixel.g != sea.g || pixel.b != sea.b;
+            if (inBand && !wave)
+            {
+                fronts.Add(x - 1);
             }
 
             inBand = wave;

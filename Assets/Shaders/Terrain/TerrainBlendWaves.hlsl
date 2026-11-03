@@ -13,6 +13,7 @@
 #define TB_WASH_FOAM 2.5
 #define TB_WASH_FILM_BACK 5.0
 #define TB_WASH_WET_FRAMES 7
+#define TB_COAST_SLOPE_STEP 4.0
 
 TEXTURE2D(_TerrainCoast);
 SAMPLER(sampler_TerrainCoast);
@@ -26,42 +27,65 @@ float TBCoastDistance(TBInputs ins, float2 worldPixel)
     return SAMPLE_TEXTURE2D_LOD(_TerrainCoast, sampler_TerrainCoast, uv, 0.0).r * TB_COAST_RANGE + TB_COAST_MIN;
 }
 
-// The waves' phase at a pixel lying coast pixels out at sea: a crest wherever it is a whole number, rising a wave per
-// spacing further out and per period of time, so the crests roll in toward the coast, turned by the waves' angle
-// (waves: spacing, period, width, tangent of the angle) so they reach a straight shore at one end first.
-float TBWavePhase(TBInputs ins, float4 waves, float framesPerSecond, float coast, float2 worldPixel)
+// The point of the coast a pixel lying coast pixels out at sea faces: the pixel moved that far back down the coast
+// map's slope, read a texel to either side. A wave keeps the same foot as it rolls in, and the feet of the pixels
+// along its front run along the coast, whichever way the coast lies; on the coast and inland, the pixel itself.
+float2 TBCoastFoot(TBInputs ins, float coast, float2 worldPixel)
 {
-    return (max(coast, 0.0) + worldPixel.x * waves.w) / waves.x + TBAnimationTime(ins, framesPerSecond) / waves.y;
+    float2 slope = float2(
+        TBCoastDistance(ins, worldPixel + float2(TB_COAST_SLOPE_STEP, 0.0)) - TBCoastDistance(ins, worldPixel - float2(TB_COAST_SLOPE_STEP, 0.0)),
+        TBCoastDistance(ins, worldPixel + float2(0.0, TB_COAST_SLOPE_STEP)) - TBCoastDistance(ins, worldPixel - float2(0.0, TB_COAST_SLOPE_STEP)));
+    float steepness = length(slope);
+    return coast > 0.0 && steepness > 0.001 ? worldPixel - slope / steepness * coast : worldPixel;
 }
 
-// How much of a wave shows along its front at x, for the wave whose own place is z: smooth noise over both, drifting
-// slowly in time t, raised by bias, so out at sea a wave breaks into stretches that grow and fade as it travels.
-float TBWaveStretches(float x, float z, float t, float bias)
+// How far a wave's front is turned at a foot on the coast, in pixels: the tangent of the waves' angle times how far
+// the foot lies along x and y together, so a front reaches a straight shore at one end first by the angle along a
+// coast running east to west or north to south alike (by up to 1.4 times it, or not at all, along a diagonal one).
+float TBWaveTurn(float4 waves, float2 foot)
 {
-    float n = sin(6.28318530718 * (0.0071 * x + 0.0172 * z) + 0.4 + 0.31 * t)
-            + sin(6.28318530718 * (-0.0058 * x + 0.0241 * z) + 2.1 - 0.23 * t)
-            + sin(6.28318530718 * (0.0089 * x - 0.0137 * z) + 4.4 + 0.17 * t)
-            + sin(6.28318530718 * (0.0034 * x + 0.0203 * z) + 1.3 - 0.37 * t)
-            + sin(6.28318530718 * (-0.0081 * x - 0.0158 * z) + 5.2 + 0.27 * t)
-            + sin(6.28318530718 * (0.0049 * x + 0.0119 * z) + 3.0 - 0.13 * t);
+    return (foot.x + foot.y) * waves.w;
+}
+
+// The waves' phase at a pixel lying coast pixels out at sea, facing foot on the coast: a crest wherever it is a whole
+// number, rising a wave per spacing further out and per period of time, so the crests roll in toward the coast, turned
+// by the waves' angle (waves: spacing, period, width, tangent of the angle; TBWaveTurn).
+float TBWavePhase(TBInputs ins, float4 waves, float framesPerSecond, float coast, float2 foot)
+{
+    return (max(coast, 0.0) + TBWaveTurn(waves, foot)) / waves.x + TBAnimationTime(ins, framesPerSecond) / waves.y;
+}
+
+// How much of a wave shows along its front at foot, for the wave whose own place is z: smooth noise over both,
+// drifting slowly in time t, raised by bias, so out at sea a wave breaks into stretches that grow and fade as it
+// travels. Each term runs across x and y, so the stretches lie along a coast whichever way it runs.
+float TBWaveStretches(float2 foot, float z, float t, float bias)
+{
+    float n = sin(6.28318530718 * (dot(foot, float2(0.0071, 0.0049)) + 0.0172 * z) + 0.4 + 0.31 * t)
+            + sin(6.28318530718 * (dot(foot, float2(-0.0058, 0.0081)) + 0.0241 * z) + 2.1 - 0.23 * t)
+            + sin(6.28318530718 * (dot(foot, float2(0.0089, -0.0058)) - 0.0137 * z) + 4.4 + 0.17 * t)
+            + sin(6.28318530718 * (dot(foot, float2(0.0034, 0.0089)) + 0.0203 * z) + 1.3 - 0.37 * t)
+            + sin(6.28318530718 * (dot(foot, float2(-0.0081, -0.0034)) - 0.0158 * z) + 5.2 + 0.27 * t)
+            + sin(6.28318530718 * (dot(foot, float2(0.0049, 0.0071)) + 0.0119 * z) + 3.0 - 0.13 * t);
     return saturate(n * 0.52 + bias);
 }
 
 // How strongly a wave whose crest lies crestAt pixels from the coast shows: its stretches (bias as TBWaveStretches),
 // whole within wholeWithin pixels of the coast, fading out over its last pixels before the coast.
-float TBWaveStrength(float crestAt, float z, float x, float t, float wholeWithin, float bias)
+float TBWaveStrength(float crestAt, float z, float2 foot, float t, float wholeWithin, float bias)
 {
-    float shown = max(TBWaveStretches(x, z, t, bias), saturate((wholeWithin - crestAt) / TB_WAVE_WHOLE_BLEND));
+    float shown = max(TBWaveStretches(foot, z, t, bias), saturate((wholeWithin - crestAt) / TB_WAVE_WHOLE_BLEND));
     return shown * saturate((crestAt - TB_WAVE_FADE_START) / TB_WAVE_FADE);
 }
 
-// Short noise along a crest or the swash's front, about 1 high, for its gaps.
-float TBWaveBreak(float2 worldPixel)
+// Short noise along a crest or the swash's front, about 1 high, for its gaps: its first terms by the front's foot on
+// the coast, running across x and y so a front breaks alike whichever way it lies, the last by the pixel itself.
+float TBWaveBreak(float2 foot, float2 worldPixel)
 {
-    return 0.94 * sin(worldPixel.x * 0.897 + 1.1) + 0.7 * sin(worldPixel.x * 0.53 + 3.7) + 0.59 * sin(worldPixel.x * 1.61 + 0.4) + 0.53 * sin(dot(worldPixel, float2(0.93, 0.71)) + 2.2);
+    return 0.94 * sin(dot(foot, float2(0.897, 0.61)) + 1.1) + 0.7 * sin(dot(foot, float2(0.53, -0.97)) + 3.7) + 0.59 * sin(dot(foot, float2(1.61, 1.13)) + 0.4) + 0.53 * sin(dot(worldPixel, float2(0.93, 0.71)) + 2.2);
 }
 
-// Layer m's waves over its colour at a pixel inside it (TBWavePhase): each wave a band of lighter water, its wave colour
+// Layer m's waves over its colour at a pixel inside it (TBWavePhase, from its foot on the coast, TBCoastFoot): each wave
+// a band of lighter water, its wave colour
 // at the crest fading back out to sea over its width in three dithered steps, a broken crest one pixel thick along its
 // shoreward face and a darker trough one pixel thick just ahead of it, all as strong as the wave shows there
 // (TBWaveStrength, its stretches raised by the crest colour's alpha). Unchanged for a layer without waves.
@@ -76,11 +100,12 @@ float3 TBWaves(TBInputs ins, uint m, float3 colour, float2 worldPixel)
         float4 body = TBLut(ins, TB_LAYER_WAVE_COLOUR_COLUMN, row);
         float4 crest = TBLut(ins, TB_LAYER_WAVE_CREST_COLUMN, row);
         float coast = TBCoastDistance(ins, worldPixel);
+        float2 foot = TBCoastFoot(ins, coast, worldPixel);
         float t = TBAnimationTime(ins, framesPerSecond);
-        float phase = TBWavePhase(ins, waves, framesPerSecond, coast, worldPixel);
+        float phase = TBWavePhase(ins, waves, framesPerSecond, coast, foot);
         float q = frac(phase) * waves.x;
-        float z = floor(phase) * waves.x - worldPixel.x * waves.w;
-        float strength = TBWaveStrength(coast - q, z, worldPixel.x, t, body.a, crest.a);
+        float z = floor(phase) * waves.x - TBWaveTurn(waves, foot);
+        float strength = TBWaveStrength(coast - q, z, foot, t, body.a, crest.a);
         [branch]
         if (q < waves.z)
         {
@@ -90,12 +115,12 @@ float3 TBWaves(TBInputs ins, uint m, float3 colour, float2 worldPixel)
         }
 
         [branch]
-        if (q > waves.x - 1.0 && TBWaveStrength(coast - q + waves.x, z + waves.x, worldPixel.x, t, body.a, crest.a) > 0.4)
+        if (q > waves.x - 1.0 && TBWaveStrength(coast - q + waves.x, z + waves.x, foot, t, body.a, crest.a) > 0.4)
         {
             colour = lerp(colour, TBLut(ins, TB_LAYER_WAVE_TROUGH_COLUMN, row).rgb, 0.5);
         }
 
-        if (q < 1.0 && strength > 0.5 && TBWaveBreak(worldPixel) > 0.35)
+        if (q < 1.0 && strength > 0.5 && TBWaveBreak(foot, worldPixel) > 0.35)
         {
             colour = crest.rgb;
         }
@@ -137,7 +162,7 @@ float4 TBWash(TBInputs ins, uint m TB_W_PARAM, float outside, float2 worldPixel)
             float behind = reach - outside;
             float foamness = saturate(1.0 - (u - TB_WASH_ADVANCE) / TB_WASH_FOAM_FADE);
             float3 colour = TBLut(ins, behind > TB_WASH_FILM_BACK ? TB_LAYER_WASH_FILM_BACK_COLUMN : TB_LAYER_WASH_FILM_COLUMN, row).rgb;
-            if (behind < TB_WASH_FOAM && TBWaveBreak(worldPixel) < 2.2 * foamness - 1.0)
+            if (behind < TB_WASH_FOAM && TBWaveBreak(worldPixel, worldPixel) < 2.2 * foamness - 1.0)
             {
                 colour = behind < 1.5 ? foam.rgb : TBLut(ins, TB_LAYER_WASH_FOAM_SHADE_COLUMN, row).rgb;
             }

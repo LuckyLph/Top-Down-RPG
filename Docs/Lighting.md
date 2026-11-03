@@ -387,7 +387,7 @@ Phase 11 notes:
 ## Later
 
 - Weather: rain, snow and fog with the light under them (a darker sky, wet ground), in a plan of its own, since it brings particles and sound.
-- What Phases 6 to 11 leave out once settled.
+- The known gaps the phases left (Architecture.md's Known gaps), in a plan of their own: [LightingGaps.md](LightingGaps.md).
 
 ## Open questions
 

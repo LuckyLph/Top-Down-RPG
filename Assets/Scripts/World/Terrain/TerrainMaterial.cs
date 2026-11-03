@@ -150,7 +150,7 @@ public class TerrainMaterial : ScriptableObject
     [SerializeField, Range(MinPeriod, 30f)] private float wavePeriod = 3.2f;
     [Tooltip("Pixels from a wave's crest back out to sea over which its band of lighter water fades out.")]
     [SerializeField, Range(1f, 32f)] private float waveWidth = 10f;
-    [Tooltip("Degrees the waves' fronts turn away from the coast's line, so they reach a straight shore at one end first and run along it.")]
+    [Tooltip("Degrees the waves' fronts turn away from the coast's line, so they reach a straight shore at one end first and run along it: this much along a coast running east to west or north to south, up to 1.4 times it along a diagonal one and none along the other diagonal.")]
     [SerializeField, Range(-45f, 45f)] private float waveAngle = 8.5f;
     [Tooltip("Pixels from the coast within which every wave runs whole; further out they break into stretches that grow and fade.")]
     [SerializeField, Range(0f, 256f)] private float waveWholeWithin = 40f;

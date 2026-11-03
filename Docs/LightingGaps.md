@@ -133,9 +133,15 @@ Phase 6 notes:
 
 ### Phase 7: the camera on the art grid
 
-- [ ] A spike with previews and costs: the world drawn at one pixel an art pixel with the camera on the art grid and shown scaled up, moved by what is left of the camera's position under an art pixel (no shake, every art pixel square); against the camera and every sprite snapped; against today. The look, the cost and what it changes (the light textures' size, the UI, the Pixel Perfect Camera) decide whether it goes ahead.
-- [ ] The way chosen built.
-- [ ] Tests: the ground and a light's shadow holding their shape as the camera moves. Architecture.md and TerrainBlending.md updated; the `ShaderCompile` tests run.
+- [x] A spike with previews and costs: the world drawn at one pixel an art pixel with the camera on the art grid and shown scaled up, moved by what is left of the camera's position under an art pixel (no shake, every art pixel square); against the camera and every sprite snapped; against today. The look, the cost and what it changes (the light textures' size, the UI, the Pixel Perfect Camera) decide whether it goes ahead.
+- [x] The way chosen built: today's camera, kept, so nothing changed.
+- [x] Tests: the ground and a light's shadow holding their shape as the camera moves. Architecture.md and TerrainBlending.md updated; the `ShaderCompile` tests run.
+
+Phase 7 notes:
+
+- **The spike** walked a unit across the Sandbox's four chunks at a run (5 units per second, diagonally) for 90 frames at 60 fps, the camera following it as `CameraFollow2D` does (a smooth damp of 0.08 s), each frame rendered through the pipeline at zoom 3 into 768 x 432 in three ways: today's (camera and unit where they are); snapped (camera and unit rounded to the art grid); and snapped plus smooth (rendered snapped, then the picture moved by what is left of the camera's position under an art pixel, in whole screen pixels). Previews in `Recordings/LightingGaps/Phase7/`: `today_walk_3x.gif`, `snapped_walk_3x.gif`, `snapped_smooth_walk_3x.gif`, the middle frame of each side by side in `modes_still_3x.png`, and today's worst frame enlarged in `today_frames_zoom.png`.
+- **What it showed.** Today's camera already keeps nearly every art pixel square at a whole zoom: in 59 of the 90 frames some colour runs came out a screen pixel narrower or wider than a multiple of 3, 0.7 % of the runs on average and 1.9 % at most, along edges where the camera sat near the half-pixel phase of the art grid, seen only zoomed in; the light textures at the screen's size since Phase 4 and the art-grid shaders keep the lighting's edges whole. Snapped, every run is a multiple of 3, but the view moves in whole art-pixel steps, 2 and 3 in turn each frame at a run, which judders against today's glide. Snapped plus smooth is square and smooth, but building it means snapping every sprite to the art grid in its shader, snapping the camera, rendering a margin round the view and shifting the final picture by the leftover after the post-processing and before the UI: a change to the whole pipeline for a wobble only seen zoomed in.
+- **Settled** with the user on 2026-11-03: today's camera stays. Architecture.md's known gap is narrowed to that wobble, with these measurements, and TerrainBlending.md's camera note points here. Nothing was built, so the tests that hold the ground's and a light's shadow's shape as the camera moves are the ones already there (`PixelLightTests`' `ALightStoppedByAWall_ShadowsWholeArtPixels_ThatHoldStillAsTheCameraMoves` and `AtOneScreenPixelAnArtPixel_ALightsShadow_HoldsStillAsTheCameraMoves`), and no shader changed; the `ShaderCompile` tests run before the merge, for the branch's earlier shader changes.
 
 ## Testing
 
@@ -146,4 +152,4 @@ Phase 6 notes:
 ## Open questions
 
 - Whether reading a lamp's light at a sprite's base changes how the lamps light the tall props (a crown far above its trunk), and whether that reads better or worse (Phase 2).
-- Whether the camera's spike leaves the light textures and the art-grid shaders as they are (Phase 7).
+- Whether the camera's spike leaves the light textures and the art-grid shaders as they are (Phase 7). Answered in Phase 7: it does; the camera stays as it is (Phase 7 notes).

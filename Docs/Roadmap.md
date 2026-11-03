@@ -22,12 +22,12 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
 | [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Done, on `main`. |
-| [LightingGaps.md](LightingGaps.md) | The known gaps the lighting left and the waves along coasts running north to south: lamps' shadows on units, sun shadows across a caster, light shadows at the smallest zoom, load hitches, the night in the editor, a camera on the art grid | Under way on `feature/lighting-gaps`: Phases 1 (the waves), 2 (lamps' shadows on units and props), 3 (sun shadows across units, props' shadows redrawn when moved), 4 (light shadows at the smallest zoom), 5 (the first caster's wake, baked glow maps, the editor's shaders) and 6 (the night previewed in the editor) done. |
+| [LightingGaps.md](LightingGaps.md) | The known gaps the lighting left and the waves along coasts running north to south: lamps' shadows on units, sun shadows across a caster, light shadows at the smallest zoom, load hitches, the night in the editor, a camera on the art grid | Done, on `main`: Phase 7's spike kept today's camera. |
 | [DesignSystem.md](DesignSystem.md) | The design system: the specs' language and generated design tables, content rules and tuning views, one UI scale, the UI theme, skin and components, reduce flashing and motion | Proposal, not adopted yet; its open questions come first. |
 
 ## Next
 
-[LightingGaps.md](LightingGaps.md) is under way on `feature/lighting-gaps`, Phase 7 (the camera on the art grid) next, a spike first; [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing; the features below wait for plans of their own.
+[DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing; the features below wait for plans of their own.
 
 ## Later
 

@@ -108,10 +108,16 @@ Phase 4 notes:
 ### Phase 5: loads and the editor's shaders
 
 - [ ] Lava's glow map baked beside each world chunk, as its coast map is (`WorldCoastBake`), and read at load instead of built.
-- [ ] The first caster's wake taken off play: URP's shadow code run once while the world loads.
-- [ ] `SpritePixelLit` compiled when first used in the editor rather than in the background (`#pragma editor_sync_compilation`), and the SRP Batcher's texture after an import looked into.
-- [ ] Our shadow shader set again in URP's 2D resources whenever the editor finds URP's there (after an upgrade), writing only that field.
-- [ ] Tests: the baked glow map the one the renderer builds; the shadow shader restored. Architecture.md updated.
+- [x] The first caster's wake taken off play: URP's shadow code run once while the world loads (`LightWarmUp`).
+- [x] `SpritePixelLit` compiled when first used in the editor rather than in the background (`#pragma editor_sync_compilation`), and the SRP Batcher's texture after an import looked into.
+- [x] Our shadow shader set again in URP's 2D resources whenever the editor finds URP's there (after an upgrade), writing only that field.
+- [ ] Tests: the baked glow map the one the renderer builds; the shadow shader restored; the warm-up drawing once and leaving nothing. Architecture.md updated.
+
+Phase 5 notes:
+
+- **The first caster's wake**, measured in a Windows development player through a throwaway benchmark run in batchmode, kept in `Recordings/LightingGaps/Phase5/` (gitignored) and deleted from the project: a new game, the rogue at the Overworld's gate before dusk (0.62), a render request of a 1920 x 1080 view at zoom 3 every frame while the clock steps 0.0004 a frame through dusk; 53 casters wake as the gate's lights first burn. Before: the median frame 1.67 ms, and 12 to 13 ms then 14 to 15 ms in the first and third frames of the night's lights (two runs). With `LightWarmUp`: those frames 2.4 to 3.4 ms and 6.2 to 7.7 ms (eight runs), the rest of the session's frames as before; a second dusk in the same run peaks under 4 ms. The third frame's remainder is URP making the screen-sized light and shadow textures of the batch the props' casters split off (Phase 2): a warm-up drawn at the screen's size took it to 4.3 to 4.5 ms with dusk 15 s after the start, but not with dusk two minutes after, URP's pool having let them go, so the warm-up draws into 32 x 32 and the rest stays in the Known gaps. A light casting soft shadows, or a caster shadowing every sorting layer, made no difference.
+- **The editor's shaders.** `#pragma editor_sync_compilation` in both of `SpritePixelLit`'s passes makes the editor compile a variant the first time a sprite draws with it, rather than drawing nothing until a background compile ends; builds compile ahead anyway. The SRP Batcher drawing a unit with the props' atlas in the editor update right after the shader's import (Lighting.md's Phase 1 notes) no longer shows: the Sandbox's lamp post scene, a rogue on the shared material beside atlas-packed props, rendered at once after a forced import, with the pragma and without it, draws every sprite with its own texture.
+- **The shadow shader restored.** `LightShadowResources` is `[InitializeOnLoad]` and, once the editor has loaded (`EditorApplication.delayCall`, after a URP upgrade's reload too), applies ours when URP's resources hold another, with a warning. Applying saves URP's global settings, which empties their `m_RuntimeSettings` list (Known gaps), so it only runs when the shader was lost.
 
 ### Phase 6: the night previewed in the editor
 

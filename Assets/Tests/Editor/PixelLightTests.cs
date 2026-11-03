@@ -637,12 +637,14 @@ public class PixelLightTests
 
     /// <summary>
     /// The 2D renderer draws the shadows of lights with our projected shadow shader (Docs/Lighting.md, Phase 7), which
-    /// decides each shadow texel by the art pixel it lies in, set in URP's global settings.
+    /// decides each shadow texel by the art pixel it lies in, set in URP's global settings, which the editor then leaves
+    /// alone.
     /// </summary>
     [Test]
     public void TheRenderersProjectedShadowShader_IsTheArtGridOne()
     {
         Assert.That(LightShadowResources.Current, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Shader>(LightShadowShaderPath)));
+        Assert.That(LightShadowResources.RestoreIfLost(), Is.False, "Holding ours, the editor leaves URP's 2D resources alone (Docs/LightingGaps.md, Phase 5).");
     }
 
     /// <summary>

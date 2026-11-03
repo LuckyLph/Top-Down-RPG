@@ -173,6 +173,8 @@ public class GameplayLifetimeScope : LifetimeScope
             builder.RegisterEntryPoint<PropLighting>().AsSelf();
         }
 
+        builder.RegisterEntryPoint<LightWarmUp>().AsSelf();
+
         builder.RegisterBuildCallback(resolver => resolver.Resolve<GameplayPlayers>().RegisterNetworkPrefabs());
     }
 }

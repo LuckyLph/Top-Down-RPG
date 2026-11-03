@@ -32,6 +32,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
 
             #pragma vertex LitVertex
             #pragma fragment LitFragment
+            #pragma editor_sync_compilation
 
             #include "Assets/Shaders/Include/PixelLight.hlsl"
             #include "Assets/Shaders/Include/PixelRelief.hlsl"
@@ -131,6 +132,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
 
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
+            #pragma editor_sync_compilation
 
             #pragma multi_compile_instancing
 

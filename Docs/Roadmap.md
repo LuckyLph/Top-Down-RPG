@@ -11,7 +11,7 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [DamageAndStatusEffects.md](DamageAndStatusEffects.md) | Typed damage, resistances, immunities and status effects | Done, on `main`. |
 | [KeyBindings.md](KeyBindings.md) | Remappable controls, the options and in-game menus, the local settings file | Done, on `main`. |
 | [Animation.md](Animation.md) | The character rig and baker, the runtime animator, gaits, the attack timeline, weapon movesets | Done, on `main`. |
-| [AsepriteCharacters.md](AsepriteCharacters.md) | Characters, effects and projectiles drawn by hand in Aseprite | Phases 0 to 3 done, on `main`; Phase 4 (a hand-drawn character's lantern) done on `feature/lighting`. |
+| [AsepriteCharacters.md](AsepriteCharacters.md) | Characters, effects and projectiles drawn by hand in Aseprite | Done, on `main`. |
 | [TerrainBlending.md](TerrainBlending.md) | Drawing the ground with a blending shader instead of dual-grid tilesets | Done, on `main`, but for two checks by hand in play mode (Phases 5 and 6). |
 | [TerrainTypes.md](TerrainTypes.md) | The ground materials past grass, 16 layers per area, per-area layer sets, raised ground | Done, on `main`; lava damage waits for gameplay (below). |
 | [TerrainLayers32.md](TerrainLayers32.md) | A terrain renderer's layers raised from 16 to 32 | Done, on `main`. |
@@ -21,11 +21,11 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Done, on `main`, but for one item: measuring a 16 x 16 world from nothing, left while the editor's memory falls short. |
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
-| [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Phases 0 to 11 done on `feature/lighting`, not yet on `main`. |
+| [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Done, on `main`. |
 
 ## Next
 
-- **Merging `feature/lighting` into `main`**, every phase of Lighting.md done, after the full EditMode and PlayMode suites and `ShaderCompile` pass (CLAUDE.md).
+No plan is under way. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing; the features below wait for plans of their own.
 
 ## Later
 

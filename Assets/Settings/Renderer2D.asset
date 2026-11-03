@@ -28,6 +28,7 @@ MonoBehaviour:
   tallestCaster: 5
   margin: 4
   redrawPixels: 1
+  casterSortingLayer: Entities
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -62,7 +63,7 @@ MonoBehaviour:
   m_TransparencySortMode: 3
   m_TransparencySortAxis: {x: 0, y: 1, z: 0}
   m_HDREmulationScale: 1
-  m_LightRenderTextureScale: 0.5
+  m_LightRenderTextureScale: 1
   m_LightBlendStyles:
   - name: Multiply
     maskTextureChannel: 0

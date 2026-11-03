@@ -34,8 +34,8 @@ bool PixelLocalLightReaches(half here)
 }
 
 // Where the local light at a world position comes from, as a unit vector: on the ground toward where it grows
-// brightest, read PIXEL_RELIEF_STEP art pixels to either side (fewer crawl as the camera moves, since the light texture
-// is half the screen's size), and its z how much it shines from above rather than from the side, its slope over the
+// brightest, read PIXEL_RELIEF_STEP art pixels to either side (fewer crawled as the camera moved while the light
+// textures were half the screen's size, Docs/Lighting.md's Phase 11), and its z how much it shines from above rather than from the side, its slope over the
 // distance divided by how bright it is there (here, its brightest channel) and scaled by PIXEL_RELIEF_RISE, so a light
 // shines from the side at the edge of its pool and from above at its middle.
 float3 PixelLocalLightDirection(float2 worldPosition, half here)

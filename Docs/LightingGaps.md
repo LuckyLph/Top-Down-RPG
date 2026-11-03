@@ -87,9 +87,23 @@ Phase 3 notes:
 
 ### Phase 4: light shadows at one screen pixel an art pixel
 
-- [ ] Measure the light textures at the screen's full size against half: the frame's cost in a player at each zoom.
-- [ ] The light textures at full size where an art pixel is under two screen pixels (a second 2D renderer the camera switches to by zoom, or full size always if the cost allows), so every shadow edge holds still.
-- [ ] Tests: a light's shadow at one screen pixel an art pixel holding still as the camera moves. Architecture.md updated.
+- [x] Measure the light textures at the screen's full size against half: the frame's cost in a player at each zoom.
+- [x] The light textures at full size where an art pixel is under two screen pixels (a second 2D renderer the camera switches to by zoom, or full size always if the cost allows), so every shadow edge holds still: full size always (`Renderer2D.asset`'s light render texture scale 1).
+- [x] Tests: a light's shadow at one screen pixel an art pixel holding still as the camera moves. Architecture.md updated.
+
+Phase 4 notes:
+
+- **Why it flickered.** URP draws its light textures, and each casting light's shadow texture, at a share of the screen's size, half until now, so at one screen pixel an art pixel (windows under 1280 x 720, where the Pixel Perfect Camera's reference of 640 x 360 fits once) a texel covered two art pixels each way, and which art pixel decided it changed as the camera moved by fractions of a pixel. At the screen's size each art pixel's centre has a texel of its own at every zoom.
+- **Cost**, measured in a Windows development player (Mono, D3D11, every build scene) on the same machine as Lighting.md's Phases 5 to 11, through a throwaway benchmark run in batchmode, kept in `Recordings/LightingGaps/Phase4/` (gitignored) and deleted from the project: a new game, the rogue at the Overworld's gate between its torches at night (0.88), renders through render requests in 4 batches of 30 waiting for the GPU and the player loop over 240 frames, in 5 rounds of alternating order, median per render, at half and full size. Three runs:
+
+  | View | Half size | Full size |
+  |---|---|---|
+  | 1920 x 1080 at zoom 3, a render | 0.685 to 0.715 ms | +0.007 to +0.021 ms |
+  | 1278 x 718 at zoom 1, a render | 0.750 to 0.765 ms | -0.015 to +0.005 ms |
+  | The player loop without rendering | 0.267 to 0.270 ms | within the noise |
+
+  So full size always, rather than a second renderer for the smallest windows: one setting, and the light textures, the relief's light direction and the reflections read the same texels at every zoom.
+- **Tests**: `PixelLightTests` (`AtOneScreenPixelAnArtPixel_ALightsShadow_HoldsStillAsTheCameraMoves`, which fails at half size), and every render test of the lights before it passing unchanged. The camera is moved by fractions of a screen pixel but never by exactly half of one, where a screen pixel's centre lies on the edge between two art pixels and either may show.
 
 ### Phase 5: loads and the editor's shaders
 

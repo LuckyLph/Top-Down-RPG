@@ -28,7 +28,8 @@ using UnityEngine.Tilemaps;
 /// a point light and to the sun (Phase 11), in whole art pixels, while the afternoon's sun and ground beyond the light's
 /// reach draw today's pixels, and a sprite's normals light its side facing a point light. A prop's lamp shadow
 /// (Docs/LightingGaps.md, Phase 2) darkens a unit standing in it by column and a prop whole, by the shadow at their
-/// feet, and leaves other sprites as they were. Renders from later editor updates, until something is drawn.
+/// feet, and leaves other sprites as they were. At one screen pixel an art pixel a light's shadow holds still as the
+/// camera moves too (Docs/LightingGaps.md, Phase 4). Renders from later editor updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -703,6 +704,55 @@ public class PixelLightTests
     }
 
     /// <summary>
+    /// The wall's shadow of <see cref="ALightStoppedByAWall_ShadowsWholeArtPixels_ThatHoldStillAsTheCameraMoves"/> at one
+    /// screen pixel an art pixel, the smallest the Pixel Perfect Camera allows (Docs/LightingGaps.md, Phase 4): the 2D
+    /// renderer draws its light textures at the screen's size, so each art pixel's centre has a texel of its own, and
+    /// moved by fractions of a screen pixel the camera sees every art pixel around the shadow in the same colour to within
+    /// 2 levels. Never by exactly half of one, where a screen pixel's centre lies on the edge between two art pixels and
+    /// either may show.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AtOneScreenPixelAnArtPixel_ALightsShadow_HoldsStillAsTheCameraMoves()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(150, 150, 150, 255), true), 16, 12);
+        AddGlobalLight(Color.white, 0.2f);
+        AddPointLight(new Vector2(5.1f, 6.05f), 6f, 1f, true);
+        AddWallCaster(new Rect(7f, 5f, 1f, 2.5f));
+        Rect world = new(4f, 3f, 8f, 6f);
+        Vector2 behind = new(8.6f, 6.25f);
+        Color32[] still = null;
+        yield return RenderUntilDrawn(terrain, world, behind, false, pixels => still = pixels, 1);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit);
+        int moved = 0;
+        string worst = null;
+        foreach (float offset in new[] { 0.25f, 0.4f, 0.6f, 0.75f, 1.25f })
+        {
+            float shift = offset / ArtPixelsPerUnit;
+            Rect shifted = new(world.x + shift, world.y + shift * 0.3f, world.width, world.height);
+            Color32[] shiftedPixels = null;
+            yield return RenderUntilDrawn(terrain, shifted, behind, false, pixels => shiftedPixels = pixels, 1);
+            for (float y = world.yMin + 1f; y < world.yMax - 1f; y += 1f / ArtPixelsPerUnit)
+            {
+                for (float x = world.xMin + 1f; x < world.xMax - 1f; x += 1f / ArtPixelsPerUnit)
+                {
+                    Vector2 centre = new(x + 0.5f / ArtPixelsPerUnit, y + 0.5f / ArtPixelsPerUnit);
+                    Color32 before = ScreenPixel(still, width, world, centre, 1);
+                    Color32 seen = ScreenPixel(shiftedPixels, width, shifted, centre, 1);
+                    int change = Mathf.Max(Mathf.Abs(before.r - seen.r), Mathf.Max(Mathf.Abs(before.g - seen.g), Mathf.Abs(before.b - seen.b)));
+                    if (change > 2)
+                    {
+                        moved++;
+                        worst ??= $"the art pixel at {centre} moved by {change} levels with the camera {offset} screen pixels on";
+                    }
+                }
+            }
+        }
+
+        Assert.That(moved, Is.Zero, worst);
+    }
+
+    /// <summary>
     /// A bright point light casting shadows under a dim global light, with a prop's caster north of it shadowing only the
     /// ground's sorting layers, so its shadow runs up the screen (Docs/LightingGaps.md, Phase 2), each sprite compared
     /// with the same render without the caster: a unit standing wholly in the shadow darkens in every pixel; a unit
@@ -967,24 +1017,25 @@ public class PixelLightTests
     }
 
     /// <summary>
-    /// Renders <paramref name="world"/> at <see cref="Zoom"/> on later editor updates until the art pixel holding
-    /// <paramref name="probe"/> is drawn, or any pixel without a probe, at most 30 updates (the first render after a
-    /// shader import draws nothing with it), asserts it was, and hands the pixels to <paramref name="read"/>.
+    /// Renders <paramref name="world"/> at <paramref name="zoom"/> screen pixels an art pixel (<see cref="Zoom"/> unless
+    /// given) on later editor updates until the art pixel holding <paramref name="probe"/> is drawn, or any pixel
+    /// without a probe, at most 30 updates (the first render after a shader import draws nothing with it), asserts it
+    /// was, and hands the pixels to <paramref name="read"/>.
     /// </summary>
-    private static IEnumerator RenderUntilDrawn(TerrainBlendRenderer terrain, Rect world, Vector2? probe, bool linear, System.Action<Color32[]> read)
+    private static IEnumerator RenderUntilDrawn(TerrainBlendRenderer terrain, Rect world, Vector2? probe, bool linear, System.Action<Color32[]> read, int zoom = Zoom)
     {
-        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * zoom);
         Color32[] pixels = null;
         bool drawn = false;
         for (int frame = 0; frame < 30 && !drawn; frame++)
         {
             yield return null;
-            Texture2D texture = TerrainBlendProbe.Render(terrain, world, Zoom, linear, false);
+            Texture2D texture = TerrainBlendProbe.Render(terrain, world, zoom, linear, false);
             pixels = texture.GetPixels32();
             Object.DestroyImmediate(texture);
             if (probe.HasValue)
             {
-                Color32 pixel = ArtPixel(pixels, width, world, probe.Value);
+                Color32 pixel = ScreenPixel(pixels, width, world, probe.Value, zoom);
                 drawn = pixel.r + pixel.g + pixel.b > 0;
             }
             else
@@ -1149,12 +1200,13 @@ public class PixelLightTests
 
     /// <summary>
     /// The rendered colour of the screen pixel holding <paramref name="position"/> in a render of
-    /// <paramref name="world"/>, which need not start on an art pixel.
+    /// <paramref name="world"/>, which need not start on an art pixel, at <paramref name="zoom"/> screen pixels an art
+    /// pixel (<see cref="Zoom"/> unless given).
     /// </summary>
-    private static Color32 ScreenPixel(Color32[] pixels, int width, Rect world, Vector2 position)
+    private static Color32 ScreenPixel(Color32[] pixels, int width, Rect world, Vector2 position, int zoom = Zoom)
     {
-        int x = Mathf.FloorToInt((position.x - world.xMin) * ArtPixelsPerUnit * Zoom);
-        int y = Mathf.FloorToInt((position.y - world.yMin) * ArtPixelsPerUnit * Zoom);
+        int x = Mathf.FloorToInt((position.x - world.xMin) * ArtPixelsPerUnit * zoom);
+        int y = Mathf.FloorToInt((position.y - world.yMin) * ArtPixelsPerUnit * zoom);
         return pixels[y * width + x];
     }
 

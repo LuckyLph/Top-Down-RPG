@@ -122,8 +122,14 @@ Phase 5 notes:
 
 ### Phase 6: the night previewed in the editor
 
-- [ ] A time of day for the editor (the lighting panel's in play, a Scene view control in edit mode) that burns the light props' lights and lava's glow, sets the sky, the sun and the reflections as `DayNightPresenter` would, and puts everything back when turned off, writing nothing to the scenes.
-- [ ] Tests: the editor's night burning the lights and showing the reflections, and leaving the scene unchanged when turned off. Architecture.md updated.
+- [x] A time of day for the editor (the lighting panel's in play, a Scene view control in edit mode) that burns the light props' lights and lava's glow, sets the sky, the sun and the reflections as `DayNightPresenter` would, and puts everything back when turned off, writing nothing to the scenes.
+- [x] Tests: the editor's night burning the lights and showing the reflections, and leaving the scene unchanged when turned off. Architecture.md updated.
+
+Phase 6 notes:
+
+- **Settled** with the user on 2026-11-03: a Scene view overlay over menu items. The Time of Day overlay (`TimeOfDayOverlay`, shown by default; the Scene view's overlay menu hides it) has a Preview toggle and a Phase slider, and `NightPreview` lights the open scenes as play would at that phase: the sky and the sun, the sun's shadows, the light props and lava's glow at the night lights' share without flicker, the reflections and the relief. Not the region skies (they follow the local player, which the editor has none of), the clouds (they drift with the world clock), nor the props' lamp shadows: a prop's Shadow Caster 2D woken in the editor writes the state of its mesh (`m_HasRenderer`, `m_ShadowMesh`, its trim and source) into its scene as prefab overrides, which putting `enabled` back does not undo. The walls' casters, always awake, still stop the lights. `Recordings/LightingGaps/Phase6/editor_night.png` is the Sandbox's lamp post and lava field at 0.88 in the editor.
+- **Writing nothing.** A Light 2D works out its mesh's bounds again while it burns, a serialized field, so the preview records each light's whole serialized state before changing it (`EditorJsonUtility.ToJson`) and writes it back (`FromJsonOverwrite`) when hidden and before any scene saves, showing the preview again once the save is done. Saved under the preview at night, the Sandbox's chunk (1, 0) came out byte for byte as it did saved with the preview off. Play starts with the preview hidden and shows it again when it ends; its state is a `ScriptableSingleton`'s, so a script reload keeps it.
+- **Tests**: `NightPreviewTests` (a light prop's light burning at night and off at noon, the sun and the reflections' globals, everything put back when hidden and for a save).
 
 ### Phase 7: the camera on the art grid
 

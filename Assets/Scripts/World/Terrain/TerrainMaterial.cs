@@ -17,7 +17,8 @@ using UnityEngine;
 /// (planks) lies on what is painted under it, so the layers under it do not go on beneath it, and a material that
 /// turns to its runs turns its textures a quarter where its layer runs left and right, so its boards lie across the run.
 /// A glowing material (lava) lights the ground, props and units near it at night, in its glow colour, through its
-/// renderer's glow light (Docs/Lighting.md, Phase 5).
+/// renderer's glow light (Docs/Lighting.md, Phase 5). A material with relief (cobbles) has its stones' bevels, painted
+/// lit from the top left, turned by the terrain shader to the sun and to each local light (Phase 11).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/Terrain Material", fileName = "TerrainMaterial")]
 public class TerrainMaterial : ScriptableObject
@@ -41,6 +42,56 @@ public class TerrainMaterial : ScriptableObject
         None,
         WholeChips,
         CutStones
+    }
+
+    /// <summary>
+    /// How a material's stones are bevelled (Docs/Lighting.md, Phase 11), as its recipe paints them lit from the top
+    /// left, so the terrain shader can take the painted bevel away and draw it again from the side of the sun and of
+    /// each local light: how much a light changes a stone along its edge and away from its centre, over what widths, how
+    /// much darker the side facing away is and from how far away, and the mortar's width inside every stone's cell
+    /// edge. The direction each pixel's bevel faces is in the height texture's alpha. All zero (the default) for a
+    /// material without relief. Written by the material's recipe.
+    /// </summary>
+    [Serializable]
+    public struct BevelRelief
+    {
+        [Tooltip("How much a light from the side a stone's edge faces changes its colour along that edge, in 0-255 steps; 0, with no radial, for no relief.")]
+        [SerializeField, Min(0f)] private float bevel;
+        [Tooltip("Width in pixels of the bevel inside the mortar.")]
+        [SerializeField, Min(0f)] private float bevelWidth;
+        [Tooltip("How much the light changes a stone's colour away from its centre, in 0-255 steps, for a rounded look.")]
+        [SerializeField, Min(0f)] private float radial;
+        [Tooltip("Distance in pixels from a stone's centre at which the rounded look is strongest.")]
+        [SerializeField, Min(0f)] private float radialRadius;
+        [Tooltip("How much darker the bevel is on a stone's side that faces away from the light, in 0-255 steps.")]
+        [SerializeField, Min(0f)] private float shadedSide;
+        [Tooltip("How far a side must face away from the light to be shaded, from 0 (sideways) to 1 (straight away).")]
+        [SerializeField, Range(0f, 1f)] private float shadedSideFrom;
+        [Tooltip("Pixels this close to their stone's cell edge, in pixels, are mortar, where the bevel starts.")]
+        [SerializeField, Min(0f)] private float mortarWidth;
+
+        /// <summary>
+        /// A stone material's relief with these settings.
+        /// </summary>
+        public BevelRelief(float bevel, float bevelWidth, float radial, float radialRadius, float shadedSide, float shadedSideFrom, float mortarWidth)
+        {
+            this.bevel = bevel;
+            this.bevelWidth = bevelWidth;
+            this.radial = radial;
+            this.radialRadius = radialRadius;
+            this.shadedSide = shadedSide;
+            this.shadedSideFrom = shadedSideFrom;
+            this.mortarWidth = mortarWidth;
+        }
+
+        public float Bevel => bevel;
+        public float BevelWidth => bevelWidth;
+        public float Radial => radial;
+        public float RadialRadius => radialRadius;
+        public float ShadedSide => shadedSide;
+        public float ShadedSideFrom => shadedSideFrom;
+        public float MortarWidth => mortarWidth;
+        public bool HasRelief => bevel > 0f || radial > 0f;
     }
 
     [Header("Textures")]
@@ -140,6 +191,9 @@ public class TerrainMaterial : ScriptableObject
     [Header("Reflection")]
     [Tooltip("How strongly it reflects the lights (Docs/Lighting.md, Phase 10): a light's glitter path down it toward the camera from a light above it on the screen, and its glints catching the light falling on them; 1 for open water, 0 for a material that reflects nothing.")]
     [SerializeField, Range(0f, 1f)] private float reflection;
+    [Header("Relief")]
+    [Tooltip("How its stones are bevelled, so the terrain shader turns their painted bevels to the sun and the local lights (Docs/Lighting.md, Phase 11); all zero for none. Written by the material's recipe with its textures.")]
+    [SerializeField] private BevelRelief relief;
     [Header("Glow")]
     [Tooltip("How strongly it lights what lies near it at night, at its own cells; 0 for a material that does not glow.")]
     [SerializeField, Min(0f)] private float glowStrength;
@@ -204,6 +258,8 @@ public class TerrainMaterial : ScriptableObject
     public float BankShadow => Mathf.Clamp01(bankShadow);
     public Color BankColour => bankColour;
     public float Reflection => Mathf.Clamp01(reflection);
+    public BevelRelief Relief => relief;
+    public bool HasRelief => relief.HasRelief && cellMode == CellMode.CutStones && height != null;
     public bool Glows => glowStrength > 0f && glowReach > 0f;
     public float GlowStrength => Mathf.Max(glowStrength, 0f);
     public float GlowReach => Mathf.Clamp(glowReach, 0f, MaxGlowReach);
@@ -252,6 +308,14 @@ public class TerrainMaterial : ScriptableObject
     internal void SetReflection(float strength)
     {
         reflection = strength;
+    }
+
+    /// <summary>
+    /// Gives its stones <paramref name="bevels"/>, for tests.
+    /// </summary>
+    internal void SetRelief(BevelRelief bevels)
+    {
+        relief = bevels;
     }
 
 #if UNITY_EDITOR

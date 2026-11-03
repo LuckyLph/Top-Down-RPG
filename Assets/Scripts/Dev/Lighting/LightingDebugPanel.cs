@@ -168,6 +168,9 @@ public class LightingDebugPanel : MonoBehaviour
             case KeyCode.G:
                 lighting.CycleReflections();
                 return true;
+            case KeyCode.H:
+                lighting.CycleRelief();
+                return true;
             case KeyCode.T:
                 lighting.Teleport(shift ? -1 : 1);
                 return true;
@@ -186,6 +189,7 @@ public class LightingDebugPanel : MonoBehaviour
         string shadows = presenter != null ? LightingDebugControls.StateText(presenter.SunShadowsOverride) : "-";
         string clouds = presenter != null ? LightingDebugControls.StateText(presenter.CloudsOverride) : "-";
         string reflections = presenter != null ? LightingDebugControls.StateText(presenter.ReflectionsOverride) : "-";
+        string relief = presenter != null ? LightingDebugControls.StateText(presenter.ReliefOverride) : "-";
         string lights = props != null ? LightingDebugControls.StateText(props.PropLightsOverride) : "-";
         string glow = props != null ? LightingDebugControls.StateText(props.GroundGlowOverride) : "-";
         string flicker = props != null ? LightingDebugControls.StateText(props.FlickerOverride) : "-";
@@ -197,7 +201,7 @@ public class LightingDebugPanel : MonoBehaviour
             + "Backspace  follow the session\n"
             + $"Z sun shadows {shadows}    M clouds {clouds}    X prop lights {lights}\n"
             + $"C lava glow {glow}    V flicker {flicker}    B glowing pixels {pixels}\n"
-            + $"N light shadows {lightShadows}    G reflections {reflections}\n"
+            + $"N light shadows {lightShadows}    G reflections {reflections}    H relief {relief}\n"
             + "T / Shift+T  next / previous spot";
     }
 

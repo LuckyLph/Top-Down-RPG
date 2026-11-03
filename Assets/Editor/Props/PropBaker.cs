@@ -4,7 +4,9 @@ using UnityEngine;
 /// <summary>
 /// One baked variant of a prop: its pixels in the recipe's frame (rows from the bottom), its glow (each pixel's alpha how
 /// much it glows, all 0 for a prop that does not glow, and its colour the one it flickers to, black for a pixel that
-/// does not flicker), the same for each frame of a moving flame's loop, the first being those, its footprint and the box
+/// does not flicker), its normals (each drawn pixel's surface normal, x right, y up the screen and z toward the camera,
+/// each from -1 to 1 as 0 to 255, opaque; clear where nothing is drawn and on the outlines around the drawing, Docs/Lighting.md,
+/// Phase 11), the same for each frame of a moving flame's loop, the first being those, its footprint and the box
 /// around its drawing in frame pixels, measured on the first frame, whether the drawing of any frame reached the frame's
 /// edge, and a light prop's light: where it stands on the sprite, in units from the base (on the ground under where the
 /// drawing marked it), and how strongly it shines.
@@ -14,19 +16,20 @@ public sealed class PropVariant
     /// <summary>
     /// Creates a baked variant of one frame.
     /// </summary>
-    public PropVariant(Color32[] pixels, Color32[] glow, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
-        : this(new[] { pixels }, new[] { glow }, footprint, drawn, atEdge, hasLight, lightOffset, lightStrength)
+    public PropVariant(Color32[] pixels, Color32[] glow, Color32[] normals, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
+        : this(new[] { pixels }, new[] { glow }, new[] { normals }, footprint, drawn, atEdge, hasLight, lightOffset, lightStrength)
     {
     }
 
     /// <summary>
-    /// Creates a baked variant of the frames of <paramref name="framePixels"/> and <paramref name="frameGlow"/>, the
-    /// first the one its footprint, drawing and light were measured on.
+    /// Creates a baked variant of the frames of <paramref name="framePixels"/>, <paramref name="frameGlow"/> and
+    /// <paramref name="frameNormals"/>, the first the one its footprint, drawing and light were measured on.
     /// </summary>
-    public PropVariant(IReadOnlyList<Color32[]> framePixels, IReadOnlyList<Color32[]> frameGlow, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
+    public PropVariant(IReadOnlyList<Color32[]> framePixels, IReadOnlyList<Color32[]> frameGlow, IReadOnlyList<Color32[]> frameNormals, RectInt footprint, RectInt drawn, bool atEdge, bool hasLight, Vector2 lightOffset, float lightStrength)
     {
         FramePixels = framePixels;
         FrameGlow = frameGlow;
+        FrameNormals = frameNormals;
         Footprint = footprint;
         Drawn = drawn;
         AtEdge = atEdge;
@@ -37,8 +40,10 @@ public sealed class PropVariant
 
     public Color32[] Pixels => FramePixels[0];
     public Color32[] Glow => FrameGlow[0];
+    public Color32[] Normals => FrameNormals[0];
     public IReadOnlyList<Color32[]> FramePixels { get; }
     public IReadOnlyList<Color32[]> FrameGlow { get; }
+    public IReadOnlyList<Color32[]> FrameNormals { get; }
     public RectInt Footprint { get; }
     public RectInt Drawn { get; }
     public bool AtEdge { get; }
@@ -84,7 +89,7 @@ public sealed class PropVariant
 /// base, both widened to lie evenly around the base, so the root snaps onto whole pixels. Its shadow is the sun's, cast
 /// from its sprite in the game (Docs/Lighting.md, Phase 4), so none is baked. A glowing material's pixels go into its
 /// glow with their flicker colours, and a light prop's light stands on the ground under where its drawing marks it
-/// (Phase 5). A recipe of more than one frame, a moving flame (Phase 6), draws each frame from the same stream at its
+/// (Phase 5). Each drawn pixel's normal goes into its normals, for relief under the lights (Phase 11). A recipe of more than one frame, a moving flame (Phase 6), draws each frame from the same stream at its
 /// share of the loop. The same recipe always gives the same pixels.
 /// </summary>
 public static class PropBaker
@@ -122,18 +127,21 @@ public static class PropBaker
 
         Color32[][] pixels = new Color32[frames][];
         Color32[][] glow = new Color32[frames][];
+        Color32[][] normals = new Color32[frames][];
         pixels[0] = first.Pixels;
         glow[0] = first.Glow;
+        normals[0] = first.Normals;
         bool atEdge = first.AtEdge;
         for (int f = 1; f < frames; f++)
         {
             PropVariant frame = BakeFrame(recipe, index, f / (float)frames);
             pixels[f] = frame.Pixels;
             glow[f] = frame.Glow;
+            normals[f] = frame.Normals;
             atEdge |= frame.AtEdge;
         }
 
-        return new PropVariant(pixels, glow, first.Footprint, first.Drawn, atEdge, first.HasLight, first.LightOffset, first.LightStrength);
+        return new PropVariant(pixels, glow, normals, first.Footprint, first.Drawn, atEdge, first.HasLight, first.LightOffset, first.LightStrength);
     }
 
     /// <summary>
@@ -147,7 +155,7 @@ public static class PropBaker
         Color32[] pixels = canvas.Shade(drawing.Materials, recipe.LightThreshold, recipe.ShadowThreshold, recipe.InnerLineGap, noise);
         RectInt drawn = DrawnBounds(pixels, recipe.FrameSize);
         Vector3 light = canvas.Project(new Vector3(drawing.LightAt.x, drawing.LightAt.y, 0f)) / PixelsPerCell;
-        return new PropVariant(pixels, GlowOf(canvas, drawing, pixels), Footprint(canvas, drawing, recipe), drawn, TouchesEdge(pixels, recipe.FrameSize),
+        return new PropVariant(pixels, GlowOf(canvas, drawing, pixels), NormalsOf(canvas, pixels), Footprint(canvas, drawing, recipe), drawn, TouchesEdge(pixels, recipe.FrameSize),
             drawing.HasLight, new Vector2(light.x, light.y), drawing.LightStrength);
     }
 
@@ -181,6 +189,40 @@ public static class PropBaker
         }
 
         return glow;
+    }
+
+    /// <summary>
+    /// Each drawn pixel's surface normal (<see cref="ArtCanvas.NormalAt"/>, whose z points away from the camera) with x
+    /// right, y up the screen and z toward the camera, each from -1 to 1 as 0 to 255, opaque; clear where nothing is
+    /// drawn and on the outlines around the drawing, which fill no pixel of the canvas.
+    /// </summary>
+    public static Color32[] NormalsOf(ArtCanvas canvas, Color32[] pixels)
+    {
+        Color32[] normals = new Color32[pixels.Length];
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                int i = y * canvas.Width + x;
+                if (pixels[i].a == 0 || !canvas.IsFilled(x, y))
+                {
+                    continue;
+                }
+
+                Vector3 normal = canvas.NormalAt(x, y);
+                normals[i] = new Color32(NormalByte(normal.x), NormalByte(normal.y), NormalByte(-normal.z), 255);
+            }
+        }
+
+        return normals;
+    }
+
+    /// <summary>
+    /// A normal's component from -1 to 1 as 0 to 255.
+    /// </summary>
+    private static byte NormalByte(float component)
+    {
+        return (byte)Mathf.Clamp(Mathf.RoundToInt((component * 0.5f + 0.5f) * 255f), 0, 255);
     }
 
     /// <summary>

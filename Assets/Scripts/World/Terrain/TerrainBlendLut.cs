@@ -28,7 +28,10 @@ using UnityEngine;
 /// at <see cref="LayerWashFoamShadeColumn"/>, <see cref="LayerWashFilmColumn"/> and <see cref="LayerWashFilmBackColumn"/>,
 /// zero otherwise, at <see cref="LayerSliceColumn"/> the slice of the texture arrays holding the material (its first
 /// value; the layer's own index unless the renderer draws with arrays shared by its style, <see cref="SharedTerrainArrays"/>),
-/// and at <see cref="LayerReflectionColumn"/> how strongly it reflects the lights (its first value, 0 for not at all).
+/// at <see cref="LayerReflectionColumn"/> how strongly it reflects the lights (its first value, 0 for not at all), and for
+/// a material with relief (<see cref="TerrainMaterial.HasRelief"/>) at <see cref="LayerReliefColumn"/> (bevel, bevel
+/// width, radial, radial radius) and at <see cref="LayerReliefShadeColumn"/> (shaded side, shaded side from, mortar
+/// width), zero otherwise.
 /// Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
 /// = -1), at <see cref="PairRow"/>: at <see cref="PairShadowColumn"/> (shadow colour, shadow alpha), at
 /// <see cref="PairOutlineColumn"/> (outline colour, 1 when drawn), at <see cref="PairWidthsColumn"/> (shadow width, rim
@@ -69,6 +72,8 @@ public static class TerrainBlendLut
     public const int LayerWashFilmBackColumn = 18;
     public const int LayerSliceColumn = 19;
     public const int LayerReflectionColumn = 20;
+    public const int LayerReliefColumn = 21;
+    public const int LayerReliefShadeColumn = 22;
     public const int PairShadowColumn = 0;
     public const int PairOutlineColumn = 1;
     public const int PairWidthsColumn = 2;
@@ -137,6 +142,13 @@ public static class TerrainBlendLut
             texels[row + LayerHeightColumn] = new Color(material.Height != null ? material.HeightScale : 0f, material.TurnsToRuns ? 1f : 0f, 0f, 0f);
             texels[row + LayerSliceColumn] = new Color(slices != null ? slices[layer] : layer, 0f, 0f, 0f);
             texels[row + LayerReflectionColumn] = new Color(material.Reflection, 0f, 0f, 0f);
+            if (material.HasRelief)
+            {
+                TerrainMaterial.BevelRelief relief = material.Relief;
+                texels[row + LayerReliefColumn] = new Color(relief.Bevel, relief.BevelWidth, relief.Radial, relief.RadialRadius);
+                texels[row + LayerReliefShadeColumn] = new Color(relief.ShadedSide, relief.ShadedSideFrom, relief.MortarWidth, 0f);
+            }
+
             if (material.IsAnimated)
             {
                 Color glint = material.GlintColour;

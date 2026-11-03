@@ -260,6 +260,8 @@ TextureImporter:
     secondaryTextures:
     - texture: {fileID: 2800000, guid: 1411eca68d2b2d1429c1e9c9a65464df, type: 3}
       name: _GlowTex
+    - texture: {fileID: 2800000, guid: 38f9103c641a521479f1fb85e1db0756, type: 3}
+      name: _NormalTex
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:

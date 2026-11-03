@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
+using UnityEngine.U2D;
 
 /// <summary>
 /// Tests for the prop prefabs under <c>Assets/Prefabs/Props</c>: the base prefabs <c>Prop</c> and <c>BlockingProp</c>
@@ -13,7 +14,8 @@ using UnityEngine.Tilemaps;
 /// casts the sun's shadow), the props fading over their own drawing, the light props carrying their light, off until it
 /// burns, and their glow, the moving flames drawing with the flames material and the charred props glowing, every glowing
 /// sheet outside the props' atlas (Docs/Lighting.md, Phase 6), the footprints of blocking props, the shadow casters over
-/// them that stop a light, and the lights' shadows (Phase 7), and how a placed prop blocks navigation.
+/// them that stop a light, and the lights' shadows (Phase 7), every prop's normals for relief under the lights, packed
+/// linear by the props' atlas (Phase 11), and how a placed prop blocks navigation.
 /// </summary>
 public class PropPrefabTests
 {
@@ -200,7 +202,9 @@ public class PropPrefabTests
             TextureImporterSettings settings = new();
             ((TextureImporter)AssetImporter.GetAtPath(sheet)).ReadTextureSettings(settings);
             Assert.That(settings.spriteMeshType, Is.EqualTo(moves ? SpriteMeshType.FullRect : SpriteMeshType.Tight), propPrefab.name);
-            bool glows = sprite.GetSecondaryTextureCount() > 0;
+            SecondarySpriteTexture[] secondary = new SecondarySpriteTexture[sprite.GetSecondaryTextureCount()];
+            sprite.GetSecondaryTextures(secondary);
+            bool glows = secondary.Any(t => t.name == PropWriter.GlowTextureName);
             if (charred.Any(prefix => propPrefab.name.StartsWith(prefix, System.StringComparison.Ordinal)))
             {
                 Assert.That(glows, Is.True, $"{propPrefab.name} smoulders.");
@@ -208,6 +212,93 @@ public class PropPrefabTests
 
             string folder = glows ? PropWriter.GlowingSpritesFolder : PropWriter.SpritesFolder;
             Assert.That(System.IO.Path.GetDirectoryName(sheet).Replace('\\', '/'), Is.EqualTo(folder), $"{propPrefab.name}'s sheet lies in {folder}.");
+        }
+    }
+
+    /// <summary>
+    /// Every prop's sprite has its sheet's normals as its secondary texture <c>_NormalTex</c> (Docs/Lighting.md, Phase
+    /// 11): a plain texture imported linear, the sheet's size, opaque wherever the sheet draws a pixel of the drawing
+    /// with a unit normal, clear wherever the sheet is. The props' atlas packs them into a page of their own, linear too.
+    /// </summary>
+    [Test]
+    public void Props_HaveTheirSheetsNormals_ForReliefUnderTheLights()
+    {
+        HashSet<string> sheets = new();
+        foreach (GameObject propPrefab in LoadPropPrefabs())
+        {
+            Sprite sprite = Child(propPrefab, VisualsName).GetComponent<SpriteRenderer>().sprite;
+            if (sprite == null)
+            {
+                continue;
+            }
+
+            SecondarySpriteTexture[] secondary = new SecondarySpriteTexture[sprite.GetSecondaryTextureCount()];
+            sprite.GetSecondaryTextures(secondary);
+            Assert.That(secondary.Select(t => t.name), Does.Contain(PropWriter.NormalTextureName), $"{propPrefab.name} has normals.");
+            string sheet = AssetDatabase.GetAssetPath(sprite);
+            if (!sheets.Add(sheet))
+            {
+                continue;
+            }
+
+            Texture2D normals = ((TextureImporter)AssetImporter.GetAtPath(sheet)).secondarySpriteTextures.FirstOrDefault(t => t.name == PropWriter.NormalTextureName).texture;
+            Assert.That(normals, Is.Not.Null, $"{sheet} takes its normals.");
+            string path = AssetDatabase.GetAssetPath(normals);
+            TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            Assert.That(importer.sRGBTexture, Is.False, $"{path} is linear.");
+            Assert.That(importer.textureType, Is.EqualTo(TextureImporterType.Default), path);
+            Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point), path);
+            Texture2D colours = new(2, 2);
+            Texture2D directions = new(2, 2);
+            try
+            {
+                colours.LoadImage(System.IO.File.ReadAllBytes(sheet));
+                directions.LoadImage(System.IO.File.ReadAllBytes(path));
+                Assert.That(new Vector2Int(directions.width, directions.height), Is.EqualTo(new Vector2Int(colours.width, colours.height)), path);
+                Color32[] drawn = colours.GetPixels32();
+                Color32[] facing = directions.GetPixels32();
+                int opaque = 0;
+                for (int i = 0; i < drawn.Length; i++)
+                {
+                    if (drawn[i].a == 0)
+                    {
+                        Assert.That(facing[i].a, Is.Zero, $"{path}: no normal where the sheet draws nothing, pixel {i}.");
+                        continue;
+                    }
+
+                    if (facing[i].a == 0)
+                    {
+                        continue;
+                    }
+
+                    opaque++;
+                    Vector3 normal = new(facing[i].r / 127.5f - 1f, facing[i].g / 127.5f - 1f, facing[i].b / 127.5f - 1f);
+                    Assert.That(normal.magnitude, Is.EqualTo(1f).Within(0.02f), $"{path}: a unit normal at pixel {i}.");
+                }
+
+                Assert.That(opaque, Is.GreaterThan(0), $"{path} holds normals.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(colours);
+                Object.DestroyImmediate(directions);
+            }
+        }
+
+        SpriteAtlas atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(PropWriter.AtlasPath);
+        UnityEditor.U2D.SpriteAtlasUtility.PackAtlases(new[] { atlas }, EditorUserBuildSettings.activeBuildTarget);
+        Sprite packed = atlas.GetSprite("Rock_Grey_0");
+        try
+        {
+            SecondarySpriteTexture[] pages = new SecondarySpriteTexture[packed.GetSecondaryTextureCount()];
+            packed.GetSecondaryTextures(pages);
+            Assert.That(pages.Select(t => t.name), Is.EqualTo(new[] { PropWriter.NormalTextureName }));
+            Assert.That(pages[0].texture.isDataSRGB, Is.False, "The atlas packs the normals linear.");
+            Assert.That(packed.texture.isDataSRGB, Is.True, "And the colours in sRGB.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(packed);
         }
     }
 

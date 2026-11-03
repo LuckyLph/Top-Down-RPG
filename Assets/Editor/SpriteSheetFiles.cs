@@ -14,11 +14,13 @@ using UnityEngine;
 /// pixels import, so one that lost frames never imports with slices past its edge, and a sheet larger than its import's
 /// maximum size gets the size it needs. An asset written beside a sheet keeps its GUID and is saved only when it
 /// changed. A glow written beside a sheet (<see cref="WriteGlow"/>) is a plain texture the sheet takes as a secondary
-/// texture (<see cref="SetSecondaryTextures"/>), the props' and the characters' lanterns' alike.
+/// texture (<see cref="SetSecondaryTextures"/>), the props' and the characters' lanterns' alike, and so are a prop
+/// sheet's normals (<see cref="WriteNormals"/>).
 /// </summary>
 public static class SpriteSheetFiles
 {
     public const string GlowTextureName = "_GlowTex";
+    public const string NormalTextureName = "_NormalTex";
 
     /// <summary>
     /// Writes <paramref name="pixels"/> (rows from the bottom) as a PNG at <paramref name="path"/> when its bytes
@@ -61,6 +63,25 @@ public static class SpriteSheetFiles
     /// </summary>
     public static bool WriteGlow(string path, int width, int height, Color32[] pixels)
     {
+        return WriteSecondary(path, width, height, pixels, true);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="pixels"/> as a PNG at <paramref name="path"/> when its bytes changed and imports it as a
+    /// sheet's normals (Docs/Lighting.md, Phase 11), as <see cref="WriteGlow"/> imports a glow but with its colour
+    /// linear, since it holds directions. Returns whether the file or its import settings changed.
+    /// </summary>
+    public static bool WriteNormals(string path, int width, int height, Color32[] pixels)
+    {
+        return WriteSecondary(path, width, height, pixels, false);
+    }
+
+    /// <summary>
+    /// Writes a texture a sheet takes as a secondary texture, as <see cref="WriteGlow"/> describes, its colour in sRGB
+    /// when <paramref name="srgb"/>, else linear.
+    /// </summary>
+    private static bool WriteSecondary(string path, int width, int height, Color32[] pixels, bool srgb)
+    {
         int side = Mathf.NextPowerOfTwo(Mathf.Max(width, height));
         bool created = AssetImporter.GetAtPath(path) == null;
         if (created)
@@ -68,7 +89,7 @@ public static class SpriteSheetFiles
             TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             File.WriteAllBytes(path, TerrainMaterialWriter.EncodePng(1, 1, new Color32[1]));
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            ApplyGlowSettings((TextureImporter)AssetImporter.GetAtPath(path), side);
+            ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb);
         }
 
         byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
@@ -79,17 +100,18 @@ public static class SpriteSheetFiles
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
         }
 
-        bool changed = ApplyGlowSettings((TextureImporter)AssetImporter.GetAtPath(path), side);
+        bool changed = ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb);
         return created || written || changed;
     }
 
     /// <summary>
-    /// Gives a glow's importer its settings (see <see cref="WriteGlow"/>), a maximum size of at least
-    /// <paramref name="side"/>, reimporting it when any changed. Returns whether any did.
+    /// Gives a secondary texture's importer its settings (see <see cref="WriteGlow"/>), its colour in sRGB when
+    /// <paramref name="srgb"/>, and a maximum size of at least <paramref name="side"/>, reimporting it when any changed.
+    /// Returns whether any did.
     /// </summary>
-    private static bool ApplyGlowSettings(TextureImporter importer, int side)
+    private static bool ApplySecondarySettings(TextureImporter importer, int side, bool srgb)
     {
-        bool changed = importer.textureType != TextureImporterType.Default || importer.spriteImportMode != SpriteImportMode.None || !importer.sRGBTexture
+        bool changed = importer.textureType != TextureImporterType.Default || importer.spriteImportMode != SpriteImportMode.None || importer.sRGBTexture != srgb
             || importer.filterMode != FilterMode.Point || importer.wrapMode != TextureWrapMode.Clamp || importer.mipmapEnabled
             || importer.textureCompression != TextureImporterCompression.Uncompressed || importer.npotScale != TextureImporterNPOTScale.None
             || importer.isReadable || importer.alphaIsTransparency || importer.maxTextureSize < side;
@@ -100,7 +122,7 @@ public static class SpriteSheetFiles
 
         importer.textureType = TextureImporterType.Default;
         importer.spriteImportMode = SpriteImportMode.None;
-        importer.sRGBTexture = true;
+        importer.sRGBTexture = srgb;
         importer.filterMode = FilterMode.Point;
         importer.wrapMode = TextureWrapMode.Clamp;
         importer.mipmapEnabled = false;

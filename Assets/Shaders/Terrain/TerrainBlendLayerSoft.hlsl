@@ -12,9 +12,11 @@
 // sunken layer's bank). No shadow is drawn; past its edge, a layer with swash draws its wash where it covers at least
 // half of a pixel, opaque. Bands are shaded by the cell field's grit like the base colour. A layer that
 // turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does. The
-// interior is worked out once for the edge pixel and the inside (TBLayerInterior).
-float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner)
+// interior is worked out once for the edge pixel and the inside (TBLayerInterior). relief is the inside's relief
+// (TBInterior) or a whole stone's own bevel (TBStoneBevel), none elsewhere.
+float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner, out TBRelief relief)
 {
+    relief = (TBRelief)0;
     float4 shape = TBShape(ins, m);
     float grit = 0.0;
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
@@ -42,6 +44,11 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
                 if (centre.depth + jitter >= centre.rim + chip.x)
                 {
                     result = float4(LOAD_TEXTURE2D_ARRAY(ins.albedo.tex, texel, TBSlice(ins, m)).rgb, 1.0);
+                    [branch]
+                    if (TBLayerHasRelief(ins, m))
+                    {
+                        relief.own = TBStoneBevel(ins, m, texel, f, turned);
+                    }
                 }
             }
         }
@@ -59,7 +66,8 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
         }
 
         float bank;
-        float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, hasCentre, centre, bank);
+        TBRelief interiorRelief;
+        float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, hasCentre, centre, bank, interiorRelief);
         if (tuft > 0.5)
         {
             result = float4(tuft > 1.5 ? edge : e.fill, 1.0);
@@ -74,6 +82,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
             float band;
             float3 colour = TBInside(ins, m, e TB_W_ARG, -d, worldPixel, interior, bank, band);
             result = float4(colour + grit * band, 1.0);
+            relief = interiorRelief;
         }
         else
         {

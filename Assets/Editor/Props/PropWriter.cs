@@ -21,7 +21,10 @@ using UnityEngine.U2D;
 /// <c>Assets/Textures/Props/&lt;name&gt;_Glow.png</c>, as the sheet's secondary texture <c>_GlowTex</c>, and its sheet
 /// goes in <c>Assets/Sprites/GlowingProps</c>, outside the props' atlas, which warns and keeps a mostly empty page when
 /// only some of its sprites have a secondary texture; a sheet written before in the other folder is moved there with
-/// its slices. A light prop's prefabs get a <c>Light</c> child on the ground under where its drawing marked its light:
+/// its slices. Every prop's sheet also gets its variants' normals laid out as it,
+/// <c>Assets/Textures/Props/&lt;name&gt;_Normal.png</c>, as its secondary texture <c>_NormalTex</c>, so the sprite shader
+/// lights its relief under the lights (Docs/Lighting.md, Phase 11); every sheet in the props' atlas has one, so the atlas
+/// packs them into pages of their own, linear as they are imported. A light prop's prefabs get a <c>Light</c> child on the ground under where its drawing marked its light:
 /// a point Light 2D, off, casting hard shadows, and the <see cref="PropLight"/> that burns it. A moving flame's sheet and glow hold its frames
 /// in rows over the first, which is sliced, imported as full rectangles so a frame reaching past the first's outline
 /// still draws, and its prefabs draw with the flames material (<see cref="FlamesMaterialPath"/>), whose
@@ -43,6 +46,7 @@ public static class PropWriter
     public const string LightName = "Light";
     public const string GlowFolder = "Assets/Textures/Props";
     public const string GlowTextureName = SpriteSheetFiles.GlowTextureName;
+    public const string NormalTextureName = SpriteSheetFiles.NormalTextureName;
     public const string AtlasPath = SpritesFolder + "/Props.spriteatlasv2";
     public const string FlamesMaterialPath = "Assets/Materials/SpritePixelLitFlames.mat";
     public const string FlameFramesName = "_FlameFrames";
@@ -102,7 +106,7 @@ public static class PropWriter
     /// <summary>
     /// <see cref="Generate(PropRecipe)"/> into other folders, for tests: the sheet in <paramref name="spritesFolder"/>,
     /// its glow in <paramref name="glowFolder"/> (beside the sheet when null; never a folder whose textures import as
-    /// sprites) and the prefabs in <paramref name="prefabsFolder"/>'s category folders.
+    /// sprites), its normals beside its glow, and the prefabs in <paramref name="prefabsFolder"/>'s category folders.
     /// </summary>
     internal static IReadOnlyList<string> Generate(PropRecipe recipe, string spritesFolder, string prefabsFolder, string glowFolder = null)
     {
@@ -112,7 +116,7 @@ public static class PropWriter
     /// <summary>
     /// Writes <paramref name="recipe"/>'s sheet in <paramref name="spritesFolder"/>, or in
     /// <paramref name="glowingSpritesFolder"/> when it <paramref name="glows"/>, moved there with its slices from the
-    /// other one, its glow in <paramref name="glowFolder"/> and its prefabs in <paramref name="prefabsFolder"/>'s
+    /// other one, its glow and its normals in <paramref name="glowFolder"/> and its prefabs in <paramref name="prefabsFolder"/>'s
     /// category folders; returns the paths written, or null when it is refused.
     /// </summary>
     internal static IReadOnlyList<string> Generate(PropRecipe recipe, string spritesFolder, string glowingSpritesFolder, string prefabsFolder, string glowFolder, out bool glows)
@@ -160,9 +164,13 @@ public static class PropWriter
         }
 
         string glow = GlowPath(glowFolder ?? spritesFolder, recipe.PropName);
-        if (WriteGlow(recipe, variants, sheet, glow))
+        string normals = NormalsPath(glowFolder ?? spritesFolder, recipe.PropName);
+        foreach (string path in WriteSecondaries(recipe, variants, sheet, glow, normals))
         {
-            written.Add(glow);
+            if (!written.Contains(path))
+            {
+                written.Add(path);
+            }
         }
 
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
@@ -252,6 +260,14 @@ public static class PropWriter
     public static string GlowPath(string folder, string propName)
     {
         return $"{folder}/{propName}_Glow.png";
+    }
+
+    /// <summary>
+    /// The path of the normals of the props named <paramref name="propName"/> in <paramref name="folder"/>.
+    /// </summary>
+    public static string NormalsPath(string folder, string propName)
+    {
+        return $"{folder}/{propName}_Normal.png";
     }
 
     /// <summary>
@@ -346,11 +362,13 @@ public static class PropWriter
     }
 
     /// <summary>
-    /// Writes the glow of <paramref name="variants"/> at <paramref name="path"/>, laid out as the sheet with its frames, and makes it the
-    /// secondary texture <see cref="GlowTextureName"/> of the sheet at <paramref name="sheet"/>; when no variant glows,
-    /// removes both. Returns whether anything changed.
+    /// Writes the glow of <paramref name="variants"/> at <paramref name="glowPath"/> and their normals at
+    /// <paramref name="normalsPath"/>, each laid out as the sheet with its frames, and makes them the secondary textures
+    /// <see cref="GlowTextureName"/> and <see cref="NormalTextureName"/> of the sheet at <paramref name="sheet"/>, in that
+    /// order; when no variant glows, removes the glow. Returns the paths that changed: the glow's or the normals' when
+    /// written or removed, and the sheet's when its secondary textures changed.
     /// </summary>
-    private static bool WriteGlow(PropRecipe recipe, IReadOnlyList<PropVariant> variants, string sheet, string path)
+    private static List<string> WriteSecondaries(PropRecipe recipe, IReadOnlyList<PropVariant> variants, string sheet, string glowPath, string normalsPath)
     {
         bool glows = false;
         foreach (PropVariant variant in variants)
@@ -358,32 +376,72 @@ public static class PropWriter
             glows |= variant.Glows;
         }
 
-        bool changed = false;
-        SecondarySpriteTexture[] wanted = new SecondarySpriteTexture[0];
+        List<string> changed = new();
+        List<SecondarySpriteTexture> wanted = new();
         if (glows)
         {
-            Vector2Int frame = recipe.FrameSize;
-            int frames = recipe.Frames;
-            int width = frame.x * variants.Count;
-            Color32[] pixels = new Color32[width * frame.y * frames];
-            for (int i = 0; i < variants.Count; i++)
+            if (SpriteSheetFiles.WriteGlow(glowPath, SheetWidth(recipe, variants), SheetHeight(recipe), Laid(recipe, variants, v => v.FrameGlow)))
             {
-                for (int f = 0; f < frames; f++)
-                {
-                    Blit(variants[i].FrameGlow[f], frame, pixels, width, i * frame.x, f * frame.y);
-                }
+                changed.Add(glowPath);
             }
 
-            changed = SpriteSheetFiles.WriteGlow(path, width, frame.y * frames, pixels);
-            wanted = new[] { new SecondarySpriteTexture { name = GlowTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path) } };
+            wanted.Add(new SecondarySpriteTexture { name = GlowTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(glowPath) });
         }
-        else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
+        else if (AssetDatabase.LoadAssetAtPath<Texture2D>(glowPath) != null)
         {
-            AssetDatabase.DeleteAsset(path);
-            changed = true;
+            AssetDatabase.DeleteAsset(glowPath);
+            changed.Add(glowPath);
         }
 
-        return SpriteSheetFiles.SetSecondaryTextures(sheet, wanted) || changed;
+        if (SpriteSheetFiles.WriteNormals(normalsPath, SheetWidth(recipe, variants), SheetHeight(recipe), Laid(recipe, variants, v => v.FrameNormals)))
+        {
+            changed.Add(normalsPath);
+        }
+
+        wanted.Add(new SecondarySpriteTexture { name = NormalTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(normalsPath) });
+        if (SpriteSheetFiles.SetSecondaryTextures(sheet, wanted.ToArray()))
+        {
+            changed.Add(sheet);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// The width of <paramref name="recipe"/>'s sheet of <paramref name="variants"/>: a frame for each.
+    /// </summary>
+    private static int SheetWidth(PropRecipe recipe, IReadOnlyList<PropVariant> variants)
+    {
+        return recipe.FrameSize.x * variants.Count;
+    }
+
+    /// <summary>
+    /// The height of <paramref name="recipe"/>'s sheet: a frame for each frame of its loop.
+    /// </summary>
+    private static int SheetHeight(PropRecipe recipe)
+    {
+        return recipe.FrameSize.y * recipe.Frames;
+    }
+
+    /// <summary>
+    /// What <paramref name="frames"/> gives of each of <paramref name="variants"/>, laid out as the sheet: the variants
+    /// in a row, each frame of its loop over the one before.
+    /// </summary>
+    private static Color32[] Laid(PropRecipe recipe, IReadOnlyList<PropVariant> variants, System.Func<PropVariant, IReadOnlyList<Color32[]>> frames)
+    {
+        Vector2Int frame = recipe.FrameSize;
+        int width = SheetWidth(recipe, variants);
+        Color32[] pixels = new Color32[width * SheetHeight(recipe)];
+        for (int i = 0; i < variants.Count; i++)
+        {
+            IReadOnlyList<Color32[]> laid = frames(variants[i]);
+            for (int f = 0; f < recipe.Frames; f++)
+            {
+                Blit(laid[f], frame, pixels, width, i * frame.x, f * frame.y);
+            }
+        }
+
+        return pixels;
     }
 
     /// <summary>

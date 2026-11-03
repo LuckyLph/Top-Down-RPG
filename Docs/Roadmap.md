@@ -21,11 +21,11 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Done, on `main`, but for one item: measuring a 16 x 16 world from nothing, left while the editor's memory falls short. |
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
-| [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Phases 0 to 10 done on `feature/lighting`, not yet on `main`; Phase 11 (relief, and shadows that know the ground) is next. |
+| [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Phases 0 to 10 done on `feature/lighting`, not yet on `main`; Phase 11's relief done there too, its shadows that know the ground next. |
 
 ## Next
 
-- **Lighting, Phase 11**: relief and shadows that know the ground's height. It starts with a spike, whose look and cost decide whether the phase goes ahead (Lighting.md).
+- **Lighting, Phase 11**: shadows that know the ground's height, a prop on a plateau casting down its cliff and one below casting onto its face, settled on previews first (Lighting.md). Relief under the lights is done.
 - **Merging `feature/lighting` into `main`**, after the full EditMode and PlayMode suites and `ShaderCompile` pass (CLAUDE.md), whether before or after Phase 11.
 
 ## Later

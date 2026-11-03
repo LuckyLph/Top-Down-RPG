@@ -13,15 +13,18 @@ using VContainer.Unity;
 /// the local player (<see cref="RegionSkies"/>), and the clouds their cover. Water's reflections (Phase 10) take from the
 /// shaders the light of the world shown, the sky every other light adds to, and how strongly water reflects: fully at
 /// night and indoors, by day the settings' <see cref="DayNightSettings.DayReflection"/>, between the two by the night
-/// lights' share, unless the lighting dev panel keeps them off or at full. Each frame it reads the clock and writes the
-/// light to the worlds and the sun and the reflections to the shaders only once they have moved by a step too small to
-/// see, the clouds every frame, and the light to a world as it loads. Presentation each machine draws on its own.
+/// lights' share, unless the lighting dev panel keeps them off or at full. Relief under the lights (Phase 11) takes the
+/// same light of the world shown, and whether it is drawn, unless the lighting dev panel keeps it off. Each frame it
+/// reads the clock and writes the light to the worlds and the sun, the reflections and the relief to the shaders only
+/// once they have moved by a step too small to see, the clouds every frame, and the light to a world as it loads.
+/// Presentation each machine draws on its own.
 /// </summary>
 public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
 {
     private const float Step = 1f / 512f;
     private const float ShadowStep = 1f / 1024f;
     internal static readonly int ReflectionId = Shader.PropertyToID("_TerrainReflection");
+    internal static readonly int ReliefId = Shader.PropertyToID("_LightRelief");
 
     private readonly DayClock clock;
     private readonly Worlds worlds;
@@ -40,6 +43,9 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     private LightingOverride reflections;
     private Vector4 shownReflection;
     private bool reflectionApplied;
+    private LightingOverride relief;
+    private Vector4 shownRelief;
+    private bool reliefApplied;
 
     /// <summary>
     /// Creates the presenter of <paramref name="dayClock"/> over <paramref name="loadedWorlds"/>, tinting the sky by the
@@ -110,6 +116,16 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
+    /// Whether relief under the lights is drawn or kept off on this machine (the lighting dev panel); on, it is drawn
+    /// as when it follows.
+    /// </summary>
+    internal LightingOverride ReliefOverride
+    {
+        get => relief;
+        set => relief = value;
+    }
+
+    /// <summary>
     /// Follows the worlds loading and lights the ones loaded.
     /// </summary>
     public void Start()
@@ -119,7 +135,8 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Stops following the worlds and takes the sun, the clouds and water's reflections away from the shaders.
+    /// Stops following the worlds and takes the sun, the clouds, water's reflections and the relief away from the
+    /// shaders.
     /// </summary>
     public void Dispose()
     {
@@ -127,6 +144,7 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
         SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
         Shader.SetGlobalVector(ReflectionId, Vector4.zero);
+        Shader.SetGlobalVector(ReliefId, Vector4.zero);
     }
 
     /// <summary>
@@ -142,7 +160,9 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
         ApplySun(day, clock.Sun, tint, outdoors);
         ApplyClouds();
         Color light = Tinted(day.Total, tint);
-        ApplyReflection(day, outdoors ? light : shownLighting != null ? shownLighting.GlobalLight : Color.black, outdoors);
+        Color sky = outdoors ? light : shownLighting != null ? shownLighting.GlobalLight : Color.black;
+        ApplyReflection(day, sky, outdoors);
+        ApplyRelief(sky);
         if (applied && Near(light, shown))
         {
             return;
@@ -230,6 +250,24 @@ public sealed class DayNightPresenter : IStartable, ITickable, IDisposable
         reflectionApplied = true;
         shownReflection = reflection;
         Shader.SetGlobalVector(ReflectionId, reflection);
+    }
+
+    /// <summary>
+    /// Writes the relief under the lights to the shaders once it has moved by a step: <paramref name="sky"/>, the light
+    /// of the world shown, and 1 while it is drawn, 0 while the lighting dev panel keeps it off.
+    /// </summary>
+    private void ApplyRelief(Color sky)
+    {
+        Vector4 value = new(sky.r, sky.g, sky.b, relief == LightingOverride.Off ? 0f : 1f);
+        if (reliefApplied && Mathf.Abs(value.x - shownRelief.x) < Step && Mathf.Abs(value.y - shownRelief.y) < Step
+            && Mathf.Abs(value.z - shownRelief.z) < Step && value.w == shownRelief.w)
+        {
+            return;
+        }
+
+        reliefApplied = true;
+        shownRelief = value;
+        Shader.SetGlobalVector(ReliefId, value);
     }
 
     /// <summary>

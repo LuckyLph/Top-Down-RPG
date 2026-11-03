@@ -8,6 +8,7 @@
 #include "Assets/Shaders/Terrain/TerrainBlendSway.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendBanks.hlsl"
 #include "Assets/Shaders/Terrain/TerrainBlendWaves.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendRelief.hlsl"
 
 // Layer m's material inside its shape, before the rim: the albedo, and where the material has chips or stones (a cell
 // field) the base colour under any chip or stone left out. A whole chip is left out unless all of it lies the keep
@@ -20,9 +21,12 @@
 // (the height's green channel above 0: its row from the row under the weed's base, plus one) shows the ground under it
 // instead, from the cell field, unless the weed's foot and its top (the field's alpha: the box's rows above its base)
 // both lie where the layer shows (TBOpenOn). A layer that turns to its runs reads all of it turned a quarter where its
-// cell runs across (TBTurned), and turns the offsets it reads back into the world (TBUnturn).
-float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known)
+// cell runs across (TBTurned), and turns the offsets it reads back into the world (TBUnturn). Where the material has
+// relief (TBLayerHasRelief) and a stone shows, relief is what of it the lights turn (Docs/Lighting.md, Phase 11): the
+// stone's own bevel (TBStoneBevel) and, where it is cut along the rim, the cut's; none elsewhere.
+float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out TBRelief relief)
 {
+    relief = (TBRelief)0;
     float4 shape = TBShape(ins, m);
     bool turned = TBTurned(ins, m, pixel);
     float2 sampled = TBSampled(worldPixel, turned);
@@ -85,12 +89,30 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
             {
                 colour = base;
             }
-            else if (shape.w > 1.5 && inside < border)
+            else
             {
-                float lit = dot(TBOutward(ins, corner, m, worldPixel), TB_LIGHT);
-                float bevel = saturate(1.0 - (inside - chip.y) / 1.25);
-                float amount = lit * chip.z * bevel - (lit < -0.35 ? 0.45 * chip.z * bevel : 0.0);
-                colour += amount / 255.0;
+                bool hasRelief = TBLayerHasRelief(ins, m);
+                [branch]
+                if (hasRelief)
+                {
+                    relief.own = TBStoneBevel(ins, m, texel, f, turned);
+                }
+                [branch]
+                if (shape.w > 1.5 && inside < border)
+                {
+                    float2 outward = TBOutward(ins, corner, m, worldPixel);
+                    float lit = dot(outward, TB_LIGHT);
+                    float bevel = saturate(1.0 - (inside - chip.y) / 1.25);
+                    float amount = lit * chip.z * bevel - (lit < -0.35 ? 0.45 * chip.z * bevel : 0.0);
+                    colour += amount / 255.0;
+                    if (hasRelief)
+                    {
+                        relief.cut.facing = outward;
+                        relief.cut.strength = chip.z * bevel;
+                        relief.cut.shade = 0.45 * chip.z * bevel;
+                        relief.cut.from = 0.35;
+                    }
+                }
             }
         }
     }
@@ -100,10 +122,12 @@ float3 TBInterior(TBInputs ins, uint m, float depth, float2 pixel, float2 worldP
 // Layer m's interior at a pixel, worked out once for its edge pixel and its inside (TBLayer), which never both need it:
 // at the depth max(-d, 0) where the edge pixel is drawn along seamless pairs (onEdge, TBSeamlessEdge) or the inside is
 // drawn below a sunken layer's bank (inside, TBInside); black elsewhere. bank is the bank's height inside the edge
-// (TBBankHeight), 0 on the edge pixel and outside.
-float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, bool onEdge, bool inside, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float bank)
+// (TBBankHeight), 0 on the edge pixel and outside. relief is the interior's relief (TBInterior), none where it is not
+// worked out.
+float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, bool onEdge, bool inside, float2 pixel, float2 worldPixel, TBCorner corner, bool hasCentre, TBCentre known, out float bank, out TBRelief relief)
 {
     bank = 0.0;
+    relief = (TBRelief)0;
     [branch]
     if (inside)
     {
@@ -114,7 +138,7 @@ float3 TBLayerInterior(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, bool 
     [branch]
     if ((onEdge && e.seamless > 0.0) || (inside && -d >= bank))
     {
-        interior = TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, hasCentre, known);
+        interior = TBInterior(ins, m, max(-d, 0.0), pixel, worldPixel, corner, hasCentre, known, relief);
     }
     return interior;
 }

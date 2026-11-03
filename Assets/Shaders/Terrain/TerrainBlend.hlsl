@@ -32,7 +32,8 @@
 // draws animated materials at the time Info.w instead of the frame's. The colour is lit by the 2D lights read once at
 // the art pixel's centre, without the sun where a sun shadow covers the art pixel (PixelLitShadowed, SunShadowAt), so the
 // light changes only from one art pixel to the next; where raised ground leaves the topmost layer showing, that layer
-// adds the lights it reflects (TBReflection), whole art pixels too.
+// adds the lights it reflects (TBReflection), whole art pixels too, and its stones' bevels turn to the sun and the local
+// lights (TBReliefLight), by as much of the pixel's colour as the layer makes, the layers drawn over it taking the rest.
 void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture2D Lut, UnityTexture2DArray Albedo, UnityTexture2DArray Field, UnityTexture2DArray Height, float4 ControlRect, float4 Info, out float3 Color, out float Alpha)
 {
     TBInputs ins;
@@ -86,6 +87,8 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
 
     float4 acc = float4(0.0, 0.0, 0.0, 0.0);
     int top = -1;
+    TBRelief relief = (TBRelief)0;
+    float reliefWeight = 0.0;
     [loop]
     for (uint n = start; n < count; n++)
     {
@@ -105,11 +108,15 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
             TBPairWeights(ins TB_D_ARG, n TB_W_ARG);
             TBEdge e = TBGetEdge(ins, n TB_W_ARG);
             e.tuftHeight = bridged ? 0.0 : e.tuftHeight;
-            float4 c = TBLayer(ins, n, e TB_W_ARG, d[n], pixel, worldPixel, corner);
+            TBRelief layerRelief;
+            float4 c = TBLayer(ins, n, e TB_W_ARG, d[n], pixel, worldPixel, corner, layerRelief);
             acc = c + acc * (1.0 - c.a);
+            reliefWeight *= 1.0 - c.a;
             if (c.a >= 0.5)
             {
                 top = (int)n;
+                relief = layerRelief;
+                reliefWeight = c.a;
             }
         }
     }
@@ -123,11 +130,17 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
     float3 colour = acc.a > 0.0 ? acc.rgb / acc.a : float3(0.0, 0.0, 0.0);
     float3 raised = TBRaisedOver(ins, colour, top, pixel, worldPixel);
     float3 unlit = TBToOutput(raised);
-    Color = PixelLitShadowed(unlit, centre, SunShadowAt(worldPixel));
+    half shadowed = SunShadowAt(worldPixel);
+    Color = PixelLitShadowed(unlit, centre, shadowed);
     [branch]
     if (top >= 0 && all(raised == colour))
     {
         Color += TBReflection(ins, (uint)top, unlit, worldPixel);
+        [branch]
+        if (TBHasRelief(relief))
+        {
+            Color += TBReliefLight(relief, reliefWeight / max(acc.a, 0.001), colour, unlit, centre, shadowed);
+        }
     }
     Alpha = acc.a;
 }

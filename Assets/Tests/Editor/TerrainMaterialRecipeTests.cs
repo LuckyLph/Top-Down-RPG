@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -13,7 +14,9 @@ using Object = UnityEngine.Object;
 /// as it was; texture files keep the paths a material already uses and are otherwise named after it, and another
 /// material's files are found; the cell fields keep the terrain shader's contract (every chip pixel points at its
 /// chip's centre, a gravel chip's reach covers its whole footprint and alpha is 0 exactly where no chip is, a stone
-/// pixel's alpha is its distance to its stone's edge); chips and stones are lit from the top left; the height is smooth
+/// pixel's alpha is its distance to its stone's edge); stones carry their relief, the height's alpha holding the way each
+/// stone pixel's bevel faces and 0 on the mortar, while no other recipe has relief (Docs/Lighting.md, Phase 11); chips
+/// and stones are lit from the top left; the height is smooth
 /// with one value per chip or stone, and glint and sparkle phases only in the water and lava recipes and sway weights
 /// only in
 /// weeds', which repeat the grass recipe's ground and weigh each weed's box by row inside one cell column, draw
@@ -30,7 +33,7 @@ using Object = UnityEngine.Object;
 /// with a lit lip below and right; stones on a regular grid moved half a pixel have one-pixel mortar; planks point
 /// every pixel straight across its board, with butt joints on the cell borders staggered from row to row, and are lit
 /// along their top rows and left ends; writing the
-/// textures to a material sets the base colour the textures' base is shaded from and has the renderers drawing it
+/// textures to a material sets the base colour the textures' base is shaded from and the relief, and has the renderers drawing it
 /// rebuild; and every project recipe still generates its material's textures. Recipes and materials are built in memory
 /// with their default settings (the project's materials and recipes are only read), and files go to a temporary folder
 /// outside Assets.
@@ -341,6 +344,66 @@ public class TerrainMaterialRecipeTests
 
         depths.Sort();
         Assert.That(depths[depths.Count / 2], Is.GreaterThan(2.5));
+    }
+
+    /// <summary>
+    /// Stones carry their relief (Docs/Lighting.md, Phase 11): the recipe's bevel settings, and in the height's alpha 0
+    /// on every mortar pixel (less than half a pixel from its stone's edge) and elsewhere the way the pixel's bevel faces
+    /// from its stone's seed, which lies in its stone's centre pixel: away from that pixel for a pixel 3 px or more from it.
+    /// The facing's byte is 1 plus the direction in 255 steps of a turn anticlockwise from right, 0 for none. No other
+    /// recipe has relief, and their heights are opaque.
+    /// </summary>
+    [Test]
+    public void StoneCobbles_HoldEachStonePixelsFacing_AndTheirRelief()
+    {
+        Assert.That(TerrainArt.FacingByte(1.0, 0.0), Is.EqualTo(1));
+        Assert.That(TerrainArt.FacingByte(0.0, 2.0), Is.EqualTo(65));
+        Assert.That(TerrainArt.FacingByte(-3.0, 0.0), Is.EqualTo(129));
+        Assert.That(TerrainArt.FacingByte(0.0, -0.5), Is.EqualTo(192));
+        Assert.That(TerrainArt.FacingByte(0.0, 0.0), Is.EqualTo(0));
+
+        TerrainTextures textures = CreateRecipe(typeof(StoneCobblesRecipe)).Generate(Seed);
+        TerrainMaterial.BevelRelief relief = textures.Relief;
+        Assert.That(relief.HasRelief, Is.True);
+        Assert.That(new[] { relief.Bevel, relief.BevelWidth, relief.Radial, relief.RadialRadius, relief.ShadedSide, relief.ShadedSideFrom, relief.MortarWidth },
+            Is.EqualTo(new[] { 18f, 1.25f, 4f, 3.5f, 8f, 0.35f, 0.5f }), "The recipe's defaults.");
+        int size = textures.Size;
+        int faced = 0;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                Color32 field = textures.CellField[i];
+                byte facing = textures.Height[i].a;
+                if (field.a < 8)
+                {
+                    Expect(facing == 0, $"({x}, {y}) is mortar.");
+                    continue;
+                }
+
+                Vector2 away = new(128 - field.r, 128 - field.g);
+                if (field.a > 8 && away.magnitude >= 3f)
+                {
+                    float angle = (facing - 1) * 2f * Mathf.PI / 255f;
+                    Expect(facing > 0 && Vector2.Dot(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)), away.normalized) > 0.9f, $"({x}, {y}) faces away from its stone's centre.");
+                    faced++;
+                }
+            }
+        }
+
+        Assert.That(faced, Is.GreaterThan(2000));
+        foreach (Type other in RecipeTypes)
+        {
+            if (other == typeof(StoneCobblesRecipe))
+            {
+                continue;
+            }
+
+            TerrainTextures plain = CreateRecipe(other).Generate(Seed);
+            Assert.That(plain.Relief.HasRelief, Is.False, other.Name);
+            Assert.That(plain.Height.All(h => h.a == 255), Is.True, $"{other.Name}'s height is opaque.");
+        }
     }
 
     /// <summary>
@@ -1984,8 +2047,8 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// Writing the textures to a material points it at them and sets the repeat, cell mode and base colour they were
-    /// made for; wherever the albedo shows the base (bare gravel dirt, stone mortar less than half a pixel from a
+    /// Writing the textures to a material points it at them and sets the repeat, cell mode, base colour and relief they
+    /// were made for; wherever the albedo shows the base (bare gravel dirt, stone mortar less than half a pixel from a
     /// stone's edge), it is exactly the material's base colour shaded by the cell field's blue channel, as the shader
     /// draws a chip or stone it leaves out.
     /// </summary>
@@ -2008,6 +2071,8 @@ public class TerrainMaterialRecipeTests
         Assert.That(material.Cells, Is.EqualTo(recipe.CellMode));
         Color32 baseColour = material.BaseColour;
         Assert.That(SameColour(baseColour, textures.BaseColour), Is.True);
+        Assert.That(material.Relief, Is.EqualTo(textures.Relief));
+        Assert.That(material.HasRelief, Is.EqualTo(recipeType == typeof(StoneCobblesRecipe)));
         if (textures.GlintColour.HasValue)
         {
             Expect(SameColour(material.GlintColour, textures.GlintColour.Value), $"The glint colour is written too.");

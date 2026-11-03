@@ -7,6 +7,9 @@ using UnityEngine;
 /// its own edges. The cell field (cut stones) points every pixel at its stone's centre pixel (its pixel nearest its
 /// seed) and holds the pixel's exact distance to its stone's cell edge, so the terrain shader can leave a stone out or
 /// cut it along the rim; its blue channel is the mortar's shade under every pixel. The base colour is the mortar colour.
+/// The material has relief (Docs/Lighting.md, Phase 11): it takes the bevel settings, and the height texture's alpha
+/// holds the way each stone pixel's bevel faces, from its stone's seed (<see cref="TerrainArt.FacingByte"/>), 0 on the
+/// mortar, so the terrain shader turns the painted bevels to the sun and the local lights.
 /// With no jitter the seeds lie on a regular grid and the stones are square slabs with straight mortar (the Plaza
 /// material), its width set by the seed offset.
 /// </summary>
@@ -53,7 +56,7 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
     /// <summary>
     /// Draws the seeds (moved by the seed offset), a colour and a value per stone, then the height waves; finds each
     /// pixel's stone, offset from its seed and distance to its cell edge, and paints the mortar, the stones, the cell
-    /// field and the height.
+    /// field and the height with each stone pixel's facing.
     /// </summary>
     protected override TerrainTextures Generate(System.Random random, int size)
     {
@@ -91,6 +94,7 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
 
         Color32[] albedo = new Color32[size * size];
         Color32[] field = new Color32[size * size];
+        byte[] facings = new byte[size * size];
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
@@ -99,7 +103,9 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
                 double pixelGrit = (TerrainArt.Hash01(x, y, GritSalt) - 0.5) * grit;
                 int amount = Mathf.Clamp(TerrainArt.Round(pixelGrit), -128, 127);
                 int stone = owner[i];
-                albedo[i] = border[i] < mortarWidth ? TerrainArt.Shade(mortar, amount) : StonePixel(colours[stone], offsetX[i], offsetY[i], border[i], pixelGrit);
+                bool isMortar = border[i] < mortarWidth;
+                albedo[i] = isMortar ? TerrainArt.Shade(mortar, amount) : StonePixel(colours[stone], offsetX[i], offsetY[i], border[i], pixelGrit);
+                facings[i] = isMortar ? (byte)0 : TerrainArt.FacingByte(offsetX[i], offsetY[i]);
                 int ox = TerrainArt.WrapDelta(centreX[stone] - x, size);
                 int oy = TerrainArt.WrapDelta(centreY[stone] - y, size);
                 byte distance = (byte)Mathf.Clamp(TerrainArt.Round(border[i] * 16.0), 1, 255);
@@ -107,7 +113,8 @@ public sealed class StoneCobblesRecipe : TerrainMaterialRecipe
             }
         }
 
-        return new TerrainTextures(size, mortar, CellMode, albedo, field, TerrainArt.HeightPixels(height, owner, values));
+        TerrainMaterial.BevelRelief relief = new(bevel, bevelWidth, radial, radialRadius, shadedSide, shadedSideFrom, mortarWidth);
+        return new TerrainTextures(size, mortar, CellMode, albedo, field, TerrainArt.HeightPixels(height, owner, values, null, facings), null, null, relief);
     }
 
     /// <summary>

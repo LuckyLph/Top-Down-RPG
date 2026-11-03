@@ -149,8 +149,9 @@ public class LightingDebugControlsTests
     }
 
     /// <summary>
-    /// The sun's shadows, the flicker, the glowing pixels and the lights' shadows cycle between following the day and off;
-    /// the clouds, water's reflections, the prop lights and the ground's glow between following the day, on and off.
+    /// The sun's shadows, the flicker, the glowing pixels and the lights' shadows cycle between following the day and off,
+    /// relief between drawn and off; the clouds, water's reflections, the prop lights and the ground's glow between
+    /// following the day, on and off.
     /// </summary>
     [Test]
     public void TheOverrides_CycleThroughTheirStates()
@@ -173,6 +174,11 @@ public class LightingDebugControlsTests
         Assert.That(presenter.ReflectionsOverride, Is.EqualTo(LightingOverride.Off));
         controls.CycleReflections();
         Assert.That(presenter.ReflectionsOverride, Is.EqualTo(LightingOverride.Follow));
+
+        controls.CycleRelief();
+        Assert.That(presenter.ReliefOverride, Is.EqualTo(LightingOverride.Off));
+        controls.CycleRelief();
+        Assert.That(presenter.ReliefOverride, Is.EqualTo(LightingOverride.Follow));
 
         controls.CyclePropLights();
         Assert.That(propLighting.PropLightsOverride, Is.EqualTo(LightingOverride.On));

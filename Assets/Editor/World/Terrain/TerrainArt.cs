@@ -289,18 +289,41 @@ public static class TerrainArt
     /// The height texture's pixels: R the smooth <paramref name="height"/> in [0, 1], G the value of the chip or stone
     /// that owns each pixel (<paramref name="owner"/>, an index into <paramref name="values"/>, negative for none), 0.5
     /// where none does or when there are no owners, B the pixel's glint or sparkle from <paramref name="glints"/> (0 for
-    /// neither, else <see cref="GlintByte"/> or <see cref="SparkleByte"/>; 0 everywhere without glints) and A opaque.
+    /// neither, else <see cref="GlintByte"/> or <see cref="SparkleByte"/>; 0 everywhere without glints) and A the way the
+    /// pixel's bevel faces from <paramref name="facings"/> (<see cref="FacingByte"/>, for a material with relief), else
+    /// opaque.
     /// </summary>
-    public static Color32[] HeightPixels(double[] height, int[] owner, double[] values, byte[] glints = null)
+    public static Color32[] HeightPixels(double[] height, int[] owner, double[] values, byte[] glints = null, byte[] facings = null)
     {
         Color32[] pixels = new Color32[height.Length];
         for (int i = 0; i < pixels.Length; i++)
         {
             double value = owner != null && owner[i] >= 0 ? values[owner[i]] : 0.5;
-            pixels[i] = new Color32(ToByte(height[i] * 255.0), ToByte(value * 255.0), glints != null ? glints[i] : (byte)0, 255);
+            pixels[i] = new Color32(ToByte(height[i] * 255.0), ToByte(value * 255.0), glints != null ? glints[i] : (byte)0, facings != null ? facings[i] : (byte)255);
         }
 
         return pixels;
+    }
+
+    /// <summary>
+    /// The height texture's alpha for a bevel facing (<paramref name="dx"/>, <paramref name="dy"/>), as the terrain
+    /// shader reads it (Docs/Lighting.md, Phase 11): 1 plus the direction in 255 steps of a turn anticlockwise from
+    /// right, from 1 to 255; 0, the mortar's, for no direction.
+    /// </summary>
+    public static byte FacingByte(double dx, double dy)
+    {
+        if (dx == 0.0 && dy == 0.0)
+        {
+            return 0;
+        }
+
+        double turn = Math.Atan2(dy, dx) / (2.0 * Math.PI);
+        if (turn < 0.0)
+        {
+            turn += 1.0;
+        }
+
+        return (byte)(1 + (int)Math.Round(turn * 255.0) % 255);
     }
 
     /// <summary>

@@ -24,7 +24,9 @@ using UnityEngine.Tilemaps;
 /// (Phase 5). A light stopped by a wall's caster (Phase 7) shadows whole art pixels that hold still as the camera moves,
 /// drawn by the 2D renderer's projected shadow shader, ours, which compiles cleanly. Water reflects a light above it on
 /// the screen down itself toward the camera (Phase 10), in whole art pixels that move with the water, never above the
-/// light; ground that reflects nothing, and water with no light about, draw today's pixels. Renders from later editor
+/// light; ground that reflects nothing, and water with no light about, draw today's pixels. The cobbles' bevels turn to
+/// a point light and to the sun (Phase 11), in whole art pixels, while the afternoon's sun and ground beyond the light's
+/// reach draw today's pixels, and a sprite's normals light its side facing a point light. Renders from later editor
 /// updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
@@ -37,6 +39,7 @@ public class PixelLightTests
     private const string LightShadowShaderPath = LightShadowResources.ShaderPath;
     private const string LightKeyword = "USE_SHAPE_LIGHT_TYPE_0";
     private const string LitLightMode = "Universal2D";
+    private const string StonePath = "Assets/Settings/Terrain/Materials/Stone.asset";
     private const string UrpLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
     private const int ArtPixelsPerUnit = 32;
     private const int Zoom = 3;
@@ -52,6 +55,8 @@ public class PixelLightTests
     {
         Shader.SetGlobalVector(GlowFlickerId, Vector4.zero);
         Shader.SetGlobalVector(DayNightPresenter.ReflectionId, Vector4.zero);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, Vector4.zero);
+        SunShadowGlobals.Set(Color.black, Vector2.zero, false);
         foreach (Object created in createdObjects)
         {
             if (created != null)
@@ -406,6 +411,227 @@ public class PixelLightTests
     }
 
     /// <summary>
+    /// The project's cobbles turn their bevels to a point light over a night sky (Docs/Lighting.md, Phase 11): with
+    /// relief drawn, every art pixel is one colour, the stones near the light change, those whose bevels face it
+    /// brighter and those facing away darker than their painted light draws them, and the ground beyond the light's
+    /// reach draws as with relief off.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderAPointLight_TheCobblesBevels_TurnToTheLight_InWholeArtPixels()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(AssetDatabase.LoadAssetAtPath<TerrainMaterial>(StonePath), 16, 12);
+        Color sky = new(0.13f, 0.16f, 0.3f);
+        AddGlobalLight(sky, 1f);
+        AddPointLight(new Vector2(8.1f, 6.6f), 3f, 1f);
+        Rect world = new(2f, 2f, 12f, 9f);
+        Vector2 probe = new(8f, 6.5f);
+        Color32[] off = null;
+        Color32[] on = null;
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 0f));
+        yield return RenderUntilDrawn(terrain, world, probe, false, drawn => off = drawn);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 1f));
+        yield return RenderUntilDrawn(terrain, world, probe, false, drawn => on = drawn);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        int height = Mathf.RoundToInt(world.height * ArtPixelsPerUnit * Zoom);
+        Assert.That(MixedBlocks(on, width, height, out string first), Is.EqualTo(0), first);
+        Color32[] facings = StoneFacings(out int repeat);
+        int changed = 0;
+        float toward = 0f;
+        float away = 0f;
+        int towardCount = 0;
+        int awayCount = 0;
+        for (float y = 5.6f; y < 7.6f; y += 1f / ArtPixelsPerUnit)
+        {
+            for (float x = 6f; x < 7.6f; x += 1f / ArtPixelsPerUnit)
+            {
+                Vector2 position = new(x, y);
+                int change = Brightness(ArtPixel(on, width, world, position)) - Brightness(ArtPixel(off, width, world, position));
+                changed += Mathf.Abs(change) > 12 ? 1 : 0;
+                float facing = FacingTowards(facings, repeat, position, Vector2.right);
+                if (facing > 0.8f)
+                {
+                    toward += change;
+                    towardCount++;
+                }
+                else if (facing < -0.8f)
+                {
+                    away += change;
+                    awayCount++;
+                }
+            }
+        }
+
+        Assert.That(changed, Is.GreaterThan(200), "The stones beside the light change.");
+        Assert.That(towardCount, Is.GreaterThan(100));
+        Assert.That(awayCount, Is.GreaterThan(100));
+        Assert.That(toward / towardCount, Is.GreaterThan(4f), "Bevels facing the light brighten.");
+        Assert.That(away / awayCount, Is.LessThan(-4f), "Bevels facing away darken.");
+        for (float y = 2f; y < 11f; y += 1f / ArtPixelsPerUnit)
+        {
+            for (float x = 2f; x < 3.5f; x += 1f / ArtPixelsPerUnit)
+            {
+                Vector2 beyond = new(x, y);
+                Assert.That(ArtPixel(on, width, world, beyond), Is.EqualTo(ArtPixel(off, width, world, beyond)), $"{beyond}: beyond the light's reach the painted light stays.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The project's cobbles take their bevels' light from the sun's side (Docs/Lighting.md, Phase 11): under the shipped
+    /// day's afternoon sky and sun, which shines within a few degrees of the top left the bevels are painted from, relief
+    /// changes no art pixel by more than 4 steps and hardly any by more than one; at sunrise, with the sun low on the other side, the stones' bevels facing the sun
+    /// brighten and those facing away darken.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderTheSun_TheCobbles_DrawTheAfternoonsPixels_AndTurnToTheSunrise()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(AssetDatabase.LoadAssetAtPath<TerrainMaterial>(StonePath), 8, 6);
+        DayNightSettings settings = AssetDatabase.LoadAssetAtPath<DayNightSettings>("Assets/Data/Lighting/DayNight.asset");
+        float afternoon = -1f;
+        float sunrise = -1f;
+        for (int i = 0; i < settings.KeyCount; i++)
+        {
+            float time = settings.GetKey(i).Time;
+            Color total = settings.LightAt(time).Total;
+            afternoon = total.r == 0.85f && total.g == 0.85f && total.b == 0.85f ? time : afternoon;
+            sunrise = sunrise < 0f && settings.SunAt(time).IsUp && settings.LightAt(time).Sun.maxColorComponent > 0.05f ? time : sunrise;
+        }
+
+        Assert.That(afternoon, Is.GreaterThanOrEqualTo(0f), "The shipped day has today's light as a key.");
+        Assert.That(sunrise, Is.GreaterThanOrEqualTo(0f), "The shipped day has a sunlit key.");
+        Light2D sky = AddGlobalLight(Color.white, 1f);
+        Rect world = new(2f, 2f, 4f, 2f);
+        Color32[][] noon = new Color32[2][];
+        Color32[][] dawn = new Color32[2][];
+        foreach (float time in new[] { afternoon, sunrise })
+        {
+            Color total = settings.LightAt(time).Total;
+            sky.color = total;
+            SunShadowGlobals.Set(settings.LightAt(time).Sun, settings.SunAt(time).Shadow, true);
+            for (int drawn = 0; drawn < 2; drawn++)
+            {
+                Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(total.r, total.g, total.b, drawn));
+                Color32[][] into = time == afternoon ? noon : dawn;
+                yield return RenderUntilDrawn(terrain, world, world.center, false, pixels => into[drawn] = pixels);
+            }
+        }
+
+        int stepped = 0;
+        int largest = 0;
+        for (int i = 0; i < noon[0].Length; i++)
+        {
+            int difference = Mathf.Max(Mathf.Abs(noon[0][i].r - noon[1][i].r), Mathf.Max(Mathf.Abs(noon[0][i].g - noon[1][i].g), Mathf.Abs(noon[0][i].b - noon[1][i].b)));
+            largest = Mathf.Max(largest, difference);
+            stepped += difference > 1 ? 1 : 0;
+        }
+
+        Assert.That(largest, Is.LessThanOrEqualTo(4), "No pixel moves more than 4 steps at the afternoon.");
+        Assert.That(stepped, Is.LessThan(noon[0].Length / 100), $"Hardly any pixel moves more than a step at the afternoon (largest {largest}).");
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        Vector2 toSun = -settings.SunAt(sunrise).Shadow.normalized;
+        Color32[] facings = StoneFacings(out int repeat);
+        float toward = 0f;
+        float away = 0f;
+        int towardCount = 0;
+        int awayCount = 0;
+        for (float y = world.yMin; y < world.yMax; y += 1f / ArtPixelsPerUnit)
+        {
+            for (float x = world.xMin; x < world.xMax; x += 1f / ArtPixelsPerUnit)
+            {
+                Vector2 position = new(x, y);
+                int change = Brightness(ArtPixel(dawn[1], width, world, position)) - Brightness(ArtPixel(dawn[0], width, world, position));
+                float facing = FacingTowards(facings, repeat, position, toSun);
+                if (facing > 0.8f)
+                {
+                    toward += change;
+                    towardCount++;
+                }
+                else if (facing < -0.8f)
+                {
+                    away += change;
+                    awayCount++;
+                }
+            }
+        }
+
+        Assert.That(toward / towardCount, Is.GreaterThan(2f), "Bevels facing the rising sun brighten.");
+        Assert.That(away / awayCount, Is.LessThan(-2f), "Bevels facing away darken.");
+    }
+
+    /// <summary>
+    /// A sprite's normals (Docs/Lighting.md, Phase 11) light it by where a point light comes from: with relief drawn, its
+    /// half facing the light draws brighter and its half facing away darker than with relief off, each art pixel one
+    /// colour, while a sprite without normals beside it draws as with relief off; under the night sky alone relief
+    /// changes nothing.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderAPointLight_ASpritesNormals_LightItsSideFacingTheLight()
+    {
+        Color sky = new(0.13f, 0.16f, 0.3f);
+        AddGlobalLight(sky, 1f);
+        Texture2D albedo = SolidTexture(16, 16, new Color32(150, 150, 150, 255), false);
+        Color32[] normalPixels = new Color32[16 * 16];
+        for (int y = 0; y < 16; y++)
+        {
+            for (int x = 0; x < 16; x++)
+            {
+                normalPixels[y * 16 + x] = x < 8 ? new Color32(0, 128, 128, 255) : new Color32(255, 128, 128, 255);
+            }
+        }
+
+        Texture2D normals = Texture(16, 16, normalPixels, true);
+        Sprite faced = Track(Sprite.Create(albedo, new Rect(0f, 0f, 16f, 16f), new Vector2(0.5f, 0f), ArtPixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false,
+            new[] { new SecondarySpriteTexture { name = "_NormalTex", texture = normals } }));
+        GameObject facedObject = Track(new GameObject("Faced"));
+        facedObject.transform.position = new Vector2(-100f, -100f);
+        SpriteRenderer facedSprite = facedObject.AddComponent<SpriteRenderer>();
+        facedSprite.sprite = faced;
+        facedSprite.sortingLayerName = "Entities";
+        facedSprite.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(SpriteMaterialPath);
+        AddSprite(albedo, new Rect(0f, 0f, 16f, 16f), new Vector2(-100f, -100.75f), false);
+        Rect world = new(-100.25f, -100.75f, 0.5f, 1.25f);
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        int height = Mathf.RoundToInt(world.height * ArtPixelsPerUnit * Zoom);
+        Color32[] skyOff = null;
+        Color32[] skyOn = null;
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 0f));
+        yield return RenderUntilDrawn(null, world, null, false, pixels => skyOff = pixels);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 1f));
+        yield return RenderUntilDrawn(null, world, null, false, pixels => skyOn = pixels);
+        Assert.That(skyOn, Is.EqualTo(skyOff), "Under the sky alone relief changes nothing.");
+
+        AddPointLight(new Vector2(-99.2f, -99.9f), 2f, 1f);
+        Color32[] off = null;
+        Color32[] on = null;
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 0f));
+        yield return RenderUntilDrawn(null, world, null, false, pixels => off = pixels);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(sky.r, sky.g, sky.b, 1f));
+        yield return RenderUntilDrawn(null, world, null, false, pixels => on = pixels);
+
+        Assert.That(MixedBlocks(on, width, height, out string first), Is.EqualTo(0), first);
+        for (int y = 0; y < 16; y++)
+        {
+            for (int x = 0; x < 16; x++)
+            {
+                Vector2 at = new(-100.25f + (x + 0.5f) / ArtPixelsPerUnit, -100f + (y + 0.5f) / ArtPixelsPerUnit);
+                int change = Brightness(ArtPixel(on, width, world, at)) - Brightness(ArtPixel(off, width, world, at));
+                if (x < 8)
+                {
+                    Assert.That(change, Is.LessThan(0), $"({x}, {y}) faces away from the light.");
+                }
+                else
+                {
+                    Assert.That(change, Is.GreaterThan(0), $"({x}, {y}) faces the light.");
+                }
+
+                Vector2 plain = new(at.x, at.y - 0.75f);
+                Assert.That(ArtPixel(on, width, world, plain), Is.EqualTo(ArtPixel(off, width, world, plain)), $"{plain}: a sprite without normals keeps its painted light.");
+            }
+        }
+    }
+
+    /// <summary>
     /// The 2D renderer draws the shadows of lights with our projected shadow shader (Docs/Lighting.md, Phase 7), which
     /// decides each shadow texel by the art pixel it lies in, set in URP's global settings.
     /// </summary>
@@ -694,6 +920,15 @@ public class PixelLightTests
         TerrainMaterial material = TerrainMaterial.Create("Ground", albedo, null, 4, TerrainMaterial.CellMode.None, Color.gray, new TerrainStyle.EdgeSettings(), height);
         material.SetReflection(reflection);
         createdObjects.Add(material);
+        return AddTerrain(material, columns, rows);
+    }
+
+    /// <summary>
+    /// A grid at the origin whose renderer draws one layer of <paramref name="material"/> over
+    /// <paramref name="columns"/> x <paramref name="rows"/> cells.
+    /// </summary>
+    private TerrainBlendRenderer AddTerrain(TerrainMaterial material, int columns, int rows)
+    {
         TerrainStyle style = TestTerrainStyle.Create(createdObjects);
         Tile tile = Track(ScriptableObject.CreateInstance<Tile>());
         GameObject gridObject = Track(new GameObject("PixelLightGrid", typeof(Grid)));
@@ -831,6 +1066,52 @@ public class PixelLightTests
         int x = Mathf.FloorToInt((position.x - world.xMin) * ArtPixelsPerUnit * Zoom);
         int y = Mathf.FloorToInt((position.y - world.yMin) * ArtPixelsPerUnit * Zoom);
         return pixels[y * width + x];
+    }
+
+    /// <summary>
+    /// The project's cobbles' height texture's pixels, read from its file, whose alpha holds which way each stone pixel's
+    /// bevel faces (Docs/Lighting.md, Phase 11), and its size in pixels, <paramref name="repeat"/>.
+    /// </summary>
+    private static Color32[] StoneFacings(out int repeat)
+    {
+        TerrainMaterial stone = AssetDatabase.LoadAssetAtPath<TerrainMaterial>(StonePath);
+        Texture2D file = new(2, 2);
+        try
+        {
+            file.LoadImage(System.IO.File.ReadAllBytes(AssetDatabase.GetAssetPath(stone.Height)));
+            repeat = file.width;
+            return file.GetPixels32();
+        }
+        finally
+        {
+            Object.DestroyImmediate(file);
+        }
+    }
+
+    /// <summary>
+    /// How much the bevel of the cobbles' art pixel at <paramref name="position"/>, on a grid at the origin, faces
+    /// <paramref name="direction"/>: the cosine between them, 0 where it faces nowhere (the mortar).
+    /// </summary>
+    private static float FacingTowards(Color32[] facings, int repeat, Vector2 position, Vector2 direction)
+    {
+        int x = ((Mathf.FloorToInt(position.x * ArtPixelsPerUnit) % repeat) + repeat) % repeat;
+        int y = ((Mathf.FloorToInt(position.y * ArtPixelsPerUnit) % repeat) + repeat) % repeat;
+        byte code = facings[y * repeat + x].a;
+        if (code == 0)
+        {
+            return 0f;
+        }
+
+        float angle = (code - 1) * 2f * Mathf.PI / 255f;
+        return Vector2.Dot(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)), direction.normalized);
+    }
+
+    /// <summary>
+    /// A colour's channels summed.
+    /// </summary>
+    private static int Brightness(Color32 colour)
+    {
+        return colour.r + colour.g + colour.b;
     }
 
     /// <summary>

@@ -16,7 +16,8 @@ using UnityEngine.TestTools;
 /// default rendering layer alone, and one casting it again on the base's; a light prop writes its glow as its sheet's
 /// secondary texture and a light on each prefab, and a prop that does not glow neither; a moving flame writes its frames
 /// in rows, imported as full rectangles, its prefabs drawing with the flames material, and a still one one row on the
-/// lit material; a sheet that starts or stops glowing moves between the props' folder and the glowing one with its
+/// lit material; every sheet gets its variants' normals as a secondary texture beside its glow, imported linear
+/// (Docs/Lighting.md, Phase 11); a sheet that starts or stops glowing moves between the props' folder and the glowing one with its
 /// slices; lowering the variant count while a dropped variant's prefab is left, or changing whether it blocks once its
 /// prefabs exist, is refused. A blocking prop's <c>Visuals</c> carry a Shadow Caster 2D over its footprint, off, casting
 /// onto the ground's sorting layers, and its light props' lights cast hard shadows at full, while a walk-through prop and
@@ -65,9 +66,10 @@ public class PropWriterTests
     }
 
     /// <summary>
-    /// Generating writes the sheet, the variants in a row, and a prefab per variant: a variant of <c>BlockingProp</c>
-    /// whose <c>Visuals</c>, on its root and its only child, draw the variant's slice pivoted on the base pixel on the
-    /// base's rendering layers, which cast the sun's shadow, and whose collider is its footprint around the root.
+    /// Generating writes the sheet, the variants in a row, its normals beside it, and a prefab per variant: a variant of
+    /// <c>BlockingProp</c> whose <c>Visuals</c>, on its root and its only child, draw the variant's slice pivoted on the
+    /// base pixel on the base's rendering layers, which cast the sun's shadow, and whose collider is its footprint around
+    /// the root.
     /// </summary>
     [Test]
     public void Generate_WritesTheSheetAndAPrefabPerVariant_InTheUnitsLayout()
@@ -75,10 +77,14 @@ public class PropWriterTests
         IReadOnlyList<string> written = PropWriter.Generate(recipe, Sprites, Prefabs);
 
         string sheet = PropWriter.SheetPath(Sprites, Name);
-        Assert.That(written, Is.EquivalentTo(new[] { sheet, PrefabPath(0), PrefabPath(1) }));
+        string normals = PropWriter.NormalsPath(Sprites, Name);
+        Assert.That(written, Is.EquivalentTo(new[] { sheet, normals, PrefabPath(0), PrefabPath(1) }));
         Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
         Assert.That(sprites.Keys, Is.EquivalentTo(new[] { "TestBush_0", "TestBush_1" }));
-        Assert.That(((TextureImporter)AssetImporter.GetAtPath(sheet)).secondarySpriteTextures, Is.Empty, "A prop that does not glow has no glow.");
+        SecondarySpriteTexture[] secondary = ((TextureImporter)AssetImporter.GetAtPath(sheet)).secondarySpriteTextures;
+        Assert.That(secondary.Length, Is.EqualTo(1), "A prop that does not glow has no glow, only its normals.");
+        Assert.That(secondary[0].name, Is.EqualTo(PropWriter.NormalTextureName));
+        Assert.That(secondary[0].texture, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Texture2D>(normals)));
         Assert.That(sprites["TestBush_0"].texture.height, Is.EqualTo(52));
         Assert.That(sprites["TestBush_0"].pivot, Is.EqualTo(new Vector2(28f, 10f)));
         Assert.That(sprites["TestBush_0"].pixelsPerUnit, Is.EqualTo(Unit));
@@ -128,12 +134,15 @@ public class PropWriterTests
 
             string sheet = PropWriter.SheetPath(Sprites, LightName);
             string glow = PropWriter.GlowPath(Glows, LightName);
-            Assert.That(written, Is.EquivalentTo(new[] { sheet, glow, PropWriter.PrefabPath(Prefabs, campfire, 0), PropWriter.PrefabPath(Prefabs, campfire, 1) }));
+            string normals = PropWriter.NormalsPath(Glows, LightName);
+            Assert.That(written, Is.EquivalentTo(new[] { sheet, glow, normals, PropWriter.PrefabPath(Prefabs, campfire, 0), PropWriter.PrefabPath(Prefabs, campfire, 1) }));
             TextureImporter sheetImporter = (TextureImporter)AssetImporter.GetAtPath(sheet);
             Texture2D glowTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(glow);
-            Assert.That(sheetImporter.secondarySpriteTextures.Length, Is.EqualTo(1));
+            Assert.That(sheetImporter.secondarySpriteTextures.Length, Is.EqualTo(2));
             Assert.That(sheetImporter.secondarySpriteTextures[0].name, Is.EqualTo(PropWriter.GlowTextureName));
             Assert.That(sheetImporter.secondarySpriteTextures[0].texture, Is.EqualTo(glowTexture));
+            Assert.That(sheetImporter.secondarySpriteTextures[1].name, Is.EqualTo(PropWriter.NormalTextureName));
+            Assert.That(sheetImporter.secondarySpriteTextures[1].texture, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Texture2D>(normals)));
             TextureImporter glowImporter = (TextureImporter)AssetImporter.GetAtPath(glow);
             Assert.That(glowImporter.textureType, Is.EqualTo(TextureImporterType.Default));
             Assert.That(glowImporter.filterMode, Is.EqualTo(FilterMode.Point));
@@ -286,14 +295,14 @@ public class PropWriterTests
             Assert.That(AssetImporter.GetAtPath(plain), Is.Null, "The sheet left the props' folder.");
             Assert.That(AssetDatabase.AssetPathToGUID(glowing), Is.EqualTo(guid), "The sheet kept its GUID.");
             Assert.That(SliceIds(glowing), Is.EqualTo(ids), "Every slice keeps its ID.");
-            Assert.That(((TextureImporter)AssetImporter.GetAtPath(glowing)).secondarySpriteTextures.Length, Is.EqualTo(1));
+            Assert.That(((TextureImporter)AssetImporter.GetAtPath(glowing)).secondarySpriteTextures.Length, Is.EqualTo(2));
 
             settings.FindProperty("embers").FindPropertyRelative("enabled").boolValue = false;
             settings.ApplyModifiedPropertiesWithoutUndo();
             PropWriter.Generate(tree, Sprites, GlowingSprites, Prefabs, Glows, out glows);
             Assert.That(glows, Is.False);
             Assert.That(AssetDatabase.AssetPathToGUID(plain), Is.EqualTo(guid), "The sheet moved back.");
-            Assert.That(((TextureImporter)AssetImporter.GetAtPath(plain)).secondarySpriteTextures, Is.Empty);
+            Assert.That(((TextureImporter)AssetImporter.GetAtPath(plain)).secondarySpriteTextures.Length, Is.EqualTo(1), "Only its normals.");
             Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(PropWriter.GlowPath(Glows, Name)), Is.Null);
         }
         finally

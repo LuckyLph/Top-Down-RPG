@@ -9,9 +9,10 @@
 // interior under the rim (TBInside, with a sunken layer's bank), with the outline fading into it over the first pixel.
 // The interior is worked out once for the edge pixel and the inside (TBLayerInterior).
 // Where the pair has tufts, pixels of the edge and of the band outside it that a tuft covers are opaque: the outline
-// along the tuft's border, the rim's outer colour inside it.
-float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner)
+// along the tuft's border, the rim's outer colour inside it. relief is the inside's relief (TBInterior), none elsewhere.
+float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel, float2 worldPixel, TBCorner corner, out TBRelief relief)
 {
+    relief = (TBRelief)0;
     float3 edge = lerp(e.fill, e.outline, e.outlineWeight);
     float tuft = 0.0;
     [branch]
@@ -21,7 +22,8 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
     }
 
     float bank;
-    float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, false, (TBCentre)0, bank);
+    TBRelief interiorRelief;
+    float3 interior = TBLayerInterior(ins, m, e TB_W_ARG, d, tuft <= 0.5 && d > -0.5 && d < 0.5, tuft <= 0.5 && d <= -0.5, pixel, worldPixel, corner, false, (TBCentre)0, bank, interiorRelief);
     float4 result = float4(0.0, 0.0, 0.0, 0.0);
     [branch]
     if (tuft > 0.5)
@@ -55,6 +57,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
             colour = lerp(lerp(colour, e.outline, e.outlineWeight), colour, saturate(depth - 0.5));
         }
         result = float4(colour, 1.0);
+        relief = interiorRelief;
     }
     return result;
 }

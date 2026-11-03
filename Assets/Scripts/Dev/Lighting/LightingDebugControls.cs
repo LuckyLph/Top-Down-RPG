@@ -161,6 +161,17 @@ public sealed class LightingDebugControls
     }
 
     /// <summary>
+    /// Relief under the lights is drawn, then kept off (Docs/Lighting.md, Phase 11).
+    /// </summary>
+    public void CycleRelief()
+    {
+        if (presenter != null)
+        {
+            presenter.ReliefOverride = presenter.ReliefOverride == LightingOverride.Off ? LightingOverride.Follow : LightingOverride.Off;
+        }
+    }
+
+    /// <summary>
     /// The prop lights follow the day, then burn at full, then not at all.
     /// </summary>
     public void CyclePropLights()

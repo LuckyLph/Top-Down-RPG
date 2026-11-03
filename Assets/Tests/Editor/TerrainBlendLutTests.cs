@@ -25,7 +25,9 @@ using UnityEngine.TestTools;
 /// (Phase 5); raised ground's cliff settings reach row 0 only for layers drawn over raised ground (Phase 10); each
 /// layer's slice of the texture arrays reaches its row, its own index unless one is given (WorldScale.md's Phase 2); a
 /// material's reflection reaches its row, and of the project's materials only the water, the shallows at half and the sea
-/// reflect (Lighting.md's Phase 10); the shader's layout defines and the constants agree. The project's style and
+/// reflect (Lighting.md's Phase 10); a material's relief reaches its row only with cut stones and a height texture, and
+/// of the project's materials only the cobbles and the plaza have it (Lighting.md's Phase 11); the shader's layout
+/// defines and the constants agree. The project's style and
 /// materials are only read.
 /// </summary>
 public class TerrainBlendLutTests
@@ -766,6 +768,45 @@ public class TerrainBlendLutTests
             float expected = reflecting.TryGetValue(name, out float strength) ? strength : 0f;
             Assert.That(ProjectMaterial(name).Reflection, Is.EqualTo(expected), name);
         }
+    }
+
+    /// <summary>
+    /// A material's relief reaches its layer's row (Docs/Lighting.md, Phase 11): its bevel, bevel width, radial and
+    /// radial radius in its relief column and its shaded side, shaded side from and mortar width in its relief shade
+    /// column, but only for cut stones with a height texture, whose alpha holds which way each bevel faces; otherwise
+    /// both hold nothing. Of the project's materials only the cobbles and the plaza have relief, as their recipes give it.
+    /// </summary>
+    [Test]
+    public void AMaterialsRelief_ReachesItsRow_AndOnlyTheProjectsCobblesAndPlazaHaveIt()
+    {
+        Texture2D height = Track(new Texture2D(4, 4, TextureFormat.RGBA32, false, true));
+        TerrainMaterial.BevelRelief relief = new(18f, 1.25f, 4f, 3.5f, 8f, 0.35f, 0.5f);
+        TerrainMaterial stones = Track(TerrainMaterial.Create("Stones", null, null, 4, TerrainMaterial.CellMode.CutStones, Color.gray, Edge(0.1f, 1.5f), height));
+        stones.SetRelief(relief);
+        TerrainMaterial heightless = Material("Heightless", 0.1f, 4, TerrainMaterial.CellMode.CutStones);
+        heightless.SetRelief(relief);
+        TerrainMaterial chips = Track(TerrainMaterial.Create("Chips", null, null, 4, TerrainMaterial.CellMode.WholeChips, Color.gray, Edge(0.1f, 1.5f), height));
+        chips.SetRelief(relief);
+        TerrainMaterial plain = Material("Plain", 0.1f);
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { stones, heightless, chips, plain });
+
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerReliefColumn), Is.EqualTo(new Color(18f, 1.25f, 4f, 3.5f)));
+        Assert.That(LayerTexel(texels, 0, TerrainBlendLut.LayerReliefShadeColumn), Is.EqualTo(new Color(8f, 0.35f, 0.5f, 0f)));
+        for (int layer = 1; layer < 4; layer++)
+        {
+            Assert.That(LayerTexel(texels, layer, TerrainBlendLut.LayerReliefColumn), Is.EqualTo(Color.clear), $"layer {layer}");
+            Assert.That(LayerTexel(texels, layer, TerrainBlendLut.LayerReliefShadeColumn), Is.EqualTo(Color.clear), $"layer {layer}");
+        }
+
+        foreach (string path in Directory.GetFiles("Assets/Settings/Terrain/Materials", "*.asset"))
+        {
+            string name = Path.GetFileNameWithoutExtension(path);
+            Assert.That(ProjectMaterial(name).HasRelief, Is.EqualTo(name == "Stone" || name == "Plaza"), name);
+        }
+
+        Assert.That(ProjectMaterial("Stone").Relief, Is.EqualTo(new TerrainMaterial.BevelRelief(18f, 1.25f, 4f, 3.5f, 8f, 0.35f, 0.5f)));
+        Assert.That(ProjectMaterial("Plaza").Relief, Is.EqualTo(new TerrainMaterial.BevelRelief(12f, 1.25f, 1.5f, 7f, 8f, 0.35f, 0.5f)));
     }
 
     /// <summary>

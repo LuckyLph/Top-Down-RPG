@@ -22,7 +22,7 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// leaving that cover under cloud, the presenter drawing them while the sun casts, and tinting the sky and the sun and
 /// scaling the clouds by the region skies at the local player; and the presenter handing water's reflections (Phase 10)
 /// the light of the world shown and how strongly to reflect, by day, at night and indoors, as the dev panel forces, and
-/// nothing once stopped.
+/// nothing once stopped, and relief under the lights (Phase 11) the same light and whether it is drawn.
 /// </summary>
 public class DayNightTests
 {
@@ -44,6 +44,7 @@ public class DayNightTests
         SunShadowGlobals.Set(Color.black, Vector2.zero, false);
         SunShadowGlobals.SetClouds(Vector2.zero, 0f, 0f, 0f, 0f);
         Shader.SetGlobalVector(DayNightPresenter.ReflectionId, Vector4.zero);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, Vector4.zero);
         foreach (Object made in created)
         {
             if (made != null)
@@ -513,6 +514,64 @@ public class DayNightTests
     }
 
     /// <summary>
+    /// The presenter hands relief under the lights (Docs/Lighting.md, Phase 11) the light of the world shown, the sky
+    /// every other light adds to (outdoors the sky and the sun it lights the world with, indoors the world's own global
+    /// light), and draws it, by day and at night alike; kept off by the lighting dev panel it is not drawn, forced on it
+    /// is drawn as when it follows; and once stopped, nothing.
+    /// </summary>
+    [Test]
+    public void ThePresenter_HandsReliefTheLightShown_AndWhetherItIsDrawn()
+    {
+        ManualClock time = new();
+        SessionSave session = new(time);
+        session.StartNew();
+        DayNightSettings settings = Track(DayNightSettings.Create(100f, 25f, 0.3f, new[]
+        {
+            new DayLightKey(0f, new Color(0.2f, 0.2f, 0.4f), new Color(0.2f, 0.1f, 0f)),
+            new DayLightKey(0.5f, new Color(0.6f, 0.6f, 0.6f), new Color(0.2f, 0.2f, 0.2f)),
+            new DayLightKey(0.8f, new Color(0.1f, 0.1f, 0.3f), Color.black, 1f),
+            new DayLightKey(0.96f, new Color(0.1f, 0.1f, 0.3f), Color.black, 1f)
+        }));
+        DayClock clock = new(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        Worlds worlds = new();
+        WorldLighting outdoor = CreateLighting(WorldLightingProfile.Outdoor, out _, out _);
+        WorldLighting indoor = CreateLighting(WorldLightingProfile.Indoor, out Light2D indoorSky, out _);
+        indoorSky.color = new Color(0.3f, 0.2f, 0.4f);
+        indoorSky.intensity = 0.5f;
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, outdoor));
+        worlds.Add(new LoadedWorld(Track(ScriptableObject.CreateInstance<WorldDefinition>()), default, null, indoor));
+        DayNightPresenter presenter = new(clock, worlds);
+        outdoor.SetShown(true);
+        presenter.Start();
+        try
+        {
+            AssertRelief(clock.Light.Total, 1f, "By day, drawn.");
+            presenter.ReliefOverride = LightingOverride.Off;
+            presenter.Tick();
+            AssertRelief(clock.Light.Total, 0f, "Kept off, not drawn.");
+            presenter.ReliefOverride = LightingOverride.On;
+            presenter.Tick();
+            AssertRelief(clock.Light.Total, 1f, "Forced on, drawn.");
+            presenter.ReliefOverride = LightingOverride.Follow;
+
+            time.Advance(75f);
+            presenter.Tick();
+            AssertRelief(clock.Light.Total, 1f, "At night, drawn.");
+
+            outdoor.SetShown(false);
+            indoor.SetShown(true);
+            presenter.Tick();
+            AssertRelief(new Color(0.15f, 0.1f, 0.2f), 1f, "Indoors, the world's own light.");
+        }
+        finally
+        {
+            presenter.Dispose();
+        }
+
+        Assert.That(Shader.GetGlobalVector(DayNightPresenter.ReliefId), Is.EqualTo(Vector4.zero), "Stopping takes the relief away.");
+    }
+
+    /// <summary>
     /// Kept off by the lighting dev panel, the sun's shadows are not cast while it is up over the outdoor world shown,
     /// and the world keeps the sky and the sun together; following the day again, or forced on, they are cast again.
     /// </summary>
@@ -827,6 +886,16 @@ public class DayNightTests
     {
         Vector4 reflection = Shader.GetGlobalVector(DayNightPresenter.ReflectionId);
         Assert.That(reflection, Is.EqualTo(new Vector4(sky.r, sky.g, sky.b, strength)).Using(Vector4EqualityComparer(1e-4f)), message);
+    }
+
+    /// <summary>
+    /// Asserts relief under the lights was last handed <paramref name="sky"/> as the light shown and
+    /// <paramref name="drawn"/>, to within float rounding.
+    /// </summary>
+    private static void AssertRelief(Color sky, float drawn, string message)
+    {
+        Vector4 relief = Shader.GetGlobalVector(DayNightPresenter.ReliefId);
+        Assert.That(relief, Is.EqualTo(new Vector4(sky.r, sky.g, sky.b, drawn)).Using(Vector4EqualityComparer(1e-4f)), message);
     }
 
     /// <summary>

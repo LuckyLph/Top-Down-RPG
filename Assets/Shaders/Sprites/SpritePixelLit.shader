@@ -4,6 +4,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
     {
         _MainTex("Diffuse", 2D) = "white" {}
         [NoScaleOffset] _GlowTex("Glow", 2D) = "black" {}
+        [NoScaleOffset] _NormalTex("Normals", 2D) = "black" {}
         _FlashColor("Flash Color", Color) = (1,1,1,1)
         _FlashAmount("Flash Amount", Range(0, 1)) = 0
         _FlameFrames("Flame Frames", Float) = 1
@@ -33,6 +34,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
             #pragma fragment LitFragment
 
             #include "Assets/Shaders/Include/PixelLight.hlsl"
+            #include "Assets/Shaders/Include/PixelRelief.hlsl"
 
             #pragma multi_compile_instancing
             #pragma multi_compile _ USE_SHAPE_LIGHT_TYPE_0
@@ -59,6 +61,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
             SAMPLER(sampler_MainTex);
             TEXTURE2D(_GlowTex);
             SAMPLER(sampler_GlowTex);
+            TEXTURE2D(_NormalTex);
+            SAMPLER(sampler_NormalTex);
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
@@ -97,7 +101,14 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 half shadowed = input.shadowed >= 0.0 ? input.shadowed : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
                 half4 glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, input.uv) * (half)(1.0 - _GlowFlicker.z);
                 main.rgb = PixelGlowColour(main.rgb, glow, input.color.rgb, floor(input.uv * texels));
-                half4 lit = half4(PixelGlowLit(PixelLitShadowed(main.rgb, centre, shadowed), main.rgb, glow.a), main.a);
+                half3 shaded = PixelLitShadowed(main.rgb, centre, shadowed);
+                half4 normal = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, input.uv);
+                [branch]
+                if (normal.a > 0.0)
+                {
+                    shaded = max(0.0, shaded + PixelSpriteRelief(main.rgb, normal.rgb * 2.0 - 1.0, centre));
+                }
+                half4 lit = half4(PixelGlowLit(shaded, main.rgb, glow.a), main.a);
                 lit.rgb = lerp(lit.rgb, _FlashColor.rgb, _FlashAmount);
                 return lit;
             }

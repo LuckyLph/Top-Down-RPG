@@ -35,6 +35,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
 
             #include "Assets/Shaders/Include/PixelLight.hlsl"
             #include "Assets/Shaders/Include/PixelRelief.hlsl"
+            #include "Assets/Shaders/Include/LampShadow.hlsl"
 
             #pragma multi_compile_instancing
             #pragma multi_compile _ USE_SHAPE_LIGHT_TYPE_0
@@ -53,6 +54,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 float2 uv : TEXCOORD0;
                 float2 positionWS : TEXCOORD1;
                 nointerpolation half shadowed : TEXCOORD2;
+                nointerpolation float3 feet : TEXCOORD3;
                 half4 color : COLOR;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -82,6 +84,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 o.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 float2 origin = TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xy;
                 o.shadowed = (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(origin) : -1.0;
+                o.feet = float3(origin, LampShadowReading(GetMeshRenderingLayer()));
                 o.uv = PixelFlameFrame(input.uv, origin, _FlameFrames);
                 o.color = input.color * _Color * unity_SpriteColor;
                 return o;
@@ -101,12 +104,13 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 half shadowed = input.shadowed >= 0.0 ? input.shadowed : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
                 half4 glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, input.uv) * (half)(1.0 - _GlowFlicker.z);
                 main.rgb = PixelGlowColour(main.rgb, glow, input.color.rgb, floor(input.uv * texels));
-                half3 shaded = PixelLitShadowed(main.rgb, centre, shadowed);
+                half kept = LampShadowKept(input.feet, centre);
+                half3 shaded = LampShadowLit(main.rgb, centre, shadowed, kept);
                 half4 normal = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, input.uv);
                 [branch]
                 if (normal.a > 0.0)
                 {
-                    shaded = max(0.0, shaded + PixelSpriteRelief(main.rgb, normal.rgb * 2.0 - 1.0, centre));
+                    shaded = max(0.0, shaded + kept * PixelSpriteRelief(main.rgb, normal.rgb * 2.0 - 1.0, centre));
                 }
                 half4 lit = half4(PixelGlowLit(shaded, main.rgb, glow.a), main.a);
                 lit.rgb = lerp(lit.rgb, _FlashColor.rgb, _FlashAmount);

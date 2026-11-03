@@ -35,6 +35,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 | Topic | Decision |
 |---|---|
+| Lamps' shadows on the casters | A unit or prop standing in a prop's lamp shadow loses that lamp's light by the shadow at its feet (Phase 2): the casters' sprites keep the share of the lights other than the sky that the ground keeps half an art pixel above their feet, read from the ground's light texture, which holds the props' shadows the casters' own leaves out. A unit reads it under each column of its sprite, so a trunk's narrow shadow crosses it as it walks through; a prop under its middle, whole. The sky stays. The walls' shadows still fall by screen pixel. Chosen with the user on Phase 2's previews over every caster darkened whole and today's, where a caster kept the light. |
 | Waves | Measured along the coast, not along x (Phase 1): each pixel at sea takes its foot on the coast, the pixel moved back down the coast map's slope by its distance, read a texel to either side (`TBCoastFoot`), which a wave keeps as it rolls in and whose run along a wave follows the coast whichever way it lies. The stretches out at sea and the gaps in a crest are smooth noise and short noise over the foot, each term running across x and y, so they lie along any coast; the front's turn is the tangent of the angle times the foot's x and y together (`TBWaveTurn`), so a front reaches a straight shore at one end first by the angle along coasts running east to west and north to south alike, up to 1.4 times it along a diagonal one and not at all along the other diagonal. The waves' spacing no longer stretches with the turn. The north and south shores keep their look but not their pixels. Chosen with the user on Phase 1's previews over today's. |
 
 ## Phases
@@ -56,11 +57,17 @@ Phase 1 notes:
 
 ### Phase 2: units and props in lamps' shadows
 
-- [ ] A spike with previews: a lamp's shadow behind a trunk falling on a unit and on a bush standing in it, read where each stands rather than by screen pixel (the light at its base under each column of the sprite, or a shadow the caster lays on the `Entities` layer read at the sprite's feet), against today; and the cost of a prop's caster shadowing the `Entities` layer.
-- [ ] The look chosen built: a unit or prop in a lamp's shadow darkened, no dark patch on a crown in front of a bush's shadow.
-- [ ] Tests: a render test of a unit in a trunk's lamp shadow and a crown in front of a bush's; today's pixels where no prop casts. Architecture.md updated; the `ShaderCompile` tests run.
+- [x] A spike with previews: a lamp's shadow behind a trunk falling on a unit and on a bush standing in it, read where each stands rather than by screen pixel, against today.
+- [x] The look chosen built (Decisions: Lamps' shadows on the casters): a unit or prop in a lamp's shadow darkened, no dark patch on a crown in front of a bush's shadow.
+- [x] Tests: a render test of units and props in a prop's lamp shadow, across its edge and beside it; today's pixels where no prop casts. Architecture.md updated; the `ShaderCompile` tests run.
 
-- **To settle first:** how a sprite reads a lamp's shadow (above), and whether the props' relief (Lighting.md's Phase 11) keeps reading the light where it is drawn.
+Phase 2 notes:
+
+- **Settled first**, with the user on 2026-11-03, on in-engine previews in `Recordings/LightingGaps/Phase2/` (gitignored) from a throwaway pass and a switch in the sprite shader, deleted after: the Sandbox's lamp post by the walls spot at night (the clock at 0.88), its casters woken by hand, a rogue walking across the narrow shadow of the trunk beside the lamp (`trunk_band_walk_3x.gif`) and down past its wider shadow, where a copied bush stands (`behind_trunk_walk_3x.gif`), each today, every caster whole, and units by column. A prop read by column split the trees' crowns where the trunk's own shadow lay beside them, so props read their feet' middle. The shipped shaders draw the chosen previews' every pixel (`built/`).
+- **Where the shadow is.** URP lays a prop's lamp shadow into the light texture of the sorting layers its caster shadows, the ground's alone since Lighting.md's Phase 7, and draws a sorting layer whose lights or casters differ in a batch of its own with its own light texture: `Entities` gets one without the props' shadows whenever a prop's caster is in view. URP's 2D renderer hands a pass every batch's light textures (`Universal2DResourceData.lightTextures`) and runs it at a sorting layer's events, so `LampShadowPass` passes the first batch's to the sprite shader before the casters draw. The two textures differ only by the props' shadows, so the ground's local light over the caster's own at a point is the share of the lamps' light a shadow there leaves, whichever lamps light it. Where the first batch is the casters' own (no prop casting in view), the share is 1.
+- **Why the first batch.** URP's render graph does not say which batch holds a sorting layer, but it batches consecutive sorting layers that every visible light and caster treats alike, in the sorting layers' order; `Default` and `Terrain` come first and every light the game makes lights both (the global lights, the prop lights, the spells', the lantern and lava's glow), so they are always the first batch.
+- **Cost**: two passes that record no draws, and two more reads of a light texture where a unit's or prop's pixel is drawn. Timed in the editor at the lamp (1920 x 1080 at zoom 3, 100 frames, the lamp burning and its casters woken): about 2 ms a frame, its run-to-run noise (0.1 ms) larger than any difference.
+- **Tests**: `PixelLightTests` (`UnderALampsShadow_AUnitDarkensByColumn_APropWhole_AndOtherSpritesKeepTheLight`), and every render test of the sprites before it passing unchanged.
 
 ### Phase 3: sun shadows across a caster, props' shadows redrawn when moved
 

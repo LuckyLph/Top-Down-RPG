@@ -1,0 +1,80 @@
+#ifndef TOPDOWNRPG_LAMP_SHADOW_INCLUDED
+#define TOPDOWNRPG_LAMP_SHADOW_INCLUDED
+
+#include "Assets/Shaders/Include/PixelRelief.hlsl"
+
+// The lamps' shadows on the casters (Docs/LightingGaps.md, Phase 2), which LampShadowPass hands over before the
+// casters' sorting layer draws: the ground's light texture, with the props' lamp shadows the casters' own leaves out,
+// the rendering layers of the casters that read it (none where no pass hands it over) and of the units among them,
+// which read it by column.
+TEXTURE2D(_LampShadowGround);
+uint _LampShadowCasters;
+uint _LampShadowUnits;
+
+// How a sprite of rendering layers `layers` reads the lamps' shadows: 0 not at all, 1 a prop, whole at its feet, 2 a
+// unit, each column at its feet' row.
+float LampShadowReading(uint layers)
+{
+    return (layers & _LampShadowCasters) == 0u ? 0.0 : (layers & _LampShadowUnits) != 0u ? 2.0 : 1.0;
+}
+
+// The ground's light at a world position, read from the one texel holding that point, as PixelLightAt reads the
+// sprite's own.
+half3 LampShadowGroundAt(float2 worldPosition)
+{
+    uint lightWidth;
+    uint lightHeight;
+    _LampShadowGround.GetDimensions(lightWidth, lightHeight);
+    int2 lightTexel = clamp((int2)floor(PixelLightScreenUV(worldPosition) * float2(lightWidth, lightHeight)), int2(0, 0), int2(lightWidth, lightHeight) - 1);
+    return LOAD_TEXTURE2D_LOD(_LampShadowGround, lightTexel, 0).rgb;
+}
+
+// The share of the lights other than the sky a caster keeps at the art pixel whose centre is `centre`: feet.xy its
+// feet, feet.z how it reads the lamps' shadows (LampShadowReading). Read half an art pixel above its feet, under the
+// pixel's column for a unit and under its middle for a prop: the ground's local light (less _LightRelief.xyz) over the
+// casters' own there, brightest channels, so a lamp's shadow on the ground there takes that lamp's light away. All of
+// it for a sprite that reads none, where no local light reaches its feet, and without lights.
+half LampShadowKept(float3 feet, float2 centre)
+{
+#if USE_SHAPE_LIGHT_TYPE_0
+    if (feet.z < 0.5)
+    {
+        return 1.0;
+    }
+
+    float2 at = float2(feet.z > 1.5 ? centre.x : feet.x, feet.y + 0.5 / ART_PIXELS_PER_UNIT);
+    half own = PixelBrightest(PixelLocalLight(at));
+    if (!PixelLocalLightReaches(own))
+    {
+        return 1.0;
+    }
+
+    half ground = PixelBrightest(max(0.0, LampShadowGroundAt(at) - (half3)_LightRelief.rgb));
+    return saturate(ground / own);
+#else
+    return 1.0;
+#endif
+}
+
+// A caster's colour lit as PixelLitShadowed lights it, keeping `kept` (LampShadowKept) of the lights other than the
+// sky (_LightRelief.xyz); exactly PixelLitShadowed's colour where it keeps all of them.
+half3 LampShadowLit(half3 colour, float2 worldPosition, half shadowed, half kept)
+{
+#if USE_SHAPE_LIGHT_TYPE_0
+    half3 light = max(0.0, PixelLightAt(worldPosition) - (half3)_SunColour.rgb * shadowed);
+    [branch]
+    if (kept < 1.0)
+    {
+        half3 sky = (half3)_LightRelief.rgb;
+        light = min(light, sky) + max(0.0, light - sky) * kept;
+    }
+
+    half3 modulate = light * _ShapeLightBlendFactors0.x;
+    half3 additive = light * _ShapeLightBlendFactors0.y;
+    return max(0.0, _HDREmulationScale * (colour * modulate + additive));
+#else
+    return colour;
+#endif
+}
+
+#endif

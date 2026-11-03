@@ -26,8 +26,9 @@ using UnityEngine.Tilemaps;
 /// the screen down itself toward the camera (Phase 10), in whole art pixels that move with the water, never above the
 /// light; ground that reflects nothing, and water with no light about, draw today's pixels. The cobbles' bevels turn to
 /// a point light and to the sun (Phase 11), in whole art pixels, while the afternoon's sun and ground beyond the light's
-/// reach draw today's pixels, and a sprite's normals light its side facing a point light. Renders from later editor
-/// updates, until something is drawn.
+/// reach draw today's pixels, and a sprite's normals light its side facing a point light. A prop's lamp shadow
+/// (Docs/LightingGaps.md, Phase 2) darkens a unit standing in it by column and a prop whole, by the shadow at their
+/// feet, and leaves other sprites as they were. Renders from later editor updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -43,6 +44,8 @@ public class PixelLightTests
     private const string UrpLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
     private const int ArtPixelsPerUnit = 32;
     private const int Zoom = 3;
+    private const string UnitsLayer = "Sun Shadow Units";
+    private const string PropsLayer = "Sun Shadow Props";
     private static readonly int GlowFlickerId = Shader.PropertyToID("_GlowFlicker");
 
     private readonly List<Object> createdObjects = new();
@@ -697,6 +700,93 @@ public class PixelLightTests
         }
 
         Assert.That(moved, Is.Zero, worst);
+    }
+
+    /// <summary>
+    /// A bright point light casting shadows under a dim global light, with a prop's caster north of it shadowing only the
+    /// ground's sorting layers, so its shadow runs up the screen (Docs/LightingGaps.md, Phase 2), each sprite compared
+    /// with the same render without the caster: a unit standing wholly in the shadow darkens in every pixel; a unit
+    /// standing across its edge darkens in its columns over the shadow and keeps the light in those beyond it; a prop
+    /// whose feet lie in the shadow darkens whole, its columns beyond the edge too; and a sprite of neither the units'
+    /// nor the props' rendering layers keeps every pixel as it was.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderALampsShadow_AUnitDarkensByColumn_APropWhole_AndOtherSpritesKeepTheLight()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(150, 150, 150, 255), true), 16, 12);
+        AddGlobalLight(Color.white, 0.2f);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(0.2f, 0.2f, 0.2f, 0f));
+        AddPointLight(new Vector2(8f, 3f), 8f, 3f, true);
+        ShadowCaster2D prop = AddWallCaster(new Rect(7.75f, 4.5f, 0.5f, 0.3f));
+        SerializedObject serialized = new(prop);
+        SerializedProperty sortingLayers = serialized.FindProperty("m_ApplyToSortingLayers");
+        sortingLayers.arraySize = 2;
+        sortingLayers.GetArrayElementAtIndex(0).intValue = SortingLayer.NameToID("Default");
+        sortingLayers.GetArrayElementAtIndex(1).intValue = SortingLayer.NameToID("Terrain");
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        prop.Update();
+
+        Texture2D grey = SolidTexture(16, 32, new Color32(150, 150, 150, 255), false);
+        Rect rect = new(0f, 0f, 16f, 32f);
+        Vector2 inside = new(8f, 6f);
+        Vector2 across = new(8.5f, 6f);
+        Vector2 propInside = new(8f, 7.3125f);
+        Vector2 propAcross = new(8.625f, 7.3125f);
+        Vector2 plain = new(8f, 4.875f);
+        AddSprite(grey, rect, inside, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
+        AddSprite(grey, rect, across, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
+        AddSprite(grey, rect, propInside, false).renderingLayerMask = RenderingLayerMask.GetMask(PropsLayer);
+        AddSprite(grey, rect, propAcross, false).renderingLayerMask = RenderingLayerMask.GetMask(PropsLayer);
+        AddSprite(grey, rect, plain, false);
+        Rect world = new(6f, 2f, 5f, 7f);
+
+        prop.enabled = false;
+        Color32[] open = null;
+        yield return RenderUntilDrawn(terrain, world, inside + new Vector2(0f, 0.5f), false, pixels => open = pixels);
+        prop.enabled = true;
+        prop.Update();
+        Color32[] cast = null;
+        yield return RenderUntilDrawn(terrain, world, inside + new Vector2(0f, 0.5f), false, pixels => cast = pixels);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        List<string> problems = new();
+        for (int row = 0; row < 32; row++)
+        {
+            for (int column = 0; column < 16; column++)
+            {
+                Vector2 offset = new((column - 7.5f) / ArtPixelsPerUnit, (row + 0.5f) / ArtPixelsPerUnit);
+                ExpectLampShadow(problems, "the unit inside", open, cast, width, world, inside + offset, true);
+                ExpectLampShadow(problems, "the prop inside", open, cast, width, world, propInside + offset, true);
+                ExpectLampShadow(problems, "the prop across the edge", open, cast, width, world, propAcross + offset, true);
+                ExpectLampShadow(problems, "the plain sprite", open, cast, width, world, plain + offset, false);
+                if (column >= 1 && column <= 5)
+                {
+                    ExpectLampShadow(problems, "the unit across the edge, over the shadow", open, cast, width, world, across + offset, true);
+                }
+                else if (column >= 10 && column <= 14)
+                {
+                    ExpectLampShadow(problems, "the unit across the edge, beyond it", open, cast, width, world, across + offset, false);
+                }
+            }
+        }
+
+        Assert.That(problems, Is.Empty, string.Join("; ", problems.GetRange(0, Mathf.Min(6, problems.Count))));
+    }
+
+    /// <summary>
+    /// Adds a line to <paramref name="problems"/> naming <paramref name="what"/> when the art pixel holding
+    /// <paramref name="position"/> is not darker in <paramref name="cast"/> than in <paramref name="open"/> by more than
+    /// 8 levels while <paramref name="darker"/>, or not the same to within one level otherwise.
+    /// </summary>
+    private static void ExpectLampShadow(List<string> problems, string what, Color32[] open, Color32[] cast, int width, Rect world, Vector2 position, bool darker)
+    {
+        Color32 before = ArtPixel(open, width, world, position);
+        Color32 after = ArtPixel(cast, width, world, position);
+        bool holds = darker ? after.r < before.r - 8 : Near(after, before);
+        if (!holds)
+        {
+            problems.Add($"{what} at {position}: {before} without the caster, {after} with it");
+        }
     }
 
     /// <summary>

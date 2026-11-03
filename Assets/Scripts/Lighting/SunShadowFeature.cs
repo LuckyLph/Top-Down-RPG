@@ -13,7 +13,8 @@ using UnityEngine.SceneManagement;
 /// frame), and terrain chunks on the cliffs' layers, whose raised ground's cliffs are drawn with the props by the
 /// cliffs' shader over the chunks' own material, as is the ground they stand on, before the props (its second pass), and the clouds' shadows over the whole mask by the cloud shader every
 /// frame (Docs/Lighting.md, Phase 8). It draws nothing while the sun casts nothing (<see cref="SunShadowGlobals"/>), so
-/// the lit shaders then take no sun away anywhere.
+/// the lit shaders then take no sun away anywhere. It also hands the casters the lamps' shadows the props cast on the
+/// ground, day or night (<see cref="LampShadowPass"/>, Docs/LightingGaps.md, Phase 2).
 /// </summary>
 [DisallowMultipleRendererFeature("Sun Shadows")]
 public sealed class SunShadowFeature : ScriptableRendererFeature
@@ -36,9 +37,13 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     private float margin = 4f;
     [SerializeField, Min(0.1f), Tooltip("How far the tip of the tallest caster's shadow may move, in art pixels, before the props' shadows are drawn again.")]
     private float redrawPixels = 1f;
+    [SerializeField, Tooltip("The sorting layer the casters, the units and the props, are drawn on, whose sprites read the lamps' shadows from the ground's light (Docs/LightingGaps.md, Phase 2).")]
+    private string casterSortingLayer = "Entities";
 
     private readonly List<SunShadowMask> masks = new();
     private SunShadowPass pass;
+    private LampShadowPass lampShadows;
+    private LampShadowPass keepGroundLight;
     private Material cloudMaterial;
 
     public Material CasterMaterial => casterMaterial;
@@ -66,11 +71,14 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     }
 
     /// <summary>
-    /// Creates the pass and follows the cameras starting to render and the scenes loading and unloading.
+    /// Creates the passes and follows the cameras starting to render and the scenes loading and unloading.
     /// </summary>
     public override void Create()
     {
         pass = new SunShadowPass(this);
+        int casterLayer = SortingLayer.NameToID(casterSortingLayer);
+        lampShadows = new LampShadowPass(this, casterLayer, true);
+        keepGroundLight = new LampShadowPass(this, casterLayer, false);
         RenderPipelineManager.beginCameraRendering -= HandleBeginCamera;
         RenderPipelineManager.beginCameraRendering += HandleBeginCamera;
         SceneManager.sceneLoaded -= HandleSceneLoaded;
@@ -80,14 +88,22 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     }
 
     /// <summary>
-    /// Adds the pass to a game or scene camera's frame.
+    /// Adds the passes to a game or scene camera's frame: the sun's with a caster material, and the lamps' shadows'.
     /// </summary>
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (casterMaterial != null && IsDrawn(renderingData.cameraData.camera))
+        if (!IsDrawn(renderingData.cameraData.camera))
+        {
+            return;
+        }
+
+        if (casterMaterial != null)
         {
             renderer.EnqueuePass(pass);
         }
+
+        renderer.EnqueuePass(lampShadows);
+        renderer.EnqueuePass(keepGroundLight);
     }
 
     /// <summary>
@@ -125,12 +141,14 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     }
 
     /// <summary>
-    /// Readies a camera's mask before it renders, with the sun as last set: releases the masks of destroyed cameras,
-    /// then culls the casters whose shadows can reach this one's area (which needs the render context, so it is done
-    /// here rather than in the pass).
+    /// Readies a camera's mask before it renders, with the sun as last set: clears the casters' rendering layers for
+    /// the lamps' shadows, which only the camera's own <see cref="LampShadowPass"/> sets again, releases the masks of
+    /// destroyed cameras, then culls the casters whose shadows can reach this one's area (which needs the render
+    /// context, so it is done here rather than in the pass).
     /// </summary>
     private void HandleBeginCamera(ScriptableRenderContext context, Camera camera)
     {
+        Shader.SetGlobalInteger(LampShadowPass.CasterLayersId, 0);
         ReleaseLostMasks();
         if (casterMaterial == null || !IsDrawn(camera))
         {

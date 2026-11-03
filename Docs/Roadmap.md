@@ -22,10 +22,11 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
 | [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Done, on `main`. |
+| [DesignSystem.md](DesignSystem.md) | The design system: the specs' language and generated design tables, content rules and tuning views, one UI scale, the UI theme, skin and components, reduce flashing and motion | Proposal, not adopted yet; its open questions come first. |
 
 ## Next
 
-No plan is under way. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing; the features below wait for plans of their own.
+No plan is under way; [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing; the features below wait for plans of their own.
 
 ## Later
 

@@ -188,9 +188,10 @@ public sealed class SunShadowFeature : ScriptableRendererFeature
     }
 
     /// <summary>
-    /// Marks every mask's props' shadows out of date.
+    /// Marks every mask's props' shadows out of date, as a scene loading does and the editor does when anything in the
+    /// open scenes changes (Docs/LightingGaps.md, Phase 3).
     /// </summary>
-    private void InvalidateAll()
+    internal void InvalidateAll()
     {
         for (int i = 0; i < masks.Count; i++)
         {

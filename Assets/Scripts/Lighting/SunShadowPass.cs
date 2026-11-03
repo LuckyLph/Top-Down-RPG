@@ -80,6 +80,7 @@ public sealed class SunShadowPass : ScriptableRenderPass2D
 
         AddDraw(renderGraph, camera, mask, feature.UnitLayers, frame, props, ground, "Sun Shadows: Units", false, SunShadowGlobals.Cloudy() ? feature.CloudMaterial : null);
         Shader.SetGlobalTexture(SunShadowGlobals.MaskId, mask.Frame.rt);
+        Shader.SetGlobalTexture(SunShadowGlobals.PropsMaskId, mask.Props.rt);
         Shader.SetGlobalInteger(SunShadowGlobals.FeetLayersId, (int)(feature.PropLayers.value | feature.UnitLayers.value));
     }
 

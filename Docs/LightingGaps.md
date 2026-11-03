@@ -36,6 +36,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Topic | Decision |
 |---|---|
 | Lamps' shadows on the casters | A unit or prop standing in a prop's lamp shadow loses that lamp's light by the shadow at its feet (Phase 2): the casters' sprites keep the share of the lights other than the sky that the ground keeps half an art pixel above their feet, read from the ground's light texture, which holds the props' shadows the casters' own leaves out. A unit reads it under each column of its sprite, so a trunk's narrow shadow crosses it as it walks through; a prop under its middle, whole. The sky stays. The walls' shadows still fall by screen pixel. Chosen with the user on Phase 2's previews over every caster darkened whole and today's, where a caster kept the light. |
+| Sun shadows on units | A unit reads the sun's shadow under each column of its sprite on its feet' row (Phase 3), from the mask without the units' shadows, so a shadow's edge sweeps across it as it walks and it never darkens itself, with the clouds over it; it no longer takes another unit's shadow. Props still darken whole, two art pixels sunward of their feet. Chosen with the user on Phase 3's previews over today's, where a unit darkened whole in one step. |
 | Waves | Measured along the coast, not along x (Phase 1): each pixel at sea takes its foot on the coast, the pixel moved back down the coast map's slope by its distance, read a texel to either side (`TBCoastFoot`), which a wave keeps as it rolls in and whose run along a wave follows the coast whichever way it lies. The stretches out at sea and the gaps in a crest are smooth noise and short noise over the foot, each term running across x and y, so they lie along any coast; the front's turn is the tangent of the angle times the foot's x and y together (`TBWaveTurn`), so a front reaches a straight shore at one end first by the angle along coasts running east to west and north to south alike, up to 1.4 times it along a diagonal one and not at all along the other diagonal. The waves' spacing no longer stretches with the turn. The north and south shores keep their look but not their pixels. Chosen with the user on Phase 1's previews over today's. |
 
 ## Phases
@@ -71,10 +72,18 @@ Phase 2 notes:
 
 ### Phase 3: sun shadows across a caster, props' shadows redrawn when moved
 
-- [ ] Previews: a unit walking into a tree's shadow at noon and at dusk, darkened whole as today against column by column (each column of the sprite by the mask under it, two pixels sunward of its feet' row).
-- [ ] The look chosen built for units and props.
-- [ ] A prop moved, added or removed in the editor in play mode redrawing the props' shadows at once (an editor hook marking the mask out of date; nothing changes in a build, where props never move).
-- [ ] Tests: a unit half in a shadow darkened only where it lies in it; a moved prop's shadow following it. Architecture.md updated; the `ShaderCompile` tests run.
+- [x] Previews: a unit walking into a tree's shadow at noon and at dusk, darkened whole as today against column by column.
+- [x] The look chosen built (Decisions: Sun shadows on units): units by column, props whole as before.
+- [x] A prop moved, added or removed in the editor in play mode redrawing the props' shadows at once (an editor hook marking the mask out of date; nothing changes in a build, where props never move).
+- [x] Tests: a unit half in a shadow darkened only where it lies in it; the props' shadows marked out of date by a change in the editor. Architecture.md updated; the `ShaderCompile` tests run.
+
+Phase 3 notes:
+
+- **Settled first**, with the user on 2026-11-03, on in-engine previews in `Recordings/LightingGaps/Phase3/` (gitignored) from a throwaway switch in the sprite shader, deleted after: at the Sandbox's lamp post by day, a rogue walking at a sixteenth of a unit a frame through a tree crown's shadow at noon (`noon_walk_3x.gif`) and along the path through the boulder's long shadow at dusk (`dusk_walk_3x.gif`, frames in `dusk_frames_3x.png`), today against by column. Today a unit darkened whole the frame the middle of its feet crossed an edge; by column the edge sweeps across it in two to six frames. The shipped shaders draw the previews' every pixel (`built/`).
+- **Why the props' texture.** A unit's own shadow starts at its feet, so its columns read on its feet' row would read their own shadow; the mask's props' texture, which the feature copies into the frame's before the units' shadows and the clouds are drawn over it, has none of the units', so a unit reads that, and the clouds from the frame's alpha, which holds the clouds alone. It then no longer takes another unit's shadow, which at their size reached little. Props keep reading the frame's mask two art pixels sunward of their feet: by column a crown read its own trunk's shadow (Phase 2's previews).
+- **Redrawn when moved.** `PropShadowRedraw` marks the props' shadows out of date on each change the editor publishes (moving, adding, removing, an inspector edit), in play mode or not; it costs one more draw of the props' shadows after an edit, nothing in a build.
+- **Cost**: one more read of the mask where a unit's pixel is drawn, and of its alpha; no pass. Within the editor's noise, as Phase 2's.
+- **Tests**: `SunShadowTests` (`AUnitAcrossAShadowsEdge_DarkensOnlyItsColumnsInIt`, `AChangeInTheEditor_DrawsThePropsShadowsAgain`), and the units darkening whole in a tree's shadow, under a cloud and where a shadow drops off a top passing unchanged.
 
 ### Phase 4: light shadows at one screen pixel an art pixel
 

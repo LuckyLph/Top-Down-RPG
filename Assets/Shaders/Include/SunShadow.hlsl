@@ -17,7 +17,9 @@
 // art pixel, SUN_SHADOW_LEVEL, SUN_SHADOW_FACE or SUN_SHADOW_TOP, and in green the cliff's height in art pixels / 255
 // within reach of raised ground (0 elsewhere). _SunShadowMaskMatrix draws world positions into both textures' texels,
 // and renderers on the rendering layers _SunShadowFeetLayers (the casters) read their shadow at their feet
-// (SunShadowUnder), every other one at each art pixel it draws.
+// (SunShadowUnder), every other one at each art pixel it draws. _SunShadowProps is the mask without the units' shadows
+// and the clouds (the props' and the cliffs' alone, in the same channels), which a unit reads under each of its columns
+// (SunShadowColumn, Docs/LightingGaps.md, Phase 3).
 float4 _SunShadow;
 float4 _SunColour;
 float4 _SunShadowRect;
@@ -25,6 +27,7 @@ float4x4 _SunShadowMaskMatrix;
 uint _SunShadowFeetLayers;
 TEXTURE2D(_SunShadowMask);
 TEXTURE2D(_SunShadowGround);
+TEXTURE2D(_SunShadowProps);
 
 #define SUN_SHADOW_LEVEL 0.0
 #define SUN_SHADOW_FACE 0.5
@@ -37,16 +40,24 @@ bool SunShadowCovers(float2 worldPixel)
     return _SunShadow.z > 0.5 && texel.x >= 0 && texel.y >= 0 && texel.x < (int)_SunShadowRect.z && texel.y < (int)_SunShadowRect.w;
 }
 
-// The sun shadow mask's texel at whole art pixel coordinates worldPixel: zero outside it and while the sun casts none.
-half4 SunShadowMaskAt(float2 worldPixel)
+// The sun shadow mask's texel at whole art pixel coordinates worldPixel, or with props that of the mask without the
+// units' shadows and the clouds (_SunShadowProps): zero outside it and while the sun casts none.
+half4 SunShadowTexelAt(float2 worldPixel, bool props)
 {
     half4 texel = half4(0.0, 0.0, 0.0, 0.0);
     [branch]
     if (SunShadowCovers(worldPixel))
     {
-        texel = LOAD_TEXTURE2D_LOD(_SunShadowMask, (int2)(worldPixel - _SunShadowRect.xy), 0);
+        int2 at = (int2)(worldPixel - _SunShadowRect.xy);
+        texel = props ? LOAD_TEXTURE2D_LOD(_SunShadowProps, at, 0) : LOAD_TEXTURE2D_LOD(_SunShadowMask, at, 0);
     }
     return texel;
+}
+
+// The sun shadow mask's texel at whole art pixel coordinates worldPixel: zero outside it and while the sun casts none.
+half4 SunShadowMaskAt(float2 worldPixel)
+{
+    return SunShadowTexelAt(worldPixel, false);
 }
 
 // The ground at whole art pixel coordinates worldPixel (_SunShadowGround): x what it is (SUN_SHADOW_LEVEL,
@@ -73,19 +84,20 @@ float2 SunShadowDrop(float cliff)
     return round(cliff * (_SunShadow.xy - float2(0.0, 1.0)));
 }
 
-// Whether a sun shadow covers the art pixel at whole art pixel coordinates worldPixel: 1 under one, 0 elsewhere,
-// outside the mask and while the sun casts none. It knows the ground's height (Docs/Lighting.md, Phase 11): level
-// ground takes the level ground's shadows, and within reach of raised ground also the shadows running off a top, read
-// where they leave it, one drop (SunShadowDrop) up the screen, unless that lies on a top; a top takes the shadows on
-// tops, and the parts of a level caster's shadow higher than the cliff, read where they would have landed below, one
-// drop down the screen; a cliff face, which faces away from the sun in this view, only the clouds.
-half SunShadowAt(float2 worldPixel)
+// Whether a sun shadow covers the art pixel at whole art pixel coordinates worldPixel, from the mask or with props
+// from the mask without the units' shadows and the clouds: 1 under one, 0 elsewhere, outside the mask and while the
+// sun casts none. It knows the ground's height (Docs/Lighting.md, Phase 11): level ground takes the level ground's
+// shadows, and within reach of raised ground also the shadows running off a top, read where they leave it, one drop
+// (SunShadowDrop) up the screen, unless that lies on a top; a top takes the shadows on tops, and the parts of a level
+// caster's shadow higher than the cliff, read where they would have landed below, one drop down the screen; a cliff
+// face, which faces away from the sun in this view, only the clouds.
+half SunShadowFrom(float2 worldPixel, bool props)
 {
     half shadowed = 0.0;
     [branch]
     if (SunShadowCovers(worldPixel))
     {
-        half4 mask = SunShadowMaskAt(worldPixel);
+        half4 mask = SunShadowTexelAt(worldPixel, props);
         half2 ground = SunShadowGroundAt(worldPixel);
         shadowed = mask.r;
         [branch]
@@ -94,7 +106,7 @@ half SunShadowAt(float2 worldPixel)
             float2 drop = SunShadowDrop(ground.y);
             if (ground.x > 0.75)
             {
-                shadowed = max(mask.g, SunShadowMaskAt(worldPixel + drop).b);
+                shadowed = max(mask.g, SunShadowTexelAt(worldPixel + drop, props).b);
             }
             else if (ground.x > 0.25)
             {
@@ -102,11 +114,26 @@ half SunShadowAt(float2 worldPixel)
             }
             else if (SunShadowGroundAt(worldPixel - drop).x < 0.75)
             {
-                shadowed = max(shadowed, SunShadowMaskAt(worldPixel - drop).g);
+                shadowed = max(shadowed, SunShadowTexelAt(worldPixel - drop, props).g);
             }
         }
     }
     return shadowed;
+}
+
+// Whether a sun shadow covers the art pixel at whole art pixel coordinates worldPixel (SunShadowFrom, from the mask).
+half SunShadowAt(float2 worldPixel)
+{
+    return SunShadowFrom(worldPixel, false);
+}
+
+// Whether a sun shadow covers a unit's column (Docs/LightingGaps.md, Phase 3): read on the ground at a world position
+// on its feet' row under that column, from the mask without the units' shadows, so a unit never darkens itself, with
+// the clouds over it; a shadow's edge then sweeps across the unit as it walks.
+half SunShadowColumn(float2 worldPosition)
+{
+    float2 worldPixel = floor(worldPosition * ART_PIXELS_PER_UNIT);
+    return max(SunShadowFrom(worldPixel, true), SunShadowMaskAt(worldPixel).a);
 }
 
 // Whether a sun shadow covers a caster standing with its feet at a world position: read SUN_SHADOW_READ_OFFSET art

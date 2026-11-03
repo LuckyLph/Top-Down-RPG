@@ -9,15 +9,15 @@ using UnityEngine.Rendering.Universal;
 /// a batch of its own without them; the first pass, before that sorting layer's sprites, hands the sprite shader the
 /// ground's light texture (blend style 0's of the first batch, which holds the ground's sorting layers, Default and
 /// Terrain, the first sorting layers, lit alike by every light) and the rendering layers of the casters that read it
-/// and of the units among them, which read it by column; the second, after those sprites, only reads the texture, so
-/// the render graph keeps it until the sprites have drawn. Where every sorting layer shares one batch (no prop casts)
-/// the texture handed over is the sprites' own, and nothing is shadowed.
+/// and of the units among them, which read it, and the sun's shadows (Phase 3), by column; the second, after those
+/// sprites, only reads the texture, so the render graph keeps it until the sprites have drawn. Where every sorting
+/// layer shares one batch (no prop casts) the texture handed over is the sprites' own, and nothing is shadowed.
 /// </summary>
 public sealed class LampShadowPass : ScriptableRenderPass2D
 {
     public static readonly int GroundLightId = Shader.PropertyToID("_LampShadowGround");
-    public static readonly int CasterLayersId = Shader.PropertyToID("_LampShadowCasters");
-    public static readonly int UnitLayersId = Shader.PropertyToID("_LampShadowUnits");
+    public static readonly int CasterLayersId = Shader.PropertyToID("_CasterLayers");
+    public static readonly int UnitLayersId = Shader.PropertyToID("_CasterUnitLayers");
 
     private const int GroundBatch = 0;
     private readonly SunShadowFeature feature;

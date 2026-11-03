@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
@@ -199,6 +200,76 @@ public class SunShadowTests
         }
 
         Assert.That(darker, Is.EqualTo(pixelsOfUnit), "A unit in the tree's shadow darkens whole.");
+    }
+
+    /// <summary>
+    /// At dusk a unit standing across the edge of a tree's shadow (Docs/LightingGaps.md, Phase 3) darkens in its
+    /// columns over the shadow, the tree's shadow read on the ground under each column on its feet' row, and keeps the
+    /// sun in its columns beyond the edge; each render is compared with the same light but the sun casting nothing.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AUnitAcrossAShadowsEdge_DarkensOnlyItsColumnsInIt()
+    {
+        DayNightSettings day = AssetDatabase.LoadAssetAtPath<DayNightSettings>(DayNightPath);
+        TerrainBlendRenderer terrain = AddTerrain(20, 12, null);
+        Vector2 treeFeet = new(8f, 7f);
+        AddCaster(SolidTexture(16, 96, new Color32(200, 120, 60, 255)), treeFeet, PropsLayer);
+        Vector2 shadow = day.SunAt(Dusk).Shadow;
+        Vector2 unitFeet = new(Mathf.Round((treeFeet.x + 0.25f + 1.5f * shadow.x) * ArtPixelsPerUnit) / ArtPixelsPerUnit, Mathf.Round((treeFeet.y + 1.5f * shadow.y) * ArtPixelsPerUnit) / ArtPixelsPerUnit);
+        AddCaster(SolidTexture(12, 32, new Color32(180, 60, 60, 255)), unitFeet, UnitsLayer);
+        sky = AddGlobalLight();
+        Rect world = new(0f, 0f, 20f, 12f);
+        Color32[] cast = null;
+        Color32[] open = null;
+        yield return RenderUnderSun(terrain, world, day, Dusk, true, pixels => cast = pixels);
+        yield return RenderUnderSun(terrain, world, day, Dusk, false, pixels => open = pixels);
+
+        for (int y = 1; y < 31; y++)
+        {
+            for (int x = -6; x < 6; x++)
+            {
+                Vector2 point = unitFeet + new Vector2((x + 0.5f) / ArtPixelsPerUnit, (y + 0.5f) / ArtPixelsPerUnit);
+                if (x <= -4)
+                {
+                    Expect(IsDarker(cast, open, world, point), $"the unit's column over the shadow at {point}");
+                }
+                else if (x >= 3)
+                {
+                    Expect(Same(cast, open, world, point), $"the unit's column beyond the shadow's edge at {point}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Once a camera has drawn its props' shadows, a change the editor publishes to the open scenes marks them out of
+    /// date (Docs/LightingGaps.md, Phase 3), so a prop moved by hand in play mode casts from where it stands at once.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AChangeInTheEditor_DrawsThePropsShadowsAgain()
+    {
+        SunShadowFeature feature = null;
+        foreach (ScriptableRendererFeature rendererFeature in AssetDatabase.LoadAssetAtPath<Renderer2DData>(RendererPath).rendererFeatures)
+        {
+            feature ??= rendererFeature as SunShadowFeature;
+        }
+
+        AddCaster(SolidTexture(16, 96, new Color32(200, 120, 60, 255)), new Vector2(4f, 3f), PropsLayer);
+        sky = AddGlobalLight();
+        Camera camera = Track(new GameObject("Camera")).AddComponent<Camera>();
+        camera.orthographic = true;
+        camera.orthographicSize = 3f;
+        camera.transform.position = new Vector3(4f, 4f, -10f);
+        RenderTexture target = Track(new RenderTexture(192, 192, 24));
+        SunShadowGlobals.Set(Color.white * 0.5f, new Vector2(1f, -0.5f), true);
+        yield return null;
+        RenderPipeline.SubmitRenderRequest(camera, new RenderPipeline.StandardRequest { destination = target });
+        SunShadowMask mask = feature.MaskOf(camera);
+
+        Assert.That(mask, Is.Not.Null, "The camera draws a mask.");
+        Assert.That(mask.PropsCurrent, Is.True, "The props' shadows are drawn.");
+        Assert.That(SunShadowGlobals.RedrawPropShadows(), Is.EqualTo(1));
+        Assert.That(mask.PropsCurrent, Is.False, "A change in the editor marks them out of date.");
     }
 
     /// <summary>

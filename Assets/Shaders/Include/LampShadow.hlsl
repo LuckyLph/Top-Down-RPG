@@ -5,17 +5,17 @@
 
 // The lamps' shadows on the casters (Docs/LightingGaps.md, Phase 2), which LampShadowPass hands over before the
 // casters' sorting layer draws: the ground's light texture, with the props' lamp shadows the casters' own leaves out,
-// the rendering layers of the casters that read it (none where no pass hands it over) and of the units among them,
-// which read it by column.
+// and the rendering layers of the casters (none where no pass hands them over) and of the units among them, which read
+// the lamps' shadows, and the sun's (Phase 3), by column.
 TEXTURE2D(_LampShadowGround);
-uint _LampShadowCasters;
-uint _LampShadowUnits;
+uint _CasterLayers;
+uint _CasterUnitLayers;
 
-// How a sprite of rendering layers `layers` reads the lamps' shadows: 0 not at all, 1 a prop, whole at its feet, 2 a
-// unit, each column at its feet' row.
-float LampShadowReading(uint layers)
+// How a sprite of rendering layers `layers` reads the shadows on the casters: 0 not at all, 1 a prop, whole at its
+// feet, 2 a unit, each column at its feet' row.
+float CasterReading(uint layers)
 {
-    return (layers & _LampShadowCasters) == 0u ? 0.0 : (layers & _LampShadowUnits) != 0u ? 2.0 : 1.0;
+    return (layers & _CasterLayers) == 0u ? 0.0 : (layers & _CasterUnitLayers) != 0u ? 2.0 : 1.0;
 }
 
 // The ground's light at a world position, read from the one texel holding that point, as PixelLightAt reads the
@@ -30,7 +30,7 @@ half3 LampShadowGroundAt(float2 worldPosition)
 }
 
 // The share of the lights other than the sky a caster keeps at the art pixel whose centre is `centre`: feet.xy its
-// feet, feet.z how it reads the lamps' shadows (LampShadowReading). Read half an art pixel above its feet, under the
+// feet, feet.z how it reads the lamps' shadows (CasterReading). Read half an art pixel above its feet, under the
 // pixel's column for a unit and under its middle for a prop: the ground's local light (less _LightRelief.xyz) over the
 // casters' own there, brightest channels, so a lamp's shadow on the ground there takes that lamp's light away. All of
 // it for a sprite that reads none, where no local light reaches its feet, and without lights.

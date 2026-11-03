@@ -83,8 +83,9 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 o.positionCS = TransformObjectToHClip(input.positionOS);
                 o.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 float2 origin = TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xy;
-                o.shadowed = (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(origin) : -1.0;
-                o.feet = float3(origin, LampShadowReading(GetMeshRenderingLayer()));
+                float reading = CasterReading(GetMeshRenderingLayer());
+                o.shadowed = reading < 1.5 && (GetMeshRenderingLayer() & _SunShadowFeetLayers) != 0u ? SunShadowUnder(origin) : -1.0;
+                o.feet = float3(origin, reading);
                 o.uv = PixelFlameFrame(input.uv, origin, _FlameFrames);
                 o.color = input.color * _Color * unity_SpriteColor;
                 return o;
@@ -101,7 +102,9 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                     discard;
                 }
 
-                half shadowed = input.shadowed >= 0.0 ? input.shadowed : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
+                half shadowed = input.shadowed >= 0.0 ? input.shadowed
+                    : input.feet.z > 1.5 ? SunShadowColumn(float2(centre.x, input.feet.y + 0.5 / ART_PIXELS_PER_UNIT))
+                    : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
                 half4 glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, input.uv) * (half)(1.0 - _GlowFlicker.z);
                 main.rgb = PixelGlowColour(main.rgb, glow, input.color.rgb, floor(input.uv * texels));
                 half kept = LampShadowKept(input.feet, centre);

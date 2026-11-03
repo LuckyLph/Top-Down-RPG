@@ -313,7 +313,7 @@ Scene management stays off: each machine loads its own worlds and chunks, as it 
 3. Paint with the Terrain Brush (the Tile Palette's default brush) on any open chunk's tilemap: a ground layer, the walls or the raised ground. A stroke goes into whichever chunks it covers. To paint a material the chunk has no layer for, pick its tile and press the palette's "Add the <material> layer" button. Walls and raised ground start on one chunk with the window's Add walls and Add raised ground (shown for the selected chunk while it is open and lacks them); after that the brush gives them to the chunks a stroke reaches. Open the chunks around the area being painted: a part of a stroke on a chunk that is not open is skipped, with a warning.
 4. Place props with the Prop Placement window, and mob spawn points under a `MobSpawns` object in each chunk scene. Each must stand on its own chunk's cells, and a blocking prop's footprint must not cross a border. Mob spawn points get their `PersistentId` as they are made.
 5. Fill in the entries in the window: the first is where a new game starts; tick Waystone for the ones players discover.
-6. Run Sync layer lists, then Bake changed coasts when the world has an ocean, then Repair ids and Validate. Save the scenes, and check `git diff` for churn in the chunk scenes (wall render tiles redrawn as neighbours open) before committing.
+6. Run Sync layer lists, then Bake changed maps when the world has an ocean or lava (the coast maps and, since LightingGaps.md's Phase 5, the glow maps), then Repair ids and Validate. Save the scenes, and check `git diff` for churn in the chunk scenes (wall render tiles redrawn as neighbours open) before committing.
 
 ## Removals and migrations
 

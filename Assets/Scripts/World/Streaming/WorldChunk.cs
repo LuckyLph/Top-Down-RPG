@@ -36,6 +36,12 @@ public class WorldChunk : MonoBehaviour
     [SerializeField] private Texture2D coastMap;
     [Tooltip("What the coast map was baked from (a hash of the sea around the chunk, or none), written by the coast bake, so the World Editor bakes again only the chunks whose sea or shore changed.")]
     [SerializeField] private string coastSource;
+    [Tooltip("The glow map baked for this chunk from the whole world, for its glowing ground's light (lava); none when nothing glows within its reach. Written by the world's glow bake.")]
+    [SerializeField] private Texture2D glowMap;
+    [Tooltip("The cells the baked glow map covers, inside the chunk.")]
+    [SerializeField] private RectInt glowArea;
+    [Tooltip("What the glow map was baked from (a hash of the glowing cells within reach of the chunk, or none), written by the glow bake, so the World Editor bakes again only the chunks whose glowing ground changed.")]
+    [SerializeField] private string glowSource;
 
     [System.NonSerialized] private readonly List<WorldChunk> neighbours = new();
     [System.NonSerialized] private readonly List<TerrainSkirtSource> skirt = new();
@@ -47,6 +53,9 @@ public class WorldChunk : MonoBehaviour
     public Vector2Int Coords => coords;
     public Texture2D CoastMap => coastMap;
     public string CoastSource => coastSource;
+    public Texture2D GlowMap => glowMap;
+    public RectInt GlowArea => glowArea;
+    public string GlowSource => glowSource;
 
     /// <summary>
     /// The world-local cells this chunk owns.
@@ -155,7 +164,7 @@ public class WorldChunk : MonoBehaviour
         Cache();
         if (terrain != null)
         {
-            terrain.SetChunk(Cells, SkirtCells, coastMap);
+            terrain.SetChunk(Cells, SkirtCells, coastMap, glowMap, glowArea);
         }
 
         foreach (DualGridTilemapModule wall in walls)

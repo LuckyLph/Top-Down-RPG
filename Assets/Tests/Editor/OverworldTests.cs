@@ -270,12 +270,14 @@ public class OverworldTests
     }
 
     /// <summary>
-    /// No chunk's coast map is out of date against the world's ground, and the world passes validation.
+    /// No chunk's coast map or glow map (Docs/LightingGaps.md, Phase 5) is out of date against the world's ground, and
+    /// the world passes validation.
     /// </summary>
     [Test]
     public void NoCoastMapIsStale_AndTheWorldValidates()
     {
         Assert.That(WorldAuthoring.StaleCoastMaps(world), Is.Empty, "stale coast maps");
+        Assert.That(WorldAuthoring.StaleGlowMaps(world), Is.Empty, "stale glow maps");
         Assert.That(WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds()), Is.Empty, "validation problems");
     }
 

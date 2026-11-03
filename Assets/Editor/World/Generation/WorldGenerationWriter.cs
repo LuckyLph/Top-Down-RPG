@@ -278,6 +278,10 @@ public static class WorldGenerationWriter
         report.Add($"Bake changed coasts: {watch.ElapsedMilliseconds} ms.");
         report.AddRange(baked);
         watch.Restart();
+        List<string> glows = WorldAuthoring.BakeGlowMaps(world, true);
+        report.Add($"Bake changed glows: {watch.ElapsedMilliseconds} ms.");
+        report.AddRange(glows);
+        watch.Restart();
         List<string> repaired = PersistentIds.Repair(world);
         report.Add($"Repair ids: {repaired.Count} changed in {watch.ElapsedMilliseconds} ms.");
         report.AddRange(repaired);

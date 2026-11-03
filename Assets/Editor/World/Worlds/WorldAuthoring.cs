@@ -766,6 +766,178 @@ public static class WorldAuthoring
     }
 
     /// <summary>
+    /// Bakes the glow map of every chunk of <paramref name="world"/> from the whole world's ground
+    /// (<see cref="WorldGlowBake"/>, Docs/LightingGaps.md, Phase 5), or with <paramref name="onlyChanged"/> only of the
+    /// chunks whose glowing ground within reach changed since their last bake (<see cref="IsGlowStale"/>), opening the
+    /// scenes that are not open: a PNG beside each chunk scene with something glowing within reach
+    /// (<c>World_name_x_y_Glow.png</c>), set on its <see cref="WorldChunk"/> with the cells it covers and what it was
+    /// baked from; a chunk with nothing glowing loses its map. Saves the scenes it changed. Returns a line per chunk
+    /// with what it did and how long it took.
+    /// </summary>
+    public static List<string> BakeGlowMaps(WorldDefinition world, bool onlyChanged = false)
+    {
+        List<string> report = new();
+        List<Scene> opened = new();
+        try
+        {
+            Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
+            WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
+            {
+                WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
+                TerrainBlendRenderer renderer = chunk.Value.GetComponent<TerrainBlendRenderer>();
+                if (marker == null || renderer == null)
+                {
+                    report.Add($"{chunk.Value.gameObject.scene.name}: no {nameof(WorldChunk)} or terrain renderer; skipped.");
+                    continue;
+                }
+
+                System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+                List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
+                string source = WorldGlowBake.SourceOf(cells, materials, ChunkCoords.Bounds(chunk.Key));
+                if (onlyChanged && !IsGlowStale(marker, source))
+                {
+                    report.Add($"{chunk.Value.gameObject.scene.name}: its glowing ground has not changed; kept.");
+                    continue;
+                }
+
+                string path = GlowMapPath(world, chunk.Key);
+                Texture2D texture = WorldGlowBake.BakeChunk(cells, materials, ChunkCoords.Bounds(chunk.Key), Path.GetFileNameWithoutExtension(path), out RectInt area);
+                Texture2D baked = null;
+                if (texture != null)
+                {
+                    File.WriteAllBytes(path, texture.EncodeToPNG());
+                    Object.DestroyImmediate(texture);
+                    AssetDatabase.ImportAsset(path);
+                    ConfigureGlowImport(path);
+                    baked = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                }
+                else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
+                {
+                    AssetDatabase.DeleteAsset(path);
+                }
+
+                string recorded = baked != null ? source : string.Empty;
+                RectInt recordedArea = baked != null ? area : new RectInt(0, 0, 0, 0);
+                if (marker.GlowMap != baked || !marker.GlowArea.Equals(recordedArea) || (marker.GlowSource ?? string.Empty) != recorded)
+                {
+                    SetGlowMarker(marker, baked, recordedArea, recorded);
+                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
+                }
+
+                report.Add($"{chunk.Value.gameObject.scene.name}: {(baked != null ? $"baked {area.width} x {area.height} cells" : "nothing glows, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
+            }
+        }
+        finally
+        {
+            CloseScenes(opened);
+        }
+
+        return report;
+    }
+
+    /// <summary>
+    /// The chunks of <paramref name="world"/> whose glow map is out of date (<see cref="IsGlowStale"/>), opening the
+    /// scenes that are not open and closing them again unchanged.
+    /// </summary>
+    public static List<Vector2Int> StaleGlowMaps(WorldDefinition world)
+    {
+        List<Vector2Int> stale = new();
+        List<Scene> opened = new();
+        try
+        {
+            Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
+            WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
+            {
+                WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
+                TerrainBlendRenderer renderer = chunk.Value.GetComponent<TerrainBlendRenderer>();
+                if (marker == null || renderer == null)
+                {
+                    continue;
+                }
+
+                List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
+                if (IsGlowStale(marker, WorldGlowBake.SourceOf(cells, materials, ChunkCoords.Bounds(chunk.Key))))
+                {
+                    stale.Add(chunk.Key);
+                }
+            }
+        }
+        finally
+        {
+            CloseScenes(opened, false);
+        }
+
+        return stale;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="marker"/>'s glow map is out of date against <paramref name="source"/>, what it would be
+    /// baked from now (<see cref="WorldGlowBake.SourceOf"/>): a chunk with something glowing within reach needs a map
+    /// baked from that source, and one with nothing needs no map.
+    /// </summary>
+    public static bool IsGlowStale(WorldChunk marker, string source)
+    {
+        if (source == WorldGlowBake.NoGlow)
+        {
+            return marker.GlowMap != null;
+        }
+
+        return marker.GlowMap == null || marker.GlowSource != source;
+    }
+
+    /// <summary>
+    /// The path of the glow map baked for the chunk at <paramref name="coords"/> of <paramref name="world"/>, beside
+    /// its scene.
+    /// </summary>
+    public static string GlowMapPath(WorldDefinition world, Vector2Int coords)
+    {
+        string folder = $"{Path.GetDirectoryName(AssetDatabase.GetAssetPath(world)).Replace('\\', '/')}/Chunks";
+        return $"{folder}/{ChunkSceneName(world, coords)}_Glow.png";
+    }
+
+    /// <summary>
+    /// The import settings of a baked glow map: a linear, uncompressed RGBA32 texture without mipmaps, bilinear and
+    /// clamped, as the renderer builds its own, and not readable.
+    /// </summary>
+    private static void ConfigureGlowImport(string path)
+    {
+        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        importer.textureType = TextureImporterType.Default;
+        importer.sRGBTexture = false;
+        importer.mipmapEnabled = false;
+        importer.npotScale = TextureImporterNPOTScale.None;
+        importer.filterMode = FilterMode.Bilinear;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        importer.isReadable = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
+        settings.format = TextureImporterFormat.RGBA32;
+        settings.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.SetPlatformTextureSettings(settings);
+        importer.SaveAndReimport();
+    }
+
+    /// <summary>
+    /// Sets <paramref name="marker"/>'s glow map, the cells it covers and what it was baked from through its serialized
+    /// object, so the scene records the change, and has the chunk take it at once.
+    /// </summary>
+    private static void SetGlowMarker(WorldChunk marker, Texture2D glowMap, RectInt glowArea, string glowSource)
+    {
+        SerializedObject data = new(marker);
+        data.FindProperty("glowMap").objectReferenceValue = glowMap;
+        data.FindProperty("glowArea").rectIntValue = glowArea;
+        data.FindProperty("glowSource").stringValue = glowSource ?? string.Empty;
+        data.ApplyModifiedProperties();
+        if (marker.isActiveAndEnabled)
+        {
+            marker.enabled = false;
+            marker.enabled = true;
+        }
+    }
+
+    /// <summary>
     /// The import settings of a baked coast map: a linear, uncompressed R16 texture without mipmaps, bilinear and
     /// clamped, as the renderer builds its own, and not readable.
     /// </summary>

@@ -470,6 +470,7 @@ public class WorldGenerationWriterTests
         Assert.That(steps, Has.Some.StartsWith("Repair ids: 0 changed"), string.Join("\n", steps));
         Assert.That(WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds()), Is.Empty, "the written world validates");
         Assert.That(WorldAuthoring.StaleCoastMaps(world), Is.Empty, "no coast map is stale");
+        Assert.That(WorldAuthoring.StaleGlowMaps(world), Is.Empty, "no glow map is stale");
         foreach (WorldComposition.Chunk chunk in composition.Chunks)
         {
             Assert.That(File.Exists(WorldAuthoring.CoastMapPath(world, chunk.Coords)), Is.True, $"chunk {chunk.Coords}'s coast map is baked");

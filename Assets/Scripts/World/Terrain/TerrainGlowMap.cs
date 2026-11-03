@@ -8,8 +8,9 @@ using UnityEngine;
 /// (1 - distance / reach) squared, 1 on the glowing cells and 0 from the reach on, in its colour channels (alpha 1),
 /// bilinear and clamped. The distance is the exact distance from each texel's centre to the nearest texel centre of a
 /// glowing cell, worked out over the area grown by the reach, so glowing cells just outside the area (in a chunk's
-/// skirt) light into it too. Built at a renderer's build and whenever its control map changes; owns its texture and
-/// sprite, <see cref="Dispose"/> destroys them.
+/// skirt) light into it too. Built at a renderer's build and whenever its control map changes, or taken from a map baked
+/// beside a world's chunk (<see cref="UseBaked"/>, Docs/LightingGaps.md, Phase 5); owns its sprite and the texture it
+/// built, <see cref="Dispose"/> destroys them.
 /// </summary>
 public sealed class TerrainGlowMap : IDisposable
 {
@@ -19,6 +20,7 @@ public sealed class TerrainGlowMap : IDisposable
     private readonly string textureName;
     private Texture2D texture;
     private Sprite sprite;
+    private bool ownsTexture;
     private float[] distance = new float[0];
     private float[] row = new float[0];
     private float[] envelope = new float[0];
@@ -54,9 +56,22 @@ public sealed class TerrainGlowMap : IDisposable
     /// </summary>
     public bool Build(TerrainControlMap controlMap, uint glowLayers, RectInt area, float reach)
     {
+        BoundsInt bounds = controlMap.Bounds;
+        RectInt read = glowLayers != 0u ? new RectInt(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y) : new RectInt(0, 0, 0, 0);
+        return Build((x, y) => (controlMap.GetCell(new Vector3Int(x, y, 0)) & glowLayers) != 0u, read, area, reach);
+    }
+
+    /// <summary>
+    /// Builds the map over <paramref name="area"/> (cells) for the cells inside <paramref name="bounds"/> where
+    /// <paramref name="glows"/> holds, lighting <paramref name="reach"/> cells around them, and uploads it, as
+    /// <see cref="Build(TerrainControlMap, uint, RectInt, float)"/> does; a world's bake reads the whole world's cells
+    /// this way.
+    /// </summary>
+    public bool Build(Func<int, int, bool> glows, RectInt bounds, RectInt area, float reach)
+    {
         int grow = Mathf.CeilToInt(reach);
-        RectInt glowing = GlowingBounds(controlMap, glowLayers, new RectInt(area.xMin - grow, area.yMin - grow, area.width + 2 * grow, area.height + 2 * grow));
-        if (glowLayers == 0u || reach <= 0f || glowing.width <= 0)
+        RectInt glowing = GlowingBounds(glows, bounds, new RectInt(area.xMin - grow, area.yMin - grow, area.width + 2 * grow, area.height + 2 * grow));
+        if (reach <= 0f || glowing.width <= 0)
         {
             Area = new RectInt(0, 0, 0, 0);
             return false;
@@ -81,8 +96,9 @@ public sealed class TerrainGlowMap : IDisposable
         {
             for (int cx = 0; cx < field.width; cx++)
             {
-                bool glows = (controlMap.GetCell(new Vector3Int(field.xMin + cx, field.yMin + cy, 0)) & glowLayers) != 0u;
-                float value = glows ? 0f : Far;
+                int x = field.xMin + cx;
+                int y = field.yMin + cy;
+                float value = bounds.Contains(new Vector2Int(x, y)) && glows(x, y) ? 0f : Far;
                 for (int ty = 0; ty < TexelsPerCell; ty++)
                 {
                     int start = (cy * TexelsPerCell + ty) * fieldWidth + cx * TexelsPerCell;
@@ -126,6 +142,22 @@ public sealed class TerrainGlowMap : IDisposable
     }
 
     /// <summary>
+    /// Takes <paramref name="baked"/>, a map built over <paramref name="area"/> (cells) and saved beside a world's
+    /// chunk, in place of building one: its sprite is made over it, and the texture stays the asset's. Nothing is
+    /// read from it, so <see cref="EncodedAt"/> keeps answering for the last build.
+    /// </summary>
+    public void UseBaked(Texture2D baked, RectInt area)
+    {
+        Release();
+        texture = baked;
+        ownsTexture = false;
+        Area = area;
+        sprite = Sprite.Create(baked, new Rect(0f, 0f, baked.width, baked.height), Vector2.zero, TexelsPerCell, 0, SpriteMeshType.FullRect);
+        sprite.name = textureName;
+        sprite.hideFlags = HideFlags.DontSave;
+    }
+
+    /// <summary>
     /// The texel at (<paramref name="x"/>, <paramref name="y"/>) of the last build, from its bottom left, clamped.
     /// </summary>
     public byte EncodedAt(int x, int y)
@@ -141,22 +173,35 @@ public sealed class TerrainGlowMap : IDisposable
     }
 
     /// <summary>
-    /// Destroys the texture and sprite.
+    /// Destroys the sprite and the texture it built.
     /// </summary>
     public void Dispose()
     {
-        Destroy(sprite);
-        Destroy(texture);
-        sprite = null;
-        texture = null;
+        Release();
     }
 
     /// <summary>
-    /// The cells inside <paramref name="within"/> where a glowing layer is filled, their bounds; empty when none is.
+    /// Destroys the sprite, and the texture when it built it rather than took it baked.
     /// </summary>
-    private static RectInt GlowingBounds(TerrainControlMap controlMap, uint glowLayers, RectInt within)
+    private void Release()
     {
-        BoundsInt bounds = controlMap.Bounds;
+        Destroy(sprite);
+        if (ownsTexture)
+        {
+            Destroy(texture);
+        }
+
+        sprite = null;
+        texture = null;
+        ownsTexture = false;
+    }
+
+    /// <summary>
+    /// The cells inside <paramref name="within"/> and <paramref name="bounds"/> where <paramref name="glows"/> holds,
+    /// their bounds; empty when none does.
+    /// </summary>
+    private static RectInt GlowingBounds(Func<int, int, bool> glows, RectInt bounds, RectInt within)
+    {
         int x0 = Mathf.Max(within.xMin, bounds.xMin), x1 = Mathf.Min(within.xMax, bounds.xMax);
         int y0 = Mathf.Max(within.yMin, bounds.yMin), y1 = Mathf.Min(within.yMax, bounds.yMax);
         int xMin = int.MaxValue, yMin = int.MaxValue, xMax = int.MinValue, yMax = int.MinValue;
@@ -164,7 +209,7 @@ public sealed class TerrainGlowMap : IDisposable
         {
             for (int x = x0; x < x1; x++)
             {
-                if ((controlMap.GetCell(new Vector3Int(x, y, 0)) & glowLayers) == 0u)
+                if (!glows(x, y))
                 {
                     continue;
                 }
@@ -257,13 +302,13 @@ public sealed class TerrainGlowMap : IDisposable
     /// </summary>
     private void Allocate(int width, int height)
     {
-        if (texture != null && texture.width == width && texture.height == height)
+        if (ownsTexture && texture != null && texture.width == width && texture.height == height)
         {
             return;
         }
 
-        Destroy(sprite);
-        Destroy(texture);
+        Release();
+        ownsTexture = true;
         texture = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
         {
             name = textureName,

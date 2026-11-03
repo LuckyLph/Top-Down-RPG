@@ -421,25 +421,25 @@ public class WorldEditorWindow : EditorWindow
 
         if (staleCoasts != null && staleCoasts.Count > 0)
         {
-            EditorGUILayout.HelpBox($"The coast maps of {string.Join(", ", staleCoasts)} are out of date.", MessageType.Warning);
+            EditorGUILayout.HelpBox($"The coast or glow maps of {string.Join(", ", staleCoasts)} are out of date.", MessageType.Warning);
         }
         else if (groundChanged)
         {
-            EditorGUILayout.HelpBox("The ground of an open chunk changed: check or bake the coast maps.", MessageType.Info);
+            EditorGUILayout.HelpBox("The ground of an open chunk changed: check or bake the coast and glow maps.", MessageType.Info);
         }
 
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Check coasts"))
+        if (GUILayout.Button("Check maps"))
         {
             Run(CheckCoasts);
         }
 
-        if (GUILayout.Button("Bake changed coasts"))
+        if (GUILayout.Button("Bake changed maps"))
         {
             Run(() => BakeCoasts(true));
         }
 
-        if (GUILayout.Button("Bake every coast"))
+        if (GUILayout.Button("Bake every map"))
         {
             Run(() => BakeCoasts(false));
         }
@@ -517,13 +517,21 @@ public class WorldEditorWindow : EditorWindow
     }
 
     /// <summary>
-    /// Lists the chunks whose coast map is out of date.
+    /// Lists the chunks whose coast or glow map is out of date.
     /// </summary>
     private void CheckCoasts()
     {
         staleCoasts = WorldAuthoring.StaleCoastMaps(world);
+        foreach (Vector2Int chunk in WorldAuthoring.StaleGlowMaps(world))
+        {
+            if (!staleCoasts.Contains(chunk))
+            {
+                staleCoasts.Add(chunk);
+            }
+        }
+
         groundChanged = false;
-        Report("Check coasts", new List<string> { staleCoasts.Count == 0 ? "Every coast map is up to date." : $"Out of date: {string.Join(", ", staleCoasts)}." });
+        Report("Check maps", new List<string> { staleCoasts.Count == 0 ? "Every coast and glow map is up to date." : $"Out of date: {string.Join(", ", staleCoasts)}." });
     }
 
     /// <summary>
@@ -540,11 +548,13 @@ public class WorldEditorWindow : EditorWindow
     }
 
     /// <summary>
-    /// Bakes the coast maps of the chunks whose sea changed, or of every chunk.
+    /// Bakes the coast and glow maps of the chunks whose sea or glowing ground changed, or of every chunk.
     /// </summary>
     private void BakeCoasts(bool onlyChanged)
     {
-        Report(onlyChanged ? "Bake changed coasts" : "Bake every coast", WorldAuthoring.BakeCoastMaps(world, onlyChanged));
+        List<string> lines = WorldAuthoring.BakeCoastMaps(world, onlyChanged);
+        lines.AddRange(WorldAuthoring.BakeGlowMaps(world, onlyChanged));
+        Report(onlyChanged ? "Bake changed maps" : "Bake every map", lines);
         staleCoasts = null;
         groundChanged = false;
     }

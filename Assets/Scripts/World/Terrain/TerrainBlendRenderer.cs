@@ -141,6 +141,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     [NonSerialized] private int skirtCells;
     [NonSerialized] private Texture2D chunkCoastMap;
     [NonSerialized] private bool coastBaked;
+    [NonSerialized] private Texture2D chunkGlowMap;
+    [NonSerialized] private RectInt chunkGlowArea;
+    [NonSerialized] private bool glowBaked;
     [NonSerialized] private TerrainSkirtSource[] skirt = new TerrainSkirtSource[0];
     [NonSerialized] private TerrainMaterial[] builtMaterials = new TerrainMaterial[0];
     [NonSerialized] private readonly List<TerrainSkirtSource> unbuiltSkirt = new();
@@ -297,6 +300,12 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal TerrainGlowMap GlowMap => glowMap;
 
     /// <summary>
+    /// Whether its glow light draws the glow map baked for its chunk instead of one it builds (Docs/LightingGaps.md,
+    /// Phase 5).
+    /// </summary>
+    internal bool IsGlowBaked => glowBaked;
+
+    /// <summary>
     /// Whether it is built wide: an RGBA32 control map, read by the shader's wide variant (_TERRAIN_WIDE).
     /// </summary>
     internal bool IsWide => controlMap != null && controlMap.IsWide;
@@ -379,14 +388,18 @@ public class TerrainBlendRenderer : MonoBehaviour
     /// Makes it draw the chunk of a seamless world owning <paramref name="cells"/>: its control map covers those cells
     /// and <paramref name="skirtWidth"/> cells around them (<see cref="ChunkControlArea"/>), its quads only the cells,
     /// and its waves read <paramref name="coastMap"/>, the map baked for that area, when it is not null and has the
-    /// area's size (otherwise it builds one from what it reads). Not saved; rebuilds when enabled.
+    /// area's size (otherwise it builds one from what it reads); its glow light draws <paramref name="glowMap"/>, the
+    /// glow map baked for the chunk over <paramref name="glowArea"/>, when it is not null and has that area's size and
+    /// lies in the chunk (otherwise it builds one, Docs/LightingGaps.md, Phase 5). Not saved; rebuilds when enabled.
     /// </summary>
-    internal void SetChunk(RectInt cells, int skirtWidth, Texture2D coastMap)
+    internal void SetChunk(RectInt cells, int skirtWidth, Texture2D coastMap, Texture2D glowMap = null, RectInt glowArea = default)
     {
         chunked = true;
         chunkCells = cells;
         skirtCells = Mathf.Max(0, skirtWidth);
         chunkCoastMap = coastMap;
+        chunkGlowMap = glowMap;
+        chunkGlowArea = glowArea;
         Rebuild();
     }
 
@@ -556,7 +569,7 @@ public class TerrainBlendRenderer : MonoBehaviour
                 coastMap.Build(controlMap, waveLayer, bridgeBits);
             }
 
-            if (glowMap != null)
+            if (glowMap != null && !glowBaked)
             {
                 BuildGlow();
             }
@@ -991,6 +1004,28 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// Whether <paramref name="baked"/> is a glow map over <paramref name="area"/>, cells inside its chunk:
+    /// <see cref="TerrainGlowMap.TexelsPerCell"/> texels per cell of it. A baked map that is not warns and is built
+    /// instead.
+    /// </summary>
+    private bool IsGlowBakedFor(Texture2D baked, RectInt area)
+    {
+        if (baked == null)
+        {
+            return false;
+        }
+
+        if (area.width <= 0 || area.height <= 0 || area.xMin < chunkCells.xMin || area.yMin < chunkCells.yMin || area.xMax > chunkCells.xMax || area.yMax > chunkCells.yMax
+            || baked.width != area.width * TerrainGlowMap.TexelsPerCell || baked.height != area.height * TerrainGlowMap.TexelsPerCell)
+        {
+            Debug.LogWarning($"{name}: the baked glow map {baked.name} ({baked.width} x {baked.height}) does not fit its area {area} in its chunk {chunkCells}, so the glow map is built instead; bake the world's glow maps again.", this);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Whether <paramref name="baked"/> is a coast map for a control map over <paramref name="area"/>:
     /// <see cref="TerrainCoastMap.TexelsPerCell"/> texels per cell of it.
     /// </summary>
@@ -1012,15 +1047,21 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     /// <summary>
     /// Builds the glow map over its cells (a world chunk's own, else the control map's bounds) from the cells of its
-    /// glowing layers, within the reach and in the colour of the first of their materials, and fits the glow light to
-    /// it: made, off and at no strength, when something glows and it has none, its cookie the map's sprite and its
-    /// corner on the map's first cell; destroyed when nothing glows any more.
+    /// glowing layers, within the reach and in the colour of the first of their materials, or takes the one baked for
+    /// its chunk (<see cref="IsGlowBakedFor"/>), and fits the glow light to it: made, off and at no strength, when
+    /// something glows and it has none, its cookie the map's sprite and its corner on the map's first cell; destroyed
+    /// when nothing glows any more.
     /// </summary>
     private void BuildGlow()
     {
         BoundsInt bounds = controlMap.Bounds;
         RectInt area = chunked ? chunkCells : new RectInt(bounds.xMin, bounds.yMin, bounds.size.x, bounds.size.y);
-        if (!glowMap.Build(controlMap, glowBits, area, glowMaterial.GlowReach))
+        glowBaked = chunked && IsGlowBakedFor(chunkGlowMap, chunkGlowArea);
+        if (glowBaked)
+        {
+            glowMap.UseBaked(chunkGlowMap, chunkGlowArea);
+        }
+        else if (!glowMap.Build(controlMap, glowBits, area, glowMaterial.GlowReach))
         {
             if (glowLight != null)
             {
@@ -1260,6 +1301,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         builtRaisedTilemap = null;
         builtRaised = false;
         coastBaked = false;
+        glowBaked = false;
         builtMaterials = new TerrainMaterial[0];
         elevationChanged = false;
         waveLayer = -1;

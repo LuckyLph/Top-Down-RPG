@@ -6,9 +6,9 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 ## Where we start
 
-Architecture.md lists about 60 known gaps. Five are covered elsewhere or settled and stay out of this plan: the fixed build version (multiplayer testing, in Roadmap.md's Later), lava only blocking (lava damage, in Later), the camera off the art grid (LightingGaps.md's Phase 7), the editor's night as a preview (LightingGaps.md's Phase 6) and every player visible to every client (fine for 2 to 4 players). The rest, by area, with what this plan proposes for each in the triage below:
+Architecture.md lists about 60 known gaps. Six are covered elsewhere or settled and stay out of this plan: the fixed build version (multiplayer testing, in Roadmap.md's Later), lava only blocking (lava damage, in Later), the placeholder status icons (DesignSystem.md's Later, by the user's choice), the camera off the art grid (LightingGaps.md's Phase 7), the editor's night as a preview (LightingGaps.md's Phase 6) and every player visible to every client (fine for 2 to 4 players). The rest, by area, with what this plan proposes for each in the triage below:
 
-- **Gameplay**: waystones and world exits with no art; placeholder status icons; a trip's arrival unprotected; a bow shooting into a wall in range; unit picks ignoring the ability's filter; the weapon switch not saved; nothing physical at a world's edge, water, the ocean, lava or the cliff of raised ground; the walk and sprint never shown; feet sliding going north or south.
+- **Gameplay**: waystones and world exits with no art; a trip's arrival unprotected; a bow shooting into a wall in range; unit picks ignoring the ability's filter; the weapon switch not saved; nothing physical at a world's edge, water, the ocean, lava or the cliff of raised ground; the walk and sprint never shown; feet sliding going north or south.
 - **Multiplayer**: one save per install, a client keeping no copy of its place; remote arrows late; a copy's cast and windup on its own clock; a client's attacks seldom holding their contact frame; hit directions each machine's own; chunk holds outliving trips.
 - **Worlds and streaming**: chunk load hitches and per-renderer texture arrays in the editor; a generated chunk keeping layers it no longer needs; a moved place taking the nearest walkable cell, reachable or not; coast and glow maps baked only on request; persistent ids repaired only for undoable edits; world search limits as code defaults; saved terrain edits naming layers by index; the Overworld's wave crests on end at its top edge and the sand nubs at the Coast region's joins.
 - **Terrain and the Terrain Brush**: one layer with waves per area and the coast map's rebuild while painting; the walls' gap at the ground's corners; diagonal paths stepping; planks picking a way per cell; a layer showing a lower one under its corners; a bridge's end depending on the layers between; no preview for a flood fill, on raised ground or for walls across a chunk border; one level of raised ground; ground tiles found by name; the layer order unchecked; a scratch scene's grass layer; the soft look's first frames in the editor.
@@ -19,19 +19,19 @@ Architecture.md lists about 60 known gaps. Five are covered elsewhere or settled
 ## Goals
 
 - Every gap no plan covers either fixed or accepted with a reason, so Architecture.md's list holds only what is known and chosen.
-- What a player meets first fixed first: the places they look for, the icons they read, the orders that misbehave, what they lose between sessions.
+- What a player meets first fixed first: the places they look for, the orders that misbehave, what they lose between sessions.
 - The code back within CLAUDE.md's rules.
 - Nothing a phase fixes changing what the other machines see without a PlayMode test of the host and client.
 
 ## Non-goals (for now)
 
-- New features a gap points to but does not need: a second level of raised ground, split animation layers, knockbacks and dashes, save slots shown in a menu beyond what the save fix needs.
-- The DesignSystem.md proposal: the status icons follow its colour rules where they apply, but adopting it is its own work.
-- The five gaps covered elsewhere (Where we start).
+- New features a gap points to but does not need: a second level of raised ground, split animation layers, knockbacks and dashes and the colliders they would need, a slot list for the saves in a menu.
+- The status icons, which wait for DesignSystem.md, and adopting that proposal.
+- The six gaps covered elsewhere (Where we start).
 
 ## Triage
 
-Proposed, to settle with the user before Phase 1 (Open questions). Fix: closed in the phase named. Accept: stays on Architecture.md's list, marked accepted, for the reason given. Decide: settled in its phase on a spike, a measurement or previews.
+Settled with the user on 2026-11-03: the triage as proposed, with the colliders accepted until a move leaves the paths, a save per session, the status icons left to DesignSystem.md and the phases in this order. Fix: closed in the phase named. Accept: stays on Architecture.md's list, marked accepted, for the reason given, when that phase lands. Decide: settled in its phase on a spike, a measurement or previews.
 
 | Gap | Proposed | Phase | Why |
 |---|---|---|---|
@@ -41,14 +41,13 @@ Proposed, to settle with the user before Phase 1 (Open questions). Fix: closed i
 | A trip's arrival unprotected | Fix | 2 | The host keeps a travelling player untargetable and its statuses paused until its machine reports the fade in, with a time limit. |
 | The weapon switch not saved | Fix | 2 | The equipped weapon's id in the player's save, the save's format version raised. |
 | Waystones and world exits with no art | Fix | 3 | Generated in the project: a waystone prop (a standing stone that glows once discovered) and exit markers (a door for an interior, a worn mat or signpost for a road), placed by the world writer from the world's entries. Settled on previews. |
-| Placeholder status icons | Fix | 3 | Generated icons, one per status, drawn by an icon recipe beside the weapons' (`WeaponSpriteRecipe`), shown on the HUD and over units. Settled on previews. |
 | Hit directions each machine's own | Fix | 4 | An arrow's hit carries the point it was shot from, so every machine turns the nudge and the kick from there. |
 | A copy's windup holding until the contact | Fix | 4 | The hold ends after its clip's contact time plus a margin, the copy then returning to its locomotion; the late contact still plays its hit. |
 | Chunk holds outliving trips | Fix | 4 | A trip releases the client's holds of the world it leaves, so a respawn waits for its chunk as the host does. |
 | A copy's cast releasing on its own clock | Decide | 4 | Release on the completion message, on its own clock, or whichever comes first, measured with a delayed connection in the in-process tests (which Phase 4 adds). |
 | A client's attacks seldom holding their contact frame | Decide | 4 | Hold on the client's own prediction of the hit (its target in range at contact), or accept as a round trip's cost. |
 | Remote arrows late | Decide | 4 | Fly them from the shot's time, ahead by the round trip, or accept: they are visual and only the host's hit counts. |
-| One save per install, a client keeping no copy of its place | Fix | 5 | One save file per session, New Game starting a new one, Continue loading the latest; a client keeps its own place per host session, used only when that host is gone. The menu shows no slot list (Non-goals). |
+| One save per install, a client keeping no copy of its place | Fix | 5 | One save file per session, New Game starting a new one, Continue loading the latest; a client keeps its own place per host session, used only when that host is gone. The menu shows no slot list (Non-goals). Chosen with the user over keeping one save and over a slot list. |
 | Saved terrain edits naming layers by index | Fix | 5 | Edits name their layer by material, the save's format version raised, so a chunk's layers can be reordered or pruned. |
 | A generated chunk keeping layers it no longer needs | Fix | 5 | The writer prunes empty layers (after the edits name layers by material), and `CreateChunk` lists the chunk's own ground layer instead of grass. |
 | A moved place taking the nearest walkable cell, reachable or not | Fix | 5 | The nearest walkable cell reachable from the world's entry or a waystone. |
@@ -79,9 +78,9 @@ Proposed, to settle with the user before Phase 1 (Open questions). Fix: closed i
 | A buffered cast replacing the release | Decide | 7 | Show the release frame for its own time before the buffered cast starts, if the cast timeline allows it without changing when hits land; else accept. |
 | A cast aimed aside running toward its aim | Accept | 7 | Only split layers could turn the legs (Animation.md's Phase 5). |
 | TMP's fallback font changing in the editor | Accept | 7 | Package behaviour; the rule on the static atlas's characters stands. |
-| Nothing physical at a world's edge, water, the ocean, lava or the cliff | Decide | 8 | Colliders now, on a layer that stops bodies but not line of sight, or accepted until the first move that leaves the paths (a knockback, a dash), which then brings them. |
-| The walk and the sprint never shown | Accept | 8 | Shown once a slow or a haste reaches them; the PlayMode test covers them. |
-| Feet sliding going north or south | Accept | 8 | Accepted in Animation.md's Phase 2. |
+| Nothing physical at a world's edge, water, the ocean, lava or the cliff | Accept | 2 | Bodies move only along paths, which go around them; the first move that leaves the paths (a knockback, a dash) brings the colliders, on a layer that stops bodies but not line of sight. Chosen with the user. |
+| The walk and the sprint never shown | Accept | 2 | Shown once a slow or a haste reaches them; the PlayMode test covers them. |
+| Feet sliding going north or south | Accept | 2 | Accepted in Animation.md's Phase 2. |
 
 ## Phases
 
@@ -104,13 +103,13 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] An attack order closing in until its target is in range and in line of sight.
 - [ ] A travelling player protected until its machine fades in, host-authoritative, with a time limit.
 - [ ] The equipped weapon saved and restored, the save's format version raised.
+- [ ] The colliders, the walk and the sprint, and the feet going north or south marked accepted in Architecture.md.
 - [ ] Tests: an ally-only pick over a closer enemy; a bow ordered at a mob behind a wall walking round it before it shoots; a mob at an arrival point not hurting the arriving player until it fades in, on the host and a client; the weapon kept across a save. Architecture.md updated.
 
-### Phase 3: waystones, exits and status icons
+### Phase 3: waystones and exits
 
 - [ ] Previews of a waystone, discovered and not, and of an interior's door and a road's exit marker, in the project's generated style; then their recipes and prefabs, and the world writer placing them from the world's entries.
-- [ ] Previews of an icon per status; then the icon recipe, the icons on the status definitions, the HUD and the world icons showing them.
-- [ ] Tests: the writer placing a marker at every waystone and exit and moving it with its entry; a discovered waystone's look on the host and a client; every status having an icon. Architecture.md updated.
+- [ ] Tests: the writer placing a marker at every waystone and exit and moving it with its entry; a discovered waystone's look on the host and a client. Architecture.md updated.
 
 ### Phase 4: what each machine shows of the others
 
@@ -153,20 +152,12 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] The buffered cast's release decided on the cast timeline, then built or accepted.
 - [ ] Tests: a unit in a wall's shadow dark whole, its head too; a unit beside it lit; the inspector's preview; the `ShaderCompile` tests run. Architecture.md and Lighting.md updated.
 
-### Phase 8: bodies off the paths
-
-- [ ] Colliders for the world's edge, water, the ocean, lava and the cliff, or their acceptance until the first move that leaves the paths, decided with the user.
-- [ ] If built: a physics layer that stops bodies but not line of sight, colliders built with each chunk's ground and walls, and nothing on the paths changing.
-- [ ] Tests: a body pushed toward the sea, lava and the world's edge stopping at them; a mob's line of sight across water unchanged; the PlayMode suites passing. Architecture.md updated.
-
 ## Testing
 
 - EditMode: each fix's own tests as its phase lists, render tests through the pipeline for what draws differently.
-- PlayMode: the in-process host and client for everything another machine sees (Phases 2, 4, 5 and 8).
+- PlayMode: the in-process host and client for everything another machine sees (Phases 2, 3, 4 and 5).
 - `ShaderCompile` after every shader change.
 
 ## Open questions
 
-- Whether the triage stands, in particular: colliders now or with the first move off the paths (Phase 8); a save per session, or one save kept as today with only the weapon and the layer names added (Phase 5); and the order of the phases.
-- Whether the status icons wait for DesignSystem.md's adoption, or come first and follow its colour rules.
-- Whether the waystone and exit markers block movement (a waystone as a prop with a collider) or are drawn on the ground only.
+- Whether the waystone and exit markers block movement (a waystone as a prop with a collider) or are drawn on the ground only (Phase 3).

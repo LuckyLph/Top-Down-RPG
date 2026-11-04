@@ -91,7 +91,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [x] Inline comments moved to the docs or removed (`IClock.cs`, `SceneDefinition.cs`, `PlayModeBootstrapper`, `SceneBuildValidator`, `SceneDefinitionEditor`, `VContainerDiagnosticsBuildGuard`, the test files).
 - [x] `MobConfig`'s obstacle mask from a named layer in its asset, not `1 << 8`; `MobConfig`, `TerrainType2D`, `TerrainMovementProfile2D` and `DualGridRuleTile` created from `TopDownRPG/...`.
 - [x] `SceneQuery`'s shared buffer and `UnityClock.Shared` replaced by injected or per-instance state.
-- [ ] `SceneDefinitionPathSync` in a file of its own, its `.meta` kept with it.
+- [x] `SceneDefinitionPathSync` in a file of its own, its `.meta` kept with it.
 - [ ] The status dev panel injected (a registration the DevTools scope owns), or the reason it cannot be recorded.
 - [ ] Duplicated tuning: one source for `nearestCellSearchRadius`; `MobMotor2D` and `MeleeDamageDealer` no longer serializing what `MobConfig` sets.
 - [ ] Unused API removed, test-only API kept `internal` where a test needs it; `StaticSlash.png` removed and its test given a generated sprite; `DualGridRuleTile.DataTile` failing with a clear error instead of throwing.

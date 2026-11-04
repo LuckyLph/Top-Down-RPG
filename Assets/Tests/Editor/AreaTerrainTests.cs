@@ -210,7 +210,7 @@ public class AreaTerrainTests
         worlds.AddChunk(loaded, Vector2Int.zero, default);
         worlds.AddChunk(loaded, Vector2Int.right, default);
         WorldState state = new(world.WorldId);
-        state.Chunk(Vector2Int.right).RecordTerrainEdit(0, new Vector2Int(70, 3), true);
+        state.Chunk(Vector2Int.right).RecordTerrainEdit(terrain.KeyOf(0), new Vector2Int(70, 3), true);
         ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.right, worlds, state: state);
 
         sync.RegisterNetworkPrefab();
@@ -248,7 +248,7 @@ public class AreaTerrainTests
         WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
         ChunkNetworkPrefabs prefabs = new(network);
         WorldState state = new(world.WorldId);
-        state.Chunk(Vector2Int.zero).RecordTerrainEdit(0, new Vector2Int(1, 1), true);
+        state.Chunk(Vector2Int.zero).RecordTerrainEdit(terrain.KeyOf(0), new Vector2Int(1, 1), true);
         ChunkTerrainSync sync = CreateChunkSync(terrain, network, world, Vector2Int.zero, new Worlds(), prefabs, state);
 
         sync.RegisterNetworkPrefab();
@@ -277,10 +277,10 @@ public class AreaTerrainTests
         WorldDefinition world = Track(WorldDefinition.Create("TerrainSync", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
         WorldState state = new(world.WorldId);
         ChunkState chunk = state.Chunk(Vector2Int.zero);
-        chunk.RecordTerrainEdit(0, new Vector2Int(1, 1), true);
-        chunk.RecordTerrainEdit(0, new Vector2Int(4, 4), false);
-        chunk.RecordTerrainEdit(1, new Vector2Int(2, 2), true);
-        chunk.RecordTerrainEdit(5, new Vector2Int(9, 9), true);
+        chunk.RecordTerrainEdit(terrain.KeyOf(0), new Vector2Int(1, 1), true);
+        chunk.RecordTerrainEdit(terrain.KeyOf(0), new Vector2Int(4, 4), false);
+        chunk.RecordTerrainEdit(AreaTerrain.WallsKey, new Vector2Int(2, 2), true);
+        chunk.RecordTerrainEdit("a-material-gone", new Vector2Int(9, 9), true);
         ChunkTerrainSync sync = CreateChunkSync(terrain, new FakeNetworkObjects(), world, Vector2Int.zero, new Worlds(), state: state);
 
         LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("layers it does not have"));
@@ -292,12 +292,69 @@ public class AreaTerrainTests
         Assert.That(terrain.Edits.Count, Is.EqualTo(3), "The restored edits are the terrain's own, as if just made.");
 
         terrain.TrySetCells(ground, new[] { new Vector3Int(6, 1, 0) }, true);
-        Assert.That(chunk.TerrainEdits, Does.Contain(new GameSaveData.CellEdit(0, new Vector2Int(6, 1), true)), "A new edit is recorded in the chunk's record.");
+        Assert.That(chunk.TerrainEdits, Does.Contain(new GameSaveData.CellEdit(terrain.KeyOf(0), new Vector2Int(6, 1), true)), "A new edit is recorded in the chunk's record.");
 
         sync.Dispose();
         int recorded = chunk.TerrainEdits.Count;
         terrain.TrySetCells(ground, new[] { new Vector3Int(7, 1, 0) }, true);
         Assert.That(chunk.TerrainEdits.Count, Is.EqualTo(recorded), "Nothing is recorded once the chunk's scope is gone.");
+    }
+
+    /// <summary>
+    /// Saves name a layer by what it draws: a ground layer by the id of the material the grid's renderer draws on its
+    /// tilemap, the walls as walls, a tilemap the renderer does not draw by its name; an unknown name finds no layer.
+    /// </summary>
+    [Test]
+    public void KeyOf_NamesALayerByItsMaterial_TheWallsAsWalls_AndAnyOtherByItsTilemap()
+    {
+        TerrainMaterial grass = Track(TerrainMaterial.Create("Grass", null, null, 1, TerrainMaterial.CellMode.None, Color.green, default));
+        AreaTerrain terrain = CreateDrawnTerrain(out Tilemap grassLayer, out Tilemap sandLayer, grass, null);
+
+        Assert.That(terrain.KeyOf(0), Is.EqualTo(grass.MaterialId));
+        Assert.That(grass.MaterialId, Is.EqualTo("test-Grass"));
+        Assert.That(terrain.KeyOf(1), Is.EqualTo(AreaTerrain.TilemapKeyPrefix + sandLayer.name), "A tilemap with no material drawn is named by its tilemap.");
+        Assert.That(terrain.KeyOf(2), Is.EqualTo(AreaTerrain.WallsKey));
+        Assert.That(terrain.KeyOf(3), Is.Empty);
+        Assert.That(terrain.IndexOfKey(grass.MaterialId), Is.EqualTo(0));
+        Assert.That(terrain.IndexOfKey(AreaTerrain.WallsKey), Is.EqualTo(2));
+        Assert.That(terrain.IndexOfKey("no-such-material"), Is.EqualTo(-1));
+        Assert.That(grassLayer, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// Edits saved from a chunk whose layers were grass, sand and the walls are restored onto the same materials' layers
+    /// after the chunk's layers were reordered (as the writer's pruning or a new layer order does), each on its own
+    /// tilemap, the walls' too.
+    /// </summary>
+    [Test]
+    public void SavedEdits_AreKept_AcrossALayerReorder()
+    {
+        TerrainMaterial grass = Track(TerrainMaterial.Create("Grass", null, null, 1, TerrainMaterial.CellMode.None, Color.green, default));
+        TerrainMaterial sand = Track(TerrainMaterial.Create("Sand", null, null, 1, TerrainMaterial.CellMode.None, Color.yellow, default));
+        AreaTerrain before = CreateDrawnTerrain(out Tilemap grassBefore, out Tilemap sandBefore, grass, sand);
+        WorldDefinition world = Track(WorldDefinition.Create("TerrainReorder", new Vector2Int(2048, 0), new Vector2Int(1, 1), new[] { Vector2Int.zero }));
+        WorldState state = new(world.WorldId);
+        ChunkTerrainSync recording = CreateChunkSync(before, new FakeNetworkObjects(), world, Vector2Int.zero, new Worlds(), state: state);
+        recording.Start();
+        before.TrySetCells(grassBefore, new[] { new Vector3Int(3, 3, 0) }, true);
+        before.TrySetCells(sandBefore, new[] { new Vector3Int(5, 5, 0) }, true);
+        before.TrySetCells(walls.DataTilemap, new[] { new Vector3Int(7, 7, 0) }, true);
+        recording.Dispose();
+
+        AreaTerrain after = CreateDrawnTerrain(out Tilemap grassAfter, out Tilemap sandAfter, grass, sand, reversed: true);
+        Assert.That(after.KeyOf(0), Is.EqualTo(AreaTerrain.WallsKey), "The reordered terrain lists the walls first.");
+        Assert.That(after.KeyOf(1), Is.EqualTo(sand.MaterialId));
+        Assert.That(after.KeyOf(2), Is.EqualTo(grass.MaterialId));
+        walls.ClearDataTiles(new[] { new Vector3Int(7, 7, 0) });
+        ChunkTerrainSync restoring = CreateChunkSync(after, new FakeNetworkObjects(), world, Vector2Int.zero, new Worlds(), state: state);
+        restoring.Start();
+
+        Assert.That(grassAfter.HasTile(new Vector3Int(3, 3, 0)), Is.True, "The grass edit lands on the grass layer, now third.");
+        Assert.That(grassAfter.HasTile(new Vector3Int(5, 5, 0)), Is.False);
+        Assert.That(sandAfter.HasTile(new Vector3Int(5, 5, 0)), Is.True, "The sand edit lands on the sand layer, now second.");
+        Assert.That(sandAfter.HasTile(new Vector3Int(3, 3, 0)), Is.False);
+        Assert.That(walls.DataTilemap.HasTile(new Vector3Int(7, 7, 0)), Is.True, "The wall edit lands on the walls, now first.");
+        restoring.Dispose();
     }
 
     /// <summary>
@@ -356,6 +413,42 @@ public class AreaTerrainTests
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        return terrain;
+    }
+
+    /// <summary>
+    /// Creates, on an inactive grid of its own (so its renderer builds nothing), an <see cref="AreaTerrain"/> listing a
+    /// grass layer, a sand layer and the test's walls (the walls first and the two layers swapped when
+    /// <paramref name="reversed"/>), its renderer drawing <paramref name="grass"/> and <paramref name="sand"/> (none on
+    /// the sand layer when null) on them, filled with its own tiles, on the authority.
+    /// </summary>
+    private AreaTerrain CreateDrawnTerrain(out Tilemap grassLayer, out Tilemap sandLayer, TerrainMaterial grass, TerrainMaterial sand, bool reversed = false)
+    {
+        GameObject gridObject = Track(new GameObject("DrawnTerrain", typeof(Grid)));
+        gridObject.SetActive(false);
+        grassLayer = new GameObject("GrassTilemap", typeof(Tilemap)).GetComponent<Tilemap>();
+        grassLayer.transform.SetParent(gridObject.transform);
+        sandLayer = new GameObject("SandTilemap", typeof(Tilemap)).GetComponent<Tilemap>();
+        sandLayer.transform.SetParent(gridObject.transform);
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        List<TerrainBlendRenderer.Layer> drawn = new() { new TerrainBlendRenderer.Layer(grassLayer, grass) };
+        if (sand != null)
+        {
+            drawn.Add(new TerrainBlendRenderer.Layer(sandLayer, sand));
+        }
+
+        if (reversed)
+        {
+            drawn.Reverse();
+        }
+
+        renderer.Configure(null, drawn.ToArray());
+        AreaTerrain terrain = gridObject.AddComponent<AreaTerrain>();
+        AreaTerrain.Layer grassEntry = new(grassLayer, Track(ScriptableObject.CreateInstance<Tile>()));
+        AreaTerrain.Layer sandEntry = new(sandLayer, Track(ScriptableObject.CreateInstance<Tile>()));
+        AreaTerrain.Layer wallsEntry = new(walls.DataTilemap, null);
+        terrain.Configure(reversed ? new[] { wallsEntry, sandEntry, grassEntry } : new[] { grassEntry, sandEntry, wallsEntry });
+        terrain.Construct(FixedGameAuthority.Authoritative);
         return terrain;
     }
 

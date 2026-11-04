@@ -143,14 +143,7 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     {
         if (worldState.TryGetChunk(identity.Coords, out ChunkState chunk) && chunk.TerrainEdits.Count > 0)
         {
-            IReadOnlyList<GameSaveData.CellEdit> saved = chunk.TerrainEdits;
-            List<TerrainEdit> restored = new(saved.Count);
-            for (int i = 0; i < saved.Count; i++)
-            {
-                restored.Add(new TerrainEdit(saved[i].Layer, (Vector3Int)saved[i].Cell, saved[i].Filled));
-            }
-
-            terrain.RestoreEdits(restored);
+            terrain.RestoreEdits(chunk.TerrainEdits);
         }
 
         terrain.EditRecorded += HandleEditRecorded;
@@ -158,12 +151,13 @@ public sealed class ChunkTerrainSync : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Records the terrain's edit at <paramref name="index"/> in the chunk's record.
+    /// Records the terrain's edit at <paramref name="index"/> in the chunk's record, its layer named by what it draws
+    /// (<see cref="AreaTerrain.KeyOf"/>).
     /// </summary>
     private void HandleEditRecorded(int index)
     {
         TerrainEdit edit = terrain.Edits[index];
-        worldState.Chunk(identity.Coords).RecordTerrainEdit(edit.Layer, (Vector2Int)edit.Cell, edit.Filled);
+        worldState.Chunk(identity.Coords).RecordTerrainEdit(terrain.KeyOf(edit.Layer), (Vector2Int)edit.Cell, edit.Filled);
     }
 
     /// <summary>

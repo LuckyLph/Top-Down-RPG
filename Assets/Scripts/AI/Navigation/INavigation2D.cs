@@ -57,6 +57,12 @@ public interface INavigation2D
     bool AreCellsConnected(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile);
 
     /// <summary>
+    /// Whether the cell's region runs on beyond the loaded ground, into ground the navigation could load but has not;
+    /// false when it lies wholly in what is loaded (always on a single area), so whatever it connects to is known.
+    /// </summary>
+    bool RunsBeyondLoadedPages(Vector3Int cell, TerrainMovementProfile2D movementProfile);
+
+    /// <summary>
     /// The summed step costs of the Bresenham line between two cells; false when any step of it is blocked.
     /// </summary>
     bool TryGetLineCost(Vector3Int from, Vector3Int to, TerrainMovementProfile2D movementProfile, out int cost);

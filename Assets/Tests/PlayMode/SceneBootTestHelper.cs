@@ -28,11 +28,11 @@ public static class SceneBootTestHelper
 
     /// <summary>
     /// Boots into a new game in Testlands, the hand-painted test world, at its default entry, backed by
-    /// <paramref name="saveStore"/> or a fresh in-memory store.
+    /// <paramref name="saves"/> or a fresh in-memory save folder.
     /// </summary>
-    public static IEnumerator BootIntoTestlands(ISaveStore saveStore = null)
+    public static IEnumerator BootIntoTestlands(ISaveFolder saves = null)
     {
-        yield return BootIntoWorld(TestlandsRootPath, saveStore);
+        yield return BootIntoWorld(TestlandsRootPath, saves);
     }
 
     /// <summary>
@@ -41,12 +41,12 @@ public static class SceneBootTestHelper
     /// menu, and asserts it ends in game. Any world's scene can be booted into in the editor, listed in GameScenes or
     /// not (see BootFlow).
     /// </summary>
-    public static IEnumerator BootIntoWorld(string worldScenePath, ISaveStore saveStore = null)
+    public static IEnumerator BootIntoWorld(string worldScenePath, ISaveFolder saves = null)
     {
 #if UNITY_EDITOR
         EditorBootRequest.Set(new[] { worldScenePath });
 #endif
-        yield return LoadMainScene(saveStore, TestlandsRootPath, TestlandsStartEntry);
+        yield return LoadMainScene(saves, TestlandsRootPath, TestlandsStartEntry);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
 
         GameFlow gameFlow = ResolveGameFlow();
@@ -67,12 +67,12 @@ public static class SceneBootTestHelper
     /// <paramref name="startingWorldPath"/> (Testlands' <c>start</c> by default), or with the project's own starting
     /// world when <paramref name="startingWorldPath"/> is null.
     /// </summary>
-    public static IEnumerator BootIntoMainMenu(ISaveStore saveStore = null, string startingWorldPath = TestlandsRootPath, string startingEntry = TestlandsStartEntry)
+    public static IEnumerator BootIntoMainMenu(ISaveFolder saves = null, string startingWorldPath = TestlandsRootPath, string startingEntry = TestlandsStartEntry)
     {
 #if UNITY_EDITOR
         EditorBootRequest.Clear();
 #endif
-        yield return LoadMainScene(saveStore, startingWorldPath, startingEntry);
+        yield return LoadMainScene(saves, startingWorldPath, startingEntry);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
 
         GameFlow gameFlow = ResolveGameFlow();
@@ -152,19 +152,19 @@ public static class SceneBootTestHelper
     }
 
     /// <summary>
-    /// Loads Main alone with its scope given <paramref name="saveStore"/> (or a fresh in-memory store) as the save
-    /// store, an in-memory user settings store and, unless <paramref name="startingWorldPath"/> is null, a copy of the
+    /// Loads Main alone with its scope given <paramref name="saves"/> (or a fresh in-memory folder) as the save
+    /// folder, an in-memory user settings store and, unless <paramref name="startingWorldPath"/> is null, a copy of the
     /// project's <see cref="GameScenes"/> starting at that world's <paramref name="startingEntry"/>, registered after the
     /// asset the scope registers, so it is the one resolved, and destroyed with the scope; then waits for the scope to
     /// build.
     /// </summary>
-    private static IEnumerator LoadMainScene(ISaveStore saveStore, string startingWorldPath, string startingEntry)
+    private static IEnumerator LoadMainScene(ISaveFolder saves, string startingWorldPath, string startingEntry)
     {
-        ISaveStore store = saveStore ?? new MemorySaveStore();
+        ISaveFolder folder = saves ?? new MemorySaveFolder();
         GameScenes scenes = startingWorldPath != null ? CopyScenesStartingAt(startingWorldPath, startingEntry) : null;
         using (LifetimeScope.Enqueue(builder =>
                {
-                   builder.RegisterInstance<ISaveStore>(store);
+                   builder.RegisterInstance<ISaveFolder>(folder);
                    builder.RegisterInstance<ISaveStore>(new MemorySaveStore()).Keyed(UserSettings.FileName);
                    if (scenes != null && builder.Exists(typeof(GameScenes)))
                    {

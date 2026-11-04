@@ -5,8 +5,9 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 /// <summary>
-/// Fails a build whose seamless worlds break the layout or their chunks' ownership (<see cref="WorldValidation"/>), as
-/// <see cref="SceneBuildValidator"/> fails one whose scene list cannot boot. Also on the menu, to check by hand.
+/// Fails a build whose seamless worlds break the layout or their chunks' ownership, or hold a coast or glow map out of
+/// date (<see cref="WorldValidation"/>), as <see cref="SceneBuildValidator"/> fails one whose scene list cannot boot.
+/// Also on the menu, to check by hand.
 /// </summary>
 public class WorldBuildValidator : IPreprocessBuildWithReport
 {

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Lava
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: b1da909a32a77f54ebcf980ddc6e84f4
   albedo: {fileID: 2800000, guid: cc2ee1f5eb0cc7d468e2117540edbce7, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: 28bee2ceceb429e4fb46ff1233d4a4f0, type: 3}
@@ -55,6 +56,15 @@ MonoBehaviour:
   sinkDepth: 1.5
   bankShadow: 0.35
   bankColour: {r: 0.27450982, g: 0.13333334, b: 0.10980392, a: 1}
+  reflection: 0
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
   glowStrength: 1
   glowReach: 2.5
   glowColour: {r: 1, g: 0.50980395, b: 0.19607843, a: 1}

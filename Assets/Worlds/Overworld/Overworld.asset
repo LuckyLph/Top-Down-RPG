@@ -115,3 +115,5 @@ MonoBehaviour:
   - name: lavaFieldsEast
     position: {x: 218.5, y: 46.5}
     waystone: 0
+  maxSearchCells: 4096
+  nearestCellSearchRadius: 8

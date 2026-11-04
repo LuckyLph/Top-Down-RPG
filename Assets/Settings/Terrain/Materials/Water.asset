@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Water
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: 8117c62c7a0ccaf4090c342e8ee2c35e
   albedo: {fileID: 2800000, guid: c320a823d10d01f4c9e47d1e9644cb35, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: bdc4f5cf7268aaa4d8df3550408c260a, type: 3}
@@ -56,6 +57,14 @@ MonoBehaviour:
   bankShadow: 0.35
   bankColour: {r: 0.38, g: 0.29, b: 0.2, a: 1}
   reflection: 1
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
   glowStrength: 0
   glowReach: 2.5
   glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}

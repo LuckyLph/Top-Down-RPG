@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Snow
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: 3ed53aa60a241a542bd303dba4096c31
   albedo: {fileID: 2800000, guid: 07ddf87543d8f004d87ce01297eba0f5, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: 41915c898f0558144a813062fd96617b, type: 3}
@@ -33,6 +34,21 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
+  swash: 0
+  waveSpacing: 0
+  wavePeriod: 3.2
+  waveWidth: 10
+  waveAngle: 8.5
+  waveWholeWithin: 40
+  waveStretch: 0.2
+  waveColour: {r: 0.17, g: 0.37, b: 0.59, a: 1}
+  waveCrestColour: {r: 0.55, g: 0.72, b: 0.85, a: 1}
+  waveTroughColour: {r: 0.05, g: 0.16, b: 0.31, a: 1}
+  washFoamColour: {r: 0.94, g: 0.96, b: 0.97, a: 1}
+  washFoamShadeColour: {r: 0.84, g: 0.89, b: 0.93, a: 1}
+  washFilmColour: {r: 0.59, g: 0.75, b: 0.87, a: 1}
+  washFilmBackColour: {r: 0.44, g: 0.65, b: 0.8, a: 1}
+  washWet: 0.15
   swayAmplitude: 0
   swayPeriod: 2.5
   gustLength: 12
@@ -40,6 +56,18 @@ MonoBehaviour:
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.7137255, g: 0.7764706, b: 0.87058824, a: 1}
+  reflection: 0
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
+  glowStrength: 0
+  glowReach: 2.5
+  glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}
   bridge: 0
   turnToRuns: 0
   edge:

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Stone
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: 2faf17a29ca6d9445bf898432ddf4024
   albedo: {fileID: 2800000, guid: 5d151905636a22d4180a2fea1e99cb01, type: 3}
   cellField: {fileID: 2800000, guid: a9d716bce893ce14c98cc0d5625e3d24, type: 3}
   height: {fileID: 2800000, guid: 2aae56b8454dad043bcc03737b8dcd65, type: 3}

@@ -87,7 +87,7 @@ public static class EditModeWorldNavigation
 
             if (!navigations.TryGetValue(world, out WorldNavigation navigation))
             {
-                navigations[world] = navigation = new WorldNavigation(pool);
+                navigations[world] = navigation = new WorldNavigation(pool, world);
             }
 
             if (!navigation.HasChunk(coords) && pool.UsedSlots < pool.SlotCount && navigation.AddChunk(grid, coords))

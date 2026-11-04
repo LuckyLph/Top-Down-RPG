@@ -17,7 +17,7 @@ using Object = UnityEngine.Object;
 /// home chunk that is; before unloading a chunk it releases it and waits until the host has hidden that chunk's objects
 /// from it. The host keeps every chunk a client holds.
 /// </summary>
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IPlayerIdSource, IClientVisibility, INetworkClock, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IPlayerIdSource, IClientVisibility, INetworkClock, IHostLink, IDisposable
 {
     public const string ClientJoinedMessage = "TopDownRPG.ClientJoined";
     public const string ChunkReadyMessage = "TopDownRPG.ChunkReady";
@@ -86,6 +86,8 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public bool IsServer => networkManager.IsServer;
     public bool IsConnectedClient => networkManager.IsConnectedClient;
     public bool IsAuthoritative => IsActive ? networkManager.IsServer : !followingHost;
+    public bool IsFollowingHost => followingHost;
+    public bool IsHostLost => followingHost && !IsActive;
     public ulong LocalClientId => networkManager.LocalClientId;
     public IReadOnlyCollection<ulong> JoinedClients => readiness.JoinedClients;
     public string JoinRefusal { get; private set; }

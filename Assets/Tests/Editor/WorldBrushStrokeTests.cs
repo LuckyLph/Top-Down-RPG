@@ -172,6 +172,66 @@ public class WorldBrushStrokeTests
     }
 
     /// <summary>
+    /// The brush marks a chunk's coast map out of date as it paints the sea or its shore within the map's reach
+    /// (Docs/KnownGaps.md, Phase 5), and its glow map as it paints lava within the glow's reach: sand painted on the
+    /// grass far from any sea marks nothing; ocean painted in chunk (0, 0)'s middle marks its coast map alone, farther
+    /// than the bake reaches into its neighbours; ocean painted by the border with chunk (1, 0) marks that chunk's too;
+    /// erasing the grass of a cell, which leaves a hole the coast reads as sea, marks it; lava marks the glow map of the
+    /// chunk it lies in alone, and no coast map. One undo takes a mark back with the stroke.
+    /// </summary>
+    [Test]
+    public void PaintingTheSeaItsShoreOrLava_MarksTheMapsReachingIt_OutOfDate()
+    {
+        TerrainMaterial ocean = WorldAuthoring.MaterialNamed("Ocean");
+        TerrainMaterial lava = WorldAuthoring.MaterialNamed("Lava");
+        foreach (WorldChunk chunk in chunks.Values)
+        {
+            SerializedObject data = new(chunk);
+            data.FindProperty("coastSource").stringValue = "baked";
+            data.FindProperty("glowSource").stringValue = "baked";
+            data.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        Tilemap sandLayer = Layer(Vector2Int.zero, sand);
+        Stroke(sandLayer, () => brush.Paint(sandLayer.layoutGrid, sandLayer.gameObject, new Vector3Int(10, 10, 0)));
+        AssertMarks("sand on grass", false, false, false, false);
+
+        Tilemap oceanLayer = GroundLayerMigration.AddLayer(chunks[Vector2Int.zero].GetComponent<Grid>(), ocean);
+        brush.SetTile(Vector3Int.zero, AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(ocean)));
+        Stroke(oceanLayer, () => brush.Paint(oceanLayer.layoutGrid, oceanLayer.gameObject, new Vector3Int(10, 10, 0)));
+        AssertMarks("ocean in the middle of chunk (0, 0)", true, false, false, false);
+
+        Undo.PerformUndo();
+        AssertMarks("the stroke undone", false, false, false, false);
+
+        Stroke(oceanLayer, () => brush.Paint(oceanLayer.layoutGrid, oceanLayer.gameObject, new Vector3Int(60, 10, 0)));
+        AssertMarks("ocean by the border with chunk (1, 0)", true, true, false, false);
+
+        Tilemap northGrass = Layer(new Vector2Int(0, 1), grass);
+        Stroke(northGrass, () => brush.Erase(northGrass.layoutGrid, northGrass.gameObject, new Vector3Int(10, 120, 0)));
+        Assert.That(chunks[new Vector2Int(0, 1)].CoastSource, Is.EqualTo(WorldAuthoring.StaleSource), "a hole in the grass is sea to the coast map");
+
+        Tilemap lavaLayer = GroundLayerMigration.AddLayer(chunks[new Vector2Int(1, 0)].GetComponent<Grid>(), lava);
+        brush.SetTile(Vector3Int.zero, AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(lava)));
+        Stroke(lavaLayer, () => brush.Paint(lavaLayer.layoutGrid, lavaLayer.gameObject, new Vector3Int(100, 30, 0)));
+        Assert.That(chunks[new Vector2Int(1, 0)].GlowSource, Is.EqualTo(WorldAuthoring.StaleSource), "lava marks its chunk's glow map");
+        Assert.That(chunks[Vector2Int.zero].GlowSource, Is.EqualTo("baked"), "lava 36 cells from chunk (0, 0) is beyond the glow's reach");
+        Assert.That(WorldAuthoring.IsGlowStale(chunks[new Vector2Int(1, 0)], "baked"), Is.True, "a marked map is stale whatever it was baked from");
+    }
+
+    /// <summary>
+    /// Asserts which of chunks (0, 0), (1, 0), (0, 1) have their coast map marked out of date after
+    /// <paramref name="what"/>, and that no glow map is (<paramref name="glow"/> for chunk (0, 0)'s).
+    /// </summary>
+    private void AssertMarks(string what, bool origin, bool east, bool north, bool glow)
+    {
+        Assert.That(chunks[Vector2Int.zero].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(origin), $"{what}: chunk (0, 0)'s coast map");
+        Assert.That(chunks[new Vector2Int(1, 0)].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(east), $"{what}: chunk (1, 0)'s coast map");
+        Assert.That(chunks[new Vector2Int(0, 1)].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(north), $"{what}: chunk (0, 1)'s coast map");
+        Assert.That(chunks[Vector2Int.zero].GlowSource == WorldAuthoring.StaleSource, Is.EqualTo(glow), $"{what}: chunk (0, 0)'s glow map");
+    }
+
+    /// <summary>
     /// Erasing grass across the border at y = 64 empties the cells on both chunks' grass layers.
     /// </summary>
     [Test]

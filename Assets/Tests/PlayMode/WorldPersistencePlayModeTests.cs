@@ -101,7 +101,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator LeavingToTheMenu_SavesTheWorld_AndContinueBringsItBack()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition world = FindWorld(gameFlow, "Sandbox");
@@ -142,7 +142,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator APlaceSavedOnWater_StartsOnTheNearestWalkableCell_AndIsSavedThere()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
@@ -172,7 +172,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator APlaceSavedFarOutAtSea_StartsAtTheNearestDiscoveredWaystone()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
@@ -181,7 +181,7 @@ public class WorldPersistencePlayModeTests
         GameSaveData.Waystone[] discovered = { new(overworld.WorldId, "lakeside") };
         saveStore.Contents = SaveWith(new GameSaveData.Player(playerId, overworld.WorldId, saved, discovered)).ToJson();
 
-        LogAssert.Expect(LogType.Warning, new Regex("no walkable cell lies within \\d+ cells; it starts at .*, its nearest discovered waystone lakeside"));
+        LogAssert.Expect(LogType.Warning, new Regex("no walkable cell reaching the world's entries lies within \\d+ cells; it starts at .*, its nearest discovered waystone lakeside"));
         Object.FindAnyObjectByType<MainMenuController>().ContinueGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.CurrentWorld, Is.SameAs(overworld));
@@ -210,7 +210,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator AJoiningPlayerSavedOnWater_SpawnsOnTheNearestWalkableCell()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();

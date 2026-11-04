@@ -4,13 +4,14 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Tests for the rule that moves a saved place a player can no longer stand on (Docs/WorldGeneration.md: Runtime
-/// changes), <see cref="WalkablePlaces.Find"/>, on a standalone navigation grid of 40 x 40 cells of ground with a lake
-/// of 13 x 13 cells of water in it and a wall across the north-east, under a world at the origin whose entries are the
-/// default <c>start</c> and the waystones <c>west</c> and <c>east</c>: a place on walkable ground stays; one on water or
-/// in the wall moves to the centre of the walkable cell nearest it by Manhattan distance, within the radius; with none
-/// within the radius it goes to the player's nearest discovered waystone, the default entry counting; with no entry at
-/// all it stays.
+/// Tests for the rule that moves a saved place a player can no longer stand on, or cannot leave (Docs/WorldGeneration.md:
+/// Runtime changes; Docs/KnownGaps.md, Phase 5), <see cref="WalkablePlaces.Find"/>, on a standalone navigation grid of
+/// 40 x 40 cells of ground with a lake of 13 x 13 cells of water in it and a wall across the north-east, under a world at
+/// the origin whose entries are the default <c>start</c> and the waystones <c>west</c> and <c>east</c>: a place on
+/// walkable ground stays; one on water or in the wall moves to the centre of the walkable cell nearest it by Manhattan
+/// distance, within the radius, that reaches the world's entries, so a place on an islet in the lake, or in the water by
+/// it, moves to the mainland; with none within the radius it goes to the player's nearest discovered waystone, the
+/// default entry counting; with no entry at all it stays.
 /// </summary>
 public class WalkablePlacesTests
 {
@@ -22,6 +23,7 @@ public class WalkablePlacesTests
 
     private readonly List<Object> created = new();
     private NavigationGrid2D grid;
+    private Tilemap waterMap;
     private TerrainMovementProfile2D profile;
     private WorldDefinition world;
 
@@ -38,7 +40,7 @@ public class WalkablePlacesTests
         TerrainType2D ground = Track(TerrainType2D.Create("ground"));
         TerrainType2D water = Track(TerrainType2D.Create("water"));
         Tilemap groundMap = CreateTilemap(root, "Ground");
-        Tilemap waterMap = CreateTilemap(root, "Water");
+        waterMap = CreateTilemap(root, "Water");
         Tilemap wallMap = CreateTilemap(root, "Walls");
         for (int x = 0; x < Size; x++)
         {
@@ -145,6 +147,39 @@ public class WalkablePlacesTests
     }
 
     /// <summary>
+    /// With an islet of 3 x 3 cells of ground in the middle of the lake, a place on it, which a player could stand on but
+    /// never leave, moves to the nearest cell of the mainland, 7 cells away, past the islet; so does a place in the water
+    /// beside the islet, whose nearest walkable cell is the islet's; a place on the mainland stays.
+    /// </summary>
+    [Test]
+    public void APlaceOnAnIslet_OrInTheWaterBesideIt_MovesToTheMainland()
+    {
+        for (int x = 15; x <= 17; x++)
+        {
+            for (int y = 15; y <= 17; y++)
+            {
+                waterMap.SetTile(new Vector3Int(x, y, 0), null);
+            }
+        }
+
+        grid.BuildGrid();
+        Assert.That(grid.IsCellWalkable(grid.WorldToCell(LakeMiddle), profile), Is.True, "the islet is walkable");
+
+        Assert.That(Find(LakeMiddle, 16, null, out Vector2 moved, out _), Is.EqualTo(WalkablePlaces.Outcome.NearestCell));
+        AssertOnTheMainland(moved);
+        Vector3Int from = grid.WorldToCell(LakeMiddle);
+        Vector3Int to = grid.WorldToCell(moved);
+        Assert.That(Mathf.Abs(to.x - from.x) + Mathf.Abs(to.y - from.y), Is.EqualTo(7), "the mainland's nearest cell, across the water");
+
+        Vector2 besideTheIslet = new(13.5f, 16.5f);
+        Assert.That(Find(besideTheIslet, 16, null, out moved, out _), Is.EqualTo(WalkablePlaces.Outcome.NearestCell));
+        AssertOnTheMainland(moved);
+        Assert.That(grid.WorldToCell(moved), Is.EqualTo(new Vector3Int(LakeMin - 1, 16, 0)), "the shore 4 cells west, not the islet 2 cells east");
+
+        Assert.That(Find(new Vector2(5.25f, 30.75f), 16, null, out _, out _), Is.EqualTo(WalkablePlaces.Outcome.Walkable));
+    }
+
+    /// <summary>
     /// With no walkable cell within the radius and a world without entries, the place stays.
     /// </summary>
     [Test]
@@ -186,6 +221,16 @@ public class WalkablePlacesTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="moved"/> lies on a walkable cell connected to the world's default entry.
+    /// </summary>
+    private void AssertOnTheMainland(Vector2 moved)
+    {
+        Vector3Int cell = grid.WorldToCell(moved);
+        Assert.That(grid.IsCellWalkable(cell, profile), Is.True, "a walkable cell");
+        Assert.That(grid.AreCellsConnected(cell, grid.WorldToCell(world.EntryPosition("start")), profile), Is.True, "on the mainland, reaching the entries");
     }
 
     /// <summary>

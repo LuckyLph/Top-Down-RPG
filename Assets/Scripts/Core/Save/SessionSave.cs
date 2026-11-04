@@ -2,14 +2,15 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The running session's saved state, in memory (Docs/WorldStreaming.md: Persistence): the world clock, each player's
-/// place, discovered waystones and weapon by player id, and the <see cref="WorldState"/> of every world visited, loaded
-/// or not.
+/// The running session's saved state, in memory (Docs/WorldStreaming.md: Persistence): its id, which names its save file
+/// (Docs/KnownGaps.md, Phase 5), the world clock, each player's place, discovered waystones and weapon by player id, and
+/// the <see cref="WorldState"/> of every world visited, loaded or not.
 /// It is used where game state is decided, offline or on the host; a client keeps an empty one it never writes. A
-/// session starts new (<see cref="StartNew"/>), from the save file (<see cref="StartFrom"/>), or as a throwaway
-/// (<see cref="StartThrowaway"/>: an editor boot straight into a world, which nothing writes to the save file), and lasts
-/// as long as the Main scope, across Gameplay scenes. The world clock is the game time played on the save: the saved time plus the
-/// game time since the session started, so a time recorded in one session still means the same in the next.
+/// session starts new (<see cref="StartNew"/>, a new id), from a save (<see cref="StartFrom"/>: its id, or a new one for
+/// a joined client's copy, which goes on as a session of its own), or as a throwaway (<see cref="StartThrowaway"/>: an
+/// editor boot straight into a world, which nothing writes to a save file), and lasts as long as the Main scope, across
+/// Gameplay scenes. The world clock is the game time played on the save: the saved time plus the game time since the
+/// session started, so a time recorded in one session still means the same in the next.
 /// </summary>
 public sealed class SessionSave
 {
@@ -22,11 +23,13 @@ public sealed class SessionSave
     private float clockAtStart;
 
     /// <summary>
-    /// Creates an empty session state whose world clock runs on <paramref name="gameClock"/>.
+    /// Creates an empty session state whose world clock runs on <paramref name="gameClock"/>, under an id of its own, so
+    /// a session started without the menu (a test hosting directly) still saves into a file of its own.
     /// </summary>
     public SessionSave(IClock gameClock)
     {
         clock = gameClock;
+        Id = NewId();
     }
 
     /// <summary>
@@ -36,19 +39,26 @@ public sealed class SessionSave
 
     /// <summary>
     /// Whether this session is a throwaway, started by booting the editor straight into a world rather than from the
-    /// main menu: it keeps its state in memory like any session, but nothing writes it to the save file.
+    /// main menu: it keeps its state in memory like any session, but nothing writes it to a save file.
     /// </summary>
     public bool IsThrowaway { get; private set; }
+
+    /// <summary>
+    /// The session's id, which names its save file and which a host tells its clients, so each keeps a copy of its own
+    /// place per host session.
+    /// </summary>
+    public string Id { get; private set; }
 
     internal int PlayerCount => places.Count;
     internal int WorldCount => worlds.Count;
 
     /// <summary>
-    /// Forgets everything and starts the world clock at zero, for a new game (or a joined client, which saves nothing).
+    /// Forgets everything and starts the world clock at zero under a new id, for a new game (or a joined client, which
+    /// writes no session of its own).
     /// </summary>
     public void StartNew()
     {
-        Restart(0d);
+        Restart(0d, NewId());
     }
 
     /// <summary>
@@ -58,17 +68,18 @@ public sealed class SessionSave
     /// </summary>
     public void StartThrowaway()
     {
-        Restart(0d);
+        Restart(0d, NewId());
         IsThrowaway = true;
     }
 
     /// <summary>
-    /// Replaces the state with <paramref name="data"/>'s and continues its world clock from the saved time. Players
-    /// and worlds without an id are skipped.
+    /// Replaces the state with <paramref name="data"/>'s and continues its world clock from the saved time, under the
+    /// save's id; a joined client's copy of its place (or a save with no id) goes on as a new session of its own, under a
+    /// new id, its copy left as it is. Players and worlds without an id are skipped.
     /// </summary>
     public void StartFrom(GameSaveData data)
     {
-        Restart(data.Time);
+        Restart(data.Time, data.IsCopy || string.IsNullOrEmpty(data.Id) ? NewId() : data.Id);
         foreach (GameSaveData.Player player in data.Players)
         {
             if (player != null && !string.IsNullOrEmpty(player.PlayerId))
@@ -213,9 +224,9 @@ public sealed class SessionSave
     }
 
     /// <summary>
-    /// The state as save data in the current format, at the world clock's time: a record per player with a place, its
-    /// discovered waystones and weapon in it. A player with discoveries or a weapon but no place yet is left out; every
-    /// player in a world has its place recorded before each save.
+    /// The state as save data of this session's id in the current format, at the world clock's time: a record per player
+    /// with a place, its discovered waystones and weapon in it. A player with discoveries or a weapon but no place yet is
+    /// left out; every player in a world has its place recorded before each save.
     /// </summary>
     public GameSaveData ToData()
     {
@@ -234,15 +245,26 @@ public sealed class SessionSave
             }
         }
 
-        return new GameSaveData(Time, players, saved);
+        GameSaveData data = new(Time, players, saved);
+        data.SetSession(Id);
+        return data;
     }
 
     /// <summary>
-    /// Forgets every player and world, makes the session a real one again and sets the world clock to
-    /// <paramref name="time"/> from now.
+    /// A new session id: a GUID without separators.
     /// </summary>
-    private void Restart(double time)
+    private static string NewId()
     {
+        return System.Guid.NewGuid().ToString("N");
+    }
+
+    /// <summary>
+    /// Forgets every player and world, makes the session a real one again under <paramref name="id"/> and sets the world
+    /// clock to <paramref name="time"/> from now.
+    /// </summary>
+    private void Restart(double time, string id)
+    {
+        Id = id;
         places.Clear();
         waystones.Clear();
         weapons.Clear();

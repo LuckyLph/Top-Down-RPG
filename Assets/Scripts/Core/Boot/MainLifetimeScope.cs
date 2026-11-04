@@ -60,7 +60,8 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<MenuStack>().AsSelf();
         builder.RegisterEntryPoint<TransitionTimeFreeze>();
 
-        builder.RegisterInstance<ISaveStore>(new FileSaveStore(DataPath(FileSaveStore.DefaultFileName)));
+        builder.RegisterInstance<ISaveFolder>(new FileSaveFolder(DataPath(FileSaveFolder.DefaultFolderName), DataPath(FileSaveStore.DefaultFileName)));
+        builder.Register<IWallClock, SystemWallClock>(Lifetime.Singleton);
         builder.Register<GameSave>(Lifetime.Singleton);
         builder.Register<SessionSave>(Lifetime.Singleton);
         builder.Register<PlayerStarts>(Lifetime.Singleton);
@@ -88,6 +89,7 @@ public class MainLifetimeScope : LifetimeScope
                 .As<ISessionStatus>()
                 .As<IPlayerIdSource>()
                 .As<INetworkClock>()
+                .As<IHostLink>()
                 .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);

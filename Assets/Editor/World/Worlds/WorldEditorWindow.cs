@@ -35,7 +35,9 @@ public class WorldEditorWindow : EditorWindow
     private bool createChunks = true;
     private bool listWorld = true;
     private bool groundChanged;
+    private bool markCheckScheduled;
     private List<Vector2Int> staleCoasts;
+    private List<Vector2Int> markedStale = new();
     private List<string> messages = new();
     private Vector2 scroll;
     private Vector2 messageScroll;
@@ -425,6 +427,10 @@ public class WorldEditorWindow : EditorWindow
         {
             EditorGUILayout.HelpBox($"The coast or glow maps of {string.Join(", ", staleCoasts)} are out of date.", MessageType.Warning);
         }
+        else if (markedStale.Count > 0)
+        {
+            EditorGUILayout.HelpBox($"The brush marked the coast or glow maps of {string.Join(", ", markedStale)} out of date: bake the changed maps.", MessageType.Warning);
+        }
         else if (groundChanged)
         {
             EditorGUILayout.HelpBox("The ground of an open chunk changed: check or bake the coast and glow maps.", MessageType.Info);
@@ -563,6 +569,7 @@ public class WorldEditorWindow : EditorWindow
         lines.AddRange(WorldAuthoring.BakeGlowMaps(world, onlyChanged));
         Report(onlyChanged ? "Bake changed maps" : "Bake every map", lines);
         staleCoasts = null;
+        markedStale = WorldAuthoring.MarkedStale(world);
         groundChanged = false;
     }
 
@@ -629,6 +636,7 @@ public class WorldEditorWindow : EditorWindow
         world = picked;
         worldData = null;
         staleCoasts = null;
+        markedStale = picked != null ? WorldAuthoring.MarkedStale(picked) : new List<Vector2Int>();
         groundChanged = false;
         selected = Vector2Int.zero;
         chunkPaths.Clear();
@@ -647,15 +655,42 @@ public class WorldEditorWindow : EditorWindow
     }
 
     /// <summary>
-    /// Notes that the ground of an open chunk of the picked world changed.
+    /// Notes that the ground of an open chunk of the picked world changed, and reads which chunks the brush marked out
+    /// of date once the stroke is done.
     /// </summary>
     private void HandleTileChanged(Tilemap tilemap, Tilemap.SyncTile[] tiles)
     {
-        if (!groundChanged && tilemap != null && chunkPaths.Contains(tilemap.gameObject.scene.path))
+        if (tilemap == null || !chunkPaths.Contains(tilemap.gameObject.scene.path))
+        {
+            return;
+        }
+
+        if (!groundChanged)
         {
             groundChanged = true;
             Repaint();
         }
+
+        if (!markCheckScheduled)
+        {
+            markCheckScheduled = true;
+            EditorApplication.delayCall += RefreshMarked;
+        }
+    }
+
+    /// <summary>
+    /// Reads which open chunks the brush marked out of date, once the stroke that changed their tiles is done.
+    /// </summary>
+    private void RefreshMarked()
+    {
+        markCheckScheduled = false;
+        if (this == null || world == null)
+        {
+            return;
+        }
+
+        markedStale = WorldAuthoring.MarkedStale(world);
+        Repaint();
     }
 
     /// <summary>

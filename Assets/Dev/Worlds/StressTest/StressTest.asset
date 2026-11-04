@@ -29,3 +29,5 @@ MonoBehaviour:
   - name: start
     position: {x: 64.5, y: 64.5}
     waystone: 0
+  maxSearchCells: 4096
+  nearestCellSearchRadius: 8

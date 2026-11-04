@@ -41,7 +41,7 @@ public class GameSavePlayModeTests
     [UnityTest]
     public IEnumerator NewGame_EntersTheStartingWorld_AndSavesThePlayersPlace()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition world = gameFlow.Scenes.StartingWorld;
@@ -71,7 +71,7 @@ public class GameSavePlayModeTests
     [UnityTest]
     public IEnumerator BootingIntoAWorldFromTheEditor_IsAThrowaway_ThatLeavesTheSaveAlone()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoTestlands(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         SessionSave session = SceneBootTestHelper.ResolveFromMain<SessionSave>();
@@ -95,17 +95,27 @@ public class GameSavePlayModeTests
     }
 
     /// <summary>
-    /// With an empty save store, or a version 1 save (which held an area), the main menu's Continue button is disabled
-    /// and not selected.
+    /// With no save, an old save of an earlier build (version 1, which held an area), ignored with its warning, or only a
+    /// copy of this machine's place in a host's session that may still be there, the main menu's Continue button is
+    /// disabled and not selected.
     /// </summary>
     [UnityTest]
     public IEnumerator MainMenu_WithoutAUsableSave_DisablesContinue()
     {
-        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveStore());
+        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveFolder());
         yield return AssertContinueDisabled();
 
-        LogAssert.Expect(LogType.Warning, new Regex("format version 1"));
-        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveStore { Contents = "{\"version\":1,\"areaSceneGuid\":\"0\",\"spawnId\":\"start\"}" });
+        MemorySaveFolder oldSave = new();
+        oldSave.LegacyStore.Contents = "{\"version\":1,\"areaSceneGuid\":\"0\",\"spawnId\":\"start\"}";
+        LogAssert.Expect(LogType.Warning, new Regex("The save file of an earlier build has format version 1"));
+        yield return SceneBootTestHelper.BootIntoMainMenu(oldSave);
+        yield return AssertContinueDisabled();
+
+        MemorySaveFolder copyOnly = new();
+        GameSaveData copy = new(0d, new[] { new GameSaveData.Player("someone", "world", Vector2.zero) }, new GameSaveData.World[0]);
+        copy.SetHost("a-host-session", false);
+        copyOnly.Seed(copy);
+        yield return SceneBootTestHelper.BootIntoMainMenu(copyOnly);
         yield return AssertContinueDisabled();
     }
 
@@ -116,7 +126,7 @@ public class GameSavePlayModeTests
     [UnityTest]
     public IEnumerator Continue_LandsInTheSavedWorldAndPosition()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         WorldDefinition sandbox = FindWorld(gameFlow, "Sandbox");
@@ -142,7 +152,7 @@ public class GameSavePlayModeTests
     [UnityTest]
     public IEnumerator HostGame_LandsInTheSavedWorldAndPosition()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
@@ -182,7 +192,7 @@ public class GameSavePlayModeTests
     public IEnumerator AKnownPlayerJoining_SpawnsAtItsSavedPlace_OnceTheHostLoadedIt()
     {
         const string KnownId = "known-client";
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();

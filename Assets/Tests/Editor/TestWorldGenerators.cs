@@ -140,20 +140,22 @@ public sealed class TestWorldGenerators
     /// <summary>
     /// A chunk of <paramref name="world"/> at <paramref name="coords"/> built in memory as
     /// <see cref="WorldAuthoring.CreateChunk"/> builds one: an enabled grid at the world's origin with its
-    /// <see cref="WorldChunk"/>, a terrain renderer in the project's style drawing one empty grass layer, its navigation
-    /// grid and its <see cref="AreaTerrain"/> listing the grass layer.
+    /// <see cref="WorldChunk"/>, a terrain renderer in the project's style drawing one empty layer of
+    /// <paramref name="ground"/> (grass when null), its navigation grid and its <see cref="AreaTerrain"/> listing that
+    /// layer.
     /// </summary>
-    public Grid NewChunk(WorldDefinition world, Vector2Int coords)
+    public Grid NewChunk(WorldDefinition world, Vector2Int coords, TerrainMaterial ground = null)
     {
+        TerrainMaterial material = ground != null ? ground : GroundMaterial("Grass");
         GameObject gridObject = Track(new GameObject($"Chunk {coords.x},{coords.y}", typeof(Grid)));
         gridObject.transform.position = new Vector3(world.Origin.x, world.Origin.y, 0f);
         gridObject.SetActive(false);
         gridObject.AddComponent<WorldChunk>().Configure(world, coords, null);
         Grid grid = gridObject.GetComponent<Grid>();
         gridObject.AddComponent<TerrainBlendRenderer>().Configure(Style);
-        GroundLayerMigration.AddLayer(grid, GroundMaterial("Grass"));
+        GroundLayerMigration.AddLayer(grid, material);
         WorldAuthoring.SetUpNavigation(grid);
-        WorldAuthoring.SetUpTerrainEdits(grid);
+        WorldAuthoring.SetUpTerrainEdits(grid, material);
         gridObject.SetActive(true);
         return grid;
     }

@@ -144,6 +144,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
         builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
+        builder.RegisterEntryPoint<HostSessionSync>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         builder.Register<SharedTerrainArrays>(Lifetime.Singleton);
         builder.Register<RegionSkies>(Lifetime.Singleton);
@@ -166,6 +167,7 @@ public class GameplayLifetimeScope : LifetimeScope
         {
             Debug.LogError($"{name} has no {nameof(DayNightSettings)}; the worlds keep their authored light.", this);
             builder.RegisterEntryPoint<PropLighting>().WithParameter(typeof(DayClock), (object)null).AsSelf();
+            builder.RegisterEntryPoint<JoinedSaveRecorder>().WithParameter(typeof(DayClock), (object)null).AsSelf();
         }
         else
         {
@@ -174,6 +176,7 @@ public class GameplayLifetimeScope : LifetimeScope
             builder.RegisterEntryPoint<DayClockSync>().AsSelf();
             builder.RegisterEntryPoint<DayNightPresenter>().AsSelf();
             builder.RegisterEntryPoint<PropLighting>().AsSelf();
+            builder.RegisterEntryPoint<JoinedSaveRecorder>().AsSelf();
         }
 
         builder.RegisterEntryPoint<LightWarmUp>().AsSelf();

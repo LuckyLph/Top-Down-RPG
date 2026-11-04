@@ -12,8 +12,9 @@ using UnityEditor;
 /// <summary>
 /// PlayMode tests for <see cref="NetworkSession"/> hosting and joining from the main menu: hosting the starting world,
 /// a joined client following an in-process host into the world it is placed in, reporting and releasing chunks, taking
-/// a trip the host sends (also while a chunk's release waits for the host), losing the host mid-join and mid-trip, join
-/// refusals, version checks and join timeouts.
+/// a trip the host sends (also while a chunk's release waits for the host), losing the host mid-join and mid-trip, a
+/// client's copy of its place in the host's session carrying it on alone once the host is gone, join refusals, version
+/// checks and join timeouts.
 /// </summary>
 public class NetworkSessionPlayModeTests
 {
@@ -40,7 +41,7 @@ public class NetworkSessionPlayModeTests
     [UnityTest]
     public IEnumerator HostFromMenu_EntersTheStartingWorld_AndReturningToTheMenuEndsTheSession()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
@@ -72,12 +73,12 @@ public class NetworkSessionPlayModeTests
     /// world, and the client loads that world around it and reports the chunk ready for trip 0. Walking its player into
     /// another chunk, it releases each chunk it leaves and keeps the chunk loaded until the host acknowledges. A trip
     /// the host sends takes it into the interior, where it reports the new chunk for trip 1; it returns to the menu
-    /// when the host leaves and never saves.
+    /// when the host leaves, having saved nothing but its copy of its place in the host's session.
     /// </summary>
     [UnityTest]
     public IEnumerator JoinFromMenu_LoadsTheHostAssignedWorld_ReportsAndReleasesChunks_AndTravelsWhenTheHostSaysSo()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
@@ -130,7 +131,72 @@ public class NetworkSessionPlayModeTests
         remoteHost.Manager.Shutdown();
         yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
         Assert.That(session.IsActive, Is.False);
-        Assert.That(saveStore.WriteCount, Is.Zero, "A joined client never saves.");
+        Assert.That(saveStore.Names(), Is.EqualTo(new[] { GameSave.CopyNameOf(remoteHost.SessionId) }), "A joined client saves no session of its own, only its copy of its place in the host's.");
+    }
+
+    /// <summary>
+    /// A joined client keeps a copy of its own place in the host's session (Docs/KnownGaps.md, Phase 5), named by the
+    /// session id the host tells it, holding its player's world, place and weapon and no world's state, and saying the
+    /// host is still there; when the host is gone, the client returns to the menu, which says so and offers Continue,
+    /// and Continue carries on alone, offline, from where the player stood, holding its weapon, as a session of its own
+    /// saved beside the copy.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientWhoseHostIsGone_CarriesOnAlone_FromItsCopy()
+    {
+        MemorySaveFolder saves = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saves);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        WorldDefinition testlands = gameFlow.Scenes.StartingWorld;
+        remoteHost = StartRemoteHost(session, gameFlow.Scenes);
+        remoteHost.SpawnWorld = testlands;
+        remoteHost.SpawnPosition = testlands.ToWorld(testlands.FindEntry("start").Position);
+        string copyName = GameSave.CopyNameOf(remoteHost.SessionId);
+
+        Object.FindAnyObjectByType<MainMenuController>().JoinGame();
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInGame && !gameFlow.IsTransitioning, "the client to load the world it was placed in");
+        yield return SceneBootTestHelper.WaitUntil(() => saves.Read(copyName) != null, "the client to copy its place as its player enters the world");
+        Assert.That(GameSaveData.TryParse(saves.Read(copyName), out GameSaveData entered), Is.True);
+        Assert.That(entered.IsCopy && !entered.HostGone, Is.True, "a copy whose host is still there");
+        Assert.That(entered.Players, Has.Count.EqualTo(1), "the copy holds its own player alone");
+        Assert.That(entered.Players[0].PlayerId, Is.EqualTo(session.LocalPlayerId));
+        Assert.That(entered.Worlds, Is.Empty, "no world's state, which is the host's");
+        Assert.That(SceneBootTestHelper.ResolveFromMain<GameSave>().HasSave, Is.False, "while the host may be there, the copy is no save to continue");
+
+        LocalPlayer local = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
+        Assert.That(local.Weapon.EquipFromCatalog(2), Is.True);
+        string weaponId = local.Weapon.CurrentWeapon.WeaponId;
+        Vector2 stood = testlands.ToWorld(new Vector2(36.5f, 40.5f));
+        local.Controller.Teleport(stood);
+        for (int frame = 0; frame < 5; frame++)
+        {
+            yield return null;
+        }
+
+        remoteHost.Manager.Shutdown();
+        yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after the host left");
+        Assert.That(GameSaveData.TryParse(saves.Read(copyName), out GameSaveData left), Is.True);
+        Assert.That(left.HostGone, Is.True, "the copy says the host is gone");
+        Assert.That(left.Players[0].Position, Is.EqualTo(stood), "where the player stood as the host went");
+        Assert.That(left.Players[0].Weapon, Is.EqualTo(weaponId));
+        MainMenuController menu = null;
+        yield return SceneBootTestHelper.WaitUntil(() => (menu = Object.FindAnyObjectByType<MainMenuController>()) != null && menu.ContinueButton.interactable, "the menu to offer Continue");
+        Assert.That(menu.Status, Is.EqualTo(MainMenuController.HostGoneStatus), "the menu says the host is gone");
+
+        menu.ContinueGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.IsInGame, Is.True);
+        Assert.That(session.IsActive, Is.False, "the game goes on offline");
+        Assert.That(session.IsAuthoritative, Is.True);
+        Assert.That(gameFlow.CurrentWorld, Is.SameAs(testlands));
+        LocalPlayer alone = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
+        Assert.That((Vector2)alone.Transform.position, Is.EqualTo(stood), "back on its own where it stood");
+        Assert.That(alone.Weapon.CurrentWeapon.WeaponId, Is.EqualTo(weaponId), "holding its weapon");
+        SessionSave sessionSave = SceneBootTestHelper.ResolveFromMain<SessionSave>();
+        yield return SceneBootTestHelper.WaitUntil(() => saves.Read(GameSave.SessionPrefix + sessionSave.Id + FileSaveFolder.Extension) != null, "the session going on alone to save as its player enters the world");
+        Assert.That(saves.Names(), Has.Count.EqualTo(2), "the copy is kept beside the session of its own");
+        Assert.That(saves.Read(copyName), Is.Not.Null);
     }
 
     /// <summary>
@@ -142,7 +208,7 @@ public class NetworkSessionPlayModeTests
     [UnityTest]
     public IEnumerator ATripDuringAChunksRelease_ReportsTheChunkOnlyOnceItHasLoadedAgain()
     {
-        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveStore());
+        yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveFolder());
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
         WorldDefinition testlands = gameFlow.Scenes.StartingWorld;
@@ -188,7 +254,7 @@ public class NetworkSessionPlayModeTests
     [UnityTest]
     public IEnumerator HostLeavingWhileAClientJoins_ReturnsTheClientToTheMenu_WithoutSaving()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
 
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
@@ -216,7 +282,7 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => gameFlow.IsInMenu && !gameFlow.IsTransitioning, "the client to return to the menu after its join");
         Assert.That(gameFlow.IsInGame, Is.False);
         Assert.That(session.IsActive, Is.False);
-        Assert.That(saveStore.WriteCount, Is.Zero, "A client that lost its host never saves.");
+        Assert.That(saveStore.WriteCount, Is.Zero, "A client that lost its host before its player stood in a world saves nothing, no copy either.");
         Assert.That(session.IsAuthoritative, Is.True, "Back in the menu, an offline game decides its own state again.");
 
         Object.FindAnyObjectByType<MainMenuController>().StartNewGame();

@@ -94,6 +94,9 @@ public class TerrainMaterial : ScriptableObject
         public bool HasRelief => bevel > 0f || radial > 0f;
     }
 
+    [Tooltip("Stable id of this material in saves, its asset's GUID; set by the editor. A saved terrain edit names its layer by it.")]
+    [SerializeField] private string materialId;
+
     [Header("Textures")]
     [Tooltip("The interior: repeat x 32 px square, RGBA32 with sRGB off (the shader treats its bytes as sRGB itself). Written by the material's recipe.")]
     [SerializeField] private Texture2D albedo;
@@ -210,6 +213,7 @@ public class TerrainMaterial : ScriptableObject
     [Tooltip("How this material's edge is drawn over any material, or over nothing, without a pair override in the style.")]
     [SerializeField] private TerrainStyle.EdgeSettings edge = new();
 
+    public string MaterialId => materialId ?? string.Empty;
     public Texture2D Albedo => albedo;
     public Texture2D CellField => cellField;
     public Texture2D Height => height;
@@ -280,6 +284,7 @@ public class TerrainMaterial : ScriptableObject
     {
         TerrainMaterial material = CreateInstance<TerrainMaterial>();
         material.name = materialName;
+        material.materialId = $"test-{materialName}";
         material.albedo = albedo;
         material.cellField = cellField;
         material.repeatCells = repeatCells;
@@ -329,11 +334,31 @@ public class TerrainMaterial : ScriptableObject
     }
 
     /// <summary>
-    /// Warns about a height scale outside its bound, which only an edited asset file can hold and which is used
-    /// clamped, and tells the renderers using this material to rebuild after an inspector change.
+    /// Keeps the id equal to the asset's GUID, so a copied asset gets its own; returns whether it changed it, marking
+    /// the asset dirty. The editor calls it as the material validates and as the save's materials are checked.
+    /// </summary>
+    internal bool EnsureId()
+    {
+        string path = UnityEditor.AssetDatabase.GetAssetPath(this);
+        string guid = string.IsNullOrEmpty(path) ? string.Empty : UnityEditor.AssetDatabase.AssetPathToGUID(path);
+        if (string.IsNullOrEmpty(guid) || guid == materialId)
+        {
+            return false;
+        }
+
+        materialId = guid;
+        UnityEditor.EditorUtility.SetDirty(this);
+        return true;
+    }
+
+    /// <summary>
+    /// Keeps the id equal to the asset's GUID, warns about a height scale outside its bound, which only an edited asset
+    /// file can hold and which is used clamped, and tells the renderers using this material to rebuild after an
+    /// inspector change.
     /// </summary>
     private void OnValidate()
     {
+        EnsureId();
         if (heightScale < 0f || heightScale > MaxHeightScale)
         {
             Debug.LogWarning($"{name}: height scale {heightScale} is outside 0 to {MaxHeightScale} px, the bound that keeps the soft look's blobs attached, so {HeightScale} is used.", this);

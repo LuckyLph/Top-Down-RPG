@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Shallows
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: 564b4a55de051dc418fc12f8853293ee
   albedo: {fileID: 2800000, guid: 86ab98fcc317b2f49869de79a1e412c6, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: ce5c9c0c4ae057f4fba3a997d9a34466, type: 3}
@@ -56,6 +57,14 @@ MonoBehaviour:
   bankShadow: 0.25
   bankColour: {r: 0.54901963, g: 0.4627451, b: 0.32156864, a: 1}
   reflection: 0.5
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
   glowStrength: 0
   glowReach: 2.5
   glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}

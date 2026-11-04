@@ -1,17 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 /// <summary>
-/// The saved game as written to disk (Docs/WorldStreaming.md: Persistence): a format version, the game time played on
-/// the save, each player's place by player id (its world, its position, the waystones it discovered and the weapon it
-/// holds), and the state of every world visited, a record per chunk of its killed mobs and runtime terrain edits.
+/// One session's saved game as written to disk (Docs/WorldStreaming.md: Persistence; Docs/KnownGaps.md, Phase 5): a
+/// format version, the session's id, when it was saved, the game time played on the session, each player's place by
+/// player id (its world, its position, the waystones it discovered and the weapon it holds), and the state of every world
+/// visited, a record per chunk of its killed mobs and runtime terrain edits. A joined client's copy of its own place
+/// names its host's session (<see cref="Host"/>) instead of an id of its own, holds its own player alone and no world,
+/// and says whether that host is gone (<see cref="HostGone"/>): the connection to it was lost.
 /// </summary>
 [Serializable]
 public sealed class GameSaveData
 {
-    public const int CurrentVersion = 3;
-    public const int OldestReadableVersion = 2;
+    public const int CurrentVersion = 4;
+    public const int OldestImportableVersion = 2;
 
     /// <summary>
     /// One player's place: the world it is in, its position there, the waystones it has discovered and the id of the
@@ -168,25 +172,29 @@ public sealed class GameSaveData
         public double DiedAt => diedAt;
     }
 
-    /// <summary>One cell of a runtime terrain edit: the chunk terrain's layer index, the cell, and filled or emptied.</summary>
+    /// <summary>
+    /// One cell of a runtime terrain edit: the chunk terrain's layer it changed, named by what it draws (its ground
+    /// material's id, or the walls, as the chunk's terrain names its layers), the cell, and filled or emptied. Naming the
+    /// layer rather than its index lets a chunk's layers be reordered or pruned without moving the edit to another layer.
+    /// </summary>
     [Serializable]
     public struct CellEdit : IEquatable<CellEdit>
     {
-        [SerializeField] private int layer;
+        [SerializeField] private string layer;
         [SerializeField] private Vector2Int cell;
         [SerializeField] private bool filled;
 
         /// <summary>
-        /// Creates the edit of <paramref name="cell"/> on layer <paramref name="layer"/>.
+        /// Creates the edit of <paramref name="cell"/> on the layer named <paramref name="layer"/>.
         /// </summary>
-        public CellEdit(int layer, Vector2Int cell, bool filled)
+        public CellEdit(string layer, Vector2Int cell, bool filled)
         {
-            this.layer = layer;
+            this.layer = layer ?? string.Empty;
             this.cell = cell;
             this.filled = filled;
         }
 
-        public int Layer => layer;
+        public string Layer => layer ?? string.Empty;
         public Vector2Int Cell => cell;
         public bool Filled => filled;
 
@@ -195,7 +203,7 @@ public sealed class GameSaveData
         /// </summary>
         public bool Equals(CellEdit other)
         {
-            return layer == other.layer && cell == other.cell && filled == other.filled;
+            return Layer == other.Layer && cell == other.cell && filled == other.filled;
         }
 
         /// <summary>
@@ -211,11 +219,15 @@ public sealed class GameSaveData
         /// </summary>
         public override int GetHashCode()
         {
-            return HashCode.Combine(layer, cell, filled);
+            return HashCode.Combine(Layer, cell, filled);
         }
     }
 
     [SerializeField] private int version;
+    [SerializeField] private string id;
+    [SerializeField] private string savedAt;
+    [SerializeField] private string host;
+    [SerializeField] private bool hostGone;
     [SerializeField] private double time;
     [SerializeField] private List<Player> players = new();
     [SerializeField] private List<World> worlds = new();
@@ -240,17 +252,71 @@ public sealed class GameSaveData
     }
 
     public int Version => version;
+    public string Id => id ?? string.Empty;
+    public string SavedAt => savedAt ?? string.Empty;
+    public string Host => host ?? string.Empty;
+    public bool HostGone => hostGone;
+    public bool IsCopy => !string.IsNullOrEmpty(host);
     public double Time => time;
     public IReadOnlyList<Player> Players => players;
     public IReadOnlyList<World> Worlds => worlds;
 
     /// <summary>
-    /// Whether this build reads a save of format <paramref name="formatVersion"/>: the current one, or version 2, whose
-    /// players hold no weapon (each starts with its starting weapon) and which the next save writes as the current one.
+    /// Whether this build reads a session's save of format <paramref name="formatVersion"/>: the current one only.
     /// </summary>
     public static bool IsReadable(int formatVersion)
     {
-        return formatVersion >= OldestReadableVersion && formatVersion <= CurrentVersion;
+        return formatVersion == CurrentVersion;
+    }
+
+    /// <summary>
+    /// Whether this build imports the single save file of an earlier build, format <paramref name="formatVersion"/>, as
+    /// a session (<see cref="GameSave"/>): version 2 (its players hold no weapon) and 3, whose terrain edits named
+    /// layers by index and are dropped.
+    /// </summary>
+    public static bool IsImportable(int formatVersion)
+    {
+        return formatVersion >= OldestImportableVersion && formatVersion < CurrentVersion;
+    }
+
+    /// <summary>
+    /// Makes this the save of the session <paramref name="sessionId"/>, no copy of a host's.
+    /// </summary>
+    public void SetSession(string sessionId)
+    {
+        id = sessionId ?? string.Empty;
+        host = string.Empty;
+        hostGone = false;
+    }
+
+    /// <summary>
+    /// Makes this a joined client's copy of its own place in the host's session <paramref name="hostSessionId"/>,
+    /// saying whether that host is gone (<paramref name="gone"/>).
+    /// </summary>
+    public void SetHost(string hostSessionId, bool gone)
+    {
+        id = string.Empty;
+        host = hostSessionId ?? string.Empty;
+        hostGone = gone;
+    }
+
+    /// <summary>
+    /// Records <paramref name="utc"/> as when this was saved, in the round-trip format.
+    /// </summary>
+    public void Stamp(DateTime utc)
+    {
+        savedAt = utc.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// When this was saved, read from <see cref="SavedAt"/>; the earliest time there is when it holds none or cannot be
+    /// read.
+    /// </summary>
+    public DateTime SavedAtUtc()
+    {
+        return DateTime.TryParse(SavedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsed)
+            ? parsed.ToUniversalTime()
+            : DateTime.MinValue;
     }
 
     /// <summary>

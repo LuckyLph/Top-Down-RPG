@@ -7,13 +7,16 @@ using UnityEditor;
 
 /// <summary>
 /// One seamless world: its root scene, its place in the global layout of worlds, its size in chunks, the scene of
-/// every chunk it has, and the entries it is entered at. A world's cells are counted from its origin, so the chunk at
-/// (cx, cy) holds the cells from (cx, cy) * <see cref="ChunkCoords.Size"/> up to the next chunk.
+/// every chunk it has, the entries it is entered at, and how far its navigation searches (Docs/KnownGaps.md, Phase 5),
+/// as an area grid's inspector sets its own. A world's cells are counted from its origin, so the chunk at (cx, cy) holds
+/// the cells from (cx, cy) * <see cref="ChunkCoords.Size"/> up to the next chunk.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/World Definition", fileName = "World")]
 public class WorldDefinition : ScriptableObject
 {
     public const int MaxChunksPerSide = 16;
+    public const int DefaultMaxSearchCells = 4096;
+    public const int DefaultNearestCellSearchRadius = 8;
 
     /// <summary>
     /// The scene of the chunk at <see cref="Coords"/>.
@@ -87,6 +90,12 @@ public class WorldDefinition : ScriptableObject
     [Tooltip("The entries the world is entered at; the first is its default.")]
     [SerializeField] private Entry[] entries = new Entry[0];
 
+    [Header("Navigation")]
+    [Tooltip("Upper bound on cells a partial path search toward a goal no path reaches expands before it settles for the closest cell found.")]
+    [SerializeField, Min(1)] private int maxSearchCells = DefaultMaxSearchCells;
+    [Tooltip("How far, in cells, the search for the walkable cell nearest a blocked one looks when not given a radius.")]
+    [SerializeField, Min(1)] private int nearestCellSearchRadius = DefaultNearestCellSearchRadius;
+
     public string WorldId => worldId;
     public SceneDefinition RootScene => rootScene;
     public Vector2Int Origin => origin;
@@ -94,6 +103,8 @@ public class WorldDefinition : ScriptableObject
     public IReadOnlyList<Chunk> Chunks => chunks;
     public IReadOnlyList<Entry> Entries => entries;
     public Entry DefaultEntry => entries.Length > 0 ? entries[0] : null;
+    public int MaxSearchCells => Mathf.Max(1, maxSearchCells);
+    public int NearestCellSearchRadius => Mathf.Max(1, nearestCellSearchRadius);
 
     /// <summary>
     /// The world's cells as a rectangle in its own cells: from (0, 0) to its size in chunks times the chunk size.
@@ -226,6 +237,15 @@ public class WorldDefinition : ScriptableObject
         world.chunks = made.ToArray();
         world.entries = worldEntries ?? new Entry[0];
         return world;
+    }
+
+    /// <summary>
+    /// Sets how far the world's navigation searches, for tests.
+    /// </summary>
+    internal void SetSearchLimits(int searchCells, int nearestCellRadius)
+    {
+        maxSearchCells = searchCells;
+        nearestCellSearchRadius = nearestCellRadius;
     }
 
 #if UNITY_EDITOR

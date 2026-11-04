@@ -21,9 +21,9 @@ public class WorldStateTests
         ChunkState west = state.Chunk(Vector2Int.zero);
         west.RecordMobDeath("weasel-a", 12.5d);
         west.RecordMobDeath("weasel-b", 40d);
-        west.RecordTerrainEdit(0, new Vector2Int(5, 6), false);
+        west.RecordTerrainEdit("grass", new Vector2Int(5, 6), false);
         ChunkState east = state.Chunk(new Vector2Int(1, 0));
-        east.RecordTerrainEdit(1, new Vector2Int(70, 6), true);
+        east.RecordTerrainEdit(AreaTerrain.WallsKey, new Vector2Int(70, 6), true);
 
         WorldState loaded = WorldState.FromData(state.ToData());
 
@@ -33,10 +33,10 @@ public class WorldStateTests
         Assert.That(loadedWest.DeadMobCount, Is.EqualTo(2));
         Assert.That(loadedWest.TryGetMobDeath("weasel-a", out double a) && a == 12.5d, Is.True);
         Assert.That(loadedWest.TryGetMobDeath("weasel-b", out double b) && b == 40d, Is.True);
-        Assert.That(loadedWest.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(0, new Vector2Int(5, 6), false) }));
+        Assert.That(loadedWest.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit("grass", new Vector2Int(5, 6), false) }));
         Assert.That(loaded.TryGetChunk(new Vector2Int(1, 0), out ChunkState loadedEast), Is.True);
         Assert.That(loadedEast.DeadMobCount, Is.Zero);
-        Assert.That(loadedEast.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(1, new Vector2Int(70, 6), true) }));
+        Assert.That(loadedEast.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(AreaTerrain.WallsKey, new Vector2Int(70, 6), true) }));
     }
 
     /// <summary>
@@ -114,16 +114,16 @@ public class WorldStateTests
     public void TerrainEdits_KeepTheLastWritePerLayerAndCell()
     {
         ChunkState chunk = new(Vector2Int.zero);
-        chunk.RecordTerrainEdit(0, new Vector2Int(1, 1), false);
-        chunk.RecordTerrainEdit(1, new Vector2Int(1, 1), true);
-        chunk.RecordTerrainEdit(0, new Vector2Int(2, 1), false);
-        chunk.RecordTerrainEdit(0, new Vector2Int(1, 1), true);
+        chunk.RecordTerrainEdit("grass", new Vector2Int(1, 1), false);
+        chunk.RecordTerrainEdit(AreaTerrain.WallsKey, new Vector2Int(1, 1), true);
+        chunk.RecordTerrainEdit("grass", new Vector2Int(2, 1), false);
+        chunk.RecordTerrainEdit("grass", new Vector2Int(1, 1), true);
 
         Assert.That(chunk.TerrainEdits, Is.EqualTo(new[]
         {
-            new GameSaveData.CellEdit(0, new Vector2Int(1, 1), true),
-            new GameSaveData.CellEdit(1, new Vector2Int(1, 1), true),
-            new GameSaveData.CellEdit(0, new Vector2Int(2, 1), false),
+            new GameSaveData.CellEdit("grass", new Vector2Int(1, 1), true),
+            new GameSaveData.CellEdit(AreaTerrain.WallsKey, new Vector2Int(1, 1), true),
+            new GameSaveData.CellEdit("grass", new Vector2Int(2, 1), false),
         }));
     }
 }

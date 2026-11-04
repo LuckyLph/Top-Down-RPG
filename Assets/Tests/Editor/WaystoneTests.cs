@@ -147,12 +147,11 @@ public class WaystoneTests
         session.SetPlace(Bob, other.WorldId, other.ToWorld(new Vector2(5.5f, 5.5f)));
         Assert.That(session.WaystonesOf(Alice), Has.Count.EqualTo(2), "A new place keeps the discoveries.");
 
-        MemorySaveStore store = new();
-        Assert.That(new GameSave(store).Write(session.ToData()), Is.True);
-        Assert.That(store.Contents, Does.Contain("waystones"));
-        Assert.That(new GameSave(store).TryLoad(out GameSaveData data), Is.True);
+        MemorySaveFolder folder = new();
+        Assert.That(new GameSave(folder, new ManualWallClock()).Write(session.ToData()), Is.True);
+        Assert.That(folder.Contents, Does.Contain("waystones"));
+        Assert.That(new GameSave(folder, new ManualWallClock()).TryLoadLatest(out GameSaveData data), Is.True);
         Assert.That(data.Version, Is.EqualTo(GameSaveData.CurrentVersion));
-        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(3), "Waystones needed no format bump; the saved weapon raised it to 3.");
 
         SessionSave loaded = new(new ManualClock());
         loaded.StartFrom(data);

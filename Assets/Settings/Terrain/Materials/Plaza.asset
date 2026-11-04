@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Plaza
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: bab0d18c7763cac4c9ad0143cde4ea4e
   albedo: {fileID: 2800000, guid: 939ec8c1bc000a4419cf451319db270c, type: 3}
   cellField: {fileID: 2800000, guid: 65caf4c687949fb4b84f595b437e559b, type: 3}
   height: {fileID: 2800000, guid: a9622b537d252fc4db99f7eee8ce3b0c, type: 3}

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Gravel
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: 26331364302bb8b4da233d510b020898
   albedo: {fileID: 2800000, guid: 043d557112573aa4c9a582ffd58f5416, type: 3}
   cellField: {fileID: 2800000, guid: bb39a97cd7efc55498047a34a8c504ba, type: 3}
   height: {fileID: 2800000, guid: 5e6829eec0235a6488d6d8f891a0519f, type: 3}
@@ -33,9 +34,42 @@ MonoBehaviour:
   sparkleDuty: 0.25
   rimSwell: 0
   swellPeriod: 4
+  swash: 0
+  waveSpacing: 0
+  wavePeriod: 3.2
+  waveWidth: 10
+  waveAngle: 8.5
+  waveWholeWithin: 40
+  waveStretch: 0.2
+  waveColour: {r: 0.17, g: 0.37, b: 0.59, a: 1}
+  waveCrestColour: {r: 0.55, g: 0.72, b: 0.85, a: 1}
+  waveTroughColour: {r: 0.05, g: 0.16, b: 0.31, a: 1}
+  washFoamColour: {r: 0.94, g: 0.96, b: 0.97, a: 1}
+  washFoamShadeColour: {r: 0.84, g: 0.89, b: 0.93, a: 1}
+  washFilmColour: {r: 0.59, g: 0.75, b: 0.87, a: 1}
+  washFilmBackColour: {r: 0.44, g: 0.65, b: 0.8, a: 1}
+  washWet: 0.15
+  swayAmplitude: 0
+  swayPeriod: 2.5
+  gustLength: 12
+  wholeClumps: 0
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.4627451, g: 0.36862746, b: 0.2509804, a: 1}
+  reflection: 0
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
+  glowStrength: 0
+  glowReach: 2.5
+  glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}
+  bridge: 0
+  turnToRuns: 0
   edge:
     rimWidth: 1.75
     rim:
@@ -77,3 +111,4 @@ MonoBehaviour:
     softBandWidth: 1.5
     softBandColour: {r: 0.49411765, g: 0.40784314, b: 0.29803923, a: 1}
     softWholeStones: 0
+    seamless: 0

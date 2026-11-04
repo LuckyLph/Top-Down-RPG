@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Ocean
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: bfa1843d3bc7ec14ab43689476b49d45
   albedo: {fileID: 2800000, guid: 455bd1e87ef40b04d9247bf50790056c, type: 3}
   cellField: {fileID: 0}
   height: {fileID: 2800000, guid: 54ef5149645025b41b8f0126255c753f, type: 3}

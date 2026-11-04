@@ -39,7 +39,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Physical keys | Bindings are stored as physical key positions (the Input System default: `<Keyboard>/q` is the key where Q sits on a US layout). Labels come from the active layout, so on AZERTY the default for `Ability1` reads "A". Rebinding records the key the player pressed, whatever its label. |
 | When changes apply | At once, and saved at once. There is no Apply or Cancel step. |
 | Reset | Per action (back to the asset's default) and "Reset all" behind a confirmation. |
-| Saving | A separate `settings.json` next to `save.json`, written on every machine. Starting a new game or deleting the save never touches it. |
+| Saving | A separate `settings.json` next to the save files (`save.json` then, the `Saves` folder since KnownGaps.md's Phase 5), written on every machine. Starting a new game or deleting the save never touches it. |
 | In-game menu | Escape opens it: Resume, Options, Leave game, Quit. In single player (no network session) it pauses the game. In an online session, hosting alone included, it pauses nothing: no new orders are made and the current order runs on, the same rule as during transitions. |
 | Pausing | Game time stops (`Time.timeScale` 0) through the same mechanism as the transition freeze, so the clock, cooldowns, statuses, physics, mob AI and animations all stop together. Menus and the fader run on unscaled time. |
 | Unused template actions | Removed from the `Player` map now, so the conflict rules only ever deal with real controls. |

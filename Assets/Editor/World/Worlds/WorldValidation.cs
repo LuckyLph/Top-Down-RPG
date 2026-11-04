@@ -119,7 +119,8 @@ public static class WorldValidation
 
     /// <summary>
     /// Every problem of <paramref name="world"/>: its origin against <paramref name="allWorlds"/>, each chunk scene's
-    /// marker and ownership, duplicate ids across its chunks, and markers out of date. Opens the chunk scenes that are
+    /// marker and ownership, duplicate ids across its chunks, markers out of date, and coast or glow maps out of date
+    /// (<see cref="WorldAuthoring.StaleMapProblems"/>), so a build stops on a stale map. Opens the chunk scenes that are
     /// not open beside the others and closes them again, unchanged.
     /// </summary>
     public static List<string> ValidateWorld(WorldDefinition world, IReadOnlyList<WorldDefinition> allWorlds)
@@ -150,6 +151,7 @@ public static class WorldValidation
 
             problems.AddRange(ValidateIds(ids));
             problems.AddRange(WorldMarkers.Stale(world));
+            problems.AddRange(WorldAuthoring.StaleMapProblems(world));
         }
         finally
         {

@@ -421,6 +421,15 @@ public class NavigationGrid2D : MonoBehaviour, INavigation2D
     }
 
     /// <summary>
+    /// Whether the cell's region runs on beyond the grid's map (<see cref="NavigationMap2D.RunsBeyondLoadedPages"/>):
+    /// never for a standalone area, whose one page is all there is. False before the grid is built.
+    /// </summary>
+    public bool RunsBeyondLoadedPages(Vector3Int cell, TerrainMovementProfile2D movementProfile)
+    {
+        return IsBuilt && map.RunsBeyondLoadedPages(cell, movementProfile);
+    }
+
+    /// <summary>
     /// Bakes the cost field for <paramref name="movementProfile"/> now so the first path query does not pay for it.
     /// Does nothing before the grid is built.
     /// </summary>

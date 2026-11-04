@@ -8,7 +8,8 @@ using Random = System.Random;
 /// <summary>
 /// Composes a world from a <see cref="WorldGenerator"/>'s settings (Docs/WorldGeneration.md: Architecture:
 /// Composition), in order: the regions laid from their seeds and moved into place cell for cell, with their outlines,
-/// ports and spawn cells; the land, the sea and the world's beach, joined to a sea region's own coast; the wilds' grass;
+/// ports and spawn cells; the land, the sea and the world's beach, joined to a sea region's own coast with no nub at the
+/// joins; the wilds' grass;
 /// the roads between the ports, each the cheapest route over the wilds sampled into a spline; the waystones with their
 /// plazas, and the gates; the wilds' patches, mobs, groves and props, per chunk on a stream of its own; the torches at
 /// the gates and the lamps along the stone roads, after everything else; each chunk's material list and content hash;
@@ -24,6 +25,8 @@ internal sealed class WorldComposer
     private const int OutlineHarmonics = 4;
     private const float CornerBlend = 8f;
     private const int HeldColumns = 3;
+    private const int JoinReach = 6;
+    private const int MaxNubWidth = 2;
     private const int PatchMargin = 3;
     private const int MinPatchPiece = 4;
     private const float PatchSquash = 0.8f;
@@ -179,6 +182,7 @@ internal sealed class WorldComposer
     private readonly string worldId;
     private readonly List<AreaLayout> layouts = new();
     private readonly List<int> offLand = new();
+    private readonly List<Vector3Int> heldJoins = new();
     private readonly Dictionary<WorldComposition.Port, int> portWidths = new();
     private readonly Dictionary<WorldComposition.Port, List<WorldComposition.Road>> portRoads = new();
     private readonly Stopwatch watch = new();
@@ -712,7 +716,8 @@ internal sealed class WorldComposer
     /// take its wobble, along sums of sine waves, with rounded corners, and along the side a sea region lies on at that
     /// region's own rows, easing back beyond it; ocean outside, grass on every land cell outside the regions, and sand
     /// on the beach, the land within the beach's width of the coast, beside a sea region at that region's own beach
-    /// width. Counts each region's cells that lie off the land but its ocean.
+    /// width; then smooths the coast at both ends of each sea region's held span (<see cref="SmoothJoin"/>). Counts each
+    /// region's cells that lie off the land but its ocean.
     /// </summary>
     private void LayLandAndSea()
     {
@@ -735,6 +740,7 @@ internal sealed class WorldComposer
             }
         }
 
+        heldJoins.Clear();
         foreach (WorldComposition.Region region in composition.Regions)
         {
             if (region.IsSea)
@@ -784,6 +790,104 @@ internal sealed class WorldComposer
                 }
             }
         }
+
+        foreach (Vector3Int join in heldJoins)
+        {
+            SmoothJoin(join.x, join.y);
+            SmoothJoin(join.x, join.z);
+        }
+    }
+
+    /// <summary>
+    /// Smooths the coast where a sea region's beach meets the world's, at <paramref name="end"/> along
+    /// <paramref name="side"/> (Docs/KnownGaps.md, Phase 5): within <see cref="JoinReach"/> columns of it, a run of up to
+    /// <see cref="MaxNubWidth"/> columns whose land pokes further into the sea than the columns either side of it (the
+    /// step of a row or two the region's outermost columns leave against the world's beach) is cut back to the nearer of
+    /// those columns' coast, its cells there taking the ocean seaward of them, until no such nub is left.
+    /// </summary>
+    private void SmoothJoin(int side, int end)
+    {
+        int length = side < 2 ? width : height;
+        int from = Mathf.Max(0, end - JoinReach);
+        int to = Mathf.Min(length - 1, end + JoinReach);
+        int[] coastDepth = new int[to - from + 1];
+        for (int a = from; a <= to; a++)
+        {
+            coastDepth[a - from] = LandDepth(side, a);
+        }
+
+        bool changed = true;
+        for (int pass = 0; changed && pass < JoinReach * 2; pass++)
+        {
+            changed = false;
+            for (int start = 1; start < coastDepth.Length - 1; start++)
+            {
+                int stop = start;
+                while (stop + 1 < coastDepth.Length - 1 && coastDepth[stop + 1] == coastDepth[start] && stop - start + 1 < MaxNubWidth)
+                {
+                    stop++;
+                }
+
+                int before = coastDepth[start - 1];
+                int after = coastDepth[stop + 1];
+                int poke = coastDepth[start];
+                if (poke < 0 || before < 0 || after < 0 || poke >= before || poke >= after)
+                {
+                    continue;
+                }
+
+                int target = Mathf.Min(before, after);
+                for (int a = start; a <= stop; a++)
+                {
+                    CutBack(side, from + a, poke, target);
+                    coastDepth[a] = target;
+                }
+
+                changed = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// How far in from the edge of <paramref name="side"/> the first cell of column <paramref name="along"/> that is
+    /// not ocean lies; -1 when the whole column is ocean.
+    /// </summary>
+    private int LandDepth(int side, int along)
+    {
+        int length = side < 2 ? height : width;
+        for (int depthIn = 0; depthIn < length; depthIn++)
+        {
+            if ((cells[IndexAt(side, along, depthIn)] & ocean) == 0)
+            {
+                return depthIn;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Turns the cells of column <paramref name="along"/> from <paramref name="from"/> up to <paramref name="to"/> in
+    /// from the edge of <paramref name="side"/> into the ocean cell just seaward of them, its owner kept.
+    /// </summary>
+    private void CutBack(int side, int along, int from, int to)
+    {
+        uint sea = from > 0 ? cells[IndexAt(side, along, from - 1)] : ocean;
+        for (int depthIn = from; depthIn < to; depthIn++)
+        {
+            cells[IndexAt(side, along, depthIn)] = sea;
+        }
+    }
+
+    /// <summary>
+    /// The index of the cell <paramref name="depthIn"/> in from the edge of <paramref name="side"/> (north, south, west,
+    /// east) in column <paramref name="along"/> (a column for the north and south sides, a row for the west and east).
+    /// </summary>
+    private int IndexAt(int side, int along, int depthIn)
+    {
+        int x = side < 2 ? along : side == 2 ? depthIn : width - 1 - depthIn;
+        int y = side >= 2 ? along : side == 0 ? height - 1 - depthIn : depthIn;
+        return y * width + x;
     }
 
     /// <summary>
@@ -857,6 +961,7 @@ internal sealed class WorldComposer
         bool alongX = side < 2;
         int spanMin = alongX ? bounds.xMin : bounds.yMin;
         int spanMax = (alongX ? bounds.xMax : bounds.yMax) - 1;
+        heldJoins.Add(new Vector3Int(side, spanMin, spanMax));
         int oceanMin = int.MaxValue;
         int oceanMax = int.MinValue;
         ForEachRegionCell(region, (a, d, mask) =>

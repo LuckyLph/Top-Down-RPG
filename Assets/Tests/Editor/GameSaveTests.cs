@@ -5,12 +5,14 @@ using UnityEngine;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/>, <see cref="SessionSave"/>, <see cref="FileSaveStore"/>
-/// and <see cref="InstanceFiles"/>: the version 3 save keyed by player id and world id round trips with each player's
-/// weapon, a version 2 save still reads (no weapons) and is written over as version 3, older, newer and unreadable saves
-/// are ignored with a warning and kept as a copy before the first write replaces them, the world clock
-/// continues from the saved time, the save file is written safely, and a Multiplayer Play Mode virtual player keeps
-/// files of its own.
+/// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/>, <see cref="SessionSave"/>, <see cref="FileSaveFolder"/>,
+/// <see cref="FileSaveStore"/> and <see cref="InstanceFiles"/> (Docs/KnownGaps.md, Phase 5): a save file per session,
+/// the version 4 save keyed by player id and world id round tripping with each player's weapon and terrain edits naming
+/// their layers, two sessions saved side by side with Continue loading the latest, a joined client's copy of its place
+/// counting only once its host is gone and going on as a session of its own, the save of an earlier build imported once
+/// (its terrain edits dropped) or, when too old, ignored with its warning, newer and unreadable files ignored with a
+/// warning and kept as a copy before anything writes over them, the world clock continuing from the saved time, the
+/// files written safely, and a Multiplayer Play Mode virtual player keeping files of its own.
 /// </summary>
 public class GameSaveTests
 {
@@ -18,6 +20,8 @@ public class GameSaveTests
     private const string WorldB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private const string Alice = "alice-id";
     private const string Bob = "bob-id";
+    private const string Grass = "grass-material-guid";
+    private const string HostSession = "host-session-id";
 
     private string tempDirectory;
 
@@ -36,8 +40,9 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A session's players (their places and weapons), worlds, chunk records and world clock written through
-    /// <see cref="GameSave"/> load back into a new session as they were, each player under its own id.
+    /// A session's players (their places and weapons), worlds, chunk records (terrain edits naming their layer) and
+    /// world clock written through <see cref="GameSave"/> load back into a new session as they were, under the session's
+    /// id, each player under its own id.
     /// </summary>
     [Test]
     public void ASessionWritten_LoadsBackIntoANewSession_KeyedByPlayerAndWorld()
@@ -51,17 +56,19 @@ public class GameSaveTests
         written.SetWeapon(Alice, "longbow-guid");
         ChunkState chunk = written.WorldOf(WorldA).Chunk(new Vector2Int(1, 0));
         chunk.RecordMobDeath("mob-1", 100d);
-        chunk.RecordTerrainEdit(1, new Vector2Int(70, 12), true);
-        written.WorldOf(WorldB).Chunk(Vector2Int.zero).RecordTerrainEdit(0, new Vector2Int(3, 4), false);
-        MemorySaveStore store = new();
+        chunk.RecordTerrainEdit(Grass, new Vector2Int(70, 12), true);
+        written.WorldOf(WorldB).Chunk(Vector2Int.zero).RecordTerrainEdit(AreaTerrain.WallsKey, new Vector2Int(3, 4), false);
+        MemorySaveFolder folder = new();
 
-        Assert.That(new GameSave(store).Write(written.ToData()), Is.True);
-        GameSave save = new(store);
+        Assert.That(new GameSave(folder, new ManualWallClock()).Write(written.ToData()), Is.True);
+        Assert.That(folder.Names(), Is.EqualTo(new[] { $"session-{written.Id}.json" }), "A session's save is a file of its own, named by its id.");
+        GameSave save = new(folder, new ManualWallClock());
         Assert.That(save.HasSave, Is.True);
-        Assert.That(save.TryLoad(out GameSaveData data), Is.True);
+        Assert.That(save.TryLoadLatest(out GameSaveData data), Is.True);
         SessionSave loaded = new(clock);
         loaded.StartFrom(data);
 
+        Assert.That(loaded.Id, Is.EqualTo(written.Id), "Continuing a session keeps its id, so it saves into its own file.");
         Assert.That(loaded.Time, Is.EqualTo(125d).Within(1e-6), "The world clock continues from the saved time.");
         Assert.That(loaded.TryGetPlace(Alice, out string aliceWorld, out Vector2 alicePosition), Is.True);
         Assert.That(aliceWorld, Is.EqualTo(WorldA));
@@ -76,109 +83,273 @@ public class GameSaveTests
         Assert.That(worldA.TryGetChunk(new Vector2Int(1, 0), out ChunkState loadedChunk), Is.True);
         Assert.That(loadedChunk.TryGetMobDeath("mob-1", out double diedAt), Is.True);
         Assert.That(diedAt, Is.EqualTo(100d));
-        Assert.That(loadedChunk.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(1, new Vector2Int(70, 12), true) }));
+        Assert.That(loadedChunk.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(Grass, new Vector2Int(70, 12), true) }));
         Assert.That(loaded.TryGetWorld(WorldB, out WorldState worldB), Is.True);
         Assert.That(worldB.TryGetChunk(Vector2Int.zero, out ChunkState chunkB), Is.True);
-        Assert.That(chunkB.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(0, new Vector2Int(3, 4), false) }));
+        Assert.That(chunkB.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(AreaTerrain.WallsKey, new Vector2Int(3, 4), false) }));
     }
 
     /// <summary>
-    /// A hand-written version 2 save parses into its time, players with their waystones, and worlds with their chunk
-    /// records.
+    /// Two sessions save side by side, each into its own file, neither touching the other's; Continue loads the one
+    /// saved last, by the time each file records, whatever the file names.
     /// </summary>
     [Test]
-    public void AVersion2Save_Parses()
+    public void TwoSessions_AreSavedSideBySide_AndContinueLoadsTheLatest()
     {
-        string json = "{\"version\":2,\"time\":3600.5,"
-            + "\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":2060.5,\"y\":42.0},"
-            + "\"waystones\":[{\"worldId\":\"" + WorldA + "\",\"entry\":\"start\"}]}],"
-            + "\"worlds\":[{\"worldId\":\"" + WorldA + "\",\"chunks\":[{\"coords\":{\"x\":1,\"y\":0},"
-            + "\"deadMobs\":[{\"id\":\"mob-1\",\"diedAt\":3500.25}],"
-            + "\"terrainEdits\":[{\"layer\":1,\"cell\":{\"x\":70,\"y\":12},\"filled\":true}]}]}]}";
+        ManualWallClock wallClock = new();
+        MemorySaveFolder folder = new();
+        GameSave save = new(folder, wallClock);
+        SessionSave first = new(new ManualClock());
+        first.StartNew();
+        first.SetPlace(Alice, WorldA, new Vector2(1f, 1f));
+        SessionSave second = new(new ManualClock());
+        second.StartNew();
+        second.SetPlace(Alice, WorldB, new Vector2(2f, 2f));
+        Assert.That(second.Id, Is.Not.EqualTo(first.Id), "Each new game is a session of its own.");
 
-        Assert.That(GameSaveData.TryParse(json, out GameSaveData data), Is.True);
+        Assert.That(save.Write(first.ToData()), Is.True);
+        wallClock.Advance(10d);
+        Assert.That(save.Write(second.ToData()), Is.True);
 
-        Assert.That(data.Version, Is.EqualTo(2));
-        Assert.That(data.Time, Is.EqualTo(3600.5d));
-        Assert.That(data.Players, Has.Count.EqualTo(1));
-        Assert.That(data.Players[0].PlayerId, Is.EqualTo(Alice));
-        Assert.That(data.Players[0].WorldId, Is.EqualTo(WorldA));
-        Assert.That(data.Players[0].Position, Is.EqualTo(new Vector2(2060.5f, 42f)));
-        Assert.That(data.Players[0].Waystones, Has.Count.EqualTo(1));
-        Assert.That(data.Players[0].Waystones[0].WorldId, Is.EqualTo(WorldA));
-        Assert.That(data.Players[0].Waystones[0].Entry, Is.EqualTo("start"));
-        Assert.That(data.Worlds, Has.Count.EqualTo(1));
-        GameSaveData.Chunk chunk = data.Worlds[0].Chunks[0];
-        Assert.That(chunk.Coords, Is.EqualTo(new Vector2Int(1, 0)));
-        Assert.That(chunk.DeadMobs[0].Id, Is.EqualTo("mob-1"));
-        Assert.That(chunk.DeadMobs[0].DiedAt, Is.EqualTo(3500.25d));
-        Assert.That(chunk.TerrainEdits, Is.EqualTo(new[] { new GameSaveData.CellEdit(1, new Vector2Int(70, 12), true) }));
+        Assert.That(folder.Names(), Has.Count.EqualTo(2));
+        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True);
+        Assert.That(latest.Id, Is.EqualTo(second.Id), "The session saved last is the latest.");
+        string firstFile = folder.Read(GameSave.FileNameOf(first.ToData()));
+        Assert.That(GameSaveData.TryParse(firstFile, out GameSaveData firstData), Is.True);
+        Assert.That(firstData.Players[0].WorldId, Is.EqualTo(WorldA), "Saving the second session left the first one's file as it was.");
+
+        wallClock.Advance(10d);
+        first.SetPlace(Alice, WorldA, new Vector2(5f, 5f));
+        Assert.That(save.Write(first.ToData()), Is.True);
+        Assert.That(save.TryLoadLatest(out latest), Is.True);
+        Assert.That(latest.Id, Is.EqualTo(first.Id), "Saving the first session again makes it the latest.");
+        Assert.That(latest.Players[0].Position, Is.EqualTo(new Vector2(5f, 5f)));
+        Assert.That(folder.Names(), Has.Count.EqualTo(2), "A session's later saves replace its own file.");
     }
 
     /// <summary>
-    /// A save without players or worlds reads them as empty lists.
+    /// The written save holds the current format version, the session's id, when it was saved, every player's
+    /// waystones (none yet, so an empty list), and no record for a chunk that has nothing in it.
     /// </summary>
     [Test]
-    public void AVersion2Save_WithoutListsReadsThemEmpty()
-    {
-        Assert.That(GameSaveData.TryParse("{\"version\":2}", out GameSaveData data), Is.True);
-
-        Assert.That(data.Players, Is.Empty);
-        Assert.That(data.Worlds, Is.Empty);
-    }
-
-    /// <summary>
-    /// The written save holds the current format version, every player's waystones (none yet, so an empty list), and
-    /// no record for a chunk that has nothing in it.
-    /// </summary>
-    [Test]
-    public void TheWrittenSave_HoldsTheFormatVersion_EmptyWaystones_AndNoEmptyChunk()
+    public void TheWrittenSave_HoldsTheFormatVersion_TheIdAndTime_EmptyWaystones_AndNoEmptyChunk()
     {
         SessionSave session = new(new ManualClock());
+        session.StartNew();
         session.SetPlace(Alice, WorldA, Vector2.one);
         session.WorldOf(WorldA).Chunk(new Vector2Int(1, 1));
-        MemorySaveStore store = new();
+        MemorySaveFolder folder = new();
+        ManualWallClock wallClock = new();
 
-        new GameSave(store).Write(session.ToData());
+        new GameSave(folder, wallClock).Write(session.ToData());
 
-        Assert.That(GameSaveData.TryParse(store.Contents, out GameSaveData data), Is.True);
+        Assert.That(GameSaveData.TryParse(folder.Contents, out GameSaveData data), Is.True);
         Assert.That(data.Version, Is.EqualTo(GameSaveData.CurrentVersion));
-        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(3), "The saved weapon raised the format to 3.");
-        Assert.That(store.Contents, Does.Contain("\"waystones\": []"));
-        Assert.That(store.Contents, Does.Contain("\"weapon\": \"\""), "A player without a weapon recorded saves none.");
+        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(4), "Terrain edits naming their layer raised the format to 4.");
+        Assert.That(data.Id, Is.EqualTo(session.Id));
+        Assert.That(data.SavedAtUtc(), Is.EqualTo(wallClock.UtcNow));
+        Assert.That(data.IsCopy, Is.False);
+        Assert.That(folder.Contents, Does.Contain("\"waystones\": []"));
+        Assert.That(folder.Contents, Does.Contain("\"weapon\": \"\""), "A player without a weapon recorded saves none.");
         Assert.That(data.Worlds[0].WorldId, Is.EqualTo(WorldA));
         Assert.That(data.Worlds[0].Chunks, Is.Empty, "A chunk with no record is not written.");
     }
 
     /// <summary>
-    /// A version 2 save, from before the weapons were saved, still loads, its players holding no weapon (so each starts
-    /// with its starting weapon); writing over it keeps no copy and writes the current version.
+    /// A joined client's copy of its place is written as its host session's copy and is no save Continue loads while its
+    /// host may still be there; written with its host gone, it is the latest save, the menu hears so once, and it goes
+    /// on as a session of its own under a new id, its player's place, waystones, weapon and the time kept, the copy left
+    /// as it is.
     /// </summary>
     [Test]
-    public void AVersion2Save_Loads_WithoutWeapons_AndIsWrittenOverAsTheCurrentVersion()
+    public void AClientsCopy_CountsOnlyOnceItsHostIsGone_AndGoesOnAsASessionOfItsOwn()
     {
-        string json = "{\"version\":2,\"time\":10.0,"
-            + "\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":1.0,\"y\":2.0},\"waystones\":[]}],"
-            + "\"worlds\":[]}";
-        MemorySaveStore store = new() { Contents = json };
-        GameSave save = new(store);
+        ManualWallClock wallClock = new();
+        MemorySaveFolder folder = new();
+        GameSave save = new(folder, wallClock);
+        GameSaveData copy = new(
+            900d,
+            new[] { new GameSaveData.Player(Alice, WorldA, new Vector2(7f, 8f), new[] { new GameSaveData.Waystone(WorldA, "north") }, "longbow-guid") },
+            new GameSaveData.World[0]);
+        copy.SetHost(HostSession, false);
 
-        Assert.That(save.TryLoad(out GameSaveData data), Is.True);
-        Assert.That(data.Players[0].Weapon, Is.Empty);
+        Assert.That(save.Write(copy), Is.True);
+        Assert.That(folder.Names(), Is.EqualTo(new[] { $"joined-{HostSession}.json" }));
+        Assert.That(save.HasSave, Is.False, "A copy whose host may still be there is used only while joined to it.");
+        Assert.That(save.TakeHostGoneNotice(), Is.False);
+        Assert.That(save.TryLoadCopy(HostSession, out GameSaveData stored), Is.True);
+        Assert.That(stored.HostGone, Is.False);
+
+        wallClock.Advance(5d);
+        copy.SetHost(HostSession, true);
+        Assert.That(save.Write(copy), Is.True);
+        Assert.That(save.TakeHostGoneNotice(), Is.True, "Writing a copy with its host gone leaves the menu a notice.");
+        Assert.That(save.TakeHostGoneNotice(), Is.False, "The notice is taken once.");
+        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True, "A copy whose host is gone is a save Continue loads.");
+        Assert.That(latest.IsCopy && latest.HostGone, Is.True);
+
+        SessionSave alone = new(new ManualClock());
+        alone.StartFrom(latest);
+        Assert.That(alone.Id, Is.Not.Empty.And.Not.EqualTo(HostSession), "The copy goes on as a session of its own.");
+        Assert.That(alone.Time, Is.EqualTo(900d), "The time of day goes on from the host's.");
+        Assert.That(alone.TryGetPlace(Alice, out string world, out Vector2 position), Is.True);
+        Assert.That(world, Is.EqualTo(WorldA));
+        Assert.That(position, Is.EqualTo(new Vector2(7f, 8f)));
+        Assert.That(alone.WaystonesOf(Alice), Has.Count.EqualTo(1));
+        Assert.That(alone.WeaponOf(Alice), Is.EqualTo("longbow-guid"));
+
+        wallClock.Advance(5d);
+        Assert.That(save.Write(alone.ToData()), Is.True);
+        Assert.That(folder.Names(), Has.Count.EqualTo(2), "The copy is kept beside the session going on from it.");
+        Assert.That(save.TryLoadLatest(out latest), Is.True);
+        Assert.That(latest.Id, Is.EqualTo(alone.Id));
+    }
+
+    /// <summary>
+    /// The single save file of an earlier build (format 3, and format 2 without weapons) is imported once as a session
+    /// of its own: its time, players, waystones, weapons and dead mobs kept, its terrain edits (which named layers by
+    /// index) dropped with a warning, the old file moved aside; another run imports nothing again.
+    /// </summary>
+    [Test]
+    public void TheSaveOfAnEarlierBuild_IsImportedOnce_AsASession_WithoutItsTerrainEdits()
+    {
+        string json = "{\"version\":3,\"time\":3600.5,"
+            + "\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":2060.5,\"y\":42.0},"
+            + "\"waystones\":[{\"worldId\":\"" + WorldA + "\",\"entry\":\"north\"}],\"weapon\":\"longbow-guid\"}],"
+            + "\"worlds\":[{\"worldId\":\"" + WorldA + "\",\"chunks\":[{\"coords\":{\"x\":1,\"y\":0},"
+            + "\"deadMobs\":[{\"id\":\"mob-1\",\"diedAt\":3500.25}],"
+            + "\"terrainEdits\":[{\"layer\":1,\"cell\":{\"x\":70,\"y\":12},\"filled\":true}]}]}]}";
+        MemorySaveFolder folder = new();
+        folder.LegacyStore.Contents = json;
+        GameSave save = new(folder, new ManualWallClock());
+
+        LogAssert.Expect(LogType.Warning, new Regex("Imported the save file of an earlier build as the session .*its 1 terrain edits named layers by index and were dropped"));
+        Assert.That(save.TryLoadLatest(out GameSaveData imported), Is.True);
+
+        Assert.That(imported.Version, Is.EqualTo(GameSaveData.CurrentVersion));
+        Assert.That(imported.Id, Is.Not.Empty);
+        Assert.That(folder.Names(), Is.EqualTo(new[] { $"session-{imported.Id}.json" }));
+        Assert.That(folder.RetiredLegacy, Is.EqualTo(json), "The old file is moved aside, not deleted.");
+        Assert.That(folder.LegacyStore.Contents, Is.Null);
+        Assert.That(imported.Time, Is.EqualTo(3600.5d));
+        Assert.That(imported.Players[0].PlayerId, Is.EqualTo(Alice));
+        Assert.That(imported.Players[0].Position, Is.EqualTo(new Vector2(2060.5f, 42f)));
+        Assert.That(imported.Players[0].Waystones[0].Entry, Is.EqualTo("north"));
+        Assert.That(imported.Players[0].Weapon, Is.EqualTo("longbow-guid"));
+        GameSaveData.Chunk chunk = imported.Worlds[0].Chunks[0];
+        Assert.That(chunk.DeadMobs[0].Id, Is.EqualTo("mob-1"));
+        Assert.That(chunk.TerrainEdits, Is.Empty, "Edits naming layers by index cannot be told apart once layers move.");
+
+        GameSave nextRun = new(folder, new ManualWallClock());
+        Assert.That(nextRun.TryLoadLatest(out GameSaveData again), Is.True);
+        Assert.That(again.Id, Is.EqualTo(imported.Id), "Nothing is imported twice.");
+        Assert.That(folder.Names(), Has.Count.EqualTo(1));
+
+        MemorySaveFolder older = new();
+        older.LegacyStore.Contents = "{\"version\":2,\"time\":10.0,\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":1.0,\"y\":2.0},\"waystones\":[]}],\"worlds\":[]}";
+        LogAssert.Expect(LogType.Warning, new Regex("Imported the save file of an earlier build"));
+        Assert.That(new GameSave(older, new ManualWallClock()).TryLoadLatest(out GameSaveData version2), Is.True);
+        Assert.That(version2.Players[0].Weapon, Is.Empty, "A version 2 save's players hold their starting weapon.");
+    }
+
+    /// <summary>
+    /// An old save, the earlier builds' file of version 1 (the area the party was in), is ignored with its warning and
+    /// left where it is, so Continue is off; a session file of an earlier format in the folder is ignored with its warning
+    /// too, once a run.
+    /// </summary>
+    [Test]
+    public void AnOldSave_IsIgnoredWithItsWarning()
+    {
+        string version1 = "{\"version\":1,\"areaSceneGuid\":\"11111111111111111111111111111111\",\"spawnId\":\"start\"}";
+        MemorySaveFolder folder = new();
+        folder.LegacyStore.Contents = version1;
+        GameSave save = new(folder, new ManualWallClock());
+
+        LogAssert.Expect(LogType.Warning, new Regex("The save file of an earlier build has format version 1.*ignored and left as it is"));
+        Assert.That(save.TryLoadLatest(out GameSaveData data), Is.False);
+        Assert.That(data, Is.Null);
+        Assert.That(folder.LegacyStore.Contents, Is.EqualTo(version1), "An old save this build does not import is left alone.");
+        Assert.That(folder.Names(), Is.Empty);
+
+        MemorySaveFolder sessions = new();
+        sessions.Seed("{\"version\":3,\"time\":1.0,\"players\":[],\"worlds\":[]}");
+        GameSave reading = new(sessions, new ManualWallClock());
+        LogAssert.Expect(LogType.Warning, new Regex("has format version 3, but this build reads version 4; ignoring it"));
+        Assert.That(reading.HasSave, Is.False);
+        Assert.That(reading.HasSave, Is.False, "The warning is given once a run.");
+    }
+
+    /// <summary>
+    /// With an empty folder there is no save; a file that is not JSON, an empty object (format version 0) or a save of a
+    /// newer format is ignored with a warning, the others still read.
+    /// </summary>
+    [Test]
+    public void NoSave_ACorruptFile_AnEmptyObject_AndANewerSave_LoadNothing()
+    {
+        Assert.That(new GameSave(new MemorySaveFolder(), new ManualWallClock()).HasSave, Is.False);
+
+        MemorySaveFolder folder = new();
+        folder.Seed("{ not json");
+        folder.Seed("{}");
+        folder.Seed(NewerSave());
         SessionSave session = new(new ManualClock());
-        session.StartFrom(data);
-        Assert.That(session.TryGetPlace(Alice, out _, out _), Is.True);
-        Assert.That(session.WeaponOf(Alice), Is.Empty);
+        session.StartNew();
+        session.SetPlace(Alice, WorldA, Vector2.one);
+        folder.Seed(session.ToData());
+        GameSave save = new(folder, new ManualWallClock());
 
-        Assert.That(save.Write(session.ToData()), Is.True);
-        Assert.That(store.KeptCopies, Is.Empty, "A save this build reads is written over without a copy.");
-        Assert.That(GameSaveData.TryParse(store.Contents, out GameSaveData rewritten), Is.True);
-        Assert.That(rewritten.Version, Is.EqualTo(GameSaveData.CurrentVersion));
+        LogAssert.Expect(LogType.Warning, new Regex("could not be read as a save"));
+        LogAssert.Expect(LogType.Warning, new Regex("format version 0"));
+        LogAssert.Expect(LogType.Warning, new Regex($"format version {GameSaveData.CurrentVersion + 1}"));
+        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True);
+        Assert.That(latest.Id, Is.EqualTo(session.Id), "The readable session is the latest.");
+    }
+
+    /// <summary>
+    /// The first write over a stored file this build cannot read (one that does not parse, or of a newer format) keeps
+    /// a copy of it first, with a warning, and the next writes keep none; a file this build reads, or none, is written
+    /// over with no copy.
+    /// </summary>
+    [Test]
+    public void WritingOverAFileThisBuildCannotRead_KeepsACopyOfItFirst()
+    {
+        GameSaveData copy = new(0d, new[] { new GameSaveData.Player(Alice, WorldA, Vector2.one) }, new GameSaveData.World[0]);
+        copy.SetHost(HostSession, false);
+        string name = GameSave.CopyNameOf(HostSession);
+        foreach (string unreadable in new[] { "{ not json", NewerSave() })
+        {
+            MemorySaveFolder folder = new();
+            folder.Open(name).Write(unreadable);
+            GameSave save = new(folder, new ManualWallClock());
+
+            LogAssert.Expect(LogType.Warning, new Regex("was kept as '.*copy 1' before saving over it"));
+            Assert.That(save.Write(copy), Is.True);
+            Assert.That(folder.KeptCopiesOf(name), Is.EqualTo(new[] { unreadable }), "The unreadable file is kept before it is replaced.");
+            Assert.That(save.Write(copy), Is.True);
+            Assert.That(folder.KeptCopiesOf(name), Has.Count.EqualTo(1), "Writing over its own save keeps no copy.");
+        }
+
+        MemorySaveFolder readable = new();
+        readable.Seed(copy);
+        Assert.That(new GameSave(readable, new ManualWallClock()).Write(copy), Is.True);
+        Assert.That(readable.KeptCopiesOf(name), Is.Empty, "A file this build reads is written over.");
+    }
+
+    /// <summary>
+    /// A save that names no session or host is refused with an error.
+    /// </summary>
+    [Test]
+    public void ASaveNamingNoSession_IsNotWritten()
+    {
+        MemorySaveFolder folder = new();
+        LogAssert.Expect(LogType.Error, new Regex("naming no session or host"));
+        Assert.That(new GameSave(folder, new ManualWallClock()).Write(new GameSaveData(0d, new GameSaveData.Player[0], new GameSaveData.World[0])), Is.False);
+        Assert.That(folder.WriteCount, Is.Zero);
     }
 
     /// <summary>
     /// A throwaway session (an editor boot straight into a world) is marked as one until a real session starts, new or
-    /// from the save.
+    /// from a save; each new session, throwaway or not, has an id of its own.
     /// </summary>
     [Test]
     public void AThrowawaySession_IsMarked_UntilARealOneStarts()
@@ -187,9 +358,11 @@ public class GameSaveTests
         Assert.That(session.IsThrowaway, Is.False);
 
         session.StartThrowaway();
+        string throwaway = session.Id;
         Assert.That(session.IsThrowaway, Is.True);
         session.StartNew();
         Assert.That(session.IsThrowaway, Is.False);
+        Assert.That(session.Id, Is.Not.Empty.And.Not.EqualTo(throwaway));
 
         session.StartThrowaway();
         session.SetPlace(Alice, WorldA, Vector2.one);
@@ -198,79 +371,37 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A version 1 save, which held the area the party was in, is ignored with a warning, so Continue is off.
+    /// The save folder lists only its save files (not the copies kept beside them nor files half written), opens a
+    /// file inside it, and moves the earlier builds' file aside under a numbered name once imported.
     /// </summary>
     [Test]
-    public void AVersion1Save_IsIgnoredWithAWarning()
+    public void FileSaveFolder_ListsItsSaves_AndMovesTheEarlierBuildsFileAside()
     {
-        GameSave save = new(new MemorySaveStore { Contents = "{\"version\":1,\"areaSceneGuid\":\"11111111111111111111111111111111\",\"spawnId\":\"start\"}" });
+        string root = CreateTempDirectory();
+        string legacy = Path.Combine(root, FileSaveStore.DefaultFileName);
+        FileSaveFolder folder = new(Path.Combine(root, FileSaveFolder.DefaultFolderName), legacy);
+        Assert.That(folder.Names(), Is.Empty, "A folder not made yet lists nothing.");
 
-        LogAssert.Expect(LogType.Warning, new Regex("format version 1"));
-        Assert.That(save.TryLoad(out GameSaveData data), Is.False);
-        Assert.That(data, Is.Null);
-    }
+        Assert.That(folder.Open("session-a.json").Write("a"), Is.True);
+        Assert.That(folder.Open("joined-b.json").Write("b"), Is.True);
+        Assert.That(folder.Open("joined-b.json").KeepCopy(out _), Is.True);
+        File.WriteAllText(Path.Combine(folder.FolderPath, "session-c.json.tmp"), "half");
 
-    /// <summary>
-    /// A save from a newer format version is ignored with a warning.
-    /// </summary>
-    [Test]
-    public void ANewerSave_IsIgnoredWithAWarning()
-    {
-        string json = new GameSaveData(0d, new GameSaveData.Player[0], new GameSaveData.World[0]).ToJson()
-            .Replace($"\"version\": {GameSaveData.CurrentVersion}", $"\"version\": {GameSaveData.CurrentVersion + 1}");
-        GameSave save = new(new MemorySaveStore { Contents = json });
+        Assert.That(folder.Names(), Is.EqualTo(new[] { "joined-b.json", "session-a.json" }));
+        Assert.That(folder.Open("session-a.json").TryRead(out string read), Is.True);
+        Assert.That(read, Is.EqualTo("a"));
 
-        LogAssert.Expect(LogType.Warning, new Regex("format version"));
-        Assert.That(save.TryLoad(out _), Is.False);
-    }
-
-    /// <summary>
-    /// With an empty store there is no save; a file that is not JSON, or an empty object (format version 0), is
-    /// ignored with a warning.
-    /// </summary>
-    [Test]
-    public void NoSave_ACorruptFile_AndAnEmptyObject_LoadNothing()
-    {
-        Assert.That(new GameSave(new MemorySaveStore()).HasSave, Is.False);
-
-        LogAssert.Expect(LogType.Warning, new Regex("could not be read"));
-        Assert.That(new GameSave(new MemorySaveStore { Contents = "{ not json" }).TryLoad(out _), Is.False);
-
-        LogAssert.Expect(LogType.Warning, new Regex("format version 0"));
-        Assert.That(new GameSave(new MemorySaveStore { Contents = "{}" }).TryLoad(out _), Is.False);
-    }
-
-    /// <summary>
-    /// The first write over a stored save this build cannot read (one that does not parse, or of a newer format
-    /// version) keeps a copy of it first, with a warning, and the next writes keep none; a save this build reads, or
-    /// nothing stored, is written over with no copy.
-    /// </summary>
-    [Test]
-    public void WritingOverASaveThisBuildCannotRead_KeepsACopyOfItFirst()
-    {
-        SessionSave session = new(new ManualClock());
-        session.SetPlace(Alice, WorldA, Vector2.one);
-        string newer = new GameSaveData(0d, new GameSaveData.Player[0], new GameSaveData.World[0]).ToJson()
-            .Replace($"\"version\": {GameSaveData.CurrentVersion}", $"\"version\": {GameSaveData.CurrentVersion + 1}");
-        foreach (string unreadable in new[] { "{ not json", newer })
-        {
-            MemorySaveStore store = new() { Contents = unreadable };
-            GameSave save = new(store);
-
-            LogAssert.Expect(LogType.Warning, new Regex("was kept as 'copy 1'"));
-            Assert.That(save.Write(session.ToData()), Is.True);
-            Assert.That(store.KeptCopies, Is.EqualTo(new[] { unreadable }), "The unreadable save is kept before it is replaced.");
-            Assert.That(save.Write(session.ToData()), Is.True);
-            Assert.That(store.KeptCopies.Count, Is.EqualTo(1), "Writing over its own save keeps no copy.");
-            Assert.That(store.WriteCount, Is.EqualTo(2));
-        }
-
-        MemorySaveStore readable = new() { Contents = session.ToData().ToJson() };
-        MemorySaveStore empty = new();
-        Assert.That(new GameSave(readable).Write(session.ToData()), Is.True);
-        Assert.That(new GameSave(empty).Write(session.ToData()), Is.True);
-        Assert.That(readable.KeptCopies, Is.Empty, "A save this build reads is written over, as a new game does.");
-        Assert.That(empty.KeptCopies, Is.Empty);
+        File.WriteAllText(legacy, "old");
+        Assert.That(folder.Legacy.TryRead(out string old), Is.True);
+        Assert.That(old, Is.EqualTo("old"));
+        Assert.That(folder.RetireLegacy(out string moved), Is.True);
+        Assert.That(moved, Is.EqualTo(legacy + ".imported"));
+        File.WriteAllText(legacy, "older");
+        Assert.That(folder.RetireLegacy(out string movedAgain), Is.True);
+        Assert.That(movedAgain, Is.EqualTo(legacy + ".imported2"));
+        Assert.That(File.Exists(legacy), Is.False);
+        Assert.That(folder.RetireLegacy(out string none), Is.True);
+        Assert.That(none, Is.Null);
     }
 
     /// <summary>
@@ -369,19 +500,23 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A save written through one file store loads through a new <see cref="GameSave"/> reading the same file.
+    /// A save written through one file folder loads through a new <see cref="GameSave"/> reading the same folder.
     /// </summary>
     [Test]
-    public void FileSaveStore_SaveSurvivesANewGameSave()
+    public void FileSaveFolder_SaveSurvivesANewGameSave()
     {
-        FileSaveStore store = new(Path.Combine(CreateTempDirectory(), FileSaveStore.DefaultFileName));
+        string root = CreateTempDirectory();
+        string folderPath = Path.Combine(root, FileSaveFolder.DefaultFolderName);
+        string legacyPath = Path.Combine(root, FileSaveStore.DefaultFileName);
         SessionSave session = new(new ManualClock());
+        session.StartNew();
         session.SetPlace(Alice, WorldA, new Vector2(1f, 2f));
-        new GameSave(store).Write(session.ToData());
+        new GameSave(new FileSaveFolder(folderPath, legacyPath), new SystemWallClock()).Write(session.ToData());
 
-        GameSave reloaded = new(new FileSaveStore(store.FilePath));
+        GameSave reloaded = new(new FileSaveFolder(folderPath, legacyPath), new SystemWallClock());
 
-        Assert.That(reloaded.TryLoad(out GameSaveData data), Is.True);
+        Assert.That(reloaded.TryLoadLatest(out GameSaveData data), Is.True);
+        Assert.That(data.Id, Is.EqualTo(session.Id));
         Assert.That(data.Players[0].PlayerId, Is.EqualTo(Alice));
         Assert.That(data.Players[0].Position, Is.EqualTo(new Vector2(1f, 2f)));
     }
@@ -394,12 +529,23 @@ public class GameSaveTests
     public void InstanceFiles_GiveAVirtualPlayerItsOwnFiles()
     {
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "Player2" }), Is.EqualTo("save.Player2.json"));
+        Assert.That(InstanceFiles.NameFor("Saves", new[] { "Unity.exe", "-name", "Player2" }), Is.EqualTo("Saves.Player2"));
         Assert.That(InstanceFiles.NameFor("settings.json", new[] { "-projectPath", "x", "-name", "Player4" }), Is.EqualTo("settings.Player4.json"));
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "Player1" }), Is.EqualTo("save.json"));
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe" }), Is.EqualTo("save.json"));
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name" }), Is.EqualTo("save.json"));
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "../evil" }), Is.EqualTo("save.json"));
         Assert.That(InstanceFiles.NameFor("save.json", new[] { "Unity.exe", "-name", "PlayerX" }), Is.EqualTo("save.json"));
+    }
+
+    /// <summary>
+    /// A session's save in a format newer than this build's.
+    /// </summary>
+    private static string NewerSave()
+    {
+        GameSaveData data = new(0d, new GameSaveData.Player[0], new GameSaveData.World[0]);
+        data.SetSession("newer");
+        return data.ToJson().Replace($"\"version\": {GameSaveData.CurrentVersion}", $"\"version\": {GameSaveData.CurrentVersion + 1}");
     }
 
     /// <summary>

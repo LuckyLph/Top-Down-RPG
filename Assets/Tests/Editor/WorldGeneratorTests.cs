@@ -32,6 +32,7 @@ public class WorldGeneratorTests
     private const string Lakeside = TestWorldGenerators.Lakeside;
     private const string LavaFields = TestWorldGenerators.LavaFields;
 
+    private const int JoinReach = 6;
     private static readonly Vector2Int[] Neighbours4 = { Vector2Int.right, Vector2Int.up, Vector2Int.left, Vector2Int.down };
 
     /// <summary>
@@ -186,7 +187,8 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// Each region of the Overworld owns exactly its generator's seed layout's ground moved by its cell, and each of its
-    /// cells holds exactly the layout's materials there, plus plaza within the plaza's radius of its spawn cell; its
+    /// cells holds exactly the layout's materials there, plus plaza within the plaza's radius of its spawn cell, but the
+    /// sand of a nub where a sea region's beach meets the world's, cut back to ocean (Docs/KnownGaps.md, Phase 5); its
     /// raised ground, its ramps, its mobs (in order) and its spawn cell are the layout's, moved; and its props are the
     /// layout's props moved, in order, but each blocking prop whose footprint would cross a chunk's border and each prop
     /// on its plaza (a walk-through prop beside it too), which are left out.
@@ -195,6 +197,7 @@ public class WorldGeneratorTests
     public void EachRegion_IsItsGeneratorsLayoutMovedByItsCell_PlusOnlyItsPlaza()
     {
         uint plaza = 1u << overworld.IndexOf(materials.Plaza);
+        uint ocean = 1u << overworld.IndexOf(materials.Ocean);
         float radius = overworldGenerator.PlazaRadius;
         foreach (WorldComposition.Region region in overworld.Regions)
         {
@@ -220,7 +223,8 @@ public class WorldGeneratorTests
                 uint expected = masks[local];
                 bool inDisc = (cell + new Vector2(0.5f, 0.5f) - spawn).sqrMagnitude <= radius * radius;
                 uint mask = overworld.MaskAt(cell);
-                Expect(mask == expected || (inDisc && mask == (expected | plaza)), $"{region.Key}: {cell} holds {mask}, its layout {expected}");
+                bool cutBack = region.IsSea && (expected & ocean) == 0 && (mask & ocean) != 0 && NearAJoin(region, cell);
+                Expect(mask == expected || cutBack || (inDisc && mask == (expected | plaza)), $"{region.Key}: {cell} holds {mask}, its layout {expected}");
                 Expect(!inDisc || (mask & plaza) != 0, $"{region.Key}: no plaza at {cell}");
                 byte kind = layout.Ramps.Contains(local) ? RaisedGround.Ramp : layout.Raised.Contains(local) ? RaisedGround.Raised : RaisedGround.Level;
                 Expect(overworld.RaisedAt(cell) == kind, $"{region.Key}: raised ground at {cell}");
@@ -485,8 +489,8 @@ public class WorldGeneratorTests
 
     /// <summary>
     /// In the Overworld the Coast region's ocean meets the world's sea, its beach meets the world's beach at both its
-    /// sides, and the ocean, the region's or the world's, meets only sand or ocean; a Coast placed inland is warned
-    /// about.
+    /// sides with no nub of sand a cell or two wide poking into the sea at either join (Docs/KnownGaps.md, Phase 5), and
+    /// the ocean, the region's or the world's, meets only sand or ocean; a Coast placed inland is warned about.
     /// </summary>
     [Test]
     public void TheCoastsOcean_JoinsTheSea_AndItsBeachTheWorlds()
@@ -514,6 +518,35 @@ public class WorldGeneratorTests
 
         Assert.That(meetsSea, Is.True, "the Coast's ocean meets the world's sea");
         Assert.That(westJoin && eastJoin, Is.True, "the Coast's beach meets the world's beach on its west and east sides");
+        foreach (int end in new[] { coast.Bounds.xMin, coast.Bounds.xMax - 1 })
+        {
+            int[] coastRow = new int[2 * JoinReach + 1];
+            for (int i = 0; i < coastRow.Length; i++)
+            {
+                int x = end - JoinReach + i;
+                int y = overworld.Size.y - 1;
+                while (y >= 0 && (overworld.MaskAt(new Vector2Int(x, y)) & ocean) != 0)
+                {
+                    y--;
+                }
+
+                coastRow[i] = y;
+            }
+
+            for (int i = 1; i < coastRow.Length - 1; i++)
+            {
+                for (int width = 1; width <= 2 && i + width < coastRow.Length; width++)
+                {
+                    bool run = true;
+                    for (int j = i; j < i + width; j++)
+                    {
+                        run &= coastRow[j] == coastRow[i];
+                    }
+
+                    Assert.That(run && coastRow[i] > coastRow[i - 1] && coastRow[i] > coastRow[i + width], Is.False, $"a nub of sand {width} wide pokes into the sea at x {end - JoinReach + i}, the Coast's join at {end}");
+                }
+            }
+        }
         for (int y = 0; y < overworld.Size.y; y++)
         {
             for (int x = 0; x < overworld.Size.x; x++)
@@ -1094,6 +1127,15 @@ public class WorldGeneratorTests
     private static RoadLink Link(string from, PortSide fromSide, string to, PortSide toSide, bool toRoad, RoadLink.Surface surface)
     {
         return TestWorldGenerators.Link(from, fromSide, to, toSide, toRoad, surface);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies within the join smoothing's reach of either end of
+    /// <paramref name="region"/>'s span along the north or south side its ocean faces in the Overworld.
+    /// </summary>
+    private static bool NearAJoin(WorldComposition.Region region, Vector2Int cell)
+    {
+        return Mathf.Abs(cell.x - region.Bounds.xMin) <= JoinReach || Mathf.Abs(cell.x - (region.Bounds.xMax - 1)) <= JoinReach;
     }
 
     /// <summary>

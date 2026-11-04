@@ -85,7 +85,7 @@ public class WaystonePlayModeTests
     [UnityTest]
     public IEnumerator WalkingToAWaystone_DiscoversIt_AndContinueKeepsIt()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
@@ -439,7 +439,7 @@ public class WaystonePlayModeTests
     public IEnumerator AKnownClient_KnowsTheWaystonesItDiscoveredBefore_FromItsSpawnOn()
     {
         const string KnownId = "waystone-client";
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();

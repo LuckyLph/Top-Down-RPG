@@ -13,7 +13,9 @@ using UnityEngine.Tilemaps;
 /// (set up where missing). A tilemap of any other kind is written only inside its own chunk. Cells of a chunk whose
 /// scene is not open, or outside the world's chunks, are skipped with a warning. Every write, added layer and added
 /// tilemap joins the current undo group, so a stroke across scenes is one undo step. A flood fill spreads across the
-/// open chunks' cells and stops at the border of a chunk that is not open.
+/// open chunks' cells and stops at the border of a chunk that is not open. A ground stroke on the sea, its shore or lava
+/// marks the coast or glow maps of the open chunks whose bake reaches it out of date, in the same undo group
+/// (Docs/KnownGaps.md, Phase 5).
 /// </summary>
 public static class WorldBrushStroke
 {
@@ -139,6 +141,7 @@ public static class WorldBrushStroke
 
         Dictionary<Vector2Int, WorldChunk> open = OpenChunks(target.World, target.Chunk);
         Dictionary<Vector2Int, List<TileChangeData>> parts = SplitByChunk(changes);
+        TouchesMaps(target, open, changes, out bool sea, out bool glow);
         int skipped = 0;
         List<string> reasons = new();
         foreach (KeyValuePair<Vector2Int, List<TileChangeData>> part in parts)
@@ -162,7 +165,91 @@ public static class WorldBrushStroke
             Debug.LogWarning($"Terrain Brush on {target.Tilemap.name} of {target.Chunk.gameObject.scene.name}: skipped {string.Join("; ", reasons)}.{hint}", target.Chunk);
         }
 
+        if (sea || glow)
+        {
+            MarkMapsStale(open, changes, sea, glow);
+        }
+
         return skipped;
+    }
+
+    /// <summary>
+    /// Whether a stroke of <paramref name="changes"/> on <paramref name="target"/>, a ground layer, changes the sea or
+    /// its shore as a coast map sees it (<paramref name="sea"/>: it paints a material with waves, paints or erases a
+    /// cell holding one, paints a cell holding no ground, which counts as sea, or erases a cell's last ground) or glowing
+    /// ground (<paramref name="glow"/>: it paints a glowing material, lava, or paints or erases a cell holding one), read
+    /// from the open chunks before it is written. Neither for walls, raised ground or other tilemaps.
+    /// </summary>
+    private static void TouchesMaps(Target target, Dictionary<Vector2Int, WorldChunk> open, IReadOnlyList<TileChangeData> changes, out bool sea, out bool glow)
+    {
+        sea = false;
+        glow = false;
+        if (target.TargetKind != Kind.Ground || target.Material == null)
+        {
+            return;
+        }
+
+        sea = target.Material.HasWaves;
+        glow = target.Material.Glows;
+        for (int i = 0; i < changes.Count && !(sea && glow); i++)
+        {
+            Vector3Int position = changes[i].position;
+            if (!open.TryGetValue(ChunkCoords.ChunkOf(new Vector2Int(position.x, position.y)), out WorldChunk chunk)
+                || !chunk.TryGetComponent(out TerrainBlendRenderer renderer))
+            {
+                continue;
+            }
+
+            bool groundless = true;
+            bool otherGround = false;
+            foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
+            {
+                if (layer != null && layer.Material != null && layer.Tilemap != null && layer.Tilemap.HasTile(position))
+                {
+                    groundless = false;
+                    otherGround |= layer.Material != target.Material;
+                    sea |= layer.Material.HasWaves;
+                    glow |= layer.Material.Glows;
+                }
+            }
+
+            sea |= groundless || (changes[i].tile == null && !otherGround);
+        }
+    }
+
+    /// <summary>
+    /// Marks the coast map (<paramref name="sea"/>) or glow map (<paramref name="glow"/>) out of date of every open chunk
+    /// whose bake reaches a cell of <paramref name="changes"/> (Docs/KnownGaps.md, Phase 5), in the stroke's undo
+    /// group, so the World Editor names it and Bake changed maps bakes it again; a closed chunk is found by Check maps,
+    /// Validate and the build.
+    /// </summary>
+    private static void MarkMapsStale(Dictionary<Vector2Int, WorldChunk> open, IReadOnlyList<TileChangeData> changes, bool sea, bool glow)
+    {
+        foreach (WorldChunk chunk in open.Values)
+        {
+            RectInt cells = chunk.Cells;
+            bool coastReached = false;
+            bool glowReached = false;
+            for (int i = 0; i < changes.Count && !(coastReached && glowReached); i++)
+            {
+                Vector2Int cell = new(changes[i].position.x, changes[i].position.y);
+                coastReached |= sea && Near(cells, cell, WorldCoastBake.Reach);
+                glowReached |= glow && Near(cells, cell, Mathf.CeilToInt(TerrainMaterial.MaxGlowReach));
+            }
+
+            if (coastReached || glowReached)
+            {
+                WorldAuthoring.MarkMapsStale(chunk, coastReached, glowReached);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="cell"/> lies within <paramref name="reach"/> cells of <paramref name="cells"/>.
+    /// </summary>
+    private static bool Near(RectInt cells, Vector2Int cell, int reach)
+    {
+        return cell.x >= cells.xMin - reach && cell.x < cells.xMax + reach && cell.y >= cells.yMin - reach && cell.y < cells.yMax + reach;
     }
 
     /// <summary>

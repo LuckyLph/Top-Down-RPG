@@ -15,8 +15,9 @@ using Object = UnityEngine.Object;
 /// its scene the active one: its ground layers become its list's materials in the style's order plus the layers its
 /// <see cref="AreaTerrain"/> lists, each cleared and filled in one batch with its material's tile in exactly the
 /// composition's cells, and a layer neither listed nor kept is removed; its raised tilemap is written, or removed when
-/// it has no raised ground; the base ground layers it lays are appended to its <see cref="AreaTerrain"/>, which is never
-/// removed from or reordered; the spawn points under its grid's <see cref="GeneratedMobSpawnsName"/> become its mobs,
+/// it has no raised ground; its <see cref="AreaTerrain"/> lists the base ground layers it lays, a ground layer it no
+/// longer lays taken out so the layer, empty, goes (saved edits name their layer by material, Docs/KnownGaps.md, Phase
+/// 5); the spawn points under its grid's <see cref="GeneratedMobSpawnsName"/> become its mobs,
 /// each with its prefab and its derived <see cref="PersistentId"/>; the prop instances under its grid's
 /// <see cref="GeneratedPropsName"/> become its props; and its grid's <see cref="ChunkSky"/> holds the region skies
 /// reaching it, or goes when none does (Docs/Lighting.md, Phase 8). <see cref="Write"/> writes chunks of a world
@@ -117,7 +118,7 @@ public static class WorldGenerationWriter
             foreach (Vector2Int coords in missing)
             {
                 Stopwatch watch = Stopwatch.StartNew();
-                WorldAuthoring.CreateChunk(world, coords);
+                WorldAuthoring.CreateChunk(world, coords, GroundOf(composition, coords));
                 created[coords] = watch.Elapsed.TotalMilliseconds;
             }
 
@@ -172,8 +173,9 @@ public static class WorldGenerationWriter
     /// material without a tile or terrain type or raised ground without its tile. The grid is inactive while it is
     /// written, so its renderer builds once as it comes back, and its scene is the active scene, so every object made
     /// lands in it. Its ground layers become the chunk's list in the style's order plus each layer its
-    /// <see cref="AreaTerrain"/> lists (made with one, <see cref="WorldAuthoring.SetUpTerrainEdits(Grid)"/>, when it has
-    /// none), set up as <see cref="GroundLayerMigration.AddLayer(Grid, TerrainMaterial, bool)"/> sets a layer up
+    /// <see cref="AreaTerrain"/> lists (made with one, <see cref="WorldAuthoring.SetUpTerrainEdits(Grid, TerrainMaterial)"/>,
+    /// when it has none) whose material it lays on its own cells, an entry of a ground layer it no longer lays being
+    /// taken out first, set up as <see cref="GroundLayerMigration.AddLayer(Grid, TerrainMaterial, bool)"/> sets a layer up
     /// (<see cref="AreaGroundSetup.SetUpLayers"/>): every layer is cleared and filled in one batch with its material's
     /// tile in exactly the composition's cells of the chunk, and a layer neither listed nor kept is removed. Each base
     /// ground layer (<see cref="WorldComposition.Grounds"/>) with cells in the chunk that its
@@ -217,6 +219,7 @@ public static class WorldGenerationWriter
         try
         {
             List<string> changes = new();
+            PruneGroundEdits(grid, composition, coords);
             Tilemap[] tilemaps = WriteGround(grid, composition, coords, layers, changes);
             ListGrounds(grid, composition, coords, layers, tilemaps);
             WriteRaised(grid, raisedCells, raisedTiles, changes);
@@ -273,7 +276,7 @@ public static class WorldGenerationWriter
 
         Stopwatch watch = Stopwatch.StartNew();
         List<string> added = WorldAuthoring.SyncLayerLists(world);
-        report.Add($"Sync layer lists: {added.Count} layers added in {watch.ElapsedMilliseconds} ms.");
+        report.Add($"Sync layer lists: {added.Count} layers added or removed in {watch.ElapsedMilliseconds} ms.");
         report.AddRange(added);
         watch.Restart();
         List<string> baked = WorldAuthoring.BakeCoastMaps(world, true);
@@ -727,7 +730,7 @@ public static class WorldGenerationWriter
         foreach (Tilemap listed in ListedTilemaps(grid))
         {
             TerrainMaterial material = MaterialDrawing(renderer, listed);
-            if (material != null && style.LayerOrderIndexOf(material) >= 0 && !materials.Contains(material))
+            if (material != null && style.LayerOrderIndexOf(material) >= 0 && !materials.Contains(material) && LaysOwnCells(composition, coords, material))
             {
                 materials.Add(material);
             }
@@ -830,6 +833,81 @@ public static class WorldGenerationWriter
 
         AreaGroundSetup.SetFillTiles(grid, tilemaps, fills, changes);
         return tilemaps;
+    }
+
+    /// <summary>
+    /// Whether the chunk at <paramref name="coords"/> of <paramref name="composition"/> lays <paramref name="material"/>
+    /// on cells of its own (not only in its neighbours' border strips).
+    /// </summary>
+    private static bool LaysOwnCells(WorldComposition composition, Vector2Int coords, TerrainMaterial material)
+    {
+        int bit = composition.IndexOf(material);
+        return bit >= 0 && (composition.ChunkAt(coords).OwnMask & (1u << bit)) != 0;
+    }
+
+    /// <summary>
+    /// Takes out of <paramref name="grid"/>'s <see cref="AreaTerrain"/> each ground layer whose material the chunk at
+    /// <paramref name="coords"/> no longer lays on cells of its own (Docs/KnownGaps.md, Phase 5), so the layer, empty,
+    /// is removed as the ground is written; the walls, raised ground and any tilemap the renderer does not draw stay
+    /// listed. Saved edits name their layer by its material, so no other entry's edits move.
+    /// </summary>
+    private static void PruneGroundEdits(Grid grid, WorldComposition composition, Vector2Int coords)
+    {
+        if (!grid.TryGetComponent(out AreaTerrain terrain) || !grid.TryGetComponent(out TerrainBlendRenderer renderer))
+        {
+            return;
+        }
+
+        SerializedObject data = new(terrain);
+        SerializedProperty listed = data.FindProperty("layers");
+        bool removed = false;
+        for (int i = listed.arraySize - 1; i >= 0; i--)
+        {
+            Tilemap tilemap = listed.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue as Tilemap;
+            TerrainMaterial material = tilemap != null ? MaterialDrawing(renderer, tilemap) : null;
+            if (material != null && !LaysOwnCells(composition, coords, material))
+            {
+                listed.DeleteArrayElementAtIndex(i);
+                removed = true;
+            }
+        }
+
+        if (removed)
+        {
+            data.ApplyModifiedPropertiesWithoutUndo();
+        }
+    }
+
+    /// <summary>
+    /// The ground layer a new chunk at <paramref name="coords"/> starts with (<see cref="WorldAuthoring.CreateChunk"/>):
+    /// of the base ground materials (<see cref="WorldComposition.Grounds"/>) laid on its own cells, the one on the most
+    /// cells, else of every material laid on its own cells, the one on the most (the ocean of a chunk of open sea); null
+    /// for a chunk laying nothing, which starts with grass.
+    /// </summary>
+    internal static TerrainMaterial GroundOf(WorldComposition composition, Vector2Int coords)
+    {
+        RectInt bounds = ChunkCoords.Bounds(coords);
+        TerrainMaterial best = null;
+        int bestCount = 0;
+        bool bestIsGround = false;
+        foreach (TerrainMaterial material in composition.ChunkAt(coords).Materials)
+        {
+            if (!LaysOwnCells(composition, coords, material))
+            {
+                continue;
+            }
+
+            bool isGround = composition.Grounds.Contains(material);
+            int count = composition.CellsOf(material, bounds).Count;
+            if ((isGround && !bestIsGround) || (isGround == bestIsGround && count > bestCount))
+            {
+                best = material;
+                bestCount = count;
+                bestIsGround = isGround;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

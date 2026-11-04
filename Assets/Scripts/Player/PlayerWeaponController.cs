@@ -71,7 +71,7 @@ public class PlayerWeaponController : MonoBehaviour
     /// </summary>
     public int WeaponIndex => catalog != null ? catalog.IndexOf(currentWeapon) : -1;
 
-    public string CurrentWeaponName
+    internal string CurrentWeaponName
     {
         get
         {
@@ -186,9 +186,9 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Equips the catalog's weapon at <paramref name="index"/>; false, changing nothing, when there is none.
+    /// Equips the catalog's weapon at <paramref name="index"/>; false, changing nothing, when there is none. For tests.
     /// </summary>
-    public bool EquipFromCatalog(int index)
+    internal bool EquipFromCatalog(int index)
     {
         PlayerWeapon weapon = catalog != null ? catalog.Get(index) : null;
         if (weapon == null)
@@ -208,15 +208,6 @@ public class PlayerWeaponController : MonoBehaviour
     {
         PlayerWeapon listed = catalog != null ? catalog.Get(index) : null;
         return listed != null ? listed : currentWeapon;
-    }
-
-    /// <summary>
-    /// Sets the multiplier the weapon's timeline and cooldown are divided by, from the next attack on (1 by default;
-    /// statuses will scale it).
-    /// </summary>
-    public void SetAttackSpeed(float multiplier)
-    {
-        attackSpeed = multiplier > 0f ? multiplier : 1f;
     }
 
     /// <summary>

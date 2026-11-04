@@ -31,8 +31,8 @@ public sealed class SessionSave
     /// </summary>
     public double Time => savedTime + (clock.Time - clockAtStart);
 
-    public int PlayerCount => places.Count;
-    public int WorldCount => worlds.Count;
+    internal int PlayerCount => places.Count;
+    internal int WorldCount => worlds.Count;
 
     /// <summary>
     /// Forgets everything and starts the world clock at zero, for a new game (or a joined client, which saves nothing).

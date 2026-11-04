@@ -81,7 +81,7 @@ public class PlayerWeaponSystemTests
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
         Image iconImage = CreatePlayerHudCanvas(weaponController).WeaponIcon;
-        Sprite iconSprite = LoadWeaponHudIconSprite();
+        Sprite iconSprite = CreateWeaponHudIconSprite();
 
         weaponController.Equip(CreateTestWeapon("Sword", icon: iconSprite));
 
@@ -929,21 +929,11 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// Loads the first sprite of the project's static slash texture to use as a weapon icon, failing the test
-    /// when there is none.
+    /// Builds a small sprite over a texture made in code to use as a weapon icon; both are destroyed on teardown.
     /// </summary>
-    private static Sprite LoadWeaponHudIconSprite()
+    private Sprite CreateWeaponHudIconSprite()
     {
-        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Weapons/StaticSlash.png");
-        foreach (Object asset in assets)
-        {
-            if (asset is Sprite sprite)
-            {
-                return sprite;
-            }
-        }
-
-        Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
-        return null;
+        Texture2D texture = Track(new Texture2D(4, 4));
+        return Track(Sprite.Create(texture, new Rect(0f, 0f, 4f, 4f), new Vector2(0.5f, 0.5f), 32f));
     }
 }

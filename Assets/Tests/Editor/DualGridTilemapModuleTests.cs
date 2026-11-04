@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// Tests for <see cref="DualGridTilemapModule"/> and <see cref="DualGridUtils"/>: how data cells map to the four
@@ -45,6 +48,26 @@ public class DualGridTilemapModuleTests
         Object.DestroyImmediate(gridObject);
         Object.DestroyImmediate(renderTile.DataTile);
         Object.DestroyImmediate(renderTile);
+    }
+
+    /// <summary>
+    /// A rule tile without its data tile sub-asset reports it once, as an exception naming the tile, and logs nothing.
+    /// </summary>
+    [Test]
+    public void DataTile_WithoutItsSubAsset_ReportsOneClearError()
+    {
+        DualGridRuleTile bare = ScriptableObject.CreateInstance<DualGridRuleTile>();
+        bare.name = "BareRuleTile";
+        try
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => _ = bare.DataTile);
+            StringAssert.Contains("BareRuleTile", error.Message);
+            LogAssert.NoUnexpectedReceived();
+        }
+        finally
+        {
+            Object.DestroyImmediate(bare);
+        }
     }
 
     /// <summary>

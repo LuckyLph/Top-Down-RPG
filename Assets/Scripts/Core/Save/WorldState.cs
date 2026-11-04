@@ -21,7 +21,7 @@ public sealed class WorldState
     }
 
     public string WorldId { get; }
-    public int ChunkCount => chunks.Count;
+    internal int ChunkCount => chunks.Count;
 
     /// <summary>
     /// The record of the chunk at <paramref name="coords"/>, made empty on first use.

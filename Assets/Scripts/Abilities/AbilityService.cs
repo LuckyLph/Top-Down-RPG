@@ -35,8 +35,15 @@ public sealed class AbilityService
         unitFilter = new ContactFilter2D { useLayerMask = true, layerMask = settings.UnitLayers, useTriggers = false };
     }
 
-    public event Action<PlayerAbilities, AbilityCast> CastApplied;
-    public event Action<PlayerAbilities, AbilityCast> CastResolved;
+    /// <summary>
+    /// Raised as a cast starts on the machine with authority, with its caster. For tests.
+    /// </summary>
+    internal event Action<PlayerAbilities, AbilityCast> CastApplied;
+
+    /// <summary>
+    /// Raised once a completed cast has acted on its units, on the machine with authority, with its caster. For tests.
+    /// </summary>
+    internal event Action<PlayerAbilities, AbilityCast> CastResolved;
 
     /// <summary>
     /// Announces that <paramref name="caster"/> started <paramref name="cast"/> on the authoritative machine; does

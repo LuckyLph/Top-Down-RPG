@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 using VContainer;
 
 #if UNITY_EDITOR
@@ -25,7 +24,6 @@ using UnityEditor;
 public class MobController : MonoBehaviour
 {
     [SerializeField] private MobConfig config;
-    [SerializeField] private UnityEvent onAttackRangeEntered;
     [Header("Debug")]
     [SerializeField] private bool drawBrainGizmos = true;
     [SerializeField] private bool drawStateLabel = true;
@@ -286,14 +284,6 @@ public class MobController : MonoBehaviour
     private void HandleAttackCancelled()
     {
         motor.StopAttack();
-    }
-
-    /// <summary>
-    /// Fires the inspector's attack-range-entered event; called when <see cref="AttackRangeState"/> is entered.
-    /// </summary>
-    public void InvokeAttackRangeEntered()
-    {
-        onAttackRangeEntered?.Invoke();
     }
 
     /// <summary>

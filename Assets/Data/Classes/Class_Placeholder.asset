@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d44727c7df5926c419ef5e9b9a513a37, type: 3}
   m_Name: Class_Placeholder
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerClass
-  displayName: Placeholder
   abilities:
   - {fileID: 11400000, guid: d07972c62707c7948ac4710353730baf, type: 2}
   - {fileID: 11400000, guid: c87b9e8b6ddfc0748a25acdb1bcae66e, type: 2}

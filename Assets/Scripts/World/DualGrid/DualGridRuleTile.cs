@@ -21,7 +21,8 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
 
     [SerializeField, HideInInspector, FormerlySerializedAs("_dataTile")] private DualGridDataTile dataTile;
     /// <summary>
-    /// The Data Tile is a tile generated from this Dual Grid Rule Tile to populate the DataTilemap.
+    /// The Data Tile is a tile generated from this Dual Grid Rule Tile to populate the DataTilemap. Throws one
+    /// <see cref="InvalidOperationException"/> naming this tile when its data tile sub-asset is missing.
     /// </summary>
     public DualGridDataTile DataTile
     {
@@ -29,8 +30,7 @@ public class DualGridRuleTile : RuleTile<DualGridNeighbor>
         {
             if (dataTile == null)
             {
-                Debug.LogError($"The DualGridRuleTile {name} does not have an associated Data Tile. If this Asset was created in a previous version of DualGrid, update or re-create the Asset to potentially fix this error.", this);
-                throw new ArgumentNullException($"The DualGridRuleTile {name} does not have an associated Data Tile.");
+                throw new InvalidOperationException($"The DualGridRuleTile {name} has no Data Tile sub-asset. If it was created in a previous version of DualGrid, update or re-create the asset.");
             }
 
             return dataTile;

@@ -1,18 +1,15 @@
 using UnityEngine;
 
 /// <summary>
-/// A player class: a name and exactly four abilities (the Q W E R slots).
+/// A player class: exactly four abilities (the Q W E R slots).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Abilities/Player Class", fileName = "Class")]
 public sealed class PlayerClass : ScriptableObject
 {
     public const int AbilityCount = 4;
 
-    [SerializeField] private string displayName = "Class";
     [SerializeField, Tooltip("Exactly four abilities, for Q, W, E and R. Empty entries are empty slots.")]
     private AbilityDefinition[] abilities = new AbilityDefinition[AbilityCount];
-
-    public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
 
     /// <summary>
     /// Keeps the ability list at exactly <see cref="AbilityCount"/> entries in the inspector.
@@ -38,7 +35,6 @@ public sealed class PlayerClass : ScriptableObject
     {
         PlayerClass playerClass = CreateInstance<PlayerClass>();
         playerClass.name = name;
-        playerClass.displayName = name;
         playerClass.abilities = AbilitySlotArrays.Resize(classAbilities, AbilityCount);
         playerClass.hideFlags = HideFlags.HideAndDontSave;
         return playerClass;

@@ -944,9 +944,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobController
   config: {fileID: 11400000, guid: 4cdad9c996ec4c742b6bd28d36ae4121, type: 2}
-  onAttackRangeEntered:
-    m_PersistentCalls:
-      m_Calls: []
   drawBrainGizmos: 1
   drawStateLabel: 1
   idleColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.9}

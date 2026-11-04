@@ -14,13 +14,12 @@ public class AttackRangeState : MobStateBase
     public override MobStateId StateId => MobStateId.AttackRange;
 
     /// <summary>
-    /// Clears the path, stops, fires the brain's attack-range event and attacks at once if the cooldown allows.
+    /// Clears the path, stops and attacks at once if the cooldown allows.
     /// </summary>
     public override void Enter()
     {
         PathAgent.ClearPath();
         Motor.Stop();
-        Brain.InvokeAttackRangeEntered();
         TryAttackCurrentTarget();
     }
 

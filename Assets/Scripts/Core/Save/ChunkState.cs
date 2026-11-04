@@ -21,7 +21,7 @@ public sealed class ChunkState
     }
 
     public Vector2Int Coords { get; }
-    public int DeadMobCount => deadMobs.Count;
+    internal int DeadMobCount => deadMobs.Count;
     public IReadOnlyList<GameSaveData.CellEdit> TerrainEdits => terrainEdits;
     public bool IsEmpty => deadMobs.Count == 0 && terrainEdits.Count == 0;
 

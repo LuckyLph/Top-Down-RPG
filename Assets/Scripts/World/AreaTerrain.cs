@@ -129,9 +129,10 @@ public class AreaTerrain : MonoBehaviour
 
     /// <summary>
     /// Fills or empties <paramref name="cells"/> on <paramref name="layer"/> and records them for clients. Returns
-    /// false, changing nothing, on a machine without authority or for a tilemap that is not one of the layers.
+    /// false, changing nothing, on a machine without authority or for a tilemap that is not one of the layers. Only the
+    /// editor's dev menu and tests edit terrain so far.
     /// </summary>
-    public bool TrySetCells(Tilemap layer, IReadOnlyList<Vector3Int> cells, bool filled)
+    internal bool TrySetCells(Tilemap layer, IReadOnlyList<Vector3Int> cells, bool filled)
     {
         if (authority == null || !authority.IsAuthoritative)
         {

@@ -1,36 +1,19 @@
 using UnityEngine;
 
 /// <summary>
-/// A terrain tag that navigation sources put on cells and movement profiles give rules for. Read-only at runtime;
-/// tests build their own with <see cref="Create"/>.
+/// A terrain tag that navigation sources put on cells and movement profiles give rules for: the asset itself is the
+/// tag. Read-only at runtime; tests build their own with <see cref="Create"/>.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/AI/Navigation/Terrain Type", fileName = "TerrainType2D")]
 public class TerrainType2D : ScriptableObject
 {
-    [SerializeField] private string terrainId = "terrain";
-
-    public string TerrainId => string.IsNullOrWhiteSpace(terrainId) ? name : terrainId;
-
     /// <summary>
-    /// Builds a terrain type in code, for tests.
+    /// Builds a terrain type in code named <paramref name="terrainName"/> ("terrain" when empty), for tests.
     /// </summary>
-    public static TerrainType2D Create(string id)
+    public static TerrainType2D Create(string terrainName)
     {
         TerrainType2D terrain = CreateInstance<TerrainType2D>();
-        terrain.terrainId = string.IsNullOrWhiteSpace(id) ? "terrain" : id;
+        terrain.name = string.IsNullOrWhiteSpace(terrainName) ? "terrain" : terrainName;
         return terrain;
     }
-
-#if UNITY_EDITOR
-    /// <summary>
-    /// Fills an empty terrain id with the asset name.
-    /// </summary>
-    private void OnValidate()
-    {
-        if (string.IsNullOrWhiteSpace(terrainId))
-        {
-            terrainId = name;
-        }
-    }
-#endif
 }

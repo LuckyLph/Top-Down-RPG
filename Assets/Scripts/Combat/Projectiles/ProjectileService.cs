@@ -47,8 +47,9 @@ public sealed class ProjectileService : ITickable, IDisposable
 
     /// <summary>
     /// Raised when a projectile stops at a unit, with the unit, whether this machine resolved the hit, and the shooter.
+    /// For tests.
     /// </summary>
-    public event Action<DamageReceiver, bool, GameObject> UnitStruck;
+    internal event Action<DamageReceiver, bool, GameObject> UnitStruck;
 
     public int FlyingCount => flying.Count;
 

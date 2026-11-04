@@ -8,7 +8,8 @@ using UnityEngine;
 /// <see cref="PlayerOrders"/> running its casts on a manual clock: the owner's cast shows its release frame on exactly
 /// the tick its orders complete it, at several cast times and instantly; a Continue cast while running shows its clip
 /// over the run; after a look change the attack and the cast play the new set's clips, a cast whose set has no clip over
-/// the run standing; a cancelled cast, a copy's cancelled cast and a disabled player stop the clip at once; ending an
+/// the run standing; a copy's cast releases when the owner's completion arrives; a cancelled cast, a copy's cancelled
+/// cast and a disabled player stop the clip at once; ending an
 /// attack leaves a cast playing; and casting plays out the same in gameplay (casts, completions, failures, cooldowns
 /// and effects) with the visuals as without them.
 /// </summary>
@@ -140,11 +141,12 @@ public class PlayerCastVisualsTests
     }
 
     /// <summary>
-    /// A copy plays another machine's cast from its message toward its aim, releasing on its own clock after the cast
-    /// time, and stops it at once when the owner's cancel arrives.
+    /// A copy plays another machine's cast from its message toward its aim, holding its gather past the cast time until
+    /// the owner's completion arrives and releasing on that update (Docs/KnownGaps.md, Phase 4); a completion arriving
+    /// before the cast time cuts the gather short; it stops at once when the owner's cancel arrives, never releasing.
     /// </summary>
     [Test]
-    public void ACopy_PlaysTheOwnersCast_AndStopsItOnTheCancel()
+    public void ACopy_ReleasesTheOwnersCastOnItsCompletion_AndStopsItOnTheCancel()
     {
         CharacterAnimationClip cast = set.Find("Cast");
         CreatePlayer(Ability("Bolt", 0.25f), true);
@@ -152,16 +154,25 @@ public class PlayerCastVisualsTests
         visuals.Tick();
         Assert.That(visuals.Animator.IsActing, Is.True);
         Assert.That(visuals.Animator.Direction, Is.EqualTo(CharacterDirections.North));
-        clock.Advance(0.25f);
+        clock.Advance(0.3f);
         visuals.Tick();
-        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "The copy releases on its own clock.");
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release - 1)), "Past the cast time, the copy's gather waits for the completion.");
+        abilities.CompleteRemoteCast();
+        visuals.Tick();
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "The copy releases on the update the completion arrives.");
 
         abilities.PlayRemoteCast(0, new CastAim(Vector2.zero, Vector2.up, default));
-        clock.Advance(0.1f);
+        clock.Advance(0.2f);
+        abilities.CompleteRemoteCast();
+        visuals.Tick();
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "An early completion cuts the gather short.");
+
+        abilities.PlayRemoteCast(0, new CastAim(Vector2.zero, Vector2.up, default));
+        clock.Advance(0.3f);
         visuals.Tick();
         abilities.StopRemoteCast();
         visuals.Tick();
-        Assert.That(visuals.Animator.IsActing, Is.False);
+        Assert.That(visuals.Animator.IsActing, Is.False, "A cancel stops the held gather without a release.");
     }
 
     /// <summary>

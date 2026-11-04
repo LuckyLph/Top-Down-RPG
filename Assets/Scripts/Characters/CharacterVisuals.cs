@@ -158,7 +158,8 @@ public class CharacterVisuals : MonoBehaviour
     /// <summary>
     /// Plays <paramref name="clip"/>, an attack's clip, from now toward <paramref name="direction"/> stretched to
     /// <paramref name="timeline"/>; with <paramref name="holdUntilContact"/> (a copy of another machine's attack) its
-    /// windup holds its last frame until <see cref="ReachContact"/>.
+    /// windup holds its last frame until <see cref="ReachContact"/>, at most the locomotion settings' contact wait past
+    /// the windup, after which the character goes back to its locomotion.
     /// </summary>
     public void PlayAction(CharacterAnimationClip clip, Vector2 direction, in AttackTimeline timeline, bool holdUntilContact)
     {

@@ -24,19 +24,20 @@ public sealed class HitService
     }
 
     /// <summary>
-    /// Applies <paramref name="hit"/> to <paramref name="target"/>. Returns whether it reached the target: its damage
-    /// resolved (an immune hit included) or one of its statuses landed, stacked, refreshed or was blocked by an
-    /// immunity. A refused hit (no authority, the wrong faction, a dead target) and an ignored one (a target out of play)
-    /// return false.
+    /// Applies <paramref name="hit"/> to <paramref name="target"/>, its damage coming from <paramref name="origin"/>
+    /// when it came from a point (where an arrow was shot from, where an attacker or caster stood). Returns whether it
+    /// reached the target: its damage resolved (an immune hit included) or one of its statuses landed, stacked,
+    /// refreshed or was blocked by an immunity. A refused hit (no authority, the wrong faction, a dead target) and an
+    /// ignored one (a target out of play) return false.
     /// </summary>
-    public bool ApplyHit(DamageReceiver target, in Hit hit, GameObject source = null)
+    public bool ApplyHit(DamageReceiver target, in Hit hit, GameObject source = null, Vector2? origin = null)
     {
         if (target == null || protection.IsProtected(target))
         {
             return false;
         }
 
-        bool reached = hit.Amount > 0 && damageService.ApplyDamage(target, hit.Amount, hit.Type, source).Resolved;
+        bool reached = hit.Amount > 0 && damageService.ApplyDamage(target, hit.Amount, hit.Type, source, DamageFlags.None, origin).Resolved;
         if (target.Health == null || target.Health.IsDead)
         {
             return reached;

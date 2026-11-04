@@ -157,7 +157,8 @@ public class MobMotor2D : MonoBehaviour
     /// <summary>
     /// Faces <paramref name="direction"/> and plays the mob's attack clip toward it from now, stretched to
     /// <paramref name="timeline"/>; with <paramref name="untilContact"/> (a client's copy of the host's attack) its
-    /// windup holds its last frame until <see cref="ShowAttackContact"/>.
+    /// windup holds its last frame until <see cref="ShowAttackContact"/>, at most the character's contact wait past the
+    /// windup, after which the copy goes back to its locomotion.
     /// </summary>
     public void PlayAttack(Vector2 direction, in AttackTimeline timeline, bool untilContact)
     {

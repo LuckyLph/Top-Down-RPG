@@ -21,6 +21,7 @@ public sealed class InProcessClient : IDisposable
 {
     private readonly IObjectResolver container;
     private readonly NetworkSession host;
+    private int followedTrip = -1;
 
     /// <summary>
     /// Captures the started client's manager, container and client-side services.
@@ -226,6 +227,46 @@ public sealed class InProcessClient : IDisposable
     }
 
     /// <summary>
+    /// From now on, whenever this client's own player sets off on a new trip, reports again every chunk the host has
+    /// loaded in that trip's world, tagged with the trip, as a real client's streaming reports its world's loaded chunks
+    /// when a trip reaches it (a respawn waits for the waystone's chunk reported during its trip).
+    /// </summary>
+    public void FollowTrips()
+    {
+        PlayerWorlds worlds = Resolve<PlayerWorlds>();
+        worlds.Changed -= ReportOnTrip;
+        worlds.Changed += ReportOnTrip;
+    }
+
+    /// <summary>
+    /// Reports the host's loaded chunks of <paramref name="world"/> for the new trip of this client's own
+    /// <paramref name="player"/>; nothing for another player, no world or a trip already reported.
+    /// </summary>
+    private void ReportOnTrip(PlayerHandle player, WorldDefinition world)
+    {
+        LocalPlayer local = LocalPlayer.Current;
+        if (local == null || player != local.Handle || world == null || Manager == null || !Manager.IsConnectedClient)
+        {
+            return;
+        }
+
+        int trip = Resolve<PlayerWorlds>().TripOf(player);
+        if (trip == followedTrip)
+        {
+            return;
+        }
+
+        followedTrip = trip;
+        foreach (ChunkId chunk in HostChunks())
+        {
+            if (chunk.WorldId == world.WorldId)
+            {
+                SendChunkReady(trip, chunk);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tells the host this client's Gameplay scene is up, so it receives the players and its own.
     /// </summary>
     public void SendJoined()
@@ -292,10 +333,12 @@ public sealed class InProcessClient : IDisposable
     }
 
     /// <summary>
-    /// Shuts down and destroys the client's manager if it still exists, then disposes the client container.
+    /// Stops following trips, shuts down and destroys the client's manager if it still exists, then disposes the client
+    /// container.
     /// </summary>
     public void Dispose()
     {
+        Resolve<PlayerWorlds>().Changed -= ReportOnTrip;
         if (Manager != null)
         {
             Manager.Shutdown();
@@ -497,7 +540,7 @@ public sealed class InProcessClient : IDisposable
         /// <summary>
         /// Records nothing.
         /// </summary>
-        public void BeginTrip(ulong clientId, int trip)
+        public void BeginTrip(ulong clientId, int trip, string worldId)
         {
         }
     }

@@ -35,6 +35,12 @@ public sealed class ProjectileFlight
     public Hit Hit { get; private set; }
     public ProjectileSpec Spec { get; private set; }
     public Vector2 Position { get; private set; }
+
+    /// <summary>
+    /// The point it was shot from, its shooter's feet at the shot, which its hit comes from on every machine.
+    /// </summary>
+    public Vector2 Origin { get; private set; }
+
     public Vector2 Direction { get; private set; }
     public float Flown { get; private set; }
     public DamageReceiver Struck { get; private set; }
@@ -61,6 +67,7 @@ public sealed class ProjectileFlight
         Spec = spec;
         Hit = hit;
         Position = origin;
+        Origin = origin;
         Direction = direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector2.down;
         Flown = 0f;
         Struck = null;

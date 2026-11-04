@@ -64,20 +64,22 @@ internal static class TestCombat
     }
 
     /// <summary>
-    /// Creates an attack service over its own hit service under <paramref name="authority"/>, sharing
+    /// Creates an attack service over its own hit service under <paramref name="authority"/>, both sharing
     /// <paramref name="combatEvents"/> or fresh events.
     /// </summary>
     public static AttackService CreateAttackService(IGameAuthority authority, CombatEvents combatEvents = null)
     {
-        return new AttackService(authority, CreateHitService(authority, combatEvents), Settings);
+        combatEvents ??= new CombatEvents();
+        return new AttackService(authority, CreateHitService(authority, combatEvents), Settings, combatEvents);
     }
 
     /// <summary>
-    /// Creates an attack service over <paramref name="hits"/> under <paramref name="authority"/>.
+    /// Creates an attack service over <paramref name="hits"/> under <paramref name="authority"/>, raising its predictions
+    /// on <paramref name="combatEvents"/> or fresh events.
     /// </summary>
-    public static AttackService CreateAttackService(IGameAuthority authority, HitService hits)
+    public static AttackService CreateAttackService(IGameAuthority authority, HitService hits, CombatEvents combatEvents = null)
     {
-        return new AttackService(authority, hits, Settings);
+        return new AttackService(authority, hits, Settings, combatEvents ?? new CombatEvents());
     }
 
     /// <summary>

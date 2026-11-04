@@ -11,7 +11,8 @@ using UnityEngine;
 /// without one stops as soon as the character moves after its release frame showed (the follow-through is cut). A hold
 /// (<see cref="Hold"/>, a hit-stop) keeps the sprite of its first update on screen for a while: the action keeps its
 /// time underneath and the locomotion layer stands still (a moving cast keeps its held frame over legs that run on), so
-/// once the hold ends the action shows the frame for the real time, and the stride goes on where it stopped. Each sprite
+/// once the hold ends the action shows the frame for the real time, and the stride goes on where it stopped. An action
+/// played until its contact waits for it at most the settings' contact wait past its windup, then ends. Each sprite
 /// comes with what its clip says about it: a cast's light and, for a character carrying a lantern, the lantern's layer
 /// and light, held with it. Allocates nothing per update, so EditMode tests drive it on a manual clock.
 /// </summary>
@@ -19,6 +20,7 @@ public sealed class CharacterAnimator
 {
     private readonly IClock clock;
     private readonly float directionMargin;
+    private readonly float contactWait;
     private readonly CharacterLocomotionLayer locomotion;
     private readonly CharacterActionLayer action = new();
     private float lastTime;
@@ -37,6 +39,7 @@ public sealed class CharacterAnimator
     {
         clock = gameClock;
         directionMargin = settings != null ? settings.DirectionMargin : 0f;
+        contactWait = settings != null ? settings.ContactWaitSeconds : float.PositiveInfinity;
         locomotion = new CharacterLocomotionLayer(set, settings);
     }
 
@@ -87,12 +90,13 @@ public sealed class CharacterAnimator
     /// <summary>
     /// Starts <paramref name="clip"/>, an attack's clip, now, toward <paramref name="direction"/> on
     /// <paramref name="timeline"/>, replacing any action playing; with <paramref name="holdUntilContact"/> its windup
-    /// holds its last frame until <see cref="ReachContact"/>. Ignored for a clip without a contact frame.
+    /// holds its last frame until <see cref="ReachContact"/>, at most the settings' contact wait past the windup, after
+    /// which the action ends. Ignored for a clip without a contact frame.
     /// </summary>
     public void PlayAction(CharacterAnimationClip clip, Vector2 direction, in AttackTimeline timeline, bool holdUntilContact)
     {
         IsHolding = false;
-        action.Play(clip, CharacterDirections.Nearest(direction), timeline, clock.Time, holdUntilContact);
+        action.Play(clip, CharacterDirections.Nearest(direction), timeline, clock.Time, holdUntilContact, contactWait);
     }
 
     /// <summary>
@@ -102,13 +106,14 @@ public sealed class CharacterAnimator
     /// <paramref name="followsFacing"/> (a cast aimed nowhere). <paramref name="movingClip"/>, the cast drawn over a
     /// gait, shows while the character moves; a positive <paramref name="channelBeat"/> makes a cast longer than its
     /// clip's gather a channel; with <paramref name="untilRelease"/> the gather waits for <see cref="ReachContact"/>
-    /// (the owner's cast completing) before the release. Ignored for a clip without a release frame.
+    /// (the cast completing, on the owner or by its message on a copy) before the release, at most the settings' contact
+    /// wait past the cast time, after which the cast ends. Ignored for a clip without a release frame.
     /// </summary>
     public void PlayCast(CharacterAnimationClip clip, CharacterAnimationClip movingClip, Vector2 direction, bool followsFacing, in AttackTimeline timeline, float channelBeat, bool untilRelease)
     {
         IsHolding = false;
         int facing = direction.sqrMagnitude > 1e-8f ? CharacterDirections.Nearest(direction) : Direction;
-        action.PlayCast(clip, movingClip, facing, followsFacing, timeline, clock.Time, channelBeat, untilRelease);
+        action.PlayCast(clip, movingClip, facing, followsFacing, timeline, clock.Time, channelBeat, untilRelease, contactWait);
     }
 
     /// <summary>

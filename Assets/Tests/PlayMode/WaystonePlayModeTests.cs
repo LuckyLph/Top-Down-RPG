@@ -14,7 +14,8 @@ using UnityEngine.TestTools;
 /// deciding and the client moving its own player there; a trip to a waystone protects the traveller (Docs/KnownGaps.md,
 /// Phase 2): a mob by the entry does not hurt the host's player or a client's until its machine has faded in; and a
 /// waystone's stone shows what each machine's own player discovered, a client's discoveries reaching it from the host,
-/// earlier sessions' as it joins (Phase 3).
+/// earlier sessions' as it joins (Phase 3); and, under a delayed connection, a client's respawn waits for its machine to
+/// report the waystone's chunk during the respawn's trip, though it held that chunk before (Phase 4).
 /// </summary>
 public class WaystonePlayModeTests
 {
@@ -23,13 +24,16 @@ public class WaystonePlayModeTests
     private static readonly Vector2 TwelveEastOfStart = new(36.5f, 40.5f);
 
     private InProcessClient client;
+    private NetworkDelay delay;
 
     /// <summary>
-    /// Disposes the in-process client when the test started one.
+    /// Disposes the delayed connection and the in-process client when the test started them.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
+        delay?.Dispose();
+        delay = null;
         client?.Dispose();
         client = null;
     }
@@ -152,6 +156,7 @@ public class WaystonePlayModeTests
             () => client.LocalPlayer.Current != null && client.Players.Players.Count == 2 && hostPlayers.Players.Count == 2,
             "both sides to see both players");
         client.DisableColliders();
+        DeactivateMobs();
         LocalPlayer clientLocal = client.LocalPlayer.Current;
         PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
         PlayerHandle hostCopyHandle = HandleOf(hostPlayers, hostCopy);
@@ -185,6 +190,68 @@ public class WaystonePlayModeTests
             () => !hostCopy.GetComponent<Health>().IsDead && !clientLocal.Handle.Health.IsDead,
             "the host to restore the client's player at its waystone");
         Assert.That(Vector2.Distance(hostCopy.transform.position, world.EntryPosition("start")), Is.LessThan(1.5f));
+    }
+
+    /// <summary>
+    /// Under a typical delayed connection, hosting Testlands with an in-process client that reported every loaded chunk,
+    /// `start`'s among them, at its join (Docs/KnownGaps.md, Phase 4): its player dies away from `start`, and the host's
+    /// respawn trip to `start`, within the same world, keeps that chunk held, its objects still shown to the client, but
+    /// no longer ready for the trip. The player stays dead though the client moved it to `start`, until the client
+    /// reports the chunk again during that trip, as its streaming does once the trip reaches it; then the host restores
+    /// it, on both machines.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsRespawn_WaitsForItsChunkReportedDuringTheTrip()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        delay = NetworkDelay.Install();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        WorldDefinition world = gameFlow.CurrentWorld;
+        PlayerRegistry hostPlayers = SceneBootTestHelper.ResolveFromGameplay<PlayerRegistry>();
+        ChunkId startChunk = ChunkId.Of(world, Vector2Int.zero);
+
+        client = InProcessClient.Start(session, SceneBootTestHelper.ResolveFromGameplay<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendReady();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => client.LocalPlayer.Current != null && client.Players.Players.Count == 2 && hostPlayers.Players.Count == 2,
+            "both sides to see both players");
+        client.DisableColliders();
+        DeactivateMobs();
+        delay.Set(NetworkDelay.Conditions.Typical);
+        ulong clientId = client.Manager.LocalClientId;
+        LocalPlayer clientLocal = client.LocalPlayer.Current;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, clientId);
+        Health hostCopyHealth = hostCopy.GetComponent<Health>();
+        yield return SceneBootTestHelper.WaitUntil(() => session.IsClientReady(clientId, startChunk), "the client's report of `start`'s chunk");
+        Vector2 away = world.ToWorld(new Vector2(32.5f, 40.5f));
+        clientLocal.Controller.Teleport(away);
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(hostCopy.transform.position, away) < 0.1f, "the host to see the client's player move");
+
+        List<TripApproval> delivered = new();
+        client.Resolve<NetworkTripAuthority>().Approved += delivered.Add;
+        SceneBootTestHelper.ResolveFromGameplay<DamageService>().ApplyDamage(hostCopy.GetComponent<DamageReceiver>(), hostCopyHealth.MaxHealth);
+        yield return SceneBootTestHelper.WaitUntil(() => delivered.Count == 1, "the host's respawn trip to reach the client");
+        Assert.That(delivered[0].World, Is.SameAs(world), "A respawn is a trip within the player's world.");
+        Assert.That(session.Readiness.Holds(clientId, startChunk), Is.True, "The trip's world stays held, its objects shown to the client.");
+        Assert.That(session.IsClientReady(clientId, startChunk), Is.False, "But it is not ready for the respawn's trip.");
+
+        clientLocal.Controller.Teleport(delivered[0].Position);
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(hostCopy.transform.position, delivered[0].Position) < 1.5f, "the host to see the client's player at `start`");
+        for (float until = Time.time + 1f; Time.time < until;)
+        {
+            Assert.That(hostCopyHealth.IsDead, Is.True, "The respawn waits for the chunk reported during the trip.");
+            yield return null;
+        }
+
+        client.SendChunkReady(client.Resolve<PlayerWorlds>().TripOf(clientLocal.Handle), startChunk);
+        yield return SceneBootTestHelper.WaitUntil(
+            () => !hostCopyHealth.IsDead && !clientLocal.Handle.Health.IsDead,
+            "the host to restore the client's player once it reported the chunk");
+        Assert.That(session.IsClientReady(clientId, startChunk), Is.True);
     }
 
     /// <summary>

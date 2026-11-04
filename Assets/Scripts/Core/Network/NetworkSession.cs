@@ -233,11 +233,11 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <inheritdoc />
-    public void BeginTrip(ulong clientId, int trip)
+    public void BeginTrip(ulong clientId, int trip, string worldId)
     {
         if (networkManager.IsServer)
         {
-            readiness.BeginTrip(clientId, trip);
+            readiness.BeginTrip(clientId, trip, worldId);
         }
     }
 
@@ -325,7 +325,8 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
 
     /// <summary>
     /// Host only: spawns <paramref name="instance"/> as a server-owned object of <paramref name="homeChunk"/>: it is
-    /// visible to the clients that hold that chunk, destroyed with its scene, and carries the chunk as its
+    /// visible to the clients that hold that chunk, whichever trip they reported it in, destroyed with its scene, and
+    /// carries the chunk as its
     /// instantiation data when its prefab has a handler here (<c>ChunkNetworkPrefabs</c>), so each client creates its
     /// copy in that chunk's scope.
     /// </summary>
@@ -336,7 +337,7 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
             networkManager.PrefabHandler.SetInstantiationData(instance, new NetworkChunkId(homeChunk));
         }
 
-        instance.CheckObjectVisibility = clientId => IsClientReady(clientId, homeChunk);
+        instance.CheckObjectVisibility = clientId => clientId == NetworkManager.ServerClientId || readiness.Holds(clientId, homeChunk);
         instance.Spawn(destroyWithScene: true);
     }
 

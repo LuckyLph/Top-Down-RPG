@@ -11,8 +11,8 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// directions and keeps it until a margin past the boundary; the gait follows the speed bands with hysteresis around
 /// each boundary; switching gaits keeps the phase while starting and stopping restart it; the playback rate is speed
 /// over natural speed, clamped; a missing gait shows the nearest slower one; an attack's phases play their frames stretched to the timeline at any attack speed, its contact frame
-/// showing exactly when the attack state reaches contact; a copy's windup holds until contact, and a contact reached
-/// shows on its update at any time on the clock; locomotion resumes
+/// showing exactly when the attack state reaches contact; a copy's windup holds until contact, at most its contact wait
+/// past the windup, and a contact reached shows on its update at any time on the clock; locomotion resumes
 /// where it was after an action; a cast's gather stretches to its cast time with its release on the update it completes
 /// (instantly for an instant cast), a long cast channels, a cancel stops it, a Continue cast while running keeps the
 /// legs' gait and phase under its upper body, moving cuts a standing cast's follow-through but never its release, and a
@@ -351,7 +351,7 @@ public class CharacterAnimatorTests
         CharacterAnimator animator = new(set, settings, clock);
         animator.Update(Vector2.zero, Vector2.down);
         animator.PlayAction(slash, Vector2.up, timeline, true);
-        clock.Advance(0.5f);
+        clock.Advance(0.375f);
         animator.Update(Vector2.zero, Vector2.down);
         Assert.That(animator.Frame, Is.EqualTo(Contact - 1), "The windup holds its last frame.");
         Assert.That(animator.Direction, Is.EqualTo(CharacterDirections.North));
@@ -374,6 +374,44 @@ public class CharacterAnimatorTests
         animator.Update(Vector2.zero, Vector2.down);
         Assert.That(animator.IsActing, Is.False);
         Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
+    }
+
+    /// <summary>
+    /// A copy's attack whose contact does not come holds its last windup frame for the settings' contact wait past the
+    /// windup, then ends, the character showing its locomotion again (Docs/KnownGaps.md, Phase 4); nothing then holds
+    /// for that contact and a contact arriving later shows nothing. A copy's cast waiting for its completion ends the
+    /// same way past its cast time.
+    /// </summary>
+    [Test]
+    public void ACopysWindup_EndsAfterItsContactWait_WithoutAContact()
+    {
+        AttackTimeline timeline = new(0.25f, 0.125f, 0.25f);
+        CharacterAnimationClip slash = set.Find("Slash");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.down);
+        animator.PlayAction(slash, Vector2.up, timeline, true);
+        clock.Advance(timeline.Windup + settings.ContactWaitSeconds - 0.01f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.IsActing, Is.True);
+        Assert.That(animator.Frame, Is.EqualTo(Contact - 1), "Within its wait the windup still holds.");
+
+        clock.Advance(0.02f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.IsActing, Is.False, "Past its wait the copy gives up on the contact.");
+        Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
+        Assert.That(animator.HoldContact(0.1f), Is.False, "Nothing holds for a contact given up on.");
+        animator.ReachContact();
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.IsActing, Is.False, "A contact arriving later shows nothing.");
+
+        AttackTimeline castTimeline = new(0.5f, 0.06f, 0.24f);
+        animator.PlayCast(set.Find("Cast"), null, Vector2.up, false, castTimeline, 0f, true);
+        clock.Advance(castTimeline.Windup + settings.ContactWaitSeconds - 0.01f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.IsActing, Is.True, "A copy's gather holds for its completion within the wait.");
+        clock.Advance(0.02f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.IsActing, Is.False, "A copy's cast whose completion does not come ends past its wait too.");
     }
 
     /// <summary>

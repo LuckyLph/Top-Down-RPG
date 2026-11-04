@@ -5,7 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Tests for <see cref="ClientChunkReadiness"/>, the host's per-chunk readiness and release handshake as a state
 /// machine: joining shows the players, a chunk reported ready for the client's current trip is held and shown, a report
-/// from before a trip is ignored, a release hides before it acknowledges, holds keep a chunk loaded, and leaving
+/// from before a trip is ignored, a held chunk is ready for a trip only once reported during it, a trip into another
+/// world releases the world it leaves, a release hides before it acknowledges, holds keep a chunk loaded, and leaving
 /// forgets everything. Also <see cref="ChunkId"/>'s equality and its wire form.
 /// </summary>
 public class ClientChunkReadinessTests
@@ -73,33 +74,69 @@ public class ClientChunkReadinessTests
     }
 
     /// <summary>
-    /// Once the client's player sets off on a trip, a report tagged with the trip before it is ignored (it neither
-    /// shows anything nor settles the client), while chunks held from before stay held; a report for the new trip
-    /// counts. An older trip number changes nothing.
+    /// Once the client's player sets off on a trip within its world, a report tagged with the trip before it is ignored
+    /// (it neither shows anything nor settles the client); the chunks it held stay held, so it keeps seeing them, but
+    /// count as ready for the trip only once reported during it (Docs/KnownGaps.md, Phase 4). An older trip number
+    /// changes nothing.
     /// </summary>
     [Test]
-    public void AReportFromBeforeATrip_IsIgnored()
+    public void AReportFromBeforeATrip_IsIgnored_AndAHeldChunkIsReadyAgainOnlyOnceReported()
     {
         readiness.Join(Client);
         readiness.ReportReady(Client, 0, Start);
         visibility.Calls.Clear();
 
-        readiness.BeginTrip(Client, 1);
+        readiness.BeginTrip(Client, 1, Start.WorldId);
         Assert.That(readiness.IsSettled(Client), Is.False, "A travelling client is held again.");
-        Assert.That(readiness.IsReady(Client, Start), Is.True, "Its old world's chunks stay held until it releases them.");
+        Assert.That(readiness.Holds(Client, Start), Is.True, "Its world's chunks stay held, their objects visible to it.");
+        Assert.That(readiness.IsHeld(Start), Is.True);
+        Assert.That(readiness.IsReady(Client, Start), Is.False, "A chunk held from before the trip is not ready for it.");
+        Assert.That(visibility.Calls, Is.Empty, "Nothing it holds in the trip's world is hidden.");
 
         Assert.That(readiness.ReportReady(Client, 0, East), Is.False);
         Assert.That(readiness.IsReady(Client, East), Is.False);
         Assert.That(readiness.IsSettled(Client), Is.False);
         Assert.That(visibility.Calls, Is.Empty);
 
-        Assert.That(readiness.ReportReady(Client, 1, Interior), Is.True);
+        Assert.That(readiness.ReportReady(Client, 1, Start), Is.True);
+        Assert.That(readiness.IsReady(Client, Start), Is.True, "Reported during the trip, it is ready for it.");
         Assert.That(readiness.IsSettled(Client), Is.True);
-        Assert.That(visibility.Calls, Is.EqualTo(new[] { "show 3" }));
+        Assert.That(visibility.Calls, Is.Empty, "A chunk it already held shows nothing new.");
 
-        readiness.BeginTrip(Client, 0);
+        readiness.BeginTrip(Client, 0, Interior.WorldId);
         Assert.That(readiness.TripOf(Client), Is.EqualTo(1));
         Assert.That(readiness.IsSettled(Client), Is.True);
+        Assert.That(readiness.IsReady(Client, Start), Is.True, "An older trip number releases nothing.");
+    }
+
+    /// <summary>
+    /// A trip into another world releases what the client held in the world it leaves: those chunks are forgotten and
+    /// their objects hidden from it, so the host may unload them, while its holds in the trip's world stay; a chunk of
+    /// the new world reported during the trip is held and shown; and its later release of a chunk the trip already
+    /// released is still acknowledged.
+    /// </summary>
+    [Test]
+    public void ATripIntoAnotherWorld_ReleasesTheHoldsOfTheWorldItLeaves()
+    {
+        readiness.Join(Client);
+        readiness.ReportReady(Client, 0, Start);
+        readiness.ReportReady(Client, 0, East);
+        visibility.Calls.Clear();
+
+        readiness.BeginTrip(Client, 1, Interior.WorldId);
+        Assert.That(visibility.Calls, Is.EqualTo(new[] { "hide 3" }), "The world it leaves is hidden from it at once.");
+        Assert.That(readiness.Holds(Client, Start), Is.False);
+        Assert.That(readiness.Holds(Client, East), Is.False);
+        Assert.That(readiness.IsHeld(Start), Is.False, "The host may unload what it no longer holds.");
+
+        visibility.Calls.Clear();
+        Assert.That(readiness.ReportReady(Client, 1, Interior), Is.True);
+        Assert.That(readiness.IsReady(Client, Interior), Is.True);
+        Assert.That(visibility.Calls, Is.EqualTo(new[] { "show 3" }));
+
+        visibility.Calls.Clear();
+        Assert.That(readiness.Release(Client, Start), Is.False, "Its streaming releases the old chunk as it unloads it.");
+        Assert.That(visibility.Calls, Is.EqualTo(new[] { "ack 3 " + Start }));
     }
 
     /// <summary>

@@ -8,7 +8,8 @@ using VContainer.Unity;
 /// game clock. Every machine flies the arrows it learns of, the owner's at its contact and the others' from the owner's
 /// contact message, and shows each through a pooled <see cref="ProjectileVisual"/>; only where
 /// <see cref="IGameAuthority.IsAuthoritative"/> does a projectile that stops at a unit hit it, through
-/// <see cref="HitService"/> with its shooter as the source, so each arrow lands at most once, on the host. Projectiles
+/// <see cref="HitService"/> with its shooter as the source and the point it was shot from as the hit's origin, so each
+/// arrow lands at most once, on the host, and every machine turns its feedback from the shot. Projectiles
 /// are not networked objects. Flights are pooled, so launching and flying allocates nothing once warm.
 /// </summary>
 public sealed class ProjectileService : ITickable, IDisposable
@@ -151,7 +152,7 @@ public sealed class ProjectileService : ITickable, IDisposable
             bool resolved = authority.IsAuthoritative && hitService != null;
             if (resolved)
             {
-                hitService.ApplyHit(flight.Struck, flight.Hit, flight.Source);
+                hitService.ApplyHit(flight.Struck, flight.Hit, flight.Source, flight.Origin);
             }
 
             UnitStruck?.Invoke(flight.Struck, resolved, flight.Source);

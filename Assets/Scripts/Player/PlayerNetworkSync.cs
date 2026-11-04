@@ -9,8 +9,8 @@ using VContainer;
 /// <see cref="WeaponCatalog"/> index), look (its <see cref="CharacterLookCatalog"/> index, which binding it makes
 /// follow the local settings) and whether its lantern burns (<see cref="PlayerLantern"/>, which binding it makes
 /// decide) to owner network variables, and sends its attacks' starts, contacts and early
-/// ends and its cast starts and cancels to the other machines, which play them on their copy, and its completed casts to
-/// the host.
+/// ends and its casts' starts, completions and cancels to the other machines, which play them on their copy; the host
+/// also resolves a client's completed casts.
 /// Attack and cast messages name the weapon they were made with, so they play and land right even before a weapon
 /// switch reaches a machine. Every machine but the owner lands a contact around where the owner stood: only the host
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
@@ -371,12 +371,13 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// On a client owner, sends a completed cast, the weapon it started with (a running cast keeps its ability across
-    /// a weapon switch) and the owner's position to the host to resolve; the host resolves its own casts locally.
+    /// Sends a completed cast, the weapon it started with (a running cast keeps its ability across a weapon switch) and
+    /// the owner's position to the other machines (Docs/KnownGaps.md, Phase 4): their copies show its release, and the
+    /// host resolves a client's there; the host resolves its own casts locally.
     /// </summary>
     private void HandleLocalCastCompleted(AbilityCast cast)
     {
-        if (IsServer)
+        if (!IsSpawned)
         {
             return;
         }
@@ -386,13 +387,20 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// Runs on the host: resolves the effect of a cast the owner completed at <paramref name="casterPosition"/> with
-    /// the catalog's weapon <paramref name="weaponIndex"/> equipped.
+    /// Runs on every machine but the owner: the copy shows the release of the owner's cast, and the host then resolves
+    /// its effect at <paramref name="casterPosition"/> with the catalog's weapon <paramref name="weaponIndex"/>
+    /// equipped, so the release shows on the update the cast lands.
     /// </summary>
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    [Rpc(SendTo.NotOwner, InvokePermission = RpcInvokePermission.Owner)]
     private void CastCompletedRpc(int slot, int weaponIndex, Vector2 point, Vector2 direction, NetworkObjectReference target, bool hasTarget, Vector2 casterPosition)
     {
-        if (abilities != null)
+        if (abilities == null)
+        {
+            return;
+        }
+
+        abilities.CompleteRemoteCast();
+        if (IsServer)
         {
             abilities.ResolveRemoteCast(slot, new CastAim(point, direction, hasTarget ? ResolveTarget(target) : default), casterPosition, WeaponFor(weaponIndex));
         }

@@ -231,13 +231,14 @@ public class MeleeDamageDealer : MonoBehaviour
     }
 
     /// <summary>
-    /// Hits every unit in the attack's area toward <paramref name="direction"/>, this mob as the source.
+    /// Hits every unit in the attack's area toward <paramref name="direction"/>, this mob as the source and where it
+    /// stands as the hit's origin.
     /// </summary>
     private void Land(Vector2 direction)
     {
         if (attackService != null)
         {
-            attackService.Resolve(transform, new Hit(damageAmount, damageType, statuses), AreaCentre(direction), area, direction);
+            attackService.Resolve(transform, new Hit(damageAmount, damageType, statuses), AreaCentre(direction), area, direction, transform.position);
         }
     }
 

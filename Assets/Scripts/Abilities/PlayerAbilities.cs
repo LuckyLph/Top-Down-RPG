@@ -13,8 +13,8 @@ using UnityEditor;
 /// <see cref="PlayerOrders"/>. A weapon ability keeps its own cooldown across weapon switches: switching never readies
 /// an ability early, and a new weapon's abilities are not held by the old one's. Replays other machines' casts with
 /// the weapon they were cast with, so a copy that has not heard of a switch yet still plays the right ability, and
-/// raises events for a copy's casts starting and being cancelled, which only its visuals hear. Draws gizmos for recent
-/// casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
+/// raises events for a copy's casts starting, completing and being cancelled, which only its visuals hear. Draws gizmos
+/// for recent casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerAbilities : MonoBehaviour, IAbilityCaster
@@ -73,6 +73,12 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     /// for its visuals.
     /// </summary>
     public event Action<AbilityCast> RemoteCastStarted;
+
+    /// <summary>
+    /// Raised on a copy when the owner's cast completed (<see cref="CompleteRemoteCast"/>), for its visuals, which show
+    /// its release then (Docs/KnownGaps.md, Phase 4).
+    /// </summary>
+    public event Action RemoteCastCompleted;
 
     /// <summary>
     /// Raised on a copy when the owner's cast was cancelled (<see cref="StopRemoteCast"/>), for its visuals.
@@ -333,6 +339,14 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
         {
             abilityService.Apply(this, cast);
         }
+    }
+
+    /// <summary>
+    /// On a copy, the owner's cast completed: raises <see cref="RemoteCastCompleted"/>.
+    /// </summary>
+    public void CompleteRemoteCast()
+    {
+        RemoteCastCompleted?.Invoke();
     }
 
     /// <summary>

@@ -66,14 +66,16 @@ public class MobAttackTests
     }
 
     /// <summary>
-    /// The hit lands on the target in reach at contact, the windup's end, and not on any update before it; the start
-    /// and the contact are each raised once.
+    /// The hit lands on the target in reach at contact, the windup's end, and not on any update before it, coming from
+    /// where the mob stands; the start and the contact are each raised once.
     /// </summary>
     [Test]
     public void TheHit_LandsAtContact_AndNotBefore()
     {
         CreateMob();
         DamageReceiver player = Player(new Vector2(0.75f, 0.1f));
+        Vector2? origin = null;
+        player.Health.Damaged += hit => origin = hit.Origin;
 
         Assert.That(dealer.TryStartAttack(player.transform), Is.True);
         Assert.That(dealer.Phase, Is.EqualTo(AttackPhase.Windup));
@@ -87,6 +89,7 @@ public class MobAttackTests
         clock.Advance(0.02f);
         dealer.Tick();
         Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth - 10));
+        Assert.That(origin.HasValue && origin.Value == (Vector2)dealer.transform.position, Is.True, "The hit comes from where the mob stands.");
         Assert.That(dealer.Phase, Is.EqualTo(AttackPhase.Contact));
         Assert.That(started, Is.EqualTo(1));
         Assert.That(contacts, Is.EqualTo(1));

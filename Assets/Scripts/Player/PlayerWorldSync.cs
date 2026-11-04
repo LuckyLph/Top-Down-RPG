@@ -288,7 +288,7 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink, IWaystoneLink
         state.Value = new PlayerWorldState(world != null ? world.WorldId : string.Empty, trip, playerWorlds.EntryOf(handle));
         if (!IsOwnedByServer && readiness != null)
         {
-            readiness.BeginTrip(OwnerClientId, trip);
+            readiness.BeginTrip(OwnerClientId, trip, world != null ? world.WorldId : string.Empty);
         }
     }
 

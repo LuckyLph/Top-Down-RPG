@@ -276,8 +276,9 @@ public class PlayerWeaponController : MonoBehaviour
 
     /// <summary>
     /// Moves the running attack on to the clock's time: at contact its hit lands around the player (a melee area, or a
-    /// projectile leaving toward the target) and <see cref="AttackContacted"/> is raised; a recovery an earlier order
-    /// cut short stops showing.
+    /// projectile leaving toward the target), a client predicts its own melee hit there so its contact frame holds at
+    /// once (<see cref="AttackService.Predict"/>), and <see cref="AttackContacted"/> is raised; a recovery an earlier
+    /// order cut short stops showing.
     /// </summary>
     public void Tick()
     {
@@ -292,6 +293,11 @@ public class PlayerWeaponController : MonoBehaviour
             Vector2 position = transform.position;
             Vector2 direction = ContactDirection(currentWeapon, attack.Direction, position, attackTarget);
             Land(currentWeapon, direction, position, attackTarget);
+            if (attackService != null)
+            {
+                attackService.Predict(transform, currentWeapon, direction, position);
+            }
+
             AttackContacted?.Invoke(attack.Attack, direction, position, attackTarget);
         }
 
@@ -304,8 +310,9 @@ public class PlayerWeaponController : MonoBehaviour
     /// <summary>
     /// Plays an attack the owner started on another machine on this copy: the clip of the catalog's weapon at
     /// <paramref name="weaponIndex"/> (this copy's weapon outside the catalog) toward <paramref name="direction"/>
-    /// (down when zero) at <paramref name="speed"/>, its windup holding until the owner's contact arrives. Visual only:
-    /// no cooldown, hit or event.
+    /// (down when zero) at <paramref name="speed"/>, its windup holding until the owner's contact arrives, at most the
+    /// character's contact wait past the windup, after which the copy goes back to its locomotion (a later contact
+    /// still lands its hit). Visual only: no cooldown, hit or event.
     /// </summary>
     public void PlayRemoteAttack(int weaponIndex, int attackIndex, Vector2 direction, float speed)
     {

@@ -19,3 +19,4 @@ MonoBehaviour:
   minRate: 0.5
   maxRate: 1.5
   directionMargin: 8
+  contactWaitSeconds: 0.25

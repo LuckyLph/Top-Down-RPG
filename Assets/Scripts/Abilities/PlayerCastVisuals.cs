@@ -4,11 +4,13 @@ using UnityEngine;
 /// <summary>
 /// Plays the player's casts on its character visuals (Docs/Animation.md, Phase 5), on every machine: on the owner from
 /// <see cref="PlayerAbilities.CastStarted"/> and <see cref="PlayerAbilities.CastEnded"/>, on a copy from the owner's
-/// cast messages (<see cref="PlayerAbilities.RemoteCastStarted"/> and <see cref="PlayerAbilities.RemoteCastCancelled"/>).
-/// A cast plays its ability's clip on the ability's cast timeline from its start, toward its aim, or turning with the
-/// facing for an ability aimed nowhere, with its clip drawn over the run shown while the caster moves. On the owner the
-/// gather waits for the cast to complete, so the release frame shows on exactly the update its orders complete it; a
-/// copy plays on its own clock from the cast message. A cancelled cast stops its clip at once; a completed one plays
+/// cast messages (<see cref="PlayerAbilities.RemoteCastStarted"/>, <see cref="PlayerAbilities.RemoteCastCompleted"/>
+/// and <see cref="PlayerAbilities.RemoteCastCancelled"/>). A cast plays its ability's clip on the ability's cast
+/// timeline from its start, toward its aim, or turning with the facing for an ability aimed nowhere, with its clip
+/// drawn over the run shown while the caster moves. The gather waits for the cast to complete, so the release frame
+/// shows on exactly the update the owner's orders complete it, and on a copy on the update the owner's completion
+/// arrives (Docs/KnownGaps.md, Phase 4), when the host resolves it; a copy's gather waits at most the character's
+/// contact wait past the cast time, then the cast ends. A cancelled cast stops its clip at once; a completed one plays
 /// its release and follow-through on. Visual only: nothing in gameplay reads it. Clips are looked up by name in the
 /// character's set on an ability's first cast and kept until the character draws another set (its look changed); a
 /// set without an ability's clip over the run plays that cast standing.
@@ -60,6 +62,7 @@ public class PlayerCastVisuals : MonoBehaviour
         abilities.CastStarted += PlayOwn;
         abilities.CastEnded += HandleCastEnded;
         abilities.RemoteCastStarted += PlayCopy;
+        abilities.RemoteCastCompleted += Release;
         abilities.RemoteCastCancelled += Stop;
     }
 
@@ -73,6 +76,7 @@ public class PlayerCastVisuals : MonoBehaviour
             abilities.CastStarted -= PlayOwn;
             abilities.CastEnded -= HandleCastEnded;
             abilities.RemoteCastStarted -= PlayCopy;
+            abilities.RemoteCastCompleted -= Release;
             abilities.RemoteCastCancelled -= Stop;
         }
 
@@ -88,11 +92,11 @@ public class PlayerCastVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays another machine's <paramref name="cast"/> on this copy, on its own clock.
+    /// Plays another machine's <paramref name="cast"/> on this copy, its release waiting for the owner's completion.
     /// </summary>
     private void PlayCopy(AbilityCast cast)
     {
-        Play(cast, false);
+        Play(cast, true);
     }
 
     /// <summary>
@@ -128,7 +132,18 @@ public class PlayerCastVisuals : MonoBehaviour
         {
             Stop();
         }
-        else if (visuals != null)
+        else
+        {
+            Release();
+        }
+    }
+
+    /// <summary>
+    /// Shows the release of the cast playing, from now.
+    /// </summary>
+    private void Release()
+    {
+        if (visuals != null)
         {
             visuals.ReachContact();
         }

@@ -2,6 +2,7 @@
 #define TOPDOWNRPG_TERRAIN_BLEND_WAVES_INCLUDED
 
 #include "Assets/Shaders/Terrain/TerrainBlendAnimation.hlsl"
+#include "Assets/Shaders/Terrain/TerrainBlendBanks.hlsl"
 
 #define TB_COAST_MIN -64.0
 #define TB_COAST_RANGE 1024.0
@@ -13,6 +14,7 @@
 #define TB_WASH_FOAM 2.5
 #define TB_WASH_FILM_BACK 5.0
 #define TB_WASH_WET_FRAMES 7
+#define TB_WASH_BANK 2.0
 #define TB_COAST_SLOPE_STEP 4.0
 
 TEXTURE2D(_TerrainCoast);
@@ -135,13 +137,16 @@ float TBWashRise(float u)
     return u < TB_WASH_ADVANCE ? sin(u / TB_WASH_ADVANCE * 1.57079632679) : 0.5 + 0.5 * cos(3.14159265359 * (u - TB_WASH_ADVANCE) / (1.0 - TB_WASH_ADVANCE));
 }
 
-// Layer m's swash at a pixel outside distance outside past its edge, premultiplied: each wave, as it reaches the coast,
-// runs up over the layer it meets as far as the layer's swash (less in places along the shore, by the edge noise) times
-// its rise (TBWashRise), never over nothing nor along a seamless pair. Covered pixels show the film of water, its back
-// colour more than TB_WASH_FILM_BACK pixels behind the front; at the front, while the wave runs up and briefly after,
-// foam broken by TBWaveBreak, its front pixel the foam colour and the next its shade. Pixels the swash left within its
-// last frames are darkened, the wetter the more recently. Clear for a layer without swash or waves.
-float4 TBWash(TBInputs ins, uint m TB_W_PARAM, float outside, float2 worldPixel)
+// Layer m's swash at a pixel of a corner patch outside distance outside past its edge, premultiplied, over under (what
+// the edge draws there before it, its shadow): each wave, as it reaches the coast, runs up over the layer it meets as far
+// as the layer's swash (less in places along the shore, by the edge noise) times its rise (TBWashRise), never over
+// nothing nor along a seamless pair. Covered pixels show the film of water, its back colour more than TB_WASH_FILM_BACK
+// pixels behind the front; at the front, while the wave runs up and briefly after, foam broken by TBWaveBreak, its front
+// pixel the foam colour and the next its shade. Pixels the swash left within its last frames are darkened, the wetter
+// the more recently. A sunken layer's bank (TBBankHeight) holds the swash and under back, both gone where the bank
+// stands TB_WASH_BANK pixels high, so the water washes up the beaches but never over the top of its bank. under alone
+// for a layer without swash or waves.
+float4 TBWash(TBInputs ins, uint m TB_W_PARAM, TBCorner corner, float outside, float2 worldPixel, float4 under)
 {
     int row = TBLayerRow(m);
     float swash = TBLut(ins, TB_LAYER_SPARKLE_TIMING_COLUMN, row).y;
@@ -153,6 +158,9 @@ float4 TBWash(TBInputs ins, uint m TB_W_PARAM, float outside, float2 worldPixel)
         float framesPerSecond = TBLut(ins, TB_LAYER_ANIMATION_COLUMN, row).x;
         float along = saturate((1.0 - w[0]) - TBSeamlessBelow(ins, m TB_W_ARG));
         float reachMax = swash * along * (0.85 + 0.15 * PeriodicEdgeNoise(worldPixel * 0.5));
+        float hold = saturate(1.0 - TBBankHeight(ins, m TB_W_ARG, corner, worldPixel, 0.0) / TB_WASH_BANK);
+        reachMax *= hold;
+        under *= hold;
         float u = frac(TBWavePhase(ins, waves, framesPerSecond, 0.0, worldPixel));
         float reach = reachMax * TBWashRise(u);
         float4 foam = TBLut(ins, TB_LAYER_WASH_FOAM_COLUMN, row);
@@ -183,7 +191,7 @@ float4 TBWash(TBInputs ins, uint m TB_W_PARAM, float outside, float2 worldPixel)
             wash = float4(0.0, 0.0, 0.0, foam.a * wet);
         }
     }
-    return wash;
+    return wash + under * (1.0 - wash.a);
 }
 
 #endif

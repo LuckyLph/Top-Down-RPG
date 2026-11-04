@@ -9,8 +9,8 @@
 // keep margin inside the rim, and is clear otherwise, so the layer below shows. Elsewhere, from the outside in: the
 // tufts where the pair has them, as in crisp; the edge pixel (the outline, or the band's or the rim's outer colour),
 // opaque, or a sunken layer's bank (TBEdgeColour); then the interior under the band or the rim (TBInside, with a
-// sunken layer's bank). No shadow is drawn; past its edge, a layer with swash draws its wash where it covers at least
-// half of a pixel, opaque. Bands are shaded by the cell field's grit like the base colour. A layer that
+// sunken layer's bank). No shadow is drawn; past its edge, a layer with swash draws its wash (TBWash, held back by a
+// sunken layer's bank) where it covers at least half of a pixel, opaque. Bands are shaded by the cell field's grit like the base colour. A layer that
 // turns to its runs reads its cell field turned where its cell runs across (TBTurned), as its interior does. The
 // interior is worked out once for the edge pixel and the inside (TBLayerInterior). relief is the inside's relief
 // (TBInterior) or a whole stone's own bevel (TBStoneBevel), none elsewhere.
@@ -86,7 +86,7 @@ float4 TBLayer(TBInputs ins, uint m, TBEdge e TB_W_PARAM, float d, float2 pixel,
         }
         else
         {
-            float4 wash = TBWash(ins, m TB_W_ARG, d - 0.5, worldPixel);
+            float4 wash = TBWash(ins, m TB_W_ARG, corner, d - 0.5, worldPixel, float4(0.0, 0.0, 0.0, 0.0));
             if (wash.a >= 0.5)
             {
                 result = float4(wash.rgb / wash.a, 1.0);

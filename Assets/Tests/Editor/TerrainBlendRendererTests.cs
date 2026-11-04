@@ -776,6 +776,65 @@ public class TerrainBlendRendererTests
     }
 
     /// <summary>
+    /// A sunken layer with waves and swash washes up past an edge facing sideways, where it shows no bank, but never over
+    /// the top of its bank along an edge facing up the screen, nor darkens it with its shadow. The sea of
+    /// <see cref="ALayerWithWaves_WashesUpWhatItMeets_NeverPastItsSwash"/>, sunk 4 px and with a grey shadow 3 px wide:
+    /// along the bottom two rows no pixel just above its top edge differs from the ground inland over the eight frames of
+    /// a period; along the left two columns pixels just past its edge turn white. Renders from a later editor update,
+    /// until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ASunkenLayerWithSwash_WashesUpPastSideEdges_ButNeverOverItsBank()
+    {
+        foreach (bool seaWest in new[] { false, true })
+        {
+            TerrainBlendRenderer renderer = WavesRenderer(4, 2, 6f, out _, seaWest);
+            SerializedObject settings = new(renderer.Layers[1].Material);
+            settings.FindProperty("sinkDepth").floatValue = 4f;
+            settings.FindProperty("edge.shadowColour").colorValue = Color.grey;
+            settings.FindProperty("edge.shadowAlpha").floatValue = 0.5f;
+            settings.FindProperty("edge.shadowWidth").floatValue = 3f;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            renderer.Rebuild();
+            Rect world = new(0f, 0f, 8f, 4f);
+            yield return RenderUntilDrawn(renderer, world, new Vector2Int(128, 110));
+
+            Color32 inland = Pixel(renderer, world, 0f, new Vector2Int(128, 110));
+            int washed = 0;
+            for (int step = 0; step < 8; step++)
+            {
+                renderer.SetFixedTime(step * 0.125f);
+                Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+                for (int along = 32; along < 96; along++)
+                {
+                    for (int past = 66; past < 76; past++)
+                    {
+                        Color32 pixel = seaWest ? pixels.GetPixel(past, along) : pixels.GetPixel(along * 2, past);
+                        if (seaWest)
+                        {
+                            washed += pixel.r > 200 && pixel.g > 200 && pixel.b > 200 ? 1 : 0;
+                        }
+                        else
+                        {
+                            Assert.That(pixel, Is.EqualTo(inland), $"t {step * 0.125f}: ({along * 2}, {past}) above the bank");
+                        }
+                    }
+                }
+
+                Object.DestroyImmediate(pixels);
+            }
+
+            if (seaWest)
+            {
+                Assert.That(washed, Is.GreaterThan(100), "The wash runs up past an edge facing sideways.");
+            }
+
+            renderer.SetFixedTime(null);
+            Object.DestroyImmediate(renderer.gameObject);
+        }
+    }
+
+    /// <summary>
     /// A sunken layer (deep water) shows its bank along a top edge over a lower layer it meets with an ordinary pair,
     /// in that layer's bank colour, and none along a top edge over one it meets seamlessly (shallows, the same water's
     /// surface), where its own interior runs up to the edge. A blue sunken layer fills the bottom two rows, a green

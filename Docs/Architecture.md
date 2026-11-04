@@ -1242,7 +1242,7 @@ Fakes and seams:
 
 ## Known gaps and oddities
 
-Factual observations against CLAUDE.md; nothing here has been changed.
+Factual observations against CLAUDE.md; nothing here has been changed. [KnownGaps.md](KnownGaps.md) is the plan for the ones no other plan covers: each is fixed and taken off this list, or marked accepted here with its reason.
 
 - **A fixed build version**: it stays at the pre-alpha `0.1.0-prealpha` until the user asks for another (CLAUDE.md), so `JoinApproval` no longer refuses a client whose protocol, worlds or catalogs (`WeaponCatalog`, `StatusEffectCatalog`, which rely on it) differ from the host's; it matters from the first real multiplayer test with another client, planned for the first playable vertical slice. A content hash in the join payload is WorldGeneration.md's open question.
 

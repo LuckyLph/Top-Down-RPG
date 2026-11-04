@@ -7,7 +7,8 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// PlayMode tests for the world save from the main menu (Docs/WorldStreaming.md: Persistence): New Game enters the
-/// starting world and saves the local player's place and weapon; without a usable save Continue is off; Continue and
+/// starting world and saves the local player's place and weapon; an editor boot straight into a world is a throwaway
+/// session that leaves the save alone; without a usable save Continue is off; Continue and
 /// Host Game start from the save, the local player at its saved world and position holding its saved weapon, and the
 /// host's weapon switch is saved; a player the host knows by its player id joins at its saved place, once the host has
 /// loaded that world, holding its saved weapon on both machines, and its place is kept as it leaves.
@@ -59,6 +60,38 @@ public class GameSavePlayModeTests
         Assert.That(player.Waystones, Is.Empty);
         PlayerWeaponController weapon = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current.Weapon;
         Assert.That(player.Weapon, Is.EqualTo(weapon.StartingWeapon.WeaponId), "The save names the weapon the player holds.");
+    }
+
+    /// <summary>
+    /// Booting the editor straight into a world, rather than starting from the main menu, is a throwaway session: it
+    /// writes nothing to the save file as it enters the world, when a save is asked for or as it leaves to the menu, so
+    /// a save stored meanwhile is left as it was, and Continue then loads it, which makes a real session that saves
+    /// again.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator BootingIntoAWorldFromTheEditor_IsAThrowaway_ThatLeavesTheSaveAlone()
+    {
+        MemorySaveStore saveStore = new();
+        yield return SceneBootTestHelper.BootIntoTestlands(saveStore);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        SessionSave session = SceneBootTestHelper.ResolveFromMain<SessionSave>();
+        Assert.That(session.IsThrowaway, Is.True, "An editor boot into a world is a throwaway session.");
+        WorldDefinition sandbox = FindWorld(gameFlow, "Sandbox");
+        string stored = SaveWith(sandbox, SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId, sandbox.ToWorld(SavedSandboxPlace)).ToJson();
+        saveStore.Contents = stored;
+        yield return null;
+        yield return null;
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<GameSaveRecorder>().Save(), Is.False, "A throwaway session writes no save.");
+        gameFlow.ShowMainMenuAsync();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(saveStore.WriteCount, Is.Zero, "Entering the world and leaving it wrote nothing.");
+        Assert.That(saveStore.Contents, Is.EqualTo(stored), "The stored save is left as it was.");
+
+        Object.FindAnyObjectByType<MainMenuController>().ContinueGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        AssertLocalPlayerAt(gameFlow, sandbox, sandbox.ToWorld(SavedSandboxPlace));
+        Assert.That(session.IsThrowaway, Is.False, "Continue from the menu is a real session.");
+        yield return SceneBootTestHelper.WaitUntil(() => saveStore.WriteCount > 0, "the continued session to save as its player enters the world");
     }
 
     /// <summary>

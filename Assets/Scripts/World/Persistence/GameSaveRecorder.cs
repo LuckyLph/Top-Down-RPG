@@ -5,7 +5,9 @@ using VContainer.Unity;
 
 /// <summary>
 /// Gameplay-scope entry point that writes the save during a world session (Docs/WorldStreaming.md: Persistence), only
-/// on the machine that decides game state (offline or the host; a client never saves): when any player enters a world
+/// on the machine that decides game state (offline or the host; a client never saves) and only for a session started
+/// from the main menu (an editor boot straight into a world is a throwaway, <see cref="SessionSave.IsThrowaway"/>,
+/// which never writes the save file): when any player enters a world
 /// (the session starting, a trip, a player joining), every <see cref="GameplaySettings.AutosaveIntervalSeconds"/> of
 /// game time, and as the session ends (the menu, a new game, the host leaving, quitting). Each save first records every
 /// player's place and weapon in the <see cref="SessionSave"/> by its player id (<see cref="PlayerIds"/>): where it
@@ -60,9 +62,9 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Whether this machine saves now: it decides game state and a world session runs.
+    /// Whether this machine saves now: it decides game state, a world session runs and that session is no throwaway.
     /// </summary>
-    private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null;
+    private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null && !sessionSave.IsThrowaway;
 
     /// <summary>
     /// Follows the players leaving, their worlds, the session's end and the application quitting, and the worlds of the
@@ -108,8 +110,8 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
 
     /// <summary>
     /// Records every player's place and weapon and writes the session's state as the save, then waits a full autosave
-    /// interval before the next autosave. Returns false, writing nothing, where this machine does not save (a client, or
-    /// no world session), or when the store fails.
+    /// interval before the next autosave. Returns false, writing nothing, where this machine does not save (a client, no
+    /// world session, or a throwaway one), or when the store fails.
     /// </summary>
     public bool Save()
     {

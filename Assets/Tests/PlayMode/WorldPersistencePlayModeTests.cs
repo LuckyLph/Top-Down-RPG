@@ -95,16 +95,21 @@ public class WorldPersistencePlayModeTests
     }
 
     /// <summary>
-    /// Booted into the Sandbox (a new game there), a killed mob and the player's place are saved as the game returns to
-    /// the menu; Continue puts the player back there with the mob still dead.
+    /// Continuing a save in the Sandbox from the main menu, a killed mob and the player's place are saved as the game
+    /// returns to the menu; Continue puts the player back there with the mob still dead.
     /// </summary>
     [UnityTest]
     public IEnumerator LeavingToTheMenu_SavesTheWorld_AndContinueBringsItBack()
     {
         MemorySaveStore saveStore = new();
-        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath, saveStore);
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
-        WorldDefinition world = gameFlow.CurrentWorld;
+        WorldDefinition world = FindWorld(gameFlow, "Sandbox");
+        string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
+        saveStore.Contents = SaveWith(new GameSaveData.Player(playerId, world.WorldId, world.ToWorld(new Vector2(32.5f, 44.5f)))).ToJson();
+        Object.FindAnyObjectByType<MainMenuController>().ContinueGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.CurrentWorld, Is.SameAs(world));
         ChunkMobSpawner spawner = SpawnerOf(world, Vector2Int.zero);
         int spawned = spawner.Mobs.Count;
         Health health = spawner.Mobs[1].GetComponent<Health>();

@@ -177,6 +177,27 @@ public class GameSaveTests
     }
 
     /// <summary>
+    /// A throwaway session (an editor boot straight into a world) is marked as one until a real session starts, new or
+    /// from the save.
+    /// </summary>
+    [Test]
+    public void AThrowawaySession_IsMarked_UntilARealOneStarts()
+    {
+        SessionSave session = new(new ManualClock());
+        Assert.That(session.IsThrowaway, Is.False);
+
+        session.StartThrowaway();
+        Assert.That(session.IsThrowaway, Is.True);
+        session.StartNew();
+        Assert.That(session.IsThrowaway, Is.False);
+
+        session.StartThrowaway();
+        session.SetPlace(Alice, WorldA, Vector2.one);
+        session.StartFrom(session.ToData());
+        Assert.That(session.IsThrowaway, Is.False);
+    }
+
+    /// <summary>
     /// A version 1 save, which held the area the party was in, is ignored with a warning, so Continue is off.
     /// </summary>
     [Test]

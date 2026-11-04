@@ -6,8 +6,9 @@ using UnityEngine;
 /// place, discovered waystones and weapon by player id, and the <see cref="WorldState"/> of every world visited, loaded
 /// or not.
 /// It is used where game state is decided, offline or on the host; a client keeps an empty one it never writes. A
-/// session starts new (<see cref="StartNew"/>) or from the save file (<see cref="StartFrom"/>), and lasts as long as the
-/// Main scope, across Gameplay scenes. The world clock is the game time played on the save: the saved time plus the
+/// session starts new (<see cref="StartNew"/>), from the save file (<see cref="StartFrom"/>), or as a throwaway
+/// (<see cref="StartThrowaway"/>: an editor boot straight into a world, which nothing writes to the save file), and lasts
+/// as long as the Main scope, across Gameplay scenes. The world clock is the game time played on the save: the saved time plus the
 /// game time since the session started, so a time recorded in one session still means the same in the next.
 /// </summary>
 public sealed class SessionSave
@@ -33,6 +34,12 @@ public sealed class SessionSave
     /// </summary>
     public double Time => savedTime + (clock.Time - clockAtStart);
 
+    /// <summary>
+    /// Whether this session is a throwaway, started by booting the editor straight into a world rather than from the
+    /// main menu: it keeps its state in memory like any session, but nothing writes it to the save file.
+    /// </summary>
+    public bool IsThrowaway { get; private set; }
+
     internal int PlayerCount => places.Count;
     internal int WorldCount => worlds.Count;
 
@@ -42,6 +49,17 @@ public sealed class SessionSave
     public void StartNew()
     {
         Restart(0d);
+    }
+
+    /// <summary>
+    /// Forgets everything and starts the world clock at zero for a throwaway session (<see cref="IsThrowaway"/>): an
+    /// editor boot straight into a world, which leaves the save file alone. The next session started from the main menu
+    /// (<see cref="StartNew"/>, <see cref="StartFrom"/>) is a real one again.
+    /// </summary>
+    public void StartThrowaway()
+    {
+        Restart(0d);
+        IsThrowaway = true;
     }
 
     /// <summary>
@@ -220,7 +238,8 @@ public sealed class SessionSave
     }
 
     /// <summary>
-    /// Forgets every player and world and sets the world clock to <paramref name="time"/> from now.
+    /// Forgets every player and world, makes the session a real one again and sets the world clock to
+    /// <paramref name="time"/> from now.
     /// </summary>
     private void Restart(double time)
     {
@@ -228,6 +247,7 @@ public sealed class SessionSave
         waystones.Clear();
         weapons.Clear();
         worlds.Clear();
+        IsThrowaway = false;
         savedTime = time;
         clockAtStart = clock.Time;
     }

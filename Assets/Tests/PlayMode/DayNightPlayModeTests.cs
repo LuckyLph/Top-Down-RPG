@@ -245,7 +245,7 @@ public class DayNightPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
 
         NetworkManager clientManager = client.Manager;
-        SessionSave clientSession = new(UnityClock.Shared);
+        SessionSave clientSession = new(new UnityClock());
         clientSession.StartNew();
         DayClock clientClock = new(hostClock.Settings, clientSession, new ClientAuthority(), new ManagerClock(clientManager));
         DayClockSync.Listen(clientManager, clientClock);

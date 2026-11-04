@@ -140,7 +140,7 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance(players).As<IPlayerRegistry>().AsSelf();
         builder.RegisterInstance(localPlayer);
         builder.RegisterInstance<IPlayerInput>(input);
-        builder.RegisterInstance<IClock>(UnityClock.Shared);
+        builder.Register<IClock, UnityClock>(Lifetime.Singleton);
         builder.RegisterInstance<IGameAuthority>(new FixedAuthority(!sessionStatus.IsActive || sessionStatus.IsHost));
         builder.RegisterInstance(sessionStatus);
         builder.RegisterInstance(camera);

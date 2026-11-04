@@ -39,7 +39,7 @@ public class CharacterVisuals : MonoBehaviour
     private Light2D lanternLight;
 
     private SpriteRenderer spriteRenderer;
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private CharacterAnimator animator;
     private Vector2 velocity;
     private Vector2 facing = Vector2.down;
@@ -56,7 +56,7 @@ public class CharacterVisuals : MonoBehaviour
     public bool LanternLit => lanternLit;
 
     /// <summary>
-    /// The animator, built on first use; null without a set or settings.
+    /// The animator, built on first use; null without a set, settings or clock.
     /// </summary>
     internal CharacterAnimator Animator => EnsureAnimator();
 
@@ -69,6 +69,17 @@ public class CharacterVisuals : MonoBehaviour
         if (animationSet == null || locomotion == null)
         {
             Debug.LogError($"{name} needs a {nameof(CharacterAnimationSet)} and {nameof(CharacterLocomotionSettings)} to animate.", this);
+        }
+    }
+
+    /// <summary>
+    /// Fails loudly when no clock was injected: the character cannot animate without one.
+    /// </summary>
+    private void Start()
+    {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(CharacterVisuals)} was not injected with an {nameof(IClock)}; it cannot animate.", this);
         }
     }
 
@@ -97,12 +108,12 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the game clock the animation runs on; null falls back to the shared Unity clock.
+    /// Takes the game clock the animation runs on.
     /// </summary>
     [Inject]
     public void Construct(IClock gameClock)
     {
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         animator = null;
     }
 
@@ -344,11 +355,11 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Builds the animator when there is none and both the set and the settings are assigned.
+    /// Builds the animator when there is none and the set, the settings and the clock are all there.
     /// </summary>
     private CharacterAnimator EnsureAnimator()
     {
-        if (animator == null && animationSet != null && locomotion != null)
+        if (animator == null && animationSet != null && locomotion != null && clock != null)
         {
             animator = new CharacterAnimator(animationSet, locomotion, clock);
         }

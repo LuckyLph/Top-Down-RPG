@@ -51,7 +51,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     private readonly AbilityDefinition[] slots = new AbilityDefinition[AbilitySlots.Count];
     private readonly AbilityCooldowns cooldowns = new(AbilitySlots.Count);
     private readonly Dictionary<AbilityDefinition, float> weaponReadyTimes = new();
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private AbilityService abilityService;
     private Health health;
     private int runningSlot = -1;
@@ -146,10 +146,16 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Logs an error when no <see cref="AbilityService"/> was injected, since casts would then have no effect.
+    /// Logs an error when no clock was injected, since cooldowns and casts cannot run without one, or no
+    /// <see cref="AbilityService"/>, since casts would then have no effect.
     /// </summary>
     private void Start()
     {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(PlayerAbilities)} was not injected with an {nameof(IClock)}; its cooldowns and casts cannot run.", this);
+        }
+
         if (abilityService == null)
         {
             Debug.LogError($"{name} was not injected with an {nameof(AbilityService)}; its casts will have no effect.", this);
@@ -157,13 +163,12 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Injects the clock cooldowns run on (falling back to <see cref="UnityClock.Shared"/> when null) and the
-    /// service that applies casts.
+    /// Injects the clock cooldowns run on and the service that applies casts.
     /// </summary>
     [Inject]
     public void Construct(IClock gameClock, AbilityService service)
     {
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         abilityService = service;
     }
 
@@ -467,11 +472,11 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
     /// <summary>
     /// Draws the aim and a label for each recent cast still running or within <c>castGizmoSeconds</c> of its end,
-    /// fading out afterwards; remote casts are dimmer.
+    /// fading out afterwards; remote casts are dimmer. Nothing before a clock was injected (a player in edit mode).
     /// </summary>
     private void OnDrawGizmos()
     {
-        if (!drawCastGizmos)
+        if (!drawCastGizmos || clock == null)
         {
             return;
         }

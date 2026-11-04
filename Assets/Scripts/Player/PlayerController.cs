@@ -30,7 +30,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Color approachGizmoColor = new(1f, 1f, 1f, 0.8f);
 
     private IPlayerCommandSource commandSource;
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private PlayerOrders orders;
     private StatusEffects statuses;
     private PlayerLantern lantern;
@@ -95,10 +95,16 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Logs an error when a player that simulates its own movement was never given a command source.
+    /// Logs an error when no clock was injected, since orders cannot run without one, or when a player that simulates
+    /// its own movement was never given a command source.
     /// </summary>
     private void Start()
     {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(PlayerController)} was not injected with an {nameof(IClock)}; its orders cannot run.", this);
+        }
+
         if (simulatesMovement && commandSource == null)
         {
             Debug.LogError($"{name} has no {nameof(IPlayerCommandSource)}; it will not respond to input.", this);
@@ -122,12 +128,12 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the game clock that times orders and casts; null falls back to the shared Unity clock.
+    /// Takes the game clock that times orders and casts.
     /// </summary>
     [Inject]
     public void Construct(IClock gameClock)
     {
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
     }
 
     /// <summary>

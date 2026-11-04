@@ -30,7 +30,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     private AttackService attackService;
     private ProjectileService projectileService;
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private AttackState attack;
     private PlayerWeapon currentWeapon;
     private CharacterAnimationClip attackClip;
@@ -123,6 +123,17 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
+    /// Fails loudly when no clock was injected: attacks cannot run without one.
+    /// </summary>
+    private void Start()
+    {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(PlayerWeaponController)} was not injected with an {nameof(IClock)}; its attacks cannot run.", this);
+        }
+    }
+
+    /// <summary>
     /// Ends a running attack, and any attack a copy is playing, when the player is disabled (death).
     /// </summary>
     private void OnDisable()
@@ -135,15 +146,14 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the services that resolve hits and fly projectiles and the game clock that times attacks; a null clock
-    /// falls back to the shared Unity clock.
+    /// Takes the services that resolve hits and fly projectiles and the game clock that times attacks.
     /// </summary>
     [Inject]
     public void Construct(AttackService attacks, ProjectileService projectiles, IClock gameClock)
     {
         attackService = attacks;
         projectileService = projectiles;
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         attack = null;
     }
 

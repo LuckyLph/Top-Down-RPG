@@ -60,6 +60,8 @@ Chunks get their walls from [Walls.prefab](../Assets/Prefabs/World/Walls.prefab)
 
 Scene identity is data, not strings: [SceneDefinition](../Assets/Scripts/Core/Scenes/SceneDefinition.cs) assets under `Assets/Data/Scenes` (and beside each world's scenes under `Assets/Worlds`) hold a scene GUID + path, and [GameScenes](../Assets/Scripts/Core/Scenes/GameScenes.cs) (`Assets/Data/Scenes/GameScenes.asset`) lists MainMenu, Gameplay, the seamless worlds (`worlds`, `FindWorldOwning(scenePath)`: the listed world whose root or chunk scene that is; `FindWorldById`), and the starting world and entry (`StartingWorld`, `StartingWorldEntry`: the Overworld's `clearing`), where New Game and Host Game start and where a joining player the host does not know arrives. Its internal `CopyStartingAt(source, world, entry)` makes a copy of the asset starting elsewhere (a `GameScenesCopy`, every serialized field copied through `JsonUtility`, `DontSave`; a type of its own, since VContainer refuses a second singleton of the same concrete type), which `SceneBootTestHelper` registers into the Main scope for every PlayMode boot, so the tests start at Testlands' `start`; the asset itself is never written at runtime or by a test.
 
+Composition roots find a scene's own objects with [SceneQuery](../Assets/Scripts/Core/Scenes/SceneQuery.cs) (`FindFirst<T>(scene)`, `FindAll<T>(scene)`, inactive objects included), which reads the scene's root objects into an array of its own on every call, so it keeps no state between calls.
+
 ### Load hierarchy
 
 ```
@@ -102,7 +104,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 |---|---|
 | `GameScenes` | instance (inspector) |
 | `Camera` (main camera), `ScreenFader`, `CameraFollow2D` (+ as `ICameraKick`) | components (inspector) |
-| `IClock` -> `UnityClock.Shared` | instance |
+| `IClock` -> `UnityClock` | singleton |
 | `IRandom` -> `new SystemRandom()` (time-seeded) | instance |
 | `SceneLoader`, `GameFlow` (gets this scope as `LifetimeScope` parameter) | singletons |
 | `UISelection` (with the inspector's `EventSystem`) | singleton |
@@ -195,7 +197,7 @@ VContainer scopes live one per scene. Each Gameplay-assembly scope logs an error
 | `TerrainBlendRenderer` | `SharedTerrainArrays` | Chunk scope `RegisterComponent`; elsewhere (edit mode, tests, scratch scenes) nothing injects it and it builds its own arrays |
 | `NetworkAreaTerrain` | `AreaTerrain` | `ChunkTerrainSync` (`resolver.Instantiate`) on the host, or a client's chunk handler through `ChunkNetworkPrefabs` |
 
-`MeleeDamageDealer`, `PlayerController`, `PlayerAbilities`, `PlayerWeaponController` and `CharacterVisuals` default their clock to `UnityClock.Shared` when not injected. A `PlayerMotor2D` that was never injected has no navigation and moves in straight lines.
+`MeleeDamageDealer`, `PlayerController`, `PlayerAbilities`, `PlayerWeaponController` and `CharacterVisuals` have no clock until one is injected, and each logs an error from `Start` when none was (`CharacterVisuals` then animates nothing); every scope that builds them registers an `IClock`, and tests construct them with a `ManualClock`. A `PlayerMotor2D` that was never injected has no navigation and moves in straight lines.
 
 ## Networking
 
@@ -295,7 +297,7 @@ Click-to-move, specified in [PlayerControls.md](PlayerControls.md). Mouse only f
 ## Clock
 
 - [IClock](../Assets/Scripts/Core/Clock/IClock.cs): `float Time`. Used for cooldowns and gameplay timers.
-- [UnityClock](../Assets/Scripts/Core/Clock/UnityClock.cs): `Time.time`; `UnityClock.Shared` is registered in the Main scope.
+- [UnityClock](../Assets/Scripts/Core/Clock/UnityClock.cs): `Time.time`; the Main scope registers one as the `IClock` singleton, and the in-process test client registers its own.
 - Clock consumers: `MeleeDamageDealer` (a mob's attack timeline and cooldown, `AttackState`), `PlayerWeaponController` (the attack timeline and cooldown, `AttackState`), `PlayerController` (order timing: hold re-evaluation, chase repaths, cast times, the cast buffer window), `PlayerAbilities` (cooldowns), `ProjectileService` (projectiles' flight, by the clock's delta each frame), `CharacterVisuals` (the player's and the mobs' character animation, which so holds still while game time is frozen and runs on a `ManualClock` in tests). Mob AI timers are driven by the `dt` passed to `MobController.TickStateMachine`, which tests control. Purely visual, per-client animations (pooled effects (`EffectPlayer`), damage popups, the hit flash and nudge (`HitFeedback`), the camera kick) advance with `Time.deltaTime` on purpose; a character's hit-stop holds on its animator's game clock. `StatusEffectService` ticks statuses with the clock's delta each frame.
 - [TimeFreeze](../Assets/Scripts/Core/Clock/TimeFreeze.cs) (Main-scope singleton): the only writer of `Time.timeScale`: 0 while any owner holds it (`Hold`/`Release`, `IsFrozen`, on a [HoldSet](../Assets/Scripts/Core/HoldSet.cs), the owner set `GameplayInputGate` blocks with too), 1 after the last release and on dispose. Holders: `TransitionTimeFreeze`, and `GameMenuController` in solo play.
 - [TransitionTimeFreeze](../Assets/Scripts/Core/Scenes/TransitionTimeFreeze.cs) (Main-scope entry point): offline, holds the `TimeFreeze` from `GameFlow.TransitionStarted` to `TransitionFinished` (and releases it on dispose), except during a trip (`GameFlow.IsTravelling`), which is a local fade only, so nothing on the game clock, `Time.deltaTime`, physics or `Awaitable.WaitForSecondsAsync` advances behind the fade of a new game, Continue or the menu. In a session (`ISessionStatus.IsActive`) it never holds (`Freezes(transitioning, travelling, inSession)`): a machine's own start, join or leave stops nobody's game (WorldStreaming.md's Simulation and presentation). `ScreenFader` uses unscaled time.
@@ -1246,7 +1248,6 @@ Factual observations against CLAUDE.md; nothing here has been changed. [KnownGap
 
 - **A fixed build version**: it stays at the pre-alpha `0.1.0-prealpha` until the user asks for another (CLAUDE.md), so `JoinApproval` no longer refuses a client whose protocol, worlds or catalogs (`WeaponCatalog`, `StatusEffectCatalog`, which rely on it) differ from the host's; it matters from the first real multiplayer test with another client, planned for the first playable vertical slice. A content hash in the join payload is WorldGeneration.md's open question.
 
-- **Static mutable state**: `SceneQuery` shares a static root-object buffer. `UnityClock.Shared` is a static used as a fallback clock inside components.
 - **Two classes in one file**: `SceneDefinitionEditor.cs` also defines `SceneDefinitionPathSync`.
 - **A bridge's end depends on the layers listed between it and the layer under it**: `TBVisible` hides a layer under a bridge directly above it where their edges meet, while a bridge two or more layers up leaves the layer its edge pixel there (`TBNearBridgeEdge`), even when the layers between are empty. Chunks list different materials, so a plank bridge over water ending near a border where one chunk lists the ocean (between water and planks) and the other does not draws up to about 25 pixels differently on either side; `ChunkedGround` gives every grid the same list to keep its comparison to the skirt (WorldStreaming.md's Phase 2 notes).
 - **Chunk loads hitch in the editor**: an Overworld chunk's load has a worst frame of about 69 ms there, mostly the scene's activation, which grows by about 0.1 ms a prop. In a development player (batchmode, CPU only) it is about 12.6 ms on average and 16 ms at worst, under a 16.7 ms frame: activation 4 to 10 ms (about 0.005 ms a prop) and the ground's build 1 to 5 ms, since its texture arrays are shared per style (WorldScale.md's Phase 0 and Phase 2 notes). The GPU side of a load is not measured.

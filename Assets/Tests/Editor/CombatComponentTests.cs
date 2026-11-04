@@ -260,13 +260,14 @@ public class CombatComponentTests
     }
 
     /// <summary>
-    /// A melee dealer that was never injected with an <see cref="AttackService"/> logs an error and starts no attack.
+    /// A melee dealer injected with its clock but no <see cref="AttackService"/> logs an error and starts no attack.
     /// </summary>
     [Test]
     public void MeleeDamageDealer_WithoutAttackService_LogsErrorAndStartsNothing()
     {
         root = new GameObject("DealerRoot");
         MeleeDamageDealer dealer = root.AddComponent<MeleeDamageDealer>();
+        dealer.Construct(new ManualClock(), null);
         GameObject target = new("Target");
         target.transform.SetParent(root.transform);
         Health health = target.AddComponent<Health>();

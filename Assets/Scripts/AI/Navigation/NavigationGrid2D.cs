@@ -48,6 +48,8 @@ public class NavigationGrid2D : MonoBehaviour, INavigation2D
     [Tooltip("Layers whose colliders block every cell they overlap, such as the footprints of blocking props. Read " +
         "when the grid builds; colliders on tilemaps and triggers are ignored.")]
     [SerializeField] private LayerMask obstacleLayers;
+    [Tooltip("How far, in cells, the search for the nearest walkable cell looks when its caller gives no radius: A*'s " +
+        "start and goal, and the mobs and players moving on this grid. A chunk's grid uses its world's instead.")]
     [SerializeField] private int nearestCellSearchRadius = NavigationMap2D.DefaultNearestCellSearchRadius;
     [Tooltip("Upper bound on cells a partial A* search toward an unreachable goal may expand before returning " +
         "the closest cell found so far. Searches toward reachable goals are never capped. A chunk's grid uses its " +

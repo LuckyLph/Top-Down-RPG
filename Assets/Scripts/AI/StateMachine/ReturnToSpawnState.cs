@@ -102,7 +102,7 @@ public class ReturnToSpawnState : MobStateBase
             return true;
         }
 
-        if (PathAgent.Navigation.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest, Config.NearestCellSearchRadius))
+        if (PathAgent.Navigation.TryGetNearestWalkableCell(spawnCell, movementProfile, out Vector3Int nearest))
         {
             destination = PathAgent.Navigation.CellToWorldCenter(nearest);
             return true;

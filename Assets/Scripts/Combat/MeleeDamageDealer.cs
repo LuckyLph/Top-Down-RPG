@@ -18,9 +18,8 @@ public class MeleeDamageDealer : MonoBehaviour
 {
     private const int OnlyAttack = 0;
 
-    [SerializeField, Min(0)] private int damageAmount = 1;
-    [SerializeField, Min(0f)] private float attackInterval = 0.75f;
-
+    private int damageAmount = 1;
+    private float attackInterval = 0.75f;
     private IClock clock;
     private AttackService attackService;
     private DamageType damageType = DamageType.Physical;

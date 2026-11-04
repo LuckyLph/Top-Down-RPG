@@ -69,7 +69,6 @@ public class MobConfig : ScriptableObject
 
     [Header("Navigation")]
     [SerializeField, Min(0.01f)] private float repathInterval = 0.25f;
-    [SerializeField, Min(1)] private int nearestCellSearchRadius = 8;
     [SerializeField, Min(0.1f), Tooltip("Patrol and return give up after following a path this long without making headway.")]
     private float stuckTimeout = 1f;
     [SerializeField] private TerrainMovementProfile2D movementProfile;
@@ -102,7 +101,6 @@ public class MobConfig : ScriptableObject
     public bool Respawns => respawns;
     public float RespawnDelaySeconds => respawnDelaySeconds;
     public float RepathInterval => repathInterval;
-    public int NearestCellSearchRadius => nearestCellSearchRadius;
     public float StuckTimeout => stuckTimeout;
     public TerrainMovementProfile2D MovementProfile => movementProfile;
 

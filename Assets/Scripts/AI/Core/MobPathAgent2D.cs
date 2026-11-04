@@ -126,13 +126,13 @@ public class MobPathAgent2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Follower settings from the config's waypoint reach, arrival and nearest-cell distances; the defaults without a
-    /// config.
+    /// Follower settings from the config's waypoint reach and arrival distances, searching for the nearest walkable cell
+    /// as far as the navigation's own radius; the defaults without a config.
     /// </summary>
     private static PathFollowerSettings2D CreateSettings(MobConfig mobConfig)
     {
         return mobConfig != null
-            ? new PathFollowerSettings2D(mobConfig.WaypointReachDistance, mobConfig.ArrivalDistance, mobConfig.NearestCellSearchRadius)
+            ? new PathFollowerSettings2D(mobConfig.WaypointReachDistance, mobConfig.ArrivalDistance)
             : default;
     }
 

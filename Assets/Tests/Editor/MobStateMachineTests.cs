@@ -23,12 +23,12 @@ public class MobStateMachineTests
     private ManualClock clock;
     private NavigationGrid2D navGrid;
     private TerrainType2D groundTerrain;
-    // Mobs and the player live outside root; left behind, they would be sensed by later tests' mobs.
     private readonly List<GameObject> sceneObjects = new();
     private readonly List<StatusEffectDefinition> statusDefinitions = new();
 
     /// <summary>
-    /// Destroys the mobs, players, status definitions, grid root, tiles, terrain and config the test created.
+    /// Destroys the mobs, players, status definitions, grid root, tiles, terrain and config the test created. The mobs
+    /// and the player live outside the root, so left behind they would be sensed by later tests' mobs.
     /// </summary>
     [TearDown]
     public void TearDown()
@@ -105,8 +105,8 @@ public class MobStateMachineTests
     }
 
     /// <summary>
-    /// Re-injecting a mob whose state machine is already running restarts it from idle, so it still reacts to a
-    /// player instead of stalling with no state.
+    /// Re-injecting a mob whose state machine is already running, as a scope rebuild does after Start has entered its
+    /// first state, restarts it from idle, so it still reacts to a player instead of stalling with no state.
     /// </summary>
     [Test]
     public void Reinjection_WhileRunning_ResumesFromIdleInsteadOfStalling()
@@ -114,7 +114,6 @@ public class MobStateMachineTests
         SetupWorld();
         brain.ChangeState(MobStateId.Patrol);
 
-        // A scope rebuild re-injects the brain after Start has already entered its first state.
         brain.Construct(navGrid, players, random);
 
         player.position = new Vector3(3f, 0f, 0f);
@@ -185,12 +184,12 @@ public class MobStateMachineTests
 
     /// <summary>
     /// A chasing mob shoved off its path to the far side of a wall repaths and heads for the target, even though
-    /// the target has not changed cell.
+    /// the target has not changed cell. The wall runs at x = 2 from the grid's south edge up to y = 3, so the first
+    /// route goes over its top; the shove puts the mob east of the wall, its old next waypoint behind it.
     /// </summary>
     [Test]
     public void ChaseState_Repaths_WhenMobIsPushedOffPathWhileTargetStaysInSameCell()
     {
-        // Wall at x = 2 running from the grid's south edge up to y = 3, so the initial route goes over its top.
         List<Vector3Int> wall = new();
         for (int y = -10; y <= 3; y++)
         {
@@ -204,7 +203,6 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
         Assert.That(brain.PathAgent.HasPath, Is.True);
 
-        // Shoved to the east side of the wall; the old next waypoint is now behind it.
         Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
         rb.position = new Vector2(3.5f, -3.5f);
         brain.transform.position = rb.position;
@@ -259,7 +257,8 @@ public class MobStateMachineTests
 
     /// <summary>
     /// While searching, a mob only re-acquires a visible target inside its detection radius, not out to its
-    /// lose-target distance.
+    /// lose-target distance: the player steps into plain view beyond the detection radius (8) but within the lose
+    /// distance (10).
     /// </summary>
     [Test]
     public void SearchState_SpotsTargetOnlyWithinDetectionRadius_LikeEveryOtherState()
@@ -272,7 +271,6 @@ public class MobStateMachineTests
         brain.TickStateMachine(config.LineOfSightInterval);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search));
 
-        // In plain view, beyond detectionRadius (8) but within loseTargetDistance (10).
         Object.DestroyImmediate(pillar);
         player.position = new Vector3(9f, 0f, 0f);
         brain.TickStateMachine(config.LineOfSightInterval);
@@ -282,14 +280,14 @@ public class MobStateMachineTests
 
     /// <summary>
     /// The search duration only starts counting once the mob reaches the last known position, then it returns
-    /// home after the full duration.
+    /// home after the full duration. Edit mode runs no physics, so the mob walking there never arrives until the test
+    /// moves it.
     /// </summary>
     [Test]
     public void SearchState_SearchTimeStartsOnArrival_NotWhileWalkingThere()
     {
         EnterSearchWithTargetGone();
 
-        // Still walking to the last known position (edit mode runs no physics, so it never gets there).
         brain.TickStateMachine(config.SearchDuration + 0.1f);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Search), "Walking there must not use up the search time.");
 
@@ -743,7 +741,8 @@ public class MobStateMachineTests
     }
 
     /// <summary>
-    /// A patrolling mob that stays stuck past the stuck timeout gives up on its roam destination and goes idle.
+    /// A patrolling mob that stays stuck past the stuck timeout gives up on its roam destination and goes idle. Edit
+    /// mode runs no physics, so the mob stays put exactly as if something blocked it.
     /// </summary>
     [Test]
     public void PatrolState_GoesIdle_WhenBlockedFromReachingDestination()
@@ -753,7 +752,6 @@ public class MobStateMachineTests
         brain.ChangeState(MobStateId.Patrol);
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Patrol));
 
-        // Edit mode runs no physics, so the mob stays put exactly as if something blocked it.
         TickBlockedPastStuckTimeout();
 
         Assert.That(brain.CurrentStateId, Is.EqualTo(MobStateId.Idle));
@@ -839,12 +837,12 @@ public class MobStateMachineTests
     }
 
     /// <summary>
-    /// Separation from a neighbor never pushes a mob toward an unwalkable cell.
+    /// Separation from a neighbor never pushes a mob toward an unwalkable cell: the barrier row y = 1 is unwalkable,
+    /// and the neighbor below pushes this mob straight at it.
     /// </summary>
     [Test]
     public void Separation_NeverPushesAMobIntoAWall()
     {
-        // The barrier row y = 1 is unwalkable; the neighbor below pushes this mob straight at it.
         SetupWorld(new Vector3(0.5f, 0.85f, 0f), addHorizontalBarrier: true);
         CreateMob(new Vector3(0.5f, 0.55f, 0f));
 
@@ -911,7 +909,8 @@ public class MobStateMachineTests
 
     /// <summary>
     /// A waiting mob nudged just outside the separation radius keeps waiting rather than stepping straight back
-    /// toward the ally.
+    /// toward the ally: it is pushed back to just beyond the separation radius (0.8) from the ally, but within 1.5
+    /// times it.
     /// </summary>
     [Test]
     public void ChaseState_KeepsWaiting_WhenSeparationNudgesItJustPastTheAlly()
@@ -923,7 +922,6 @@ public class MobStateMachineTests
         brain.TickStateMachine(0.1f);
         brain.FixedTickStateMachine();
 
-        // Pushed back to just beyond the separation radius (0.8) from the ally, but within 1.5x of it.
         Rigidbody2D rb = brain.GetComponent<Rigidbody2D>();
         rb.position = new Vector2(1.2f, 0.5f);
         rb.linearVelocity = Vector2.zero;

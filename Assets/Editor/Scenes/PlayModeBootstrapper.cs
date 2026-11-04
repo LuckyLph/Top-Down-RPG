@@ -64,15 +64,15 @@ public static class PlayModeBootstrapper
     }
 
     /// <summary>
-    /// Reapplies the start scene on return to Edit Mode. When leaving Edit Mode with booting enabled, clears the start
-    /// scene and boot request for a Test Runner session, or else saves modified scenes (cancelling Play if the user
-    /// declines) and records the open scenes as the boot request.
+    /// Reapplies the start scene on return to Edit Mode, after a Test Runner session cleared it. When leaving Edit Mode
+    /// with booting enabled, clears the start scene and boot request for a Test Runner session, or else saves modified
+    /// scenes (cancelling Play if the user declines) and records the open scenes as the boot request
+    /// (Docs/Architecture.md, Boot sequence).
     /// </summary>
     private static void HandlePlayModeStateChanged(PlayModeStateChange change)
     {
         if (change == PlayModeStateChange.EnteredEditMode)
         {
-            // Restores the start scene after a Test Runner session cleared it.
             Apply();
             return;
         }
@@ -82,8 +82,6 @@ public static class PlayModeBootstrapper
             return;
         }
 
-        // The Test Runner fires its RunStarted callback only after entering play mode, so detect
-        // its bootstrap scene instead; the start scene is still read after this callback.
         if (IsTestRunnerSessionStarting())
         {
             EditorSceneManager.playModeStartScene = null;
@@ -91,7 +89,6 @@ public static class PlayModeBootstrapper
             return;
         }
 
-        // Play loads scenes from disk, so unsaved edits would silently be missing.
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             EditorApplication.isPlaying = false;

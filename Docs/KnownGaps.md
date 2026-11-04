@@ -88,7 +88,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 1: the code within CLAUDE.md's rules
 
-- [ ] Inline comments moved to the docs or removed (`IClock.cs`, `SceneDefinition.cs`, `PlayModeBootstrapper`, `SceneBuildValidator`, `SceneDefinitionEditor`, `VContainerDiagnosticsBuildGuard`, the test files).
+- [x] Inline comments moved to the docs or removed (`IClock.cs`, `SceneDefinition.cs`, `PlayModeBootstrapper`, `SceneBuildValidator`, `SceneDefinitionEditor`, `VContainerDiagnosticsBuildGuard`, the test files).
 - [ ] `MobConfig`'s obstacle mask from a named layer in its asset, not `1 << 8`; `MobConfig`, `TerrainType2D`, `TerrainMovementProfile2D` and `DualGridRuleTile` created from `TopDownRPG/...`.
 - [ ] `SceneQuery`'s shared buffer and `UnityClock.Shared` replaced by injected or per-instance state.
 - [ ] `SceneDefinitionPathSync` in a file of its own, its `.meta` kept with it.
@@ -96,6 +96,10 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] Duplicated tuning: one source for `nearestCellSearchRadius`; `MobMotor2D` and `MeleeDamageDealer` no longer serializing what `MobConfig` sets.
 - [ ] Unused API removed, test-only API kept `internal` where a test needs it; `StaticSlash.png` removed and its test given a generated sprite; `DualGridRuleTile.DataTile` failing with a clear error instead of throwing.
 - [ ] Tests: the touched classes' tests pass unchanged; Architecture.md updated.
+
+#### Phase 1 notes
+
+- Inline comments: `IClock.cs`, `SceneDefinition.cs`, `SceneBuildValidator` and `SceneDefinitionEditor` had none left. The rationale in `PlayModeBootstrapper`'s and `VContainerDiagnosticsBuildGuard`'s went to Architecture.md (Boot sequence, Editor tools); the test files' went into their tests' summaries and assertion messages. Shader and HLSL files keep their comments: HLSL has no XML docs, so those comments are its functions' descriptors.
 
 ### Phase 2: orders and the save
 

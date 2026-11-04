@@ -38,7 +38,8 @@ public class MobPathAgent2DTests
 
     /// <summary>
     /// On a single-waypoint path the mob counts as arrived once within the arrival distance, even outside the
-    /// smaller waypoint reach distance.
+    /// smaller waypoint reach distance: it stops 0.1 short of the goal, inside the arrival distance (0.15) but outside
+    /// the waypoint reach distance (0.05).
     /// </summary>
     [Test]
     public void FixedTick_UsesArrivalDistance_ForSingleWaypointPath()
@@ -53,7 +54,6 @@ public class MobPathAgent2DTests
         Assert.That(pathAgent.BuildPathToWorld(goal, allowPartial: false), Is.True);
         Assert.That(pathAgent.Waypoints.Count, Is.EqualTo(1), "A straight corridor should smooth to a single waypoint.");
 
-        // Inside arrivalDistance (0.15) but outside waypointReachDistance (0.05).
         PlaceMob(goal - new Vector2(0.1f, 0f));
         pathAgent.FixedTick();
 

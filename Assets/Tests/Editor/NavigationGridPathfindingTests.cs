@@ -236,9 +236,8 @@ public class NavigationGridPathfindingTests
         int expanded = ((GridAStarPathfinder2D)navigationGrid.Pathfinder).LastExpandedCount;
 
         Assert.That(result.Success, Is.True);
-        // Every cell inside the (0,0)-(31,17) parallelogram ties on cost; a search that widens across
-        // the ties expands hundreds of them.
-        Assert.That(expanded, Is.LessThanOrEqualTo(result.Cells.Count * 2));
+        Assert.That(expanded, Is.LessThanOrEqualTo(result.Cells.Count * 2),
+            "Every cell inside the (0,0)-(31,17) parallelogram ties on cost; a search that widens across the ties expands hundreds of them.");
     }
 
     /// <summary>

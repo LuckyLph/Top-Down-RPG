@@ -53,12 +53,12 @@ public class PathfindingBenchmarkTests
     }
 
     /// <summary>
-    /// Measures strict searches between random connected cell pairs in a maze of walls with one gap each.
+    /// Measures strict searches between random connected cell pairs in a maze of full-height walls every 8 columns,
+    /// each with a single 2-cell gap at a random height.
     /// </summary>
     [Test]
     public void Maze()
     {
-        // Full-height walls every 8 columns, each with a single 2-cell gap at a random height.
         Random random = new(7);
         int[] gapByColumn = new int[Size];
         for (int x = 4; x < Size; x += 8)
@@ -71,12 +71,12 @@ public class PathfindingBenchmarkTests
     }
 
     /// <summary>
-    /// Measures partial searches toward goals on the far side of a wall that splits the map in two.
+    /// Measures partial searches toward goals on the far side of a wall that splits the map in two, so each search
+    /// floods its half.
     /// </summary>
     [Test]
     public void UnreachableGoal_PartialAllowed()
     {
-        // A full wall splits the map; every goal is on the far side, so each search floods its half.
         BuildGrid(cell => cell.x == Size / 2);
         List<(Vector3Int, Vector3Int)> pairs = new();
         Random random = new(11);
@@ -161,8 +161,9 @@ public class PathfindingBenchmarkTests
 
     /// <summary>
     /// Warms up with one call to <paramref name="run"/>, times <paramref name="count"/> calls, repeats them in a
-    /// separate pass to count allocations and heap growth, and logs the per-search averages, including the cells
-    /// expanded that each call returns.
+    /// separate pass to count allocations and heap growth, so the probes do not skew the timing, and logs the
+    /// per-search averages, including the cells expanded that each call returns. Mono's heap size only grows between
+    /// collections, so the heap growth skips samples during which a collection ran.
     /// </summary>
     private static void Measure(string label, int count, Func<int, int> run)
     {
@@ -177,8 +178,6 @@ public class PathfindingBenchmarkTests
 
         stopwatch.Stop();
 
-        // Separate pass so the allocation probes don't skew the timing. Mono's heap size only grows
-        // between collections, so samples during which a GC ran are skipped.
         Recorder allocRecorder = Recorder.Get("GC.Alloc");
         allocRecorder.FilterToCurrentThread();
         long allocations = 0;
@@ -239,7 +238,7 @@ public class PathfindingBenchmarkTests
 
     /// <summary>
     /// Builds a 128x128 ground grid with the cells matching <paramref name="isBlocked"/> on a blocking tilemap,
-    /// and a benchmark profile with several terrain rules.
+    /// and a benchmark profile with a handful of terrain rules, like a profile covering several terrain types.
     /// </summary>
     private void BuildGrid(Func<Vector3Int, bool> isBlocked)
     {
@@ -268,7 +267,6 @@ public class PathfindingBenchmarkTests
         ground = Track(TerrainType2D.Create("ground"));
         groundMap.gameObject.AddComponent<NavigationTerrainSource2D>().Configure(ground);
 
-        // A handful of rules, like a profile covering several terrain types.
         TerrainMovementProfile2D.TerrainRule[] rules = new TerrainMovementProfile2D.TerrainRule[5];
         rules[0] = new TerrainMovementProfile2D.TerrainRule(ground, true, 10);
         for (int i = 0; i < 4; i++)

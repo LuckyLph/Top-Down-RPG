@@ -28,4 +28,4 @@ MonoBehaviour:
   entries:
   - name: start
     position: {x: 64.5, y: 64.5}
-    waystone: 1
+    waystone: 0

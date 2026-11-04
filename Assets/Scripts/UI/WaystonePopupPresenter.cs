@@ -5,7 +5,7 @@ using VContainer.Unity;
 /// <summary>
 /// Gameplay-scope entry point that shows the local player its own waystone discoveries: a floating text
 /// (<see cref="GameplaySettings.WaystoneDiscoveredText"/>) over the player on the pooled popup layer, on this machine
-/// only. Waystones have no art yet, so this is how a player learns it found one.
+/// only, as the waystone's stone wakes (<see cref="WaystoneMarkers"/>, Docs/KnownGaps.md, Phase 3).
 /// </summary>
 public sealed class WaystonePopupPresenter : IStartable, IDisposable
 {

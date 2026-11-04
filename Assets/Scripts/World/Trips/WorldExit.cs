@@ -1,11 +1,25 @@
 using UnityEngine;
 
 /// <summary>
+/// What shows an exit in game (Docs/KnownGaps.md, Phase 3), placed by the World Editor's Place markers step: a signpost
+/// beside the road for a road's exit to another world, a doorway on its cells for an exit into an interior, a doormat on
+/// its cells for an exit out of one, or nothing.
+/// </summary>
+public enum ExitMarker
+{
+    Signpost,
+    Door,
+    Doormat,
+    None
+}
+
+/// <summary>
 /// A way out of a world, placed in one of its chunk scenes: a rectangle of cells that takes the local player who walks
 /// into it to <see cref="TargetWorld"/>'s entry <see cref="TargetEntry"/> (its default entry when empty)
 /// (Docs/WorldStreaming.md: Travelling between worlds). Its lower-left cell is the one holding its position; it covers
 /// <see cref="SizeInCells"/> cells from there, all inside its chunk. Its <see cref="PersistentId"/> names it in trip
 /// requests. A marker only: <see cref="WorldExits"/> finds it as its chunk loads, and nothing about it runs per frame.
+/// What shows it in game is its <see cref="Marker"/>'s prop, which the World Editor's Place markers step places.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PersistentId))]
@@ -20,11 +34,15 @@ public class WorldExit : MonoBehaviour
     [Tooltip("How many cells the exit covers across and up, from the cell holding its position.")]
     [SerializeField] private Vector2Int sizeInCells = Vector2Int.one;
 
+    [Tooltip("What shows the exit in game: a signpost beside a road to another world, a doorway into an interior, a doormat out of one, or nothing. Place markers places it.")]
+    [SerializeField] private ExitMarker marker = ExitMarker.Signpost;
+
     private PersistentId persistentId;
 
     public WorldDefinition TargetWorld => targetWorld;
     public string TargetEntry => targetEntry;
     public Vector2Int SizeInCells => Vector2Int.Max(sizeInCells, Vector2Int.one);
+    public ExitMarker Marker => marker;
 
     /// <summary>
     /// The exit's persistent id; empty when it has none.

@@ -122,8 +122,9 @@ public sealed class InProcessClient : IDisposable
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
     /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
     /// own player follows), the night lights' presenter without a day clock (not started, so its own player's lantern
-    /// never lights itself and burns only on its key) and, given <paramref name="hitFeedbackSettings"/>, the hit feedback
-    /// presenter (not started) kicking <paramref name="cameraKick"/>.
+    /// never lights itself and burns only on its key), what its own player discovered with the waystones' markers'
+    /// presenter (not started: the client loads no chunk of its own) and, given <paramref name="hitFeedbackSettings"/>,
+    /// the hit feedback presenter (not started) kicking <paramref name="cameraKick"/>.
     /// </summary>
     public static IObjectResolver BuildContainer(
         PlayerRegistry players,
@@ -157,6 +158,10 @@ public sealed class InProcessClient : IDisposable
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton);
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
+        builder.Register<SessionSave>(Lifetime.Singleton);
+        builder.RegisterInstance<IPlayerIdSource>(new NoPlayerIds());
+        builder.Register<KnownWaystones>(Lifetime.Singleton);
+        builder.Register<WaystoneMarkers>(Lifetime.Singleton);
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
@@ -504,6 +509,20 @@ public sealed class InProcessClient : IDisposable
     {
         public bool IsActive => true;
         public bool IsHost => false;
+    }
+
+    /// <summary>
+    /// <see cref="IPlayerIdSource"/> for a client's container, which never asks it: a client's own player's discoveries
+    /// come from the host.
+    /// </summary>
+    private sealed class NoPlayerIds : IPlayerIdSource
+    {
+        public string LocalPlayerId => string.Empty;
+
+        public string PlayerIdOf(ulong clientId)
+        {
+            return string.Empty;
+        }
     }
 
     /// <summary>

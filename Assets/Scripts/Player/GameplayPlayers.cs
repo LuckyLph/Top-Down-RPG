@@ -8,7 +8,7 @@ using VContainer.Unity;
 /// <summary>
 /// Gameplay-scope entry point that decides who spawns players: offline it spawns the local player; on the host it
 /// spawns the host's player plus one per joined client, now and as clients join, each holding the weapon the
-/// <see cref="SessionSave"/> has for its player id and where <see cref="PlayerStarts"/> places it (its saved place by
+/// <see cref="SessionSave"/> has for its player id, a client's knowing the waystones it has for it, and where <see cref="PlayerStarts"/> places it (its saved place by
 /// player id, else the starting world's entry), once the host has loaded that world and
 /// the chunks around the place (<see cref="IWorldSession.PrepareAsync"/>, which moves a place the player can no longer
 /// stand on to walkable ground); on a client it tells the host this machine has joined, so the host spawns its player
@@ -147,7 +147,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
 
         if (session.IsServer && session.IsClientJoined(clientId) && !session.HasPlayerObject(clientId))
         {
-            spawner.SpawnRemotePlayer(clientId, world, position, sessionSave.WeaponOf(playerId));
+            spawner.SpawnRemotePlayer(clientId, world, position, sessionSave.WeaponOf(playerId), sessionSave.WaystonesOf(playerId));
         }
     }
 }

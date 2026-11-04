@@ -257,7 +257,9 @@ public static class WorldGenerationWriter
     /// <summary>
     /// Runs the World Editor's whole-world steps on <paramref name="world"/> after a write, in order: Sync layer lists
     /// (every chunk's list covering its neighbours' border materials, the locked chunks' hand work included), Bake
-    /// changed coasts, Repair ids (which keeps derived ids, being set and unique) and Validate. Returns a line per step
+    /// changed coasts, Bake changed glows, Place markers (the waystones' and exits', <see cref="WorldMarkers"/>, so a
+    /// moved waystone's stone follows it), Repair ids (which keeps derived ids, being set and unique) and Validate.
+    /// Returns a line per step
     /// with its time, each followed by the step's own lines. Refuses in play mode.
     /// </summary>
     public static List<string> RunWorldSteps(WorldDefinition world)
@@ -281,6 +283,10 @@ public static class WorldGenerationWriter
         List<string> glows = WorldAuthoring.BakeGlowMaps(world, true);
         report.Add($"Bake changed glows: {watch.ElapsedMilliseconds} ms.");
         report.AddRange(glows);
+        watch.Restart();
+        List<string> markers = WorldMarkers.Place(world);
+        report.Add($"Place markers: {markers.Count} lines in {watch.ElapsedMilliseconds} ms.");
+        report.AddRange(markers);
         watch.Restart();
         List<string> repaired = PersistentIds.Repair(world);
         report.Add($"Repair ids: {repaired.Count} changed in {watch.ElapsedMilliseconds} ms.");

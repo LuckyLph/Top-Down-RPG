@@ -15,7 +15,8 @@ using UnityEngine.U2D;
 /// burns, and their glow, the moving flames drawing with the flames material and the charred props glowing, every glowing
 /// sheet outside the props' atlas (Docs/Lighting.md, Phase 6), the footprints of blocking props, the shadow casters over
 /// them that stop a light, and the lights' shadows (Phase 7), every prop's normals for relief under the lights, packed
-/// linear by the props' atlas (Phase 11), and how a placed prop blocks navigation.
+/// linear by the props' atlas (Phase 11), how a placed prop blocks navigation, and the markers of waystones and exits
+/// (Docs/KnownGaps.md, Phase 3).
 /// </summary>
 public class PropPrefabTests
 {
@@ -25,6 +26,7 @@ public class PropPrefabTests
     private const string VisualsName = "Visuals";
     private const string LightName = "Light";
     private const string LightsFolder = PropsFolder + "/Lights";
+    private const string MarkersFolder = PropsFolder + "/Markers";
     private const string SunShadowPropsLayer = "Sun Shadow Props";
     private const float OnePixel = 1f / 32f;
 
@@ -127,7 +129,8 @@ public class PropPrefabTests
     /// Every light prop (Docs/Lighting.md, Phases 5 and 6) blocks and carries its light in a <c>Light</c> child: a point Light
     /// 2D on blend style 0 and the <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, casting hard shadows
     /// at full (Phase 7), off until it burns, and the <see cref="PropLight"/> that burns it, at a strength above none; its
-    /// sprite glows, through its sheet's secondary texture <c>_GlowTex</c>. No other prop has a light.
+    /// sprite glows, through its sheet's secondary texture <c>_GlowTex</c>. No other prop has a light but a waystone,
+    /// whose light is its marker's to let burn (<see cref="Markers_ShowWaystonesAndExits_TheStoneSwitchingItsStates"/>).
     /// </summary>
     [Test]
     public void LightProps_CarryTheirLight_OffUntilItBurns_AndGlow()
@@ -162,7 +165,7 @@ public class PropPrefabTests
 
         foreach (GameObject propPrefab in LoadPropPrefabs())
         {
-            if (!lights.Contains(propPrefab))
+            if (!lights.Contains(propPrefab) && propPrefab.GetComponent<WaystoneMarker>() == null)
             {
                 Assert.That(propPrefab.GetComponentInChildren<PropLight>(true), Is.Null, $"{propPrefab.name} has no light.");
             }
@@ -376,8 +379,8 @@ public class PropPrefabTests
     /// <summary>
     /// Every blocking prop that is no light prop stops a light (Docs/Lighting.md, Phase 7): its <c>Visuals</c> carry a
     /// Shadow Caster 2D, off until a burning light wakes it, shaped as the box of its footprint, casting onto the
-    /// <c>Default</c> and <c>Terrain</c> sorting layers only; a light prop, whose light stands inside it, and a
-    /// walk-through prop carry none.
+    /// <c>Default</c> and <c>Terrain</c> sorting layers only; a light prop, whose casting light stands inside it, and a
+    /// walk-through prop carry none. A waystone, whose small light casts nothing, stops the other lights.
     /// </summary>
     [Test]
     public void BlockingProps_CarryAShadowCasterOverTheirFootprint_OffUntilALightWakesIt()
@@ -389,7 +392,8 @@ public class PropPrefabTests
         {
             ShadowCaster2D[] casters = propPrefab.GetComponentsInChildren<ShadowCaster2D>(true);
             bool blocks = PrefabUtility.GetCorrespondingObjectFromSource(propPrefab) == blocking;
-            if (!blocks || propPrefab.transform.Find(LightName) != null)
+            Transform ownLight = propPrefab.transform.Find(LightName);
+            if (!blocks || (ownLight != null && ownLight.GetComponent<Light2D>().shadowsEnabled))
             {
                 Assert.That(casters, Is.Empty, $"{propPrefab.name} stops no light.");
                 continue;
@@ -410,6 +414,53 @@ public class PropPrefabTests
         }
 
         Assert.That(casting, Is.GreaterThan(80), "The trees, bushes, rocks and wood stop lights.");
+    }
+
+    /// <summary>
+    /// The markers (Docs/KnownGaps.md, Phase 3): the waystone, a blocking prop drawing its sleeping slice whose
+    /// <see cref="WaystoneMarker"/> switches to its awake slice of the same sheet, glowing, and lets its light burn, a
+    /// point light that casts nothing, inactive until then; the signposts pointing west and east, blocking; the doorway
+    /// and the three doormats walked through, the doormats casting no sun shadow. Nothing else is in their folder.
+    /// </summary>
+    [Test]
+    public void Markers_ShowWaystonesAndExits_TheStoneSwitchingItsStates()
+    {
+        GameObject blocking = AssetDatabase.LoadAssetAtPath<GameObject>(BlockingPropPath);
+        GameObject walkThrough = AssetDatabase.LoadAssetAtPath<GameObject>(PropPath);
+        List<GameObject> markers = AssetDatabase.FindAssets("t:Prefab", new[] { MarkersFolder })
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+            .ToList();
+        Assert.That(markers.Select(m => m.name), Is.EquivalentTo(new[] { "Waystone_0", "Doorway_0", "Signpost_0", "Signpost_1", "Doormat_0", "Doormat_1", "Doormat_2" }));
+        foreach (GameObject marker in markers)
+        {
+            bool blocks = marker.name.StartsWith("Waystone") || marker.name.StartsWith("Signpost");
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(marker), Is.EqualTo(blocks ? blocking : walkThrough), $"{marker.name} {(blocks ? "blocks" : "is walked through")}.");
+        }
+
+        GameObject stone = markers.First(m => m.name == "Waystone_0");
+        WaystoneMarker states = stone.GetComponent<WaystoneMarker>();
+        Assert.That(states, Is.Not.Null);
+        SpriteRenderer visuals = Child(stone, VisualsName).GetComponent<SpriteRenderer>();
+        Assert.That(states.Visuals, Is.EqualTo(visuals));
+        Assert.That(visuals.sprite, Is.EqualTo(states.DormantSprite), "It sleeps as placed.");
+        Assert.That(states.DormantSprite.name, Is.EqualTo("Waystone_0"));
+        Assert.That(states.AwakeSprite.name, Is.EqualTo("Waystone_1"));
+        Assert.That(states.AwakeSprite.texture, Is.EqualTo(states.DormantSprite.texture), "Both states are slices of one sheet, sharing its glow and normals.");
+        SecondarySpriteTexture[] secondary = new SecondarySpriteTexture[states.AwakeSprite.GetSecondaryTextureCount()];
+        states.AwakeSprite.GetSecondaryTextures(secondary);
+        Assert.That(secondary.Select(t => t.name), Does.Contain("_GlowTex"), "The awake stone glows.");
+        Assert.That(states.Glow, Is.EqualTo(Child(stone, LightName).gameObject));
+        Assert.That(states.Glow.activeSelf, Is.False, "Its light is out until it is discovered.");
+        Light2D light = states.Glow.GetComponent<Light2D>();
+        Assert.That(light.lightType, Is.EqualTo(Light2D.LightType.Point));
+        Assert.That(light.shadowsEnabled, Is.False);
+        Assert.That(light.enabled, Is.False, "Off until the lighting burns it.");
+        Assert.That(states.Glow.GetComponent<PropLight>().LightSource, Is.EqualTo(light));
+        foreach (GameObject mat in markers.Where(m => m.name.StartsWith("Doormat")))
+        {
+            Assert.That(Child(mat, VisualsName).GetComponent<SpriteRenderer>().renderingLayerMask, Is.EqualTo(RenderingLayerMask.defaultRenderingLayerMask.value), $"{mat.name} lies flat.");
+        }
     }
 
     /// <summary>

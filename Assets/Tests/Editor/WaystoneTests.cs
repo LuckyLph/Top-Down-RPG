@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Tests for waystones (Docs/WorldStreaming.md: Death and respawn) on worlds built in memory: the discovery rules
 /// (<see cref="WaystoneRules"/>, <see cref="WaystoneDiscovery"/>), the nearest-waystone choice, the discoveries kept per
-/// player id in the <see cref="SessionSave"/> and round-tripping through the save, <see cref="PlayerIds"/>, and the
-/// place a dead player is saved at.
+/// player id in the <see cref="SessionSave"/> and round-tripping through the save, <see cref="PlayerIds"/>, the place a
+/// dead player is saved at, and what this machine's player discovered (<see cref="KnownWaystones"/>) as the waystones'
+/// markers show it (<see cref="WaystoneMarkers"/>, Docs/KnownGaps.md, Phase 3).
 /// </summary>
 public class WaystoneTests
 {
@@ -200,6 +201,7 @@ public class WaystoneTests
             Assert.That(WaystoneRules.Contains(session.WaystonesOf(Alice), world.WorldId, "east"), Is.True);
             Assert.That(told, Is.EqualTo(new[] { "east" }));
             Assert.That(link.Sent, Is.EqualTo(new[] { "east" }));
+            Assert.That(link.Worlds, Is.EqualTo(new[] { world.WorldId }), "The link names the waystone's world.");
 
             body.transform.position = world.ToWorld(new Vector2(60.5f, 30.5f));
             discovery.Tick();
@@ -278,6 +280,129 @@ public class WaystoneTests
         Assert.That(place, Is.EqualTo(world.ToWorld(new Vector2(60.5f, 30.5f))));
     }
 
+    /// <summary>
+    /// What this machine's player discovered (Docs/KnownGaps.md, Phase 3): where game state is decided, the session's
+    /// save under this install's player id, the default entry counting from the start, each discovery raising
+    /// <see cref="KnownWaystones.Changed"/>; on a client, the save is not read but the list the host replicates, kept
+    /// once each and only for the world it names, each list raising the change and no notice doing so.
+    /// </summary>
+    [Test]
+    public void KnownWaystones_AreTheSavesWhereStateIsDecided_AndTheHostsListOnAClient()
+    {
+        FakePlayerIdSource ids = new() { LocalPlayerId = Alice };
+        SessionSave session = new(new ManualClock());
+        WaystoneNotices notices = new();
+        KnownWaystones host = new(FixedGameAuthority.Authoritative, ids, session, notices);
+        KnownWaystones client = new(new FixedGameAuthority(false), ids, session, notices);
+        int hostChanges = 0;
+        int clientChanges = 0;
+        host.Changed += () => hostChanges++;
+        client.Changed += () => clientChanges++;
+        try
+        {
+            Assert.That(host.IsDiscovered(world, world.FindEntry("start")), Is.True, "The default entry counts from the start.");
+            Assert.That(host.IsDiscovered(world, world.FindEntry("east")), Is.False);
+
+            session.Discover(Alice, world.WorldId, "east");
+            session.Discover(Bob, world.WorldId, "west");
+            notices.Raise(new PlayerHandle(Track(new GameObject("Alice")).transform, null), "east");
+            Assert.That(host.IsDiscovered(world, world.FindEntry("east")), Is.True);
+            Assert.That(host.IsDiscovered(world, world.FindEntry("west")), Is.False, "Another player's discovery is not this machine's.");
+            Assert.That(hostChanges, Is.EqualTo(1));
+
+            Assert.That(client.IsDiscovered(world, world.FindEntry("east")), Is.False, "A client does not read the save.");
+            Assert.That(clientChanges, Is.Zero, "A notice changes nothing on a client: its list does.");
+            client.Replicate(new[]
+            {
+                new GameSaveData.Waystone(world.WorldId, "west"),
+                new GameSaveData.Waystone(world.WorldId, "west"),
+                new GameSaveData.Waystone(other.WorldId, "east")
+            });
+            Assert.That(clientChanges, Is.EqualTo(1));
+            Assert.That(client.Discovered, Has.Count.EqualTo(2), "Each once.");
+            Assert.That(client.IsDiscovered(world, world.FindEntry("west")), Is.True);
+            Assert.That(client.IsDiscovered(world, world.FindEntry("east")), Is.False, "The other world's `east` is not this one's.");
+            Assert.That(client.IsDiscovered(other, other.FindEntry("east")), Is.True);
+        }
+        finally
+        {
+            host.Dispose();
+            client.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The markers of a loaded chunk show what this machine's player discovered: a waystone not yet discovered sleeps,
+    /// its light inactive, and wakes, its awake sprite shown and its light let burn, once discovered; the default entry's
+    /// is awake from the start; one naming a plain entry or an entry the world lacks sleeps. A chunk unloading takes its
+    /// markers out.
+    /// </summary>
+    [Test]
+    public void WaystoneMarkers_ShowWhatThisMachinesPlayerDiscovered()
+    {
+        FakePlayerIdSource ids = new() { LocalPlayerId = Alice };
+        SessionSave session = new(new ManualClock());
+        WaystoneNotices notices = new();
+        KnownWaystones known = new(FixedGameAuthority.Authoritative, ids, session, notices);
+        Worlds worlds = new();
+        WaystoneMarkers markers = new(worlds, known);
+        WaystoneMarker east = Marker("east");
+        WaystoneMarker start = Marker("start");
+        WaystoneMarker door = Marker("door");
+        WaystoneMarker gone = Marker("gone");
+        LoadedWorld loaded = new(world, east.gameObject.scene, null, null);
+        markers.Start();
+        try
+        {
+            worlds.Add(loaded);
+            worlds.AddChunk(loaded, Vector2Int.zero, east.gameObject.scene);
+            Assert.That(markers.Count, Is.EqualTo(4));
+            Assert.That(east.IsAwake, Is.False);
+            Assert.That(east.Glow.activeSelf, Is.False, "Its light is out until it is discovered.");
+            Assert.That(start.IsAwake, Is.True, "The default entry counts as discovered.");
+            Assert.That(door.IsAwake, Is.False, "A plain entry is no waystone.");
+            Assert.That(gone.IsAwake, Is.False);
+
+            session.Discover(Alice, world.WorldId, "east");
+            notices.Raise(new PlayerHandle(Track(new GameObject("Alice")).transform, null), "east");
+            Assert.That(east.IsAwake, Is.True);
+            Assert.That(east.Visuals.sprite, Is.EqualTo(east.AwakeSprite));
+            Assert.That(east.Glow.activeSelf, Is.True, "Discovered, its light may burn.");
+            Assert.That(markers.ShowsAwake(world, "east"), Is.True);
+
+            worlds.RemoveChunk(loaded, Vector2Int.zero);
+            Assert.That(markers.Count, Is.Zero, "An unloading chunk takes its markers out.");
+        }
+        finally
+        {
+            markers.Dispose();
+            known.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// A waystone's marker as the prop writer makes it: a renderer, a sleeping and an awake sprite and an inactive light,
+    /// naming <paramref name="entry"/>.
+    /// </summary>
+    private WaystoneMarker Marker(string entry)
+    {
+        GameObject root = Track(new GameObject($"Waystone_{entry}"));
+        GameObject visuals = new("Visuals");
+        visuals.transform.SetParent(root.transform, false);
+        SpriteRenderer renderer = visuals.AddComponent<SpriteRenderer>();
+        GameObject light = new("Light");
+        light.transform.SetParent(root.transform, false);
+        light.SetActive(false);
+        Texture2D texture = Track(new Texture2D(4, 4));
+        Sprite dormant = Track(Sprite.Create(texture, new Rect(0, 0, 2, 4), Vector2.zero));
+        Sprite awake = Track(Sprite.Create(texture, new Rect(2, 0, 2, 4), Vector2.zero));
+        renderer.sprite = dormant;
+        WaystoneMarker marker = root.AddComponent<WaystoneMarker>();
+        marker.Configure(renderer, dormant, awake, light);
+        marker.SetEntry(entry);
+        return marker;
+    }
+
     private T Track<T>(T item) where T : Object
     {
         created.Add(item);
@@ -290,9 +415,11 @@ public class WaystoneTests
     private sealed class RecordingLink : IWaystoneLink
     {
         public List<string> Sent { get; } = new();
+        public List<string> Worlds { get; } = new();
 
-        public void SendWaystoneDiscovered(string entryName)
+        public void SendWaystoneDiscovered(string worldId, string entryName)
         {
+            Worlds.Add(worldId);
             Sent.Add(entryName);
         }
     }

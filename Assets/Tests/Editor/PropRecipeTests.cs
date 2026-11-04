@@ -16,8 +16,9 @@ using UnityEngine;
 /// a light prop glows only where its flame, coals or glass are drawn, its flame's pixels flickering to the tones next to
 /// theirs, and stands its light on the ground under where it shines from (Docs/Lighting.md, Phases 5 and 6); a moving
 /// flame bakes a loop of frames whose flame moves, a still one and a lamp's one frame; charred wood smoulders with
-/// steady embers in its bark and cut ends, keeping its footprint (Phase 6); and a recipe refuses names and frames it
-/// cannot bake.
+/// steady embers in its bark and cut ends, keeping its footprint (Phase 6); a waystone's states share their shape, only
+/// the awake one's runes glowing, a signpost points west then east and a doormat lies across, along and on one cell
+/// (Docs/KnownGaps.md, Phase 3); and a recipe refuses names, frames and, for a marker, variant counts it cannot bake.
 /// </summary>
 public class PropRecipeTests
 {
@@ -66,6 +67,9 @@ public class PropRecipeTests
     [TestCase(typeof(LightRecipe), "form", (int)LightForm.Torch)]
     [TestCase(typeof(LightRecipe), "form", (int)LightForm.Brazier)]
     [TestCase(typeof(LightRecipe), null, 0)]
+    [TestCase(typeof(MarkerRecipe), "form", (int)MarkerForm.Waystone)]
+    [TestCase(typeof(MarkerRecipe), "form", (int)MarkerForm.Signpost)]
+    [TestCase(typeof(MarkerRecipe), "form", (int)MarkerForm.Doormat)]
     public void Bake_SameSeed_GivesTheSamePixels_AndOtherVariantsOthers(System.Type kind, string setting, int value)
     {
         PropRecipe recipe = Track((PropRecipe)ScriptableObject.CreateInstance(kind));
@@ -372,6 +376,76 @@ public class PropRecipeTests
         PropVariant rock = PropBaker.Bake(Track(ScriptableObject.CreateInstance<RockRecipe>()), 0);
         Assert.That(rock.Glows, Is.False);
         Assert.That(rock.HasLight, Is.False);
+    }
+
+    /// <summary>
+    /// A waystone's two variants are its states (Docs/KnownGaps.md, Phase 3), drawn from one stream: the same footprint,
+    /// drawing and light, and the same pixels but where the awake one glows, on its runes and their halo; the sleeping
+    /// one glows nowhere, and the recipe writes one prefab for both.
+    /// </summary>
+    [Test]
+    public void Waystone_StatesShareTheirShape_OnlyTheAwakeOnesRunesGlowing()
+    {
+        MarkerRecipe recipe = AssetDatabase.LoadAssetAtPath<MarkerRecipe>($"{RecipesFolder}/Waystone.asset");
+        PropVariant dormant = PropBaker.Bake(recipe, MarkerRecipe.DormantVariant);
+        PropVariant awake = PropBaker.Bake(recipe, MarkerRecipe.AwakeVariant);
+
+        Assert.That(recipe.PrefabCount, Is.EqualTo(1));
+        Assert.That(awake.Footprint, Is.EqualTo(dormant.Footprint));
+        Assert.That(awake.Drawn, Is.EqualTo(dormant.Drawn));
+        Assert.That(dormant.HasLight && awake.HasLight, Is.True, "Both carry the light the awake one burns.");
+        Assert.That(awake.LightOffset, Is.EqualTo(dormant.LightOffset));
+        Assert.That(dormant.Glows, Is.False, "A sleeping stone glows nowhere.");
+        Assert.That(awake.Glows, Is.True);
+        int glowing = 0;
+        for (int i = 0; i < dormant.Pixels.Length; i++)
+        {
+            if (awake.Glow[i].a > 0)
+            {
+                glowing++;
+                Assert.That(dormant.Pixels[i].a, Is.EqualTo(255), "The runes lie on the stone.");
+                continue;
+            }
+
+            Assert.That(awake.Pixels[i], Is.EqualTo(dormant.Pixels[i]), $"Pixel {i} is the same stone in both states.");
+        }
+
+        Assert.That(glowing, Is.GreaterThan(30), "Its runes and their halo glow.");
+    }
+
+    /// <summary>
+    /// A signpost's first variant points west and its second east; a doormat's lies across two cells, along two cells,
+    /// then on one; a waystone, a signpost or a doormat with fewer variants than its states, directions or sizes cannot
+    /// bake.
+    /// </summary>
+    [Test]
+    public void Markers_TakeTheirVariantsDirectionOrSize_AndRefuseTooFew()
+    {
+        MarkerRecipe signpost = AssetDatabase.LoadAssetAtPath<MarkerRecipe>($"{RecipesFolder}/Signpost.asset");
+        int baseX = signpost.BasePixel.x;
+        RectInt west = PropBaker.Bake(signpost, MarkerRecipe.SignpostWest).Drawn;
+        RectInt east = PropBaker.Bake(signpost, MarkerRecipe.SignpostEast).Drawn;
+        Assert.That(baseX - west.xMin, Is.GreaterThan(west.xMax - baseX), "The first points west.");
+        Assert.That(east.xMax - baseX, Is.GreaterThan(baseX - east.xMin), "The second points east.");
+
+        MarkerRecipe doormat = AssetDatabase.LoadAssetAtPath<MarkerRecipe>($"{RecipesFolder}/Doormat.asset");
+        RectInt across = PropBaker.Bake(doormat, MarkerRecipe.DoormatAcross).Drawn;
+        RectInt along = PropBaker.Bake(doormat, MarkerRecipe.DoormatAlong).Drawn;
+        RectInt single = PropBaker.Bake(doormat, MarkerRecipe.DoormatSingle).Drawn;
+        Assert.That(across.width, Is.GreaterThan(along.width * 1.7f), "Across two cells.");
+        Assert.That(along.height, Is.GreaterThan(across.height * 1.7f), "Along two cells.");
+        Assert.That(single.width, Is.LessThan(across.width * 0.6f), "On one cell.");
+
+        foreach ((MarkerForm form, int needed) in new[] { (MarkerForm.Waystone, 2), (MarkerForm.Signpost, 2), (MarkerForm.Doormat, 3) })
+        {
+            MarkerRecipe recipe = Track(ScriptableObject.CreateInstance<MarkerRecipe>());
+            Set(recipe, "form", (int)form);
+            Set(recipe, "variantCount", needed - 1);
+            Assert.That(recipe.CanGenerate(out string problem), Is.False, $"{form} with {needed - 1} variants");
+            Assert.That(problem, Does.Contain($"{needed} variants"));
+            Set(recipe, "variantCount", needed);
+            Assert.That(recipe.CanGenerate(out _), Is.True, $"{form} with {needed} variants");
+        }
     }
 
     /// <summary>

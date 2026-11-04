@@ -21,7 +21,8 @@ using UnityEngine.TestTools;
 /// slices; lowering the variant count while a dropped variant's prefab is left, or changing whether it blocks once its
 /// prefabs exist, is refused. A blocking prop's <c>Visuals</c> carry a Shadow Caster 2D over its footprint, off, casting
 /// onto the ground's sorting layers, and its light props' lights cast hard shadows at full, while a walk-through prop and
-/// a light prop carry no caster (Docs/Lighting.md, Phase 7).
+/// a light prop carry no caster (Docs/Lighting.md, Phase 7). A waystone writes one prefab switching between its two
+/// states, its light asleep (Docs/KnownGaps.md, Phase 3).
 /// </summary>
 public class PropWriterTests
 {
@@ -32,6 +33,7 @@ public class PropWriterTests
     private const string GlowingSprites = Folder + "/GlowingSprites";
     private const string Name = "TestBush";
     private const string LightName = "TestFire";
+    private const string StoneName = "TestStone";
     private const float Unit = PropBaker.PixelsPerCell;
 
     private BushRecipe recipe;
@@ -196,6 +198,77 @@ public class PropWriterTests
         finally
         {
             Object.DestroyImmediate(campfire);
+        }
+    }
+
+    /// <summary>
+    /// A waystone writes one prefab for its two states (Docs/KnownGaps.md, Phase 3): a blocking prop drawing its sleeping
+    /// slice, its <see cref="WaystoneMarker"/> holding both slices of its one sheet, so switching keeps the sheet's glow
+    /// and normals, and its <c>Light</c> child, inactive, a point light that casts no shadows, while its visuals carry a
+    /// caster over its footprint for the other lights; no prefab of its second variant. Woken, it shows its awake slice
+    /// and lets its light burn; put to sleep again, neither. Generating again writes nothing.
+    /// </summary>
+    [Test]
+    public void Generate_AWaystone_WritesOnePrefabSwitchingBetweenItsStates_ItsLightAsleep()
+    {
+        MarkerRecipe stone = ScriptableObject.CreateInstance<MarkerRecipe>();
+        GameObject instance = null;
+        try
+        {
+            SerializedObject settings = new(stone);
+            settings.FindProperty("propName").stringValue = StoneName;
+            settings.FindProperty("category").enumValueIndex = (int)PropCategory.Markers;
+            settings.FindProperty("variantCount").intValue = 2;
+            settings.FindProperty("frameSize").vector2IntValue = new Vector2Int(40, 72);
+            settings.FindProperty("basePixel").vector2IntValue = new Vector2Int(20, 12);
+            settings.ApplyModifiedPropertiesWithoutUndo();
+
+            IReadOnlyList<string> written = PropWriter.Generate(stone, Sprites, Prefabs, Glows);
+
+            string sheet = PropWriter.SheetPath(Sprites, StoneName);
+            string prefabPath = PropWriter.PrefabPath(Prefabs, stone, 0);
+            Assert.That(written, Is.EquivalentTo(new[] { sheet, PropWriter.GlowPath(Glows, StoneName), PropWriter.NormalsPath(Glows, StoneName), prefabPath }));
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.PrefabPath(Prefabs, stone, 1)), Is.Null, "Its states share one prefab.");
+            Dictionary<string, Sprite> sprites = SpriteSheetFiles.SpritesByName(sheet);
+            Sprite dormant = sprites[PropWriter.SliceName(StoneName, MarkerRecipe.DormantVariant)];
+            Sprite awake = sprites[PropWriter.SliceName(StoneName, MarkerRecipe.AwakeVariant)];
+            Assert.That(awake.texture, Is.EqualTo(dormant.texture), "Both states are slices of one sheet.");
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(prefab), Is.EqualTo(AssetDatabase.LoadAssetAtPath<GameObject>(PropWriter.BlockingPropPath)));
+            WaystoneMarker marker = prefab.GetComponent<WaystoneMarker>();
+            Assert.That(marker, Is.Not.Null);
+            Assert.That(marker.Visuals, Is.EqualTo(Visuals(prefab)));
+            Assert.That(marker.DormantSprite, Is.EqualTo(dormant));
+            Assert.That(marker.AwakeSprite, Is.EqualTo(awake));
+            Assert.That(Visuals(prefab).sprite, Is.EqualTo(dormant), "It sleeps as written.");
+            Transform light = prefab.transform.Find(PropWriter.LightName);
+            Assert.That(marker.Glow, Is.EqualTo(light.gameObject));
+            Assert.That(light.gameObject.activeSelf, Is.False, "Its light is out until it is discovered.");
+            Assert.That(light.GetComponent<Light2D>().shadowsEnabled, Is.False, "Its small light casts no shadows.");
+            Assert.That(light.GetComponent<PropLight>().LightSource, Is.EqualTo(light.GetComponent<Light2D>()));
+            Assert.That(Visuals(prefab).GetComponent<ShadowCaster2D>(), Is.Not.Null, "The stone stops the other lights.");
+
+            instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            WaystoneMarker placed = instance.GetComponent<WaystoneMarker>();
+            placed.SetAwake(true);
+            Assert.That(placed.IsAwake, Is.True);
+            Assert.That(Visuals(instance).sprite, Is.EqualTo(awake));
+            Assert.That(placed.Glow.activeSelf, Is.True);
+            placed.SetAwake(false);
+            Assert.That(Visuals(instance).sprite, Is.EqualTo(dormant));
+            Assert.That(placed.Glow.activeSelf, Is.False);
+
+            Assert.That(PropWriter.Generate(stone, Sprites, Prefabs, Glows), Is.Empty);
+        }
+        finally
+        {
+            if (instance != null)
+            {
+                Object.DestroyImmediate(instance);
+            }
+
+            Object.DestroyImmediate(stone);
         }
     }
 

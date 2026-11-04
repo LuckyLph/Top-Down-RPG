@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -131,11 +132,13 @@ public class OverworldPlayModeTests
     /// <summary>
     /// From the Clearing's waystone the player walks the region's road east to the Clearing's east gate, two cells past
     /// the outline, then on along the world road to a cell of chunk (2, 1), across the border at x = 128, each leg
-    /// walkable and connected on the world's navigation; mobs are kept out of the way, and no error is logged.
+    /// walkable and connected on the world's navigation; mobs are kept out of the way, and nothing is logged but the editor
+    /// boot's note that the session is a throwaway one (Docs/KnownGaps.md, Phase 2).
     /// </summary>
     [UnityTest]
     public IEnumerator ThePlayer_WalksOutOfTheClearingThroughItsEastGate_AndOnAcrossAChunkBorder()
     {
+        LogAssert.Expect(LogType.Log, new Regex("^Booted into Overworld from the editor: a throwaway session"));
         yield return SceneBootTestHelper.BootIntoWorld(RootPath);
         WorldDefinition world = SceneBootTestHelper.ResolveGameFlow().CurrentWorld;
         SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(world, out LoadedWorld loaded);

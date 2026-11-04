@@ -227,13 +227,13 @@ public static class PropBaker
 
     /// <summary>
     /// Draws variant <paramref name="index"/> of <paramref name="recipe"/> unshaded, at <paramref name="phase"/> of a
-    /// moving flame's loop, so tests can read what each pixel is; <paramref name="drawing"/> holds its materials and
-    /// stream.
+    /// moving flame's loop, from the stream of the variant whose shape it shares (<see cref="PropRecipe.StreamIndex"/>),
+    /// so tests can read what each pixel is; <paramref name="drawing"/> holds its materials and stream.
     /// </summary>
     public static ArtCanvas Render(PropRecipe recipe, int index, out PropDrawing drawing, float phase = 0f)
     {
         ArtCanvas canvas = new(recipe.FrameSize.x, recipe.FrameSize.y, recipe.BasePixel, PixelsPerCell) { HidesBelowGround = true };
-        drawing = new PropDrawing(canvas, new System.Random(VariantSeed(recipe.Seed, index)), phase);
+        drawing = new PropDrawing(canvas, new System.Random(VariantSeed(recipe.Seed, recipe.StreamIndex(index))), phase, index);
         recipe.Draw(drawing);
         return canvas;
     }

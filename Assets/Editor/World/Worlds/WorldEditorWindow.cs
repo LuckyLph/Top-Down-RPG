@@ -343,7 +343,8 @@ public class WorldEditorWindow : EditorWindow
     }
 
     /// <summary>
-    /// One exit's row: its name and first cell, its target world and entry, its size and a button selecting it.
+    /// One exit's row: its name and first cell, its target world and entry, its size, its marker and a button selecting
+    /// it.
     /// </summary>
     private void DrawExit(WorldExit exit)
     {
@@ -378,9 +379,10 @@ public class WorldEditorWindow : EditorWindow
         }
 
         Vector2Int size = EditorGUILayout.Vector2IntField("Size in cells", exit.SizeInCells);
+        ExitMarker marker = (ExitMarker)EditorGUILayout.EnumPopup(new GUIContent("Marker", "What shows the exit in game; Place markers places it."), exit.Marker);
         if (EditorGUI.EndChangeCheck())
         {
-            WorldAuthoring.ConfigureExit(exit, target, entry, size);
+            WorldAuthoring.ConfigureExit(exit, target, entry, size, marker);
             EditorSceneManager.MarkSceneDirty(exit.gameObject.scene);
         }
 
@@ -409,7 +411,7 @@ public class WorldEditorWindow : EditorWindow
 
     /// <summary>
     /// The whole-world steps: layer lists, coast maps (with a warning once the ground of an open chunk changed or a
-    /// check found stale maps), ids and validation.
+    /// check found stale maps), the waystones' and exits' markers, ids and validation.
     /// </summary>
     private void DrawSteps()
     {
@@ -445,6 +447,11 @@ public class WorldEditorWindow : EditorWindow
         }
 
         EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Place markers"))
+        {
+            Run(() => Report("Place markers", WorldMarkers.Place(world)));
+        }
+
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Repair ids"))
         {

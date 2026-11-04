@@ -19,7 +19,8 @@ public class TestlandsPlayModeTests
     private const int ClearLine = 5;
 
     /// <summary>
-    /// The player stands at the default entry on open ground with the Clearing's margins around it.
+    /// The player stands at the default entry on open ground with the Clearing's margins around it, but for the one cell
+    /// its own waystone's stone blocks, two cells north of it (Docs/KnownGaps.md, Phase 3).
     /// </summary>
     [UnityTest]
     public IEnumerator Boot_PutsThePlayerOnOpenGround_WithTheClearingsMargins()
@@ -37,20 +38,23 @@ public class TestlandsPlayModeTests
         INavigation2D navigation = loaded.Navigation;
         TerrainMovementProfile2D profile = player.ControlSettings.MovementProfile;
         Vector3Int spawn = navigation.WorldToCell(player.transform.position);
+        Vector3Int stone = StoneCellOf(loaded, navigation, world.DefaultEntry.Name);
+        Assert.That(stone, Is.EqualTo(spawn + new Vector3Int(0, 2, 0)), "The entry's stone stands two cells north of it.");
+        Assert.That(navigation.IsCellWalkable(stone, profile), Is.False, "The stone blocks its cell.");
         List<Vector3Int> blocked = new();
         for (int dy = -SpawnClearRadius; dy <= SpawnClearRadius; dy++)
         {
             for (int dx = -SpawnClearRadius; dx <= SpawnClearRadius; dx++)
             {
                 Vector3Int cell = spawn + new Vector3Int(dx, dy, 0);
-                if (dx * dx + dy * dy <= SpawnClearRadius * SpawnClearRadius && !navigation.IsCellWalkable(cell, profile))
+                if (dx * dx + dy * dy <= SpawnClearRadius * SpawnClearRadius && cell != stone && !navigation.IsCellWalkable(cell, profile))
                 {
                     blocked.Add(cell);
                 }
             }
         }
 
-        Assert.That(blocked, Is.Empty, $"Every cell within {SpawnClearRadius} of the spawn is open ground.");
+        Assert.That(blocked, Is.Empty, $"Every cell within {SpawnClearRadius} of the spawn but its stone's is open ground.");
         Assert.That(HasClearLine(navigation, profile, spawn), Is.True, $"The spawn has {ClearLine} clear cells in a straight line on one side.");
 
         int mobs = 0;
@@ -117,6 +121,27 @@ public class TestlandsPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => motor.ReachedDestination, "the player to walk around the wall");
 
         Assert.That(Vector2.Distance(player.transform.position, navigation.CellToWorldCenter(goal)), Is.LessThan(0.25f));
+    }
+
+    /// <summary>
+    /// The cell the stone of <paramref name="world"/>'s waystone <paramref name="entryName"/> stands on, in its loaded
+    /// chunks; fails without one.
+    /// </summary>
+    private static Vector3Int StoneCellOf(LoadedWorld world, INavigation2D navigation, string entryName)
+    {
+        foreach (KeyValuePair<Vector2Int, Scene> chunk in world.Chunks)
+        {
+            foreach (WaystoneMarker marker in SceneQuery.FindAll<WaystoneMarker>(chunk.Value))
+            {
+                if (marker.EntryName == entryName)
+                {
+                    return navigation.WorldToCell(marker.transform.position);
+                }
+            }
+        }
+
+        Assert.Fail($"The waystone '{entryName}' has no stone in the loaded chunks.");
+        return default;
     }
 
     /// <summary>

@@ -8,11 +8,13 @@ using UnityEngine.SceneManagement;
 /// Ownership checks of seamless worlds (Docs/WorldStreaming.md: Ownership): everything placed in a chunk lies inside
 /// its 64 x 64 cells. A mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of the scene's
 /// Props root, placed by hand, or of its grid's <see cref="WorldGenerationWriter.GeneratedPropsName"/>, written by world
-/// generation) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the rule
+/// generation) or a marker (a child of its grid's <see cref="WorldMarkers.RootName"/>, placed by Place markers) stands
+/// on one of its cells, and a blocking prop's footprint covers only its cells, by the rule
 /// <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
 /// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Every <see cref="WorldExit"/>
-/// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has. Each
+/// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has, and
+/// every chunk's waystone and exit markers are those Place markers would write (<see cref="WorldMarkers.Stale"/>). Each
 /// problem is a line naming the object; the World Editor shows them and <see cref="WorldBuildValidator"/> refuses a
 /// build with any.
 /// </summary>
@@ -68,10 +70,15 @@ public static class WorldValidation
             }
         }
 
-        Transform generated = grid != null ? grid.transform.Find(WorldGenerationWriter.GeneratedPropsName) : null;
-        if (generated != null)
+        foreach (string rootName in new[] { WorldGenerationWriter.GeneratedPropsName, WorldMarkers.RootName })
         {
-            foreach (Transform prop in generated)
+            Transform placed = grid != null ? grid.transform.Find(rootName) : null;
+            if (placed == null)
+            {
+                continue;
+            }
+
+            foreach (Transform prop in placed)
             {
                 CheckProp(problems, prop.gameObject, grid, cells);
             }
@@ -112,8 +119,8 @@ public static class WorldValidation
 
     /// <summary>
     /// Every problem of <paramref name="world"/>: its origin against <paramref name="allWorlds"/>, each chunk scene's
-    /// marker and ownership, and duplicate ids across its chunks. Opens the chunk scenes that are not open beside the
-    /// others and closes them again, unchanged.
+    /// marker and ownership, duplicate ids across its chunks, and markers out of date. Opens the chunk scenes that are
+    /// not open beside the others and closes them again, unchanged.
     /// </summary>
     public static List<string> ValidateWorld(WorldDefinition world, IReadOnlyList<WorldDefinition> allWorlds)
     {
@@ -142,6 +149,7 @@ public static class WorldValidation
             }
 
             problems.AddRange(ValidateIds(ids));
+            problems.AddRange(WorldMarkers.Stale(world));
         }
         finally
         {

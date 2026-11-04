@@ -11,8 +11,10 @@ using UnityEngine.TestTools;
 /// entry `start` and waystone `north` lie 50 cells apart: offline, a dead player respawns after the delay at the nearest
 /// waystone it discovered, its own machine travelling there; walking to a waystone discovers it, shows the player a
 /// popup, and Continue keeps it; in a hosted game a client's dead player respawns at its waystone with the host
-/// deciding and the client moving its own player there; and a trip to a waystone protects the traveller (Docs/KnownGaps.md,
-/// Phase 2): a mob by the entry does not hurt the host's player or a client's until its machine has faded in.
+/// deciding and the client moving its own player there; a trip to a waystone protects the traveller (Docs/KnownGaps.md,
+/// Phase 2): a mob by the entry does not hurt the host's player or a client's until its machine has faded in; and a
+/// waystone's stone shows what each machine's own player discovered, a client's discoveries reaching it from the host,
+/// earlier sessions' as it joins (Phase 3).
 /// </summary>
 public class WaystonePlayModeTests
 {
@@ -295,6 +297,108 @@ public class WaystonePlayModeTests
     }
 
     /// <summary>
+    /// Hosting Testlands with an in-process client (Docs/KnownGaps.md, Phase 3): the client's player walks to `north`,
+    /// which the host discovers for it and replicates to its machine alone; there its own record has it discovered and its
+    /// markers' presenter shows the stone awake, while on the host, whose own player has not been there, the stone sleeps
+    /// and `start`'s, the default entry, is awake; once the host's player stands at `north` too, the host's stone wakes.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ADiscoveredWaystone_ShowsItsLook_OnTheHostAndOnAClient_EachByItsOwnPlayer()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        WorldDefinition world = gameFlow.CurrentWorld;
+        PlayerRegistry hostPlayers = SceneBootTestHelper.ResolveFromGameplay<PlayerRegistry>();
+        PlayerController hostPlayer = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current.Controller;
+        KnownWaystones hostKnown = SceneBootTestHelper.ResolveFromGameplay<KnownWaystones>();
+        WaystoneMarkers hostMarkers = SceneBootTestHelper.ResolveFromGameplay<WaystoneMarkers>();
+
+        client = InProcessClient.Start(session, SceneBootTestHelper.ResolveFromGameplay<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendJoined();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => client.LocalPlayer.Current != null && client.Players.Players.Count == 2 && hostPlayers.Players.Count == 2,
+            "both sides to see both players");
+        client.DisableColliders();
+        DeactivateMobs();
+        KnownWaystones clientKnown = client.Resolve<KnownWaystones>();
+        WorldDefinition.Entry north = world.FindEntry("north");
+        Assert.That(clientKnown.IsDiscovered(world, north), Is.False);
+        Assert.That(clientKnown.IsDiscovered(world, world.DefaultEntry), Is.True, "The default entry counts on a client too.");
+
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        client.LocalPlayer.Current.Controller.Teleport(world.ToWorld(North));
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(hostCopy.transform.position, world.ToWorld(North)) < 0.1f, "the host to see the client's player at `north`");
+        yield return SceneBootTestHelper.WaitUntil(() => clientKnown.IsDiscovered(world, north), "the host's discovery to reach the client's record");
+        Assert.That(hostCopy.GetComponent<PlayerWorldSync>().ReplicatedWaystoneCount, Is.EqualTo(1));
+        Assert.That(hostKnown.IsDiscovered(world, north), Is.False, "The host's own player has not discovered it.");
+
+        WaystoneMarker hostStone = null;
+        yield return SceneBootTestHelper.WaitUntil(() => (hostStone = FindStone("north")) != null, "the host to load `north`'s chunk");
+        Assert.That(hostStone.IsAwake, Is.False, "On the host the stone shows the host's player's discoveries: it sleeps.");
+        Assert.That(hostStone.Glow.activeSelf, Is.False);
+        Assert.That(hostMarkers.ShowsAwake(world, "start"), Is.True);
+        Assert.That(FindStone("start").IsAwake, Is.True, "The default entry's stone is awake from the start.");
+
+        WaystoneMarkers clientMarkers = client.Resolve<WaystoneMarkers>();
+        clientMarkers.Start();
+        WaystoneMarker clientStone = Object.Instantiate(hostStone.gameObject).GetComponent<WaystoneMarker>();
+        try
+        {
+            clientMarkers.Add(world, ChunkCoords.ChunkOf(ChunkCoords.CellOf(North)), clientStone);
+            Assert.That(clientStone.IsAwake, Is.True, "On the client the stone shows its own player's discovery: awake.");
+            Assert.That(clientStone.Glow.activeSelf, Is.True, "Its light may burn there.");
+            Assert.That(hostStone.IsAwake, Is.False, "The host's stays asleep.");
+
+            hostPlayer.Teleport(world.ToWorld(North));
+            yield return SceneBootTestHelper.WaitUntil(() => hostStone.IsAwake, "the host's own discovery to wake its stone");
+            Assert.That(hostStone.Glow.activeSelf, Is.True);
+        }
+        finally
+        {
+            Object.Destroy(clientStone.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// Hosting Testlands with a save that has a known client's player discover `north` in an earlier session: as that
+    /// client joins, the host hands its machine the discovery with its player, once, so its record has `north` from the
+    /// spawn on, while the host's own player, a stranger to `north`, does not.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AKnownClient_KnowsTheWaystonesItDiscoveredBefore_FromItsSpawnOn()
+    {
+        const string KnownId = "waystone-client";
+        MemorySaveStore saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        WorldDefinition world = gameFlow.Scenes.StartingWorld;
+        saveStore.Contents = new GameSaveData(
+            1000d,
+            new[] { new GameSaveData.Player(KnownId, world.WorldId, world.ToWorld(TwelveEastOfStart), new[] { new GameSaveData.Waystone(world.WorldId, "north") }) },
+            new GameSaveData.World[0]).ToJson();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        PlayerRegistry hostPlayers = SceneBootTestHelper.ResolveFromGameplay<PlayerRegistry>();
+
+        client = InProcessClient.Start(session, SceneBootTestHelper.ResolveFromGameplay<PlayerSpawner>().PlayerNetworkPrefab, KnownId);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendJoined();
+        yield return SceneBootTestHelper.WaitUntil(() => client.LocalPlayer.Current != null && hostPlayers.Players.Count == 2, "the host to spawn the known player");
+        KnownWaystones clientKnown = client.Resolve<KnownWaystones>();
+        yield return SceneBootTestHelper.WaitUntil(() => clientKnown.IsDiscovered(world, world.FindEntry("north")), "the client's record to have `north`");
+
+        Assert.That(clientKnown.Discovered, Has.Count.EqualTo(1), "Exactly the saved discovery, once.");
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        Assert.That(hostCopy.GetComponent<PlayerWorldSync>().ReplicatedWaystoneCount, Is.EqualTo(1));
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<KnownWaystones>().IsDiscovered(world, world.FindEntry("north")), Is.False, "The host's player has not discovered it.");
+    }
+
+    /// <summary>
     /// Keeps the first mob of the loaded chunk holding <paramref name="position"/> in <paramref name="world"/> standing
     /// one and a half cells east of it with its AI off, and turns every other mob's AI off.
     /// </summary>
@@ -326,6 +430,22 @@ public class WaystonePlayModeTests
         WorldStreaming streaming = SceneBootTestHelper.ResolveFromGameplay<WorldStreaming>();
         yield return SceneBootTestHelper.WaitUntil(() => streaming.Streamer.IsSettled(new StreamInterest(world, position)), "the chunks around the player to load");
         yield return null;
+    }
+
+    /// <summary>
+    /// The marker of Testlands' waystone <paramref name="entryName"/> in a loaded chunk, or null.
+    /// </summary>
+    private static WaystoneMarker FindStone(string entryName)
+    {
+        foreach (WaystoneMarker marker in Object.FindObjectsByType<WaystoneMarker>())
+        {
+            if (marker.EntryName == entryName && marker.gameObject.scene.name.StartsWith("World_Testlands"))
+            {
+                return marker;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

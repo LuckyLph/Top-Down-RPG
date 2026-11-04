@@ -1306,12 +1306,13 @@ public static class WorldAuthoring
     /// Sets where <paramref name="exit"/> leads and how many cells it covers, through its serialized object, recorded
     /// for undo.
     /// </summary>
-    public static void ConfigureExit(WorldExit exit, WorldDefinition target, string entryName, Vector2Int size)
+    public static void ConfigureExit(WorldExit exit, WorldDefinition target, string entryName, Vector2Int size, ExitMarker marker = ExitMarker.Signpost)
     {
         SerializedObject data = new(exit);
         data.FindProperty("targetWorld").objectReferenceValue = target;
         data.FindProperty("targetEntry").stringValue = entryName ?? string.Empty;
         data.FindProperty("sizeInCells").vector2IntValue = Vector2Int.Max(size, Vector2Int.one);
+        data.FindProperty("marker").enumValueIndex = (int)marker;
         data.ApplyModifiedProperties();
     }
 

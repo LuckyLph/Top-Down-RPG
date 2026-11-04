@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -78,11 +79,11 @@ public sealed class PlayerSpawner
     /// <summary>
     /// Host only: creates the network player object owned by client <paramref name="ownerClientId"/> on a free slot at
     /// <paramref name="position"/> (<see cref="EntrySlots"/>, so players joining at the same entry stand apart), puts
-    /// it in <paramref name="world"/> and has its owner equip the weapon whose id is <paramref name="savedWeapon"/> (its
-    /// starting weapon for none) as it spawns, and spawns it, unless that client already has one. Logs an error when
-    /// called anywhere but the host.
+    /// it in <paramref name="world"/>, has its owner equip the weapon whose id is <paramref name="savedWeapon"/> (its
+    /// starting weapon for none) as it spawns and receive the waystones it <paramref name="discovered"/> (none for
+    /// null), and spawns it, unless that client already has one. Logs an error when called anywhere but the host.
     /// </summary>
-    public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position, string savedWeapon)
+    public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position, string savedWeapon, IReadOnlyList<GameSaveData.Waystone> discovered = null)
     {
         if (!session.IsServer)
         {
@@ -102,6 +103,7 @@ public sealed class PlayerSpawner
         if (controller.TryGetComponent(out PlayerWorldSync worldSync))
         {
             worldSync.SetSpawnWorld(world);
+            worldSync.SetSpawnWaystones(discovered);
         }
 
         if (controller.TryGetComponent(out PlayerWeaponController weapon) && controller.TryGetComponent(out PlayerNetworkSync networkSync))

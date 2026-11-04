@@ -138,6 +138,8 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneDiscovery>();
         builder.RegisterEntryPoint<WaystonePopupPresenter>();
+        builder.Register<KnownWaystones>(Lifetime.Singleton);
+        builder.RegisterEntryPoint<WaystoneMarkers>().AsSelf();
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();

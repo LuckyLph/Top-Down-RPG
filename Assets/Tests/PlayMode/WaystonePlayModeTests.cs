@@ -3,19 +3,22 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 /// <summary>
 /// PlayMode tests for waystones and respawns in Testlands (Docs/WorldStreaming.md: Death and respawn), whose default
 /// entry `start` and waystone `north` lie 50 cells apart: offline, a dead player respawns after the delay at the nearest
 /// waystone it discovered, its own machine travelling there; walking to a waystone discovers it, shows the player a
-/// popup, and Continue keeps it; and in a hosted game a client's dead player respawns at its waystone with the host
-/// deciding and the client moving its own player there.
+/// popup, and Continue keeps it; in a hosted game a client's dead player respawns at its waystone with the host
+/// deciding and the client moving its own player there; and a trip to a waystone protects the traveller (Docs/KnownGaps.md,
+/// Phase 2): a mob by the entry does not hurt the host's player or a client's until its machine has faded in.
 /// </summary>
 public class WaystonePlayModeTests
 {
     private static readonly Vector2 North = new(30.5f, 90.5f);
     private static readonly Vector2 SouthOfNorth = new(30.5f, 85.5f);
+    private static readonly Vector2 TwelveEastOfStart = new(36.5f, 40.5f);
 
     private InProcessClient client;
 
@@ -180,6 +183,137 @@ public class WaystonePlayModeTests
             () => !hostCopy.GetComponent<Health>().IsDead && !clientLocal.Handle.Health.IsDead,
             "the host to restore the client's player at its waystone");
         Assert.That(Vector2.Distance(hostCopy.transform.position, world.EntryPosition("start")), Is.LessThan(1.5f));
+    }
+
+    /// <summary>
+    /// Hosting Testlands, the host's own player is sent on a trip to `start` while a mob stands by the entry: through the
+    /// whole trip, its fade out, arrival and fade in, the host keeps it out of play (the mob never targets it, a hit on
+    /// it is ignored, it loses no health); once its screen has faded in the protection is over, and the mob comes for it
+    /// and hurts it.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator TheHostsTraveller_IsNotHurtAtItsArrival_UntilItFadesIn()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        WorldDefinition world = gameFlow.CurrentWorld;
+        LocalPlayer local = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
+        Health health = local.Handle.Health;
+        TripProtection protection = SceneBootTestHelper.ResolveFromGameplay<TripProtection>();
+        LocalTripTraveller traveller = SceneBootTestHelper.ResolveFromGameplay<LocalTripTraveller>();
+        HitService hits = SceneBootTestHelper.ResolveFromGameplay<HitService>();
+        Vector2 entry = world.EntryPosition("start");
+        yield return TeleportAndSettle(local.Controller, world, world.ToWorld(TwelveEastOfStart));
+        MobController mob = StandAMobBy(world, entry);
+        MobPerception2D perception = mob.GetComponent<MobPerception2D>();
+
+        SceneBootTestHelper.ResolveFromGameplay<NetworkTripAuthority>().Send(local.Handle, world, "start");
+        mob.enabled = true;
+        Assert.That(protection.IsProtected(local.Handle), Is.True, "The trip protects the traveller from its approval on.");
+        Assert.That(hits.ApplyHit(local.Controller.GetComponent<DamageReceiver>(), new Hit(10, DamageType.Physical), mob.gameObject), Is.False, "A hit on the traveller is ignored.");
+        bool arrived = false;
+        while (traveller.IsTravelling)
+        {
+            arrived |= Vector2.Distance(local.Transform.position, entry) < 1.5f;
+            Assert.That(protection.IsProtected(local.Handle), Is.True, "The host keeps its traveller out of play until it fades in.");
+            Assert.That(perception.CurrentTargetPlayer, Is.Not.SameAs(local.Handle), "The mob by the entry does not see the traveller.");
+            Assert.That(health.CurrentHealth, Is.EqualTo(health.MaxHealth));
+            yield return null;
+        }
+
+        Assert.That(arrived, Is.True, "The traveller stood by the mob before its screen faded in.");
+        Assert.That(protection.IsProtected(local.Handle), Is.False, "Its fade in ends the protection.");
+        yield return SceneBootTestHelper.WaitUntil(() => health.CurrentHealth < health.MaxHealth, "the mob to hurt the player once it has faded in");
+    }
+
+    /// <summary>
+    /// Hosting Testlands with an in-process client, the host sends the client's player on a trip to `start` while a mob
+    /// stands by the entry: the host keeps it out of play while the client moves it there and reports the entry's chunk
+    /// for that trip, until the client reports its fade in; the protection then ends on the host and the mob hurts the
+    /// player, on both machines.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsTraveller_IsNotHurtAtItsArrival_UntilItReportsItsFadeIn()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        WorldDefinition world = gameFlow.CurrentWorld;
+        PlayerRegistry hostPlayers = SceneBootTestHelper.ResolveFromGameplay<PlayerRegistry>();
+        PlayerController hostPlayer = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current.Controller;
+        TripProtection protection = SceneBootTestHelper.ResolveFromGameplay<TripProtection>();
+        yield return TeleportAndSettle(hostPlayer, world, world.ToWorld(North));
+
+        client = InProcessClient.Start(session, SceneBootTestHelper.ResolveFromGameplay<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendJoined();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => client.LocalPlayer.Current != null && client.Players.Players.Count == 2 && hostPlayers.Players.Count == 2,
+            "both sides to see both players");
+        client.DisableColliders();
+        LocalPlayer clientLocal = client.LocalPlayer.Current;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        PlayerHandle hostCopyHandle = HandleOf(hostPlayers, hostCopy);
+        Health hostCopyHealth = hostCopy.GetComponent<Health>();
+        Vector2 away = world.ToWorld(TwelveEastOfStart);
+        clientLocal.Controller.Teleport(away);
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(hostCopy.transform.position, away) < 0.1f, "the host to see the client's player move");
+        Vector2 entry = world.EntryPosition("start");
+        MobController mob = StandAMobBy(world, entry);
+        MobPerception2D perception = mob.GetComponent<MobPerception2D>();
+
+        NetworkTripAuthority clientTrips = client.Resolve<NetworkTripAuthority>();
+        List<TripApproval> delivered = new();
+        clientTrips.Approved += delivered.Add;
+        SceneBootTestHelper.ResolveFromGameplay<NetworkTripAuthority>().Send(hostCopyHandle, world, "start");
+        mob.enabled = true;
+        Assert.That(protection.IsProtected(hostCopyHandle), Is.True);
+        yield return SceneBootTestHelper.WaitUntil(() => delivered.Count == 1, "the trip to reach the client");
+        clientLocal.Controller.Teleport(delivered[0].Position);
+        int trip = client.Resolve<PlayerWorlds>().TripOf(clientLocal.Handle);
+        client.SendChunkReady(trip, ChunkId.Of(world, Vector2Int.zero));
+        yield return SceneBootTestHelper.WaitUntil(() => Vector2.Distance(hostCopy.transform.position, entry) < 1.5f, "the host to see the client's player at the entry");
+
+        float until = Time.time + 1.5f;
+        while (Time.time < until)
+        {
+            Assert.That(protection.IsProtected(hostCopyHandle), Is.True, "The host keeps the traveller out of play until its machine fades in, its chunk reported or not.");
+            Assert.That(perception.CurrentTargetPlayer, Is.Not.SameAs(hostCopyHandle), "The mob by the entry does not see the traveller.");
+            Assert.That(hostCopyHealth.CurrentHealth, Is.EqualTo(hostCopyHealth.MaxHealth));
+            yield return null;
+        }
+
+        clientTrips.ReportArrived(clientLocal.Handle, trip);
+        yield return SceneBootTestHelper.WaitUntil(() => !protection.IsProtected(hostCopyHandle), "the client's fade in to end the protection on the host");
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostCopyHealth.CurrentHealth < hostCopyHealth.MaxHealth && clientLocal.Handle.Health.CurrentHealth < clientLocal.Handle.Health.MaxHealth,
+            "the mob to hurt the client's player, on both machines");
+    }
+
+    /// <summary>
+    /// Keeps the first mob of the loaded chunk holding <paramref name="position"/> in <paramref name="world"/> standing
+    /// one and a half cells east of it with its AI off, and turns every other mob's AI off.
+    /// </summary>
+    private static MobController StandAMobBy(WorldDefinition world, Vector2 position)
+    {
+        Assert.That(SceneBootTestHelper.ResolveFromGameplay<Worlds>().TryGet(world, out LoadedWorld loaded), Is.True);
+        Scene chunk = loaded.Chunks[ChunkCoords.ChunkOf(ChunkCoords.CellOf(world.ToLocal(position)))];
+        MobController mob = SceneQuery.FindFirst<MobController>(chunk);
+        Assert.That(mob, Is.Not.Null, "The chunk should have a mob.");
+        foreach (MobController other in Object.FindObjectsByType<MobController>())
+        {
+            other.enabled = false;
+        }
+
+        Vector2 spot = position + new Vector2(1.5f, 0f);
+        mob.GetComponent<Rigidbody2D>().position = spot;
+        mob.transform.position = spot;
+        Physics2D.SyncTransforms();
+        return mob;
     }
 
     /// <summary>

@@ -42,6 +42,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     private readonly WalkablePlaces walkablePlaces;
     private readonly PlayerIds playerIds;
     private readonly float slotSpacing;
+    private readonly float restoreWaitSeconds;
     private readonly List<StreamInterest> interests = new();
     private readonly List<StreamInterest> preparations = new();
     private readonly CancellationTokenSource disposeCancellation = new();
@@ -53,8 +54,9 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     /// <summary>
     /// Creates the driver with a streamer made from <paramref name="settings"/>, loading through
     /// <paramref name="sceneLoader"/> with <paramref name="gameplayScope"/> as the parent of every world's scope,
-    /// placing arriving players <paramref name="gameplaySettings"/>' entry slot spacing apart, and moving a saved place
-    /// that is no longer walkable through <paramref name="places"/>, keyed by the players' <paramref name="ids"/>.
+    /// placing arriving players <paramref name="gameplaySettings"/>' entry slot spacing apart (and waiting at most its
+    /// trip protection's time for a respawning player to come back), and moving a saved place that is no longer
+    /// walkable through <paramref name="places"/>, keyed by the players' <paramref name="ids"/>.
     /// </summary>
     public WorldStreaming(
         WorldStreamingSettings settings,
@@ -75,6 +77,7 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         PlayerIds ids)
     {
         slotSpacing = gameplaySettings != null ? gameplaySettings.EntrySlotSpacing : 0f;
+        restoreWaitSeconds = gameplaySettings != null ? gameplaySettings.TripProtectionSeconds : 0f;
         streamer = settings.CreateStreamer(chunkHandshake);
         handshake = chunkHandshake;
         sessionStatus = session;
@@ -244,8 +247,10 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
     /// <summary>
     /// Moves the local player, which the trip's authority has put in <paramref name="world"/>, to a free slot of its
     /// entry <paramref name="entryName"/> (<see cref="EntrySlots"/>), snaps the camera there, and completes once the
-    /// world and the chunks around the entry are loaded. The world it left keeps everything for the empty-world grace.
-    /// Throws without a local player.
+    /// world and the chunks around the entry are loaded and, for a dead player (a respawn's trip), once the player is
+    /// alive again, which the host decides once it stands there, waiting at most
+    /// <see cref="GameplaySettings.TripProtectionSeconds"/> of game time for that, so the screen fades in on the living
+    /// player. The world it left keeps everything for the empty-world grace. Throws without a local player.
     /// </summary>
     public async Awaitable ArriveAsync(WorldDefinition world, string entryName, CancellationToken cancellation)
     {
@@ -270,6 +275,12 @@ public sealed class WorldStreaming : IWorldSession, IStartable, ITickable, IDisp
         cameraFollow.SnapToTarget();
         StreamInterest arrival = new(world, position);
         while (!streamer.IsSettled(arrival))
+        {
+            await Awaitable.NextFrameAsync(cancellation);
+        }
+
+        float giveUp = clock.Time + restoreWaitSeconds;
+        while (!local.Handle.IsAlive && local.Handle.Transform != null && clock.Time < giveUp)
         {
             await Awaitable.NextFrameAsync(cancellation);
         }

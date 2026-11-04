@@ -151,7 +151,7 @@ public class WaystoneTests
         Assert.That(store.Contents, Does.Contain("waystones"));
         Assert.That(new GameSave(store).TryLoad(out GameSaveData data), Is.True);
         Assert.That(data.Version, Is.EqualTo(GameSaveData.CurrentVersion));
-        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(2), "Waystones need no format bump.");
+        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(3), "Waystones needed no format bump; the saved weapon raised it to 3.");
 
         SessionSave loaded = new(new ManualClock());
         loaded.StartFrom(data);

@@ -16,7 +16,9 @@ using VContainer;
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
 /// client's completed casts there. The owner's teleports (arriving at an entry, a waystone included) snap on the other
 /// machines instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that
-/// movement, equips the replicated weapon and shows the replicated look and lantern, a late joiner included.
+/// movement, equips the replicated weapon and shows the replicated look and lantern, a late joiner included. The host
+/// writes the weapon a client's player holds in the save (<see cref="SetSavedWeapon"/>) to a server network variable as
+/// it spawns: the owner equips it, and every copy shows it until the owner writes a weapon of its own.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
@@ -29,6 +31,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     private readonly NetworkVariable<Vector2> move = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<Vector2> facing = new(Vector2.down, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<int> equippedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private readonly NetworkVariable<int> savedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> look = new(NoLook, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<bool> lanternLit = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
@@ -42,6 +45,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     private PlayerBinder binder;
     private PlayerHandle handle;
     private int castWeaponIndex = NoWeapon;
+    private int pendingSavedWeapon = NoWeapon;
 
     /// <summary>
     /// The player's registry handle on this machine once it is bound, else null.
@@ -72,8 +76,18 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// The owner binds the player as local (which shows the look the local settings choose and has it decide its
-    /// lantern), writes its weapon, look and lantern, and starts relaying its weapon switches, look changes, lantern
+    /// Host only, before spawning: the catalog index of the weapon the save gives this client's player, written as it
+    /// spawns for its owner to equip.
+    /// </summary>
+    public void SetSavedWeapon(int index)
+    {
+        pendingSavedWeapon = index;
+    }
+
+    /// <summary>
+    /// The host writes the saved weapon it was given. The owner binds the player as local (which shows the look the
+    /// local settings choose and has it decide its lantern), equips the saved weapon, now or when it arrives, writes its
+    /// weapon, look and lantern, and starts relaying its weapon switches, look changes, lantern
     /// changes, attacks, teleports and casts; any other machine makes the body kinematic without interpolation, binds it
     /// as remote, shows the current replicated movement, equips the replicated weapon and shows the replicated look and
     /// lantern, following them from then on. Logs an error and does nothing
@@ -87,12 +101,19 @@ public class PlayerNetworkSync : NetworkBehaviour
             return;
         }
 
+        if (IsServer && pendingSavedWeapon != NoWeapon)
+        {
+            savedWeapon.Value = pendingSavedWeapon;
+        }
+
         if (IsOwner)
         {
             handle = binder.BindLocal(controller);
             controller.Teleported += HandleLocalTeleported;
             if (weapon != null)
             {
+                EquipSavedWeapon(savedWeapon.Value);
+                savedWeapon.OnValueChanged += HandleSavedWeaponReplicated;
                 weapon.AttackStarted += HandleLocalAttackStarted;
                 weapon.AttackContacted += HandleLocalAttackContacted;
                 weapon.AttackCancelled += HandleLocalAttackCancelled;
@@ -132,7 +153,8 @@ public class PlayerNetworkSync : NetworkBehaviour
         handle = binder.BindRemote(controller);
         controller.ShowRemoteMovement(move.Value, facing.Value);
         equippedWeapon.OnValueChanged += HandleWeaponReplicated;
-        EquipReplicatedWeapon(equippedWeapon.Value);
+        savedWeapon.OnValueChanged += HandleWeaponReplicated;
+        EquipReplicatedWeapon(CopyWeaponIndex());
         look.OnValueChanged += HandleLookReplicated;
         if (playerLook != null)
         {
@@ -161,6 +183,8 @@ public class PlayerNetworkSync : NetworkBehaviour
         }
 
         equippedWeapon.OnValueChanged -= HandleWeaponReplicated;
+        savedWeapon.OnValueChanged -= HandleWeaponReplicated;
+        savedWeapon.OnValueChanged -= HandleSavedWeaponReplicated;
         look.OnValueChanged -= HandleLookReplicated;
         if (playerLook != null)
         {
@@ -468,11 +492,42 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// On the other machines, equips the weapon the owner switched to.
+    /// On the other machines, equips the weapon the owner switched to, or the saved one until the owner writes one,
+    /// when either changes.
     /// </summary>
     private void HandleWeaponReplicated(int previous, int current)
     {
-        EquipReplicatedWeapon(current);
+        EquipReplicatedWeapon(CopyWeaponIndex());
+    }
+
+    /// <summary>
+    /// The catalog index of the weapon a copy shows: the one its owner wrote, else the one its save holds (the
+    /// unwritten value of both keeps the copy's own, the starting weapon).
+    /// </summary>
+    private int CopyWeaponIndex()
+    {
+        return equippedWeapon.Value != NoWeapon ? equippedWeapon.Value : savedWeapon.Value;
+    }
+
+    /// <summary>
+    /// On the owner, equips the saved weapon the host wrote after the player spawned.
+    /// </summary>
+    private void HandleSavedWeaponReplicated(int previous, int current)
+    {
+        EquipSavedWeapon(current);
+    }
+
+    /// <summary>
+    /// On the owner, equips the catalog's weapon at <paramref name="index"/>, the one the save holds, unless it is the
+    /// weapon already held or there is none (the unwritten value).
+    /// </summary>
+    private void EquipSavedWeapon(int index)
+    {
+        PlayerWeapon saved = weapon != null && weapon.Catalog != null ? weapon.Catalog.Get(index) : null;
+        if (saved != null && saved != weapon.CurrentWeapon)
+        {
+            weapon.Equip(saved);
+        }
     }
 
     /// <summary>

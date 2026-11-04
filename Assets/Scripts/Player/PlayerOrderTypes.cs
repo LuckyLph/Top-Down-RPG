@@ -41,8 +41,9 @@ public enum PlayerOrderIssue
 public readonly struct PlayerOrderContext
 {
     /// <summary>
-    /// Captures the player's position, the clock time, the motor's arrival and stall state, the weapon's attack range
-    /// and the crowd control currently applied (none by default).
+    /// Captures the player's position, the clock time, the motor's arrival and stall state, the weapon's attack range,
+    /// the crowd control currently applied (none by default) and the radius the weapon's attack sweeps toward its
+    /// target past the walls (its projectile's; 0, a line, for a melee weapon and by default).
     /// </summary>
     public PlayerOrderContext(
         Vector2 position,
@@ -50,7 +51,8 @@ public readonly struct PlayerOrderContext
         bool reachedDestination,
         float stalledTime,
         float attackRange,
-        StatusControls controls = StatusControls.None)
+        StatusControls controls = StatusControls.None,
+        float attackSightRadius = 0f)
     {
         Position = position;
         Time = time;
@@ -58,6 +60,7 @@ public readonly struct PlayerOrderContext
         StalledTime = stalledTime;
         AttackRange = attackRange;
         Controls = controls;
+        AttackSightRadius = attackSightRadius;
     }
 
     public Vector2 Position { get; }
@@ -66,6 +69,7 @@ public readonly struct PlayerOrderContext
     public float StalledTime { get; }
     public float AttackRange { get; }
     public StatusControls Controls { get; }
+    public float AttackSightRadius { get; }
 }
 
 /// <summary>

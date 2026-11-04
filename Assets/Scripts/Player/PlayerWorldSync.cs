@@ -9,7 +9,8 @@ using VContainer;
 /// feeds the variable into its own <see cref="PlayerWorlds"/>, so each machine knows every player's world; the owner
 /// also hands a new trip to <see cref="NetworkTripAuthority.Deliver"/>, which sets its fade and arrival off; a respawn
 /// at a waystone is such a trip. As the player's <see cref="ITripLink"/> it sends its owner's trip requests to the host
-/// as an RPC naming the exit, and as its <see cref="IWaystoneLink"/> it tells a client's owner which waystone its player
+/// as an RPC naming the exit, and its fade in at the end of each trip as an RPC naming the trip, which ends the trip's
+/// protection there; and as its <see cref="IWaystoneLink"/> it tells a client's owner which waystone its player
 /// discovered, raised there on <see cref="WaystoneNotices"/>.
 /// </summary>
 [DisallowMultipleComponent]
@@ -130,6 +131,20 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink, IWaystoneLink
     }
 
     /// <summary>
+    /// Owner only: tells the host this machine faded in at the end of its player's trip number <paramref name="trip"/>.
+    /// </summary>
+    public void SendTripArrived(int trip)
+    {
+        if (!IsSpawned || !IsOwner)
+        {
+            Debug.LogWarning($"{name} can only report its own trips once spawned.", this);
+            return;
+        }
+
+        TripArrivedRpc(trip);
+    }
+
+    /// <summary>
     /// Host only: tells this player's owner, when it is a client, that its player discovered the waystone
     /// <paramref name="entryName"/>.
     /// </summary>
@@ -163,6 +178,19 @@ public class PlayerWorldSync : NetworkBehaviour, ITripLink, IWaystoneLink
         if (handle != null && trips != null)
         {
             trips.Approve(new TripRequest(handle, exitId, position));
+        }
+    }
+
+    /// <summary>
+    /// Runs on the host: the owner faded in at the end of its trip number <paramref name="trip"/>, which ends the
+    /// protection that trip gave the player.
+    /// </summary>
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+    private void TripArrivedRpc(int trip)
+    {
+        if (handle != null && trips != null)
+        {
+            trips.ReportArrived(handle, trip);
         }
     }
 

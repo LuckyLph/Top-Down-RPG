@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// How a weapon's hit reaches its target at contact: a melee area searched at once, or a projectile that leaves then
@@ -16,7 +19,8 @@ public enum AttackDelivery
 /// (windup, contact and recovery at attack speed 1) with its cancel rules, how its hit lands at contact (the area a
 /// melee weapon searches, or the projectile a ranged one launches), the clip of the character's animation set its
 /// attack plays (the only frames that draw it), its HUD icon, and the two abilities it grants (the A and S slots). A
-/// weapon is named on the wire by its index in the <see cref="WeaponCatalog"/>.
+/// weapon is named on the wire by its index in the <see cref="WeaponCatalog"/>, and in saves by its id, its asset's
+/// GUID, which the editor keeps.
 /// </summary>
 [CreateAssetMenu(fileName = "Player Weapon", menuName = "TopDownRPG/Combat/Player Weapon")]
 public sealed class PlayerWeapon : ScriptableObject
@@ -24,6 +28,8 @@ public sealed class PlayerWeapon : ScriptableObject
     public const int AbilityCount = 2;
     private const int DirectionalOffsetCount = 4;
 
+    [SerializeField, Tooltip("Stable id of this weapon in saves, its asset's GUID; set by the editor.")]
+    private string weaponId;
     [SerializeField] private string displayName = "Sword";
     [SerializeField, Min(0)] private int damage = 1;
     [SerializeField] private DamageType damageType = DamageType.Physical;
@@ -81,6 +87,7 @@ public sealed class PlayerWeapon : ScriptableObject
     [SerializeField, Tooltip("Exactly two abilities, for the A and S slots. Empty entries are empty slots.")]
     private AbilityDefinition[] abilities = new AbilityDefinition[AbilityCount];
 
+    public string WeaponId => weaponId ?? string.Empty;
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? "Weapon" : displayName;
     public int Damage => Mathf.Max(0, damage);
     public DamageType DamageType => damageType;
@@ -99,12 +106,22 @@ public sealed class PlayerWeapon : ScriptableObject
     public Sprite HudIcon => hudIcon;
 
     /// <summary>
-    /// Keeps exactly four directional hit offsets and <see cref="AbilityCount"/> ability entries in the inspector.
+    /// Keeps exactly four directional hit offsets and <see cref="AbilityCount"/> ability entries in the inspector, and
+    /// the id equal to the asset's GUID, so a copied asset gets its own.
     /// </summary>
     private void OnValidate()
     {
         EnsureDirectionalOffsets();
         abilities = AbilitySlotArrays.Resize(abilities, AbilityCount);
+#if UNITY_EDITOR
+        string path = AssetDatabase.GetAssetPath(this);
+        string guid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
+        if (!string.IsNullOrEmpty(guid) && guid != weaponId)
+        {
+            weaponId = guid;
+            EditorUtility.SetDirty(this);
+        }
+#endif
     }
 
     /// <summary>
@@ -135,7 +152,8 @@ public sealed class PlayerWeapon : ScriptableObject
     }
 
     /// <summary>
-    /// Builds an unsaved, hidden runtime weapon with the given values, for tests that must not touch project assets.
+    /// Builds an unsaved, hidden runtime weapon with the given values, for tests that must not touch project assets, its
+    /// id <c>test-</c> and its name.
     /// Offsets and abilities are truncated or padded to their fixed counts; the timeline defaults to 0.15 s, 0.05 s and
     /// 0.15 s with both cancel rules on, the hit area to 0.9 by 0.9, and the attack clip to the sword's. With a
     /// <paramref name="projectile"/> it fires that projectile instead of searching its area.
@@ -161,6 +179,7 @@ public sealed class PlayerWeapon : ScriptableObject
         ProjectileSpec? projectile = null)
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
+        weapon.weaponId = $"test-{name}";
         weapon.displayName = name;
         weapon.damage = attackDamage;
         weapon.damageType = type;

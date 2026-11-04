@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Session tuning registered in the Gameplay scope: how long a dead player waits to respawn, how close a player comes to
 /// a waystone to discover it and what it is shown then, how far apart players arriving at the same entry stand, how
-/// often a world session saves, and how far a saved place on ground no longer walkable looks for walkable ground.
+/// often a world session saves, how far a saved place on ground no longer walkable looks for walkable ground, and how
+/// long a travelling player stays protected at most.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Gameplay Settings", fileName = "GameplaySettings")]
 public class GameplaySettings : ScriptableObject
@@ -16,6 +17,10 @@ public class GameplaySettings : ScriptableObject
 
     [SerializeField, Min(1f), Tooltip("Seconds of game time between autosaves of a world session, on the machine that saves (offline or the host). The game also saves whenever a player enters a world and as the session ends.")]
     private float autosaveIntervalSeconds = 60f;
+
+    [Header("Trips")]
+    [SerializeField, Min(0.1f), Tooltip("Seconds of game time a travelling player stays untargetable, its statuses held, at most: its machine normally ends the protection sooner, as it fades in at the end of the trip. A dead player's respawn trip also fades in once the player is alive again, waiting this long at most.")]
+    private float tripProtectionSeconds = 10f;
 
     [Header("Waystones")]
     [SerializeField, Min(0), Tooltip("A player discovers a waystone entry when its cell is at most this many cells from the entry's cell along each axis.")]
@@ -38,11 +43,12 @@ public class GameplaySettings : ScriptableObject
     public float EntrySlotSpacing => entrySlotSpacing;
     public float AutosaveIntervalSeconds => autosaveIntervalSeconds;
     public int SavedPlaceSearchCells => savedPlaceSearchCells;
+    public float TripProtectionSeconds => tripProtectionSeconds;
 
     /// <summary>
     /// Builds unsaved settings for tests.
     /// </summary>
-    internal static GameplaySettings Create(float respawnDelay = 3f, float slotSpacing = 0.6f, float autosaveInterval = 60f, int waystoneReach = 2)
+    internal static GameplaySettings Create(float respawnDelay = 3f, float slotSpacing = 0.6f, float autosaveInterval = 60f, int waystoneReach = 2, float tripProtection = 10f)
     {
         GameplaySettings settings = CreateInstance<GameplaySettings>();
         settings.hideFlags = HideFlags.DontSave;
@@ -50,6 +56,7 @@ public class GameplaySettings : ScriptableObject
         settings.waystoneReachCells = waystoneReach;
         settings.entrySlotSpacing = slotSpacing;
         settings.autosaveIntervalSeconds = autosaveInterval;
+        settings.tripProtectionSeconds = tripProtection;
         return settings;
     }
 }

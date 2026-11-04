@@ -8,8 +8,9 @@ using UnityEngine;
 public static class TestPlayerControlSettings
 {
     /// <summary>
-    /// Creates a hidden, unsaved settings instance with the given tuning, the Enemy layer as enemies and the Player
-    /// layer as allies; the caller destroys it.
+    /// Creates a hidden, unsaved settings instance with the given tuning, the Enemy layer as enemies, the Player
+    /// layer as allies and the Obstacles layer blocking an attack's line of sight, as the asset sets them; the caller
+    /// destroys it.
     /// </summary>
     public static PlayerControlSettings Create(
         float moveSpeed = 5f,
@@ -36,6 +37,7 @@ public static class TestPlayerControlSettings
         serialized.FindProperty("movementProfile").objectReferenceValue = movementProfile;
         serialized.FindProperty("enemyLayers").intValue = LayerMask.GetMask("Enemy");
         serialized.FindProperty("allyLayers").intValue = LayerMask.GetMask("Player");
+        serialized.FindProperty("obstacleLayers").intValue = LayerMask.GetMask("Obstacles");
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return settings;
     }

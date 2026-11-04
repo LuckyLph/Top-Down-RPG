@@ -556,6 +556,38 @@ public class StatusEffectTests
     }
 
     /// <summary>
+    /// A unit out of play (a travelling player, <see cref="IUnitProtection"/>) takes no hit, neither its damage nor its
+    /// statuses, and its statuses neither tick nor run down (<see cref="StatusEffectService.IsHeld"/>); back in play,
+    /// hits land and its statuses run on from where they stood.
+    /// </summary>
+    [Test]
+    public void Service_UnitsOutOfPlay_TakeNoHits_AndTheirStatusesStandStill()
+    {
+        DamageReceiver player = Unit("Player", Faction.Players);
+        DamageReceiver mob = Unit("Mob", Faction.Mobs);
+        StatusEffectDefinition burn = Definition("Burn", StatusKind.Debuff, 4f, periodic: StatusPeriodic.Damage, periodicAmount: 1);
+        StatusEffectDefinition chill = Definition("Chill", StatusKind.Debuff, 3f);
+        Services services = new(true);
+        services.Statuses.Apply(player, burn, mob.gameObject);
+        services.Protection.Protected.Add(player);
+
+        Assert.That(services.Hits.ApplyHit(player, new Hit(5, DamageType.Physical, new[] { chill }), mob.gameObject), Is.False);
+        Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth), "No damage lands out of play.");
+        Assert.That(player.Statuses.Count, Is.EqualTo(1), "No status lands out of play.");
+        Assert.That(services.Statuses.IsHeld(player), Is.True);
+        services.Statuses.Advance(2f);
+        Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth), "The burn does not tick.");
+        Assert.That(player.Statuses.GetSnapshot(0).Remaining, Is.EqualTo(4f).Within(0.001f));
+
+        services.Protection.Protected.Remove(player);
+        Assert.That(services.Statuses.IsHeld(player), Is.False);
+        services.Statuses.Advance(2f);
+        Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth - 2));
+        Assert.That(services.Hits.ApplyHit(player, new Hit(5, DamageType.Physical), mob.gameObject), Is.True);
+        Assert.That(player.Health.CurrentHealth, Is.EqualTo(player.Health.MaxHealth - 7));
+    }
+
+    /// <summary>
     /// The service removes one named status from a unit and clears all of them.
     /// </summary>
     [Test]
@@ -876,17 +908,20 @@ public class StatusEffectTests
     {
         /// <summary>
         /// Builds damage, status and hit services that are authoritative when <paramref name="authoritative"/> is
-        /// set, with the status service on <paramref name="clock"/> or a fresh manual clock.
+        /// set, with the status service on <paramref name="clock"/> or a fresh manual clock, and both the status and hit
+        /// services keeping the units in <see cref="Protection"/> out of play.
         /// </summary>
         public Services(bool authoritative, IClock clock = null)
         {
             IGameAuthority authority = new FixedGameAuthority(authoritative);
             Events = new CombatEvents();
+            Protection = new FakeUnitProtection();
             Damage = TestCombat.CreateDamageService(authority, Events);
-            Statuses = TestCombat.CreateStatusService(Damage, authority, Events, clock);
-            Hits = new HitService(Damage, Statuses);
+            Statuses = TestCombat.CreateStatusService(Damage, authority, Events, clock, Protection);
+            Hits = new HitService(Damage, Statuses, Protection);
         }
 
+        public FakeUnitProtection Protection { get; }
         public CombatEvents Events { get; }
         public DamageService Damage { get; }
         public StatusEffectService Statuses { get; }

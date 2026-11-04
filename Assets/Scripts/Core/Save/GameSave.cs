@@ -2,8 +2,10 @@ using UnityEngine;
 
 /// <summary>
 /// Reads and writes the save file (<see cref="GameSaveData"/>) through an <see cref="ISaveStore"/>. A file that cannot
-/// be parsed, or has another format version (a version 1 area save included), is ignored with a warning, and kept as a
-/// copy beside it before the first write replaces it, so a save from a newer build or a damaged one is never lost.
+/// be parsed, or has a format version this build does not read (<see cref="GameSaveData.IsReadable"/>: a version 1 area
+/// save, or one from a newer build), is ignored with a warning, and kept as a copy beside it before the first write
+/// replaces it, so a save from a newer build or a damaged one is never lost. An older format this build reads is
+/// written over in the current format.
 /// </summary>
 public sealed class GameSave
 {
@@ -19,13 +21,13 @@ public sealed class GameSave
     }
 
     /// <summary>
-    /// Whether a save in the current format is stored.
+    /// Whether a save in a format this build reads is stored.
     /// </summary>
     public bool HasSave => TryLoad(out _);
 
     /// <summary>
-    /// Reads the save. Returns false when there is none, and warns and returns false when it cannot be parsed or has
-    /// another format version.
+    /// Reads the save. Returns false when there is none, and warns and returns false when it cannot be parsed or has a
+    /// format version this build does not read.
     /// </summary>
     public bool TryLoad(out GameSaveData data)
     {
@@ -41,9 +43,9 @@ public sealed class GameSave
             return false;
         }
 
-        if (parsed.Version != GameSaveData.CurrentVersion)
+        if (!GameSaveData.IsReadable(parsed.Version))
         {
-            Debug.LogWarning($"The save file has format version {parsed.Version}, but this build reads version {GameSaveData.CurrentVersion}; ignoring it.");
+            Debug.LogWarning($"The save file has format version {parsed.Version}, but this build reads versions {GameSaveData.OldestReadableVersion} to {GameSaveData.CurrentVersion}; ignoring it.");
             return false;
         }
 
@@ -74,7 +76,7 @@ public sealed class GameSave
     /// </summary>
     private bool KeepUnreadable()
     {
-        if (store.TryRead(out string json) && GameSaveData.TryParse(json, out GameSaveData parsed) && parsed.Version == GameSaveData.CurrentVersion)
+        if (store.TryRead(out string json) && GameSaveData.TryParse(json, out GameSaveData parsed) && GameSaveData.IsReadable(parsed.Version))
         {
             return true;
         }

@@ -45,9 +45,10 @@ public sealed class InProcessHost : IDisposable
     /// <summary>
     /// Starts a host cloned from <paramref name="session"/>'s manager on its port, approving every client (or refusing
     /// remote ones with <paramref name="refusal"/>), with a container built from <paramref name="gameScenes"/>,
-    /// <paramref name="combatSettings"/> and <paramref name="playerPrefab"/>'s control settings. Asserts it starts.
+    /// <paramref name="combatSettings"/>, <paramref name="gameplaySettings"/> and <paramref name="playerPrefab"/>'s
+    /// control settings. Asserts it starts.
     /// </summary>
-    public static InProcessHost Start(NetworkSession session, NetworkObject playerPrefab, GameScenes gameScenes, CombatSettings combatSettings, string refusal = null)
+    public static InProcessHost Start(NetworkSession session, NetworkObject playerPrefab, GameScenes gameScenes, CombatSettings combatSettings, GameplaySettings gameplaySettings, string refusal = null)
     {
         NetworkManager manager = InProcessClient.CloneNetworkManager(session, "RemoteHost");
         manager.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port, "127.0.0.1");
@@ -61,6 +62,7 @@ public sealed class InProcessHost : IDisposable
                 Camera.main,
                 playerPrefab.GetComponent<PlayerController>().ControlSettings,
                 combatSettings,
+                gameplaySettings,
                 gameScenes,
                 new HostStatus());
         }

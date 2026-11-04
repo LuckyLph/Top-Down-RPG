@@ -22,6 +22,7 @@ public class PlayerOrdersTests
     private bool reachedDestination;
     private float stalledTime;
     private float weaponRange;
+    private float sightRadius;
 
     /// <summary>
     /// Builds the orders with test control settings, fake units and a fake caster, and resets the simulated
@@ -39,6 +40,7 @@ public class PlayerOrdersTests
         reachedDestination = true;
         stalledTime = 0f;
         weaponRange = AttackRange;
+        sightRadius = 0f;
     }
 
     /// <summary>
@@ -203,6 +205,38 @@ public class PlayerOrdersTests
         PlayerOrderOutput next = Tick(default);
         Assert.That(next.Motor, Is.EqualTo(PlayerMotorRequest.None));
         Assert.That(next.Swing, Is.True, "Swings are requested every tick; the weapon cooldown decides when one lands.");
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
+    }
+
+    /// <summary>
+    /// An enemy within range but behind a wall (out of the attack's sight) is chased and never swung at, repathing as
+    /// any chase does; once nothing lies between them the player stops once, aims and swings. Sight is asked with the
+    /// radius the weapon's attack sweeps.
+    /// </summary>
+    [Test]
+    public void AnEnemyInRangeBehindAWall_IsChasedUntilInSight_ThenSwungAt()
+    {
+        sightRadius = 0.1f;
+        UnitTarget enemy = CreateUnit(UnitTeam.Enemy, new Vector2(4f, 0f), distance: AttackRange);
+        units.SetInSight(enemy, false);
+
+        PlayerOrderOutput blocked = Tick(Click(new Vector2(4f, 0f), enemy));
+        Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
+        Assert.That(blocked.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo), "A wall between them keeps the chase going, range or not.");
+        Assert.That(blocked.Destination, Is.EqualTo(new Vector2(4f, 0f)));
+        Assert.That(blocked.Swing, Is.False);
+        Assert.That(units.LastSightRadius, Is.EqualTo(0.1f));
+
+        time = 0.6f;
+        PlayerOrderOutput repath = Tick(default);
+        Assert.That(repath.Motor, Is.EqualTo(PlayerMotorRequest.MoveTo), "The chase repaths on its interval.");
+        Assert.That(repath.Swing, Is.False);
+
+        units.SetInSight(enemy, true);
+        PlayerOrderOutput inSight = Tick(default);
+        Assert.That(inSight.Motor, Is.EqualTo(PlayerMotorRequest.Stop));
+        Assert.That(inSight.AimDirection, Is.EqualTo(Vector2.right));
+        Assert.That(inSight.Swing, Is.True);
         Assert.That(orders.Current, Is.EqualTo(PlayerOrderKind.Attack));
     }
 
@@ -1375,7 +1409,7 @@ public class PlayerOrdersTests
     /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command)
     {
-        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange));
+        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange, StatusControls.None, sightRadius));
     }
 
     /// <summary>
@@ -1384,7 +1418,7 @@ public class PlayerOrdersTests
     /// </summary>
     private PlayerOrderOutput Tick(PlayerCommand command, StatusControls controls)
     {
-        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange, controls));
+        return orders.Tick(command, new PlayerOrderContext(position, time, reachedDestination, stalledTime, weaponRange, controls, sightRadius));
     }
 
     /// <summary>
@@ -1595,6 +1629,19 @@ public class PlayerOrdersTests
         }
 
         /// <summary>
+        /// Sets whether <see cref="InSight"/> reports a registered unit in sight (every unit is, until set).
+        /// </summary>
+        public void SetInSight(UnitTarget target, bool inSight)
+        {
+            states[target.Health].Hidden = !inSight;
+        }
+
+        /// <summary>
+        /// The radius the last <see cref="InSight"/> call asked with.
+        /// </summary>
+        public float LastSightRadius { get; private set; }
+
+        /// <summary>
         /// True only for a registered unit marked alive; false for an empty target or an unknown unit.
         /// </summary>
         public bool IsAlive(UnitTarget target)
@@ -1616,6 +1663,15 @@ public class PlayerOrdersTests
         public float DistanceTo(UnitTarget target)
         {
             return states[target.Health].Distance;
+        }
+
+        /// <summary>
+        /// Whether a registered unit is in sight, as last set, recording <paramref name="radius"/>.
+        /// </summary>
+        public bool InSight(UnitTarget target, float radius)
+        {
+            LastSightRadius = radius;
+            return !states[target.Health].Hidden;
         }
 
         /// <summary>
@@ -1648,6 +1704,7 @@ public class PlayerOrdersTests
             public bool Alive;
             public Vector2 Position;
             public float Distance;
+            public bool Hidden;
         }
     }
 }

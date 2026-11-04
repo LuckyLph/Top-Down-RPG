@@ -4,15 +4,19 @@ using UnityEngine;
 
 /// <summary>
 /// The saved game as written to disk (Docs/WorldStreaming.md: Persistence): a format version, the game time played on
-/// the save, each player's place by player id (its world, its position and the waystones it discovered), and the state
-/// of every world visited, a record per chunk of its killed mobs and runtime terrain edits.
+/// the save, each player's place by player id (its world, its position, the waystones it discovered and the weapon it
+/// holds), and the state of every world visited, a record per chunk of its killed mobs and runtime terrain edits.
 /// </summary>
 [Serializable]
 public sealed class GameSaveData
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
+    public const int OldestReadableVersion = 2;
 
-    /// <summary>One player's place: the world it is in, its position there and the waystones it has discovered.</summary>
+    /// <summary>
+    /// One player's place: the world it is in, its position there, the waystones it has discovered and the id of the
+    /// weapon it holds (empty for its starting weapon).
+    /// </summary>
     [Serializable]
     public sealed class Player
     {
@@ -20,6 +24,7 @@ public sealed class GameSaveData
         [SerializeField] private string worldId;
         [SerializeField] private Vector2 position;
         [SerializeField] private List<Waystone> waystones = new();
+        [SerializeField] private string weapon;
 
         /// <summary>
         /// Creates an empty record for the serializer.
@@ -30,13 +35,15 @@ public sealed class GameSaveData
 
         /// <summary>
         /// Creates the place of <paramref name="playerId"/>: <paramref name="position"/> in the world
-        /// <paramref name="worldId"/>, with the discovered <paramref name="waystones"/> (none when null).
+        /// <paramref name="worldId"/>, with the discovered <paramref name="waystones"/> (none when null) and the weapon
+        /// <paramref name="weapon"/> (none, its starting weapon, when null).
         /// </summary>
-        public Player(string playerId, string worldId, Vector2 position, IEnumerable<Waystone> waystones = null)
+        public Player(string playerId, string worldId, Vector2 position, IEnumerable<Waystone> waystones = null, string weapon = null)
         {
             this.playerId = playerId;
             this.worldId = worldId;
             this.position = position;
+            this.weapon = weapon ?? string.Empty;
             if (waystones != null)
             {
                 this.waystones.AddRange(waystones);
@@ -47,6 +54,7 @@ public sealed class GameSaveData
         public string WorldId => worldId;
         public Vector2 Position => position;
         public IReadOnlyList<Waystone> Waystones => waystones;
+        public string Weapon => weapon ?? string.Empty;
     }
 
     /// <summary>A waystone a player discovered: a world's entry, by world id and entry name.</summary>
@@ -235,6 +243,15 @@ public sealed class GameSaveData
     public double Time => time;
     public IReadOnlyList<Player> Players => players;
     public IReadOnlyList<World> Worlds => worlds;
+
+    /// <summary>
+    /// Whether this build reads a save of format <paramref name="formatVersion"/>: the current one, or version 2, whose
+    /// players hold no weapon (each starts with its starting weapon) and which the next save writes as the current one.
+    /// </summary>
+    public static bool IsReadable(int formatVersion)
+    {
+        return formatVersion >= OldestReadableVersion && formatVersion <= CurrentVersion;
+    }
 
     /// <summary>
     /// The data as pretty-printed JSON.

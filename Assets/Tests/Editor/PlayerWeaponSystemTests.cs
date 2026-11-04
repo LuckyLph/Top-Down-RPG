@@ -14,8 +14,8 @@ using UnityEngine.UI;
 /// (the hit at contact, the cooldown, the events the owner replicates), switching weapons (the attack cancelled, the
 /// weapon slots rebuilt, cooldowns kept), a ranged attack's projectile leaving at contact toward its target, a contact
 /// naming its target even as it ends its attack, the controller's attack orders under the cancel rules, crowd control
-/// and casts (instant ones included), the hit area <see cref="AttackService"/> resolves, and the Main scope's input
-/// asset.
+/// and casts (instant ones included), the hit area <see cref="AttackService"/> resolves, the Main scope's input asset,
+/// and the ids saves name the catalog's weapons by.
 /// </summary>
 public class PlayerWeaponSystemTests
 {
@@ -67,6 +67,30 @@ public class PlayerWeaponSystemTests
         }
 
         created.Clear();
+    }
+
+    /// <summary>
+    /// A save names a weapon by its id: every weapon of the project's catalog holds its asset's GUID as its id, and the
+    /// catalog finds each by it; an unknown or empty id finds nothing, and a weapon outside the catalog has no id there.
+    /// </summary>
+    [Test]
+    public void EveryCatalogWeapon_IsSavedByItsAssetGuid()
+    {
+        WeaponCatalog catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalog>("Assets/Data/Weapons/WeaponCatalog.asset");
+        Assert.That(catalog, Is.Not.Null);
+        Assert.That(catalog.Count, Is.GreaterThan(0));
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            PlayerWeapon weapon = catalog.Get(i);
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(weapon));
+            Assert.That(weapon.WeaponId, Is.EqualTo(guid), weapon.name);
+            Assert.That(catalog.IdOf(weapon), Is.EqualTo(guid));
+            Assert.That(catalog.FindById(guid), Is.SameAs(weapon));
+        }
+
+        Assert.That(catalog.FindById("no-such-weapon"), Is.Null);
+        Assert.That(catalog.FindById(string.Empty), Is.Null);
+        Assert.That(catalog.IdOf(Track(PlayerWeapon.Create("Elsewhere", 1, 0.35f, 0.55f, new Vector2[4]))), Is.Empty);
     }
 
     /// <summary>

@@ -7,8 +7,9 @@ using VContainer.Unity;
 
 /// <summary>
 /// Gameplay-scope entry point that decides who spawns players: offline it spawns the local player; on the host it
-/// spawns the host's player plus one per joined client, now and as clients join, each where <see cref="PlayerStarts"/>
-/// places it (its saved place by player id, else the starting world's entry), once the host has loaded that world and
+/// spawns the host's player plus one per joined client, now and as clients join, each holding the weapon the
+/// <see cref="SessionSave"/> has for its player id and where <see cref="PlayerStarts"/> places it (its saved place by
+/// player id, else the starting world's entry), once the host has loaded that world and
 /// the chunks around the place (<see cref="IWorldSession.PrepareAsync"/>, which moves a place the player can no longer
 /// stand on to walkable ground); on a client it tells the host this machine has joined, so the host spawns its player
 /// and shows it the players.
@@ -18,6 +19,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     private readonly PlayerSpawner spawner;
     private readonly NetworkSession session;
     private readonly PlayerStarts starts;
+    private readonly SessionSave sessionSave;
     private readonly IObjectResolver resolver;
     private readonly HashSet<ulong> preparing = new();
     private readonly CancellationTokenSource disposeCancellation = new();
@@ -26,14 +28,15 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     private bool listeningForClients;
 
     /// <summary>
-    /// Captures the spawner, the session, where players start and the Gameplay scope's resolver that injects
-    /// network-spawned players and provides the world session, when there is one.
+    /// Captures the spawner, the session, where players start, the saved weapons and the Gameplay scope's resolver that
+    /// injects network-spawned players and provides the world session, when there is one.
     /// </summary>
-    public GameplayPlayers(PlayerSpawner spawner, NetworkSession session, PlayerStarts starts, IObjectResolver resolver)
+    public GameplayPlayers(PlayerSpawner spawner, NetworkSession session, PlayerStarts starts, SessionSave sessionSave, IObjectResolver resolver)
     {
         this.spawner = spawner;
         this.session = session;
         this.starts = starts;
+        this.sessionSave = sessionSave;
         this.resolver = resolver;
     }
 
@@ -60,7 +63,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
     {
         if (!session.IsActive)
         {
-            spawner.SpawnLocalPlayer();
+            spawner.SpawnLocalPlayer(sessionSave.WeaponOf(session.LocalPlayerId));
             return;
         }
 
@@ -71,7 +74,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
         }
 
         resolver.TryResolve(out worldSession);
-        spawner.SpawnLocalPlayer();
+        spawner.SpawnLocalPlayer(sessionSave.WeaponOf(session.LocalPlayerId));
         foreach (ulong clientId in session.JoinedClients)
         {
             SpawnFor(clientId);
@@ -144,7 +147,7 @@ public sealed class GameplayPlayers : IStartable, IDisposable
 
         if (session.IsServer && session.IsClientJoined(clientId) && !session.HasPlayerObject(clientId))
         {
-            spawner.SpawnRemotePlayer(clientId, world, position);
+            spawner.SpawnRemotePlayer(clientId, world, position, sessionSave.WeaponOf(playerId));
         }
     }
 }

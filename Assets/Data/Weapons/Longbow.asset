@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 752a3ff13d40430ca2350f54e8d65b25, type: 3}
   m_Name: Longbow
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerWeapon
+  weaponId: 9f2cea8bb4988f2418ddaa9824d9fec9
   displayName: Longbow
   damage: 24
   damageType: 0

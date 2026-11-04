@@ -23,7 +23,7 @@ public class PlayerBinderTests
     {
         players = new PlayerRegistry();
         localPlayer = new LocalPlayerTracker();
-        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null));
+        binder = new PlayerBinder(players, localPlayer, new LocalPlayerCommandSource(new FakePlayerInput(), null, null, null));
     }
 
     /// <summary>

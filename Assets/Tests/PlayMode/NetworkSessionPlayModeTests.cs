@@ -19,6 +19,7 @@ public class NetworkSessionPlayModeTests
 {
     private const string PlayerPrefabPath = "Assets/Prefabs/Player/Player.prefab";
     private const string CombatSettingsPath = "Assets/Data/Combat/CombatSettings.asset";
+    private const string GameplaySettingsPath = "Assets/Data/GameplaySettings.asset";
 
     private InProcessHost remoteHost;
 
@@ -263,7 +264,7 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.BootIntoMainMenu();
 
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
-        remoteHost = InProcessHost.Start(session, null, null, null, "the game is full (4 players).");
+        remoteHost = InProcessHost.Start(session, null, null, null, null, "the game is full (4 players).");
         Awaitable<bool> join = session.JoinAsync("127.0.0.1", 10f, CancellationToken.None);
         yield return SceneBootTestHelper.WaitUntil(() => join.GetAwaiter().IsCompleted, "the refused join to end");
 
@@ -365,16 +366,18 @@ public class NetworkSessionPlayModeTests
 
     /// <summary>
     /// Starts an in-process host on the session's port that spawns joined clients' players, built from the project's
-    /// player prefab and combat settings and <paramref name="gameScenes"/>.
+    /// player prefab, combat and gameplay settings and <paramref name="gameScenes"/>.
     /// </summary>
     private static InProcessHost StartRemoteHost(NetworkSession session, GameScenes gameScenes)
     {
 #if UNITY_EDITOR
         NetworkObject playerPrefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath);
         CombatSettings combatSettings = AssetDatabase.LoadAssetAtPath<CombatSettings>(CombatSettingsPath);
+        GameplaySettings gameplaySettings = AssetDatabase.LoadAssetAtPath<GameplaySettings>(GameplaySettingsPath);
         Assert.That(playerPrefab, Is.Not.Null);
         Assert.That(combatSettings, Is.Not.Null);
-        return InProcessHost.Start(session, playerPrefab, gameScenes, combatSettings);
+        Assert.That(gameplaySettings, Is.Not.Null);
+        return InProcessHost.Start(session, playerPrefab, gameScenes, combatSettings, gameplaySettings);
 #else
         Assert.Ignore("The in-process host loads the player prefab through the AssetDatabase.");
         return null;

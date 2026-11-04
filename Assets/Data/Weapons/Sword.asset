@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 752a3ff13d40430ca2350f54e8d65b25, type: 3}
   m_Name: Sword
   m_EditorClassIdentifier: 
+  weaponId: 5e8290d96f4c4814a5d633d9cb244fc6
   displayName: Sword
   damage: 20
   damageType: 0

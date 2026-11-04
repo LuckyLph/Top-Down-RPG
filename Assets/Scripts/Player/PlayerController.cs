@@ -225,7 +225,8 @@ public class PlayerController : MonoBehaviour
             playerMotor.ReachedDestination,
             playerMotor.StalledTime,
             AttackRange(),
-            controls);
+            controls,
+            AttackSightRadius());
         Apply(orders.Tick(command, context), controls);
         bool attacking = weaponController != null && weaponController.IsAttacking;
         playerMotor.SetSpeedScale(attacking ? 0f : statuses != null ? statuses.MovementScale : 1f);
@@ -285,8 +286,19 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// The radius the equipped weapon's attack sweeps toward its target: its projectile's for a ranged weapon, 0 (a
+    /// line) for a melee one or without a weapon.
+    /// </summary>
+    private float AttackSightRadius()
+    {
+        PlayerWeapon weapon = weaponController != null ? weaponController.CurrentWeapon : null;
+        return weapon != null && weapon.FiresProjectile ? weapon.Projectile.Radius : 0f;
+    }
+
+    /// <summary>
     /// Builds the orders on first use (Awake, or a test tick before it): configures the motor, finds the abilities
-    /// and statuses, and creates <see cref="PlayerOrders"/> over this body's collider and the settings' enemy layers.
+    /// and statuses, and creates <see cref="PlayerOrders"/> over this body's collider and the settings' enemy and
+    /// obstacle layers.
     /// Waits while settings are missing.
     /// </summary>
     private void EnsureInitialized()
@@ -305,7 +317,7 @@ public class PlayerController : MonoBehaviour
         statuses = GetComponent<StatusEffects>();
         lantern = GetComponent<PlayerLantern>();
         IAbilityCaster caster = abilities != null ? abilities : null;
-        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>(), controlSettings.EnemyLayers), caster);
+        orders = new PlayerOrders(controlSettings, new PlayerUnitQueries(GetComponent<Collider2D>(), controlSettings.EnemyLayers, controlSettings.ObstacleLayers), caster);
     }
 
     /// <summary>

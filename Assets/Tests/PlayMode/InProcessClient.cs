@@ -70,7 +70,7 @@ public sealed class InProcessClient : IDisposable
         PlayerRegistry players = new();
         LocalPlayerTracker localPlayer = new();
         RecordingCameraKick cameraKick = new();
-        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameScenes, new ClientStatus(), gameplay.Resolve<HitFeedbackSettings>(), cameraKick);
+        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameplay.Resolve<GameplaySettings>(), gameScenes, new ClientStatus(), gameplay.Resolve<HitFeedbackSettings>(), cameraKick);
         container.Resolve<HitFeedbackPresenter>().Start();
 
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
@@ -117,7 +117,8 @@ public sealed class InProcessClient : IDisposable
     /// <summary>
     /// A client-side container like a real client's Gameplay scope offers player and mob copies: the registry, the
     /// local player, scripted input, combat (projectiles, which nothing ticks here), statuses and abilities, the
-    /// players' worlds and trips (with
+    /// players' worlds and trips (their protection timed by <paramref name="gameplaySettings"/>, which nothing ticks
+    /// here, with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
     /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
     /// own player follows), the night lights' presenter without a day clock (not started, so its own player's lantern
@@ -131,6 +132,7 @@ public sealed class InProcessClient : IDisposable
         Camera camera,
         PlayerControlSettings controlSettings,
         CombatSettings combatSettings,
+        GameplaySettings gameplaySettings,
         GameScenes gameScenes,
         ISessionStatus sessionStatus,
         HitFeedbackSettings hitFeedbackSettings = null,
@@ -149,6 +151,8 @@ public sealed class InProcessClient : IDisposable
         builder.Register<Worlds>(Lifetime.Singleton);
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
         builder.Register<TripArrivals>(Lifetime.Singleton);
+        builder.RegisterInstance(gameplaySettings);
+        builder.Register<TripProtection>(Lifetime.Singleton).As<IUnitProtection>().AsSelf();
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton);

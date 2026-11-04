@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// The running session's saved state, in memory (Docs/WorldStreaming.md: Persistence): the world clock, each player's
-/// place and discovered waystones by player id, and the <see cref="WorldState"/> of every world visited, loaded or not.
+/// place, discovered waystones and weapon by player id, and the <see cref="WorldState"/> of every world visited, loaded
+/// or not.
 /// It is used where game state is decided, offline or on the host; a client keeps an empty one it never writes. A
 /// session starts new (<see cref="StartNew"/>) or from the save file (<see cref="StartFrom"/>), and lasts as long as the
 /// Main scope, across Gameplay scenes. The world clock is the game time played on the save: the saved time plus the
@@ -14,6 +15,7 @@ public sealed class SessionSave
     private readonly IClock clock;
     private readonly Dictionary<string, GameSaveData.Player> places = new();
     private readonly Dictionary<string, List<GameSaveData.Waystone>> waystones = new();
+    private readonly Dictionary<string, string> weapons = new();
     private readonly Dictionary<string, WorldState> worlds = new();
     private double savedTime;
     private float clockAtStart;
@@ -55,6 +57,7 @@ public sealed class SessionSave
             {
                 places[player.PlayerId] = new GameSaveData.Player(player.PlayerId, player.WorldId, player.Position);
                 waystones[player.PlayerId] = new List<GameSaveData.Waystone>(player.Waystones);
+                SetWeapon(player.PlayerId, player.Weapon);
             }
         }
 
@@ -138,6 +141,36 @@ public sealed class SessionSave
     }
 
     /// <summary>
+    /// The id of the weapon <paramref name="playerId"/> holds, as the save names it; empty for a player this session
+    /// knows no weapon of (it holds its starting weapon).
+    /// </summary>
+    public string WeaponOf(string playerId)
+    {
+        return !string.IsNullOrEmpty(playerId) && weapons.TryGetValue(playerId, out string weapon) ? weapon : string.Empty;
+    }
+
+    /// <summary>
+    /// Records that <paramref name="playerId"/> holds the weapon <paramref name="weapon"/> (an empty id forgets its
+    /// weapon); saved with its place. Nothing for an empty player id.
+    /// </summary>
+    public void SetWeapon(string playerId, string weapon)
+    {
+        if (string.IsNullOrEmpty(playerId))
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(weapon))
+        {
+            weapons.Remove(playerId);
+        }
+        else
+        {
+            weapons[playerId] = weapon;
+        }
+    }
+
+    /// <summary>
     /// The state of the world <paramref name="worldId"/>, made empty the first time the world is visited.
     /// </summary>
     public WorldState WorldOf(string worldId)
@@ -163,15 +196,15 @@ public sealed class SessionSave
 
     /// <summary>
     /// The state as save data in the current format, at the world clock's time: a record per player with a place, its
-    /// discovered waystones in it. A player with discoveries but no place yet is left out; every player in a world has
-    /// its place recorded before each save.
+    /// discovered waystones and weapon in it. A player with discoveries or a weapon but no place yet is left out; every
+    /// player in a world has its place recorded before each save.
     /// </summary>
     public GameSaveData ToData()
     {
         List<GameSaveData.Player> players = new(places.Count);
         foreach (GameSaveData.Player place in places.Values)
         {
-            players.Add(new GameSaveData.Player(place.PlayerId, place.WorldId, place.Position, WaystonesOf(place.PlayerId)));
+            players.Add(new GameSaveData.Player(place.PlayerId, place.WorldId, place.Position, WaystonesOf(place.PlayerId), WeaponOf(place.PlayerId)));
         }
 
         List<GameSaveData.World> saved = new(worlds.Count);
@@ -193,6 +226,7 @@ public sealed class SessionSave
     {
         places.Clear();
         waystones.Clear();
+        weapons.Clear();
         worlds.Clear();
         savedTime = time;
         clockAtStart = clock.Time;

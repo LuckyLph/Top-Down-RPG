@@ -32,11 +32,12 @@ internal static class TestCombat
 
     /// <summary>
     /// Creates a status service over <paramref name="damageService"/> that ticks on <paramref name="clock"/>, or
-    /// on a fresh <see cref="ManualClock"/> that stands still, so time only passes when a test advances it directly.
+    /// on a fresh <see cref="ManualClock"/> that stands still, so time only passes when a test advances it directly,
+    /// holding the units <paramref name="protection"/> keeps out of play (none by default).
     /// </summary>
-    public static StatusEffectService CreateStatusService(DamageService damageService, IGameAuthority authority, CombatEvents combatEvents, IClock clock = null)
+    public static StatusEffectService CreateStatusService(DamageService damageService, IGameAuthority authority, CombatEvents combatEvents, IClock clock = null, IUnitProtection protection = null)
     {
-        return new StatusEffectService(damageService, combatEvents, authority, clock ?? new ManualClock());
+        return new StatusEffectService(damageService, combatEvents, authority, clock ?? new ManualClock(), protection ?? new FakeUnitProtection());
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ internal static class TestCombat
     {
         combatEvents ??= new CombatEvents();
         DamageService damageService = CreateDamageService(authority, combatEvents);
-        HitService hitService = new(damageService, CreateStatusService(damageService, authority, combatEvents));
+        HitService hitService = new(damageService, CreateStatusService(damageService, authority, combatEvents), new FakeUnitProtection());
         return new AbilityService(authority, damageService, hitService, Settings);
     }
 
@@ -59,7 +60,7 @@ internal static class TestCombat
     {
         combatEvents ??= new CombatEvents();
         DamageService damageService = CreateDamageService(authority, combatEvents);
-        return new HitService(damageService, CreateStatusService(damageService, authority, combatEvents));
+        return new HitService(damageService, CreateStatusService(damageService, authority, combatEvents), new FakeUnitProtection());
     }
 
     /// <summary>

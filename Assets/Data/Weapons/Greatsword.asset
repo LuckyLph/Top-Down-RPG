@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 752a3ff13d40430ca2350f54e8d65b25, type: 3}
   m_Name: Greatsword
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerWeapon
+  weaponId: 7b1f91f4035aef94faaa6fbd274299b4
   displayName: Greatsword
   damage: 48
   damageType: 0

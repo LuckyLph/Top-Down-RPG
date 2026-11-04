@@ -6,8 +6,9 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// Tests for <see cref="GameSave"/>, <see cref="GameSaveData"/>, <see cref="SessionSave"/>, <see cref="FileSaveStore"/>
-/// and <see cref="InstanceFiles"/>: the version 2 save keyed by player id and world id round trips, older, newer and
-/// unreadable saves are ignored with a warning and kept as a copy before the first write replaces them, the world clock
+/// and <see cref="InstanceFiles"/>: the version 3 save keyed by player id and world id round trips with each player's
+/// weapon, a version 2 save still reads (no weapons) and is written over as version 3, older, newer and unreadable saves
+/// are ignored with a warning and kept as a copy before the first write replaces them, the world clock
 /// continues from the saved time, the save file is written safely, and a Multiplayer Play Mode virtual player keeps
 /// files of its own.
 /// </summary>
@@ -35,8 +36,8 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A session's players, worlds, chunk records and world clock written through <see cref="GameSave"/> load back into a
-    /// new session as they were, each player under its own id.
+    /// A session's players (their places and weapons), worlds, chunk records and world clock written through
+    /// <see cref="GameSave"/> load back into a new session as they were, each player under its own id.
     /// </summary>
     [Test]
     public void ASessionWritten_LoadsBackIntoANewSession_KeyedByPlayerAndWorld()
@@ -47,6 +48,7 @@ public class GameSaveTests
         clock.Advance(125f);
         written.SetPlace(Alice, WorldA, new Vector2(2100.5f, 40.25f));
         written.SetPlace(Bob, WorldB, new Vector2(4130f, 33f));
+        written.SetWeapon(Alice, "longbow-guid");
         ChunkState chunk = written.WorldOf(WorldA).Chunk(new Vector2Int(1, 0));
         chunk.RecordMobDeath("mob-1", 100d);
         chunk.RecordTerrainEdit(1, new Vector2Int(70, 12), true);
@@ -68,6 +70,8 @@ public class GameSaveTests
         Assert.That(bobWorld, Is.EqualTo(WorldB));
         Assert.That(bobPosition, Is.EqualTo(new Vector2(4130f, 33f)));
         Assert.That(loaded.TryGetPlace("someone-else", out _, out _), Is.False);
+        Assert.That(loaded.WeaponOf(Alice), Is.EqualTo("longbow-guid"), "The weapon a player holds is saved with its place.");
+        Assert.That(loaded.WeaponOf(Bob), Is.Empty, "A player with no weapon recorded keeps its starting weapon.");
         Assert.That(loaded.TryGetWorld(WorldA, out WorldState worldA), Is.True);
         Assert.That(worldA.TryGetChunk(new Vector2Int(1, 0), out ChunkState loadedChunk), Is.True);
         Assert.That(loadedChunk.TryGetMobDeath("mob-1", out double diedAt), Is.True);
@@ -139,10 +143,37 @@ public class GameSaveTests
 
         Assert.That(GameSaveData.TryParse(store.Contents, out GameSaveData data), Is.True);
         Assert.That(data.Version, Is.EqualTo(GameSaveData.CurrentVersion));
-        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(2));
+        Assert.That(GameSaveData.CurrentVersion, Is.EqualTo(3), "The saved weapon raised the format to 3.");
         Assert.That(store.Contents, Does.Contain("\"waystones\": []"));
+        Assert.That(store.Contents, Does.Contain("\"weapon\": \"\""), "A player without a weapon recorded saves none.");
         Assert.That(data.Worlds[0].WorldId, Is.EqualTo(WorldA));
         Assert.That(data.Worlds[0].Chunks, Is.Empty, "A chunk with no record is not written.");
+    }
+
+    /// <summary>
+    /// A version 2 save, from before the weapons were saved, still loads, its players holding no weapon (so each starts
+    /// with its starting weapon); writing over it keeps no copy and writes the current version.
+    /// </summary>
+    [Test]
+    public void AVersion2Save_Loads_WithoutWeapons_AndIsWrittenOverAsTheCurrentVersion()
+    {
+        string json = "{\"version\":2,\"time\":10.0,"
+            + "\"players\":[{\"playerId\":\"alice-id\",\"worldId\":\"" + WorldA + "\",\"position\":{\"x\":1.0,\"y\":2.0},\"waystones\":[]}],"
+            + "\"worlds\":[]}";
+        MemorySaveStore store = new() { Contents = json };
+        GameSave save = new(store);
+
+        Assert.That(save.TryLoad(out GameSaveData data), Is.True);
+        Assert.That(data.Players[0].Weapon, Is.Empty);
+        SessionSave session = new(new ManualClock());
+        session.StartFrom(data);
+        Assert.That(session.TryGetPlace(Alice, out _, out _), Is.True);
+        Assert.That(session.WeaponOf(Alice), Is.Empty);
+
+        Assert.That(save.Write(session.ToData()), Is.True);
+        Assert.That(store.KeptCopies, Is.Empty, "A save this build reads is written over without a copy.");
+        Assert.That(GameSaveData.TryParse(store.Contents, out GameSaveData rewritten), Is.True);
+        Assert.That(rewritten.Version, Is.EqualTo(GameSaveData.CurrentVersion));
     }
 
     /// <summary>

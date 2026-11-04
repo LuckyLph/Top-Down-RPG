@@ -20,6 +20,13 @@ public interface IUnitQueries
     float DistanceTo(UnitTarget target);
 
     /// <summary>
+    /// Whether an attack reaches <paramref name="target"/> past the walls: nothing that blocks line of sight lies within
+    /// <paramref name="radius"/> (a projectile's, 0 for a line) of the line from the player's feet toward the middle of
+    /// the target, up to where it meets the target. An attack order closes in until it does.
+    /// </summary>
+    bool InSight(UnitTarget target, float radius);
+
+    /// <summary>
     /// The living enemy closest to <paramref name="point"/> among those within <paramref name="range"/> of the player
     /// (collider to collider), or an empty target when there is none; an attack move engages it.
     /// </summary>

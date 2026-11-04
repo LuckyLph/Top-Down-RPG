@@ -14,8 +14,9 @@ public class WorldLifetimeScope : LifetimeScope
     /// <summary>
     /// Registers the world's <see cref="WorldNavigation"/> (with the Gameplay scope's shared
     /// <see cref="NavigationPagePool"/>), also as <see cref="INavigation2D"/>, and its <see cref="WorldPlayers"/> (the
-    /// Gameplay scope's players narrowed to this world), also as <see cref="IPlayerRegistry"/> so that whatever this scope
-    /// and its chunks' scopes inject sees only the players in this world; both disposed with the scope. Also registers
+    /// Gameplay scope's players narrowed to this world, leaving out the travellers <see cref="TripProtection"/> keeps
+    /// out of play), also as <see cref="IPlayerRegistry"/> so that whatever this scope and its chunks' scopes inject
+    /// sees only the players in this world; both disposed with the scope. Also registers
     /// the world's <see cref="WorldState"/> from the Main scope's <see cref="SessionSave"/>, which outlives the scope, so
     /// the world's state survives it unloading. Logs an error and
     /// registers nothing without a parent scope, since world scenes are loaded by the world streaming under a Gameplay
@@ -40,6 +41,7 @@ public class WorldLifetimeScope : LifetimeScope
                 resolver => new WorldPlayers(
                     gameplayScope.Container.Resolve<IPlayerRegistry>(),
                     resolver.Resolve<PlayerWorlds>(),
+                    resolver.Resolve<TripProtection>(),
                     resolver.Resolve<WorldDefinition>()),
                 Lifetime.Singleton)
             .As<IPlayerRegistry>()

@@ -357,7 +357,7 @@ public sealed class PlayerOrders
                 aim = new CastAim(context.Position + Vector2.ClampMagnitude(toCursor, ability.Range), direction, default);
                 return true;
             default:
-                UnitTarget target = command.Target;
+                UnitTarget target = command.AbilityTarget;
                 if (!target.Exists || !ability.Accepts(target.Team) || !units.IsAlive(target))
                 {
                     aim = default;
@@ -518,13 +518,14 @@ public sealed class PlayerOrders
     }
 
     /// <summary>
-    /// Chases <paramref name="target"/> while it is out of weapon range, and otherwise stops chasing and, when
-    /// <paramref name="act"/> is set, aims at it and swings.
+    /// Chases <paramref name="target"/> while it is out of weapon range or a wall lies between (out of sight for the
+    /// attack's sweep, <see cref="IUnitQueries.InSight"/>), and otherwise stops chasing and, when <paramref name="act"/>
+    /// is set, aims at it and swings.
     /// </summary>
     private void Engage(UnitTarget target, in PlayerOrderContext context, bool act)
     {
         Vector2 targetPosition = units.PositionOf(target);
-        if (units.DistanceTo(target) > context.AttackRange)
+        if (units.DistanceTo(target) > context.AttackRange || !units.InSight(target, context.AttackSightRadius))
         {
             Chase(targetPosition, context);
             return;

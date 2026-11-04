@@ -33,7 +33,7 @@ Architecture.md lists about 60 known gaps. Six are covered elsewhere or settled 
 
 Settled with the user on 2026-11-03: the triage as proposed, with the colliders accepted until a move leaves the paths, a save per session, the status icons left to DesignSystem.md and the phases in this order. Fix: closed in the phase named. Accept: stays on Architecture.md's list, marked accepted, for the reason given, when that phase lands. Decide: settled in its phase on a spike, a measurement or previews.
 
-| Gap | Proposed | Phase | Why |
+| Gap | Settled | Phase | Why |
 |---|---|---|---|
 | Inline comments, `MobConfig`'s layer mask and menu paths, static mutable state, two classes in one file, the status dev panel's lookup, duplicated tuning, unused or test-only API, the old sword icon, the dual-grid leftovers | Fix | 1 | CLAUDE.md's rules; no behaviour changes. A test-only API that a test needs stays `internal`. |
 | Unit picks ignoring the ability's filter | Fix | 2 | The pick takes the ability's target filter, so an ally-only cast picks the closest ally. |

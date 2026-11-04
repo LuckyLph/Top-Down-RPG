@@ -38,12 +38,18 @@ public class MobPerception2D : MonoBehaviour
 
     /// <summary>
     /// Takes the player registry and config, clears the target, and resets the sight timer and the last known
-    /// position to the mob's position.
+    /// position to the mob's position. Logs an error when the config sets no obstacle layers, since the mob would then
+    /// see through walls.
     /// </summary>
     public void Initialize(IPlayerRegistry playerRegistry, MobConfig mobConfig)
     {
         players = playerRegistry;
         config = mobConfig;
+        if (config != null && config.ObstacleLayerMask.value == 0)
+        {
+            Debug.LogError($"{name}'s {nameof(MobConfig)} {config.name} sets no obstacle layers, so it sees through walls; set them on the asset.", this);
+        }
+
         losTimer = 0f;
         lastKnownTargetPosition = transform.position;
         lastLinecastOrigin = transform.position;

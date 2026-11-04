@@ -89,7 +89,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 ### Phase 1: the code within CLAUDE.md's rules
 
 - [x] Inline comments moved to the docs or removed (`IClock.cs`, `SceneDefinition.cs`, `PlayModeBootstrapper`, `SceneBuildValidator`, `SceneDefinitionEditor`, `VContainerDiagnosticsBuildGuard`, the test files).
-- [ ] `MobConfig`'s obstacle mask from a named layer in its asset, not `1 << 8`; `MobConfig`, `TerrainType2D`, `TerrainMovementProfile2D` and `DualGridRuleTile` created from `TopDownRPG/...`.
+- [x] `MobConfig`'s obstacle mask from a named layer in its asset, not `1 << 8`; `MobConfig`, `TerrainType2D`, `TerrainMovementProfile2D` and `DualGridRuleTile` created from `TopDownRPG/...`.
 - [ ] `SceneQuery`'s shared buffer and `UnityClock.Shared` replaced by injected or per-instance state.
 - [ ] `SceneDefinitionPathSync` in a file of its own, its `.meta` kept with it.
 - [ ] The status dev panel injected (a registration the DevTools scope owns), or the reason it cannot be recorded.
@@ -100,6 +100,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 #### Phase 1 notes
 
 - Inline comments: `IClock.cs`, `SceneDefinition.cs`, `SceneBuildValidator` and `SceneDefinitionEditor` had none left. The rationale in `PlayModeBootstrapper`'s and `VContainerDiagnosticsBuildGuard`'s went to Architecture.md (Boot sequence, Editor tools); the test files' went into their tests' summaries and assertion messages. Shader and HLSL files keep their comments: HLSL has no XML docs, so those comments are its functions' descriptors.
+- `MobConfig`'s obstacle mask: both assets (`Mob_Default`, `Mob_StressTest`) already held the `Obstacles` layer, so dropping the code default changed neither; a test checks every asset keeps it. An empty mask logs an error from the mob's perception and, as before, sees through everything. `MobConfig.Create` defaults the mask to the `Obstacles` layer by name, as the assets set it. The menus: `TopDownRPG/AI/Mob Config`, `TopDownRPG/AI/Navigation/Terrain Type`, `TopDownRPG/AI/Navigation/Terrain Movement Profile`, `TopDownRPG/World/Dual Grid Rule Tile`.
 
 ### Phase 2: orders and the save
 

@@ -1,6 +1,9 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 
 /// <summary>
@@ -1093,6 +1096,43 @@ public class MobStateMachineTests
 
         Assert.That(areaMobLeftTheRectangle, Is.True);
         Assert.That(destinations, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// Every mob config in the project blocks its mobs' sight with the Obstacles layer, set on the asset.
+    /// </summary>
+    [Test]
+    public void EveryMobConfigAsset_BlocksSightWithTheObstaclesLayer()
+    {
+        string[] guids = AssetDatabase.FindAssets($"t:{nameof(MobConfig)}");
+        Assert.That(guids, Is.Not.Empty);
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            MobConfig asset = AssetDatabase.LoadAssetAtPath<MobConfig>(path);
+            Assert.That(asset.ObstacleLayerMask.value, Is.EqualTo(LayerMask.GetMask("Obstacles")), path);
+        }
+    }
+
+    /// <summary>
+    /// A mob whose config sets no obstacle layers logs an error as its perception starts, since it would see through
+    /// walls.
+    /// </summary>
+    [Test]
+    public void Perception_WithoutObstacleLayers_LogsAnError()
+    {
+        GameObject mob = new("Mob");
+        sceneObjects.Add(mob);
+        MobConfig blind = MobConfig.Create(obstacleLayerMask: 0);
+        try
+        {
+            LogAssert.Expect(LogType.Error, new Regex("sets no obstacle layers"));
+            mob.AddComponent<MobPerception2D>().Initialize(new PlayerRegistry(), blind);
+        }
+        finally
+        {
+            Object.DestroyImmediate(blind);
+        }
     }
 
     /// <summary>

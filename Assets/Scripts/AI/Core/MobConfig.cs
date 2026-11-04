@@ -5,9 +5,11 @@ using UnityEngine;
 /// A mob type's tuning: movement, perception, search, combat, crowd, patrol, leash, respawn and navigation. Read-only at runtime;
 /// tests build their own with <see cref="Create"/>.
 /// </summary>
-[CreateAssetMenu(menuName = "AI/Mob Config", fileName = "MobConfig")]
+[CreateAssetMenu(menuName = "TopDownRPG/AI/Mob Config", fileName = "MobConfig")]
 public class MobConfig : ScriptableObject
 {
+    private const string ObstaclesLayer = "Obstacles";
+
     [Header("Movement")]
     [SerializeField, Min(0f)] private float moveSpeed = 2.5f;
     [SerializeField, Min(0f)] private float acceleration = 20f;
@@ -18,7 +20,8 @@ public class MobConfig : ScriptableObject
     [SerializeField, Min(0f)] private float detectionRadius = 6f;
     [SerializeField, Min(0f)] private float loseTargetDistance = 8f;
     [SerializeField, Min(0.01f)] private float lineOfSightInterval = 0.2f;
-    [SerializeField] private LayerMask obstacleLayerMask = 1 << 8;
+    [SerializeField, Tooltip("The layers whose colliders block the mob's line of sight: the Obstacles layer. A mob whose config leaves it empty logs an error and sees through everything.")]
+    private LayerMask obstacleLayerMask;
     [SerializeField, Min(0f), Tooltip("How long a mob waits at the last known position of a target that slipped out of sight in range. The walk there is not included.")]
     private float searchDuration = 3f;
 
@@ -115,7 +118,8 @@ public class MobConfig : ScriptableObject
     }
 
     /// <summary>
-    /// Builds a config in code, for tests. Every value left out keeps the asset's default.
+    /// Builds a config in code, for tests. Every value left out keeps the asset's default, but for the obstacle mask,
+    /// which the assets set in the inspector: it defaults to the Obstacles layer they use.
     /// </summary>
     public static MobConfig Create(
         float? moveSpeed = null,
@@ -123,6 +127,7 @@ public class MobConfig : ScriptableObject
         float? arrivalDistance = null,
         float? detectionRadius = null,
         float? loseTargetDistance = null,
+        LayerMask? obstacleLayerMask = null,
         float? attackStopDistance = null,
         float? attackExitBuffer = null,
         int? attackDamage = null,
@@ -148,6 +153,7 @@ public class MobConfig : ScriptableObject
         config.arrivalDistance = arrivalDistance ?? config.arrivalDistance;
         config.detectionRadius = detectionRadius ?? config.detectionRadius;
         config.loseTargetDistance = loseTargetDistance ?? config.loseTargetDistance;
+        config.obstacleLayerMask = obstacleLayerMask ?? LayerMask.GetMask(ObstaclesLayer);
         config.attackStopDistance = attackStopDistance ?? config.attackStopDistance;
         config.attackExitBuffer = attackExitBuffer ?? config.attackExitBuffer;
         config.attackDamage = attackDamage ?? config.attackDamage;

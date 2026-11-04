@@ -13,7 +13,7 @@ using static DualGridRuleTile;
 /// This tile type will be used in all Render Tilemaps.
 /// </remarks>
 [Serializable]
-[CreateAssetMenu(fileName = "DualGridRuleTile", menuName = "Scriptable Objects/DualGridRuleTile")]
+[CreateAssetMenu(fileName = "DualGridRuleTile", menuName = "TopDownRPG/World/Dual Grid Rule Tile")]
 public class DualGridRuleTile : RuleTile<DualGridNeighbor>
 {
     [SerializeField, HideInInspector, FormerlySerializedAs("_originalTexture")] private Texture2D originalTexture;

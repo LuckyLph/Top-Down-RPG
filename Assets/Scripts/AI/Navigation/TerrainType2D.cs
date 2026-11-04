@@ -4,7 +4,7 @@ using UnityEngine;
 /// A terrain tag that navigation sources put on cells and movement profiles give rules for. Read-only at runtime;
 /// tests build their own with <see cref="Create"/>.
 /// </summary>
-[CreateAssetMenu(menuName = "AI/Navigation/Terrain Type", fileName = "TerrainType2D")]
+[CreateAssetMenu(menuName = "TopDownRPG/AI/Navigation/Terrain Type", fileName = "TerrainType2D")]
 public class TerrainType2D : ScriptableObject
 {
     [SerializeField] private string terrainId = "terrain";

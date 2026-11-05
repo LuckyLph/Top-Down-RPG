@@ -77,7 +77,7 @@ public static class TilePaletteFollower
         TerrainBlendRenderer renderer = TerrainBlendRenderer.FindLayerDrawing(tilemap, out int layer);
         if (renderer != null && renderer.Layers[layer].Material != null)
         {
-            Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(TerrainTileWriter.TilePath(renderer.Layers[layer].Material));
+            Tile tile = TerrainTileWriter.TileOf(renderer.Layers[layer].Material);
             if (tile != null)
             {
                 tiles.Add(tile);

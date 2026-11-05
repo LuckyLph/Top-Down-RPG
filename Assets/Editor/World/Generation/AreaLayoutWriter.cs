@@ -14,7 +14,9 @@ using UnityEngine.Tilemaps;
 /// when missing) draws the layers in the generator's order with their materials and the generator's terrain style, and
 /// any layer it drew that the generator does not list is kept at its place in the style's layer order when painted,
 /// and removed when empty (<see cref="AreaGroundSetup.SetUpLayers"/>); each layer's navigation priority is its place in
-/// the renderer, and the grid's <see cref="AreaTerrain"/> fills the layers it lists with their tiles. Every prop under
+/// the renderer, and the grid's <see cref="AreaTerrain"/> fills the layers it lists with their tiles; on a standalone grid
+/// (a scratch scene) an entry it lists of an empty ground layer the generator does not lay is pointed at the generator's
+/// lowest layer, its ground, so that layer goes instead of staying empty. Every prop under
 /// the scene's <c>Props</c> root and every <see cref="MobSpawnPoint"/> is replaced. The layout's spawn cell is written
 /// nowhere: it only shapes the layout (the generator's preview shows it). The collision tilemap and everything else in
 /// the scene stay as they are.
@@ -44,6 +46,7 @@ public static class AreaLayoutWriter
         int undoGroup = Undo.GetCurrentGroup();
 
         List<string> changes = new();
+        int dropped = grid.TryGetComponent(out WorldChunk _) ? -1 : DropUnlistedEdits(grid, layers);
         Tilemap[] tilemaps = AreaGroundSetup.SetUpLayers(grid, generator.TerrainStyle, layers, generator.name, changes);
         TileBase[] tiles = new TileBase[layers.Count];
         for (int i = 0; i < layers.Count; i++)
@@ -53,6 +56,11 @@ public static class AreaLayoutWriter
         }
 
         AreaGroundSetup.SetFillTiles(grid, tilemaps, tiles, changes);
+        if (dropped >= 0)
+        {
+            ListGround(grid, tilemaps[0], tiles[0], dropped);
+        }
+
         WriteRaised(grid, generator, layout, changes);
         WriteProps(grid, scene, layout.Props);
         WriteMobSpawns(grid, scene, layout.Mobs);
@@ -65,6 +73,85 @@ public static class AreaLayoutWriter
         Undo.CollapseUndoOperations(undoGroup);
         EditorSceneManager.MarkSceneDirty(scene);
         return true;
+    }
+
+    /// <summary>
+    /// Takes out of the grid's <see cref="AreaTerrain"/> each entry of a ground layer whose material none of
+    /// <paramref name="layers"/> has and whose tilemap holds no tile, as a scratch scene's grass layer when the generator
+    /// lays another ground (Docs/KnownGaps.md, Phase 6), so <see cref="AreaGroundSetup.SetUpLayers"/> removes that layer
+    /// instead of keeping it as edited at runtime. Recorded for undo. Returns the index of the first entry taken out, or
+    /// -1 when none was.
+    /// </summary>
+    private static int DropUnlistedEdits(Grid grid, IReadOnlyList<AreaGenerator.TerrainLayer> layers)
+    {
+        if (!grid.TryGetComponent(out AreaTerrain terrain) || !grid.TryGetComponent(out TerrainBlendRenderer renderer))
+        {
+            return -1;
+        }
+
+        SerializedObject data = new(terrain);
+        SerializedProperty listed = data.FindProperty("layers");
+        int first = -1;
+        for (int i = listed.arraySize - 1; i >= 0; i--)
+        {
+            Tilemap tilemap = listed.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue as Tilemap;
+            int index = tilemap != null ? renderer.LayerIndexOf(tilemap) : -1;
+            TerrainMaterial material = index >= 0 ? renderer.Layers[index].Material : null;
+            if (material != null && !Lists(layers, material) && tilemap.GetUsedTilesCount() == 0)
+            {
+                listed.DeleteArrayElementAtIndex(i);
+                first = i;
+            }
+        }
+
+        data.ApplyModifiedProperties();
+        return first;
+    }
+
+    /// <summary>
+    /// Lists <paramref name="tilemap"/>, the generator's lowest layer, its ground, filled with <paramref name="tile"/>, in
+    /// the grid's <see cref="AreaTerrain"/> at <paramref name="index"/>, where <see cref="DropUnlistedEdits"/> took out
+    /// the entry it replaces, unless it lists it already. Recorded for undo.
+    /// </summary>
+    private static void ListGround(Grid grid, Tilemap tilemap, TileBase tile, int index)
+    {
+        if (!grid.TryGetComponent(out AreaTerrain terrain) || tilemap == null)
+        {
+            return;
+        }
+
+        SerializedObject data = new(terrain);
+        SerializedProperty listed = data.FindProperty("layers");
+        for (int i = 0; i < listed.arraySize; i++)
+        {
+            if (listed.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue == tilemap)
+            {
+                return;
+            }
+        }
+
+        index = Mathf.Min(index, listed.arraySize);
+        listed.InsertArrayElementAtIndex(index);
+        SerializedProperty entry = listed.GetArrayElementAtIndex(index);
+        entry.FindPropertyRelative("tilemap").objectReferenceValue = tilemap;
+        entry.FindPropertyRelative("fillTile").objectReferenceValue = tile;
+        data.ApplyModifiedProperties();
+    }
+
+    /// <summary>
+    /// Whether one of <paramref name="layers"/> draws <paramref name="material"/>.
+    /// </summary>
+    private static bool Lists(IReadOnlyList<AreaGenerator.TerrainLayer> layers, TerrainMaterial material)
+    {
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (layers[i] != null && layers[i].Material == material)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

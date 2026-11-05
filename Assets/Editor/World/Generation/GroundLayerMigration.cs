@@ -45,19 +45,19 @@ public static class GroundLayerMigration
     /// <summary>
     /// Adds the ground layer of the project's <paramref name="material"/> to <paramref name="grid"/>
     /// (<see cref="AddLayer(Grid, AreaGenerator.TerrainLayer)"/>): its tilemap named after it (<see cref="TilemapName"/>),
-    /// its plain tile (<see cref="TerrainTileWriter.TilePath"/>) and its terrain type (<see cref="TerrainTypePath"/>).
+    /// its plain tile (<see cref="TerrainTileWriter.TileOf"/>) and its terrain type (<see cref="TerrainTypePath"/>).
     /// Returns the layer's tilemap, or null after logging why when the material has no tile or terrain type or the layer
     /// cannot be added. With <paramref name="ownUndoStep"/> false the change joins the current undo group instead of
     /// making one of its own, so a brush stroke that adds layers to several chunks stays one undo step.
     /// </summary>
     public static Tilemap AddLayer(Grid grid, TerrainMaterial material, bool ownUndoStep = true)
     {
-        Tile tile = material != null ? AssetDatabase.LoadAssetAtPath<Tile>(TerrainTileWriter.TilePath(material)) : null;
+        Tile tile = TerrainTileWriter.TileOf(material);
         TerrainType2D terrainType = material != null ? AssetDatabase.LoadAssetAtPath<TerrainType2D>(TerrainTypePath(material)) : null;
         if (tile == null || terrainType == null)
         {
             string name = material != null ? material.name : "no material";
-            Debug.LogError($"{grid.name}: cannot add {name}'s ground layer: it needs a tile at {(material != null ? TerrainTileWriter.TilePath(material) : "?")} and a terrain type at {(material != null ? TerrainTypePath(material) : "?")}.", grid);
+            Debug.LogError($"{grid.name}: cannot add {name}'s ground layer: it needs a ground tile (Tools/TopDownRPG/World/Terrain/Write Ground Tiles) and a terrain type at {(material != null ? TerrainTypePath(material) : "?")}.", grid);
             return null;
         }
 

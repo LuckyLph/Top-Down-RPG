@@ -67,12 +67,13 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
 #endif
     TBDistances(ins, corner, worldPixel TB_D_ARG);
     uint count = TBLayersAt(ins, corner);
+    uint present = TBPresentLayers(corner);
 
     uint start = 0u;
     [loop]
     for (uint m = 0u; m < count; m++)
     {
-        if (d[m] <= -0.5 && TBVisible(ins TB_D_ARG, m) && TBOpaqueInside(ins, m))
+        if (d[m] <= -0.5 && TBVisible(ins TB_D_ARG, present, m) && TBOpaqueInside(ins, m))
         {
             start = m;
         }
@@ -100,7 +101,7 @@ void TerrainBlend_float(float3 WorldPos, UnityTexture2D ControlMap, UnityTexture
         }
 
         [branch]
-        if (TBVisible(ins TB_D_ARG, n) && (!bridged || d[n] < 0.5))
+        if (TBVisible(ins TB_D_ARG, present, n) && (!bridged || d[n] < 0.5))
         {
 #ifndef _TERRAIN_WIDE
             float w[TB_MAX_LAYERS + 1];

@@ -70,4 +70,23 @@ uint TBLayersAt(TBInputs ins, TBCorner corner)
     return cells != 0u ? min(ins.layers, TBTopLayer(cells) + 1u) : 0u;
 }
 
+// The layers that cover any cell of a corner patch (whose distance is not TB_FAR), as bits: every layer up to the
+// highest one filled in the patch that is not a bridge, since a layer counts every layer above it but the bridges
+// (TBCounted), and the bridges filled in the patch.
+uint TBPresentLayers(TBCorner corner)
+{
+    uint cells = corner.cells.x | corner.cells.y | corner.cells.z | corner.cells.w;
+    uint solid = cells & ~corner.bridges;
+    uint below = solid != 0u ? (2u << firstbithigh(solid)) - 1u : 0u;
+    return below | (cells & corner.bridges);
+}
+
+// The lowest of the layers in present (TBPresentLayers) above layer m, or m when none is: the layer whose edge m's edge
+// is measured against, so layers that cover none of the patch, listed between, change nothing.
+uint TBNextPresent(uint present, uint m)
+{
+    uint above = present & ~((2u << m) - 1u);
+    return above != 0u ? firstbitlow(above) : m;
+}
+
 #endif

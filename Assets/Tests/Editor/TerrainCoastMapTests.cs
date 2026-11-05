@@ -186,6 +186,72 @@ public class TerrainCoastMapTests
     }
 
     /// <summary>
+    /// Over a sea and land 48 cells wide, each of a few changes far from each other (the coast pushed in or out by a cell
+    /// or two, an islet raised and sunk) is blurred and encoded again only around the texels whose distance it changed
+    /// (<see cref="TerrainCoastMap.LastRebuilt"/>, narrower than the map), leaving every texel outside as it was, and after
+    /// each the map holds exactly what a map built whole from the same cells holds (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void ARebuild_TouchesOnlyItsRegion_AndMatchesAWholeBuild()
+    {
+        const int wide = 48;
+        Paint(SandLayer, 0, 0, wide - 1, wide - 1);
+        Paint(SeaLayer, 0, wide / 2, wide - 1, wide - 1);
+        TerrainControlMap controlMap = ControlMap();
+        TerrainCoastMap coastMap = Build(controlMap, SeaLayer, 0u);
+        int width = coastMap.Texture.width;
+        int height = coastMap.Texture.height;
+        Assert.That(coastMap.LastRebuilt, Is.EqualTo(new RectInt(0, 0, width, height)));
+        RectInt[] changes = { new(10, wide / 2 - 1, 1, 1), new(30, wide / 2, 2, 1), new(20, wide - 12, 3, 3), new(20, wide - 12, 3, 3) };
+        bool[] toSea = { true, false, false, true };
+        for (int c = 0; c < changes.Length; c++)
+        {
+            ushort[] before = Texels(coastMap);
+            RectInt change = changes[c];
+            for (int y = change.yMin; y < change.yMax; y++)
+            {
+                for (int x = change.xMin; x < change.xMax; x++)
+                {
+                    layers[SeaLayer].SetTile(new Vector3Int(x, y, 0), toSea[c] ? tile : null);
+                }
+            }
+
+            controlMap.Rebuild();
+            controlMap.Apply();
+            coastMap.Build(controlMap, SeaLayer, 0u);
+
+            RectInt rebuilt = coastMap.LastRebuilt;
+            Assert.That(rebuilt.width, Is.LessThan(width), $"change {c} rebuilds part of the map");
+            Assert.That(rebuilt.Contains(new Vector2Int(change.xMin * TerrainCoastMap.TexelsPerCell, change.yMin * TerrainCoastMap.TexelsPerCell)), Is.True, $"change {c} rebuilds around itself");
+            ushort[] after = Texels(coastMap);
+            TerrainCoastMap whole = Build(controlMap, SeaLayer, 0u);
+            ushort[] expected = Texels(whole);
+            int outside = 0;
+            int wrong = 0;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int i = y * width + x;
+                    outside += !rebuilt.Contains(new Vector2Int(x, y)) && after[i] != before[i] ? 1 : 0;
+                    wrong += after[i] != expected[i] ? 1 : 0;
+                }
+            }
+
+            Assert.That(outside, Is.Zero, $"change {c}: texels outside its region changed");
+            Assert.That(wrong, Is.Zero, $"change {c}: texels differing from a whole build");
+        }
+    }
+
+    /// <summary>
+    /// The coast map texture's texels, a copy.
+    /// </summary>
+    private static ushort[] Texels(TerrainCoastMap coastMap)
+    {
+        return coastMap.Texture.GetPixelData<ushort>(0).ToArray();
+    }
+
+    /// <summary>
     /// A control map over the three layers, applied, disposed in <see cref="TearDown"/>.
     /// </summary>
     private TerrainControlMap ControlMap()

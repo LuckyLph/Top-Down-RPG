@@ -60,13 +60,14 @@ bool TBNearBridgeEdge(TBInputs ins TB_D_PARAM, uint bridges, uint m)
 }
 
 // Whether a layer is drawn at a pixel: it covers the pixel's corner patch and its edge lies at least the pair margin
-// beyond the edge of the layer above it, so where two edges coincide only the upper one is drawn.
-bool TBVisible(TBInputs ins TB_D_PARAM, uint m)
+// beyond the edge of the next layer above it that covers the patch (present, TBPresentLayers), so where two edges
+// coincide only the upper one is drawn. Layers that cover none of the patch's cells are skipped, so a bridge hides the
+// layer it lies on at their common edge whatever empty layers are listed between them.
+bool TBVisible(TBInputs ins TB_D_PARAM, uint present, uint m)
 {
-    bool present = d[m] < TB_FAR;
-    uint up = min(m + 1u, (uint)TB_MAX_LAYERS - 1u);
-    bool covered = m + 1u < ins.layers && d[up] < TB_FAR && d[up] - d[m] < ins.globals.y;
-    return present && !covered;
+    uint up = TBNextPresent(present, m);
+    bool covered = up != m && d[up] - d[m] < ins.globals.y;
+    return d[m] < TB_FAR && !covered;
 }
 
 #endif

@@ -740,11 +740,11 @@ public static class WorldGenerationWriter
         List<AreaGenerator.TerrainLayer> layers = new();
         foreach (TerrainMaterial material in materials)
         {
-            Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(TerrainTileWriter.TilePath(material));
+            Tile tile = TerrainTileWriter.TileOf(material);
             TerrainType2D terrainType = AssetDatabase.LoadAssetAtPath<TerrainType2D>(GroundLayerMigration.TerrainTypePath(material));
             if (tile == null || terrainType == null)
             {
-                problem = $"{grid.name}: chunk {coords} lays {material.name}, which needs a tile at {TerrainTileWriter.TilePath(material)} and a terrain type at {GroundLayerMigration.TerrainTypePath(material)}.";
+                problem = $"{grid.name}: chunk {coords} lays {material.name}, which needs a ground tile and a terrain type at {GroundLayerMigration.TerrainTypePath(material)}.";
                 return null;
             }
 

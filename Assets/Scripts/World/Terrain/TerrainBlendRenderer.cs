@@ -102,6 +102,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     private static readonly int InfoId = Shader.PropertyToID("_TerrainInfo");
     private static readonly int CoastMapId = Shader.PropertyToID("_TerrainCoast");
     private static readonly int RaisedMapId = Shader.PropertyToID("_TerrainRaised");
+    private static readonly int TurnMapId = Shader.PropertyToID("_TerrainTurns");
     internal const string WideKeywordName = "_TERRAIN_WIDE";
     private const string SoftKeywordName = "_TERRAIN_SOFT";
     private const string RaisedKeywordName = "_TERRAIN_RAISED";
@@ -136,6 +137,9 @@ public class TerrainBlendRenderer : MonoBehaviour
     private Tilemap builtRaisedTilemap;
     [NonSerialized] private bool builtRaised;
     [NonSerialized] private bool elevationChanged;
+    private TerrainTurnMap turnMap;
+    [NonSerialized] private uint turnBits;
+    [NonSerialized] private bool turnsChanged;
     [NonSerialized] private bool chunked;
     [NonSerialized] private RectInt chunkCells;
     [NonSerialized] private int skirtCells;
@@ -166,6 +170,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 #if UNITY_EDITOR
     [NonSerialized] private bool enabledOnce;
     [NonSerialized] private TerrainBlendRebuilds rebuilds;
+    [NonSerialized] private TerrainBlendSoftWarmUp softWarmUp;
 #endif
 
     public TerrainStyle Style => style;
@@ -245,8 +250,10 @@ public class TerrainBlendRenderer : MonoBehaviour
 
     /// <summary>
     /// The look the ground is drawn in. Setting it only switches the soft look's keyword on the runtime material, at
-    /// once and in edit mode too, rebuilding nothing and allocating nothing; it is not saved per machine. Set from code
-    /// it does not mark the scene changed, but a later save of the scene keeps it.
+    /// once and in edit mode too, rebuilding nothing and allocating nothing; it is not saved per machine. In the editor,
+    /// a switch to soft before the soft look's shader variants are compiled keeps drawing crisp while they compile in
+    /// the background and switches once they are (<see cref="TerrainBlendSoftWarmUp"/>). Set from code it does not mark
+    /// the scene changed, but a later save of the scene keeps it.
     /// </summary>
     public BlendMode Mode
     {
@@ -321,6 +328,7 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal bool SharesArrays => arraysSource != null;
     internal Texture2D Lut => lut;
     internal TerrainElevationMap ElevationMap => elevationMap;
+    internal TerrainTurnMap TurnMap => turnMap;
     internal IReadOnlyList<MeshRenderer> Chunks => chunkSet != null ? chunkSet.Renderers : NoChunks;
     internal bool IsFlushScheduled => flushScheduled;
 
@@ -336,6 +344,26 @@ public class TerrainBlendRenderer : MonoBehaviour
     internal bool IsRebuildScheduled => Rebuilds.IsScheduled;
 
     private TerrainBlendRebuilds Rebuilds => rebuilds ??= new TerrainBlendRebuilds(RebuildIfEnabled);
+    internal TerrainBlendSoftWarmUp SoftWarmUp => softWarmUp ??= new TerrainBlendSoftWarmUp(ApplyMode);
+
+    /// <summary>
+    /// Editor only: compiles the soft look's shader variants now, if the renderer draws soft or will, and switches to it,
+    /// so a check that renders at once draws the soft look (<see cref="TerrainBlendSoftWarmUp.CompileNow"/>).
+    /// </summary>
+    internal void CompileModeNow()
+    {
+        if (material == null || mode != BlendMode.Soft)
+        {
+            return;
+        }
+
+        LocalKeyword softKeyword = new(material.shader, SoftKeywordName);
+        if (softKeyword.isValid)
+        {
+            SoftWarmUp.CompileNow(material, softKeyword);
+            ApplyMode();
+        }
+    }
 #endif
 
     /// <summary>
@@ -436,6 +464,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             controlMap.SetSources(ControlMapSources());
             controlMap.Rebuild();
             elevationChanged |= builtRaised;
+            turnsChanged |= turnBits != 0u;
             FollowControlMapChange(before);
         }
     }
@@ -528,6 +557,46 @@ public class TerrainBlendRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// Whether the renderer is built drawing raised ground and reads <paramref name="tilemap"/> as its raised tilemap.
+    /// </summary>
+    internal bool IsDrawingRaised(Tilemap tilemap)
+    {
+        return controlMap != null && builtRaised && tilemap != null && tilemap == builtRaisedTilemap;
+    }
+
+    /// <summary>
+    /// Shows raised ground in <paramref name="cells"/> (their z is ignored) as <paramref name="kinds"/>
+    /// (<see cref="RaisedGround"/>'s values, one per cell; null for level everywhere) in place of any raised preview shown
+    /// before, without changing a tilemap, navigation or anything saved, for a brush's hover in the editor
+    /// (Docs/KnownGaps.md, Phase 6): its elevation map is built again with them before the next render. Cells outside the
+    /// control map's bounds show nothing. Returns false, changing nothing, when it draws no raised ground.
+    /// </summary>
+    internal bool SetRaisedPreview(IReadOnlyList<Vector3Int> cells, IReadOnlyList<byte> kinds)
+    {
+        if (controlMap == null || !builtRaised || elevationMap == null)
+        {
+            return false;
+        }
+
+        elevationMap.SetPreview(cells, kinds);
+        elevationChanged = true;
+        ScheduleFlush();
+        return true;
+    }
+
+    /// <summary>
+    /// Removes the raised preview, so the cells show their raised ground again from the next render.
+    /// </summary>
+    internal void ClearRaisedPreview()
+    {
+        if (elevationMap != null && elevationMap.ClearPreview())
+        {
+            elevationChanged = true;
+            ScheduleFlush();
+        }
+    }
+
+    /// <summary>
     /// Removes the preview, so the cells show their real bits again from the next render. When a preview grew the
     /// bounds since the last clear, reads the layers again so the bounds and chunks shrink back to the filled cells.
     /// Does nothing when no preview is shown and none grew the bounds.
@@ -575,6 +644,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             }
 
             elevationChanged |= builtRaised;
+            turnsChanged |= turnBits != 0u;
         }
 
         if (elevationChanged && elevationMap != null)
@@ -582,6 +652,13 @@ public class TerrainBlendRenderer : MonoBehaviour
             elevationChanged = false;
             elevationMap.Build(controlMap, builtRaisedTilemap, skirt);
             material.SetTexture(RaisedMapId, elevationMap.Texture);
+        }
+
+        if (turnsChanged && turnMap != null)
+        {
+            turnsChanged = false;
+            turnMap.Build(controlMap, layerTilemaps, turnBits, controlMap.Sources);
+            material.SetTexture(TurnMapId, turnMap.Texture);
         }
     }
 
@@ -651,6 +728,7 @@ public class TerrainBlendRenderer : MonoBehaviour
         BoundsInt before = controlMap.Bounds;
         controlMap.Rebuild();
         elevationChanged |= builtRaised;
+        turnsChanged |= turnBits != 0u;
         FollowControlMapChange(before);
     }
 
@@ -808,6 +886,15 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         elevationChanged = false;
+        turnBits = 0u;
+        for (int i = 0; i < count; i++)
+        {
+            turnBits |= materials[i].TurnsToRuns ? 1u << i : 0u;
+        }
+
+        turnMap = new TerrainTurnMap($"{name} Terrain Turns");
+        turnMap.Build(controlMap, layerTilemaps, turnBits, controlMap.Sources);
+        turnsChanged = false;
         using (LutMarker.Auto())
         {
             lut = TerrainBlendLut.Create(style, materials, $"{name} Terrain Lut", builtRaised, slices);
@@ -823,6 +910,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             material.SetTexture(HeightArrayId, arrays.Height);
             material.SetTexture(CoastMapId, coastBaked ? chunkCoastMap : coastMap.Texture);
             material.SetTexture(RaisedMapId, elevationMap.Texture);
+            material.SetTexture(TurnMapId, turnMap.Texture);
             ApplyMode();
             UpdateControlRect();
             UpdateInfo();
@@ -852,7 +940,11 @@ public class TerrainBlendRenderer : MonoBehaviour
         LocalKeyword softKeyword = new(material.shader, SoftKeywordName);
         if (softKeyword.isValid)
         {
-            material.SetKeyword(softKeyword, mode == BlendMode.Soft);
+            bool soft = mode == BlendMode.Soft;
+#if UNITY_EDITOR
+            soft = soft && (material.IsKeywordEnabled(softKeyword) || SoftWarmUp.IsReady(material, softKeyword));
+#endif
+            material.SetKeyword(softKeyword, soft);
         }
         else if (mode == BlendMode.Soft)
         {
@@ -1148,16 +1240,51 @@ public class TerrainBlendRenderer : MonoBehaviour
         }
 
         BoundsInt before = controlMap.Bounds;
+        turnsChanged |= IsTurningSource(tilemap);
         if (controlMap.Refresh(tilemap, positions))
         {
             FollowControlMapChange(before);
             return;
         }
 
+        if (turnsChanged)
+        {
+            ScheduleFlush();
+        }
+
         if (FillsUnbuiltSkirt(tilemap, positions))
         {
             Rebuild();
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> is a layer it built from whose material turns to its runs, or a skirt source
+    /// of such a layer, so a change of its tiles' facing changes the turn map though no bit of the control map changes.
+    /// </summary>
+    private bool IsTurningSource(Tilemap tilemap)
+    {
+        if (turnBits == 0u)
+        {
+            return false;
+        }
+
+        int layer = BuiltLayerIndexOf(tilemap);
+        if (layer >= 0)
+        {
+            return (turnBits >> layer & 1u) != 0u;
+        }
+
+        IReadOnlyList<TerrainControlMap.Source> sources = controlMap.Sources;
+        for (int i = 0; i < sources.Count; i++)
+        {
+            if (sources[i].Tilemap == tilemap && (turnBits >> sources[i].Layer & 1u) != 0u)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -1234,7 +1361,7 @@ public class TerrainBlendRenderer : MonoBehaviour
             UpdateChunks();
         }
 
-        if (controlMap.HasPendingChanges || elevationChanged)
+        if (controlMap.HasPendingChanges || elevationChanged || turnsChanged)
         {
             ScheduleFlush();
         }
@@ -1279,6 +1406,7 @@ public class TerrainBlendRenderer : MonoBehaviour
 
 #if UNITY_EDITOR
         Rebuilds.StopFollowing();
+        softWarmUp?.Stop();
 #endif
         chunkSet?.Clear();
         chunkSet = null;
@@ -1298,6 +1426,10 @@ public class TerrainBlendRenderer : MonoBehaviour
         glowBits = 0u;
         elevationMap?.Dispose();
         elevationMap = null;
+        turnMap?.Dispose();
+        turnMap = null;
+        turnBits = 0u;
+        turnsChanged = false;
         builtRaisedTilemap = null;
         builtRaised = false;
         coastBaked = false;

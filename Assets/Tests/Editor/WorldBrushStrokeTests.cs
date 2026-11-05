@@ -17,7 +17,9 @@ using Object = UnityEngine.Object;
 /// reaches), its walls (copied where missing) or its raised tilemap (set up where missing), and one undo takes all of
 /// it back. Cells of a chunk that is not open, or outside the world, are skipped with a warning; a tilemap of another
 /// kind is written only inside its chunk. A flood fill spreads across the border. The hover preview shows on each
-/// chunk's renderer it covers. A grid that is no chunk is painted as before. The test reads the project's style,
+/// chunk's renderer it covers; a walls preview across a border sets each cell on its own chunk's module and each render
+/// cell on the module drawing it, reading both chunks' previews; walls painted beside the ground get it under them,
+/// across a border too (Docs/KnownGaps.md, Phase 6). A grid that is no chunk is painted as before. The test reads the project's style,
 /// materials, ground and raised tiles and walls rule tile, and changes none of them.
 /// </summary>
 public class WorldBrushStrokeTests
@@ -387,6 +389,64 @@ public class WorldBrushStrokeTests
 
         Assert.That(west.ControlMap.HasPreview, Is.False);
         Assert.That(east.ControlMap.HasPreview, Is.False);
+    }
+
+    /// <summary>
+    /// The hover preview of walls across the border at x = 64, once chunk (1, 0) has walls, sets each cell's preview tile
+    /// on the module of the chunk owning it, and each render cell's on the module drawing it, which reads both chunks'
+    /// previews: the render cell on the border between two filled rows shows the full piece. Clearing it clears both.
+    /// </summary>
+    [Test]
+    public void TheWallsPreviewAcrossABorder_UsesBothChunksModules()
+    {
+        DualGridTilemapModule west = chunks[Vector2Int.zero].GetComponentInChildren<DualGridTilemapModule>();
+        Stroke(west.DataTilemap, () => brush.BoxFill(west.DataTilemap.layoutGrid, west.gameObject, new BoundsInt(70, 10, 0, 1, 1, 1)));
+        DualGridTilemapModule east = WorldBrushStroke.WallsLike(chunks[new Vector2Int(1, 0)], west);
+        Assert.That(east, Is.Not.Null);
+
+        editor.BoxPreview(west.DataTilemap.layoutGrid, west.gameObject, new BoundsInt(62, 30, 0, 4, 2, 1), false);
+
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(63, 30, 0)), Is.Not.Null);
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Null);
+        Assert.That(east.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Not.Null);
+        Vector3Int border = new(64, 31, 0);
+        DualGridTilemapModule drawing = west.OwnsRenderTile(border) ? west : east;
+        DualGridTilemapModule other = drawing == west ? east : west;
+        Assert.That(drawing.RenderTilemap.GetEditorPreviewTile(border), Is.SameAs(drawing.RenderTile));
+        Assert.That(other.RenderTilemap.GetEditorPreviewTile(border), Is.Null);
+        Sprite piece = drawing.RenderTilemap.GetEditorPreviewSprite(border);
+        Assert.That(piece != null && piece.name.EndsWith("_6"), Is.True, $"the border's render cell shows the full piece, not {(piece != null ? piece.name : "none")}");
+
+        editor.ClearPreview();
+
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(63, 30, 0)), Is.Null);
+        Assert.That(east.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Null);
+        Assert.That(drawing.RenderTilemap.GetEditorPreviewTile(border), Is.Null);
+    }
+
+    /// <summary>
+    /// Walls painted across the border at x = 64 beside the grass, on cells whose grass was erased, get grass under them
+    /// in each chunk, from the tile their neighbours hold, and cells with no ground beside them get none.
+    /// </summary>
+    [Test]
+    public void WallsPaintedBesideTheGround_GetItUnderThem_AcrossABorder()
+    {
+        DualGridTilemapModule walls = chunks[Vector2Int.zero].GetComponentInChildren<DualGridTilemapModule>();
+        Tilemap westGrass = Layer(Vector2Int.zero, grass);
+        Tilemap eastGrass = Layer(new Vector2Int(1, 0), grass);
+        TileBase grassTile = westGrass.GetTile(new Vector3Int(10, 10, 0));
+        foreach (Vector3Int cell in CellsOf(new RectInt(60, 20, 8, 6)))
+        {
+            (cell.x < 64 ? westGrass : eastGrass).SetTile(cell, null);
+        }
+
+        Stroke(walls.DataTilemap, () => brush.BoxFill(walls.DataTilemap.layoutGrid, walls.gameObject, new BoundsInt(60, 20, 0, 8, 1, 1)));
+
+        Assert.That(westGrass.GetTile(new Vector3Int(63, 20, 0)), Is.SameAs(grassTile));
+        Assert.That(eastGrass.GetTile(new Vector3Int(64, 20, 0)), Is.SameAs(grassTile));
+
+        Stroke(walls.DataTilemap, () => brush.BoxFill(walls.DataTilemap.layoutGrid, walls.gameObject, new BoundsInt(62, 23, 0, 4, 1, 1)));
+        Assert.That(westGrass.HasTile(new Vector3Int(63, 23, 0)), Is.False, "no ground beside it");
     }
 
     /// <summary>

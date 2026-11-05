@@ -9,8 +9,10 @@ using UnityEngine;
 /// <see cref="FarBlend"/> into a long one, so far out at sea the waves forget the coast's steps. A cell counts as the layer's when that layer or one above it that is no bridge is
 /// filled, or when it is empty, so the map's edge is no coast. Stored in a bilinear R16 texture as
 /// (distance - <see cref="MinDistance"/>) / <see cref="DistanceRange"/>; 1 x 1 without a layer with waves. Built again
-/// whenever the control map changes, which only works the distances out again when the coast moved; owns its texture
-/// and buffers, <see cref="Dispose"/> destroys the texture.
+/// whenever the control map changes, which only works the distances out again when the coast moved, and then blurs and
+/// encodes again only the texels whose distance changed, widened by the blur's reach (<see cref="Reach"/>), the others
+/// keeping what a whole build gives them (Docs/KnownGaps.md, Phase 6); owns its texture and buffers,
+/// <see cref="Dispose"/> destroys the texture.
 /// </summary>
 public sealed class TerrainCoastMap : IDisposable
 {
@@ -23,6 +25,7 @@ public sealed class TerrainCoastMap : IDisposable
     public const int BlurPasses = 3;
     public const float FarFrom = 8f;
     public const float FarBlend = 50f;
+    public const int Reach = BlurPasses * FarBlurRadius;
     private const float Far = 1e6f;
     private const float Diagonal = 1.41421356f;
 
@@ -31,10 +34,13 @@ public sealed class TerrainCoastMap : IDisposable
     private bool[] sea = new bool[0];
     private float[] toLand = new float[0];
     private float[] toSea = new float[0];
-    private float[] blurred = new float[0];
+    private float[] signed = new float[0];
+    private float[] near = new float[0];
+    private float[] far = new float[0];
     private ushort[] encoded = new ushort[0];
     private bool built;
     private int builtWidth;
+    private RectInt rebuilt;
 
     /// <summary>
     /// Creates an empty map whose texture will be named <paramref name="textureName"/>.
@@ -47,9 +53,16 @@ public sealed class TerrainCoastMap : IDisposable
     public Texture2D Texture => texture;
 
     /// <summary>
+    /// The texels the last build blurred and encoded again: the whole map for a first build or one of a new size, none
+    /// when nothing changed, else the bounds of the texels whose distance changed widened by <see cref="Reach"/>.
+    /// </summary>
+    internal RectInt LastRebuilt => rebuilt;
+
+    /// <summary>
     /// Builds the map over <paramref name="controlMap"/>'s bounds for the layer at <paramref name="waveLayer"/> (-1 for
     /// none), <paramref name="bridges"/> holding a bit for each bridge layer, and uploads it; keeps the texture as it is
-    /// when no cell changed sides since the last build.
+    /// when no cell changed sides since the last build, and after a build of the same size blurs and encodes again only
+    /// around the texels whose distance changed (<see cref="LastRebuilt"/>), which gives the texels a whole build gives.
     /// </summary>
     public void Build(TerrainControlMap controlMap, int waveLayer, uint bridges)
     {
@@ -58,6 +71,7 @@ public sealed class TerrainCoastMap : IDisposable
         int width = used ? bounds.size.x * TexelsPerCell : 1;
         int height = used ? bounds.size.y * TexelsPerCell : 1;
         Prepare(width, height);
+        rebuilt = new RectInt(0, 0, 0, 0);
         if (!used)
         {
             built = false;
@@ -66,6 +80,7 @@ public sealed class TerrainCoastMap : IDisposable
             return;
         }
 
+        bool wasBuilt = built;
         uint counted = ~(bridges & ~(1u << waveLayer));
         bool changed = !built;
         for (int cy = 0; cy < bounds.size.y; cy++)
@@ -91,7 +106,15 @@ public sealed class TerrainCoastMap : IDisposable
             return;
         }
 
-        Compute(width, height);
+        if (wasBuilt)
+        {
+            Update(width, height);
+        }
+        else
+        {
+            Compute(width, height);
+        }
+
         Upload();
     }
 
@@ -155,29 +178,118 @@ public sealed class TerrainCoastMap : IDisposable
         Chamfer(width, height, false, toSea);
         for (int i = 0; i < width * height; i++)
         {
-            float texels = sea[i] ? toLand[i] : -toSea[i];
-            texels = texels > DistanceRange ? DistanceRange : texels < -DistanceRange ? -DistanceRange : texels;
-            blurred[i] = (texels - (sea[i] ? 0.5f : -0.5f)) * PixelsPerTexel;
-            toSea[i] = blurred[i];
+            signed[i] = SignedAt(i);
+        }
+
+        rebuilt = new RectInt(0, 0, width, height);
+        Blur(width, rebuilt, rebuilt);
+    }
+
+    /// <summary>
+    /// Works the distances out again from the sea flags of <paramref name="width"/> x <paramref name="height"/> texels,
+    /// finds the texels whose distance changed since the last build, and blurs and encodes again only those widened by
+    /// <see cref="Reach"/>, from a window widened by twice that: the blur's errors at the window's edges inside the map
+    /// spread no further than <see cref="Reach"/> texels, so every texel it writes gets what a whole build gives it, and
+    /// every other texel already has it.
+    /// </summary>
+    private void Update(int width, int height)
+    {
+        Chamfer(width, height, true, toLand);
+        Chamfer(width, height, false, toSea);
+        int xMin = width;
+        int yMin = height;
+        int xMax = -1;
+        int yMax = -1;
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int i = y * width + x;
+                float value = SignedAt(i);
+                if (value != signed[i])
+                {
+                    signed[i] = value;
+                    xMin = x < xMin ? x : xMin;
+                    yMin = y < yMin ? y : yMin;
+                    xMax = x > xMax ? x : xMax;
+                    yMax = y > yMax ? y : yMax;
+                }
+            }
+        }
+
+        if (xMax < 0)
+        {
+            return;
+        }
+
+        RectInt changed = new(xMin, yMin, xMax - xMin + 1, yMax - yMin + 1);
+        rebuilt = Widen(changed, Reach, width, height);
+        Blur(width, Widen(changed, 2 * Reach, width, height), rebuilt);
+    }
+
+    /// <summary>
+    /// The signed distance of texel <paramref name="i"/> in pixels, from the last chamfers: to land for a sea texel,
+    /// negative to the sea for a land texel, clamped to <see cref="DistanceRange"/> texels and taken to the texel's edge.
+    /// </summary>
+    private float SignedAt(int i)
+    {
+        float texels = sea[i] ? toLand[i] : -toSea[i];
+        texels = texels > DistanceRange ? DistanceRange : texels < -DistanceRange ? -DistanceRange : texels;
+        return (texels - (sea[i] ? 0.5f : -0.5f)) * PixelsPerTexel;
+    }
+
+    /// <summary>
+    /// Blurs the signed distances of <paramref name="window"/> near and far (<see cref="BoxBlur"/>, which takes the
+    /// window's edges as the map's), then mixes and encodes them into the texels of <paramref name="kept"/>, which lies at
+    /// least <see cref="Reach"/> texels inside the window's edges that are not the map's.
+    /// </summary>
+    private void Blur(int width, RectInt window, RectInt kept)
+    {
+        for (int y = window.yMin; y < window.yMax; y++)
+        {
+            int row = y * width;
+            for (int x = window.xMin; x < window.xMax; x++)
+            {
+                near[row + x] = signed[row + x];
+                far[row + x] = signed[row + x];
+            }
         }
 
         for (int pass = 0; pass < BlurPasses; pass++)
         {
-            BoxBlur(blurred, width, height, true, NearBlurRadius);
-            BoxBlur(blurred, width, height, false, NearBlurRadius);
-            BoxBlur(toSea, width, height, true, FarBlurRadius);
-            BoxBlur(toSea, width, height, false, FarBlurRadius);
+            BoxBlur(near, width, window, true, NearBlurRadius);
+            BoxBlur(near, width, window, false, NearBlurRadius);
+            BoxBlur(far, width, window, true, FarBlurRadius);
+            BoxBlur(far, width, window, false, FarBlurRadius);
         }
 
-        for (int i = 0; i < width * height; i++)
+        for (int y = kept.yMin; y < kept.yMax; y++)
         {
-            float near = blurred[i];
-            float far = (near - FarFrom) / FarBlend;
-            far = far < 0f ? 0f : far > 1f ? 1f : far;
-            float level = (near + (toSea[i] - near) * far - MinDistance) / DistanceRange;
-            level = level < 0f ? 0f : level > 1f ? 1f : level;
-            encoded[i] = (ushort)(level * 65535f + 0.5f);
+            int row = y * width;
+            for (int x = kept.xMin; x < kept.xMax; x++)
+            {
+                int i = row + x;
+                float nearValue = near[i];
+                float blend = (nearValue - FarFrom) / FarBlend;
+                blend = blend < 0f ? 0f : blend > 1f ? 1f : blend;
+                float level = (nearValue + (far[i] - nearValue) * blend - MinDistance) / DistanceRange;
+                level = level < 0f ? 0f : level > 1f ? 1f : level;
+                encoded[i] = (ushort)(level * 65535f + 0.5f);
+            }
         }
+    }
+
+    /// <summary>
+    /// <paramref name="rect"/> widened by <paramref name="by"/> texels each way, within the map's
+    /// <paramref name="width"/> x <paramref name="height"/> texels.
+    /// </summary>
+    private static RectInt Widen(RectInt rect, int by, int width, int height)
+    {
+        int xMin = Math.Max(0, rect.xMin - by);
+        int yMin = Math.Max(0, rect.yMin - by);
+        int xMax = Math.Min(width, rect.xMax + by);
+        int yMax = Math.Min(height, rect.yMax + by);
+        return new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
     }
 
     /// <summary>
@@ -215,7 +327,9 @@ public sealed class TerrainCoastMap : IDisposable
             sea = new bool[count];
             toLand = new float[count];
             toSea = new float[count];
-            blurred = new float[count];
+            signed = new float[count];
+            near = new float[count];
+            far = new float[count];
             encoded = new ushort[count];
         }
 
@@ -340,21 +454,23 @@ public sealed class TerrainCoastMap : IDisposable
     }
 
     /// <summary>
-    /// Averages <paramref name="values"/> over <paramref name="radius"/> texels each way along rows
-    /// (<paramref name="alongRows"/>) or columns, the map's edge texels repeating past it, using the land distances as
-    /// scratch. The running sum is a double, so a texel's average does not depend on where its line starts: a coast
-    /// map baked over a window of the world gives the same texels as one over the whole world.
+    /// Averages <paramref name="values"/> over <paramref name="radius"/> texels each way along the rows
+    /// (<paramref name="alongRows"/>) or columns of <paramref name="window"/>, in a map <paramref name="width"/> texels
+    /// wide, the window's edge texels repeating past it, using the land distances as scratch. The running sum is a
+    /// double, so a texel's average does not depend on where its line starts: a coast map baked over a window of the
+    /// world gives the same texels as one over the whole world, and a window inside the map the same texels as the whole
+    /// map but within the radius of its edges inside the map.
     /// </summary>
-    private void BoxBlur(float[] values, int width, int height, bool alongRows, int radius)
+    private void BoxBlur(float[] values, int width, RectInt window, bool alongRows, int radius)
     {
-        int lines = alongRows ? height : width;
-        int length = alongRows ? width : height;
+        int lines = alongRows ? window.height : window.width;
+        int length = alongRows ? window.width : window.height;
         int stride = alongRows ? 1 : width;
         double scale = 1.0 / (2 * radius + 1);
         int last = (length - 1) * stride;
         for (int line = 0; line < lines; line++)
         {
-            int start = alongRows ? line * width : line;
+            int start = alongRows ? (window.yMin + line) * width + window.xMin : window.yMin * width + window.xMin + line;
             double sum = 0.0;
             for (int k = -radius; k <= radius; k++)
             {

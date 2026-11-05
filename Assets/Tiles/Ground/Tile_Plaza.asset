@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
+  m_Script: {fileID: 11500000, guid: 1d1f75ea74c99ac46828527bf8355ace, type: 3}
   m_Name: Tile_Plaza
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
   m_Sprite: {fileID: 21300000, guid: 2abe33a81a1e48a4caddaf1677ce1abd, type: 3}
@@ -34,3 +34,5 @@ MonoBehaviour:
   m_InstancedGameObject: {fileID: 0}
   m_Flags: 1
   m_ColliderType: 0
+  material: {fileID: 11400000, guid: bab0d18c7763cac4c9ad0143cde4ea4e, type: 2}
+  facing: 0

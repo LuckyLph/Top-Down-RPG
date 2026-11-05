@@ -29,6 +29,9 @@
         },
         {
             "m_Id": "de80e49efec54a7f9102254eb5a42c2b"
+        },
+        {
+            "m_Id": "19256a2b069a428d833bb256b6a59b56"
         }
     ],
     "m_Keywords": [
@@ -517,6 +520,43 @@
     "m_Property": {
         "m_Id": "ce8fca5f7aaa4a7599b73e8a2e7baf07"
     }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DShaderProperty",
+    "m_ObjectId": "19256a2b069a428d833bb256b6a59b56",
+    "m_Guid": {
+        "m_GuidSerialized": "f825a601-0bfc-4c9f-be95-f4da7d84f334"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Terrain Turns",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Terrain Turns",
+    "m_DefaultReferenceName": "_Terrain_Turns",
+    "m_OverrideReferenceName": "_TerrainTurns",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": true,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": {
+        "m_SerializedTexture": "",
+        "m_Guid": ""
+    },
+    "isMainTexture": false,
+    "useTilingAndOffset": false,
+    "useTexelSize": false,
+    "isHDR": false,
+    "m_Modifiable": true,
+    "m_DefaultType": 1
 }
 
 {

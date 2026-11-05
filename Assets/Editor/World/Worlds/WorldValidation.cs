@@ -14,7 +14,8 @@ using UnityEngine.SceneManagement;
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
 /// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Every <see cref="WorldExit"/>
 /// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has, and
-/// every chunk's waystone and exit markers are those Place markers would write (<see cref="WorldMarkers.Stale"/>). Each
+/// every chunk's waystone and exit markers are those Place markers would write (<see cref="WorldMarkers.Stale"/>), and no
+/// wall cell beside ground lacks ground under it (<see cref="WallGround.BareCells"/>). Each
 /// problem is a line naming the object; the World Editor shows them and <see cref="WorldBuildValidator"/> refuses a
 /// build with any.
 /// </summary>
@@ -84,7 +85,30 @@ public static class WorldValidation
             }
         }
 
+        CheckWallGround(problems, chunk);
         return problems;
+    }
+
+    /// <summary>
+    /// Adds a problem naming the chunk's wall cells beside ground with no ground under them
+    /// (<see cref="WallGround.BareCells"/>), whose ground's corner leaves a gap at the wall, reading the neighbours'
+    /// ground across borders in the chunks open beside it (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    private static void CheckWallGround(List<string> problems, WorldChunk chunk)
+    {
+        TerrainBlendRenderer renderer = chunk.Terrain;
+        DualGridTilemapModule walls = chunk.GetComponentInChildren<DualGridTilemapModule>(true);
+        if (renderer == null || walls == null || walls.DataTilemap == null)
+        {
+            return;
+        }
+
+        Dictionary<Vector2Int, WorldChunk> open = chunk.World != null ? WorldBrushStroke.OpenChunks(chunk.World, chunk) : new Dictionary<Vector2Int, WorldChunk>();
+        List<Vector2Int> bare = WallGround.BareCells(renderer, walls.DataTilemap, chunk.Cells, cell => open.TryGetValue(ChunkCoords.ChunkOf(cell), out WorldChunk owner) && owner != null ? owner.Terrain : chunk.Cells.Contains(cell) ? renderer : null);
+        if (bare.Count > 0)
+        {
+            problems.Add($"{chunk.gameObject.scene.name}: {bare.Count} wall cells beside ground have no ground under them (first at {bare[0]}), so the ground's corners leave gaps at the walls; paint the ground under them, as the Terrain Brush does when it paints walls.");
+        }
     }
 
     /// <summary>

@@ -200,7 +200,7 @@ public static class WorldAuthoring
     {
         Dictionary<Vector2Int, List<Vector3Int>> byChunk = SplitByChunk(cells);
         int skipped = 0;
-        TileBase tile = AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(material));
+        TileBase tile = TerrainTileWriter.TileOf(material);
         foreach (KeyValuePair<Vector2Int, List<Vector3Int>> part in byChunk)
         {
             Grid grid = OpenChunkGrid(world, part.Key);
@@ -230,8 +230,9 @@ public static class WorldAuthoring
     /// <summary>
     /// Fills (or with <paramref name="filled"/> false, empties) the walls of <paramref name="cells"/> (world-local
     /// cells) in the open chunk scenes of <paramref name="world"/>, each cell through the wall module of the chunk that
-    /// owns it, adding the walls (<see cref="AddWalls"/>) to a chunk that has none. Cells of chunks that are not open
-    /// are skipped and counted in the result.
+    /// owns it, adding the walls (<see cref="AddWalls"/>) to a chunk that has none, and paints the ground of their
+    /// neighbours under walls filled beside ground (<see cref="WallGround.FillUnder"/>). Cells of chunks that are not
+    /// open are skipped and counted in the result.
     /// </summary>
     public static int PaintWalls(WorldDefinition world, IEnumerable<Vector2Int> cells, bool filled = true)
     {
@@ -254,6 +255,7 @@ public static class WorldAuthoring
             if (filled)
             {
                 walls.SetDataTiles(part.Value);
+                WallGround.FillUnder(part.Value, cell => OpenChunkGrid(world, ChunkCoords.ChunkOf(cell)) is Grid owner && owner != null ? owner.GetComponent<TerrainBlendRenderer>() : null);
             }
             else
             {
@@ -452,7 +454,7 @@ public static class WorldAuthoring
         SerializedProperty layers = data.FindProperty("layers");
         TerrainMaterial groundMaterial = ground != null ? ground : MaterialNamed("Grass");
         Transform walls = grid.transform.Find(WallsName);
-        changed |= AddTerrainLayer(layers, LayerOf(grid, groundMaterial), groundMaterial != null ? AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(groundMaterial)) : null);
+        changed |= AddTerrainLayer(layers, LayerOf(grid, groundMaterial), TerrainTileWriter.TileOf(groundMaterial));
         changed |= AddTerrainLayer(layers, walls != null ? walls.GetComponent<Tilemap>() : null, null);
         data.ApplyModifiedProperties();
         Undo.RecordObject(terrain, "Set the terrain sync prefab");
@@ -1589,7 +1591,7 @@ public static class WorldAuthoring
                 continue;
             }
 
-            Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(TerrainTileWriter.TilePath(layer.Material));
+            Tile tile = TerrainTileWriter.TileOf(layer.Material);
             TerrainType2D terrainType = AssetDatabase.LoadAssetAtPath<TerrainType2D>(GroundLayerMigration.TerrainTypePath(layer.Material));
             if (tile == null || terrainType == null || layer.Tilemap.transform.parent != grid.transform)
             {
@@ -1724,7 +1726,7 @@ public static class WorldAuthoring
     /// <paramref name="ground"/> (grass when null), its <see cref="NavigationGrid2D"/> and its <see cref="AreaTerrain"/>,
     /// which lists that layer.
     /// </summary>
-    private static void SetUpGround(Grid grid, TerrainMaterial ground = null)
+    internal static void SetUpGround(Grid grid, TerrainMaterial ground = null)
     {
         TerrainMaterial material = ground != null ? ground : MaterialNamed("Grass");
         TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();

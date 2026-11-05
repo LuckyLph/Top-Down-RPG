@@ -35,7 +35,7 @@ using UnityEngine;
 /// Then one row per pair of an upper layer u over a lower layer l, or over nothing (l
 /// = -1), at <see cref="PairRow"/>: at <see cref="PairShadowColumn"/> (shadow colour, shadow alpha), at
 /// <see cref="PairOutlineColumn"/> (outline colour, 1 when drawn), at <see cref="PairWidthsColumn"/> (shadow width, rim
-/// width, tuft height, 1 when the soft look shows whole stones, only over a material with cut stones), at
+/// width, tuft height, 0 over nothing, 1 when the soft look shows whole stones, only over a material with cut stones), at
 /// <see cref="PairFillColumn"/> (the rim's outer colour, 0 when the edge is seamless, else 1), at
 /// <see cref="PairBandColumn"/> (the soft band's colour, its width, 0 for none), then from <see cref="PairRampColumn"/>
 /// the rim sampled every <see cref="RampStep"/> pixels from the edge inwards, <see cref="RampTexels"/> texels (colour,
@@ -194,7 +194,7 @@ public static class TerrainBlendLut
                 TerrainMaterial lowerMaterial = lower < 0 ? null : layerMaterials[lower];
                 TerrainStyle.EdgeSettings edge = style.GetEdge(layerMaterials[upper], lowerMaterial);
                 bool wholeStones = cutStones && edge.SoftWholeStones;
-                WriteEdge(texels, PairRow(layers, upper, lower) * Width, edge, wholeStones);
+                WriteEdge(texels, PairRow(layers, upper, lower) * Width, edge, wholeStones, lowerMaterial != null);
                 if (wholeStones)
                 {
                     texels[LayerRow(upper) * Width + LayerChipsColumn].a = 1f;
@@ -243,16 +243,18 @@ public static class TerrainBlendLut
     }
 
     /// <summary>
-    /// Writes one pair row starting at texel <paramref name="start"/>.
+    /// Writes one pair row starting at texel <paramref name="start"/>; a pair over nothing (not
+    /// <paramref name="overLayer"/>) gets no tufts, so a floor running under walls one cell thick shows none past them
+    /// into the void (Docs/KnownGaps.md, Phase 6).
     /// </summary>
-    private static void WriteEdge(Color[] texels, int start, TerrainStyle.EdgeSettings edge, bool wholeStones)
+    private static void WriteEdge(Color[] texels, int start, TerrainStyle.EdgeSettings edge, bool wholeStones, bool overLayer)
     {
         Color shadow = edge.ShadowColour;
         Color outline = edge.OutlineColour;
         Color band = edge.SoftBandColour;
         texels[start + PairShadowColumn] = new Color(shadow.r, shadow.g, shadow.b, edge.ShadowAlpha);
         texels[start + PairOutlineColumn] = new Color(outline.r, outline.g, outline.b, edge.DrawOutline ? 1f : 0f);
-        texels[start + PairWidthsColumn] = new Color(edge.ShadowWidth, edge.RimWidth, edge.TuftHeight, wholeStones ? 1f : 0f);
+        texels[start + PairWidthsColumn] = new Color(edge.ShadowWidth, edge.RimWidth, overLayer ? edge.TuftHeight : 0f, wholeStones ? 1f : 0f);
         Color outer = edge.EvaluateRim(0f);
         texels[start + PairFillColumn] = new Color(outer.r, outer.g, outer.b, edge.Seamless ? 0f : 1f);
         texels[start + PairBandColumn] = new Color(band.r, band.g, band.b, edge.SoftBandWidth);

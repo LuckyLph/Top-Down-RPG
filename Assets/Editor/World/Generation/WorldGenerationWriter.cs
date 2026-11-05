@@ -123,11 +123,12 @@ public static class WorldGenerationWriter
             }
 
             string emptyHash = ChunkContent.EmptyHash(composition.LayerOrder);
+            Dictionary<TerrainMaterial, Tile> tiles = new();
             Dictionary<string, List<Vector2Int>> holders = RecordedHolders(generator);
             Dictionary<Vector2Int, Outcome> outcomes = new();
             foreach (Vector2Int coords in targets)
             {
-                ChunkWrite result = WriteOne(generator, composition, coords, force, created, emptyHash, LeftOut(generator, composition, coords, holders, targets, outcomes));
+                ChunkWrite result = WriteOne(generator, composition, coords, force, created, emptyHash, tiles, LeftOut(generator, composition, coords, holders, targets, outcomes));
                 outcomes[coords] = result.Outcome;
                 results.Add(result);
             }
@@ -136,7 +137,7 @@ public static class WorldGenerationWriter
             {
                 if (IsWritten(outcomes[coords]) && HoldsKeptIds(generator, coords, holders, targets, outcomes))
                 {
-                    ChunkWrite again = WriteOne(generator, composition, coords, true, created, emptyHash, LeftOut(generator, composition, coords, holders, targets, outcomes));
+                    ChunkWrite again = WriteOne(generator, composition, coords, true, created, emptyHash, tiles, LeftOut(generator, composition, coords, holders, targets, outcomes));
                     outcomes[coords] = again.Outcome;
                     results[results.FindIndex(result => result.Coords == coords)] = again;
                 }
@@ -187,9 +188,10 @@ public static class WorldGenerationWriter
     /// <paramref name="leaveOut"/> (another chunk keeping its content still holds them), in which case the hash returned
     /// is the one read back from the grid. The prop instances under the grid's <see cref="GeneratedPropsName"/> (made
     /// when missing) become the chunk's props in order, each where <see cref="ChunkContent.RootOf"/> puts it; every object
-    /// outside those two roots stays.
+    /// outside those two roots stays. Each material's ground tile is taken from <paramref name="tiles"/> when it holds
+    /// it, else looked up (<see cref="TerrainTileWriter.TileOf"/>) and added to it.
     /// </summary>
-    public static string WriteChunk(Grid grid, WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut = null)
+    public static string WriteChunk(Grid grid, WorldComposition composition, Vector2Int coords, ICollection<string> leaveOut = null, IDictionary<TerrainMaterial, Tile> tiles = null)
     {
         string problem = ChunkProblem(grid, composition, coords);
         if (problem == null && !grid.TryGetComponent(out AreaTerrain _))
@@ -197,7 +199,7 @@ public static class WorldGenerationWriter
             WorldAuthoring.SetUpTerrainEdits(grid);
         }
 
-        List<AreaGenerator.TerrainLayer> layers = problem == null ? PlanLayers(grid, composition, coords, out problem) : null;
+        List<AreaGenerator.TerrainLayer> layers = problem == null ? PlanLayers(grid, composition, coords, tiles, out problem) : null;
         List<Vector3Int> raisedCells = new();
         List<TileBase> raisedTiles = new();
         problem ??= PlanRaised(composition, coords, raisedCells, raisedTiles);
@@ -262,8 +264,9 @@ public static class WorldGenerationWriter
     /// (every chunk's list covering its neighbours' border materials, the locked chunks' hand work included), Bake
     /// changed coasts, Bake changed glows, Place markers (the waystones' and exits', <see cref="WorldMarkers"/>, so a
     /// moved waystone's stone follows it), Repair ids (which keeps derived ids, being set and unique) and Validate.
-    /// Returns a line per step
-    /// with its time, each followed by the step's own lines. Refuses in play mode.
+    /// The world's chunks are opened once for them all and closed after the last, unsaved (each step saves what it
+    /// changed), the scenes open before staying as they were. Returns a line per step with its time, each followed by
+    /// the step's own lines, between a line for the opening and one for the closing. Refuses in play mode.
     /// </summary>
     public static List<string> RunWorldSteps(WorldDefinition world)
     {
@@ -275,29 +278,43 @@ public static class WorldGenerationWriter
         }
 
         Stopwatch watch = Stopwatch.StartNew();
-        List<string> added = WorldAuthoring.SyncLayerLists(world);
-        report.Add($"Sync layer lists: {added.Count} layers added or removed in {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(added);
-        watch.Restart();
-        List<string> baked = WorldAuthoring.BakeCoastMaps(world, true);
-        report.Add($"Bake changed coasts: {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(baked);
-        watch.Restart();
-        List<string> glows = WorldAuthoring.BakeGlowMaps(world, true);
-        report.Add($"Bake changed glows: {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(glows);
-        watch.Restart();
-        List<string> markers = WorldMarkers.Place(world);
-        report.Add($"Place markers: {markers.Count} lines in {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(markers);
-        watch.Restart();
-        List<string> repaired = PersistentIds.Repair(world);
-        report.Add($"Repair ids: {repaired.Count} changed in {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(repaired);
-        watch.Restart();
-        List<string> problems = WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds());
-        report.Add($"Validate: {problems.Count} problems in {watch.ElapsedMilliseconds} ms.");
-        report.AddRange(problems);
+        List<Scene> opened = new();
+        try
+        {
+            WorldAuthoring.OpenChunkScenes(world, opened);
+            report.Add($"Open the chunks: {opened.Count} opened in {watch.ElapsedMilliseconds} ms.");
+            watch.Restart();
+            List<string> added = WorldAuthoring.SyncLayerLists(world);
+            report.Add($"Sync layer lists: {added.Count} layers added or removed in {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(added);
+            watch.Restart();
+            List<string> baked = WorldAuthoring.BakeCoastMaps(world, true);
+            report.Add($"Bake changed coasts: {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(baked);
+            watch.Restart();
+            List<string> glows = WorldAuthoring.BakeGlowMaps(world, true);
+            report.Add($"Bake changed glows: {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(glows);
+            watch.Restart();
+            List<string> markers = WorldMarkers.Place(world);
+            report.Add($"Place markers: {markers.Count} lines in {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(markers);
+            watch.Restart();
+            List<string> repaired = PersistentIds.Repair(world);
+            report.Add($"Repair ids: {repaired.Count} changed in {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(repaired);
+            watch.Restart();
+            List<string> problems = WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds());
+            report.Add($"Validate: {problems.Count} problems in {watch.ElapsedMilliseconds} ms.");
+            report.AddRange(problems);
+        }
+        finally
+        {
+            watch.Restart();
+            WorldAuthoring.CloseScenes(opened, false);
+            report.Add($"Close the chunks: {opened.Count} closed in {watch.ElapsedMilliseconds} ms.");
+        }
+
         return report;
     }
 
@@ -415,9 +432,10 @@ public static class WorldGenerationWriter
     /// <summary>
     /// Writes, or leaves, the chunk at <paramref name="coords"/> for <see cref="Write"/>, and reports it, leaving out
     /// the mobs of <paramref name="leftOut"/> (by id, with the chunk still holding each). A chunk whose scene could not
-    /// be saved fails and is not recorded, so the next write tries it again.
+    /// be saved fails and is not recorded, so the next write tries it again. The ground tiles found go into
+    /// <paramref name="tiles"/> for the next chunks (<see cref="WriteChunk"/>).
     /// </summary>
-    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, Dictionary<Vector2Int, double> created, string emptyHash, Dictionary<string, Vector2Int> leftOut)
+    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, Dictionary<Vector2Int, double> created, string emptyHash, Dictionary<TerrainMaterial, Tile> tiles, Dictionary<string, Vector2Int> leftOut)
     {
         WorldDefinition world = generator.World;
         string name = WorldAuthoring.ChunkSceneName(world, coords);
@@ -473,7 +491,7 @@ public static class WorldGenerationWriter
             }
             else if (grid != null)
             {
-                string written = WriteChunk(grid, composition, coords, leftOut.Keys);
+                string written = WriteChunk(grid, composition, coords, leftOut.Keys, tiles);
                 write = Lap(watch);
                 if (written == null)
                 {
@@ -719,10 +737,11 @@ public static class WorldGenerationWriter
     /// The ground layers the chunk at <paramref name="coords"/> gets on <paramref name="grid"/>, in the style's order:
     /// its list's materials and the materials of the layers its <see cref="AreaTerrain"/> lists, each on the tilemap
     /// drawing it now (or its material's own name, <see cref="GroundLayerMigration.TilemapName"/>) with its material's
-    /// tile and terrain type. Null, with <paramref name="problem"/>, when a material lacks either or the layers cannot
-    /// be set up (<see cref="AreaGroundSetup.Problem"/>).
+    /// tile (from <paramref name="tiles"/>, <see cref="GroundTileOf"/>) and terrain type. Null, with
+    /// <paramref name="problem"/>, when a material lacks either or the layers cannot be set up
+    /// (<see cref="AreaGroundSetup.Problem"/>).
     /// </summary>
-    private static List<AreaGenerator.TerrainLayer> PlanLayers(Grid grid, WorldComposition composition, Vector2Int coords, out string problem)
+    private static List<AreaGenerator.TerrainLayer> PlanLayers(Grid grid, WorldComposition composition, Vector2Int coords, IDictionary<TerrainMaterial, Tile> tiles, out string problem)
     {
         TerrainStyle style = composition.Style;
         TerrainBlendRenderer renderer = grid.GetComponent<TerrainBlendRenderer>();
@@ -740,7 +759,7 @@ public static class WorldGenerationWriter
         List<AreaGenerator.TerrainLayer> layers = new();
         foreach (TerrainMaterial material in materials)
         {
-            Tile tile = TerrainTileWriter.TileOf(material);
+            Tile tile = GroundTileOf(material, tiles);
             TerrainType2D terrainType = AssetDatabase.LoadAssetAtPath<TerrainType2D>(GroundLayerMigration.TerrainTypePath(material));
             if (tile == null || terrainType == null)
             {
@@ -755,6 +774,26 @@ public static class WorldGenerationWriter
 
         problem = AreaGroundSetup.Problem($"{grid.name} (chunk {coords})", style, layers);
         return problem == null ? layers : null;
+    }
+
+    /// <summary>
+    /// The ground tile of <paramref name="material"/>, from <paramref name="found"/> when it holds it, else looked up
+    /// (<see cref="TerrainTileWriter.TileOf"/>) and added to it; looked up each time without one.
+    /// </summary>
+    private static Tile GroundTileOf(TerrainMaterial material, IDictionary<TerrainMaterial, Tile> found)
+    {
+        if (found != null && found.TryGetValue(material, out Tile tile) && tile != null)
+        {
+            return tile;
+        }
+
+        tile = TerrainTileWriter.TileOf(material);
+        if (found != null)
+        {
+            found[material] = tile;
+        }
+
+        return tile;
     }
 
     /// <summary>

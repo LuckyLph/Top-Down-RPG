@@ -70,8 +70,8 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Props | Since PropGeneration.md's Phase 6: each region's layout comes with its scatter layers' props, moved with it, but each blocking prop whose footprint would cross a chunk's border (a chunk's navigation sees only its own props) and each prop on its waystone's plaza (a plant beside it too), which are left out. The wilds lay their forest per chunk, each footprint a cell inside the chunk. The writer writes each chunk's props as prefab instances under its grid's `GeneratedProps`, and its written hash covers them. Laid with props, a region's mobs and its terrain laid after its props (the Lakeside's ponds, the Coast's plateau) differ from the layout laid without them, which the Overworld held until then. |
 | Lights | Since Lighting.md's Phase 6, after the wilds, so nothing laid before them moves and no mob changes: a pair of the gate torches (`GateTorches`) at each gate, on the first cell off its road either side of it across the road, the first on its west or south side; then a lamp post (`RoadLamp`) along each stone road every `RoadLampSpacing` (12) cells of its spline from half that, at points within `RoadLampReach` (30) of a gate and `RoadLampEntryClearance` (5) or more from every waystone and gate, on the first cell beside the road, across the road from the last lamp where it stands there, else on the same side. A light stands only on the wilds' grass and its patches, in one chunk, a cell from every mob, on no footprint, and a lamp with no footprint beside it; it takes the walk-through props off its cell. The gravel roads and the stretches of stone road far from every gate stay dark. |
 | Tooling | A World Generator window (`Tools/TopDownRPG/World/World Generator`) over the world generator asset: the preview, the chunk grid with each chunk's state, lock and wide allowance, and writing changed chunks, or the selected chunks or every chunk forced, followed by the World Editor's whole-world steps. Its logic sits in a session object the tests and tools drive with the confirmation passed in, so no dialog ever runs under a tool. Chunk scenes of the world open with unsaved changes stop a write. The World Editor and the Scene Generator stay as they are; the Scene Generator is where a region's generator is tuned on its own. |
-| Whole-world steps | They open every chunk scene of the world at once, as now, at every size up to 16 x 16, with no windows of chunks: Phase 0 ran them on 256 chunks (Sync layer lists 12 s, Bake every coast 48 s, Repair ids 12 s, Validate 12 s) with every chunk open in 16.6 GB of the editor's private memory, 31 to 34 MB a chunk, about half of it graphics memory, mostly each chunk renderer's own texture arrays. Windows come only if worlds grow past 16 x 16 or the editor has to run in 16 GB. The writer opens one chunk at a time. With props, lights and skies, and the texture arrays shared, the 256 chunks open in about 5 MB a chunk of the editor's own allocations, but each step takes 43 s or more, opening and closing every chunk (The 16 x 16 world measured). |
-| Targets | Composing the Overworld in memory under 1 s (Phase 0: 0.4 to 0.7 s) and a 16 x 16 world under 10 s (4.6 s with 88 regions); writing a chunk that exists under 0.5 s (open, write, save, close: 0.14 s with its coast map baked, 0.43 to 0.48 s without) and under 1 s when it is created (0.35 to 0.53 s); the whole Overworld written, synced, baked, repaired and validated under 30 s once its chunks exist (15 to 19 s) and under a minute the first time (29 s); a 16 x 16 world under 4 minutes from nothing, its first bake included (3 to 3.8 minutes); scenes of 1.5 MB or less per chunk (1.05 to 1.42 MB). Phase 3 records what the tool reaches. Since props, lights and skies, the 16 x 16 world misses three: composing takes 14 s, writing it from nothing 14 minutes and its scenes are up to 3.2 MB (The 16 x 16 world measured). |
+| Whole-world steps | They open every chunk scene of the world at once, as now, at every size up to 16 x 16, with no windows of chunks: Phase 0 ran them on 256 chunks (Sync layer lists 12 s, Bake every coast 48 s, Repair ids 12 s, Validate 12 s) with every chunk open in 16.6 GB of the editor's private memory, 31 to 34 MB a chunk, about half of it graphics memory, mostly each chunk renderer's own texture arrays. Windows come only if worlds grow past 16 x 16 or the editor has to run in 16 GB. The writer opens one chunk at a time. With props, lights and skies, and the texture arrays shared, the 256 chunks open in about 5 MB a chunk of the editor's own allocations, but each step took 43 s or more, opening and closing every chunk (The 16 x 16 world measured). Since Phase 6 the steps open the chunks once for them all and close them after the last, a bake imports its maps together and each step saves the chunks it changed together: the 16 x 16 world's first steps take 2 minutes where they took 12. |
+| Targets | Composing the Overworld in memory under 1 s (Phase 0: 0.4 to 0.7 s) and a 16 x 16 world under 10 s (4.6 s with 88 regions); writing a chunk that exists under 0.5 s (open, write, save, close: 0.14 s with its coast map baked, 0.43 to 0.48 s without) and under 1 s when it is created (0.35 to 0.53 s); the whole Overworld written, synced, baked, repaired and validated under 30 s once its chunks exist (15 to 19 s) and under a minute the first time (29 s); a 16 x 16 world under 4 minutes from nothing, its first bake included (3 to 3.8 minutes); scenes of 1.5 MB or less per chunk (1.05 to 1.42 MB). Phase 3 records what the tool reaches. Since props, lights and skies, the 16 x 16 world missed three: composing took 14 s, writing it from nothing 14 minutes and its scenes are up to 3.2 MB (The 16 x 16 world measured). Phase 6 brings composing to 9.5 s and writing from nothing to 4.6 minutes, still past its 4 (Phase 6 notes). |
 | Branch | `feature/world-generation`, from `feature/world-streaming`, moved onto `main` once that branch merges. |
 
 ## Terms
@@ -576,7 +576,54 @@ Phase 3's last item, measured on 2026-11-05 on `main` after KnownGaps.md, when t
 - **What surprised.**
   - The coast bake's own work is a small part of a map's 2 s with every chunk open: a glow map of a few cells costs as much, so the time goes to the import and the save beside 255 other open scenes.
   - The second round's scenes differ from the first's by a few hundred bytes each, the new objects' file IDs being random; their content and coast maps are the same.
-- **Decisions changed**: none. The whole-world steps keep every chunk open at once (Decisions: Whole-world steps), which the memory now allows; the 16 x 16 world's time targets are missed and left to Later, with the ways to meet them.
+- **Decisions changed**: none. The whole-world steps keep every chunk open at once (Decisions: Whole-world steps), which the memory now allows; the 16 x 16 world's time targets are missed, and Phase 6 takes the ways to meet them.
+
+### Phase 6: the 16 x 16 world written faster
+
+On `feature/world-write-speed`, from `main` after The 16 x 16 world measured: the three ways its Later named to write a 16 x 16 world from nothing within 4 minutes again and compose it within 10 s.
+
+- [x] Composing: the Lights step marks the mobs on the world's cells and lists the walk-through props by chunk before it tries a light, so a light looks only at its own cells and chunk, and takes the props its lights stand on off the list at the end, the others keeping their order; the Chunks step lists the mobs and props by chunk once and hashes each chunk from its own (`ChunkContent.Of` takes them). The same composition as before, cell for cell, prop for prop and hash for hash, on the Overworld and the 16 x 16 world.
+- [x] The whole-world steps open the world's chunks once for them all (`RunWorldSteps`), each step finding them open, and close them after the last, unsaved, each step having saved what it changed; the scenes open before stay as they were.
+- [x] Each bake writes its maps first, then imports them in one batch of asset changes and gives those lacking their import settings the settings in a second (`ImportMaps`), and saves the chunks it changed together; Sync layer lists, Place markers and Repair ids save theirs together too (`WorldAuthoring.SaveScenes`, each scene marked changed first: `EditorSceneManager.SaveScenes` saves only the scenes marked changed, and a chunk's marker changed through a serialized object does not mark its scene).
+- [x] Two lookups found while measuring: Sync layer lists looked up the tile of every layer it kept, in every chunk, even when it removed none (`TerrainTileWriter.TileOf`, 9 ms, searching every ground tile); it looks them up only when a layer goes. The writer looked up each material's tile in every chunk it wrote; a write now looks each up once (`WriteChunk`'s `tiles`).
+- [x] Tests: `WorldGenerationWriterTests` (the whole-world steps open each chunk once and close them all, the world validating from disk after), `WorldUpkeepTests` (`BakingTheMaps_WithTheChunksClosed_SavesEachChunkWithItsMaps`: with the chunks closed, a coast map for each and a glow map for the lava's chunk, imported together, saved with their chunks and read back from disk with their import settings).
+- [x] Measured again from nothing (Phase 6 notes).
+- [x] Docs: Architecture.md's Editor tools (Generation/ and WorldAuthoring) and Tests.
+- [ ] The full EditMode and PlayMode suites pass before merging into `main`.
+
+#### Phase 6 notes
+
+Measured on 2026-11-05 as The 16 x 16 world measured measured it: the same synthetic world on a fresh scratch world `Synthetic16` at (10240, 0) each round, written from nothing through `WorldGeneratorSession`, Write changed chunks then the whole-world steps; two rounds, the second in brackets; the helper (under `Assets/Editor/Spike`) and the scratch world deleted before the commit, the readings in `Recordings/WorldGeneration/Phase6`, which git ignores.
+
+| | The 16 x 16 world measured | Phase 6 | target |
+|---|---|---|---|
+| composing | 14.0 s | 9.5 s (9.7) | under 10 s |
+| writing the chunks | 158 s | 146 s (147) | |
+| opening the chunks | in each step | 43 s (44) | |
+| Sync layer lists | 63 s | 0.5 s (0.5) | |
+| Bake changed coasts | 263 s | 48 s (48) | |
+| Bake changed glows | 153 s | 11 s (11) | |
+| Place markers | 110 s | 7.5 s (7.5) | |
+| Repair ids | 43 s | 0.1 s (0.1) | |
+| Validate | 44 s | 1.2 s (1.3) | |
+| closing the chunks | in each step | 9 s (9) | |
+| the whole-world steps | 703 s | 120 s (121) | |
+| in all | 14.1 minutes | 4.6 minutes (4.6) | under 4 minutes |
+
+- **Composing.** Lights went from 2.7 s to 48 ms and Chunks from 4.1 s to 2.2 s, of which 2 s are now the region skies' weights (`RegionSkyField.Plan`, each sample walking the cells within the blend's reach), which grow with the chunks, not their square. The Overworld composes in 0.59 to 0.72 s (Lights 3 to 6 ms, Chunks 70 to 81 ms). A fingerprint of each composition (each chunk's hash and list, then the entries, warnings, mobs and props in order) is byte for byte the one before.
+- **Writing the chunks.** A median of 559 ms a chunk (create 259, open 30, write 112, save 132, close 10), the write 112 ms where it was 172, its tiles looked up once a write.
+- **The steps.**
+  - Opening the chunks: 43 s, about 170 ms a chunk as its objects wake (25 s for a forced rewrite's steps, the time varying with the editor's state).
+  - The coast bake: its own work 27 s, 74 maps of a median of 335 ms on one thread; its import and saves 20 s: the 74 new maps' first import as the default compressed sprites 8 s and again with their settings 1.4 s, saving the 74 chunks about 120 ms each, and their import in one refresh 0.75 s. The glows' 10 s, for 42 maps, go the same way.
+  - Each refresh still costs 0.6 s or more with every chunk open: the 2D SpriteShape package's postprocessor (`SpriteShapeAssetPostProcessor`) walks every loaded object on each, 0.5 to 0.9 s of it. The project draws no sprite shape.
+  - Closing the chunks: 9 s (17 s for a forced rewrite's steps).
+- **A forced rewrite** of every chunk, nothing changed: 116 s in all (6.1 minutes before): composing 9 s, writing 61 s, the steps 45 s.
+- **No churn.** The forced rewrite and the steps after it changed none of the world's 1265 files.
+- **Memory.** The editor's private memory from 7.6 to at most 9.5 GB (8.8), the machine keeping 8.5 GB or more of its 32 GB free, the commit charge at most 32.4 GB.
+- **What surprised.**
+  - `EditorSceneManager.SaveScenes` skips a scene not marked changed, and a chunk's marker changed through a serialized object does not mark its scene, which `SaveScene` saved anyway: the first run of the batched bakes saved no chunk, so `SaveScenes` marks each scene first.
+  - A texture destroyed after its PNG is written reads as null: the glow bake first took its written maps for none.
+- **Decisions changed**: none. The 4 minutes are missed by 36 s; what is left of them is in Later.
 
 ### Later
 
@@ -586,7 +633,7 @@ Phase 3's last item, measured on 2026-11-05 on `main` after KnownGaps.md, when t
 - A marker for waystones on their plazas.
 - A content hash per world in the join payload.
 - The hybrid of compact chunk data written into tilemaps at load, if scene sizes or player-build loads call for it.
-- A 16 x 16 world written from nothing within its 4 minutes again, and composed within 10 s (The 16 x 16 world measured): the chunks opened once for all the whole-world steps instead of once a step; the maps imported and their chunks saved without every other chunk open, or the imports batched and each chunk saved once after the bakes; the composition's props and mobs listed by chunk for the Lights and Chunks steps.
+- A 16 x 16 world written from nothing within its 4 minutes (Phase 6 notes: 4.6 minutes): what a chunk's open goes to (43 s for the 256), the coast maps' distance fields baked on several threads (27 s on one), a new map imported once, with its settings (8 s for the coasts' first import; a texture preprocessor for the baked maps would have every texture imported again once, as it is added), the SpriteShape package removed if nothing needs it (0.5 s or more of each refresh with every chunk open), and creating a chunk (259 ms each).
 
 ## Testing
 

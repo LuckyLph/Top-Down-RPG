@@ -29,7 +29,8 @@ using Object = UnityEngine.Object;
 /// added in the middle of a chunk's list (a region's light, Docs/Lighting.md, Phase 6); a locked chunk is
 /// never opened, an unchanged one is skipped without being opened, one
 /// changed by hand is refused unless forced; a second write changes no file; and the written world validates, bakes
-/// its coasts and keeps its derived ids through Repair ids; an entry moves only once the chunk under its new place is
+/// its coasts and keeps its derived ids through Repair ids, the whole-world steps opening each chunk once
+/// (Docs/WorldGeneration.md, Phase 6); an entry moves only once the chunk under its new place is
 /// written; a mob whose id a chunk keeping its content still holds is left out of the chunk it moved to, also when that
 /// chunk is refused after it in the same write. Creating a chunk keeps the open scenes' unsaved changes and refuses
 /// beside an untitled scene with some.
@@ -503,9 +504,12 @@ public class WorldGenerationWriterTests
         Assert.That(new List<WorldDefinition.Entry>(world.Entries).ConvertAll(entry => entry.Name), Is.EqualTo(new[] { TestWorldGenerators.Clearing, "camp" }), "the generated entries first, the hand-made one after");
         Assert.That(EditorBuildSettings.scenes.Length, Is.EqualTo(buildScenes), "a dev world's chunks stay out of the build");
 
-        List<string> steps = WorldGenerationWriter.RunWorldSteps(world);
+        List<string> stepOpens = new();
+        List<string> steps = WatchingOpens(stepOpens, () => WorldGenerationWriter.RunWorldSteps(world));
         Assert.That(steps, Has.Some.StartsWith("Repair ids: 0 changed"), string.Join("\n", steps));
-        Assert.That(WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds()), Is.Empty, "the written world validates");
+        Assert.That(stepOpens, Is.EquivalentTo(composition.Chunks.ConvertAll(chunk => ScenePathOf(world, chunk.Coords))), "the whole-world steps open each chunk once");
+        Assert.That(WorldAuthoring.OpenChunkCoords(world), Is.Empty, "and close them all after");
+        Assert.That(WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds()), Is.Empty, "the written world validates, its maps and markers saved");
         Assert.That(WorldAuthoring.StaleCoastMaps(world), Is.Empty, "no coast map is stale");
         Assert.That(WorldAuthoring.StaleGlowMaps(world), Is.Empty, "no glow map is stale");
         foreach (WorldComposition.Chunk chunk in composition.Chunks)
@@ -922,7 +926,7 @@ public class WorldGenerationWriterTests
     /// <summary>
     /// Runs <paramref name="write"/>, adding the path of every scene opened meanwhile to <paramref name="opened"/>.
     /// </summary>
-    private static List<WorldGenerationWriter.ChunkWrite> WatchingOpens(List<string> opened, Func<List<WorldGenerationWriter.ChunkWrite>> write)
+    private static T WatchingOpens<T>(List<string> opened, Func<T> write)
     {
         void Record(Scene scene, OpenSceneMode mode) => opened.Add(scene.path);
         EditorSceneManager.sceneOpened += Record;

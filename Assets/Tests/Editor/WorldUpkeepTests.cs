@@ -12,8 +12,9 @@ using UnityEngine.Tilemaps;
 /// created on disk in a temporary folder under <c>Assets/Dev</c> and deleted after, both chunks grass with a strip of
 /// ocean by their border: a coast map out of date is a validation problem that stops a build, until the maps are baked;
 /// Sync layer lists adds the layer a neighbour's border shows and removes an empty one nothing shows any more, with its
-/// runtime edits' entry; a chunk scene saved by a script gives its spawn points ids and its ids no duplicate; and the
-/// chunks opened in the editor draw with one shared set of texture arrays.
+/// runtime edits' entry; a chunk scene saved by a script gives its spawn points ids and its ids no duplicate; the
+/// maps baked with the chunks closed are imported together and saved with their chunks (Docs/WorldGeneration.md, Phase
+/// 6); and the chunks opened in the editor draw with one shared set of texture arrays.
 /// </summary>
 public class WorldUpkeepTests
 {
@@ -149,6 +150,42 @@ public class WorldUpkeepTests
     }
 
     /// <summary>
+    /// With lava painted in chunk (1, 0) and both chunks closed, Bake changed maps opens them, bakes a coast map for
+    /// each (the ocean strip lies within the reach of both) and a glow map for the lava's chunk, imports the maps of each
+    /// bake together and saves the chunks together (Docs/WorldGeneration.md, Phase 6), closing the chunks again: read back
+    /// from disk, each chunk records its maps, the maps have their import settings, and no map is out of date.
+    /// </summary>
+    [Test]
+    public void BakingTheMaps_WithTheChunksClosed_SavesEachChunkWithItsMaps()
+    {
+        WorldAuthoring.Paint(world, WorldAuthoring.MaterialNamed("Lava"), Cells(new RectInt(96, 24, 8, 8)));
+        EditorSceneManager.SaveOpenScenes();
+        WorldAuthoring.CloseChunks(world, new List<Vector2Int>());
+        Assert.That(WorldAuthoring.OpenChunkCoords(world), Is.Empty, "the chunks are closed");
+
+        List<string> lines = WorldAuthoring.BakeCoastMaps(world, true);
+        lines.AddRange(WorldAuthoring.BakeGlowMaps(world, true));
+
+        Assert.That(WorldAuthoring.OpenChunkCoords(world), Is.Empty, "the bakes close the chunks they opened");
+        Assert.That(lines, Has.Some.StartsWith("Imported 2 maps, deleted 0 and saved 2 chunks"), string.Join("\n", lines));
+        Assert.That(lines, Has.Some.StartsWith("Imported 1 maps, deleted 0 and saved 1 chunks"), string.Join("\n", lines));
+        foreach (Vector2Int coords in new[] { Vector2Int.zero, Vector2Int.right })
+        {
+            string coastSource = ReadChunk(coords, chunk => chunk.CoastMap != null ? chunk.CoastSource : null);
+            Assert.That(coastSource, Is.Not.Null.And.Not.Empty.And.Not.EqualTo(WorldAuthoring.StaleSource), $"chunk {coords} saved with its coast map");
+            TextureImporter coast = (TextureImporter)AssetImporter.GetAtPath(WorldAuthoring.CoastMapPath(world, coords));
+            Assert.That(coast.GetDefaultPlatformTextureSettings().format, Is.EqualTo(TextureImporterFormat.R16), $"chunk {coords}'s coast map is R16");
+            Assert.That(coast.textureType == TextureImporterType.Default && !coast.sRGBTexture && !coast.isReadable, Is.True, $"chunk {coords}'s coast map is a linear texture, not readable");
+        }
+
+        Assert.That(ReadChunk(Vector2Int.right, chunk => chunk.GlowMap != null && chunk.GlowArea.width > 0 && !string.IsNullOrEmpty(chunk.GlowSource)), Is.True, "the lava's chunk saved with its glow map");
+        Assert.That(ReadChunk(Vector2Int.zero, chunk => chunk.GlowMap == null), Is.True, "nothing glows within reach of chunk (0, 0)");
+        TextureImporter glow = (TextureImporter)AssetImporter.GetAtPath(WorldAuthoring.GlowMapPath(world, Vector2Int.right));
+        Assert.That(glow.GetDefaultPlatformTextureSettings().format, Is.EqualTo(TextureImporterFormat.RGBA32), "the glow map is RGBA32");
+        Assert.That(WorldValidation.ValidateWorld(world, WorldLayout.AllWorlds()), Has.None.Contains(": its coast").And.None.Contains(": its glow"), "no map is out of date");
+    }
+
+    /// <summary>
     /// The two chunks opened in the editor draw with one set of shared texture arrays (<see cref="EditModeTerrainArrays"/>),
     /// not each its own.
     /// </summary>
@@ -186,6 +223,24 @@ public class WorldUpkeepTests
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// <paramref name="read"/> of the chunk marker of the chunk at <paramref name="coords"/>, opened from disk and closed
+    /// again.
+    /// </summary>
+    private T ReadChunk<T>(Vector2Int coords, System.Func<WorldChunk, T> read)
+    {
+        Assert.That(world.TryGetChunkScene(coords, out SceneDefinition definition), Is.True, $"chunk {coords}");
+        Scene scene = EditorSceneManager.OpenScene(definition.ScenePath, OpenSceneMode.Additive);
+        try
+        {
+            return read(SceneQuery.FindFirst<WorldChunk>(scene));
+        }
+        finally
+        {
+            EditorSceneManager.CloseScene(scene, true);
+        }
     }
 
     /// <summary>

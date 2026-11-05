@@ -69,8 +69,8 @@ public static class WorldMarkers
 
     /// <summary>
     /// Places the markers of <paramref name="world"/>'s entries and exits in its chunk scenes, opening those that are not
-    /// open and closing them again, saving the ones it changed. Returns a line per chunk it changed and per marker it
-    /// could not place.
+    /// open and closing them again, saving the ones it changed, together (<see cref="WorldAuthoring.SaveScenes"/>).
+    /// Returns a line per chunk it changed and per marker it could not place.
     /// </summary>
     public static List<string> Place(WorldDefinition world)
     {
@@ -80,6 +80,7 @@ public static class WorldMarkers
         {
             Dictionary<Vector2Int, Grid> grids = OpenGrids(world, opened);
             Dictionary<Vector2Int, List<Placement>> plan = Plan(world, grids, report);
+            List<Scene> changed = new();
             foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
             {
                 plan.TryGetValue(chunk.Key, out List<Placement> placements);
@@ -90,9 +91,11 @@ public static class WorldMarkers
 
                 Scene scene = chunk.Value.gameObject.scene;
                 EditorSceneManager.MarkSceneDirty(scene);
-                EditorSceneManager.SaveScene(scene);
+                changed.Add(scene);
                 report.Add($"{scene.name}: {Describe(placements)}.");
             }
+
+            WorldAuthoring.SaveScenes(changed);
         }
         finally
         {

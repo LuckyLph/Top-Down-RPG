@@ -18,7 +18,7 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [SceneGeneration.md](SceneGeneration.md) | The area generators that fill a scene with terrain, props and spawn points | In use; no phase checklist. |
 | [DualGrid.md](DualGrid.md) | How the dual-grid walls are painted and drawn | Reference; no phase checklist. |
 | [WorldStreaming.md](WorldStreaming.md) | Seamless worlds: chunk scenes streamed around the players, worlds at separate origins, world saves | Done, on `main`. |
-| [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Done, on `main`: the 16 x 16 world measured from nothing (2026-11-05), within the editor's memory but past its time targets, 14 minutes against 4, with the ways to meet them in its Later. |
+| [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Phases 0 to 5 done, on `main`, the 16 x 16 world measured from nothing (2026-11-05) past its time targets, 14 minutes against 4. Phase 6 (the 16 x 16 world written faster: 4.6 minutes from nothing, composed in 9.5 s) on `feature/world-write-speed`, all but the full suites before merging; what is left of the 4 minutes is in its Later. |
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
 | [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Done, on `main`. |
@@ -28,7 +28,7 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 
 ## Next
 
-[KnownGaps.md](KnownGaps.md) is done, on `main`; no plan is in progress. [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted, and its open questions come first; the features below wait for plans of their own. The plans above leave no box unticked; WorldGeneration.md's Later lists how a 16 x 16 world could be written from nothing within its 4 minutes again.
+[KnownGaps.md](KnownGaps.md) is done, on `main`; no plan is in progress. [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted, and its open questions come first; the features below wait for plans of their own. WorldGeneration.md's Phase 6, on `feature/world-write-speed`, waits on the full suites before merging into `main`; its Later lists what is left of a 16 x 16 world's 4 minutes.
 
 ## Later
 

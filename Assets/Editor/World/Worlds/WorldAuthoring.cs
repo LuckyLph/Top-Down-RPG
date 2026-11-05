@@ -32,6 +32,36 @@ public static class WorldAuthoring
     private const float GlobalLightIntensity = 0.85f;
 
     /// <summary>
+    /// A chunk's coast or glow map as a bake leaves it, before the import: the chunk's coordinates and marker, the map's
+    /// path, whether a map was written there (else the chunk wants none), what it was baked from, and the cells it
+    /// covers (a glow map's).
+    /// </summary>
+    private readonly struct BakedMap
+    {
+        /// <summary>
+        /// The map at <paramref name="mapPath"/> of the chunk at <paramref name="coords"/> with
+        /// <paramref name="marker"/>, written when <paramref name="written"/>, baked from <paramref name="source"/> and
+        /// covering <paramref name="area"/>.
+        /// </summary>
+        public BakedMap(Vector2Int coords, WorldChunk marker, string mapPath, bool written, string source, RectInt area)
+        {
+            Coords = coords;
+            Marker = marker;
+            MapPath = mapPath;
+            Written = written;
+            Source = source;
+            Area = area;
+        }
+
+        public Vector2Int Coords { get; }
+        public WorldChunk Marker { get; }
+        public string MapPath { get; }
+        public bool Written { get; }
+        public string Source { get; }
+        public RectInt Area { get; }
+    }
+
+    /// <summary>
     /// The folder of the world named <paramref name="worldName"/>.
     /// </summary>
     public static string FolderOf(string worldName)
@@ -619,7 +649,8 @@ public static class WorldAuthoring
     /// draw yet, at its place in the style's order, and removes each empty layer of a material neither shows any more
     /// (Docs/KnownGaps.md, Phase 5: a material that left a neighbour's strip, the grass a chunk of open sea was made with),
     /// with its <see cref="AreaTerrain"/> entry, since saved edits name their layer by material. Opens the scenes that are
-    /// not open, and saves the ones it changed. Returns a line per layer added or removed.
+    /// not open, and saves the ones it changed, together (<see cref="SaveScenes"/>). Returns a line per layer added or
+    /// removed.
     /// </summary>
     public static List<string> SyncLayerLists(WorldDefinition world)
     {
@@ -629,6 +660,7 @@ public static class WorldAuthoring
         {
             Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
             WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            List<Scene> changedScenes = new();
             foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
             {
                 RectInt reach = Grow(ChunkCoords.Bounds(chunk.Key), WorldChunk.SkirtCells);
@@ -649,9 +681,11 @@ public static class WorldAuthoring
                 if (changed)
                 {
                     RefreshLinks(chunk.Value);
-                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
+                    changedScenes.Add(chunk.Value.gameObject.scene);
                 }
             }
+
+            SaveScenes(changedScenes);
         }
         finally
         {
@@ -666,8 +700,10 @@ public static class WorldAuthoring
     /// (<see cref="WorldCoastBake"/>), or with <paramref name="onlyChanged"/> only of the chunks whose sea or shore
     /// within the bake's reach changed since their last bake (<see cref="IsCoastStale"/>), opening the scenes that are
     /// not open: a 16-bit PNG beside each chunk scene showing waves (<c>World_name_x_y_Coast.png</c>), set on its
-    /// <see cref="WorldChunk"/> with what it was baked from; a chunk showing none loses its map. Saves the scenes it
-    /// changed. Returns a line per chunk with what it did and how long it took.
+    /// <see cref="WorldChunk"/> with what it was baked from; a chunk showing none loses its map. The maps are written
+    /// first, then imported together and the scenes they changed saved together (<see cref="ImportMaps"/>,
+    /// <see cref="SaveScenes"/>). Returns a line per chunk with what it did and how long its bake took, and one for the
+    /// import and the saves.
     /// </summary>
     public static List<string> BakeCoastMaps(WorldDefinition world, bool onlyChanged = false)
     {
@@ -680,6 +716,7 @@ public static class WorldAuthoring
             System.Diagnostics.Stopwatch read = System.Diagnostics.Stopwatch.StartNew();
             WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
             report.Add($"Read the world's ground in {read.ElapsedMilliseconds} ms.");
+            List<BakedMap> maps = new();
             foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
             {
                 WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
@@ -701,30 +738,28 @@ public static class WorldAuthoring
 
                 ushort[] encoded = WorldCoastBake.BakeChunk(cells, style, materials, ChunkCoords.Bounds(chunk.Key), out int width, out int height);
                 string path = CoastMapPath(world, chunk.Key);
-                Texture2D baked = null;
                 if (encoded != null)
                 {
                     Texture2D texture = WorldCoastBake.ToTexture(encoded, width, height, Path.GetFileNameWithoutExtension(path));
                     File.WriteAllBytes(path, texture.EncodeToPNG());
                     Object.DestroyImmediate(texture);
-                    AssetDatabase.ImportAsset(path);
-                    ConfigureCoastImport(path);
-                    baked = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                }
-                else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
-                {
-                    AssetDatabase.DeleteAsset(path);
                 }
 
-                string recorded = baked != null ? source : string.Empty;
-                if (marker.CoastMap != baked || (marker.CoastSource ?? string.Empty) != recorded)
-                {
-                    SetMarker(marker, world, chunk.Key, baked, recorded);
-                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
-                }
-
-                report.Add($"{chunk.Value.gameObject.scene.name}: {(baked != null ? $"baked {width} x {height}" : "no waves, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
+                maps.Add(new BakedMap(chunk.Key, marker, path, encoded != null, source, default));
+                report.Add($"{chunk.Value.gameObject.scene.name}: {(encoded != null ? $"baked {width} x {height}" : "no waves, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
             }
+
+            report.Add(FinishMaps(maps, ApplyCoastImport, (map, baked) =>
+            {
+                string recorded = baked != null ? map.Source : string.Empty;
+                if (map.Marker.CoastMap == baked && (map.Marker.CoastSource ?? string.Empty) == recorded)
+                {
+                    return false;
+                }
+
+                SetMarker(map.Marker, world, map.Coords, baked, recorded);
+                return true;
+            }));
         }
         finally
         {
@@ -807,8 +842,9 @@ public static class WorldAuthoring
     /// chunks whose glowing ground within reach changed since their last bake (<see cref="IsGlowStale"/>), opening the
     /// scenes that are not open: a PNG beside each chunk scene with something glowing within reach
     /// (<c>World_name_x_y_Glow.png</c>), set on its <see cref="WorldChunk"/> with the cells it covers and what it was
-    /// baked from; a chunk with nothing glowing loses its map. Saves the scenes it changed. Returns a line per chunk
-    /// with what it did and how long it took.
+    /// baked from; a chunk with nothing glowing loses its map. The maps are written first, then imported together and
+    /// the scenes they changed saved together (<see cref="ImportMaps"/>, <see cref="SaveScenes"/>). Returns a line per
+    /// chunk with what it did and how long its bake took, and one for the import and the saves.
     /// </summary>
     public static List<string> BakeGlowMaps(WorldDefinition world, bool onlyChanged = false)
     {
@@ -818,6 +854,7 @@ public static class WorldAuthoring
         {
             Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
             WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            List<BakedMap> maps = new();
             foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
             {
                 WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
@@ -839,30 +876,29 @@ public static class WorldAuthoring
 
                 string path = GlowMapPath(world, chunk.Key);
                 Texture2D texture = WorldGlowBake.BakeChunk(cells, materials, ChunkCoords.Bounds(chunk.Key), Path.GetFileNameWithoutExtension(path), out RectInt area);
-                Texture2D baked = null;
-                if (texture != null)
+                bool written = texture != null;
+                if (written)
                 {
                     File.WriteAllBytes(path, texture.EncodeToPNG());
                     Object.DestroyImmediate(texture);
-                    AssetDatabase.ImportAsset(path);
-                    ConfigureGlowImport(path);
-                    baked = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                }
-                else if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null)
-                {
-                    AssetDatabase.DeleteAsset(path);
                 }
 
-                string recorded = baked != null ? source : string.Empty;
-                RectInt recordedArea = baked != null ? area : new RectInt(0, 0, 0, 0);
-                if (marker.GlowMap != baked || !marker.GlowArea.Equals(recordedArea) || (marker.GlowSource ?? string.Empty) != recorded)
-                {
-                    SetGlowMarker(marker, baked, recordedArea, recorded);
-                    EditorSceneManager.SaveScene(chunk.Value.gameObject.scene);
-                }
-
-                report.Add($"{chunk.Value.gameObject.scene.name}: {(baked != null ? $"baked {area.width} x {area.height} cells" : "nothing glows, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
+                maps.Add(new BakedMap(chunk.Key, marker, path, written, source, area));
+                report.Add($"{chunk.Value.gameObject.scene.name}: {(written ? $"baked {area.width} x {area.height} cells" : "nothing glows, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
             }
+
+            report.Add(FinishMaps(maps, ApplyGlowImport, (map, baked) =>
+            {
+                string recorded = baked != null ? map.Source : string.Empty;
+                RectInt recordedArea = baked != null ? map.Area : new RectInt(0, 0, 0, 0);
+                if (map.Marker.GlowMap == baked && map.Marker.GlowArea.Equals(recordedArea) && (map.Marker.GlowSource ?? string.Empty) == recorded)
+                {
+                    return false;
+                }
+
+                SetGlowMarker(map.Marker, baked, recordedArea, recorded);
+                return true;
+            }));
         }
         finally
         {
@@ -983,12 +1019,18 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// The import settings of a baked glow map: a linear, uncompressed RGBA32 texture without mipmaps, bilinear and
-    /// clamped, as the renderer builds its own, and not readable.
+    /// Gives <paramref name="importer"/> the import settings of a baked glow map, when it lacks them, and returns whether
+    /// it changed them: a linear, uncompressed RGBA32 texture without mipmaps, bilinear and clamped, as the renderer
+    /// builds its own, and not readable.
     /// </summary>
-    private static void ConfigureGlowImport(string path)
+    private static bool ApplyGlowImport(TextureImporter importer)
     {
-        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
+        if (HasMapImport(importer) && settings.format == TextureImporterFormat.RGBA32 && settings.textureCompression == TextureImporterCompression.Uncompressed)
+        {
+            return false;
+        }
+
         importer.textureType = TextureImporterType.Default;
         importer.sRGBTexture = false;
         importer.mipmapEnabled = false;
@@ -997,11 +1039,10 @@ public static class WorldAuthoring
         importer.wrapMode = TextureWrapMode.Clamp;
         importer.isReadable = false;
         importer.textureCompression = TextureImporterCompression.Uncompressed;
-        TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
         settings.format = TextureImporterFormat.RGBA32;
         settings.textureCompression = TextureImporterCompression.Uncompressed;
         importer.SetPlatformTextureSettings(settings);
-        importer.SaveAndReimport();
+        return true;
     }
 
     /// <summary>
@@ -1023,12 +1064,18 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// The import settings of a baked coast map: a linear, uncompressed R16 texture without mipmaps, bilinear and
-    /// clamped, as the renderer builds its own, and not readable.
+    /// Gives <paramref name="importer"/> the import settings of a baked coast map, when it lacks them, and returns
+    /// whether it changed them: a linear, uncompressed R16 texture without mipmaps or alpha, bilinear and clamped, as the
+    /// renderer builds its own, and not readable.
     /// </summary>
-    private static void ConfigureCoastImport(string path)
+    private static bool ApplyCoastImport(TextureImporter importer)
     {
-        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
+        if (HasMapImport(importer) && importer.alphaSource == TextureImporterAlphaSource.None && settings.format == TextureImporterFormat.R16 && settings.textureCompression == TextureImporterCompression.Uncompressed)
+        {
+            return false;
+        }
+
         importer.textureType = TextureImporterType.Default;
         importer.sRGBTexture = false;
         importer.mipmapEnabled = false;
@@ -1038,11 +1085,54 @@ public static class WorldAuthoring
         importer.wrapMode = TextureWrapMode.Clamp;
         importer.isReadable = false;
         importer.textureCompression = TextureImporterCompression.Uncompressed;
-        TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
         settings.format = TextureImporterFormat.R16;
         settings.textureCompression = TextureImporterCompression.Uncompressed;
         importer.SetPlatformTextureSettings(settings);
-        importer.SaveAndReimport();
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="importer"/> has the settings every baked map shares: a default, linear texture without
+    /// mipmaps or scaling, bilinear and clamped, not readable and uncompressed.
+    /// </summary>
+    private static bool HasMapImport(TextureImporter importer)
+    {
+        return importer.textureType == TextureImporterType.Default
+            && !importer.sRGBTexture
+            && !importer.mipmapEnabled
+            && importer.npotScale == TextureImporterNPOTScale.None
+            && importer.filterMode == FilterMode.Bilinear
+            && importer.wrapModeU == TextureWrapMode.Clamp
+            && importer.wrapModeV == TextureWrapMode.Clamp
+            && !importer.isReadable
+            && importer.textureCompression == TextureImporterCompression.Uncompressed;
+    }
+
+    /// <summary>
+    /// Imports <paramref name="maps"/>, the maps a bake wrote or found no longer wanted, together
+    /// (<see cref="ImportMaps"/> with <paramref name="configure"/>'s settings), deleting the asset of each chunk that no
+    /// longer has a map, then has <paramref name="record"/> set each chunk's map, null for none (it returns whether it
+    /// changed the chunk), and saves the chunks it changed together (<see cref="SaveScenes"/>). Returns a line with how
+    /// many maps it imported and deleted, how many chunks it saved and how long it took.
+    /// </summary>
+    private static string FinishMaps(IReadOnlyList<BakedMap> maps, System.Func<TextureImporter, bool> configure, System.Func<BakedMap, Texture2D, bool> record)
+    {
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        List<string> written = maps.Where(map => map.Written).Select(map => map.MapPath).ToList();
+        List<string> deleted = maps.Where(map => !map.Written && AssetDatabase.LoadAssetAtPath<Texture2D>(map.MapPath) != null).Select(map => map.MapPath).ToList();
+        ImportMaps(written, deleted, configure);
+        List<Scene> changed = new();
+        foreach (BakedMap map in maps)
+        {
+            Texture2D baked = map.Written ? AssetDatabase.LoadAssetAtPath<Texture2D>(map.MapPath) : null;
+            if (record(map, baked))
+            {
+                changed.Add(map.Marker.gameObject.scene);
+            }
+        }
+
+        SaveScenes(changed);
+        return $"Imported {written.Count} maps, deleted {deleted.Count} and saved {changed.Count} chunks in {watch.ElapsedMilliseconds} ms.";
     }
 
     /// <summary>
@@ -1272,19 +1362,88 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Closes the scenes <see cref="OpenChunkScenes"/> opened, saving the changed ones first unless
-    /// <paramref name="save"/> is false.
+    /// Closes the scenes <see cref="OpenChunkScenes"/> opened, saving the changed ones first, together
+    /// (<see cref="SaveScenes"/>), unless <paramref name="save"/> is false.
     /// </summary>
     public static void CloseScenes(List<Scene> opened, bool save = true)
     {
+        if (save)
+        {
+            SaveScenes(opened.Where(scene => scene.isDirty).ToList());
+        }
+
         foreach (Scene scene in opened)
         {
-            if (save && scene.isDirty)
+            EditorSceneManager.CloseScene(scene, true);
+        }
+    }
+
+    /// <summary>
+    /// Saves <paramref name="scenes"/> together (<see cref="EditorSceneManager.SaveScenes"/>), so the asset database
+    /// takes them in one refresh, not one each: with every chunk of a 16 x 16 world open, a refresh costs about a
+    /// second (Docs/WorldGeneration.md, Phase 6). Each is marked changed first, since only changed scenes are saved
+    /// together and a change made through a serialized object does not always mark its scene.
+    /// </summary>
+    public static void SaveScenes(IReadOnlyList<Scene> scenes)
+    {
+        if (scenes.Count == 0)
+        {
+            return;
+        }
+
+        foreach (Scene scene in scenes)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        EditorSceneManager.SaveScenes(scenes.ToArray());
+    }
+
+    /// <summary>
+    /// Imports the maps written at <paramref name="written"/> and deletes the assets at <paramref name="deleted"/> in
+    /// one batch of asset changes, then sets <paramref name="configure"/>'s import settings on each written map whose
+    /// importer lacks them (it returns whether it changed any) and imports those again in a second batch, so the asset
+    /// database refreshes twice for any number of maps (<see cref="SaveScenes"/>).
+    /// </summary>
+    private static void ImportMaps(IReadOnlyList<string> written, IReadOnlyList<string> deleted, System.Func<TextureImporter, bool> configure)
+    {
+        if (written.Count == 0 && deleted.Count == 0)
+        {
+            return;
+        }
+
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (string path in written)
             {
-                EditorSceneManager.SaveScene(scene);
+                AssetDatabase.ImportAsset(path);
             }
 
-            EditorSceneManager.CloseScene(scene, true);
+            foreach (string path in deleted)
+            {
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (string path in written)
+            {
+                if (AssetImporter.GetAtPath(path) is TextureImporter importer && configure(importer))
+                {
+                    importer.SaveAndReimport();
+                }
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
         }
     }
 
@@ -1587,7 +1746,7 @@ public static class WorldAuthoring
     /// <paramref name="needed"/>, taking it out of the grid's <see cref="AreaTerrain"/> first, then setting the layers
     /// left up as they were (<see cref="AreaGroundSetup.SetUpLayers"/>, which removes the empty tilemaps no longer drawn
     /// nor listed). Nothing when a layer left has no tile or terrain type to set it up with. Returns a line per layer
-    /// removed.
+    /// removed. The tiles of the layers left are looked up only when a layer goes.
     /// </summary>
     private static List<string> PruneLayers(Grid grid, ICollection<TerrainMaterial> needed)
     {
@@ -1598,7 +1757,6 @@ public static class WorldAuthoring
         }
 
         List<Tilemap> pruned = new();
-        List<AreaGenerator.TerrainLayer> kept = new();
         foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
         {
             if (layer == null || layer.Tilemap == null || layer.Material == null)
@@ -1610,6 +1768,19 @@ public static class WorldAuthoring
             {
                 pruned.Add(layer.Tilemap);
                 removed.Add($"{grid.gameObject.scene.name}: removed {layer.Material.name}, empty and shown by no cell or border");
+            }
+        }
+
+        if (pruned.Count == 0)
+        {
+            return removed;
+        }
+
+        List<AreaGenerator.TerrainLayer> kept = new();
+        foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
+        {
+            if (pruned.Contains(layer.Tilemap))
+            {
                 continue;
             }
 
@@ -1623,7 +1794,7 @@ public static class WorldAuthoring
             kept.Add(new AreaGenerator.TerrainLayer(layer.Tilemap.name, tile, terrainType, layer.Material));
         }
 
-        if (pruned.Count == 0 || AreaGroundSetup.Problem(grid.gameObject.scene.name, renderer.Style, kept) != null)
+        if (AreaGroundSetup.Problem(grid.gameObject.scene.name, renderer.Style, kept) != null)
         {
             return new List<string>();
         }

@@ -213,6 +213,9 @@ internal sealed class WorldComposer
     private int[] closed;
     private int[] goals;
     private bool[] chunkExists;
+    private bool[] mobCells;
+    private Dictionary<Vector2Int, List<int>> walkThroughProps;
+    private bool[] takenOff;
     private int searchId;
     private readonly OpenCells open = new();
 
@@ -1913,9 +1916,59 @@ internal sealed class WorldComposer
     /// spacing apart along it from half of it, at points within the road lamp reach of a gate and no nearer a waystone
     /// or a gate than the road lamp entry clearance, each on the first cell beside the road, across the road from the
     /// last lamp where it stands there, else on the same side (<see cref="TryPlaceLight"/>). The gravel roads stay
-    /// dark.
+    /// dark. The mobs are marked on the cells and the walk-through props listed by chunk first, and the props the lights
+    /// stand on are taken off the list at the end, the others keeping their order.
     /// </summary>
     private void LayLights()
+    {
+        mobCells = new bool[width * height];
+        foreach (WorldComposition.Mob mob in composition.Mobs)
+        {
+            int index = IndexOf(mob.Cell.x, mob.Cell.y);
+            if (index >= 0)
+            {
+                mobCells[index] = true;
+            }
+        }
+
+        walkThroughProps = new Dictionary<Vector2Int, List<int>>();
+        for (int i = 0; i < composition.Props.Count; i++)
+        {
+            WorldComposition.Prop prop = composition.Props[i];
+            if (prop.Blocks)
+            {
+                continue;
+            }
+
+            if (!walkThroughProps.TryGetValue(prop.Chunk, out List<int> inChunk))
+            {
+                walkThroughProps[prop.Chunk] = inChunk = new List<int>();
+            }
+
+            inChunk.Add(i);
+        }
+
+        takenOff = new bool[composition.Props.Count];
+        PlaceLights();
+        int kept = 0;
+        for (int i = 0; i < composition.Props.Count; i++)
+        {
+            if (i >= takenOff.Length || !takenOff[i])
+            {
+                composition.Props[kept++] = composition.Props[i];
+            }
+        }
+
+        composition.Props.RemoveRange(kept, composition.Props.Count - kept);
+        mobCells = null;
+        walkThroughProps = null;
+        takenOff = null;
+    }
+
+    /// <summary>
+    /// The gate torches, then the road lamps, of <see cref="LayLights"/>.
+    /// </summary>
+    private void PlaceLights()
     {
         List<Vector2> gates = new();
         List<GameObject> torches = new();
@@ -2043,7 +2096,7 @@ internal sealed class WorldComposer
     /// <paramref name="corner"/>, placed by <paramref name="scope"/>, when every cell it covers lies in one chunk on the
     /// wilds' grass and its patches (off the roads, the plazas and the beach) that no blocking prop holds, a cell from
     /// every mob, and, when <paramref name="alone"/>, with no other footprint beside it; the walk-through props on those
-    /// cells are taken off. Returns whether it stood.
+    /// cells are freed and marked to be taken off the list (<see cref="LayLights"/>). Returns whether it stood.
     /// </summary>
     private bool TryPlaceLight(GameObject prefab, Vector2Int corner, string scope, bool alone)
     {
@@ -2071,6 +2124,11 @@ internal sealed class WorldComposer
                     return false;
                 }
 
+                if (index >= 0 && mobCells[index])
+                {
+                    return false;
+                }
+
                 bool beside = !inside && (dx < 0 || dx >= covered.x) != (dy < 0 || dy >= covered.y);
                 if (alone && beside && index >= 0 && footprints[index])
                 {
@@ -2079,21 +2137,16 @@ internal sealed class WorldComposer
             }
         }
 
-        foreach (WorldComposition.Mob mob in composition.Mobs)
+        if (walkThroughProps.TryGetValue(ChunkCoords.ChunkOf(corner), out List<int> inChunk))
         {
-            if (mob.Cell.x >= block.xMin - 1 && mob.Cell.x <= block.xMax && mob.Cell.y >= block.yMin - 1 && mob.Cell.y <= block.yMax)
+            foreach (int i in inChunk)
             {
-                return false;
-            }
-        }
-
-        for (int i = composition.Props.Count - 1; i >= 0; i--)
-        {
-            WorldComposition.Prop prop = composition.Props[i];
-            if (!prop.Blocks && block.Contains(prop.Cell))
-            {
-                MarkProp(prop, false);
-                composition.Props.RemoveAt(i);
+                WorldComposition.Prop prop = composition.Props[i];
+                if (!takenOff[i] && block.Contains(prop.Cell))
+                {
+                    MarkProp(prop, false);
+                    takenOff[i] = true;
+                }
             }
         }
 
@@ -2658,12 +2711,37 @@ internal sealed class WorldComposer
     /// Lists each chunk's materials, in row order of the chunks: its own cells' and those of its neighbours' border
     /// strips (<see cref="WorldChunk.SkirtCells"/> wide), in the style's order; the region skies reaching it with their
     /// weights (<see cref="RegionSkyField"/>, Docs/Lighting.md, Phase 8); and hashes its content
-    /// (<see cref="ChunkContent"/>).
+    /// (<see cref="ChunkContent"/>), from its own mobs and props, listed by chunk first.
     /// </summary>
     private void ListChunks()
     {
         Vector2Int size = composition.SizeInChunks;
         RegionSkyField skies = new(composition, settings.SkyBlend);
+        Dictionary<Vector2Int, List<WorldComposition.Mob>> mobsByChunk = new();
+        foreach (WorldComposition.Mob mob in composition.Mobs)
+        {
+            Vector2Int chunk = ChunkCoords.ChunkOf(mob.Cell);
+            if (!mobsByChunk.TryGetValue(chunk, out List<WorldComposition.Mob> inChunk))
+            {
+                mobsByChunk[chunk] = inChunk = new List<WorldComposition.Mob>();
+            }
+
+            inChunk.Add(mob);
+        }
+
+        Dictionary<Vector2Int, List<WorldComposition.Prop>> propsByChunk = new();
+        foreach (WorldComposition.Prop prop in composition.Props)
+        {
+            if (!propsByChunk.TryGetValue(prop.Chunk, out List<WorldComposition.Prop> inChunk))
+            {
+                propsByChunk[prop.Chunk] = inChunk = new List<WorldComposition.Prop>();
+            }
+
+            inChunk.Add(prop);
+        }
+
+        List<WorldComposition.Mob> noMobs = new();
+        List<WorldComposition.Prop> noProps = new();
         for (int cy = 0; cy < size.y; cy++)
         {
             for (int cx = 0; cx < size.x; cx++)
@@ -2685,7 +2763,9 @@ internal sealed class WorldComposer
 
                 skies.Plan(chunk);
                 composition.Chunks.Add(chunk);
-                chunk.ContentHash = ChunkContent.Of(composition, coords).Hash();
+                List<WorldComposition.Mob> mobs = mobsByChunk.TryGetValue(coords, out List<WorldComposition.Mob> chunkMobs) ? chunkMobs : noMobs;
+                List<WorldComposition.Prop> props = propsByChunk.TryGetValue(coords, out List<WorldComposition.Prop> chunkProps) ? chunkProps : noProps;
+                chunk.ContentHash = ChunkContent.Of(composition, coords, mobs, props).Hash();
             }
         }
     }

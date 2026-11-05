@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -193,8 +193,8 @@ public static class PersistentIds
 
     /// <summary>
     /// Gives every mob spawn point of <paramref name="world"/>'s chunks its id and makes every id unique within the
-    /// world (<see cref="MakeUnique"/>), opening the chunk scenes that are not open and saving the scenes it changed.
-    /// Returns a line per object changed.
+    /// world (<see cref="MakeUnique"/>), opening the chunk scenes that are not open and saving the scenes it changed,
+    /// together (<see cref="WorldAuthoring.SaveScenes"/>). Returns a line per object changed.
     /// </summary>
     public static List<string> Repair(WorldDefinition world)
     {
@@ -225,13 +225,7 @@ public static class PersistentIds
                 report.Add($"{PathOf(changed)}: new id {changed.Id}.");
             }
 
-            foreach (Scene scene in scenes.Values)
-            {
-                if (scene.isDirty)
-                {
-                    EditorSceneManager.SaveScene(scene);
-                }
-            }
+            WorldAuthoring.SaveScenes(scenes.Values.Where(scene => scene.isDirty).ToList());
         }
         finally
         {

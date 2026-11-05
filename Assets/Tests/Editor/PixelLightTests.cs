@@ -28,8 +28,10 @@ using UnityEngine.Tilemaps;
 /// a point light and to the sun (Phase 11), in whole art pixels, while the afternoon's sun and ground beyond the light's
 /// reach draw today's pixels, and a sprite's normals light its side facing a point light. A prop's lamp shadow
 /// (Docs/LightingGaps.md, Phase 2) darkens a unit standing in it by column and a prop whole, by the shadow at their
-/// feet, and leaves other sprites as they were. At one screen pixel an art pixel a light's shadow holds still as the
-/// camera moves too (Docs/LightingGaps.md, Phase 4). Renders from later editor updates, until something is drawn.
+/// feet, and other sprites at each art pixel, as the ground; a wall's (Docs/KnownGaps.md, Phase 7) darkens a unit south
+/// of it whole, its head over the wall's top too, and leaves one beside it lit. At one screen pixel an art pixel a
+/// light's shadow holds still as the camera moves too (Docs/LightingGaps.md, Phase 4). Renders from later editor
+/// updates, until something is drawn.
 /// </summary>
 public class PixelLightTests
 {
@@ -760,10 +762,11 @@ public class PixelLightTests
     /// with the same render without the caster: a unit standing wholly in the shadow darkens in every pixel; a unit
     /// standing across its edge darkens in its columns over the shadow and keeps the light in those beyond it; a prop
     /// whose feet lie in the shadow darkens whole, its columns beyond the edge too; and a sprite of neither the units'
-    /// nor the props' rendering layers keeps every pixel as it was.
+    /// nor the props' rendering layers (a flat prop, an arrow) darkens at each art pixel over the shadow, as the ground
+    /// does, and keeps every pixel beside it (Docs/KnownGaps.md, Phase 7).
     /// </summary>
     [UnityTest]
-    public IEnumerator UnderALampsShadow_AUnitDarkensByColumn_APropWhole_AndOtherSpritesKeepTheLight()
+    public IEnumerator UnderALampsShadow_AUnitDarkensByColumn_APropWhole_AndOtherSpritesByArtPixel()
     {
         TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(150, 150, 150, 255), true), 16, 12);
         AddGlobalLight(Color.white, 0.2f);
@@ -785,11 +788,13 @@ public class PixelLightTests
         Vector2 propInside = new(8f, 7.3125f);
         Vector2 propAcross = new(8.625f, 7.3125f);
         Vector2 plain = new(8f, 4.875f);
+        Vector2 plainBeside = new(10f, 4.875f);
         AddSprite(grey, rect, inside, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
         AddSprite(grey, rect, across, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
         AddSprite(grey, rect, propInside, false).renderingLayerMask = RenderingLayerMask.GetMask(PropsLayer);
         AddSprite(grey, rect, propAcross, false).renderingLayerMask = RenderingLayerMask.GetMask(PropsLayer);
         AddSprite(grey, rect, plain, false);
+        AddSprite(grey, rect, plainBeside, false);
         Rect world = new(6f, 2f, 5f, 7f);
 
         prop.enabled = false;
@@ -810,7 +815,8 @@ public class PixelLightTests
                 ExpectLampShadow(problems, "the unit inside", open, cast, width, world, inside + offset, true);
                 ExpectLampShadow(problems, "the prop inside", open, cast, width, world, propInside + offset, true);
                 ExpectLampShadow(problems, "the prop across the edge", open, cast, width, world, propAcross + offset, true);
-                ExpectLampShadow(problems, "the plain sprite", open, cast, width, world, plain + offset, false);
+                ExpectLampShadow(problems, "the plain sprite in the shadow", open, cast, width, world, plain + offset, true);
+                ExpectLampShadow(problems, "the plain sprite beside it", open, cast, width, world, plainBeside + offset, false);
                 if (column >= 1 && column <= 5)
                 {
                     ExpectLampShadow(problems, "the unit across the edge, over the shadow", open, cast, width, world, across + offset, true);
@@ -818,6 +824,72 @@ public class PixelLightTests
                 else if (column >= 10 && column <= 14)
                 {
                     ExpectLampShadow(problems, "the unit across the edge, beyond it", open, cast, width, world, across + offset, false);
+                }
+            }
+        }
+
+        Assert.That(problems, Is.Empty, string.Join("; ", problems.GetRange(0, Mathf.Min(6, problems.Count))));
+    }
+
+    /// <summary>
+    /// A bright point light casting shadows under a dim global light, north of a wall whose caster shadows the ground's
+    /// sorting layers alone, as the walls' do (Docs/KnownGaps.md, Phase 7), each sprite compared with the same render
+    /// without the wall: a unit south of the wall, in its shadow, its head drawn over the wall's own cells, which the wall
+    /// leaves lit, darkens in every pixel, its head included; a prop there, its top reaching past the wall into the light,
+    /// darkens whole; a sprite of neither the units' nor the props' rendering layers in the shadow darkens; and a unit
+    /// beside the shadow keeps every pixel as it was.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator UnderAWallsLampShadow_AUnitDarkensWhole_ItsHeadOverTheWallToo_AndOneBesideItKeepsTheLight()
+    {
+        TerrainBlendRenderer terrain = AddTerrain(SolidTexture(128, 128, new Color32(150, 150, 150, 255), true), 16, 12);
+        AddGlobalLight(Color.white, 0.2f);
+        Shader.SetGlobalVector(DayNightPresenter.ReliefId, new Vector4(0.2f, 0.2f, 0.2f, 0f));
+        AddPointLight(new Vector2(8f, 8f), 8f, 3f, true);
+        ShadowCaster2D wall = AddWallCaster(new Rect(7f, 6f, 2f, 1f));
+        SerializedObject serialized = new(wall);
+        SerializedProperty sortingLayers = serialized.FindProperty("m_ApplyToSortingLayers");
+        sortingLayers.arraySize = 2;
+        sortingLayers.GetArrayElementAtIndex(0).intValue = SortingLayer.NameToID("Default");
+        sortingLayers.GetArrayElementAtIndex(1).intValue = SortingLayer.NameToID("Terrain");
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        wall.Update();
+
+        Texture2D grey = SolidTexture(16, 64, new Color32(150, 150, 150, 255), false);
+        Rect unitRect = new(0f, 0f, 16f, 32f);
+        Rect propRect = new(0f, 0f, 16f, 64f);
+        Vector2 unit = new(8.2f, 5.7f);
+        Vector2 prop = new(7.4f, 5.6f);
+        Vector2 flat = new(8.9f, 4.6f);
+        Vector2 beside = new(10.9f, 5.7f);
+        AddSprite(grey, unitRect, unit, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
+        AddSprite(grey, propRect, prop, false).renderingLayerMask = RenderingLayerMask.GetMask(PropsLayer);
+        AddSprite(grey, unitRect, flat, false);
+        AddSprite(grey, unitRect, beside, false).renderingLayerMask = RenderingLayerMask.GetMask(UnitsLayer);
+        Rect world = new(5f, 4f, 7f, 5f);
+        Vector2 probe = new(10.5f, 4.5f);
+
+        wall.enabled = false;
+        Color32[] open = null;
+        yield return RenderUntilDrawn(terrain, world, probe, false, pixels => open = pixels);
+        wall.enabled = true;
+        wall.Update();
+        Color32[] cast = null;
+        yield return RenderUntilDrawn(terrain, world, probe, false, pixels => cast = pixels);
+
+        int width = Mathf.RoundToInt(world.width * ArtPixelsPerUnit * Zoom);
+        List<string> problems = new();
+        for (int row = 0; row < 64; row++)
+        {
+            for (int column = 0; column < 16; column++)
+            {
+                Vector2 offset = new((column - 7.5f) / ArtPixelsPerUnit, (row + 0.5f) / ArtPixelsPerUnit);
+                ExpectLampShadow(problems, "the prop in the wall's shadow", open, cast, width, world, prop + offset, true);
+                if (row < 32)
+                {
+                    ExpectLampShadow(problems, row >= 10 ? "the unit's head over the wall" : "the unit south of the wall", open, cast, width, world, unit + offset, true);
+                    ExpectLampShadow(problems, "the flat sprite in the wall's shadow", open, cast, width, world, flat + offset, true);
+                    ExpectLampShadow(problems, "the unit beside the shadow", open, cast, width, world, beside + offset, false);
                 }
             }
         }

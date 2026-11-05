@@ -5,13 +5,15 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// <see cref="SunShadowFeature"/>'s passes for the lamps' shadows on the casters (Docs/LightingGaps.md, Phase 2). The
-/// props' Shadow Caster 2Ds shadow only the ground's sorting layers, so URP draws the casters' sorting layer's light in
-/// a batch of its own without them; the first pass, before that sorting layer's sprites, hands the sprite shader the
-/// ground's light texture (blend style 0's of the first batch, which holds the ground's sorting layers, Default and
-/// Terrain, the first sorting layers, lit alike by every light) and the rendering layers of the casters that read it
-/// and of the units among them, which read it, and the sun's shadows (Phase 3), by column; the second, after those
-/// sprites, only reads the texture, so the render graph keeps it until the sprites have drawn. Where every sorting
-/// layer shares one batch (no prop casts) the texture handed over is the sprites' own, and nothing is shadowed.
+/// props' and the walls' Shadow Caster 2Ds shadow only the ground's sorting layers (the walls' since Docs/KnownGaps.md,
+/// Phase 7), so URP draws the casters' sorting layer's light in a batch of its own without them; the first pass, before
+/// that sorting layer's sprites, hands the sprite shader the ground's light texture (blend style 0's of the first batch,
+/// which holds the ground's sorting layers, Default and Terrain, the first sorting layers, lit alike by every light) and
+/// the rendering layers of the casters that read it at their feet and of the units among them, which read it, and the
+/// sun's shadows (Phase 3), by column, every other sprite of that sorting layer reading it at each art pixel; the
+/// second, after those sprites, only reads the texture, so the render graph keeps it until the sprites have drawn.
+/// Where every sorting layer shares one batch (nothing casts near a burning light) the texture handed over is the
+/// sprites' own, and nothing is shadowed.
 /// </summary>
 public sealed class LampShadowPass : ScriptableRenderPass2D
 {

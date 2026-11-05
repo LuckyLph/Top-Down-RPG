@@ -53,6 +53,12 @@ public sealed class CharacterActionLayer
     public AttackPhase Phase { get; private set; }
 
     /// <summary>
+    /// When the contact (a cast's release) stops showing: its length after <see cref="ReachContact"/>, or after the windup
+    /// of an action that reached it on its own.
+    /// </summary>
+    public float ContactEndsAt => (contacted ? contactTime : startTime + timeline.Windup) + timeline.Contact;
+
+    /// <summary>
     /// The current frame's sprite in the action's direction, or null when nothing plays.
     /// </summary>
     public Sprite Sprite => IsPlaying ? clip.SpriteAt(Direction, Frame) : null;

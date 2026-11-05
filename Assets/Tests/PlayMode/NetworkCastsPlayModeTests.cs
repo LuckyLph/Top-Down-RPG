@@ -12,8 +12,9 @@ using VContainer;
 /// Phase 2) shining in Bolt's colour at the release and off once the cast is over; a client's cast interrupted mid-way
 /// stops the host's copy before its release and never resolves, and one cancelled late, its cancel arriving after the
 /// cast time, never shows a release either; a client switching weapons mid-cast has the host resolve the ability it
-/// cast; and the host's cast plays on the client's copy of the host's player, holding its gather until the host's
-/// completion arrives.
+/// cast; the host's cast plays on the client's copy of the host's player, holding its gather until the host's
+/// completion arrives; and a client's buffered cast shows the first cast's release for its time on its own player and on
+/// the host's copy before its gather, its release on the copy as the host resolves it (Docs/KnownGaps.md, Phase 7).
 /// </summary>
 public class NetworkCastsPlayModeTests
 {
@@ -259,6 +260,113 @@ public class NetworkCastsPlayModeTests
 
         hostAbilities.CompleteCast(BoltSlot);
         yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.ActionPhase == AttackPhase.Contact, "the host's completion to release the copy's cast");
+    }
+
+    /// <summary>
+    /// Under a typical delayed connection, a client casting Bolt and pressing Whirl halfway through it, which buffers
+    /// and fires as Bolt completes (Docs/KnownGaps.md, Phase 7): the client's own player and the host's copy each show
+    /// Bolt's release frame, the copy on the update the host resolves Bolt, and keep it for its 60 ms before Whirl's
+    /// gather shows; the copy then shows Whirl's release on the update the host resolves Whirl, its cast time after
+    /// resolving Bolt, as before.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AClientsBufferedCast_ShowsTheFirstRelease_ThenReleasesAsTheHostResolvesIt()
+    {
+        yield return HostAndJoin(true);
+        delay.Set(NetworkDelay.Conditions.Typical);
+        yield return new WaitForSecondsRealtime(0.3f);
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(gameplay.Resolve<PlayerRegistry>(), client.Manager.LocalClientId);
+        PlayerAbilities copyAbilities = hostCopy.GetComponent<PlayerAbilities>();
+        CharacterVisuals copyVisuals = hostCopy.GetComponentInChildren<CharacterVisuals>();
+        CharacterAnimator copyAnimation = copyVisuals.Animator;
+        CharacterAnimator ownerAnimation = clientOwned.GetComponentInChildren<CharacterVisuals>().Animator;
+        AbilityDefinition bolt = copyAbilities.GetAbility(BoltSlot);
+        AbilityDefinition whirl = copyAbilities.GetAbility(WeaponSlot);
+        Assert.That(whirl.Bufferable, Is.True, "The sword's first ability buffers.");
+        CharacterAnimationClip boltClip = copyVisuals.AnimationSet.Find(bolt.CastClip);
+        CharacterAnimationClip whirlClip = copyVisuals.AnimationSet.Find(whirl.CastClip);
+        int boltResolved = -1;
+        int whirlResolved = -1;
+        float boltResolvedAt = -1f;
+        float whirlResolvedAt = -1f;
+        gameplay.Resolve<AbilityService>().CastResolved += (caster, cast) =>
+        {
+            if (caster != copyAbilities)
+            {
+                return;
+            }
+
+            if (cast.Ability == bolt && boltResolved < 0)
+            {
+                boltResolved = Time.frameCount;
+                boltResolvedAt = Time.time;
+            }
+            else if (cast.Ability == whirl && whirlResolved < 0)
+            {
+                whirlResolved = Time.frameCount;
+                whirlResolvedAt = Time.time;
+            }
+        };
+
+        client.Input.PointAt((Vector2)clientOwned.transform.position + Vector2.right * 3f);
+        client.Input.AbilityPressedThisFrame = BoltSlot;
+        yield return null;
+        client.Input.AbilityPressedThisFrame = -1;
+        float pressAt = Time.time + bolt.CastTime * 0.5f;
+        bool pressed = false;
+        bool ownerReleasedBolt = false;
+        float ownerBoltReleaseAt = -1f;
+        float ownerWhirlAt = -1f;
+        int copyBoltRelease = -1;
+        float copyBoltReleaseAt = -1f;
+        float copyWhirlAt = -1f;
+        int copyWhirlRelease = -1;
+        for (float until = Time.time + 3f; Time.time < until && (whirlResolved < 0 || copyWhirlRelease < 0);)
+        {
+            client.Input.AbilityPressedThisFrame = !pressed && Time.time >= pressAt ? WeaponSlot : -1;
+            pressed |= client.Input.AbilityPressedThisFrame == WeaponSlot;
+            yield return null;
+            float shownAt = Time.time - Time.deltaTime;
+            if (ownerAnimation.IsActing && ownerAnimation.Clip == boltClip && ownerAnimation.ActionPhase == AttackPhase.Contact && ownerBoltReleaseAt < 0f)
+            {
+                ownerReleasedBolt = true;
+                ownerBoltReleaseAt = shownAt;
+            }
+
+            if (ownerAnimation.IsActing && ownerAnimation.Clip == whirlClip && ownerWhirlAt < 0f)
+            {
+                ownerWhirlAt = shownAt;
+            }
+
+            if (copyAnimation.IsActing && copyAnimation.Clip == boltClip && copyAnimation.ActionPhase == AttackPhase.Contact && copyBoltRelease < 0)
+            {
+                copyBoltRelease = Time.frameCount;
+                copyBoltReleaseAt = shownAt;
+            }
+
+            if (copyAnimation.IsActing && copyAnimation.Clip == whirlClip && copyWhirlAt < 0f)
+            {
+                copyWhirlAt = shownAt;
+            }
+
+            if (copyAnimation.IsActing && copyAnimation.Clip == whirlClip && copyAnimation.ActionPhase == AttackPhase.Contact && copyWhirlRelease < 0)
+            {
+                copyWhirlRelease = Time.frameCount;
+            }
+        }
+
+        client.Input.AbilityPressedThisFrame = -1;
+        Assert.That(pressed, Is.True);
+        Assert.That(boltResolved, Is.GreaterThanOrEqualTo(0), "The host resolves Bolt.");
+        Assert.That(whirlResolved, Is.GreaterThanOrEqualTo(0), "The host resolves the buffered Whirl.");
+        Assert.That(whirlResolvedAt - boltResolvedAt, Is.InRange(whirl.CastTime - 0.06f, whirl.CastTime + 0.12f), "Whirl lands its cast time after Bolt, as without the visuals.");
+        Assert.That(ownerReleasedBolt, Is.True, "The client's own player shows Bolt's release.");
+        Assert.That(ownerWhirlAt - ownerBoltReleaseAt, Is.GreaterThanOrEqualTo(bolt.CastTimeline.Contact - 0.005f), "The client's own player keeps Bolt's release for its time.");
+        Assert.That(copyBoltRelease - boltResolved, Is.InRange(0, 1), "The host's copy shows Bolt's release on the update the host resolves it, seen at the next frame's check.");
+        Assert.That(copyWhirlAt - copyBoltReleaseAt, Is.GreaterThanOrEqualTo(bolt.CastTimeline.Contact - 0.005f), "The copy keeps Bolt's release for its time before Whirl's gather.");
+        Assert.That(copyWhirlRelease - whirlResolved, Is.InRange(0, 1), "The copy shows Whirl's release on the update the host resolves it.");
     }
 
     /// <summary>

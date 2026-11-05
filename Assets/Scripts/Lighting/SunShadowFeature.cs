@@ -13,8 +13,9 @@ using UnityEngine.SceneManagement;
 /// frame), and terrain chunks on the cliffs' layers, whose raised ground's cliffs are drawn with the props by the
 /// cliffs' shader over the chunks' own material, as is the ground they stand on, before the props (its second pass), and the clouds' shadows over the whole mask by the cloud shader every
 /// frame (Docs/Lighting.md, Phase 8). It draws nothing while the sun casts nothing (<see cref="SunShadowGlobals"/>), so
-/// the lit shaders then take no sun away anywhere. It also hands the casters the lamps' shadows the props cast on the
-/// ground, day or night (<see cref="LampShadowPass"/>, Docs/LightingGaps.md, Phase 2).
+/// the lit shaders then take no sun away anywhere. It also hands the casters the lamps' shadows the props and the walls
+/// cast on the ground, day or night (<see cref="LampShadowPass"/>, Docs/LightingGaps.md, Phase 2, Docs/KnownGaps.md,
+/// Phase 7).
 /// </summary>
 [DisallowMultipleRendererFeature("Sun Shadows")]
 public sealed class SunShadowFeature : ScriptableRendererFeature

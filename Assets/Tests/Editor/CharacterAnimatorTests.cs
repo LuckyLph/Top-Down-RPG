@@ -16,7 +16,10 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// where it was after an action; a cast's gather stretches to its cast time with its release on the update it completes
 /// (instantly for an instant cast), a long cast channels, a cancel stops it, a Continue cast while running keeps the
 /// legs' gait and phase under its upper body, moving cuts a standing cast's follow-through but never its release, and a
-/// hold ends at the release; updates allocate nothing once warm; the visuals put the sprite on their renderer, the
+/// hold ends at the release; a cast started at another's release (a buffered cast, Docs/KnownGaps.md, Phase 7) waits
+/// for that release's time, then gathers in what is left of its cast time and releases on the update it completes, an
+/// instant one releasing as it starts, a hit-stop holding the first release on, moving starting it at once and a stop
+/// dropping it; updates allocate nothing once warm; the visuals put the sprite on their renderer, the
 /// weapon plays its attack on them while the character stands and runs unarmed, and a copy's attack plays on through
 /// a switch to its weapon that arrives after it.
 /// </summary>
@@ -52,6 +55,7 @@ public class CharacterAnimatorTests
             AttackClip("Slash"),
             CastClip("Cast", 0),
             CastClip("CastRun", 8),
+            CastClip("Second", 0),
             FlourishClip("Flourish")
         }));
     }
@@ -783,6 +787,7 @@ public class CharacterAnimatorTests
         Assert.That(animator.Frame, Is.EqualTo(CastRelease));
         Assert.That(held, Is.LessThan(CastRelease));
 
+        clock.Advance(0.1f);
         animator.PlayCast(cast, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
         clock.Advance(0.25f);
         animator.ReachContact();
@@ -794,8 +799,146 @@ public class CharacterAnimatorTests
     }
 
     /// <summary>
+    /// A cast started on the update another completes (a buffered cast, fired as the running one completes) waits while
+    /// the first cast's release shows its 60 ms, then plays its gather forward in what is left of its own cast time and
+    /// shows its release on the update its completion is reached, as it would have without the wait; a cast started
+    /// during another's gather still replaces it at once.
+    /// </summary>
+    [Test]
+    public void ACastStartedAtAnothersRelease_WaitsForIt_ThenGathersInWhatIsLeft_AndReleasesOnTime()
+    {
+        CharacterAnimationClip first = set.Find("Cast");
+        CharacterAnimationClip second = set.Find("Second");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(first, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(second, null, Vector2.right, false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
+        Assert.That(animator.HasQueuedCast, Is.False, "A cast started during another's gather replaces it at once.");
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Clip, Is.SameAs(second));
+
+        animator.PlayCast(first, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        float completed = clock.Time;
+        animator.ReachContact();
+        animator.PlayCast(second, null, Vector2.right, false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
+        Assert.That(animator.HasQueuedCast, Is.True, "The buffered cast waits for the release.");
+        foreach (float since in new[] { 0f, 0.02f, 0.04f, 0.055f })
+        {
+            clock.Time = completed + since;
+            animator.Update(Vector2.zero, Vector2.right);
+            Assert.That(animator.Sprite, Is.SameAs(first.SpriteAt(CharacterDirections.East, CastRelease)), $"{since} s after the first completed, its release shows.");
+        }
+
+        clock.Time = completed + 0.065f;
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.HasQueuedCast, Is.False);
+        Assert.That(animator.Clip, Is.SameAs(second));
+        Assert.That(animator.Frame, Is.EqualTo(0), "The buffered cast starts its gather once the release has shown.");
+        int lastGather = 0;
+        for (float since = 0.08f; since < 0.3f; since += 0.02f)
+        {
+            clock.Time = completed + since;
+            animator.Update(Vector2.zero, Vector2.right);
+            Assert.That(animator.Clip, Is.SameAs(second));
+            Assert.That(animator.Frame, Is.InRange(lastGather, CastRelease - 1), $"{since} s: the gather plays forward.");
+            lastGather = animator.Frame;
+        }
+
+        Assert.That(lastGather, Is.EqualTo(CastRelease - 1), "The gather reaches its last frame within the cast time.");
+        clock.Time = completed + 0.3f;
+        animator.ReachContact();
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.Frame, Is.EqualTo(CastRelease), "Its release shows on the update it completes.");
+        Assert.That(animator.Sprite, Is.SameAs(second.SpriteAt(CharacterDirections.East, CastRelease)));
+    }
+
+    /// <summary>
+    /// An instant cast buffered behind another, which completes on the update it starts, shows the first cast's release
+    /// for its time, then its own release, then its follow-through.
+    /// </summary>
+    [Test]
+    public void AnInstantCastStartedAtAnothersRelease_ShowsItsReleaseAfterIt()
+    {
+        CharacterAnimationClip first = set.Find("Cast");
+        CharacterAnimationClip flourish = set.Find("Flourish");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.down);
+        animator.PlayCast(first, null, Vector2.down, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        animator.ReachContact();
+        animator.PlayCast(flourish, null, Vector2.down, false, new AttackTimeline(0f, 0.06f, 0.3f), 0f, true);
+        animator.ReachContact();
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Sprite, Is.SameAs(first.SpriteAt(CharacterDirections.South, CastRelease)));
+        clock.Advance(0.065f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Clip, Is.SameAs(flourish));
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Contact));
+        Assert.That(animator.Sprite, Is.SameAs(flourish.SpriteAt(CharacterDirections.South, 0)), "Its own release follows.");
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ActionPhase, Is.EqualTo(AttackPhase.Recovery));
+    }
+
+    /// <summary>
+    /// A caster whose own hit holds its release (80 ms, past the release's 60) keeps showing it while the buffered cast
+    /// starts underneath, which then shows the frame for the real time; moving while a cast waits starts it at once, its
+    /// clip over the run showing with no locomotion frame between; a stop while it waits drops it with the release.
+    /// </summary>
+    [Test]
+    public void ACastWaitingForARelease_FollowsAHoldAMoveAndAStop()
+    {
+        CharacterAnimationClip first = set.Find("Second");
+        CharacterAnimationClip second = set.Find("Cast");
+        CharacterAnimationClip secondRun = set.Find("CastRun");
+        CharacterAnimator animator = new(set, settings, clock);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.PlayCast(first, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        animator.ReachContact();
+        Assert.That(animator.HoldContact(0.08f), Is.True);
+        animator.PlayCast(second, secondRun, Vector2.right, false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(0.07f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.IsHolding, Is.True);
+        Assert.That(animator.Clip, Is.SameAs(second), "The buffered cast runs underneath the hold.");
+        Assert.That(animator.Sprite, Is.SameAs(first.SpriteAt(CharacterDirections.East, CastRelease)), "The hit-stop holds the first release.");
+        clock.Advance(0.02f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.IsHolding, Is.False);
+        Assert.That(animator.Sprite, Is.SameAs(second.SpriteAt(CharacterDirections.East, animator.Frame)));
+
+        animator.PlayCast(first, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        animator.ReachContact();
+        animator.PlayCast(second, secondRun, Vector2.right, false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(0.02f);
+        animator.Update(Vector2.right * RunNatural, Vector2.right);
+        Assert.That(animator.HasQueuedCast, Is.False);
+        Assert.That(animator.IsActing, Is.True, "No locomotion frame shows between the casts.");
+        Assert.That(animator.ShowsMovingCast, Is.True);
+        Assert.That(animator.Clip, Is.SameAs(secondRun));
+
+        animator.PlayCast(first, null, Vector2.right, false, new AttackTimeline(0.25f, 0.06f, 0.24f), 0f, true);
+        clock.Advance(0.25f);
+        animator.ReachContact();
+        animator.PlayCast(second, null, Vector2.right, false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
+        animator.Update(Vector2.zero, Vector2.right);
+        animator.StopAction(CharacterActionKind.Cast);
+        Assert.That(animator.HasQueuedCast, Is.False);
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.IsActing, Is.False, "A stop drops the release and the cast waiting.");
+    }
+
+    /// <summary>
     /// Once warm, updating with changing speeds, facings and gaits, playing, reaching the contact of and stopping
-    /// attacks and casts (standing, over the run, channelling) allocates no managed memory.
+    /// attacks and casts (standing, over the run, channelling, waiting for a release) allocates no managed memory.
     /// </summary>
     [Test]
     public void Update_DoesNotAllocate_OnceWarm()
@@ -828,6 +971,15 @@ public class CharacterAnimatorTests
                 else if (i % 20 == 9)
                 {
                     animator.StopAction(CharacterActionKind.Cast);
+                }
+                else if (i % 20 == 14)
+                {
+                    animator.PlayCast(set.Find("Flourish"), null, Facing(i * 17f), false, new AttackTimeline(0f, 0.06f, 0.3f), 0f, true);
+                }
+                else if (i % 20 == 15)
+                {
+                    animator.ReachContact();
+                    animator.PlayCast(set.Find("Cast"), set.Find("CastRun"), Facing(i * 17f), false, new AttackTimeline(0.3f, 0.06f, 0.24f), 0f, true);
                 }
 
                 animator.Update(Facing(i * 17f) * speeds[i % speeds.Length], Facing(i * 17f));

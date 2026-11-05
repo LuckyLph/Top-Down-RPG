@@ -793,6 +793,15 @@ public static class PropWriter
     }
 
     /// <summary>
+    /// The IDs of the sorting layers a light shadow caster shadows, the ground's (Default and Terrain): the props' casters
+    /// and the walls' (Docs/Lighting.md, Phase 7, Docs/KnownGaps.md, Phase 7).
+    /// </summary>
+    internal static int[] ShadowedSortingLayerIds()
+    {
+        return SortingLayerIds(ShadowedSortingLayers);
+    }
+
+    /// <summary>
     /// The IDs of the sorting layers named <paramref name="names"/>.
     /// </summary>
     private static int[] SortingLayerIds(string[] names)

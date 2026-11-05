@@ -335,30 +335,52 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Gives <paramref name="walls"/>, a walls' data tilemap, the Shadow Caster 2D the walls prefab carries
-    /// (Docs/Lighting.md, Phase 7), unless it has one, as one undo step: shaped by the walls' collider through URP's
-    /// collider shape, on every sorting layer, the walls' own cells left lit, without URP's trim so a shadow starts at the
-    /// walls' cells. Returns the caster, or null with an error when URP shapes it from anything but the collider.
+    /// (Docs/Lighting.md, Phase 7), or brings the one it has in line, as one undo step: shaped by the walls' collider
+    /// through URP's collider shape, the walls' own cells left lit, without URP's trim so a shadow starts at the walls'
+    /// cells, casting onto the ground's sorting layers only (<see cref="PropWriter.ShadowedSortingLayerIds"/>), so units
+    /// and props read the walls' shadows at their feet as they read the props' (Docs/KnownGaps.md, Phase 7). Returns the
+    /// caster, or null with an error when URP shapes a new one from anything but the collider.
     /// </summary>
     public static ShadowCaster2D AddWallShadows(GameObject walls)
     {
-        if (walls.TryGetComponent(out ShadowCaster2D caster))
+        if (!walls.TryGetComponent(out ShadowCaster2D caster))
         {
-            return caster;
+            TilemapCollider2D collider = walls.GetComponent<TilemapCollider2D>();
+            caster = Undo.AddComponent<ShadowCaster2D>(walls);
+            SerializedObject added = new(caster);
+            if (collider == null || added.FindProperty("m_ShadowShape2DComponent").objectReferenceValue != collider)
+            {
+                Debug.LogError($"{walls.name}: its shadow caster is not shaped by the walls' collider.", walls);
+                Undo.DestroyObjectImmediate(caster);
+                return null;
+            }
+
+            added.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
+            added.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(walls);
         }
 
-        TilemapCollider2D collider = walls.GetComponent<TilemapCollider2D>();
-        caster = Undo.AddComponent<ShadowCaster2D>(walls);
+        int[] layers = PropWriter.ShadowedSortingLayerIds();
         SerializedObject serialized = new(caster);
-        if (collider == null || serialized.FindProperty("m_ShadowShape2DComponent").objectReferenceValue != collider)
+        SerializedProperty sortingLayers = serialized.FindProperty("m_ApplyToSortingLayers");
+        bool same = sortingLayers.arraySize == layers.Length;
+        for (int i = 0; same && i < layers.Length; i++)
         {
-            Debug.LogError($"{walls.name}: its shadow caster is not shaped by the walls' collider.", walls);
-            Undo.DestroyObjectImmediate(caster);
-            return null;
+            same = sortingLayers.GetArrayElementAtIndex(i).intValue == layers[i];
         }
 
-        serialized.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(walls);
+        if (!same)
+        {
+            sortingLayers.arraySize = layers.Length;
+            for (int i = 0; i < layers.Length; i++)
+            {
+                sortingLayers.GetArrayElementAtIndex(i).intValue = layers[i];
+            }
+
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(walls);
+        }
+
         return caster;
     }
 

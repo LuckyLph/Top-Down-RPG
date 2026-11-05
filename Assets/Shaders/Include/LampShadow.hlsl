@@ -3,19 +3,28 @@
 
 #include "Assets/Shaders/Include/PixelRelief.hlsl"
 
-// The lamps' shadows on the casters (Docs/LightingGaps.md, Phase 2), which LampShadowPass hands over before the
-// casters' sorting layer draws: the ground's light texture, with the props' lamp shadows the casters' own leaves out,
-// and the rendering layers of the casters (none where no pass hands them over) and of the units among them, which read
-// the lamps' shadows, and the sun's (Phase 3), by column.
+// The lamps' shadows on the casters' sorting layer (Docs/LightingGaps.md, Phase 2), which LampShadowPass hands over
+// before that sorting layer draws: the ground's light texture, with the lamp shadows of the props and the walls
+// (Docs/KnownGaps.md, Phase 7) the casters' own leaves out, and the rendering layers of the casters (none where no pass
+// hands them over, and before that sorting layer) and of the units among them, which read the lamps' shadows, and the
+// sun's (Phase 3), by column.
 TEXTURE2D(_LampShadowGround);
 uint _CasterLayers;
 uint _CasterUnitLayers;
 
-// How a sprite of rendering layers `layers` reads the shadows on the casters: 0 not at all, 1 a prop, whole at its
-// feet, 2 a unit, each column at its feet' row.
+// How a sprite of rendering layers `layers` reads the lamps' shadows: 0 not at all (no pass handed them over), 1 a prop,
+// whole at its feet, 2 a unit, each column at its feet' row, 3 any other sprite of the casters' sorting layer (a flat
+// prop, an arrow, an effect), at each art pixel it draws, as the ground does (Docs/KnownGaps.md, Phase 7).
 float CasterReading(uint layers)
 {
-    return (layers & _CasterLayers) == 0u ? 0.0 : (layers & _CasterUnitLayers) != 0u ? 2.0 : 1.0;
+    return _CasterLayers == 0u ? 0.0 : (layers & _CasterLayers) == 0u ? 3.0 : (layers & _CasterUnitLayers) != 0u ? 2.0 : 1.0;
+}
+
+// Whether a sprite reading the lamps' shadows as `reading` (CasterReading) is a unit, which reads its sun shadows by
+// column too.
+bool CasterReadsByColumn(float reading)
+{
+    return reading > 1.5 && reading < 2.5;
 }
 
 // The ground's light at a world position, read from the one texel holding that point, as PixelLightAt reads the
@@ -29,11 +38,12 @@ half3 LampShadowGroundAt(float2 worldPosition)
     return LOAD_TEXTURE2D_LOD(_LampShadowGround, lightTexel, 0).rgb;
 }
 
-// The share of the lights other than the sky a caster keeps at the art pixel whose centre is `centre`: feet.xy its
+// The share of the lights other than the sky a sprite keeps at the art pixel whose centre is `centre`: feet.xy its
 // feet, feet.z how it reads the lamps' shadows (CasterReading). Read half an art pixel above its feet, under the
-// pixel's column for a unit and under its middle for a prop: the ground's local light (less _LightRelief.xyz) over the
-// casters' own there, brightest channels, so a lamp's shadow on the ground there takes that lamp's light away. All of
-// it for a sprite that reads none, where no local light reaches its feet, and without lights.
+// pixel's column for a unit and under its middle for a prop, and at the art pixel itself for any other sprite: the
+// ground's local light (less _LightRelief.xyz) over the sprites' own there, brightest channels, so a lamp's shadow on
+// the ground there takes that lamp's light away. All of it for a sprite that reads none, where no local light reaches
+// the point read, and without lights.
 half LampShadowKept(float3 feet, float2 centre)
 {
 #if USE_SHAPE_LIGHT_TYPE_0
@@ -42,7 +52,7 @@ half LampShadowKept(float3 feet, float2 centre)
         return 1.0;
     }
 
-    float2 at = float2(feet.z > 1.5 ? centre.x : feet.x, feet.y + 0.5 / ART_PIXELS_PER_UNIT);
+    float2 at = feet.z > 2.5 ? centre : float2(CasterReadsByColumn(feet.z) ? centre.x : feet.x, feet.y + 0.5 / ART_PIXELS_PER_UNIT);
     half own = PixelBrightest(PixelLocalLight(at));
     if (!PixelLocalLightReaches(own))
     {

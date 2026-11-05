@@ -370,6 +370,199 @@ public class NetworkTimingPlayModeTests
     }
 
     /// <summary>
+    /// The client's casts with a bufferable ability pressed halfway through them (Docs/KnownGaps.md, Phase 7), as the
+    /// client's own player and the host's copy of it show them, aimed away from every unit: for each pair of the running
+    /// cast and the buffered one, with no delay and the Typical delay, whether the running cast's release frame showed,
+    /// when the buffered cast's clip first showed and when its release showed, against when the owner completed each
+    /// cast and when the host resolved each (its hits). An animator is read on the frame after the one it drew, at that
+    /// frame's time.
+    /// </summary>
+    [UnityTest, Explicit, Category("NetworkBench"), Timeout(1800000)]
+    public IEnumerator Benchmark_ABufferedCastsRelease()
+    {
+        const int Repeats = 4;
+        const int Bolt = 0;
+        const int Leap = 1;
+        const int FirstWeaponSlot = PlayerAbilities.ClassSlotCount;
+        (int weapon, int running, int buffered)[] pairs =
+        {
+            (0, Bolt, FirstWeaponSlot),
+            (0, FirstWeaponSlot + 1, FirstWeaponSlot),
+            (0, Bolt, Leap),
+            (0, FirstWeaponSlot + 1, Leap),
+            (1, Bolt, FirstWeaponSlot),
+            (1, FirstWeaponSlot + 1, FirstWeaponSlot),
+        };
+
+        yield return HostAndJoin(false);
+        PlayerController owner = client.LocalPlayer.Current.Controller;
+        PlayerController copy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        PlayerWeaponController ownerWeapon = owner.GetComponent<PlayerWeaponController>();
+        PlayerAbilities ownerAbilities = owner.GetComponent<PlayerAbilities>();
+        PlayerAbilities copyAbilities = copy.GetComponent<PlayerAbilities>();
+        CharacterAnimator ownerAnimation = owner.GetComponentInChildren<CharacterVisuals>().Animator;
+        CharacterAnimator copyAnimation = copy.GetComponentInChildren<CharacterVisuals>().Animator;
+        Dictionary<AbilityDefinition, float> resolved = new();
+        Dictionary<int, float> completed = new();
+        gameplay.Resolve<AbilityService>().CastResolved += (caster, cast) =>
+        {
+            if (caster == copyAbilities && !resolved.ContainsKey(cast.Ability))
+            {
+                resolved[cast.Ability] = Time.time;
+            }
+        };
+        ownerAbilities.CastEnded += (slot, done) =>
+        {
+            if (done && !completed.ContainsKey(slot))
+            {
+                completed[slot] = Time.time;
+            }
+        };
+
+        foreach (NetworkDelay.Conditions conditions in new[] { NetworkDelay.Conditions.None, NetworkDelay.Conditions.Typical })
+        {
+            delay.Set(conditions);
+            yield return new WaitForSecondsRealtime(0.6f);
+            foreach ((int weapon, int running, int buffered) in pairs)
+            {
+                if (ownerWeapon.WeaponIndex != weapon)
+                {
+                    Assert.That(ownerWeapon.EquipFromCatalog(weapon), Is.True);
+                    yield return new WaitForSecondsRealtime(conditions.RoundTripMs / 1000f + 0.3f);
+                }
+
+                AbilityDefinition first = ownerAbilities.GetAbility(running);
+                AbilityDefinition second = ownerAbilities.GetAbility(buffered);
+                List<float> ownerShown = new();
+                List<float> ownerReleased = new();
+                List<float> copyShown = new();
+                List<float> copyReleased = new();
+                List<float> hitsLand = new();
+                List<float> secondHits = new();
+                int ownerFirstReleases = 0;
+                int copyFirstReleases = 0;
+                for (int i = 0; i < Repeats; i++)
+                {
+                    yield return SceneBootTestHelper.WaitUntil(() => ownerAbilities.CanCast(running, out _) && ownerAbilities.CanCast(buffered, out _) && !ownerAnimation.IsActing && !copyAnimation.IsActing, "both casts to be ready");
+                    resolved.Clear();
+                    completed.Clear();
+                    BufferedCastWatch ownerWatch = new(first.CastClip, second.CastClip);
+                    BufferedCastWatch copyWatch = new(first.CastClip, second.CastClip);
+                    client.Input.PointAt((Vector2)owner.transform.position + Vector2.left * 3f);
+                    client.Input.AbilityPressedThisFrame = running;
+                    yield return null;
+                    client.Input.AbilityPressedThisFrame = -1;
+                    float pressAt = Time.time + first.CastTime * 0.5f;
+                    bool pressed = false;
+                    for (float until = Time.time + 4f; Time.time < until && !(resolved.ContainsKey(second) && ownerWatch.SecondReleased >= 0f && copyWatch.SecondReleased >= 0f);)
+                    {
+                        if (!pressed && Time.time >= pressAt)
+                        {
+                            client.Input.AbilityPressedThisFrame = buffered;
+                            pressed = true;
+                        }
+                        else
+                        {
+                            client.Input.AbilityPressedThisFrame = -1;
+                        }
+
+                        yield return null;
+                        ownerWatch.Sample(ownerAnimation, Time.time - Time.deltaTime);
+                        copyWatch.Sample(copyAnimation, Time.time - Time.deltaTime);
+                    }
+
+                    client.Input.AbilityPressedThisFrame = -1;
+                    if (!completed.TryGetValue(running, out float firstDone) || !resolved.TryGetValue(first, out float firstHits))
+                    {
+                        Debug.LogWarning($"[NetTiming] {first.DisplayName} then {second.DisplayName}: the first cast did not complete or resolve.");
+                        continue;
+                    }
+
+                    ownerFirstReleases += ownerWatch.FirstReleased >= 0f ? 1 : 0;
+                    copyFirstReleases += copyWatch.FirstReleased >= 0f ? 1 : 0;
+                    hitsLand.Add((firstHits - firstDone) * 1000f);
+                    Add(ownerShown, ownerWatch.SecondShown, firstDone);
+                    Add(copyShown, copyWatch.SecondShown, firstHits);
+                    if (completed.TryGetValue(buffered, out float secondDone) && resolved.TryGetValue(second, out float secondResolved))
+                    {
+                        secondHits.Add((secondResolved - firstDone) * 1000f);
+                        Add(ownerReleased, ownerWatch.SecondReleased, secondDone);
+                        Add(copyReleased, copyWatch.SecondReleased, secondResolved);
+                    }
+                }
+
+                Debug.Log($"[NetTiming] {conditions}, {first.DisplayName} ({first.CastTime:0.##} s) then {second.DisplayName} ({second.CastTime:0.##} s) buffered, {Repeats} casts. "
+                    + $"Owner: {first.DisplayName}'s release shown {ownerFirstReleases} times; {second.DisplayName}'s clip shown after {first.DisplayName} completed (ms): {Describe(ownerShown)}; its release after it completed: {Describe(ownerReleased)}. "
+                    + $"Host's copy: {first.DisplayName}'s release shown {copyFirstReleases} times; {second.DisplayName}'s clip shown after the host resolved {first.DisplayName} (ms): {Describe(copyShown)}; its release after the host resolved it: {Describe(copyReleased)}. "
+                    + $"Hits: {first.DisplayName}'s resolved on the host after the owner completed it (ms): {Describe(hitsLand)}; {second.DisplayName}'s after the owner completed {first.DisplayName}: {Describe(secondHits)}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds the time from <paramref name="from"/> to <paramref name="at"/> in ms to <paramref name="values"/> when
+    /// <paramref name="at"/> was seen.
+    /// </summary>
+    private static void Add(List<float> values, float at, float from)
+    {
+        if (at >= 0f)
+        {
+            values.Add((at - from) * 1000f);
+        }
+    }
+
+    /// <summary>
+    /// What one animator showed of a cast and a buffered cast after it: when the first cast's release frame, the second
+    /// cast's clip and the second cast's release frame first showed (-1 for never).
+    /// </summary>
+    private sealed class BufferedCastWatch
+    {
+        private readonly string first;
+        private readonly string second;
+
+        /// <summary>
+        /// Watches for the clips named <paramref name="firstClip"/> and <paramref name="secondClip"/>.
+        /// </summary>
+        public BufferedCastWatch(string firstClip, string secondClip)
+        {
+            first = firstClip;
+            second = secondClip;
+        }
+
+        public float FirstReleased { get; private set; } = -1f;
+        public float SecondShown { get; private set; } = -1f;
+        public float SecondReleased { get; private set; } = -1f;
+
+        /// <summary>
+        /// Notes what <paramref name="animator"/> shows at <paramref name="now"/>.
+        /// </summary>
+        public void Sample(CharacterAnimator animator, float now)
+        {
+            if (!animator.IsActing || animator.ActionKind != CharacterActionKind.Cast || animator.Clip == null)
+            {
+                return;
+            }
+
+            string shown = animator.Clip.Name;
+            bool release = animator.ActionPhase == AttackPhase.Contact;
+            if (shown == first && release && FirstReleased < 0f && SecondShown < 0f)
+            {
+                FirstReleased = now;
+            }
+
+            if (shown == second && SecondShown < 0f)
+            {
+                SecondShown = now;
+            }
+
+            if (shown == second && release && SecondReleased < 0f)
+            {
+                SecondReleased = now;
+            }
+        }
+    }
+
+    /// <summary>
     /// Boots to the menu, installs the delayed connection, hosts with one mob kept (its AI, motor and body still, the
     /// others deactivated) and joins an in-process client, waiting until both machines see both players and the client
     /// its copy of the mob; the colliders of the client's player and mob copies are off. With

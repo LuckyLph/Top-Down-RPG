@@ -75,7 +75,9 @@ public static class WorldGenerationWriter
     /// <summary>
     /// Writes the chunks of <paramref name="generator"/>'s world at <paramref name="chunks"/> (every chunk of the world,
     /// in row order, when null) from <paramref name="composition"/>, one at a time, and returns what it did with each.
-    /// The missing chunks are created first (<see cref="WorldAuthoring.CreateChunk"/>). A locked chunk is never opened,
+    /// A missing chunk is created and written before its scene's one save (<see cref="WorldAuthoring.CreateFilledChunk"/>,
+    /// Docs/WorldGeneration.md, Phase 6), and the editor's shared texture arrays are held for the whole write, so no
+    /// chunk opened or created builds them again (<see cref="EditModeTerrainArrays"/>). A locked chunk is never opened,
     /// and a chunk whose composed hash equals its record is skipped without being opened. Each other chunk is opened
     /// (or used as it is when its scene is open), refused when it no longer hashes to its record (to an empty chunk's
     /// hash when it has none), written (<see cref="WriteChunk"/>), saved, recorded with the ids of the generated spawn
@@ -112,16 +114,10 @@ public static class WorldGenerationWriter
         List<string> openBefore = OpenScenePaths();
         Scene activeBefore = SceneManager.GetActiveScene();
         bool generatorChanged = false;
+        TerrainMaterialArrays heldArrays = EditModeTerrainArrays.Arrays.Acquire(composition.Style);
         try
         {
-            Dictionary<Vector2Int, double> created = new();
-            foreach (Vector2Int coords in missing)
-            {
-                Stopwatch watch = Stopwatch.StartNew();
-                WorldAuthoring.CreateChunk(world, coords, GroundOf(composition, coords));
-                created[coords] = watch.Elapsed.TotalMilliseconds;
-            }
-
+            HashSet<Vector2Int> created = new();
             string emptyHash = ChunkContent.EmptyHash(composition.LayerOrder);
             Dictionary<TerrainMaterial, Tile> tiles = new();
             Dictionary<string, List<Vector2Int>> holders = RecordedHolders(generator);
@@ -149,6 +145,7 @@ public static class WorldGenerationWriter
         finally
         {
             CloseOpenedChunks(world, openBefore);
+            EditModeTerrainArrays.Arrays.Release(heldArrays);
             if (activeBefore.IsValid() && activeBefore.isLoaded)
             {
                 SceneManager.SetActiveScene(activeBefore);
@@ -265,8 +262,9 @@ public static class WorldGenerationWriter
     /// changed coasts, Bake changed glows, Place markers (the waystones' and exits', <see cref="WorldMarkers"/>, so a
     /// moved waystone's stone follows it), Repair ids (which keeps derived ids, being set and unique) and Validate.
     /// The world's chunks are opened once for them all and closed after the last, unsaved (each step saves what it
-    /// changed), the scenes open before staying as they were. Returns a line per step with its time, each followed by
-    /// the step's own lines, between a line for the opening and one for the closing. Refuses in play mode.
+    /// changed, and a chunk a step left changed and unsaved is named in a warning), the scenes open before staying as
+    /// they were. Returns a line per step with its time, each followed by the step's own lines, between a line for the
+    /// opening and one for the closing. Refuses in play mode.
     /// </summary>
     public static List<string> RunWorldSteps(WorldDefinition world)
     {
@@ -311,6 +309,14 @@ public static class WorldGenerationWriter
         finally
         {
             watch.Restart();
+            foreach (Scene scene in opened)
+            {
+                if (scene.isDirty)
+                {
+                    Debug.LogWarning($"{scene.name}: changed by the whole-world steps but not saved by them; closed without saving.", world);
+                }
+            }
+
             WorldAuthoring.CloseScenes(opened, false);
             report.Add($"Close the chunks: {opened.Count} closed in {watch.ElapsedMilliseconds} ms.");
         }
@@ -435,7 +441,7 @@ public static class WorldGenerationWriter
     /// be saved fails and is not recorded, so the next write tries it again. The ground tiles found go into
     /// <paramref name="tiles"/> for the next chunks (<see cref="WriteChunk"/>).
     /// </summary>
-    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, Dictionary<Vector2Int, double> created, string emptyHash, Dictionary<TerrainMaterial, Tile> tiles, Dictionary<string, Vector2Int> leftOut)
+    private static ChunkWrite WriteOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, bool force, HashSet<Vector2Int> created, string emptyHash, Dictionary<TerrainMaterial, Tile> tiles, Dictionary<string, Vector2Int> leftOut)
     {
         WorldDefinition world = generator.World;
         string name = WorldAuthoring.ChunkSceneName(world, coords);
@@ -450,8 +456,13 @@ public static class WorldGenerationWriter
             return new ChunkWrite(coords, Outcome.Locked, 0, $"{name}: locked; left alone.");
         }
 
+        if (!world.HasChunk(coords))
+        {
+            return CreateOne(generator, composition, coords, created, tiles, leftOut);
+        }
+
         Stopwatch watch = Stopwatch.StartNew();
-        bool isNew = created.TryGetValue(coords, out double create);
+        bool isNew = created.Contains(coords);
         string composed = composition.ChunkAt(coords).ContentHash;
         if (!force && !isNew && record != null && record.WrittenHash == composed)
         {
@@ -522,14 +533,57 @@ public static class WorldGenerationWriter
         }
 
         double close = Lap(watch);
-        double total = create + open + check + write + save + close;
+        double total = open + check + write + save + close;
         string line = outcome switch
         {
-            Outcome.Created => $"{name}: created and written in {total:0} ms (create {create:0}, open {open:0}, write {write:0}, save {save:0}, close {close:0}); {detail}",
+            Outcome.Created => $"{name}: created, then written again in {total:0} ms (open {open:0}, write {write:0}, save {save:0}, close {close:0}); {detail}",
             Outcome.Written => $"{name}: written in {total:0} ms (open {open:0}, check {check:0}, write {write:0}, save {save:0}, close {close:0}); {detail}",
             _ => $"{name}: {detail}"
         };
         return new ChunkWrite(coords, outcome, total, line);
+    }
+
+    /// <summary>
+    /// Creates the missing chunk at <paramref name="coords"/> for <see cref="Write"/> and writes it before its scene's
+    /// one save (<see cref="WorldAuthoring.CreateFilledChunk"/>, the grid drawing with the shared arrays and inactive
+    /// until written), records it with the ids of the spawn points written, leaving out the mobs of
+    /// <paramref name="leftOut"/>, adds it to <paramref name="created"/>, and reports it. A chunk whose write fails is
+    /// saved as <see cref="WorldAuthoring.CreateChunk"/> makes it and fails; one whose scene cannot be saved is not
+    /// created.
+    /// </summary>
+    private static ChunkWrite CreateOne(WorldGenerator generator, WorldComposition composition, Vector2Int coords, HashSet<Vector2Int> created, Dictionary<TerrainMaterial, Tile> tiles, Dictionary<string, Vector2Int> leftOut)
+    {
+        string name = WorldAuthoring.ChunkSceneName(generator.World, coords);
+        Stopwatch watch = Stopwatch.StartNew();
+        double create = 0;
+        double write = 0;
+        string written = null;
+        string detail = null;
+        string path = WorldAuthoring.CreateFilledChunk(generator.World, coords, GroundOf(composition, coords), grid =>
+        {
+            create = Lap(watch);
+            written = WriteChunk(grid, composition, coords, leftOut.Keys, tiles);
+            write = Lap(watch);
+            if (written != null)
+            {
+                detail = Describe(grid, composition, coords, generator.RecordOf(coords), leftOut);
+            }
+        });
+        double save = Lap(watch);
+        double total = create + write + save;
+        if (path == null)
+        {
+            return new ChunkWrite(coords, Outcome.Failed, total, $"{name}: its new scene could not be saved (is the folder read-only?); not created, so the next write tries it again.");
+        }
+
+        created.Add(coords);
+        if (written == null)
+        {
+            return new ChunkWrite(coords, Outcome.Failed, total, $"{name}: created, but not written; see the console.");
+        }
+
+        generator.SetWrittenHash(coords, written, MobsOf(composition, coords, leftOut.Keys).ConvertAll(mob => mob.Id));
+        return new ChunkWrite(coords, Outcome.Created, total, $"{name}: created and written in {total:0} ms (create {create:0}, write {write:0}, save {save:0}); {detail}");
     }
 
     /// <summary>

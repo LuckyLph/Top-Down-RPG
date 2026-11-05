@@ -136,6 +136,22 @@ public static class WorldAuthoring
     /// </summary>
     public static string CreateChunk(WorldDefinition world, Vector2Int coords, TerrainMaterial ground = null)
     {
+        string path = CreateFilledChunk(world, coords, ground, null);
+        AssetDatabase.SaveAssets();
+        return path;
+    }
+
+    /// <summary>
+    /// Creates the chunk at <paramref name="coords"/> of <paramref name="world"/> as <see cref="CreateChunk"/> does, but
+    /// has <paramref name="fill"/>, when given, write its grid, inactive meanwhile and drawing with the editor's shared
+    /// texture arrays (<see cref="EditModeTerrainArrays"/>), before the scene's one save, so the grid builds its
+    /// terrain once, as it comes back; and saves no other asset, the world's entry and the scene's definition being left
+    /// to the caller to save (Docs/WorldGeneration.md, Phase 6: <see cref="WorldGenerationWriter.Write"/> creates and
+    /// writes a missing chunk this way). Returns the scene path, or null, making no definition, when the scene could not
+    /// be saved.
+    /// </summary>
+    internal static string CreateFilledChunk(WorldDefinition world, Vector2Int coords, TerrainMaterial ground, System.Action<Grid> fill)
+    {
         if (coords.x < 0 || coords.y < 0 || coords.x >= world.SizeInChunks.x || coords.y >= world.SizeInChunks.y)
         {
             throw new System.ArgumentOutOfRangeException(nameof(coords), coords, $"{world.name} is {world.SizeInChunks} chunks across.");
@@ -151,6 +167,7 @@ public static class WorldAuthoring
         EnsureFolder(folder);
         string path = $"{folder}/{ChunkSceneName(world, coords)}.unity";
         Scene scene = NewWorkScene();
+        bool saved;
         try
         {
             new GameObject("ChunkLifetimeScope", typeof(ChunkLifetimeScope));
@@ -158,18 +175,29 @@ public static class WorldAuthoring
             gridObject.transform.position = new Vector3(world.Origin.x, world.Origin.y, 0f);
             gridObject.SetActive(false);
             gridObject.AddComponent<WorldChunk>().Configure(world, coords, null);
-            SetUpGround(gridObject.GetComponent<Grid>(), ground);
+            Grid grid = gridObject.GetComponent<Grid>();
+            SetUpGround(grid, ground);
+            if (fill != null)
+            {
+                grid.GetComponent<TerrainBlendRenderer>().Construct(EditModeTerrainArrays.Arrays);
+                fill(grid);
+            }
+
             gridObject.SetActive(true);
-            EditorSceneManager.SaveScene(scene, path);
+            saved = EditorSceneManager.SaveScene(scene, path);
         }
         finally
         {
             CloseWorkScene(scene);
         }
 
+        if (!saved)
+        {
+            return null;
+        }
+
         world.SetChunk(coords, CreateSceneDefinition(path));
         AddToBuild(path);
-        AssetDatabase.SaveAssets();
         return path;
     }
 
@@ -700,10 +728,11 @@ public static class WorldAuthoring
     /// (<see cref="WorldCoastBake"/>), or with <paramref name="onlyChanged"/> only of the chunks whose sea or shore
     /// within the bake's reach changed since their last bake (<see cref="IsCoastStale"/>), opening the scenes that are
     /// not open: a 16-bit PNG beside each chunk scene showing waves (<c>World_name_x_y_Coast.png</c>), set on its
-    /// <see cref="WorldChunk"/> with what it was baked from; a chunk showing none loses its map. The maps are written
-    /// first, then imported together and the scenes they changed saved together (<see cref="ImportMaps"/>,
-    /// <see cref="SaveScenes"/>). Returns a line per chunk with what it did and how long its bake took, and one for the
-    /// import and the saves.
+    /// <see cref="WorldChunk"/> with what it was baked from; a chunk showing none loses its map. Each chunk's sea is read
+    /// on the main thread, the maps are encoded together on worker threads (<see cref="WorldCoastBake.Encode"/>) and
+    /// written, then imported together and the scenes they changed saved together (<see cref="ImportMaps"/>,
+    /// <see cref="SaveScenes"/>). Returns a line per chunk with what it did and how long its map took to encode and to
+    /// write, one for the encoding and one for the import and the saves.
     /// </summary>
     public static List<string> BakeCoastMaps(WorldDefinition world, bool onlyChanged = false)
     {
@@ -717,6 +746,8 @@ public static class WorldAuthoring
             WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
             report.Add($"Read the world's ground in {read.ElapsedMilliseconds} ms.");
             List<BakedMap> maps = new();
+            List<WorldCoastBake.ChunkSea> seas = new();
+            List<int> lines = new();
             foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
             {
                 WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
@@ -727,7 +758,6 @@ public static class WorldAuthoring
                     continue;
                 }
 
-                System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
                 List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
                 string source = WorldCoastBake.SourceOf(cells, style, materials, ChunkCoords.Bounds(chunk.Key));
                 if (onlyChanged && !IsCoastStale(marker, source))
@@ -736,17 +766,38 @@ public static class WorldAuthoring
                     continue;
                 }
 
-                ushort[] encoded = WorldCoastBake.BakeChunk(cells, style, materials, ChunkCoords.Bounds(chunk.Key), out int width, out int height);
-                string path = CoastMapPath(world, chunk.Key);
-                if (encoded != null)
+                WorldCoastBake.ChunkSea sea = WorldCoastBake.ReadSea(cells, style, materials, ChunkCoords.Bounds(chunk.Key));
+                seas.Add(sea);
+                maps.Add(new BakedMap(chunk.Key, marker, CoastMapPath(world, chunk.Key), sea != null, source, default));
+                lines.Add(report.Count);
+                report.Add($"{chunk.Value.gameObject.scene.name}: no waves, nothing baked.");
+            }
+
+            System.Diagnostics.Stopwatch encoding = System.Diagnostics.Stopwatch.StartNew();
+            ushort[][] encoded = new ushort[seas.Count][];
+            long[] encodeTimes = new long[seas.Count];
+            System.Threading.Tasks.Parallel.For(0, seas.Count, i =>
+            {
+                if (seas[i] != null)
                 {
-                    Texture2D texture = WorldCoastBake.ToTexture(encoded, width, height, Path.GetFileNameWithoutExtension(path));
-                    File.WriteAllBytes(path, texture.EncodeToPNG());
-                    Object.DestroyImmediate(texture);
+                    System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+                    encoded[i] = WorldCoastBake.Encode(seas[i]);
+                    encodeTimes[i] = watch.ElapsedMilliseconds;
+                }
+            });
+            report.Add($"Encoded {maps.Count(map => map.Written)} maps on worker threads in {encoding.ElapsedMilliseconds} ms.");
+            for (int i = 0; i < maps.Count; i++)
+            {
+                if (encoded[i] == null)
+                {
+                    continue;
                 }
 
-                maps.Add(new BakedMap(chunk.Key, marker, path, encoded != null, source, default));
-                report.Add($"{chunk.Value.gameObject.scene.name}: {(encoded != null ? $"baked {width} x {height}" : "no waves, nothing baked")} in {watch.ElapsedMilliseconds} ms.");
+                System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+                Texture2D texture = WorldCoastBake.ToTexture(encoded[i], seas[i].Width, seas[i].Height, Path.GetFileNameWithoutExtension(maps[i].MapPath));
+                File.WriteAllBytes(maps[i].MapPath, texture.EncodeToPNG());
+                Object.DestroyImmediate(texture);
+                report[lines[i]] = $"{maps[i].Marker.gameObject.scene.name}: baked {seas[i].Width} x {seas[i].Height}, encoded in {encodeTimes[i]} ms and written in {watch.ElapsedMilliseconds} ms.";
             }
 
             report.Add(FinishMaps(maps, ApplyCoastImport, (map, baked) =>
@@ -824,6 +875,35 @@ public static class WorldAuthoring
         }
 
         return marker.CoastMap == null || marker.CoastSource != source;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="assetPath"/> names a chunk's baked coast map (<see cref="CoastMapPath"/>): a
+    /// <c>World_*_Coast.png</c> in a world's <c>Chunks</c> folder.
+    /// </summary>
+    public static bool IsCoastMapPath(string assetPath)
+    {
+        return IsChunkMapPath(assetPath, "_Coast.png");
+    }
+
+    /// <summary>
+    /// Whether <paramref name="assetPath"/> names a chunk's baked glow map (<see cref="GlowMapPath"/>): a
+    /// <c>World_*_Glow.png</c> in a world's <c>Chunks</c> folder.
+    /// </summary>
+    public static bool IsGlowMapPath(string assetPath)
+    {
+        return IsChunkMapPath(assetPath, "_Glow.png");
+    }
+
+    /// <summary>
+    /// Whether <paramref name="assetPath"/> names a file of a world's <c>Chunks</c> folder starting with <c>World_</c>
+    /// and ending with <paramref name="suffix"/>.
+    /// </summary>
+    private static bool IsChunkMapPath(string assetPath, string suffix)
+    {
+        string path = assetPath.Replace('\\', '/');
+        string file = Path.GetFileName(path);
+        return path.EndsWith($"/Chunks/{file}", System.StringComparison.Ordinal) && file.StartsWith("World_", System.StringComparison.Ordinal) && file.EndsWith(suffix, System.StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -1023,7 +1103,7 @@ public static class WorldAuthoring
     /// it changed them: a linear, uncompressed RGBA32 texture without mipmaps, bilinear and clamped, as the renderer
     /// builds its own, and not readable.
     /// </summary>
-    private static bool ApplyGlowImport(TextureImporter importer)
+    internal static bool ApplyGlowImport(TextureImporter importer)
     {
         TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
         if (HasMapImport(importer) && settings.format == TextureImporterFormat.RGBA32 && settings.textureCompression == TextureImporterCompression.Uncompressed)
@@ -1068,7 +1148,7 @@ public static class WorldAuthoring
     /// whether it changed them: a linear, uncompressed R16 texture without mipmaps or alpha, bilinear and clamped, as the
     /// renderer builds its own, and not readable.
     /// </summary>
-    private static bool ApplyCoastImport(TextureImporter importer)
+    internal static bool ApplyCoastImport(TextureImporter importer)
     {
         TextureImporterPlatformSettings settings = importer.GetDefaultPlatformTextureSettings();
         if (HasMapImport(importer) && importer.alphaSource == TextureImporterAlphaSource.None && settings.format == TextureImporterFormat.R16 && settings.textureCompression == TextureImporterCompression.Uncompressed)
@@ -1363,13 +1443,23 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Closes the scenes <see cref="OpenChunkScenes"/> opened, saving the changed ones first, together
-    /// (<see cref="SaveScenes"/>), unless <paramref name="save"/> is false.
+    /// (<see cref="SaveScenes"/>), unless <paramref name="save"/> is false. Their chunks stop drawing their terrain
+    /// before the first closes (<see cref="WorldChunk.SetDrawn"/>), so a chunk still open whose neighbour closes has no
+    /// border to draw again.
     /// </summary>
     public static void CloseScenes(List<Scene> opened, bool save = true)
     {
         if (save)
         {
             SaveScenes(opened.Where(scene => scene.isDirty).ToList());
+        }
+
+        foreach (Scene scene in opened)
+        {
+            foreach (WorldChunk chunk in SceneQuery.FindAll<WorldChunk>(scene))
+            {
+                chunk.SetDrawn(false);
+            }
         }
 
         foreach (Scene scene in opened)
@@ -1435,7 +1525,11 @@ public static class WorldAuthoring
         {
             foreach (string path in written)
             {
-                if (AssetImporter.GetAtPath(path) is TextureImporter importer && configure(importer))
+                if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
+                {
+                    Debug.LogError($"{path}: imported, but not as a texture; its chunk records no map.", AssetDatabase.LoadMainAssetAtPath(path));
+                }
+                else if (configure(importer))
                 {
                     importer.SaveAndReimport();
                 }
@@ -1904,13 +1998,14 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Creates the <see cref="SceneDefinition"/> of the scene at <paramref name="scenePath"/> beside it.
+    /// Creates the <see cref="SceneDefinition"/> of the scene at <paramref name="scenePath"/> beside it, written with its
+    /// scene, so it needs no save of its own.
     /// </summary>
     private static SceneDefinition CreateSceneDefinition(string scenePath)
     {
         SceneDefinition definition = ScriptableObject.CreateInstance<SceneDefinition>();
-        AssetDatabase.CreateAsset(definition, Path.ChangeExtension(scenePath, ".asset"));
         definition.SetScene(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
+        AssetDatabase.CreateAsset(definition, Path.ChangeExtension(scenePath, ".asset"));
         return definition;
     }
 

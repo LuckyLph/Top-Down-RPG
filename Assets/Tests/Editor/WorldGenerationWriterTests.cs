@@ -30,7 +30,8 @@ using Object = UnityEngine.Object;
 /// never opened, an unchanged one is skipped without being opened, one
 /// changed by hand is refused unless forced; a second write changes no file; and the written world validates, bakes
 /// its coasts and keeps its derived ids through Repair ids, the whole-world steps opening each chunk once
-/// (Docs/WorldGeneration.md, Phase 6); an entry moves only once the chunk under its new place is
+/// and closing only those they opened, a chunk open with unsaved changes staying so, and a created chunk's definition
+/// saved with its scene (Docs/WorldGeneration.md, Phase 6); an entry moves only once the chunk under its new place is
 /// written; a mob whose id a chunk keeping its content still holds is left out of the chunk it moved to, also when that
 /// chunk is refused after it in the same write. Creating a chunk keeps the open scenes' unsaved changes and refuses
 /// beside an untitled scene with some.
@@ -499,6 +500,8 @@ public class WorldGenerationWriterTests
         {
             Assert.That(world.HasChunk(chunk.Coords), Is.True, $"chunk {chunk.Coords} is created");
             Assert.That(generator.RecordOf(chunk.Coords).WrittenHash, Is.EqualTo(chunk.ContentHash), $"chunk {chunk.Coords}'s record");
+            string scenePath = ScenePathOf(world, chunk.Coords);
+            Assert.That(File.ReadAllText(Path.ChangeExtension(scenePath, ".asset")), Does.Contain($"scenePath: {scenePath}"), $"chunk {chunk.Coords}'s definition is saved with its scene");
         }
 
         Assert.That(new List<WorldDefinition.Entry>(world.Entries).ConvertAll(entry => entry.Name), Is.EqualTo(new[] { TestWorldGenerators.Clearing, "camp" }), "the generated entries first, the hand-made one after");
@@ -521,10 +524,17 @@ public class WorldGenerationWriterTests
         Dictionary<string, byte[]> files = Snapshot();
         List<string> opened = new();
         List<WorldGenerationWriter.ChunkWrite> second = WatchingOpens(opened, () => WorldGenerationWriter.Write(generator, composition, null, false));
+        Scene handEdited = EditorSceneManager.OpenScene(ScenePathOf(world, Vector2Int.zero), OpenSceneMode.Additive);
+        SceneManager.MoveGameObjectToScene(new GameObject("UnsavedHandEdit"), handEdited);
+        EditorSceneManager.MarkSceneDirty(handEdited);
         WorldGenerationWriter.RunWorldSteps(world);
+        Assert.That(handEdited.isLoaded && handEdited.isDirty, Is.True, "a chunk open with unsaved changes before the steps stays open and unsaved");
+        Assert.That(Array.Exists(handEdited.GetRootGameObjects(), root => root.name == "UnsavedHandEdit"), Is.True, "with its change");
+        Assert.That(WorldAuthoring.OpenChunkCoords(world), Is.EqualTo(new[] { Vector2Int.zero }), "the steps close only the chunks they opened");
+        EditorSceneManager.CloseScene(handEdited, true);
         Assert.That(second.ConvertAll(result => result.Outcome), Is.All.EqualTo(WorldGenerationWriter.Outcome.Unchanged), "a second write skips every chunk");
         Assert.That(opened, Has.None.Contains("/Chunks/"), "a skipped chunk is not opened");
-        ExpectSameFiles(files, Snapshot(), "a second write");
+        ExpectSameFiles(files, Snapshot(), "a second write, its steps saving no chunk");
 
         Vector2Int locked = new(1, 1);
         Vector2Int painted = new(1, 0);

@@ -11,7 +11,8 @@ using UnityEngine.Tilemaps;
 /// sea with waves bakes nothing. Uses <see cref="ChunkedGround"/>, whose ocean crosses the border of the two southern
 /// chunks. What a chunk's map is baked from (<see cref="WorldCoastBake.SourceOf"/>) changes when the sea or its shore
 /// within the bake's reach changes, not for ground under the sea's order or beyond the reach, and
-/// <see cref="WorldAuthoring.IsCoastStale"/> tells from it which chunks need baking again.
+/// <see cref="WorldAuthoring.IsCoastStale"/> tells from it which chunks need baking again. Maps encoded on worker
+/// threads are the ones encoded on the main thread.
 /// </summary>
 public class WorldCoastBakeTests
 {
@@ -86,6 +87,44 @@ public class WorldCoastBakeTests
 
         RectInt north = ChunkCoords.Bounds(new Vector2Int(0, 1));
         Assert.That(WorldCoastBake.BakeChunk(ground.Cells, ground.Style, new[] { ground.Material("Grass") }, north, out _, out _), Is.Null, "A chunk showing no sea bakes nothing.");
+    }
+
+    /// <summary>
+    /// Every chunk's map encoded on worker threads, all at once, as the World Editor's bake encodes them
+    /// (Docs/WorldGeneration.md, Phase 6), is texel for texel the one encoded on the main thread, and the one
+    /// <see cref="WorldCoastBake.BakeChunk"/> bakes.
+    /// </summary>
+    [Test]
+    public void MapsEncodedOnWorkerThreads_MatchThoseEncodedOnTheMainThread()
+    {
+        ground = new ChunkedGround();
+        List<Vector2Int> coords = new();
+        List<WorldCoastBake.ChunkSea> seas = new();
+        foreach (KeyValuePair<Vector2Int, WorldChunk> chunk in ground.Chunks)
+        {
+            List<TerrainMaterial> materials = new();
+            foreach (TerrainBlendRenderer.Layer layer in chunk.Value.Terrain.Layers)
+            {
+                materials.Add(layer.Material);
+            }
+
+            WorldCoastBake.ChunkSea sea = WorldCoastBake.ReadSea(ground.Cells, ground.Style, materials, ChunkCoords.Bounds(chunk.Key));
+            if (sea != null)
+            {
+                coords.Add(chunk.Key);
+                seas.Add(sea);
+                ushort[] baked = WorldCoastBake.BakeChunk(ground.Cells, ground.Style, materials, ChunkCoords.Bounds(chunk.Key), out _, out _);
+                Assert.That(WorldCoastBake.Encode(sea), Is.EqualTo(baked), $"chunk {chunk.Key}: encoded as baked");
+            }
+        }
+
+        Assert.That(seas.Count, Is.GreaterThan(1), "several chunks show the sea");
+        ushort[][] parallel = new ushort[seas.Count][];
+        System.Threading.Tasks.Parallel.For(0, seas.Count, i => parallel[i] = WorldCoastBake.Encode(seas[i]));
+        for (int i = 0; i < seas.Count; i++)
+        {
+            Assert.That(parallel[i], Is.EqualTo(WorldCoastBake.Encode(seas[i])), $"chunk {coords[i]}: the same on a worker thread");
+        }
     }
 
     /// <summary>

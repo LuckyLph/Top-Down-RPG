@@ -87,7 +87,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 
 ### 2D specifics
 - Use `Rigidbody2D`/`Collider2D` APIs (not 3D ones). Move bodies through the Rigidbody, not `transform.position`, when physics is involved.
-- Sprites sort by the 2D renderer's custom axis within their sorting layer, a lower one in front (Docs/WorldScale.md). Keep every order on the `Entities` layer at 0: sort a unit, projectile or effect as a `SortingGroup` on its root, and a prop by its sprite's pivot (Sprite Sort Point Pivot). Parts inside a unit's sorting group may order themselves (a player's lantern layer at 1 over its body), the group staying at 0. Never write sorting orders from code, and do not hack `z` positions.
+- Sprites sort by the 2D renderer's custom axis within their sorting layer, a lower one in front (Docs/WorldScale.md). Keep every order on the `Entities` layer at 0: sort a unit, projectile or effect as a `SortingGroup` on its root, and a prop by its sprite's pivot (Sprite Sort Point Pivot). Parts inside a unit's sorting group may order themselves (a carried lantern's layer at 1 over its body), the group staying at 0. Never write sorting orders from code, and do not hack `z` positions.
 - Use Pixel Perfect/consistent PPU settings for sprites; import via the Aseprite importer where sources exist.
 
 ### Logging and errors

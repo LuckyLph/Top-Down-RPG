@@ -61,7 +61,7 @@ public sealed class LocalPlayerCommandSource : IPlayerCommandSource
             ? picker.Pick(pointerWorld, UnitFilterOf(abilitySlot))
             : default;
 
-        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot, input.AttackMovePressedThisFrame, input.LanternPressedThisFrame, abilityTarget);
+        return new PlayerCommand(pointerWorld, target, movePressed, moveHeld, input.StopPressedThisFrame, abilitySlot, input.AttackMovePressedThisFrame, abilityTarget);
     }
 
     /// <summary>

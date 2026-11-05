@@ -95,15 +95,6 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
-                },
-                {
-                    "name": "Lantern",
-                    "type": "Button",
-                    "id": "b8cd8842-860e-4383-a199-0c4ed12c60ce",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -214,17 +205,6 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Ability6",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "07ef205d-529d-4124-84de-c90a48122b3c",
-                    "path": "<Keyboard>/l",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Lantern",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -7,8 +7,7 @@ using VContainer;
 /// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
 /// base move speed, so a slowed or hasted copy shows the same gait), facing, equipped weapon (its
 /// <see cref="WeaponCatalog"/> index), look (its <see cref="CharacterLookCatalog"/> index, which binding it makes
-/// follow the local settings) and whether its lantern burns (<see cref="PlayerLantern"/>, which binding it makes
-/// decide) to owner network variables, and sends its attacks' starts, contacts and early
+/// follow the local settings) to owner network variables, and sends its attacks' starts, contacts and early
 /// ends and its casts' starts, completions and cancels to the other machines, which play them on their copy; the host
 /// also resolves a client's completed casts.
 /// Attack and cast messages name the weapon they were made with, so they play and land right even before a weapon
@@ -16,7 +15,7 @@ using VContainer;
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
 /// client's completed casts there. The owner's teleports (arriving at an entry, a waystone included) snap on the other
 /// machines instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that
-/// movement, equips the replicated weapon and shows the replicated look and lantern, a late joiner included. The host
+/// movement, equips the replicated weapon and shows the replicated look, a late joiner included. The host
 /// writes the weapon a client's player holds in the save (<see cref="SetSavedWeapon"/>) to a server network variable as
 /// it spawns: the owner equips it, and every copy shows it until the owner writes a weapon of its own.
 /// </summary>
@@ -33,12 +32,10 @@ public class PlayerNetworkSync : NetworkBehaviour
     private readonly NetworkVariable<int> equippedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<int> savedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> look = new(NoLook, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-    private readonly NetworkVariable<bool> lanternLit = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     private PlayerController controller;
     private PlayerWeaponController weapon;
     private PlayerLook playerLook;
-    private PlayerLantern lantern;
     private PlayerAbilities abilities;
     private Rigidbody2D body;
     private NetworkTransform networkTransform;
@@ -53,14 +50,13 @@ public class PlayerNetworkSync : NetworkBehaviour
     internal PlayerHandle Handle => handle;
 
     /// <summary>
-    /// Caches the controller, weapon, look, lantern, abilities, body and network transform on this player.
+    /// Caches the controller, weapon, look, abilities, body and network transform on this player.
     /// </summary>
     private void Awake()
     {
         controller = GetComponent<PlayerController>();
         weapon = GetComponent<PlayerWeaponController>();
         playerLook = GetComponent<PlayerLook>();
-        lantern = GetComponent<PlayerLantern>();
         abilities = GetComponent<PlayerAbilities>();
         body = GetComponent<Rigidbody2D>();
         networkTransform = GetComponent<NetworkTransform>();
@@ -86,11 +82,10 @@ public class PlayerNetworkSync : NetworkBehaviour
 
     /// <summary>
     /// The host writes the saved weapon it was given. The owner binds the player as local (which shows the look the
-    /// local settings choose and has it decide its lantern), equips the saved weapon, now or when it arrives, writes its
-    /// weapon, look and lantern, and starts relaying its weapon switches, look changes, lantern
-    /// changes, attacks, teleports and casts; any other machine makes the body kinematic without interpolation, binds it
-    /// as remote, shows the current replicated movement, equips the replicated weapon and shows the replicated look and
-    /// lantern, following them from then on. Logs an error and does nothing
+    /// local settings choose), equips the saved weapon, now or when it arrives, writes its weapon and look, and starts
+    /// relaying its weapon switches, look changes, attacks, teleports and casts; any other machine makes the body
+    /// kinematic without interpolation, binds it as remote, shows the current replicated movement, equips the
+    /// replicated weapon and shows the replicated look, following them from then on. Logs an error and does nothing
     /// when the prefab was spawned without injection.
     /// </summary>
     public override void OnNetworkSpawn()
@@ -127,12 +122,6 @@ public class PlayerNetworkSync : NetworkBehaviour
                 HandleLocalLookChosen(playerLook.Index);
             }
 
-            if (lantern != null)
-            {
-                lantern.Changed += HandleLocalLanternChanged;
-                HandleLocalLanternChanged(lantern.Lit);
-            }
-
             if (abilities != null)
             {
                 abilities.CastStarted += HandleLocalCast;
@@ -160,12 +149,6 @@ public class PlayerNetworkSync : NetworkBehaviour
         {
             playerLook.Show(look.Value);
         }
-
-        lanternLit.OnValueChanged += HandleLanternReplicated;
-        if (lantern != null)
-        {
-            lantern.Show(lanternLit.Value);
-        }
     }
 
     /// <summary>
@@ -190,13 +173,6 @@ public class PlayerNetworkSync : NetworkBehaviour
         {
             playerLook.Chosen -= HandleLocalLookChosen;
             playerLook.StopFollowing();
-        }
-
-        lanternLit.OnValueChanged -= HandleLanternReplicated;
-        if (lantern != null)
-        {
-            lantern.Changed -= HandleLocalLanternChanged;
-            lantern.StopDeciding();
         }
 
         if (abilities != null)
@@ -463,28 +439,6 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (IsSpawned && IsOwner && index != look.Value)
         {
             look.Value = index;
-        }
-    }
-
-    /// <summary>
-    /// On the owner, writes whether its lantern burns when it differs from what the other machines know.
-    /// </summary>
-    private void HandleLocalLanternChanged(bool lit)
-    {
-        if (IsSpawned && IsOwner && lit != lanternLit.Value)
-        {
-            lanternLit.Value = lit;
-        }
-    }
-
-    /// <summary>
-    /// On the other machines, shows the owner's lantern burning or out.
-    /// </summary>
-    private void HandleLanternReplicated(bool previous, bool current)
-    {
-        if (lantern != null)
-        {
-            lantern.Show(current);
         }
     }
 

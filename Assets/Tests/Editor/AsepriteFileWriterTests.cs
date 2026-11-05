@@ -18,8 +18,10 @@ using UnityEngine;
 public class AsepriteFileWriterTests
 {
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
+    private const string LanternPath = "Assets/Settings/Characters/Lantern.asset";
 
     private readonly List<string> paths = new();
+    private CharacterRecipe lanternRecipe;
 
     /// <summary>
     /// Deletes every file the test wrote.
@@ -33,6 +35,10 @@ public class AsepriteFileWriterTests
         }
 
         paths.Clear();
+        if (lanternRecipe != null)
+        {
+            Object.DestroyImmediate(lanternRecipe);
+        }
     }
 
     /// <summary>
@@ -111,7 +117,8 @@ public class AsepriteFileWriterTests
     }
 
     /// <summary>
-    /// The rogue's baked Run and SwordSlash, written from their sheets, read back in the plan's conventions: a canvas the
+    /// The rogue's baked Run and SwordSlash, carrying the lantern (in memory: no character the game ships carries one),
+    /// written from their sheets, read back in the plan's conventions: a canvas the
     /// size of a frame, the visible body layer, eight forward tags named after the directions in order over each
     /// direction's frames, each frame's duration in whole milliseconds, the contact marker only on the contact frame's
     /// body cel in every direction, and each frame's body cel holding exactly that frame's pixels; above it the lantern's
@@ -122,8 +129,11 @@ public class AsepriteFileWriterTests
     [Test]
     public void FromSheet_RoguesRunAndSwordSlash_FollowTheConventions()
     {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
-        Assert.That(recipe, Is.Not.Null);
+        lanternRecipe = Object.Instantiate(AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath));
+        SerializedObject serialized = new(lanternRecipe);
+        serialized.FindProperty("lantern").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CharacterLanternArt>(LanternPath);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        CharacterRecipe recipe = lanternRecipe;
         CharacterBaker baker = new(recipe);
         foreach (string clipName in new[] { "Run", "SwordSlash" })
         {

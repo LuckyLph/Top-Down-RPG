@@ -110,7 +110,7 @@ MonoBehaviour:
     weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
-  lantern: {fileID: 11400000, guid: e06c18a4c68226746ae68188aa064bac, type: 2}
+  lantern: {fileID: 0}
   thigh: 7
   shin: 7
   ankle: 1.5

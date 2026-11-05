@@ -61,15 +61,15 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// Starting builds the Character section's Look row, then ten binding rows under four section headers, labelled
-    /// with each action and its current binding, the lantern's last under Other, and leaves the screen hidden.
+    /// Starting builds the Character section's Look row, then nine binding rows under three section headers, labelled
+    /// with each action and its current binding, and leaves the screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
         Assert.That(view.IsShown, Is.False);
-        Assert.That(controller.RowCount, Is.EqualTo(10));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(16), "The Character header and its Look row, four section headers and ten rows.");
+        Assert.That(controller.RowCount, Is.EqualTo(9));
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(14), "The Character header and its Look row, three section headers and nine rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
         Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
         Assert.That(view.RowsContainer.GetChild(2).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
@@ -79,9 +79,6 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(controller.GetRow(AttackMoveRow).BindingText.text, Is.EqualTo("A"));
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(controller.GetRow(8).Label.text, Is.EqualTo("Weapon ability 2"));
-        Assert.That(controller.GetRow(9).Label.text, Is.EqualTo("Lantern"));
-        Assert.That(controller.GetRow(9).BindingText.text, Is.EqualTo("L"));
-        Assert.That(view.RowsContainer.GetChild(view.RowsContainer.childCount - 2).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Other"));
     }
 
     /// <summary>

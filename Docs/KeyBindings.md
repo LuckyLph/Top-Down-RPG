@@ -31,7 +31,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 | Topic | Decision |
 |---|---|
-| Rebindable actions | `MoveClick`, `AttackMove`, `Stop`, `Ability1`…`Ability6`, and since Lighting.md's Phase 9 `Lantern`. `Point` (the pointer) and the new `Menu` action are fixed. |
+| Rebindable actions | `MoveClick`, `AttackMove`, `Stop`, `Ability1`…`Ability6`. `Point` (the pointer) and the new `Menu` action are fixed. Lighting.md's Phase 9 added `Lantern` under Other, removed with the player's lantern on 2026-11-05. |
 | Bindings per action | One, in the `Keyboard&Mouse` group. |
 | Allowed inputs | Any keyboard key except Escape, and the mouse buttons (left, right, middle, back, forward). Not the pointer, its delta, the scroll wheel, or other devices. |
 | Reserved keys | Escape opens and closes menus and cancels a rebind, so it can never be bound. |
@@ -53,7 +53,6 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | `Stop` | Stop | Movement | S | Yes |
 | `Ability1`…`Ability4` | Class ability 1…4 | Class abilities | Q W E R | Yes |
 | `Ability5`, `Ability6` | Weapon ability 1, 2 | Weapon abilities | 1 2 | Yes |
-| `Lantern` | Lantern | Other | L | Yes |
 | `Point` | – | – | Pointer position | No |
 | `Menu` | – | – | Escape, gamepad Start | No |
 

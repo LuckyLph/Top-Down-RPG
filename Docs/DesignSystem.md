@@ -324,7 +324,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 | Preference | Phase | Values | Effect |
 |---|---|---|---|
 | UI size | 3 | Normal; Large and Larger where the display fits them | Adds 0, 1 or 2 to the UI zoom. Screen-space UI and popups grow; world-space UI does not. |
-| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter` flashes at a third of the strength set in `HitFeedbackSettings` (the asset is never edited). Light props, flame pixels, flame frames and the lantern stop flickering, through `PropLighting`'s flicker override. |
+| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter` flashes at a third of the strength set in `HitFeedbackSettings` (the asset is never edited). Light props, flame pixels and flame frames stop flickering, through `PropLighting`'s flicker override. |
 | Reduce motion | 6 | Off, On | No camera kick on hits. Popups fade in place instead of rising. |
 
 ## Architecture

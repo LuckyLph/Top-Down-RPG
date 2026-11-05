@@ -361,7 +361,7 @@ Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12:
 - [x] `Sand`, `Mud` and `Water` materials with their recipes (`SandRipplesRecipe`, `MudPuddlesRecipe`, `WaterHighlightsRecipe`), ground tiles and palettes; terrain types, with water unwalkable and mud costing twice as much as grass in the default movement profile.
 - [x] Animated water: highlight strokes that glint from their middle out, sparkles and a swelling shore rim, in the shader alone; a fixed time for checks.
 - [x] The generators list six layers, with sand, mud and water generated empty; Convert Ground creates the layers an area lacks; the Clearing and the Village Forest have empty sand, mud and water layers to paint with the Terrain Brush.
-- [ ] Checked by hand in play mode: a painted pond that units walk around, mud they avoid when a detour is short, and the water moving in the Game view.
+- [x] Checked by hand in play mode: a painted pond that units walk around, mud they avoid when a detour is short, and the water moving in the Game view. Marked done by the user on 2026-11-05.
 
 #### Phase 5 notes
 
@@ -414,7 +414,7 @@ Checked with `TerrainBlendProbe` on the same RTX 5070 Ti under D3D12, with the e
 - [x] A `Weeds` material: the grass's own ground with clumps of weeds (`WeedsRecipe`), a tile and a palette, a terrain type walked like grass, and an empty weeds layer, drawn right over the grass, in every generator, area and the area template.
 - [x] Weeds sway in the wind in the shader alone, and a weeds patch meets grass with no edge at all (a seamless pair).
 - [x] The Lakeside generator lays weed patches on the open grass and a fringe of weeds around the marsh.
-- [ ] Checked by hand in play mode: the weeds swaying in the Game view, units walking through them as through grass.
+- [x] Checked by hand in play mode: the weeds swaying in the Game view, units walking through them as through grass. Marked done by the user on 2026-11-05.
 
 #### Phase 6 notes
 

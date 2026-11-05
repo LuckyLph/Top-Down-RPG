@@ -12,13 +12,13 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 | [KeyBindings.md](KeyBindings.md) | Remappable controls, the options and in-game menus, the local settings file | Done, on `main`. |
 | [Animation.md](Animation.md) | The character rig and baker, the runtime animator, gaits, the attack timeline, weapon movesets | Done, on `main`. |
 | [AsepriteCharacters.md](AsepriteCharacters.md) | Characters, effects and projectiles drawn by hand in Aseprite | Done, on `main`. |
-| [TerrainBlending.md](TerrainBlending.md) | Drawing the ground with a blending shader instead of dual-grid tilesets | Done, on `main`, but for two checks by hand in play mode (Phases 5 and 6). |
+| [TerrainBlending.md](TerrainBlending.md) | Drawing the ground with a blending shader instead of dual-grid tilesets | Done, on `main`. |
 | [TerrainTypes.md](TerrainTypes.md) | The ground materials past grass, 16 layers per area, per-area layer sets, raised ground | Done, on `main`; lava damage waits for gameplay (below). |
 | [TerrainLayers32.md](TerrainLayers32.md) | A terrain renderer's layers raised from 16 to 32 | Done, on `main`. |
 | [SceneGeneration.md](SceneGeneration.md) | The area generators that fill a scene with terrain, props and spawn points | In use; no phase checklist. |
 | [DualGrid.md](DualGrid.md) | How the dual-grid walls are painted and drawn | Reference; no phase checklist. |
 | [WorldStreaming.md](WorldStreaming.md) | Seamless worlds: chunk scenes streamed around the players, worlds at separate origins, world saves | Done, on `main`. |
-| [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Done, on `main`, but for one item: measuring a 16 x 16 world from nothing, left while the editor's memory falls short (since KnownGaps.md's Phase 5 the chunks open in the editor share their texture arrays, which should make room for it). |
+| [WorldGeneration.md](WorldGeneration.md) | Generating worlds in the editor from the area generators, starting with the Overworld | Done, on `main`: the 16 x 16 world measured from nothing (2026-11-05), within the editor's memory but past its time targets, 14 minutes against 4, with the ways to meet them in its Later. |
 | [PropGeneration.md](PropGeneration.md) | Natural props generated in the editor, in looks for each terrain, and their placement | Done, on `main`. |
 | [WorldScale.md](WorldScale.md) | Worlds up to 16 x 16 chunks: sorting by the custom axis, the streaming benchmark, chunk load costs | Done, on `main`. |
 | [Lighting.md](Lighting.md) | URP 2D light read per art pixel, spell lights, day and night, sun and cloud shadows, light props, a lantern, reflections on water, relief | Done, on `main`. |
@@ -28,7 +28,7 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 
 ## Next
 
-[KnownGaps.md](KnownGaps.md) is done, on `main`; no plan is in progress. [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted, and its open questions come first; the features below wait for plans of their own. What the plans above leave: TerrainBlending.md's two checks by hand in play mode and WorldGeneration.md's measurement of a 16 x 16 world from nothing.
+[KnownGaps.md](KnownGaps.md) is done, on `main`; no plan is in progress. [DesignSystem.md](DesignSystem.md) is a proposal waiting to be adopted, and its open questions come first; the features below wait for plans of their own. The plans above leave no box unticked; WorldGeneration.md's Later lists how a 16 x 16 world could be written from nothing within its 4 minutes again.
 
 ## Later
 

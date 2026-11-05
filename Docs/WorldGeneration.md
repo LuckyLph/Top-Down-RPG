@@ -598,7 +598,7 @@ On `feature/world-write-speed`, from `main` after The 16 x 16 world measured: th
 - [x] Tests: `WorldCoastBakeTests` (`MapsEncodedOnWorkerThreads_MatchThoseEncodedOnTheMainThread`), `WorldGenerationWriterTests` (each created chunk's definition saved with its scene; a chunk open with unsaved changes before the steps stays open and unsaved, and the steps close only the chunks they opened).
 - [x] Measured again from nothing (Phase 6 notes, the review's five).
 - [x] Docs: Architecture.md's Editor tools (Generation/, WorldAuthoring, WorldCoastBake, TerrainTextureDefaults, PersistentIds), TerrainCoastMap and Tests.
-- [ ] The full EditMode and PlayMode suites pass before merging into `main`.
+- [x] The full EditMode and PlayMode suites before merging into `main`, on 2026-11-05: EditMode 1436 passed (6 skipped, the explicit ones); PlayMode 142 passed (10 skipped), twice, both times but for `NetworkDelayPlayModeTests.TheDelayedConnection_DelaysEachWayByHalfTheRoundTrip`, whose reliable channel's quickest tenth of pings at the slow setting came at 375 and 369 ms, past its bound of about 365 ms (289 to 356 ms in the runs of the day before), and at 321 ms, passing, with its class alone. Nothing this phase changes runs in play mode, and the editor had by then loaded the 256 chunks a dozen times (12 GB of private memory, a 3.6 GB managed heap); the test is left to a full run in a fresh editor.
 
 #### Phase 6 notes
 

@@ -8,7 +8,7 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for the click-to-move controls in Testlands, the booted test world, driven by scripted commands:
-/// pathing, attack orders, the attack timeline (the contact frame showing as the hit lands, standing still through the
+/// pathing, attack orders (a bow walking round a wall before it shoots), the attack timeline (the contact frame showing as the hit lands, standing still through the
 /// windup, a move cancelling it, death ending it), attack moves, player overlap, the ability and status HUD, the dev
 /// status panel and death.
 /// </summary>
@@ -97,6 +97,65 @@ public class PlayerControlsPlayModeTests
 
         yield return null;
         Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Idle), "The order ends with its target.");
+    }
+
+    /// <summary>
+    /// A longbow ordered at a mob within its range but behind a wall does not shoot into the wall: the player walks
+    /// round the wall's end until nothing lies between them, and only then shoots, its first arrow reaching the mob.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ABowOrderedAtAMobBehindAWall_WalksRoundItBeforeItShoots()
+    {
+        yield return Boot();
+        MobController mob = MobOfTheStartChunk();
+        Assert.That(mob, Is.Not.Null);
+        foreach (MobController other in Object.FindObjectsByType<MobController>())
+        {
+            other.gameObject.SetActive(other == mob);
+        }
+
+        mob.enabled = false;
+        Vector2 hidingSpot = BuildWallInFrontOfThePlayer();
+        MoveMob(mob, hidingSpot);
+        PlayerWeaponController weapon = player.GetComponent<PlayerWeaponController>();
+        PlayerWeapon bow = RangedWeaponOf(weapon.Catalog);
+        weapon.Equip(bow);
+        Collider2D mobCollider = mob.GetComponent<Collider2D>();
+        Health mobHealth = mob.GetComponent<Health>();
+        Vector2 start = player.transform.position;
+        Assert.That(player.GetComponent<Collider2D>().Distance(mobCollider).distance, Is.LessThan(bow.AttackRange), "The mob stands within the bow's range.");
+        Assert.That(WallBetween(start, mobCollider.bounds.center), Is.True, "The wall lies between them.");
+
+        int attacks = 0;
+        Vector2 shotFrom = default;
+        System.Action<int, Vector2, float> onStarted = (_, _, _) =>
+        {
+            if (attacks++ == 0)
+            {
+                shotFrom = player.transform.position;
+            }
+        };
+        weapon.AttackStarted += onStarted;
+        try
+        {
+            commands.Click(hidingSpot, PickMob(mob));
+            yield return null;
+            float deadline = Time.realtimeSinceStartup + 15f;
+            while (mobHealth.CurrentHealth == mobHealth.MaxHealth)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The bow should hit the mob.");
+                Assert.That(player.CurrentOrder, Is.EqualTo(PlayerOrderKind.Attack), "Walls and distance must not cancel the order.");
+                yield return null;
+            }
+
+            Assert.That(attacks, Is.EqualTo(1), "The first arrow reaches the mob.");
+            Assert.That(Vector2.Distance(shotFrom, start), Is.GreaterThan(1f), "The player walks before it shoots.");
+            Assert.That(WallBetween(shotFrom, mobCollider.bounds.center), Is.False, "It shoots once nothing lies between them.");
+        }
+        finally
+        {
+            weapon.AttackStarted -= onStarted;
+        }
     }
 
     /// <summary>
@@ -581,6 +640,32 @@ public class PlayerControlsPlayModeTests
             contact: 0.1f,
             recovery: 0.2f,
             attackClipName: sword.AttackClip);
+    }
+
+    /// <summary>
+    /// The first weapon of <paramref name="catalog"/> that fires projectiles (the longbow).
+    /// </summary>
+    private static PlayerWeapon RangedWeaponOf(WeaponCatalog catalog)
+    {
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            if (catalog.Get(i).FiresProjectile)
+            {
+                return catalog.Get(i);
+            }
+        }
+
+        Assert.Fail("The weapon catalog should hold a ranged weapon.");
+        return null;
+    }
+
+    /// <summary>
+    /// Whether a collider on the Obstacles layer, a wall, lies on the line from <paramref name="from"/> to
+    /// <paramref name="to"/>.
+    /// </summary>
+    private static bool WallBetween(Vector2 from, Vector2 to)
+    {
+        return Physics2D.Linecast(from, to, LayerMask.GetMask("Obstacles")).collider != null;
     }
 
     /// <summary>

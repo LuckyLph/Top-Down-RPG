@@ -53,6 +53,7 @@ public class NetworkMobsPlayModeTests
         client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
         yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
         client.SendReady();
+        client.FollowTrips();
 
         MobController clientMob = null;
         yield return SceneBootTestHelper.WaitUntil(

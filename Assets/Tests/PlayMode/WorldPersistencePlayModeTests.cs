@@ -95,16 +95,21 @@ public class WorldPersistencePlayModeTests
     }
 
     /// <summary>
-    /// Booted into the Sandbox (a new game there), a killed mob and the player's place are saved as the game returns to
-    /// the menu; Continue puts the player back there with the mob still dead.
+    /// Continuing a save in the Sandbox from the main menu, a killed mob and the player's place are saved as the game
+    /// returns to the menu; Continue puts the player back there with the mob still dead.
     /// </summary>
     [UnityTest]
     public IEnumerator LeavingToTheMenu_SavesTheWorld_AndContinueBringsItBack()
     {
-        MemorySaveStore saveStore = new();
-        yield return SceneBootTestHelper.BootIntoWorld(SandboxRootPath, saveStore);
+        MemorySaveFolder saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
-        WorldDefinition world = gameFlow.CurrentWorld;
+        WorldDefinition world = FindWorld(gameFlow, "Sandbox");
+        string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
+        saveStore.Contents = SaveWith(new GameSaveData.Player(playerId, world.WorldId, world.ToWorld(new Vector2(32.5f, 44.5f)))).ToJson();
+        Object.FindAnyObjectByType<MainMenuController>().ContinueGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        Assert.That(gameFlow.CurrentWorld, Is.SameAs(world));
         ChunkMobSpawner spawner = SpawnerOf(world, Vector2Int.zero);
         int spawned = spawner.Mobs.Count;
         Health health = spawner.Mobs[1].GetComponent<Health>();
@@ -137,7 +142,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator APlaceSavedOnWater_StartsOnTheNearestWalkableCell_AndIsSavedThere()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
@@ -167,7 +172,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator APlaceSavedFarOutAtSea_StartsAtTheNearestDiscoveredWaystone()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         string playerId = SceneBootTestHelper.ResolveFromMain<NetworkSession>().LocalPlayerId;
@@ -176,7 +181,7 @@ public class WorldPersistencePlayModeTests
         GameSaveData.Waystone[] discovered = { new(overworld.WorldId, "lakeside") };
         saveStore.Contents = SaveWith(new GameSaveData.Player(playerId, overworld.WorldId, saved, discovered)).ToJson();
 
-        LogAssert.Expect(LogType.Warning, new Regex("no walkable cell lies within \\d+ cells; it starts at .*, its nearest discovered waystone lakeside"));
+        LogAssert.Expect(LogType.Warning, new Regex("no walkable cell reaching the world's entries lies within \\d+ cells; it starts at .*, its nearest discovered waystone lakeside"));
         Object.FindAnyObjectByType<MainMenuController>().ContinueGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.CurrentWorld, Is.SameAs(overworld));
@@ -205,7 +210,7 @@ public class WorldPersistencePlayModeTests
     [UnityTest]
     public IEnumerator AJoiningPlayerSavedOnWater_SpawnsOnTheNearestWalkableCell()
     {
-        MemorySaveStore saveStore = new();
+        MemorySaveFolder saveStore = new();
         yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();

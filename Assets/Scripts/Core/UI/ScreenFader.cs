@@ -13,8 +13,6 @@ public class ScreenFader : MonoBehaviour
     [SerializeField, Min(0f)] private float fadeDuration = 0.25f;
     [SerializeField] private bool startOpaque = true;
 
-    public bool IsOpaque => canvasGroup != null && canvasGroup.alpha >= 1f;
-
     /// <summary>
     /// Falls back to the sibling <see cref="CanvasGroup"/> when none is assigned and starts opaque or clear as
     /// configured.

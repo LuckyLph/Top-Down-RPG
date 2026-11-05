@@ -10,7 +10,9 @@ using UnityEngine;
 /// with where its own machine has the player, and the host's answer comes back as <see cref="Deliver"/>: the arrival is
 /// held so the target world starts loading here, and <see cref="Approved"/> sets this machine's trip off. Nobody else
 /// fades or pauses. The host also sends players on trips of its own (<see cref="Send"/>: a respawn at a waystone), which
-/// reach a client's player the same way.
+/// reach a client's player the same way. A player's machine reports its fade in at the end of a trip
+/// (<see cref="ReportArrived"/>): a client's report goes to the host through the link, and there, as offline, it ends
+/// the protection the trip gave the player.
 /// </summary>
 public sealed class NetworkTripAuthority : ITripAuthority
 {
@@ -98,6 +100,30 @@ public sealed class NetworkTripAuthority : ITripAuthority
         TripApproval approval = local.Send(player, world, entryName);
         Approved?.Invoke(approval);
         return approval;
+    }
+
+    /// <summary>
+    /// <paramref name="player"/>'s machine faded in at the end of its trip number <paramref name="trip"/>: on a client
+    /// the report goes to the host through the player's <see cref="ITripLink"/> (a warning without one); offline and on
+    /// the host, for its own player or a client's report, it ends the trip's protection.
+    /// </summary>
+    public void ReportArrived(PlayerHandle player, int trip)
+    {
+        if (!SendsToHost)
+        {
+            local.ReportArrived(player, trip);
+            return;
+        }
+
+        Transform body = player != null ? player.Transform : null;
+        ITripLink link = body != null ? findLink(body) : null;
+        if (link == null)
+        {
+            Debug.LogWarning($"Trip arrival not sent: the player has no {nameof(ITripLink)} to reach the host with.");
+            return;
+        }
+
+        link.SendTripArrived(trip);
     }
 
     /// <summary>

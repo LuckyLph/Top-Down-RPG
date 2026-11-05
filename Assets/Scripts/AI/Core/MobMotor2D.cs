@@ -5,16 +5,17 @@ using UnityEngine;
 /// <see cref="CurrentMoveSpeed"/> and reached at the configured acceleration (a speed scale of 0 holds it still at
 /// once), and feeds the mob's <see cref="CharacterVisuals"/> (Docs/Animation.md, Phase 7): the velocity and facing it
 /// moves with, and its attacks on their timeline. On clients it shows the replicated move and facing and the host's
-/// attacks instead.
+/// attacks instead. Its move speed and acceleration are its <see cref="MobConfig"/>'s, taken in
+/// <see cref="Initialize"/>.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class MobMotor2D : MonoBehaviour
 {
-    [SerializeField, Min(0f)] private float moveSpeed = 2.5f;
-    [SerializeField, Min(0f)] private float acceleration = 20f;
     [SerializeField, Tooltip("The character visuals on the mob's Visuals child, which draw its locomotion and attacks.")]
     private CharacterVisuals visuals;
 
+    private float moveSpeed = 2.5f;
+    private float acceleration = 20f;
     private Rigidbody2D rb;
     private Vector2 desiredVelocity;
     private Vector2 steeringVelocity;
@@ -156,7 +157,8 @@ public class MobMotor2D : MonoBehaviour
     /// <summary>
     /// Faces <paramref name="direction"/> and plays the mob's attack clip toward it from now, stretched to
     /// <paramref name="timeline"/>; with <paramref name="untilContact"/> (a client's copy of the host's attack) its
-    /// windup holds its last frame until <see cref="ShowAttackContact"/>.
+    /// windup holds its last frame until <see cref="ShowAttackContact"/>, at most the character's contact wait past the
+    /// windup, after which the copy goes back to its locomotion.
     /// </summary>
     public void PlayAttack(Vector2 direction, in AttackTimeline timeline, bool untilContact)
     {

@@ -259,6 +259,76 @@ public class WorldNavigationTests
     }
 
     /// <summary>
+    /// A region runs on beyond the loaded pages only into a chunk its world has and has not loaded (Docs/KnownGaps.md,
+    /// Phase 5): with chunk (0, 0) of a 2 x 1 world loaded, its open ground runs into chunk (1, 0), while an islet of
+    /// ground ringed by water inside chunk (0, 0) does not, nor does a water cell; with both chunks loaded nothing runs
+    /// on, chunk (0, 1) not being the world's; with no world given, every chunk of the 16 x 16 counts. A single area's
+    /// region never runs on.
+    /// </summary>
+    [Test]
+    public void ARegion_RunsBeyondTheLoadedPages_OnlyIntoAChunkTheWorldHas()
+    {
+        layout = OpenLayout();
+        RectInt lake = new(10, 10, 15, 15);
+        RectInt islet = new(15, 15, 5, 5);
+        foreach (Vector2Int cell in lake.allPositionsWithin)
+        {
+            if (!islet.Contains(cell))
+            {
+                layout.Water.Add(cell);
+            }
+        }
+
+        WorldDefinition definition = Track(WorldDefinition.Create("Beyond", new Vector2Int(2048, 0), new Vector2Int(2, 1), new[] { new Vector2Int(0, 0), new Vector2Int(1, 0) }));
+        WorldNavigation world = new(new NavigationPagePool(), definition);
+        navigations.Add(world);
+        AddChunk(world, Vector2Int.zero);
+        Vector3Int open = new(40, 40, 0);
+        Vector3Int onTheIslet = new(17, 17, 0);
+        Assert.That(world.RunsBeyondLoadedPages(open, landProfile), Is.True, "open ground runs on into chunk (1, 0)");
+        Assert.That(world.RunsBeyondLoadedPages(onTheIslet, landProfile), Is.False, "the islet lies wholly in the loaded chunk");
+        Assert.That(world.RunsBeyondLoadedPages(new Vector3Int(12, 12, 0), landProfile), Is.False, "water is no region");
+        Assert.That(world.RunsBeyondLoadedPages(new Vector3Int(80, 10, 0), landProfile), Is.False, "a cell not loaded");
+
+        AddChunk(world, new Vector2Int(1, 0));
+        Assert.That(world.RunsBeyondLoadedPages(open, landProfile), Is.False, "every chunk of the world is loaded");
+
+        WorldNavigation anyWorld = CreateWorld(new NavigationPagePool(), new Vector2Int(0, 0), new Vector2Int(1, 0));
+        Assert.That(anyWorld.RunsBeyondLoadedPages(open, landProfile), Is.True, "with no world given, chunk (0, 1) counts");
+
+        NavigationGrid2D area = CreateGrid("Area", null);
+        area.BuildGrid();
+        Assert.That(area.RunsBeyondLoadedPages(open, landProfile), Is.False, "an area's one page is all there is");
+    }
+
+    /// <summary>
+    /// A world's navigation takes its search limits from its world (Docs/KnownGaps.md, Phase 5), defaulting to 4096
+    /// cells and a radius of 8; with no world given, those defaults.
+    /// </summary>
+    [Test]
+    public void AWorldsNavigation_TakesItsSearchLimitsFromTheWorld()
+    {
+        WorldDefinition definition = Track(WorldDefinition.Create("Limits", new Vector2Int(2048, 0), Vector2Int.one, new[] { Vector2Int.zero }));
+        Assert.That(definition.MaxSearchCells, Is.EqualTo(4096));
+        Assert.That(definition.NearestCellSearchRadius, Is.EqualTo(8));
+        WorldNavigation defaults = new(new NavigationPagePool(), definition);
+        Assert.That(defaults.MaxSearchCells, Is.EqualTo(4096));
+        Assert.That(defaults.NearestCellSearchRadius, Is.EqualTo(8));
+
+        definition.SetSearchLimits(1000, 3);
+        WorldNavigation tuned = new(new NavigationPagePool(), definition);
+        Assert.That(tuned.MaxSearchCells, Is.EqualTo(1000));
+        Assert.That(tuned.NearestCellSearchRadius, Is.EqualTo(3));
+
+        WorldNavigation none = new(new NavigationPagePool());
+        Assert.That(none.MaxSearchCells, Is.EqualTo(NavigationMap2D.DefaultMaxSearchCells));
+        Assert.That(none.NearestCellSearchRadius, Is.EqualTo(NavigationMap2D.DefaultNearestCellSearchRadius));
+        navigations.Add(defaults);
+        navigations.Add(tuned);
+        navigations.Add(none);
+    }
+
+    /// <summary>
     /// Toward a goal in a chunk that is not loaded, a strict request fails and a partial one ends at the loaded edge;
     /// a path follower's last waypoint is that edge cell's centre.
     /// </summary>

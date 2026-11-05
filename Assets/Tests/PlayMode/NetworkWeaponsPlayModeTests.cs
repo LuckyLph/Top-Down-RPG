@@ -10,8 +10,9 @@ using VContainer;
 /// PlayMode tests for weapons online (Docs/Animation.md, Phase 4) between a host and an in-process client: a client's
 /// weapon switch reaching the host's copy (its weapon, its weapon abilities and the clip its attacks play), an attack
 /// made on the frame of a switch playing out on the host's copy whichever arrives first, a client's arrow resolving
-/// exactly once on the host from where the owner stood, and a client joining after the host switched weapons seeing
-/// the host's current weapon.
+/// exactly once on the host from where the owner stood, a client joining after the host switched weapons seeing
+/// the host's current weapon, and, under a delayed connection (Docs/KnownGaps.md, Phase 4), a copy's windup ending
+/// without its contact while the late contact still lands its hit.
 /// </summary>
 public class NetworkWeaponsPlayModeTests
 {
@@ -19,13 +20,16 @@ public class NetworkWeaponsPlayModeTests
     private const int LongbowIndex = 2;
 
     private InProcessClient client;
+    private NetworkDelay delay;
 
     /// <summary>
-    /// Disposes the in-process client when the test started one.
+    /// Disposes the delayed connection and the in-process client when the test started them.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
+        delay?.Dispose();
+        delay = null;
         client?.Dispose();
         client = null;
     }
@@ -190,17 +194,89 @@ public class NetworkWeaponsPlayModeTests
     }
 
     /// <summary>
-    /// Hosts from the menu with every mob deactivated, then starts an in-process client and waits until both machines
-    /// see both players, with the client's colliders off.
+    /// Under a typical delayed connection, the client's sword attack on a Weasel in reach plays on the host's copy, and
+    /// everything the client sends is dropped from the moment its start arrived, so its contact does not come: the copy
+    /// holds its last windup frame for the character's contact wait past its windup, then goes back to its locomotion
+    /// without ever showing the contact. Once the connection comes back, the late contact still lands its hit on the
+    /// host's Weasel, and the copy stays in its locomotion.
     /// </summary>
-    private IEnumerator HostAndJoin()
+    [UnityTest]
+    public IEnumerator ACopysWindup_EndsWithoutItsContact_AndTheLateContactStillLands()
+    {
+        MobController mob = null;
+        yield return HostAndJoin(true, kept => mob = kept);
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(gameplay.Resolve<PlayerRegistry>(), client.Manager.LocalClientId);
+        PlayerWeaponController ownerWeapon = clientOwned.GetComponent<PlayerWeaponController>();
+        CharacterVisuals copyVisuals = hostCopy.GetComponentInChildren<CharacterVisuals>();
+        CharacterAnimator copyAnimation = copyVisuals.Animator;
+        Health mobHealth = mob.GetComponent<Health>();
+        Vector2 inReach = (Vector2)clientOwned.transform.position + new Vector2(0.8f, 0f);
+        mob.GetComponent<Rigidbody2D>().position = inReach;
+        mob.transform.position = inReach;
+        Physics2D.SyncTransforms();
+        delay.Set(NetworkDelay.Conditions.Typical);
+        yield return new WaitForSecondsRealtime(0.3f);
+
+        Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
+        yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing && copyAnimation.ActionKind == CharacterActionKind.Attack, "the attack's start to reach the host's copy");
+        float startedAt = Time.time;
+        delay.SetSending(client.Manager, NetworkDelay.Conditions.Typical.OneWayMs, NetworkDelay.Conditions.Typical.JitterMs, 100);
+        bool contactShown = false;
+        while (copyAnimation.IsActing)
+        {
+            contactShown |= copyAnimation.ActionPhase == AttackPhase.Contact;
+            Assert.That(Time.time - startedAt, Is.LessThan(3f), "The copy's windup should not hold for ever.");
+            yield return null;
+        }
+
+        float heldFor = Time.time - startedAt;
+        float expected = ownerWeapon.CurrentWeapon.Timeline.Windup + copyVisuals.Locomotion.ContactWaitSeconds;
+        Assert.That(contactShown, Is.False, "The copy never showed a contact that never came.");
+        Assert.That(heldFor, Is.InRange(expected - 0.05f, expected + 0.1f), "The copy waited its contact wait past the windup.");
+        Assert.That(copyAnimation.Clip, Is.SameAs(copyVisuals.AnimationSet.Locomotion(CharacterGait.Idle)), "Back to its locomotion.");
+        Assert.That(mobHealth.CurrentHealth, Is.EqualTo(mobHealth.MaxHealth), "The contact has not landed yet.");
+
+        delay.Set(NetworkDelay.Conditions.Typical);
+        yield return SceneBootTestHelper.WaitUntil(() => mobHealth.CurrentHealth < mobHealth.MaxHealth, "the late contact to land its hit on the host");
+        Assert.That(copyAnimation.IsActing, Is.False, "The late contact does not play the swing on the copy.");
+    }
+
+    /// <summary>
+    /// Hosts from the menu with every mob deactivated, or all but one kept with its AI off and handed to
+    /// <paramref name="keepOneMob"/>, the delayed connection installed first when <paramref name="delayed"/> (with no
+    /// delay yet), then starts an in-process client and waits until both machines see both players, with the client's
+    /// colliders off (and its copy of the kept mob's).
+    /// </summary>
+    private IEnumerator HostAndJoin(bool delayed = false, System.Action<MobController> keepOneMob = null)
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        if (delayed)
+        {
+            delay = NetworkDelay.Install();
+        }
+
         Object.FindAnyObjectByType<MainMenuController>().HostGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
-        DisableMobs();
+        MobController kept = null;
+        if (keepOneMob != null)
+        {
+            kept = Object.FindAnyObjectByType<MobController>();
+            Assert.That(kept, Is.Not.Null, "A mob should be loaded around the start.");
+            kept.enabled = false;
+            keepOneMob(kept);
+        }
+
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            if (mob != kept)
+            {
+                mob.gameObject.SetActive(false);
+            }
+        }
 
         IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
         PlayerRegistry hostPlayers = gameplay.Resolve<PlayerRegistry>();
@@ -211,6 +287,35 @@ public class NetworkWeaponsPlayModeTests
             () => hostPlayers.Players.Count == 2 && client.Players.Players.Count == 2 && client.LocalPlayer.Current != null,
             "both sides to see both players");
         client.DisableColliders();
+        if (kept == null)
+        {
+            yield break;
+        }
+
+        ulong keptId = kept.GetComponent<NetworkObject>().NetworkObjectId;
+        MobController copy = null;
+        yield return SceneBootTestHelper.WaitUntil(() => (copy = CopyOf(keptId)) != null, "the client's copy of the kept mob");
+        foreach (Collider2D body in copy.GetComponentsInChildren<Collider2D>())
+        {
+            body.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// The client's spawned copy of the mob whose network object id is <paramref name="id"/>, or null.
+    /// </summary>
+    private MobController CopyOf(ulong id)
+    {
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            NetworkObject networkObject = mob.GetComponent<NetworkObject>();
+            if (networkObject != null && networkObject.IsSpawned && networkObject.NetworkManager == client.Manager && networkObject.NetworkObjectId == id)
+            {
+                return mob;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

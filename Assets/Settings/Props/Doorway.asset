@@ -1,0 +1,163 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc0a11e4bc7200b46b4b518494554aff, type: 3}
+  m_Name: Doorway
+  m_EditorClassIdentifier: TopDownRPG.Editor::MarkerRecipe
+  propName: Doorway
+  category: 6
+  seed: 1
+  variantCount: 1
+  frameSize: {x: 48, y: 64}
+  basePixel: {x: 24, y: 10}
+  blocking: 0
+  contactHeight: 0.12
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  castsShadow: 1
+  fades: 0
+  previewTerrains:
+  - {fileID: 11400000, guid: 2faf17a29ca6d9445bf898432ddf4024, type: 2}
+  - {fileID: 11400000, guid: 0a3bc937ff61a3340b80b6482607f160, type: 2}
+  form: 1
+  stoneHeight: 1.5
+  stoneFoot: {x: 0.27, y: 0.18}
+  stoneTop: {x: 0.17, y: 0.12}
+  plinth: {x: 0.36, y: 0.08}
+  lean: 0.05
+  facets: 2
+  runes: 3
+  doormatSize: {x: 1.85, y: 0.9}
+  singleDoormatSize: {x: 0.9, y: 0.8}
+  lightColour:
+    serializedVersion: 2
+    rgba: 4294954380
+  lightIntensity: 0.9
+  lightRadius: 3
+  lightFlicker: 0
+  stone:
+    outline:
+      serializedVersion: 2
+      rgba: 4280687898
+    shadow:
+      serializedVersion: 2
+      rgba: 4283975747
+    middle:
+      serializedVersion: 2
+      rgba: 4286606694
+    light:
+      serializedVersion: 2
+      rgba: 4289238927
+  dressed:
+    outline:
+      serializedVersion: 2
+      rgba: 4281215014
+    shadow:
+      serializedVersion: 2
+      rgba: 4285293150
+    middle:
+      serializedVersion: 2
+      rgba: 4287793798
+    light:
+      serializedVersion: 2
+      rgba: 4290033332
+  carved:
+    outline:
+      serializedVersion: 2
+      rgba: 4280687898
+    shadow:
+      serializedVersion: 2
+      rgba: 4282002986
+    middle:
+      serializedVersion: 2
+      rgba: 4282002986
+    light:
+      serializedVersion: 2
+      rgba: 4282002986
+  rune:
+    outline:
+      serializedVersion: 2
+      rgba: 4285422110
+    shadow:
+      serializedVersion: 2
+      rgba: 4292657998
+    middle:
+      serializedVersion: 2
+      rgba: 4294966198
+    light:
+      serializedVersion: 2
+      rgba: 4294967274
+  wood:
+    outline:
+      serializedVersion: 2
+      rgba: 4278981668
+    shadow:
+      serializedVersion: 2
+      rgba: 4279773770
+    middle:
+      serializedVersion: 2
+      rgba: 4280565870
+    light:
+      serializedVersion: 2
+      rgba: 4282015892
+  board:
+    outline:
+      serializedVersion: 2
+      rgba: 4279112734
+    shadow:
+      serializedVersion: 2
+      rgba: 4280300622
+    middle:
+      serializedVersion: 2
+      rgba: 4281750134
+    light:
+      serializedVersion: 2
+      rgba: 4283463326
+  iron:
+    outline:
+      serializedVersion: 2
+      rgba: 4279899156
+    shadow:
+      serializedVersion: 2
+      rgba: 4281740844
+    middle:
+      serializedVersion: 2
+      rgba: 4283845704
+    light:
+      serializedVersion: 2
+      rgba: 4286214252
+  matBorder:
+    outline:
+      serializedVersion: 2
+      rgba: 4278980138
+    shadow:
+      serializedVersion: 2
+      rgba: 4279640154
+    middle:
+      serializedVersion: 2
+      rgba: 4280431742
+    light:
+      serializedVersion: 2
+      rgba: 4281354906
+  matField:
+    outline:
+      serializedVersion: 2
+      rgba: 4279248442
+    shadow:
+      serializedVersion: 2
+      rgba: 4280965754
+    middle:
+      serializedVersion: 2
+      rgba: 4282416288
+    light:
+      serializedVersion: 2
+      rgba: 4284260036

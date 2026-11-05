@@ -16,15 +16,17 @@ void TBPairWeights(TBInputs ins TB_D_PARAM, uint m TB_W_OUT_PARAM)
     }
     float remaining = 1.0;
     float blend = max(ins.globals.z, 0.001);
+    float up = d[m];
     [loop]
     for (int j = (int)m - 1; j >= 0; j--)
     {
         if (d[j] < 0.5)
         {
-            float v = saturate((d[j + 1] - d[j] - ins.globals.y) / blend + 0.5);
+            float v = saturate((up - d[j] - ins.globals.y) / blend + 0.5);
             w[j + 1] = remaining * v;
             remaining -= w[j + 1];
         }
+        up = d[j] < TB_FAR ? d[j] : up;
     }
     w[0] = remaining;
 }

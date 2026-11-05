@@ -128,7 +128,7 @@ public sealed class WaystoneDiscovery : IStartable, ITickable, IDisposable
         IWaystoneLink link = findLink(player.Transform);
         if (link != null)
         {
-            link.SendWaystoneDiscovered(entry.Name);
+            link.SendWaystoneDiscovered(world.WorldId, entry.Name);
         }
     }
 

@@ -24,14 +24,19 @@ using UnityEngine.U2D;
 /// its slices. Every prop's sheet also gets its variants' normals laid out as it,
 /// <c>Assets/Textures/Props/&lt;name&gt;_Normal.png</c>, as its secondary texture <c>_NormalTex</c>, so the sprite shader
 /// lights its relief under the lights (Docs/Lighting.md, Phase 11); every sheet in the props' atlas has one, so the atlas
-/// packs them into pages of their own, linear as they are imported. A light prop's prefabs get a <c>Light</c> child on the ground under where its drawing marked its light:
-/// a point Light 2D, off, casting hard shadows, and the <see cref="PropLight"/> that burns it. A moving flame's sheet and glow hold its frames
+/// packs them into pages of their own, linear as they are imported. A light prop's prefabs (a recipe with
+/// <see cref="IPropLightSettings"/> whose drawing marked a light) get a <c>Light</c> child on the ground under where its
+/// drawing marked it: a point Light 2D, off, casting hard shadows when the recipe's light casts, and the
+/// <see cref="PropLight"/> that burns it. A recipe whose variants are states of one prop writes fewer prefabs than
+/// variants (<see cref="PropRecipe.PrefabCount"/>): a waystone (<see cref="MarkerRecipe"/>, Docs/KnownGaps.md, Phase 3)
+/// writes one, drawing its sleeping variant, with a <see cref="WaystoneMarker"/> holding both states' slices and its
+/// <c>Light</c> child, inactive until the marker wakes. A moving flame's sheet and glow hold its frames
 /// in rows over the first, which is sliced, imported as full rectangles so a frame reaching past the first's outline
 /// still draws, and its prefabs draw with the flames material (<see cref="FlamesMaterialPath"/>), whose
 /// <c>_FlameFrames</c> tells the sprite shader how many rows it steps through. A prefab is created once and
 /// updated in place afterwards, so its GUID and every placed instance stay, and saved only when it changed. Every
 /// variant is baked before anything is written; a recipe is refused when it cannot bake, when a drawing reaches its
-/// frame's edge, when a blocking variant touches no ground, when a prefab of a variant past the count is left, or when
+/// frame's edge, when a blocking variant touches no ground, when a prefab of a variant past the prefab count is left, or when
 /// an existing prefab is a variant of the other base. Writing into the props' folder also makes sure the props' Sprite
 /// Atlas is there (<see cref="AtlasPath"/>): it packs the whole folder, every sheet in it, so props draw in few batches.
 /// </summary>
@@ -188,11 +193,12 @@ public static class PropWriter
             material = AssetDatabase.LoadAssetAtPath<Material>(FlamesMaterialPath);
         }
 
-        for (int i = 0; i < variants.Count; i++)
+        sprites.TryGetValue(SliceName(recipe.PropName, MarkerRecipe.AwakeVariant), out Sprite awake);
+        for (int i = 0; i < recipe.PrefabCount; i++)
         {
             sprites.TryGetValue(SliceName(recipe.PropName, i), out Sprite sprite);
             string path = PrefabPath(prefabsFolder, recipe, i);
-            if (WritePrefab(path, basePrefab, recipe, variants[i], sprite, material, layers))
+            if (WritePrefab(path, basePrefab, recipe, variants[i], sprite, awake, material, layers))
             {
                 written.Add(path);
             }
@@ -226,15 +232,15 @@ public static class PropWriter
             foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { folder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (VariantIndex(recipe.PropName, Path.GetFileNameWithoutExtension(path)) >= recipe.VariantCount)
+                if (VariantIndex(recipe.PropName, Path.GetFileNameWithoutExtension(path)) >= recipe.PrefabCount)
                 {
-                    return $"{path} is a variant past the count of {recipe.VariantCount}; placed props may use it, so the count cannot drop below it.";
+                    return $"{path} is a prefab past the count of {recipe.PrefabCount}; placed props may use it, so the count cannot drop below it.";
                 }
             }
         }
 
         GameObject expected = AssetDatabase.LoadAssetAtPath<GameObject>(recipe.Blocking ? BlockingPropPath : PropPath);
-        for (int i = 0; i < variants.Count; i++)
+        for (int i = 0; i < recipe.PrefabCount; i++)
         {
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(prefabsFolder, recipe, i));
             if (existing != null && PrefabUtility.GetCorrespondingObjectFromSource(existing) != expected)
@@ -458,12 +464,12 @@ public static class PropWriter
 
     /// <summary>
     /// Creates variant prefab <paramref name="path"/> from <paramref name="basePrefab"/>, or updates it in place when
-    /// it differs, returning whether it was written.
+    /// it differs, returning whether it was written; a waystone's switches to <paramref name="awake"/> once discovered.
     /// </summary>
-    private static bool WritePrefab(string path, GameObject basePrefab, PropRecipe recipe, PropVariant variant, Sprite sprite, Material material, uint layers)
+    private static bool WritePrefab(string path, GameObject basePrefab, PropRecipe recipe, PropVariant variant, Sprite sprite, Sprite awake, Material material, uint layers)
     {
         GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        if (existing != null && !Apply(existing, recipe, variant, sprite, material, layers, false))
+        if (existing != null && !Apply(existing, recipe, variant, sprite, awake, material, layers, false))
         {
             return false;
         }
@@ -473,24 +479,24 @@ public static class PropWriter
             TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab);
             instance.name = Path.GetFileNameWithoutExtension(path);
-            Apply(instance, recipe, variant, sprite, material, layers, true);
+            Apply(instance, recipe, variant, sprite, awake, material, layers, true);
             PrefabUtility.SaveAsPrefabAsset(instance, path);
             Object.DestroyImmediate(instance);
             return true;
         }
 
         GameObject contents = PrefabUtility.LoadPrefabContents(path);
-        Apply(contents, recipe, variant, sprite, material, layers, true);
+        Apply(contents, recipe, variant, sprite, awake, material, layers, true);
         PrefabUtility.SaveAsPrefabAsset(contents, path);
         PrefabUtility.UnloadPrefabContents(contents);
         return true;
     }
 
     /// <summary>
-    /// Whether <paramref name="root"/>'s sprite, material, rendering layers, fade, light, footprint or shadow caster
-    /// differ from the variant's, setting them when <paramref name="write"/>.
+    /// Whether <paramref name="root"/>'s sprite, material, rendering layers, fade, light, waystone states, footprint or
+    /// shadow caster differ from the variant's, setting them when <paramref name="write"/>.
     /// </summary>
-    private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, Material material, uint layers, bool write)
+    private static bool Apply(GameObject root, PropRecipe recipe, PropVariant variant, Sprite sprite, Sprite awake, Material material, uint layers, bool write)
     {
         SpriteRenderer visuals = root.transform.Find(VisualsName).GetComponent<SpriteRenderer>();
         bool changed = visuals.sprite != sprite || visuals.sharedMaterial != material || visuals.renderingLayerMask != layers;
@@ -511,7 +517,8 @@ public static class PropWriter
             }
         }
 
-        changed |= ApplyLight(root, recipe as LightRecipe, variant, write);
+        changed |= ApplyLight(root, recipe as IPropLightSettings, variant, write);
+        changed |= ApplyWaystone(root, recipe as MarkerRecipe, visuals, sprite, awake, write);
         RectInt footprint = variant.Footprint;
         float unit = PropBaker.PixelsPerCell;
         Vector2 size = new(footprint.width / unit, footprint.height / unit);
@@ -677,13 +684,56 @@ public static class PropWriter
     }
 
     /// <summary>
+    /// Whether <paramref name="root"/>'s waystone states differ from what a waystone's recipe asks for (none for any
+    /// other prop), setting them when <paramref name="write"/> (Docs/KnownGaps.md, Phase 3): a
+    /// <see cref="WaystoneMarker"/> drawing through <paramref name="visuals"/> in <paramref name="dormant"/> until its
+    /// waystone is discovered and <paramref name="awake"/> after, letting its <c>Light</c> child, inactive until then,
+    /// burn.
+    /// </summary>
+    private static bool ApplyWaystone(GameObject root, MarkerRecipe recipe, SpriteRenderer visuals, Sprite dormant, Sprite awake, bool write)
+    {
+        root.TryGetComponent(out WaystoneMarker marker);
+        if (recipe == null || recipe.Form != MarkerForm.Waystone)
+        {
+            if (marker != null && write)
+            {
+                Object.DestroyImmediate(marker, true);
+            }
+
+            return marker != null;
+        }
+
+        Transform light = root.transform.Find(LightName);
+        GameObject glow = light != null ? light.gameObject : null;
+        bool changed = marker == null || marker.Visuals != visuals || marker.DormantSprite != dormant || marker.AwakeSprite != awake || marker.Glow != glow
+            || (glow != null && glow.activeSelf);
+        if (!write)
+        {
+            return changed;
+        }
+
+        if (marker == null)
+        {
+            marker = root.AddComponent<WaystoneMarker>();
+        }
+
+        marker.Configure(visuals, dormant, awake, glow);
+        if (glow != null)
+        {
+            glow.SetActive(false);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
     /// Whether <paramref name="root"/>'s <c>Light</c> child differs from what a light prop's variant asks for (none for
     /// any other prop), setting it when <paramref name="write"/>: a point Light 2D on blend style 0 and the
     /// <c>Default</c>, <c>Terrain</c> and <c>Entities</c> sorting layers, casting shadows at full strength with hard edges
-    /// (Docs/Lighting.md, Phase 7), off, where the variant's light stands, in the recipe's colour, strength and radius,
-    /// with the <see cref="PropLight"/> that burns it.
+    /// when the recipe's light casts (Docs/Lighting.md, Phase 7), off, where the variant's light stands, in the recipe's
+    /// colour, strength and radius, with the <see cref="PropLight"/> that burns it.
     /// </summary>
-    private static bool ApplyLight(GameObject root, LightRecipe recipe, PropVariant variant, bool write)
+    private static bool ApplyLight(GameObject root, IPropLightSettings recipe, PropVariant variant, bool write)
     {
         Transform child = root.transform.Find(LightName);
         if (recipe == null || !variant.HasLight)
@@ -717,7 +767,7 @@ public static class PropWriter
         int[] layers = SortingLayerIds(LitSortingLayers);
         changed |= child.localPosition != position || light.lightType != Light2D.LightType.Point || light.blendStyleIndex != 0 || light.color != colour
             || !Mathf.Approximately(light.intensity, recipe.LightIntensity) || !Mathf.Approximately(light.pointLightOuterRadius, recipe.LightRadius)
-            || light.pointLightInnerRadius != 0f || !Mathf.Approximately(light.falloffIntensity, LightFalloff) || !light.shadowsEnabled
+            || light.pointLightInnerRadius != 0f || !Mathf.Approximately(light.falloffIntensity, LightFalloff) || light.shadowsEnabled != recipe.LightCastsShadows
             || light.shadowIntensity != 1f || light.shadowSoftness != 0f || light.enabled
             || !SameLayers(light.targetSortingLayers, layers) || propLight.LightSource != light || !Mathf.Approximately(propLight.Intensity, recipe.LightIntensity)
             || !Mathf.Approximately(propLight.Flicker, recipe.LightFlicker);
@@ -731,7 +781,7 @@ public static class PropWriter
             light.pointLightInnerRadius = 0f;
             light.pointLightOuterRadius = recipe.LightRadius;
             light.falloffIntensity = LightFalloff;
-            light.shadowsEnabled = true;
+            light.shadowsEnabled = recipe.LightCastsShadows;
             light.shadowIntensity = 1f;
             light.shadowSoftness = 0f;
             light.targetSortingLayers = layers;
@@ -740,6 +790,15 @@ public static class PropWriter
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// The IDs of the sorting layers a light shadow caster shadows, the ground's (Default and Terrain): the props' casters
+    /// and the walls' (Docs/Lighting.md, Phase 7, Docs/KnownGaps.md, Phase 7).
+    /// </summary>
+    internal static int[] ShadowedSortingLayerIds()
+    {
+        return SortingLayerIds(ShadowedSortingLayers);
     }
 
     /// <summary>

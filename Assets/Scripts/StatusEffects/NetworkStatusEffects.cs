@@ -5,7 +5,8 @@ using VContainer;
 
 /// <summary>
 /// Replicates a unit's statuses. Host: rewrites a server-only list of <see cref="StatusEntry"/> whenever the set
-/// changes, forwards blocked statuses for Immune popups, and holds a client's player while that client loads.
+/// changes and as the statuses start running again after a hold (the clients' mirrors ran down meanwhile), forwards
+/// blocked statuses for Immune popups, and holds a client's player while that client loads.
 /// Clients: rebuild their mirror set from the list on spawn and after every change, counting remaining time down
 /// from the server time of each write and then every frame for display.
 /// </summary>
@@ -22,6 +23,7 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
     private StatusEffectService statusService;
     private IClientReadiness readiness;
     private bool mirrorDirty;
+    private bool wasHeld;
 
     public bool IsHeld => IsSpawned && IsServer && !IsOwnedByServer && readiness != null && !readiness.IsClientReady(OwnerClientId);
 
@@ -83,7 +85,8 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
 
     /// <summary>
     /// Rebuilds the mirror once per frame after list changes; otherwise, on a client, counts the mirrored remaining
-    /// times down by the frame time.
+    /// times down by the frame time. On the host, rewrites the list on the frame the statuses run again after a hold
+    /// (<see cref="StatusEffectService.IsHeld"/>), since the clients counted them down through it.
     /// </summary>
     private void Update()
     {
@@ -94,6 +97,16 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
         else if (IsSpawned && !IsServer)
         {
             statuses.Set.CountDown(Time.deltaTime);
+        }
+        else if (IsSpawned)
+        {
+            bool held = statuses.Count > 0 && statusService != null && statusService.IsHeld(receiver);
+            if (wasHeld && !held && statuses.Count > 0)
+            {
+                WriteEntries();
+            }
+
+            wasHeld = held;
         }
     }
 

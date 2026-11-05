@@ -35,8 +35,15 @@ public sealed class AbilityService
         unitFilter = new ContactFilter2D { useLayerMask = true, layerMask = settings.UnitLayers, useTriggers = false };
     }
 
-    public event Action<PlayerAbilities, AbilityCast> CastApplied;
-    public event Action<PlayerAbilities, AbilityCast> CastResolved;
+    /// <summary>
+    /// Raised as a cast starts on the machine with authority, with its caster. For tests.
+    /// </summary>
+    internal event Action<PlayerAbilities, AbilityCast> CastApplied;
+
+    /// <summary>
+    /// Raised once a completed cast has acted on its units, on the machine with authority, with its caster. For tests.
+    /// </summary>
+    internal event Action<PlayerAbilities, AbilityCast> CastResolved;
 
     /// <summary>
     /// Announces that <paramref name="caster"/> started <paramref name="cast"/> on the authoritative machine; does
@@ -70,7 +77,7 @@ public sealed class AbilityService
             CollectAffected(caster, cast, casterPosition);
             for (int i = 0; i < affected.Count; i++)
             {
-                ApplyTo(affected[i], cast.Ability, caster.gameObject);
+                ApplyTo(affected[i], cast.Ability, caster.gameObject, casterPosition);
             }
 
             affected.Clear();
@@ -152,9 +159,10 @@ public sealed class AbilityService
 
     /// <summary>
     /// Heals <paramref name="target"/> when the ability has a heal, then applies its hit when it carries damage or
-    /// statuses, both with <paramref name="source"/> as the source.
+    /// statuses, both with <paramref name="source"/> as the source, the hit coming from <paramref name="origin"/>, where
+    /// the caster stood as the cast completed.
     /// </summary>
-    private void ApplyTo(DamageReceiver target, AbilityDefinition ability, GameObject source)
+    private void ApplyTo(DamageReceiver target, AbilityDefinition ability, GameObject source, Vector2 origin)
     {
         if (ability.Heal > 0)
         {
@@ -164,7 +172,7 @@ public sealed class AbilityService
         Hit hit = ability.Hit;
         if (hit.Amount > 0 || hit.StatusCount > 0)
         {
-            hitService.ApplyHit(target, hit, source);
+            hitService.ApplyHit(target, hit, source, origin);
         }
     }
 }

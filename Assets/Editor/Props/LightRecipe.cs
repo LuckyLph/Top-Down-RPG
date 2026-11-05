@@ -22,7 +22,7 @@ public enum LightForm
 /// which the sprite shader steps through; a lamp post's wick stands still behind its glass.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Props/Light Recipe", fileName = "Campfire")]
-public sealed class LightRecipe : PropRecipe
+public sealed class LightRecipe : PropRecipe, IPropLightSettings
 {
     private const float StoneJitter = 0.25f;
     private const float StoneSink = 0.45f;
@@ -133,6 +133,11 @@ public sealed class LightRecipe : PropRecipe
     public float LightIntensity => lightIntensity;
     public float LightRadius => lightRadius;
     public float LightFlicker => lightFlicker;
+
+    /// <summary>
+    /// A light prop's light casts the shadows of walls and props (Docs/Lighting.md, Phase 7).
+    /// </summary>
+    public bool LightCastsShadows => true;
 
     /// <inheritdoc />
     public override int Frames => form != LightForm.LampPost && flameMoves ? FlameFrames : 1;

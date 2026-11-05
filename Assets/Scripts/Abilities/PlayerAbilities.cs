@@ -13,8 +13,8 @@ using UnityEditor;
 /// <see cref="PlayerOrders"/>. A weapon ability keeps its own cooldown across weapon switches: switching never readies
 /// an ability early, and a new weapon's abilities are not held by the old one's. Replays other machines' casts with
 /// the weapon they were cast with, so a copy that has not heard of a switch yet still plays the right ability, and
-/// raises events for a copy's casts starting and being cancelled, which only its visuals hear. Draws gizmos for recent
-/// casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
+/// raises events for a copy's casts starting, completing and being cancelled, which only its visuals hear. Draws gizmos
+/// for recent casts (local and remote) and, when selected, the ranges of its Point and Unit abilities.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerAbilities : MonoBehaviour, IAbilityCaster
@@ -51,7 +51,7 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     private readonly AbilityDefinition[] slots = new AbilityDefinition[AbilitySlots.Count];
     private readonly AbilityCooldowns cooldowns = new(AbilitySlots.Count);
     private readonly Dictionary<AbilityDefinition, float> weaponReadyTimes = new();
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private AbilityService abilityService;
     private Health health;
     private int runningSlot = -1;
@@ -73,6 +73,12 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     /// for its visuals.
     /// </summary>
     public event Action<AbilityCast> RemoteCastStarted;
+
+    /// <summary>
+    /// Raised on a copy when the owner's cast completed (<see cref="CompleteRemoteCast"/>), for its visuals, which show
+    /// its release then (Docs/KnownGaps.md, Phase 4).
+    /// </summary>
+    public event Action RemoteCastCompleted;
 
     /// <summary>
     /// Raised on a copy when the owner's cast was cancelled (<see cref="StopRemoteCast"/>), for its visuals.
@@ -146,10 +152,16 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Logs an error when no <see cref="AbilityService"/> was injected, since casts would then have no effect.
+    /// Logs an error when no clock was injected, since cooldowns and casts cannot run without one, or no
+    /// <see cref="AbilityService"/>, since casts would then have no effect.
     /// </summary>
     private void Start()
     {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(PlayerAbilities)} was not injected with an {nameof(IClock)}; its cooldowns and casts cannot run.", this);
+        }
+
         if (abilityService == null)
         {
             Debug.LogError($"{name} was not injected with an {nameof(AbilityService)}; its casts will have no effect.", this);
@@ -157,13 +169,12 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
-    /// Injects the clock cooldowns run on (falling back to <see cref="UnityClock.Shared"/> when null) and the
-    /// service that applies casts.
+    /// Injects the clock cooldowns run on and the service that applies casts.
     /// </summary>
     [Inject]
     public void Construct(IClock gameClock, AbilityService service)
     {
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         abilityService = service;
     }
 
@@ -331,6 +342,14 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
     }
 
     /// <summary>
+    /// On a copy, the owner's cast completed: raises <see cref="RemoteCastCompleted"/>.
+    /// </summary>
+    public void CompleteRemoteCast()
+    {
+        RemoteCastCompleted?.Invoke();
+    }
+
+    /// <summary>
     /// On a copy, the owner's cast was cancelled: raises <see cref="RemoteCastCancelled"/>.
     /// </summary>
     public void StopRemoteCast()
@@ -467,11 +486,11 @@ public class PlayerAbilities : MonoBehaviour, IAbilityCaster
 
     /// <summary>
     /// Draws the aim and a label for each recent cast still running or within <c>castGizmoSeconds</c> of its end,
-    /// fading out afterwards; remote casts are dimmer.
+    /// fading out afterwards; remote casts are dimmer. Nothing before a clock was injected (a player in edit mode).
     /// </summary>
     private void OnDrawGizmos()
     {
-        if (!drawCastGizmos)
+        if (!drawCastGizmos || clock == null)
         {
             return;
         }

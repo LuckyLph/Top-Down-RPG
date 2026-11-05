@@ -7,19 +7,23 @@ using UnityEngine;
 /// <see cref="NavigationGrid2D"/> over its 64 x 64 cells and placed in the <see cref="NavigationPagePool"/> every loaded
 /// world shares. Steps, edge costs, cliff sides, cliff faces and regions read across the borders of loaded chunks; a
 /// chunk that is not loaded is blocked, so paths stay inside the loaded chunks and a partial path toward a goal beyond
-/// them ends at the loaded edge. Registered by the world's scope; each chunk's scope adds and removes its page
-/// (<see cref="ChunkNavigation"/>).
+/// them ends at the loaded edge. Its search limits are its world's (<see cref="WorldDefinition.MaxSearchCells"/>,
+/// <see cref="WorldDefinition.NearestCellSearchRadius"/>), and it knows which chunks the world has, so a region running
+/// to a chunk not loaded counts as going on beyond what is loaded. Registered by the world's scope; each chunk's scope
+/// adds and removes its page (<see cref="ChunkNavigation"/>).
 /// </summary>
 public sealed class WorldNavigation : NavigationMap2D, IDisposable
 {
     private readonly Dictionary<Vector2Int, NavigationGrid2D> chunks = new();
     private readonly List<Vector2Int> removing = new();
+    private readonly WorldDefinition world;
 
     /// <summary>
-    /// The navigation of a world of up to <see cref="WorldDefinition.MaxChunksPerSide"/> chunks a side, its pages in
-    /// <paramref name="pool"/>.
+    /// The navigation of <paramref name="worldDefinition"/>, up to <see cref="WorldDefinition.MaxChunksPerSide"/>
+    /// chunks a side, its pages in <paramref name="pool"/>, with the world's search limits; with no world, the default
+    /// limits, every chunk of the 16 x 16 counting as one the world has.
     /// </summary>
-    public WorldNavigation(NavigationPagePool pool)
+    public WorldNavigation(NavigationPagePool pool, WorldDefinition worldDefinition = null)
         : base(
             pool,
             Vector2Int.zero,
@@ -27,6 +31,21 @@ public sealed class WorldNavigation : NavigationMap2D, IDisposable
             new Vector2Int(WorldDefinition.MaxChunksPerSide, WorldDefinition.MaxChunksPerSide),
             singleArea: false)
     {
+        world = worldDefinition;
+        if (world != null)
+        {
+            MaxSearchCells = world.MaxSearchCells;
+            NearestCellSearchRadius = world.NearestCellSearchRadius;
+        }
+    }
+
+    /// <summary>
+    /// Whether the world has a chunk at <paramref name="column"/>, <paramref name="row"/> (any chunk of the 16 x 16 with
+    /// no world given).
+    /// </summary>
+    protected override bool CouldLoadPage(int column, int row)
+    {
+        return world == null || world.HasChunk(new Vector2Int(column, row));
     }
 
     /// <summary>

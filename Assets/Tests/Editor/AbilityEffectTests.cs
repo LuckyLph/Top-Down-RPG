@@ -198,7 +198,8 @@ public class AbilityEffectTests
 
     /// <summary>
     /// An area around the caster is centred on the caster position passed to
-    /// <see cref="AbilityService.Resolve"/>, not on where this machine's copy of the caster stands.
+    /// <see cref="AbilityService.Resolve"/>, not on where this machine's copy of the caster stands, and its hits come
+    /// from that position (Docs/KnownGaps.md, Phase 4).
     /// </summary>
     [Test]
     public void AreasAroundTheCaster_StartWhereTheOwnerSawTheCaster_NotAtThisMachinesCopy()
@@ -207,11 +208,14 @@ public class AbilityEffectTests
         DamageReceiver ahead = Unit("Ahead", Faction.Mobs, new Vector2(3f, 0f));
         DamageReceiver atCopy = Unit("AtCopy", Faction.Mobs, new Vector2(-1f, 0f));
         Physics2D.SyncTransforms();
+        Vector2? origin = null;
+        ahead.Health.Damaged += hit => origin = hit.Origin;
 
         service.Resolve(caster, SelfCast(Ability(AbilityTargeting.None, new Hit(10, DamageType.Physical), areaRadius: 1.25f)), new Vector2(2.5f, 0f));
 
         Assert.That(ahead.Health.CurrentHealth, Is.EqualTo(ahead.Health.MaxHealth - 10), "The circle is centred on the owner's position.");
         Assert.That(atCopy.Health.CurrentHealth, Is.EqualTo(atCopy.Health.MaxHealth), "Not on this machine's lagging copy.");
+        Assert.That(origin.HasValue && origin.Value == new Vector2(2.5f, 0f), Is.True, "The hit comes from the owner's position.");
     }
 
     /// <summary>

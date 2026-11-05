@@ -7,7 +7,7 @@ using UnityEngine;
 /// has no rule for. Read-only at runtime; tests build their own with <see cref="Create"/>. <see cref="Version"/> changes
 /// when the asset is edited, so region caches refresh.
 /// </summary>
-[CreateAssetMenu(menuName = "AI/Navigation/Terrain Movement Profile", fileName = "TerrainMovementProfile2D")]
+[CreateAssetMenu(menuName = "TopDownRPG/AI/Navigation/Terrain Movement Profile", fileName = "TerrainMovementProfile2D")]
 public class TerrainMovementProfile2D : ScriptableObject
 {
     /// <summary>Whether one terrain type is walkable, and its traversal cost.</summary>

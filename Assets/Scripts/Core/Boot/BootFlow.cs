@@ -41,10 +41,10 @@ public sealed class BootFlow : IAsyncStartable
 #if UNITY_EDITOR
     /// <summary>
     /// Boots into the scenes the editor had open: a world's root or chunk scene starts a new game in that world at its
-    /// default entry (whose first save replaces the save file, as New Game's does); the gameplay scene without a world
-    /// starts a new game in the starting world at its entry; the menu scene shows the main menu. Any other scene is no
-    /// world: it boots to the main menu with a warning. Returns false when <paramref name="scenePaths"/> gives nothing
-    /// to boot into.
+    /// default entry; the gameplay scene without a world starts a new game in the starting world at its entry; either is
+    /// a throwaway session (<see cref="SessionSave.StartThrowaway"/>), which leaves the save file alone, since only a game
+    /// started from the main menu saves. The menu scene shows the main menu. Any other scene is no world: it boots to the
+    /// main menu with a warning. Returns false when <paramref name="scenePaths"/> gives nothing to boot into.
     /// </summary>
     private async Awaitable<bool> TryBootFromEditorScenesAsync(string[] scenePaths, CancellationToken cancellation)
     {
@@ -89,7 +89,8 @@ public sealed class BootFlow : IAsyncStartable
 
         if (world != null)
         {
-            sessionSave.StartNew();
+            sessionSave.StartThrowaway();
+            Debug.Log($"Booted into {world.name} from the editor: a throwaway session that leaves the save file alone. Games started from the main menu save.");
             await gameFlow.StartWorldGameAsync(world, entryName, cancellation);
             return true;
         }

@@ -44,6 +44,5 @@ MonoBehaviour:
   respawns: 1
   respawnDelaySeconds: 300
   repathInterval: 0.25
-  nearestCellSearchRadius: 8
   stuckTimeout: 1
   movementProfile: {fileID: 11400000, guid: 55e5271f71628e1bf0c34e5cd4a56789, type: 2}

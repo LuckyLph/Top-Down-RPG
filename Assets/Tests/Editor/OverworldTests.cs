@@ -180,7 +180,7 @@ public class OverworldTests
     /// The Overworld's lights that are not spells (Docs/Lighting.md, Phase 5): a campfire at each of the four campsites,
     /// the Clearing's, the Snowfield's, the Coast's and the Lava Fields', lamp posts along the Village Forest's street
     /// and a lamp post on every waystone's plaza, within its radius of the waystone; the chunks hold a prop light for each
-    /// light prop composed, and the Lava Fields' ground glows.
+    /// light prop composed and for each waystone's stone (Docs/KnownGaps.md, Phase 3), and the Lava Fields' ground glows.
     /// </summary>
     [Test]
     public void ItsCampsitesVillageAndWaystones_AreLit()
@@ -221,10 +221,21 @@ public class OverworldTests
         Assert.That(litWaystones, Is.EquivalentTo(composition.Entries.FindAll(entry => entry.Waystone).ConvertAll(entry => entry.Name)), "the waystones with a lamp post");
         Assert.That(villageLamps, Is.GreaterThanOrEqualTo(3), "the lamp posts along the village street");
         int inScenes = 0;
+        int stones = 0;
         bool glows = false;
         foreach (Scene scene in opened)
         {
-            inScenes += SceneQuery.FindAll<PropLight>(scene).Length;
+            foreach (PropLight light in SceneQuery.FindAll<PropLight>(scene))
+            {
+                if (light.GetComponentInParent<WaystoneMarker>(true) != null)
+                {
+                    stones++;
+                }
+                else
+                {
+                    inScenes++;
+                }
+            }
         }
 
         foreach (Grid grid in grids.Values)
@@ -233,6 +244,7 @@ public class OverworldTests
         }
 
         Assert.That(inScenes, Is.EqualTo(lights), "the chunks hold a light for each light prop");
+        Assert.That(stones, Is.EqualTo(composition.Entries.FindAll(entry => entry.Waystone).Count), "and each waystone's stone its own");
         Assert.That(glows, Is.True, "the Lava Fields' ground glows");
     }
 

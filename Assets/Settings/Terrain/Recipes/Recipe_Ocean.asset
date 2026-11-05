@@ -58,23 +58,7 @@ MonoBehaviour:
     amplitude: 0.4
   darkerShare: 0.3
   lighterShare: 0.2
-  crestsAcross: 4
   families: 1
-  bendWaves:
-  - x: 1
-    y: 0
-    amplitude: 1
-  - x: 2
-    y: 0
-    amplitude: 0.7
-  - x: 3
-    y: 0
-    amplitude: 0.5
-  - x: 5
-    y: 0
-    amplitude: 0.3
-  bend: 20
-  arch: 8
   maskWaves:
   - x: 2
     y: 5

@@ -5,13 +5,16 @@ using VContainer.Unity;
 
 /// <summary>
 /// Gameplay-scope entry point that writes the save during a world session (Docs/WorldStreaming.md: Persistence), only
-/// on the machine that decides game state (offline or the host; a client never saves): when any player enters a world
+/// on the machine that decides game state (offline or the host; a client never saves) and only for a session started
+/// from the main menu (an editor boot straight into a world is a throwaway, <see cref="SessionSave.IsThrowaway"/>,
+/// which never writes the save file): when any player enters a world
 /// (the session starting, a trip, a player joining), every <see cref="GameplaySettings.AutosaveIntervalSeconds"/> of
 /// game time, and as the session ends (the menu, a new game, the host leaving, quitting). Each save first records every
-/// player's place in the <see cref="SessionSave"/> by its player id (<see cref="PlayerIds"/>): where it stands, the
-/// entry of the trip it is on until it gets there, or, for a dead player, the waystone it will respawn at, so leaving or
-/// quitting while dead neither skips the respawn nor brings it back beside its killer. A player that leaves has its
-/// place recorded as it goes, for its next join.
+/// player's place and weapon in the <see cref="SessionSave"/> by its player id (<see cref="PlayerIds"/>): where it
+/// stands, the entry of the trip it is on until it gets there, or, for a dead player, the waystone it will respawn at, so
+/// leaving or quitting while dead neither skips the respawn nor brings it back beside its killer; and the id of the
+/// catalog weapon it holds (<see cref="WeaponCatalog.IdOf"/>), as this machine sees it. A player that leaves has its
+/// place and weapon recorded as it goes, for its next join.
 /// </summary>
 public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
 {
@@ -59,9 +62,9 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Whether this machine saves now: it decides game state and a world session runs.
+    /// Whether this machine saves now: it decides game state, a world session runs and that session is no throwaway.
     /// </summary>
-    private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null;
+    private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null && !sessionSave.IsThrowaway;
 
     /// <summary>
     /// Follows the players leaving, their worlds, the session's end and the application quitting, and the worlds of the
@@ -106,9 +109,9 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Records every player's place and writes the session's state as the save, then waits a full autosave interval
-    /// before the next autosave. Returns false, writing nothing, where this machine does not save (a client, or no world
-    /// session), or when the store fails.
+    /// Records every player's place and weapon and writes the session's state as the save, then waits a full autosave
+    /// interval before the next autosave. Returns false, writing nothing, where this machine does not save (a client, no
+    /// world session, or a throwaway one), or when the store fails.
     /// </summary>
     public bool Save()
     {
@@ -121,6 +124,7 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
         for (int i = 0; i < registered.Count; i++)
         {
             RecordPlace(registered[i]);
+            RecordWeapon(registered[i]);
         }
 
         saveRequested = false;
@@ -214,13 +218,35 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Records the place of a player that leaves (a client disconnecting, the session ending), then forgets its world.
+    /// Records the id of the catalog weapon <paramref name="player"/> holds under its player id; nothing for a player
+    /// without an id, a weapon controller or a catalog weapon.
+    /// </summary>
+    private void RecordWeapon(PlayerHandle player)
+    {
+        string playerId = playerIds.IdOf(player);
+        if (string.IsNullOrEmpty(playerId) || player.Transform == null
+            || !player.Transform.TryGetComponent(out PlayerWeaponController weapon) || weapon.Catalog == null)
+        {
+            return;
+        }
+
+        string id = weapon.Catalog.IdOf(weapon.CurrentWeapon);
+        if (!string.IsNullOrEmpty(id))
+        {
+            sessionSave.SetWeapon(playerId, id);
+        }
+    }
+
+    /// <summary>
+    /// Records the place and weapon of a player that leaves (a client disconnecting, the session ending), then forgets
+    /// its world.
     /// </summary>
     private void HandlePlayerRemoved(PlayerHandle player)
     {
         if (authority.IsAuthoritative)
         {
             RecordPlace(player);
+            RecordWeapon(player);
         }
 
         lastWorlds.Remove(player);

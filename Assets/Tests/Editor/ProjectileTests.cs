@@ -51,8 +51,9 @@ public class ProjectileTests
     }
 
     /// <summary>
-    /// A straight projectile stops at the first enemy on its line and hits it once; the one behind it takes nothing,
-    /// and the shooter, whose body it starts in, is never hit.
+    /// A straight projectile stops at the first enemy on its line and hits it once, the hit coming from where it was
+    /// shot though the shooter moved on (Docs/KnownGaps.md, Phase 4); the one behind it takes nothing, and the shooter,
+    /// whose body it starts in, is never hit.
     /// </summary>
     [Test]
     public void AStraightProjectile_HitsTheFirstUnitOnItsLine_Only()
@@ -62,14 +63,20 @@ public class ProjectileTests
         ProjectileService service = CreateService(FixedGameAuthority.Authoritative);
         int struck = 0;
         service.UnitStruck += (_, _, _) => struck++;
+        Vector2? origin = null;
+        first.Health.Damaged += hit => origin = hit.Origin;
 
         service.Launch(shooter, Spec(false), new Hit(5, DamageType.Physical, null), Vector2.zero, Vector2.right, default);
         Assert.That(service.FlyingCount, Is.EqualTo(1));
         Assert.That(service.Flying(0).Position.x, Is.EqualTo(LaunchDistance).Within(0.0001f), "It leaves its launch distance ahead.");
+        Assert.That(service.Flying(0).Origin, Is.EqualTo(Vector2.zero), "It keeps the point it was shot from.");
+        shooter.transform.position = new Vector3(0f, 3f, 0f);
         FlyFor(service, 1f);
 
         Assert.That(service.FlyingCount, Is.Zero);
         Assert.That(struck, Is.EqualTo(1));
+        Assert.That(origin.HasValue, Is.True, "The arrow's hit carries a point.");
+        Assert.That(origin.Value, Is.EqualTo(Vector2.zero), "Where it was shot from, not where the shooter stands now.");
         Assert.That(first.Health.CurrentHealth, Is.EqualTo(first.Health.MaxHealth - 5));
         Assert.That(second.Health.CurrentHealth, Is.EqualTo(second.Health.MaxHealth), "Only the first unit is hit.");
         Assert.That(shooter.GetComponent<Health>().CurrentHealth, Is.EqualTo(shooter.GetComponent<Health>().MaxHealth));

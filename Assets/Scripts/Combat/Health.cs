@@ -11,7 +11,8 @@ public class Health : MonoBehaviour
 {
     /// <summary>
     /// One application of damage as raised by <see cref="Damaged"/>: the HP actually removed, the source, the HP
-    /// before and after, and the damage type and flags.
+    /// before and after, the damage type and flags, and the point the hit came from (Docs/KnownGaps.md, Phase 4), if
+    /// it came from a point.
     /// </summary>
     [Serializable]
     public readonly struct DamageEvent
@@ -19,7 +20,7 @@ public class Health : MonoBehaviour
         /// <summary>
         /// Creates the event for <paramref name="amount"/> HP removed from <paramref name="target"/>.
         /// </summary>
-        public DamageEvent(Health target, int amount, GameObject source, int previousHealth, int currentHealth, DamageType type, DamageFlags flags)
+        public DamageEvent(Health target, int amount, GameObject source, int previousHealth, int currentHealth, DamageType type, DamageFlags flags, Vector2? origin = null)
         {
             Target = target;
             Amount = amount;
@@ -28,6 +29,7 @@ public class Health : MonoBehaviour
             CurrentHealth = currentHealth;
             Type = type;
             Flags = flags;
+            Origin = origin;
         }
 
         public Health Target { get; }
@@ -37,6 +39,12 @@ public class Health : MonoBehaviour
         public int CurrentHealth { get; }
         public DamageType Type { get; }
         public DamageFlags Flags { get; }
+
+        /// <summary>
+        /// Where the hit came from as the machine that resolved it saw it (where an arrow was shot from, where an
+        /// attacker or caster stood), or null for a hit from no point.
+        /// </summary>
+        public Vector2? Origin { get; }
     }
 
     [SerializeField, Min(1)] private int maxHealth = 10;
@@ -80,10 +88,11 @@ public class Health : MonoBehaviour
 
     /// <summary>
     /// Removes up to <paramref name="amount"/> HP from a living unit and returns what was removed, raising
-    /// <see cref="Damaged"/> and, when HP reaches zero, <see cref="Died"/>. Does nothing and returns 0 for a
-    /// non-positive amount or a dead unit. Applies no faction or authority rules; that is <see cref="DamageService"/>.
+    /// <see cref="Damaged"/> and, when HP reaches zero, <see cref="Died"/>, with the hit's <paramref name="origin"/>.
+    /// Does nothing and returns 0 for a non-positive amount or a dead unit. Applies no faction or authority rules; that
+    /// is <see cref="DamageService"/>.
     /// </summary>
-    public int ApplyDamage(int amount, GameObject source = null, DamageType type = DamageType.Physical, DamageFlags flags = DamageFlags.None)
+    public int ApplyDamage(int amount, GameObject source = null, DamageType type = DamageType.Physical, DamageFlags flags = DamageFlags.None, Vector2? origin = null)
     {
         InitializeIfNeeded();
 
@@ -101,7 +110,7 @@ public class Health : MonoBehaviour
             return 0;
         }
 
-        Damaged?.Invoke(new DamageEvent(this, appliedDamage, source, previousHealth, currentHealth, type, flags));
+        Damaged?.Invoke(new DamageEvent(this, appliedDamage, source, previousHealth, currentHealth, type, flags, origin));
 
         if (currentHealth == 0)
         {

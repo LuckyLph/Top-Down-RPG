@@ -7,9 +7,11 @@ using UnityEngine;
 /// long as its cast time), the contact frame for the contact (a cast's release), and the frames after it over the
 /// recovery (a cast's follow-through), so the contact frame shows exactly when the hit resolves or the cast completes,
 /// at any speed or cast time. The contact frame is never skipped: an update that jumps past the whole contact still
-/// shows it once. Played until contact (a copy of another machine's attack, or the owner's cast, which its orders
-/// complete), the windup holds its last frame until <see cref="ReachContact"/> says the hit landed or the cast
-/// completed, and the contact and recovery then play from that moment. A cast with
+/// shows it once. Played until contact (a copy of another machine's attack or cast, or the owner's cast, which its
+/// orders complete), the windup holds its last frame until <see cref="ReachContact"/> says the hit landed or the cast
+/// completed, and the contact and recovery then play from that moment; a hold that outlasts its contact wait past the
+/// windup ends the action, the character going back to its locomotion (Docs/KnownGaps.md, Phase 4), and a contact
+/// arriving later shows nothing. A cast with
 /// a channel beat whose cast time is longer than its clip's gather plays the gather at its natural speed, then shows its
 /// last two gather frames in turn, a beat each, until the release. A cast may come with a clip drawn over a gait, which
 /// the animator shows while the character moves. Allocates nothing.
@@ -21,6 +23,7 @@ public sealed class CharacterActionLayer
     private AttackTimeline timeline;
     private float startTime;
     private bool holdUntilContact;
+    private float contactWait;
     private bool contacted;
     private float contactTime;
     private float channelFrom;
@@ -50,6 +53,12 @@ public sealed class CharacterActionLayer
     public AttackPhase Phase { get; private set; }
 
     /// <summary>
+    /// When the contact (a cast's release) stops showing: its length after <see cref="ReachContact"/>, or after the windup
+    /// of an action that reached it on its own.
+    /// </summary>
+    public float ContactEndsAt => (contacted ? contactTime : startTime + timeline.Windup) + timeline.Contact;
+
+    /// <summary>
     /// The current frame's sprite in the action's direction, or null when nothing plays.
     /// </summary>
     public Sprite Sprite => IsPlaying ? clip.SpriteAt(Direction, Frame) : null;
@@ -62,17 +71,18 @@ public sealed class CharacterActionLayer
     /// <summary>
     /// Starts <paramref name="actionClip"/>, an attack's clip, facing <paramref name="direction"/> at
     /// <paramref name="now"/> on <paramref name="actionTimeline"/>, replacing any action playing; with
-    /// <paramref name="untilContact"/> the windup holds its last frame until <see cref="ReachContact"/>. False, and
-    /// nothing changes, for a clip that is incomplete or has no contact frame.
+    /// <paramref name="untilContact"/> the windup holds its last frame until <see cref="ReachContact"/>, for at most
+    /// <paramref name="wait"/> past the windup, after which the action ends. False, and nothing changes, for a clip
+    /// that is incomplete or has no contact frame.
     /// </summary>
-    public bool Play(CharacterAnimationClip actionClip, int direction, in AttackTimeline actionTimeline, float now, bool untilContact)
+    public bool Play(CharacterAnimationClip actionClip, int direction, in AttackTimeline actionTimeline, float now, bool untilContact, float wait = float.PositiveInfinity)
     {
         if (!Playable(actionClip))
         {
             return false;
         }
 
-        Start(CharacterActionKind.Attack, actionClip, null, direction, false, actionTimeline, now, untilContact, 0f);
+        Start(CharacterActionKind.Attack, actionClip, null, direction, false, actionTimeline, now, untilContact, 0f, wait);
         return true;
     }
 
@@ -82,11 +92,12 @@ public sealed class CharacterActionLayer
     /// replacing any action playing. <paramref name="castMovingClip"/>, the same cast drawn over a gait, is kept when
     /// it is complete and has the clip's frames and release frame (null otherwise); <paramref name="followsFacing"/>
     /// turns the cast with the facing; a positive <paramref name="beat"/> makes a cast longer than the clip's gather a
-    /// channel; with <paramref name="untilRelease"/> (the owner's cast, completed by its orders) the gather holds its
-    /// last frame past the cast time until <see cref="ReachContact"/>, so the release shows on exactly the update the
-    /// cast completes. False, and nothing changes, for a clip that is incomplete or has no release frame.
+    /// channel; with <paramref name="untilRelease"/> (the owner's cast, completed by its orders, or a copy's, completed by
+    /// the owner's message) the gather holds its last frame past the cast time until <see cref="ReachContact"/>, so the
+    /// release shows on exactly the update the cast completes, for at most <paramref name="wait"/> past the cast time,
+    /// after which the cast ends. False, and nothing changes, for a clip that is incomplete or has no release frame.
     /// </summary>
-    public bool PlayCast(CharacterAnimationClip castClip, CharacterAnimationClip castMovingClip, int direction, bool followsFacing, in AttackTimeline castTimeline, float now, float beat, bool untilRelease)
+    public bool PlayCast(CharacterAnimationClip castClip, CharacterAnimationClip castMovingClip, int direction, bool followsFacing, in AttackTimeline castTimeline, float now, float beat, bool untilRelease, float wait = float.PositiveInfinity)
     {
         if (!Playable(castClip))
         {
@@ -95,7 +106,7 @@ public sealed class CharacterActionLayer
 
         bool movingFits = castMovingClip != null && castMovingClip.IsComplete && castMovingClip.GaitFrames > 0
             && castMovingClip.FrameCount == castClip.FrameCount && castMovingClip.ContactFrame == castClip.ContactFrame;
-        Start(CharacterActionKind.Cast, castClip, movingFits ? castMovingClip : null, direction, followsFacing, castTimeline, now, untilRelease, beat);
+        Start(CharacterActionKind.Cast, castClip, movingFits ? castMovingClip : null, direction, followsFacing, castTimeline, now, untilRelease, beat, wait);
         return true;
     }
 
@@ -124,8 +135,9 @@ public sealed class CharacterActionLayer
     }
 
     /// <summary>
-    /// The phase the next <see cref="Advance"/> to <paramref name="now"/> shows: none when nothing plays, the windup
-    /// while a copy's windup holds for its contact, and the contact on the first update past the windup.
+    /// The phase the next <see cref="Advance"/> to <paramref name="now"/> shows: none when nothing plays or a hold for
+    /// the contact has outlasted its wait, the windup while a copy's windup holds for its contact, and the contact on the
+    /// first update past the windup.
     /// </summary>
     public AttackPhase PhaseAt(float now)
     {
@@ -137,7 +149,7 @@ public sealed class CharacterActionLayer
         float elapsed = ElapsedAt(now);
         if (holdUntilContact && !contacted && elapsed >= timeline.Windup)
         {
-            return AttackPhase.Windup;
+            return GaveUpWaiting(elapsed) ? AttackPhase.None : AttackPhase.Windup;
         }
 
         AttackPhase phase = timeline.PhaseAt(elapsed);
@@ -174,7 +186,7 @@ public sealed class CharacterActionLayer
     /// <summary>
     /// Moves the action on to <paramref name="now"/>: its phase and the frame that phase shows, the contact frame on the
     /// first update past the windup whatever the time. Returns whether it is still playing; it ends once its recovery is
-    /// over.
+    /// over, or once a hold for its contact has outlasted its wait.
     /// </summary>
     public bool Advance(float now)
     {
@@ -187,6 +199,12 @@ public sealed class CharacterActionLayer
         int contactFrame = clip.ContactFrame;
         if (holdUntilContact && !contacted && elapsed >= timeline.Windup)
         {
+            if (GaveUpWaiting(elapsed))
+            {
+                Stop();
+                return false;
+            }
+
             Phase = AttackPhase.Windup;
             Frame = Mathf.Max(0, contactFrame - 1);
             return true;
@@ -229,6 +247,15 @@ public sealed class CharacterActionLayer
     }
 
     /// <summary>
+    /// Whether a hold for the contact, <paramref name="elapsed"/> seconds into the action, has waited past the windup
+    /// longer than its wait.
+    /// </summary>
+    private bool GaveUpWaiting(float elapsed)
+    {
+        return elapsed >= timeline.Windup + contactWait;
+    }
+
+    /// <summary>
     /// Whether <paramref name="actionClip"/> can play: complete, with a contact frame.
     /// </summary>
     private static bool Playable(CharacterAnimationClip actionClip)
@@ -238,9 +265,10 @@ public sealed class CharacterActionLayer
 
     /// <summary>
     /// Starts an action of <paramref name="kind"/>; a positive <paramref name="beat"/> makes a windup longer than the
-    /// clip's natural one, with at least two frames, a channel.
+    /// clip's natural one, with at least two frames, a channel; played <paramref name="untilContact"/>, its windup holds
+    /// for the contact at most <paramref name="wait"/> past its end.
     /// </summary>
-    private void Start(CharacterActionKind kind, CharacterAnimationClip actionClip, CharacterAnimationClip actionMovingClip, int direction, bool followsFacing, in AttackTimeline actionTimeline, float now, bool untilContact, float beat)
+    private void Start(CharacterActionKind kind, CharacterAnimationClip actionClip, CharacterAnimationClip actionMovingClip, int direction, bool followsFacing, in AttackTimeline actionTimeline, float now, bool untilContact, float beat, float wait)
     {
         Kind = kind;
         clip = actionClip;
@@ -250,6 +278,7 @@ public sealed class CharacterActionLayer
         FollowsFacing = followsFacing;
         startTime = now;
         holdUntilContact = untilContact;
+        contactWait = Mathf.Max(0f, wait);
         contacted = false;
         ContactShown = false;
         channelBeat = beat;

@@ -78,6 +78,7 @@ public static class TerrainBlendProbe
         try
         {
             terrain.Mode = mode;
+            terrain.CompileModeNow();
             return check();
         }
         finally
@@ -149,10 +150,10 @@ public static class TerrainBlendProbe
         for (int i = 0; i < layers; i++)
         {
             TerrainMaterial material = style.LayerOrder[i == 0 ? 0 : 1 + (i - 1) % later];
-            TileBase tile = AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(material));
+            TileBase tile = TerrainTileWriter.TileOf(material);
             if (tile == null)
             {
-                throw new System.InvalidOperationException($"The stress scene needs {material.name}'s tile at {TerrainTileWriter.TilePath(material)}.");
+                throw new System.InvalidOperationException($"The stress scene needs {material.name}'s ground tile.");
             }
 
             GameObject layerObject = new($"{i:00} {material.name}", typeof(Tilemap));
@@ -191,6 +192,11 @@ public static class TerrainBlendProbe
         try
         {
             ShaderUtil.allowAsyncCompilation = false;
+            foreach (TerrainBlendRenderer open in Object.FindObjectsByType<TerrainBlendRenderer>())
+            {
+                open.CompileModeNow();
+            }
+
             HashSet<Renderer> chunks = new(terrain != null ? terrain.Chunks : new MeshRenderer[0]);
             HashSet<Material> drawn = new();
             foreach (Renderer renderer in Resources.FindObjectsOfTypeAll<Renderer>())

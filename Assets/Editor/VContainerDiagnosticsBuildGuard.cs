@@ -33,8 +33,6 @@ public class VContainerDiagnosticsBuildGuard : IPreprocessBuildWithReport, IPost
 
         disabledSettings = settings;
         SetDiagnostics(settings, false);
-
-        // Postprocess callbacks are skipped when a build fails, so also restore once it has ended.
         EditorApplication.delayCall += RestoreWhenBuildEnds;
     }
 

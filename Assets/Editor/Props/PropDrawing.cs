@@ -14,14 +14,15 @@ public sealed class PropDrawing
     private int nextPart;
 
     /// <summary>
-    /// Creates the drawing of a variant on <paramref name="canvas"/>, drawing from <paramref name="random"/>, at
-    /// <paramref name="phase"/> of a moving flame's loop (0 for its first frame).
+    /// Creates the drawing of variant <paramref name="variant"/> on <paramref name="canvas"/>, drawing from
+    /// <paramref name="random"/>, at <paramref name="phase"/> of a moving flame's loop (0 for its first frame).
     /// </summary>
-    public PropDrawing(ArtCanvas canvas, System.Random random, float phase = 0f)
+    public PropDrawing(ArtCanvas canvas, System.Random random, float phase = 0f, int variant = 0)
     {
         Canvas = canvas;
         Random = random;
         Phase = phase;
+        Variant = variant;
     }
 
     /// <summary>
@@ -32,6 +33,12 @@ public sealed class PropDrawing
     public ArtCanvas Canvas { get; }
     public System.Random Random { get; }
     public float Phase { get; }
+
+    /// <summary>
+    /// The index of the variant being drawn, which a recipe whose variants share one shape draws by (a waystone's states).
+    /// </summary>
+    public int Variant { get; }
+
     public IReadOnlyList<ArtMaterial> Materials => materials;
     public bool HasLight { get; private set; }
     public Vector3 LightAt { get; private set; }

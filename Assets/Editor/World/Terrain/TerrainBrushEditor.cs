@@ -14,8 +14,14 @@ using UnityEngine.Tilemaps;
 /// a paint or a box while shift is held, since the click then erases. It shows exactly the cells the click writes at
 /// z = 0: on a dual-grid layer every cell of the stroke, since the brush writes the module's data tile there, and on a
 /// plain layer, when filling, only the cells whose brush cell holds a tile. It never writes the tilemap, navigation or
-/// anything saved, and a new preview replaces the last. A flood fill shows no preview on a ground layer (see
-/// Docs/TerrainBlending.md's Phase 3 notes). The preview is cleared when the stroke is committed
+/// anything saved, and a new preview replaces the last. A flood fill shows the cells it would fill
+/// (<see cref="WorldBrushStroke.FloodCells"/> on a chunk, <see cref="TerrainBrush.FloodCells"/> elsewhere, the brush
+/// filling those same cells). On an area's raised ground it previews a paint, an erase, a box or a flood fill the same
+/// way through the renderer's elevation map (<see cref="TerrainBlendRenderer.SetRaisedPreview"/>), each cell as the
+/// brush's tile would raise it, on the chunk's renderer and its linked neighbours' on a seamless world. On the walls of
+/// a chunk it previews with the modules of every open chunk the stroke covers, each cell on the module of the chunk
+/// owning it and each render cell on the module drawing it, so the corners along a border read both chunks' previews
+/// (Docs/KnownGaps.md, Phase 6). The preview is cleared when the stroke is committed
 /// (<see cref="RegisterUndo"/>) or ends (the mouse is released), when the pointer leaves the Scene view, the tool or the
 /// brush changes, the paint target changes, after an undo or redo, when a scene closes, before an assembly reload and
 /// when the editor is disabled. During the Scene view's GUI a clear waits for the end of it, so a hover that replaces
@@ -42,6 +48,14 @@ public class TerrainBrushEditor : DualGridBrushEditor
     private bool shiftHeld;
     private bool inPaintSceneGUI;
     private bool clearDeferred;
+    private readonly List<byte> raisedKinds = new();
+    private readonly List<TerrainBlendRenderer> raisedRenderers = new();
+    private readonly List<Vector3Int> wallCells = new();
+    private readonly List<DualGridTilemapModule> wallOwners = new();
+    private readonly List<DualGridTilemapModule> wallModules = new();
+    private readonly HashSet<(DualGridTilemapModule Module, Vector3Int Cell)> wallRenderCells = new();
+    private DualGridPreviewTile filledWallTile;
+    private DualGridPreviewTile emptyWallTile;
 
     public override string tooltip => "Paints ground layers with a hover preview drawn by their Terrain Blend Renderer, and any other tilemap as the Dual Grid Brush.";
 
@@ -55,7 +69,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
         GridPaintingState.scenePaintTargetChanged += HandlePaintTargetChanged;
         GridPaintingState.brushChanged += HandleBrushChanged;
         EditorSceneManager.sceneClosing += HandleSceneClosing;
-        AssemblyReloadEvents.beforeAssemblyReload += ClearTerrainPreview;
+        AssemblyReloadEvents.beforeAssemblyReload += ClearAllPreviews;
     }
 
     /// <summary>
@@ -66,7 +80,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
         GridPaintingState.scenePaintTargetChanged -= HandlePaintTargetChanged;
         GridPaintingState.brushChanged -= HandleBrushChanged;
         EditorSceneManager.sceneClosing -= HandleSceneClosing;
-        AssemblyReloadEvents.beforeAssemblyReload -= ClearTerrainPreview;
+        AssemblyReloadEvents.beforeAssemblyReload -= ClearAllPreviews;
         base.OnDisable();
     }
 
@@ -251,7 +265,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     {
         if (wasExecuting && !executing)
         {
-            ClearTerrainPreview();
+            ClearAllPreviews();
         }
 
         wasExecuting = executing;
@@ -273,11 +287,11 @@ public class TerrainBrushEditor : DualGridBrushEditor
         bool shown = false;
         if (tool == GridBrushBase.Tool.Paint)
         {
-            shown = TryShowTerrainPreview(brushTarget, FootprintAt(position.min), !shift);
+            shown = TryShowAnyPreview(brushTarget, FootprintAt(position.min), !shift);
         }
         else if (tool == GridBrushBase.Tool.Box)
         {
-            shown = TryShowTerrainPreview(brushTarget, position, !shift);
+            shown = TryShowAnyPreview(brushTarget, position, !shift);
         }
 
         if (shown)
@@ -301,7 +315,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     internal void PaintPreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position, bool erasing)
     {
-        if (!TryShowTerrainPreview(brushTarget, FootprintAt(position), !erasing))
+        if (!TryShowAnyPreview(brushTarget, FootprintAt(position), !erasing))
         {
             base.PaintPreview(gridLayout, brushTarget, position);
         }
@@ -313,7 +327,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     public override void ErasePreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position)
     {
-        if (!TryShowTerrainPreview(brushTarget, FootprintAt(position), false))
+        if (!TryShowAnyPreview(brushTarget, FootprintAt(position), false))
         {
             base.ErasePreview(gridLayout, brushTarget, position);
         }
@@ -334,41 +348,361 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     internal void BoxPreview(GridLayout gridLayout, GameObject brushTarget, BoundsInt bounds, bool erasing)
     {
-        if (!TryShowTerrainPreview(brushTarget, bounds, !erasing))
+        if (!TryShowAnyPreview(brushTarget, bounds, !erasing))
         {
             base.BoxFillPreview(gridLayout, brushTarget, bounds);
         }
     }
 
     /// <summary>
-    /// Shows no flood fill preview on a ground layer; the Dual Grid Brush's preview elsewhere.
+    /// Previews the flood fill from <paramref name="position"/>: the cells it would fill on a ground layer, on raised
+    /// ground and on a chunk's walls; the Dual Grid Brush's preview elsewhere.
     /// </summary>
     public override void FloodFillPreview(GridLayout gridLayout, GameObject brushTarget, Vector3Int position)
     {
-        if (RendererDrawing(brushTarget, out _, out _) == null)
+        if (!TryShowFloodPreview(brushTarget, position))
         {
             base.FloodFillPreview(gridLayout, brushTarget, position);
         }
     }
 
     /// <summary>
-    /// Clears the ground layer preview (<see cref="ClearTerrainPreview"/>), then whatever preview the Dual Grid
-    /// Brush's editor shows.
+    /// Clears the ground layer preview (<see cref="ClearTerrainPreview"/>), the raised ground's and a chunk's walls',
+    /// then whatever preview the Dual Grid Brush's editor shows.
     /// </summary>
     public override void ClearPreview()
     {
         ClearTerrainPreview();
+        ClearRaisedPreview();
+        ClearWallsPreview();
         base.ClearPreview();
     }
 
     /// <summary>
-    /// Clears the ground layer preview as the stroke is committed, then records the undo step as the Dual Grid Brush
-    /// does: the data and render tilemaps of a dual-grid layer, or the tilemap.
+    /// Clears the ground layer, raised ground and walls previews as the stroke is committed, then records the undo step
+    /// as the Dual Grid Brush does: the data and render tilemaps of a dual-grid layer, or the tilemap.
     /// </summary>
     public override void RegisterUndo(GameObject brushTarget, GridBrushBase.Tool tool)
     {
         ClearTerrainPreview();
+        ClearRaisedPreview();
+        ClearWallsPreview();
         base.RegisterUndo(brushTarget, tool);
+    }
+
+    /// <summary>
+    /// Previews <paramref name="bounds"/> filled or empty on a ground layer, raised ground or a chunk's walls, whichever
+    /// <paramref name="brushTarget"/> is; returns false, showing nothing, on any other tilemap.
+    /// </summary>
+    private bool TryShowAnyPreview(GameObject brushTarget, BoundsInt bounds, bool filled)
+    {
+        return TryShowTerrainPreview(brushTarget, bounds, filled) || TryShowRaisedPreview(brushTarget, bounds, filled) || TryShowWallsPreview(brushTarget, bounds, filled);
+    }
+
+    /// <summary>
+    /// Previews the cells a flood fill from <paramref name="position"/> would fill on a ground layer, raised ground or a
+    /// chunk's walls (<see cref="WorldBrushStroke.FloodCells"/>, <see cref="TerrainBrush.FloodCells"/>); returns false,
+    /// showing nothing, on any other tilemap.
+    /// </summary>
+    internal bool TryShowFloodPreview(GameObject brushTarget, Vector3Int position)
+    {
+        TileBase fill = ((TerrainBrush)brush).FloodTile;
+        bool onChunk = WorldBrushStroke.TryResolve(brushTarget, out WorldBrushStroke.Target target);
+        if (onChunk && target.TargetKind == WorldBrushStroke.Kind.Walls)
+        {
+            WorldBrushStroke.FloodCells(target, position, target.Module.DataTile, wallCells);
+            return ShowWalls(target, wallCells, true);
+        }
+
+        TerrainBlendRenderer ground = RendererDrawing(brushTarget, out Tilemap groundTilemap, out _);
+        TerrainBlendRenderer raised = RaisedRendererOf(brushTarget, out Tilemap raisedTilemap);
+        if (ground == null && raised == null)
+        {
+            return false;
+        }
+
+        if (onChunk)
+        {
+            WorldBrushStroke.FloodCells(target, position, fill, previewCells);
+        }
+        else
+        {
+            TerrainBrush.FloodCells(ground != null ? groundTilemap : raisedTilemap, position, fill, previewCells);
+        }
+
+        if (ground != null)
+        {
+            ShowTerrainCells(ground, groundTilemap, true);
+        }
+        else
+        {
+            ShowRaisedCells(raised, RaisedGround.KindOf(fill));
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The renderer that reads <paramref name="brushTarget"/>'s tilemap as its raised ground and draws it now, with the
+    /// tilemap; null for any other tilemap.
+    /// </summary>
+    private static TerrainBlendRenderer RaisedRendererOf(GameObject brushTarget, out Tilemap tilemap)
+    {
+        tilemap = null;
+        if (brushTarget == null || !brushTarget.TryGetComponent(out tilemap))
+        {
+            return null;
+        }
+
+        TerrainBlendRenderer renderer = tilemap.GetComponentInParent<TerrainBlendRenderer>();
+        return renderer != null && renderer.IsDrawingRaised(tilemap) ? renderer : null;
+    }
+
+    /// <summary>
+    /// On raised ground, replaces the last raised preview with <paramref name="bounds"/>' cells at z = 0, each raised as
+    /// the brush's tile there would raise it when <paramref name="filled"/> (level where its cell holds no tile), else
+    /// level, and returns true; returns false, showing nothing, on any other tilemap.
+    /// </summary>
+    private bool TryShowRaisedPreview(GameObject brushTarget, BoundsInt bounds, bool filled)
+    {
+        TerrainBlendRenderer renderer = RaisedRendererOf(brushTarget, out _);
+        if (renderer == null)
+        {
+            return false;
+        }
+
+        previewCells.Clear();
+        raisedKinds.Clear();
+        foreach (Vector3Int cell in bounds.allPositionsWithin)
+        {
+            if (cell.z == 0)
+            {
+                previewCells.Add(cell);
+                raisedKinds.Add(filled ? RaisedGround.KindOf(BrushTileAt(cell - bounds.min)) : RaisedGround.Level);
+            }
+        }
+
+        ShowRaised(renderer);
+        return true;
+    }
+
+    /// <summary>
+    /// Shows <see cref="previewCells"/> raised as <paramref name="kind"/> on <paramref name="renderer"/> and, on a
+    /// chunk, its linked neighbours (<see cref="ShowRaised"/>).
+    /// </summary>
+    private void ShowRaisedCells(TerrainBlendRenderer renderer, byte kind)
+    {
+        raisedKinds.Clear();
+        for (int i = 0; i < previewCells.Count; i++)
+        {
+            raisedKinds.Add(kind);
+        }
+
+        ShowRaised(renderer);
+    }
+
+    /// <summary>
+    /// Shows <see cref="previewCells"/> raised as <see cref="raisedKinds"/> on <paramref name="renderer"/> and, when it
+    /// draws a chunk, on its linked neighbours, whose skirt reads the chunk's raised ground, clearing it from every
+    /// renderer showing it before that does not show it now.
+    /// </summary>
+    private void ShowRaised(TerrainBlendRenderer renderer)
+    {
+        List<TerrainBlendRenderer> showing = new() { renderer };
+        if (renderer.TryGetComponent(out WorldChunk chunk))
+        {
+            for (int i = 0; i < chunk.Neighbours.Count; i++)
+            {
+                TerrainBlendRenderer neighbour = chunk.Neighbours[i] != null ? chunk.Neighbours[i].Terrain : null;
+                if (neighbour != null && !showing.Contains(neighbour))
+                {
+                    showing.Add(neighbour);
+                }
+            }
+        }
+
+        foreach (TerrainBlendRenderer shown in raisedRenderers)
+        {
+            if (shown != null && !showing.Contains(shown))
+            {
+                shown.ClearRaisedPreview();
+            }
+        }
+
+        raisedRenderers.Clear();
+        foreach (TerrainBlendRenderer shown in showing)
+        {
+            if (shown.SetRaisedPreview(previewCells, raisedKinds))
+            {
+                raisedRenderers.Add(shown);
+            }
+        }
+
+        SceneView.RepaintAll();
+    }
+
+    /// <summary>
+    /// Removes the raised preview from every renderer showing it.
+    /// </summary>
+    private void ClearRaisedPreview()
+    {
+        if (raisedRenderers.Count == 0)
+        {
+            return;
+        }
+
+        foreach (TerrainBlendRenderer shown in raisedRenderers)
+        {
+            if (shown != null)
+            {
+                shown.ClearRaisedPreview();
+            }
+        }
+
+        raisedRenderers.Clear();
+        SceneView.RepaintAll();
+    }
+
+    /// <summary>
+    /// On a chunk's walls, previews <paramref name="bounds"/>' cells at z = 0 filled or empty with the open chunks'
+    /// modules (<see cref="ShowWalls"/>) and returns true; returns false, showing nothing, on any other tilemap.
+    /// </summary>
+    private bool TryShowWallsPreview(GameObject brushTarget, BoundsInt bounds, bool filled)
+    {
+        if (!WorldBrushStroke.TryResolve(brushTarget, out WorldBrushStroke.Target target) || target.TargetKind != WorldBrushStroke.Kind.Walls)
+        {
+            return false;
+        }
+
+        wallCells.Clear();
+        foreach (Vector3Int cell in bounds.allPositionsWithin)
+        {
+            if (cell.z == 0)
+            {
+                wallCells.Add(cell);
+            }
+        }
+
+        return ShowWalls(target, wallCells, filled);
+    }
+
+    /// <summary>
+    /// Replaces the last walls preview with <paramref name="cells"/> shown filled or empty: each cell as an editor
+    /// preview tile on the data tilemap of the open chunk owning it (the target's walls or the like walls of a linked
+    /// neighbour; a cell no open chunk owns is left out), then each render cell around them on the module drawing it
+    /// (<see cref="DualGridTilemapModule.OwnsRenderTile"/>), a preview of its render tile where one of its four data cells
+    /// is previewed filled and none elsewhere, refreshed so its corner reads every chunk's preview. Returns true.
+    /// </summary>
+    private bool ShowWalls(WorldBrushStroke.Target target, List<Vector3Int> cells, bool filled)
+    {
+        List<Vector3Int> shown = new(cells);
+        ClearWallsPreview();
+        filledWallTile ??= DualGridPreviewTile.Filled;
+        emptyWallTile ??= DualGridPreviewTile.NotFilled;
+        wallModules.Add(target.Module);
+        for (int i = 0; i < target.Chunk.Neighbours.Count; i++)
+        {
+            DualGridTilemapModule neighbour = target.Chunk.Neighbours[i] != null ? WorldBrushStroke.WallsLike(target.Chunk.Neighbours[i], target.Module) : null;
+            if (neighbour != null && !wallModules.Contains(neighbour))
+            {
+                wallModules.Add(neighbour);
+            }
+        }
+
+        foreach (Vector3Int cell in shown)
+        {
+            DualGridTilemapModule owner = ModuleHolding(cell);
+            if (owner == null)
+            {
+                continue;
+            }
+
+            owner.DataTilemap.SetEditorPreviewTile(cell, filled ? filledWallTile : emptyWallTile);
+            wallCells.Add(cell);
+            wallOwners.Add(owner);
+            for (int corner = 0; corner < DualGridUtils.CornerCount; corner++)
+            {
+                Vector3Int renderCell = DualGridUtils.GetRenderTilePosition(cell, corner);
+                foreach (DualGridTilemapModule module in wallModules)
+                {
+                    if (module.OwnsRenderTile(renderCell))
+                    {
+                        wallRenderCells.Add((module, renderCell));
+                    }
+                }
+            }
+        }
+
+        foreach ((DualGridTilemapModule module, Vector3Int renderCell) in wallRenderCells)
+        {
+            bool anyFilled = false;
+            for (int corner = 0; corner < DualGridUtils.CornerCount && !anyFilled; corner++)
+            {
+                Vector3Int dataCell = DualGridUtils.GetDataTilePosition(renderCell, corner);
+                DualGridTilemapModule owner = ModuleHolding(dataCell);
+                anyFilled = owner != null && owner.DataTilemap.GetEditorPreviewTile(dataCell) is DualGridPreviewTile tile && tile.IsFilled;
+            }
+
+            module.RenderTilemap.SetEditorPreviewTile(renderCell, anyFilled ? module.RenderTile : null);
+            module.RenderTilemap.RefreshTile(renderCell);
+        }
+
+        SceneView.RepaintAll();
+        return true;
+    }
+
+    /// <summary>
+    /// Of the walls modules a preview uses, the one of the chunk whose cells hold <paramref name="cell"/>, or null.
+    /// </summary>
+    private DualGridTilemapModule ModuleHolding(Vector3Int cell)
+    {
+        foreach (DualGridTilemapModule module in wallModules)
+        {
+            WorldChunk chunk = module != null ? module.GetComponentInParent<WorldChunk>() : null;
+            if (chunk != null && chunk.Cells.Contains(new Vector2Int(cell.x, cell.y)))
+            {
+                return module;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Removes the walls preview: the preview tiles from the data cells and render cells it set, refreshing the render
+    /// cells.
+    /// </summary>
+    private void ClearWallsPreview()
+    {
+        if (wallOwners.Count == 0 && wallRenderCells.Count == 0)
+        {
+            wallCells.Clear();
+            wallModules.Clear();
+            return;
+        }
+
+        for (int i = 0; i < wallOwners.Count; i++)
+        {
+            if (wallOwners[i] != null)
+            {
+                wallOwners[i].DataTilemap.SetEditorPreviewTile(wallCells[i], null);
+            }
+        }
+
+        foreach ((DualGridTilemapModule module, Vector3Int renderCell) in wallRenderCells)
+        {
+            if (module != null)
+            {
+                module.RenderTilemap.SetEditorPreviewTile(renderCell, null);
+                module.RenderTilemap.RefreshTile(renderCell);
+            }
+        }
+
+        wallCells.Clear();
+        wallOwners.Clear();
+        wallModules.Clear();
+        wallRenderCells.Clear();
+        SceneView.RepaintAll();
     }
 
     /// <summary>
@@ -418,6 +752,18 @@ public class TerrainBrushEditor : DualGridBrushEditor
             }
         }
 
+        ShowTerrainCells(renderer, tilemap, filled);
+        return true;
+    }
+
+    /// <summary>
+    /// Replaces the last ground layer preview with <see cref="previewCells"/> shown filled or empty
+    /// (<paramref name="filled"/>) on <paramref name="renderer"/>'s <paramref name="tilemap"/> or, on a chunk, on the
+    /// renderers of the chunks they cover (<see cref="ShowOnChunk"/>), and cancels a clear waiting for the end of the
+    /// Scene view's GUI.
+    /// </summary>
+    private void ShowTerrainCells(TerrainBlendRenderer renderer, Tilemap tilemap, bool filled)
+    {
         shownRenderers.Clear();
         TerrainMaterial material = renderer.Layers[renderer.LayerIndexOf(tilemap)].Material;
         if (renderer.TryGetComponent(out WorldChunk chunk) && chunk.World != null && material != null)
@@ -444,7 +790,6 @@ public class TerrainBrushEditor : DualGridBrushEditor
         (previewRenderers, shownRenderers) = (shownRenderers, previewRenderers);
         shownRenderers.Clear();
         clearDeferred = false;
-        return true;
     }
 
     /// <summary>
@@ -515,7 +860,15 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     private bool BrushHoldsTileAt(Vector3Int local)
     {
-        return brush.cellCount > 0 && brush.cells[brush.GetCellIndexWrapAround(local.x, local.y, local.z)].tile != null;
+        return BrushTileAt(local) != null;
+    }
+
+    /// <summary>
+    /// The tile of the brush cell a box fill uses at <paramref name="local"/> from the box's corner, or null.
+    /// </summary>
+    private TileBase BrushTileAt(Vector3Int local)
+    {
+        return brush.cellCount > 0 ? brush.cells[brush.GetCellIndexWrapAround(local.x, local.y, local.z)].tile : null;
     }
 
     /// <summary>
@@ -532,6 +885,16 @@ public class TerrainBrushEditor : DualGridBrushEditor
     private static bool IsShiftHeld()
     {
         return Event.current != null && Event.current.shift;
+    }
+
+    /// <summary>
+    /// Removes the ground layer, raised ground and walls previews.
+    /// </summary>
+    private void ClearAllPreviews()
+    {
+        ClearTerrainPreview();
+        ClearRaisedPreview();
+        ClearWallsPreview();
     }
 
     /// <summary>
@@ -579,7 +942,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     private void HandlePaintTargetChanged(GameObject target)
     {
-        ClearTerrainPreview();
+        ClearAllPreviews();
     }
 
     /// <summary>
@@ -587,7 +950,7 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     private void HandleBrushChanged(GridBrushBase changed)
     {
-        ClearTerrainPreview();
+        ClearAllPreviews();
     }
 
     /// <summary>
@@ -595,6 +958,6 @@ public class TerrainBrushEditor : DualGridBrushEditor
     /// </summary>
     private void HandleSceneClosing(Scene scene, bool removingScene)
     {
-        ClearTerrainPreview();
+        ClearAllPreviews();
     }
 }

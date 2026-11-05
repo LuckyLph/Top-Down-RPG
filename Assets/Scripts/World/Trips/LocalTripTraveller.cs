@@ -9,7 +9,8 @@ using VContainer.Unity;
 /// <see cref="WorldExit"/> of its world, through an <see cref="ExitTriggerGuard"/> so an exit fires once per step onto
 /// it and never right after a trip. When the authority approves a trip of the local player, it stops the player and
 /// runs the trip's local transition, <see cref="GameFlow.TravelAsync"/>: fade out with input off, arrive at the entry
-/// once the ground there is loaded, fade in, with game time running all along. It waits for any other transition to
+/// once the ground there is loaded, fade in, with game time running all along; then it reports the trip over
+/// (<see cref="ITripAuthority.ReportArrived"/>), which ends the player's protection. It waits for any other transition to
 /// end before starting, and checks nothing while one runs. Each frame it only compares the local player's cell with the
 /// last one.
 /// </summary>
@@ -122,13 +123,16 @@ public sealed class LocalTripTraveller : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Waits for any running transition to end, then stops the player and runs the trip's transition. A session that
-    /// ended meanwhile drops the trip's arrival instead. The guard waits for the player to step off any exit afterwards.
+    /// Waits for any running transition to end, then stops the player and runs the trip's transition, and once it has
+    /// faded in reports the trip's end to the authority, which ends the protection the trip gave the player. A session
+    /// that ended meanwhile drops the trip's arrival instead. The guard waits for the player to step off any exit
+    /// afterwards.
     /// </summary>
     private async Awaitable GoAsync(LocalPlayer local, TripApproval approval, CancellationToken cancellation)
     {
         travelling = true;
         guard.Disarm();
+        int trip = playerWorlds.TripOf(approval.Player);
         try
         {
             while (gameFlow.IsTransitioning)
@@ -144,6 +148,10 @@ public sealed class LocalTripTraveller : IStartable, ITickable, IDisposable
 
             local.Controller.ClearOrders();
             await gameFlow.TravelAsync(approval.World, approval.EntryName, cancellation);
+            if (!cancellation.IsCancellationRequested)
+            {
+                authority.ReportArrived(approval.Player, trip);
+            }
         }
         catch (OperationCanceledException)
         {

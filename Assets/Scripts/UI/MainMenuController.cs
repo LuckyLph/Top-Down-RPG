@@ -4,15 +4,19 @@ using UnityEngine.UI;
 using VContainer;
 
 /// <summary>
-/// The main menu's buttons: new game, continue from the save, host, join an address, options and quit. Every session
-/// runs in seamless worlds (Docs/WorldStreaming.md): New Game starts the session's saved state over and enters the
-/// starting world's entry; Continue, and Host Game when there is a save, continue it, the local player starting at its
-/// saved place (<see cref="PlayerStarts"/>). Starting anything is refused while a transition runs or a join is in
-/// progress, and a status line reports save and connection problems.
+/// The main menu's buttons: new game, continue the latest save, host, join an address, options and quit. Every session
+/// runs in seamless worlds (Docs/WorldStreaming.md) and has a save file of its own (Docs/KnownGaps.md, Phase 5): New
+/// Game starts a new session and enters the starting world's entry; Continue, and Host Game when there is a save,
+/// continue the latest (<see cref="GameSave.TryLoadLatest"/>), the local player starting at its saved place
+/// (<see cref="PlayerStarts"/>). The latest can be this machine's copy of its place in a host's session whose host is
+/// gone, which goes on as a session of its own; returning here after losing a host says so. Starting anything is refused
+/// while a transition runs or a join is in progress, and a status line reports save and connection problems.
 /// </summary>
 [DisallowMultipleComponent]
 public class MainMenuController : MonoBehaviour
 {
+    internal const string HostGoneStatus = "The host is gone. Continue carries on alone from where you were.";
+
     [SerializeField] private Selectable firstSelected;
     [SerializeField] private Button continueButton;
     [SerializeField] private TMP_InputField joinAddressField;
@@ -30,6 +34,7 @@ public class MainMenuController : MonoBehaviour
     private bool isJoining;
 
     internal Button ContinueButton => continueButton;
+    internal string Status => statusText != null ? statusText.text : string.Empty;
     internal Button OptionsButton => optionsButton;
     internal GameObject ButtonsPanel => buttonsPanel;
 
@@ -74,10 +79,12 @@ public class MainMenuController : MonoBehaviour
 
     /// <summary>
     /// Enables Continue only when a save exists and selects it (or the first button otherwise), fills an empty
-    /// join address with the session's default and clears the status line.
+    /// join address with the session's default, and clears the status line, or says the host is gone when a copy of
+    /// this machine's place was just saved with its host gone.
     /// </summary>
     private void Start()
     {
+        bool hostGone = gameSave != null && gameSave.TakeHostGoneNotice();
         bool hasSave = gameSave != null && gameSave.HasSave;
         if (continueButton != null)
         {
@@ -95,12 +102,12 @@ public class MainMenuController : MonoBehaviour
             joinAddressField.text = session.Settings.DefaultAddress;
         }
 
-        SetStatus(string.Empty);
+        SetStatus(hostGone && hasSave ? HostGoneStatus : string.Empty);
     }
 
     /// <summary>
-    /// New game button: starts an offline game over, in the starting world at its entry. Its first save replaces the
-    /// save file.
+    /// New game button: starts a new offline session, in the starting world at its entry, with a save file of its own
+    /// from its first save.
     /// </summary>
     public void StartNewGame()
     {
@@ -114,8 +121,8 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Continue button: continues the save offline, the local player starting at its saved place, or reports that there
-    /// is no save.
+    /// Continue button: continues the latest save offline, the local player starting at its saved place, or reports
+    /// that there is no save.
     /// </summary>
     public void ContinueGame()
     {
@@ -124,7 +131,7 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        if (!gameSave.TryLoad(out GameSaveData data))
+        if (!gameSave.TryLoadLatest(out GameSaveData data))
         {
             SetStatus("No saved game to continue.");
             return;
@@ -135,9 +142,9 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Host button: starts hosting, then continues the save when there is one, or starts a new game, the host's player
-    /// starting at its saved place or the starting world's entry. Reports and logs a failure to start the host, or a
-    /// catalogue without a starting world.
+    /// Host button: starts hosting, then continues the latest save when there is one, or starts a new game, the host's
+    /// player starting at its saved place or the starting world's entry. Reports and logs a failure to start the host, or
+    /// a catalogue without a starting world.
     /// </summary>
     public void HostGame()
     {
@@ -160,7 +167,7 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        if (gameSave.TryLoad(out GameSaveData data))
+        if (gameSave.TryLoadLatest(out GameSaveData data))
         {
             sessionSave.StartFrom(data);
         }

@@ -12,8 +12,8 @@ using UnityEngine.Tilemaps;
 /// </summary>
 public class NavigationMap2D : INavigation2D
 {
-    public const int DefaultMaxSearchCells = 4096;
-    public const int DefaultNearestCellSearchRadius = 8;
+    public const int DefaultMaxSearchCells = WorldDefinition.DefaultMaxSearchCells;
+    public const int DefaultNearestCellSearchRadius = WorldDefinition.DefaultNearestCellSearchRadius;
 
     internal const int DefaultTraversalCost = 10;
     internal const int BlockedCost = int.MaxValue / 4;
@@ -180,6 +180,92 @@ public class NavigationMap2D : INavigation2D
         }
 
         return GetCostField(movementProfile).AreConnected(fromIndex, toIndex);
+    }
+
+    /// <summary>
+    /// Whether the region of <paramref name="cell"/> for <paramref name="movementProfile"/>, joined across the loaded
+    /// pages, runs on beyond them: it holds a cell on a loaded page's border, with no cliff across it, whose neighbour
+    /// across it lies on a page the map could load but has not (<see cref="CouldLoadPage"/>). False for a cell that is
+    /// blocked or where no page is loaded. A region that does not run on lies wholly in the loaded pages, so what it
+    /// connects to is known: a pocket (an islet, a walled yard) holds every cell it reaches.
+    /// </summary>
+    public bool RunsBeyondLoadedPages(Vector3Int cell, TerrainMovementProfile2D movementProfile)
+    {
+        if (!IsBuilt || !TryGetIndex(cell, out int index))
+        {
+            return false;
+        }
+
+        NavigationCostField field = GetCostField(movementProfile);
+        int region = field.Regions[index];
+        if (region < 0)
+        {
+            return false;
+        }
+
+        int root = field.Roots[region];
+        for (int row = 0; row < rows; row++)
+        {
+            for (int column = 0; column < columns; column++)
+            {
+                NavigationPage page = pages[(row * columns) + column];
+                if (page == null)
+                {
+                    continue;
+                }
+
+                if ((IsUnloadedPage(column - 1, row) && BorderRunsOut(field, page, root, true, 0, NavigationGrid2D.LeftSide))
+                    || (IsUnloadedPage(column + 1, row) && BorderRunsOut(field, page, root, true, page.Width - 1, NavigationGrid2D.RightSide))
+                    || (IsUnloadedPage(column, row - 1) && BorderRunsOut(field, page, root, false, 0, NavigationGrid2D.DownSide))
+                    || (IsUnloadedPage(column, row + 1) && BorderRunsOut(field, page, root, false, page.Height - 1, NavigationGrid2D.UpSide)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the map could load a page at <paramref name="column"/>, <paramref name="row"/> of its page grid: every
+    /// place on it here; a world's navigation only its world's chunks.
+    /// </summary>
+    protected virtual bool CouldLoadPage(int column, int row)
+    {
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="column"/>, <paramref name="row"/> lies on the page grid, holds no loaded page and could
+    /// hold one (<see cref="CouldLoadPage"/>).
+    /// </summary>
+    private bool IsUnloadedPage(int column, int row)
+    {
+        return column >= 0 && row >= 0 && column < columns && row < rows && pages[(row * columns) + column] == null
+            && CouldLoadPage(column, row);
+    }
+
+    /// <summary>
+    /// Whether a cell of <paramref name="page"/>'s border column (<paramref name="vertical"/>) or row at
+    /// <paramref name="offset"/> belongs to the region rooted at <paramref name="root"/> with no cliff on its
+    /// <paramref name="side"/>.
+    /// </summary>
+    private bool BorderRunsOut(NavigationCostField field, NavigationPage page, int root, bool vertical, int offset, byte side)
+    {
+        int count = vertical ? page.Height : page.Width;
+        byte[] cliffSides = pool.CliffSides;
+        for (int i = 0; i < count; i++)
+        {
+            int index = page.Base + (vertical ? (i * page.Width) + offset : (offset * page.Width) + i);
+            int region = field.Regions[index];
+            if (region >= 0 && field.Roots[region] == root && (cliffSides[index] & side) == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

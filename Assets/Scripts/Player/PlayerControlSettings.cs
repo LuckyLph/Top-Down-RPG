@@ -49,6 +49,9 @@ public sealed class PlayerControlSettings : ScriptableObject
     [SerializeField, Tooltip("Layers of units that count as allies (players).")]
     private LayerMask allyLayers;
 
+    [SerializeField, Tooltip("Layers whose colliders block an attack's line of sight: the walls (the Obstacles layer). An attack order keeps closing in until none lies between the player and its target.")]
+    private LayerMask obstacleLayers;
+
     public float MoveSpeed => moveSpeed;
     public float WaypointReachDistance => waypointReachDistance;
     public float ArrivalDistance => arrivalDistance;
@@ -62,6 +65,7 @@ public sealed class PlayerControlSettings : ScriptableObject
     public float PickRadius => pickRadius;
     public LayerMask EnemyLayers => enemyLayers;
     public LayerMask AllyLayers => allyLayers;
+    public LayerMask ObstacleLayers => obstacleLayers;
 
     public PathFollowerSettings2D FollowerSettings =>
         new(waypointReachDistance, arrivalDistance, useStraightLineShortcut: true);

@@ -18,8 +18,10 @@ using Object = UnityEngine.Object;
 /// preview on the layers of a renderer that is off. The editor's previews write preview bits only, on the cells the
 /// click would write, a new one replacing the last; a paint or a box shows an erase while shift is held, and pressing
 /// or releasing shift redoes the preview; they are cleared when the stroke is committed or ends, the pointer leaves,
-/// the tool changes or the editor goes; a flood fill shows none; updating them allocates nothing; and a stroke still
-/// reaches a built navigation grid in edit mode.
+/// the tool changes or the editor goes; a flood fill previews exactly the cells it then fills; raised ground previews
+/// through the renderer's elevation map; walls painted beside the ground get the ground under them; updating the
+/// previews allocates nothing; and a stroke still reaches a built navigation grid in edit mode (Docs/KnownGaps.md,
+/// Phase 6, for the flood fill, raised ground and walls).
 /// </summary>
 public class TerrainBrushTests
 {
@@ -497,26 +499,108 @@ public class TerrainBrushTests
     }
 
     /// <summary>
-    /// A flood fill shows no preview on a ground layer, neither preview bits nor editor preview tiles, and filling an
-    /// enclosed hole of a plain layer writes the palette's tile into it.
+    /// A flood fill on a ground layer previews the cells it would fill through the renderer, no editor preview tile, and
+    /// filling then writes the palette's tile into exactly those cells: an enclosed two-cell hole of a plain layer, and
+    /// from an empty cell beside the block the whole empty region within the tilemap's bounds.
     /// </summary>
     [Test]
-    public void FloodFill_OnAGroundLayer_ShowsNoPreview_AndFillsWithThePalettesTile()
+    public void FloodFill_OnAGroundLayer_PreviewsTheCellsItFills_AndFillsThem()
     {
         Tilemap grass = layers[0];
         Vector3Int hole = new(4, 3, 0);
         grass.SetTile(hole, null);
+        grass.SetTile(hole + Vector3Int.right, null);
 
         editor.FloodFillPreview(grid, grass.gameObject, hole);
 
-        Assert.That(renderer.ControlMap.HasPreview, Is.False);
+        Assert.That(renderer.ControlMap.HasPreview, Is.True);
+        Assert.That(renderer.ControlMap.GetShownCell(hole), Is.EqualTo(1));
+        Assert.That(renderer.ControlMap.GetShownCell(hole + Vector3Int.right), Is.EqualTo(1));
+        Assert.That(renderer.ControlMap.GetShownCell(new Vector3Int(12, 3, 0)), Is.EqualTo(0));
         Assert.That(grass.GetEditorPreviewTile(hole), Is.Null);
 
         Stroke(GridBrushBase.Tool.FloodFill, grass, () => brush.FloodFill(grid, grass.gameObject, hole));
 
+        Assert.That(renderer.ControlMap.HasPreview, Is.False);
         Assert.That(grass.GetTile(hole), Is.SameAs(paletteTile));
         Assert.That(FilledCells(grass).Count, Is.EqualTo(60));
         Assert.That(renderer.ControlMap.GetCell(hole), Is.EqualTo(1));
+
+        grass.SetTile(new Vector3Int(9, 0, 0), null);
+        grass.SetTile(new Vector3Int(9, 1, 0), null);
+        List<Vector3Int> previewed = new();
+        TerrainBrush.FloodCells(grass, new Vector3Int(9, 0, 0), paletteTile, previewed);
+        Assert.That(previewed, Is.EquivalentTo(new[] { new Vector3Int(9, 0, 0), new Vector3Int(9, 1, 0) }), "within the tilemap's bounds");
+        Stroke(GridBrushBase.Tool.FloodFill, grass, () => brush.FloodFill(grid, grass.gameObject, new Vector3Int(9, 0, 0)));
+        Assert.That(FilledCells(grass).Count, Is.EqualTo(60));
+    }
+
+    /// <summary>
+    /// On raised ground, a paint, an erase and a flood fill preview through the renderer's elevation map: the cells show
+    /// raised while the raised tilemap stays as it was, an erase shows raised cells level, and clearing the preview
+    /// shows the tilemap's own again.
+    /// </summary>
+    [Test]
+    public void OnRaisedGround_ThePreviewShowsThroughTheElevationMap()
+    {
+        GameObject raisedObject = new("Raised", typeof(Tilemap));
+        raisedObject.transform.SetParent(root.transform, false);
+        Tilemap raised = raisedObject.GetComponent<Tilemap>();
+        RaisedGroundTile raisedTile = Track(RaisedGroundTile.Create(false));
+        raised.SetTile(new Vector3Int(2, 2, 0), raisedTile);
+        renderer.Configure(renderer.Style, raised, new TerrainBlendRenderer.Layer(layers[0], renderer.Layers[0].Material), new TerrainBlendRenderer.Layer(layers[1], renderer.Layers[1].Material), new TerrainBlendRenderer.Layer(layers[2], renderer.Layers[2].Material));
+        renderer.Rebuild();
+        brush.SetTile(Vector3Int.zero, raisedTile);
+        Vector3Int cell = new(5, 2, 0);
+
+        editor.PaintPreview(grid, raised.gameObject, cell, false);
+        renderer.FlushPendingChanges();
+
+        Assert.That(renderer.ElevationMap.GetCell(cell), Is.EqualTo(RaisedGround.Raised));
+        Assert.That(raised.HasTile(cell), Is.False);
+
+        editor.PaintPreview(grid, raised.gameObject, new Vector3Int(2, 2, 0), true);
+        renderer.FlushPendingChanges();
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(2, 2, 0)), Is.EqualTo(RaisedGround.Level));
+        Assert.That(renderer.ElevationMap.GetCell(cell), Is.EqualTo(RaisedGround.Level), "a new preview replaces the last");
+
+        editor.ClearPreview();
+        renderer.FlushPendingChanges();
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(2, 2, 0)), Is.EqualTo(RaisedGround.Raised));
+
+        Assert.That(editor.TryShowFloodPreview(raised.gameObject, cell), Is.True);
+        renderer.FlushPendingChanges();
+        Assert.That(renderer.ElevationMap.GetCell(cell), Is.EqualTo(RaisedGround.Raised));
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(3, 2, 0)), Is.EqualTo(RaisedGround.Raised), "the flood fills the empty cells joined to it");
+        Assert.That(renderer.ElevationMap.GetCell(new Vector3Int(5, 3, 0)), Is.EqualTo(RaisedGround.Level), "within the raised tilemap's bounds, the start cell taken in");
+        editor.ClearPreview();
+    }
+
+    /// <summary>
+    /// Walls box filled beside the ground, on cells with no ground, get the ground of their neighbours under them, the
+    /// tile their neighbours hold, so the ground's corner leaves no gap at the wall; a wall cell with no ground beside it
+    /// gets none, and one undo takes walls and ground back (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void BoxFill_OnWallsBesideTheGround_PaintsTheGroundUnderThem()
+    {
+        BoundsInt box = new(10, 0, 0, 1, 7, 1);
+
+        Stroke(GridBrushBase.Tool.Box, walls, () => brush.BoxFill(grid, walls.gameObject, box));
+
+        for (int y = 0; y < 7; y++)
+        {
+            Assert.That(walls.HasTile(new Vector3Int(10, y, 0)), Is.True);
+            Assert.That(layers[0].GetTile(new Vector3Int(10, y, 0)), Is.SameAs(paletteTile), $"ground under the wall at (10, {y})");
+        }
+
+        Stroke(GridBrushBase.Tool.Box, walls, () => brush.BoxFill(grid, walls.gameObject, new BoundsInt(15, 0, 0, 1, 1, 1)));
+        Assert.That(layers[0].HasTile(new Vector3Int(15, 0, 0)), Is.False, "no ground beside it");
+
+        Undo.PerformUndo();
+        Undo.PerformUndo();
+        Assert.That(layers[0].HasTile(new Vector3Int(10, 0, 0)), Is.False);
+        Assert.That(walls.HasTile(new Vector3Int(10, 0, 0)), Is.False);
     }
 
     /// <summary>

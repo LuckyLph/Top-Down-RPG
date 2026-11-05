@@ -10,7 +10,8 @@ public enum PropCategory
     Rocks,
     Wood,
     Plants,
-    Lights
+    Lights,
+    Markers
 }
 
 /// <summary>
@@ -19,8 +20,8 @@ public enum PropCategory
 /// on, whether it blocks, the shading, its shadow, whether it fades while it hides the local player, and the terrains
 /// its inspector previews it on. Each kind of prop is a kind of recipe holding its shape and palette and drawing a
 /// variant onto a <see cref="PropDrawing"/>: trees (<see cref="TreeRecipe"/>), bushes (<see cref="BushRecipe"/>), rocks
-/// (<see cref="RockRecipe"/>), wood (<see cref="WoodRecipe"/>), plants (<see cref="PlantRecipe"/>) and light props
-/// (<see cref="LightRecipe"/>).
+/// (<see cref="RockRecipe"/>), wood (<see cref="WoodRecipe"/>), plants (<see cref="PlantRecipe"/>), light props
+/// (<see cref="LightRecipe"/>) and the markers of waystones and exits (<see cref="MarkerRecipe"/>).
 /// <see cref="PropBaker"/> draws the variants without touching an asset, the same recipe always giving the same pixels;
 /// <see cref="PropWriter"/> writes the sheet and a prefab per variant.
 /// </summary>
@@ -85,14 +86,30 @@ public abstract class PropRecipe : ScriptableObject
     public virtual int Frames => 1;
 
     /// <summary>
+    /// How many prefabs the recipe writes, one per variant from the first: all of them, but for a recipe whose variants
+    /// are states of one prop that a prefab switches between (a waystone's).
+    /// </summary>
+    public virtual int PrefabCount => variantCount;
+
+    /// <summary>
+    /// The variant whose random stream variant <paramref name="index"/> draws from: its own, but for a recipe whose
+    /// variants share one shape (a waystone's states).
+    /// </summary>
+    public virtual int StreamIndex(int index)
+    {
+        return index;
+    }
+
+    /// <summary>
     /// Draws one variant onto <paramref name="drawing"/>, in cells with the base at the world origin, drawing every
     /// random value from its random stream.
     /// </summary>
     public abstract void Draw(PropDrawing drawing);
 
     /// <summary>
-    /// Whether the recipe can bake: a name of letters, digits and underscores starting with a letter, and a frame of
-    /// at least 8 px a side with its base pixel inside. Returns the reason in <paramref name="problem"/> when it cannot.
+    /// Whether the recipe can bake: a name of letters, digits and underscores starting with a letter, a frame of at
+    /// least 8 px a side with its base pixel inside, and whatever its kind asks (<see cref="KindProblem"/>). Returns the
+    /// reason in <paramref name="problem"/> when it cannot.
     /// </summary>
     public bool CanGenerate(out string problem)
     {
@@ -109,7 +126,16 @@ public abstract class PropRecipe : ScriptableObject
             return false;
         }
 
-        return true;
+        problem = KindProblem();
+        return problem == null;
+    }
+
+    /// <summary>
+    /// Why this kind of recipe cannot bake as it is set, or null when it can; nothing stops most kinds.
+    /// </summary>
+    protected virtual string KindProblem()
+    {
+        return null;
     }
 
     /// <summary>

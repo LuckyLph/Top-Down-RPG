@@ -59,7 +59,7 @@ public class PlayerDeathHandlerTests
         ids = new FakePlayerIdSource();
         playerIds = new PlayerIds(players, ids, new FakeSessionStatus());
         readiness = new FakeClientReadiness();
-        LocalTripAuthority local = new(new WorldExits(new Worlds()), playerWorlds, arrivals, gameScenes);
+        LocalTripAuthority local = new(new WorldExits(new Worlds()), playerWorlds, arrivals, new TripProtection(players, playerWorlds, clock, Track(GameplaySettings.Create())), gameScenes);
         trips = new NetworkTripAuthority(local, new FakeSessionStatus(), arrivals);
         approved = new List<TripApproval>();
         trips.Approved += approved.Add;

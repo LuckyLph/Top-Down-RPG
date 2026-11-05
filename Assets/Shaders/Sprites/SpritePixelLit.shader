@@ -104,7 +104,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                 }
 
                 half shadowed = input.shadowed >= 0.0 ? input.shadowed
-                    : input.feet.z > 1.5 ? SunShadowColumn(float2(centre.x, input.feet.y + 0.5 / ART_PIXELS_PER_UNIT))
+                    : CasterReadsByColumn(input.feet.z) ? SunShadowColumn(float2(centre.x, input.feet.y + 0.5 / ART_PIXELS_PER_UNIT))
                     : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
                 half4 glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, input.uv) * (half)(1.0 - _GlowFlicker.z);
                 main.rgb = PixelGlowColour(main.rgb, glow, input.color.rgb, floor(input.uv * texels));

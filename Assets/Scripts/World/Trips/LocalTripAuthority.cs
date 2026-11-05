@@ -10,10 +10,11 @@ using UnityEngine;
 /// of its cells, where the request says its machine has it, or else where its body is) and that it leads to a listed
 /// world with an entry (an unknown entry name falls back to the default entry, with a warning). Then it prepares the
 /// trip, holding the arrival in <see cref="TripArrivals"/> so the target world and the chunks around the entry start
-/// loading, puts the player in the target world for one more trip (<see cref="PlayerWorlds.Travel"/>), and raises
-/// <see cref="Approved"/> for the player's machine to go. A player whose trip is under way cannot ask for another until
-/// it arrives. The authority also starts trips of its own (<see cref="Send"/>): a dead player's to the waystone it
-/// respawns at, within its world.
+/// loading, puts the player in the target world for one more trip (<see cref="PlayerWorlds.Travel"/>), protects it
+/// until its machine reports fading in at the end of the trip (<see cref="TripProtection"/>, <see cref="ReportArrived"/>),
+/// and raises <see cref="Approved"/> for the player's machine to go. A player whose trip is under way cannot ask for
+/// another until it arrives. The authority also starts trips of its own (<see cref="Send"/>): a dead player's to the
+/// waystone it respawns at, within its world.
 /// </summary>
 public sealed class LocalTripAuthority : ITripAuthority
 {
@@ -22,17 +23,20 @@ public sealed class LocalTripAuthority : ITripAuthority
     private readonly WorldExits exits;
     private readonly PlayerWorlds playerWorlds;
     private readonly TripArrivals arrivals;
+    private readonly TripProtection protection;
     private readonly IReadOnlyList<WorldDefinition> listedWorlds;
 
     /// <summary>
     /// Creates the authority over the loaded <paramref name="worldExits"/>, the players' worlds and the trips under
-    /// way, letting players travel only to the worlds <paramref name="gameScenes"/> lists.
+    /// way, protecting travellers through <paramref name="tripProtection"/> and letting players travel only to the
+    /// worlds <paramref name="gameScenes"/> lists.
     /// </summary>
-    public LocalTripAuthority(WorldExits worldExits, PlayerWorlds worldsOfPlayers, TripArrivals tripArrivals, GameScenes gameScenes)
+    public LocalTripAuthority(WorldExits worldExits, PlayerWorlds worldsOfPlayers, TripArrivals tripArrivals, TripProtection tripProtection, GameScenes gameScenes)
     {
         exits = worldExits;
         playerWorlds = worldsOfPlayers;
         arrivals = tripArrivals;
+        protection = tripProtection;
         listedWorlds = gameScenes.Worlds;
     }
 
@@ -52,6 +56,15 @@ public sealed class LocalTripAuthority : ITripAuthority
         {
             Debug.LogWarning($"Trip refused: {refusal}");
         }
+    }
+
+    /// <summary>
+    /// Ends <paramref name="player"/>'s protection once its machine faded in at the end of its trip number
+    /// <paramref name="trip"/> (an earlier trip's report ends nothing).
+    /// </summary>
+    public void ReportArrived(PlayerHandle player, int trip)
+    {
+        protection.End(player, trip);
     }
 
     /// <summary>
@@ -127,7 +140,7 @@ public sealed class LocalTripAuthority : ITripAuthority
     /// Sends <paramref name="player"/> on a trip to <paramref name="world"/>'s entry <paramref name="entryName"/> (the
     /// default entry, with a warning, for an unknown name; the world's middle when it has no entry), checking nothing:
     /// holds the arrival so the world and the chunks around the entry start loading, puts the player in the world for
-    /// one more trip, and returns the approval its machine goes by. A trip approved from a request goes this way, and so
+    /// one more trip, protects it on that trip, and returns the approval its machine goes by. A trip approved from a request goes this way, and so
     /// does a respawn, which needs no exit.
     /// </summary>
     internal TripApproval Send(PlayerHandle player, WorldDefinition world, string entryName)
@@ -137,6 +150,7 @@ public sealed class LocalTripAuthority : ITripAuthority
         Vector2 position = world.EntryPosition(resolved);
         arrivals.Hold(player, new StreamInterest(world, position));
         playerWorlds.Travel(player, world, resolved);
+        protection.Protect(player);
         return new TripApproval(player, world, resolved, position);
     }
 

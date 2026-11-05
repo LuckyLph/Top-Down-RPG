@@ -1,6 +1,7 @@
 /// <summary>
-/// In-memory <see cref="ISaveStore"/> a benchmark run is given (<see cref="StreamingBenchmarkRunner"/>), so it reads no
-/// save and writes none: it starts empty and keeps only what the run writes.
+/// In-memory <see cref="ISaveStore"/> a benchmark run is given for its settings and its save files
+/// (<see cref="StreamingBenchmarkRunner"/>, <see cref="BenchmarkSaveFolder"/>), so it reads no file and writes none: it
+/// starts empty and keeps only what the run writes.
 /// </summary>
 public sealed class BenchmarkSaveStore : ISaveStore
 {

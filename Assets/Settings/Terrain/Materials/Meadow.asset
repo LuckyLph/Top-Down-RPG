@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3aa8b7690d2337448e3ef6ffb5e0743, type: 3}
   m_Name: Meadow
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainMaterial
+  materialId: c1db5ae30d8e6b347918810fecb85dfe
   albedo: {fileID: 2800000, guid: 34cc8d00f08964a4d89cc862d7af5b73, type: 3}
   cellField: {fileID: 2800000, guid: e539803a07519594caed7bd01ba52d72, type: 3}
   height: {fileID: 2800000, guid: b0f861a000f1ea5488b1c5b4a76dd0ff, type: 3}
@@ -55,6 +56,18 @@ MonoBehaviour:
   sinkDepth: 0
   bankShadow: 0.25
   bankColour: {r: 0.3764706, g: 0.2901961, b: 0.19607843, a: 1}
+  reflection: 0
+  relief:
+    bevel: 0
+    bevelWidth: 0
+    radial: 0
+    radialRadius: 0
+    shadedSide: 0
+    shadedSideFrom: 0
+    mortarWidth: 0
+  glowStrength: 0
+  glowReach: 2.5
+  glowColour: {r: 1, g: 0.51, b: 0.2, a: 1}
   bridge: 0
   turnToRuns: 0
   edge:

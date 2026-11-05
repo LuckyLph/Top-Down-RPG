@@ -126,6 +126,24 @@ public class TerrainBlendLutTests
     }
 
     /// <summary>
+    /// A pair over nothing writes no tufts, whatever its edge's tuft height, so a floor running under walls one cell thick
+    /// shows none past them into the void; a pair over a layer keeps its tufts (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void APairOverNothing_HasNoTufts_AndOneOverALayerKeepsThem()
+    {
+        TerrainStyle.EdgeSettings tufted = new(1.5f, new Gradient(), true, Color.black, Color.black, 0.3f, 1f, 4.5f);
+        TerrainMaterial grass = Track(TerrainMaterial.Create("Grass", null, null, 4, TerrainMaterial.CellMode.None, Color.gray, tufted));
+        TerrainMaterial dirt = Track(TerrainMaterial.Create("Dirt", null, null, 4, TerrainMaterial.CellMode.None, Color.gray, tufted));
+
+        Color[] texels = TerrainBlendLut.BuildTexels(Style(), new[] { grass, dirt });
+
+        Assert.That(PairTexel(texels, 2, 0, -1, TerrainBlendLut.PairWidthsColumn).b, Is.EqualTo(0f), "grass over nothing");
+        Assert.That(PairTexel(texels, 2, 1, -1, TerrainBlendLut.PairWidthsColumn).b, Is.EqualTo(0f), "dirt over nothing");
+        Assert.That(PairTexel(texels, 2, 1, 0, TerrainBlendLut.PairWidthsColumn).b, Is.EqualTo(4.5f), "dirt over grass");
+    }
+
+    /// <summary>
     /// Row 0 holds the shared settings and each layer's row its own material's repeat, cell mode and base colour.
     /// </summary>
     [Test]

@@ -7,14 +7,16 @@ using UnityEngine.Tilemaps;
 /// Which cells of a renderer's area are raised ground, as a texture for the terrain blending shader: one point-filtered
 /// R8 texel per cell over the control map's bounds holding what the cell of the renderer's raised tilemap is
 /// (<see cref="RaisedGround.KindOf"/>, as a byte; the shader reads r * 255), or, where that cell is level, of a raised
-/// skirt source covering it (a neighbouring chunk's raised ground along the border). 1 x 1 and level without a
-/// raised tilemap or source. Built again whenever the control map's bounds or the raised tilemap change; owns its texture,
-/// <see cref="Dispose"/> destroys it.
+/// skirt source covering it (a neighbouring chunk's raised ground along the border), or of a brush's preview over both
+/// (<see cref="SetPreview"/>, Docs/KnownGaps.md, Phase 6). 1 x 1 and level without a raised tilemap or source. Built
+/// again whenever the control map's bounds or the raised tilemap change; owns its texture, <see cref="Dispose"/>
+/// destroys it.
 /// </summary>
 public sealed class TerrainElevationMap : IDisposable
 {
     private readonly string textureName;
     private readonly List<TerrainSkirtSource> raisedSkirt = new();
+    private readonly Dictionary<Vector3Int, byte> preview = new();
     private Texture2D texture;
     private byte[] cells = new byte[0];
     private BoundsInt bounds;
@@ -28,6 +30,31 @@ public sealed class TerrainElevationMap : IDisposable
     }
 
     public Texture2D Texture => texture;
+    public bool HasPreview => preview.Count > 0;
+
+    /// <summary>
+    /// Shows <paramref name="cells"/> (their z is ignored) as <paramref name="kinds"/> (<see cref="RaisedGround"/>'s
+    /// values, one per cell, or <see cref="RaisedGround.Level"/> for all when null) in place of any preview shown before,
+    /// from the next <see cref="Build"/>, without touching a tilemap, for a brush's hover in the editor.
+    /// </summary>
+    public void SetPreview(IReadOnlyList<Vector3Int> cells, IReadOnlyList<byte> kinds)
+    {
+        preview.Clear();
+        for (int i = 0; i < cells.Count; i++)
+        {
+            preview[new Vector3Int(cells[i].x, cells[i].y, 0)] = kinds != null ? kinds[i] : RaisedGround.Level;
+        }
+    }
+
+    /// <summary>
+    /// Removes the preview from the next <see cref="Build"/>; returns whether there was one.
+    /// </summary>
+    public bool ClearPreview()
+    {
+        bool had = preview.Count > 0;
+        preview.Clear();
+        return had;
+    }
 
     /// <summary>
     /// Reads <paramref name="raised"/> (null for none) over <paramref name="controlMap"/>'s bounds and uploads the map.
@@ -54,7 +81,7 @@ public sealed class TerrainElevationMap : IDisposable
             }
         }
 
-        bool used = (raised != null || raisedSkirt.Count > 0) && !controlMap.IsEmpty;
+        bool used = (raised != null || raisedSkirt.Count > 0 || preview.Count > 0) && !controlMap.IsEmpty;
         bounds = used ? controlMap.Bounds : new BoundsInt(0, 0, 0, 1, 1, 1);
         int width = bounds.size.x;
         int height = bounds.size.y;
@@ -98,11 +125,16 @@ public sealed class TerrainElevationMap : IDisposable
     }
 
     /// <summary>
-    /// What <paramref name="cell"/> is: on <paramref name="raised"/>, or, where that is level, on the first raised
-    /// source of the skirt covering it.
+    /// What <paramref name="cell"/> is: in the preview, or on <paramref name="raised"/>, or, where that is level, on the
+    /// first raised source of the skirt covering it.
     /// </summary>
     private byte KindAt(Tilemap raised, Vector3Int cell)
     {
+        if (preview.TryGetValue(cell, out byte previewed))
+        {
+            return previewed;
+        }
+
         byte kind = raised != null ? RaisedGround.KindAt(raised, cell) : RaisedGround.Level;
         for (int i = 0; kind == RaisedGround.Level && i < raisedSkirt.Count; i++)
         {

@@ -12,8 +12,9 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// A bare host running in the test process, so the editor's own session can be tested as a joining client: a clone of
 /// the session's <see cref="NetworkManager"/> listening on its port, with a hand-built container of host-side player
-/// services and no scenes of its own. It records the client's join, chunk reports and releases, spawns the client's
-/// player in a given world when it joins (unless told not to), and acknowledges releases at once or when told.
+/// services and no scenes of its own. It records the client's join, chunk reports and releases, tells a joined client
+/// its session id, spawns the client's player in a given world when it joins (unless told not to), and acknowledges
+/// releases at once or when told.
 /// </summary>
 public sealed class InProcessHost : IDisposable
 {
@@ -41,13 +42,15 @@ public sealed class InProcessHost : IDisposable
     public Vector2 SpawnPosition { get; set; }
     public bool SpawnsJoinedPlayers { get; set; } = true;
     public string RefusalForClients { get; set; }
+    public string SessionId { get; set; } = System.Guid.NewGuid().ToString("N");
 
     /// <summary>
     /// Starts a host cloned from <paramref name="session"/>'s manager on its port, approving every client (or refusing
     /// remote ones with <paramref name="refusal"/>), with a container built from <paramref name="gameScenes"/>,
-    /// <paramref name="combatSettings"/> and <paramref name="playerPrefab"/>'s control settings. Asserts it starts.
+    /// <paramref name="combatSettings"/>, <paramref name="gameplaySettings"/> and <paramref name="playerPrefab"/>'s
+    /// control settings. Asserts it starts.
     /// </summary>
-    public static InProcessHost Start(NetworkSession session, NetworkObject playerPrefab, GameScenes gameScenes, CombatSettings combatSettings, string refusal = null)
+    public static InProcessHost Start(NetworkSession session, NetworkObject playerPrefab, GameScenes gameScenes, CombatSettings combatSettings, GameplaySettings gameplaySettings, string refusal = null)
     {
         NetworkManager manager = InProcessClient.CloneNetworkManager(session, "RemoteHost");
         manager.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", session.Settings.Port, "127.0.0.1");
@@ -61,6 +64,7 @@ public sealed class InProcessHost : IDisposable
                 Camera.main,
                 playerPrefab.GetComponent<PlayerController>().ControlSettings,
                 combatSettings,
+                gameplaySettings,
                 gameScenes,
                 new HostStatus());
         }
@@ -141,12 +145,14 @@ public sealed class InProcessHost : IDisposable
     }
 
     /// <summary>
-    /// Records a client's join and, when it spawns joined players, spawns its player at <see cref="SpawnPosition"/> in
-    /// <see cref="SpawnWorld"/>.
+    /// Records a client's join, tells it the host's <see cref="SessionId"/> as a real host does
+    /// (<see cref="HostSessionSync"/>) and, when it spawns joined players, spawns its player at
+    /// <see cref="SpawnPosition"/> in <see cref="SpawnWorld"/>.
     /// </summary>
     private void HandleJoined(ulong clientId)
     {
         Joined.Add(clientId);
+        HostSessionSync.Send(Manager, clientId, SessionId);
         if (!SpawnsJoinedPlayers || container == null)
         {
             return;

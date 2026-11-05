@@ -144,7 +144,7 @@ public class MobPatrolAnchor : MonoBehaviour
             Vector3Int candidateCell = navigation.WorldToCell(candidateWorld);
 
             if (!navigation.IsCellWalkable(candidateCell, config.MovementProfile)
-                && !navigation.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell, config.NearestCellSearchRadius))
+                && !navigation.TryGetNearestWalkableCell(candidateCell, config.MovementProfile, out candidateCell))
             {
                 continue;
             }

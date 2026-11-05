@@ -21,6 +21,7 @@ public sealed class InProcessClient : IDisposable
 {
     private readonly IObjectResolver container;
     private readonly NetworkSession host;
+    private int followedTrip = -1;
 
     /// <summary>
     /// Captures the started client's manager, container and client-side services.
@@ -70,7 +71,7 @@ public sealed class InProcessClient : IDisposable
         PlayerRegistry players = new();
         LocalPlayerTracker localPlayer = new();
         RecordingCameraKick cameraKick = new();
-        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameScenes, new ClientStatus(), gameplay.Resolve<HitFeedbackSettings>(), cameraKick);
+        IObjectResolver container = BuildContainer(players, localPlayer, input, camera, controlSettings, combatSettings, gameplay.Resolve<GameplaySettings>(), gameScenes, new ClientStatus(), gameplay.Resolve<HitFeedbackSettings>(), cameraKick);
         container.Resolve<HitFeedbackPresenter>().Start();
 
         NetworkManager manager = CloneNetworkManager(session, "InProcessClient");
@@ -117,12 +118,14 @@ public sealed class InProcessClient : IDisposable
     /// <summary>
     /// A client-side container like a real client's Gameplay scope offers player and mob copies: the registry, the
     /// local player, scripted input, combat (projectiles, which nothing ticks here), statuses and abilities, the
-    /// players' worlds and trips (with
+    /// players' worlds and trips (their protection timed by <paramref name="gameplaySettings"/>, which nothing ticks
+    /// here, with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
     /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
     /// own player follows), the night lights' presenter without a day clock (not started, so its own player's lantern
-    /// never lights itself and burns only on its key) and, given <paramref name="hitFeedbackSettings"/>, the hit feedback
-    /// presenter (not started) kicking <paramref name="cameraKick"/>.
+    /// never lights itself and burns only on its key), what its own player discovered with the waystones' markers'
+    /// presenter (not started: the client loads no chunk of its own) and, given <paramref name="hitFeedbackSettings"/>,
+    /// the hit feedback presenter (not started) kicking <paramref name="cameraKick"/>.
     /// </summary>
     public static IObjectResolver BuildContainer(
         PlayerRegistry players,
@@ -131,6 +134,7 @@ public sealed class InProcessClient : IDisposable
         Camera camera,
         PlayerControlSettings controlSettings,
         CombatSettings combatSettings,
+        GameplaySettings gameplaySettings,
         GameScenes gameScenes,
         ISessionStatus sessionStatus,
         HitFeedbackSettings hitFeedbackSettings = null,
@@ -140,7 +144,7 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance(players).As<IPlayerRegistry>().AsSelf();
         builder.RegisterInstance(localPlayer);
         builder.RegisterInstance<IPlayerInput>(input);
-        builder.RegisterInstance<IClock>(UnityClock.Shared);
+        builder.Register<IClock, UnityClock>(Lifetime.Singleton);
         builder.RegisterInstance<IGameAuthority>(new FixedAuthority(!sessionStatus.IsActive || sessionStatus.IsHost));
         builder.RegisterInstance(sessionStatus);
         builder.RegisterInstance(camera);
@@ -149,10 +153,16 @@ public sealed class InProcessClient : IDisposable
         builder.Register<Worlds>(Lifetime.Singleton);
         builder.Register<PlayerWorlds>(Lifetime.Singleton);
         builder.Register<TripArrivals>(Lifetime.Singleton);
+        builder.RegisterInstance(gameplaySettings);
+        builder.Register<TripProtection>(Lifetime.Singleton).As<IUnitProtection>().AsSelf();
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton);
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
+        builder.Register<SessionSave>(Lifetime.Singleton);
+        builder.RegisterInstance<IPlayerIdSource>(new NoPlayerIds());
+        builder.Register<KnownWaystones>(Lifetime.Singleton);
+        builder.Register<WaystoneMarkers>(Lifetime.Singleton);
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PointerTargetPicker>(Lifetime.Singleton);
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
@@ -213,6 +223,46 @@ public sealed class InProcessClient : IDisposable
         foreach (ChunkId chunk in HostChunks())
         {
             SendChunkReady(0, chunk);
+        }
+    }
+
+    /// <summary>
+    /// From now on, whenever this client's own player sets off on a new trip, reports again every chunk the host has
+    /// loaded in that trip's world, tagged with the trip, as a real client's streaming reports its world's loaded chunks
+    /// when a trip reaches it (a respawn waits for the waystone's chunk reported during its trip).
+    /// </summary>
+    public void FollowTrips()
+    {
+        PlayerWorlds worlds = Resolve<PlayerWorlds>();
+        worlds.Changed -= ReportOnTrip;
+        worlds.Changed += ReportOnTrip;
+    }
+
+    /// <summary>
+    /// Reports the host's loaded chunks of <paramref name="world"/> for the new trip of this client's own
+    /// <paramref name="player"/>; nothing for another player, no world or a trip already reported.
+    /// </summary>
+    private void ReportOnTrip(PlayerHandle player, WorldDefinition world)
+    {
+        LocalPlayer local = LocalPlayer.Current;
+        if (local == null || player != local.Handle || world == null || Manager == null || !Manager.IsConnectedClient)
+        {
+            return;
+        }
+
+        int trip = Resolve<PlayerWorlds>().TripOf(player);
+        if (trip == followedTrip)
+        {
+            return;
+        }
+
+        followedTrip = trip;
+        foreach (ChunkId chunk in HostChunks())
+        {
+            if (chunk.WorldId == world.WorldId)
+            {
+                SendChunkReady(trip, chunk);
+            }
         }
     }
 
@@ -283,10 +333,12 @@ public sealed class InProcessClient : IDisposable
     }
 
     /// <summary>
-    /// Shuts down and destroys the client's manager if it still exists, then disposes the client container.
+    /// Stops following trips, shuts down and destroys the client's manager if it still exists, then disposes the client
+    /// container.
     /// </summary>
     public void Dispose()
     {
+        Resolve<PlayerWorlds>().Changed -= ReportOnTrip;
         if (Manager != null)
         {
             Manager.Shutdown();
@@ -488,7 +540,7 @@ public sealed class InProcessClient : IDisposable
         /// <summary>
         /// Records nothing.
         /// </summary>
-        public void BeginTrip(ulong clientId, int trip)
+        public void BeginTrip(ulong clientId, int trip, string worldId)
         {
         }
     }
@@ -500,6 +552,20 @@ public sealed class InProcessClient : IDisposable
     {
         public bool IsActive => true;
         public bool IsHost => false;
+    }
+
+    /// <summary>
+    /// <see cref="IPlayerIdSource"/> for a client's container, which never asks it: a client's own player's discoveries
+    /// come from the host.
+    /// </summary>
+    private sealed class NoPlayerIds : IPlayerIdSource
+    {
+        public string LocalPlayerId => string.Empty;
+
+        public string PlayerIdOf(ulong clientId)
+        {
+            return string.Empty;
+        }
     }
 
     /// <summary>

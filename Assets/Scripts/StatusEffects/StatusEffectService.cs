@@ -6,7 +6,8 @@ using VContainer.Unity;
 /// The only path that changes statuses, acting only where <see cref="IGameAuthority.IsAuthoritative"/>. Tracks
 /// every unit a status landed on, ticks them each frame on the game clock (turning periodic ticks into damage and
 /// heals through <see cref="DamageService"/>) and clears a unit's statuses when it dies. Units whose statuses are
-/// held (a client's player while that client loads) do not tick.
+/// held (a client's player while that client loads, <see cref="StatusEffects.IsHeld"/>) or that are out of play (a
+/// travelling player, <see cref="IUnitProtection"/>) do not tick.
 /// </summary>
 public sealed class StatusEffectService : ITickable
 {
@@ -14,6 +15,7 @@ public sealed class StatusEffectService : ITickable
     private readonly CombatEvents combatEvents;
     private readonly IGameAuthority authority;
     private readonly IClock clock;
+    private readonly IUnitProtection protection;
     private readonly List<TrackedUnit> units = new();
     private readonly List<StatusTick> dueTicks = new();
     private readonly List<PendingTick> pendingTicks = new();
@@ -21,14 +23,15 @@ public sealed class StatusEffectService : ITickable
 
     /// <summary>
     /// Captures the damage service periodic ticks go through, the combat events blocks are published on, the
-    /// authority and the game clock that times ticks.
+    /// authority, the game clock that times ticks and which units are out of play.
     /// </summary>
-    public StatusEffectService(DamageService damageService, CombatEvents combatEvents, IGameAuthority authority, IClock clock)
+    public StatusEffectService(DamageService damageService, CombatEvents combatEvents, IGameAuthority authority, IClock clock, IUnitProtection protection)
     {
         this.damageService = damageService;
         this.combatEvents = combatEvents;
         this.authority = authority;
         this.clock = clock;
+        this.protection = protection;
     }
 
     internal int TrackedUnitCount => units.Count;
@@ -75,6 +78,16 @@ public sealed class StatusEffectService : ITickable
 
         Track(target);
         return outcome;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="unit"/>'s statuses stand still: held by its <see cref="StatusEffects"/> or out of play.
+    /// False for a unit without statuses.
+    /// </summary>
+    public bool IsHeld(DamageReceiver unit)
+    {
+        StatusEffects statuses = unit != null ? unit.Statuses : null;
+        return statuses != null && (statuses.IsHeld || protection.IsProtected(unit));
     }
 
     /// <summary>
@@ -127,8 +140,9 @@ public sealed class StatusEffectService : ITickable
     }
 
     /// <summary>
-    /// Advances every tracked, unheld unit's statuses by <paramref name="deltaTime"/>, untracking units with none
-    /// left, then applies the periodic ticks that came due as heals or damage once every set has been advanced.
+    /// Advances the statuses of every tracked unit neither held nor out of play by <paramref name="deltaTime"/>,
+    /// untracking units with none left, then applies the periodic ticks that came due as heals or damage once every set
+    /// has been advanced.
     /// </summary>
     internal void Advance(float deltaTime)
     {
@@ -143,7 +157,7 @@ public sealed class StatusEffectService : ITickable
                 continue;
             }
 
-            if (statuses.IsHeld)
+            if (statuses.IsHeld || protection.IsProtected(unit))
             {
                 continue;
             }

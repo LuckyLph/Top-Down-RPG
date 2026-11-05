@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -1112,6 +1113,138 @@ public class TerrainBlendRendererTests
         Assert.That(SameStripe(acrossLow, acrossHigh), Is.False, "A turned run changes stripe going up.");
         Assert.That(SameStripe(upLeft, upHigher), Is.True, "Up an unturned run the stripes run along y.");
         Assert.That(SameStripe(upLeft, upRight), Is.False, "An unturned run changes stripe going across.");
+    }
+
+    /// <summary>
+    /// A tile fixing which way a layer that turns to its runs lies (<see cref="TerrainTile.Facing"/>, Docs/KnownGaps.md,
+    /// Phase 6) keeps that way whatever the runs say, and the renderer's turn map follows a change of facing in a cell
+    /// already filled, though no bit of the control map changes: the striped boards of
+    /// <see cref="ALayerThatTurnsToItsRuns_TurnsItsTexturesWhereItRunsAcross"/>, cell (2, 0) of the run across painted
+    /// with an east to west tile and cell (8, 4) of the run up with a north to south one, draw unturned and turned there.
+    /// Renders from a later editor update, until anything is drawn.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ATilesFacing_FixesTheWayALayerThatTurnsToItsRunsLies()
+    {
+        SetEdgeNoise(0f);
+        Color32 red = new(220, 30, 30, 255);
+        Color32 blue = new(30, 60, 200, 255);
+        Color32[] stripes = new Color32[128 * 128];
+        Color32[] height = new Color32[128 * 128];
+        for (int i = 0; i < stripes.Length; i++)
+        {
+            stripes[i] = (i % 128) % 32 < 16 ? red : blue;
+            height[i] = new Color32(128, 128, 0, 255);
+        }
+
+        TerrainStyle.EdgeSettings bare = new(0f, null, false, Color.black, Color.black, 0f, 0f);
+        TerrainMaterial boards = TerrainMaterial.Create("Boards", Texture("Boards albedo", stripes), null, 4, TerrainMaterial.CellMode.None, red, bare, Texture("Boards height", height));
+        createdObjects.Add(boards);
+        SerializedObject settings = new(boards);
+        settings.FindProperty("turnToRuns").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        TerrainTile automatic = FacingTile(boards, TerrainTile.Facing.Automatic);
+        TerrainTile eastWest = FacingTile(boards, TerrainTile.Facing.EastWest);
+        TerrainTile northSouth = FacingTile(boards, TerrainTile.Facing.NorthSouth);
+        GameObject gridObject = Track(new GameObject("FacingGrid", typeof(Grid)));
+        gridObject.SetActive(false);
+        Tilemap tilemap = new GameObject("Boards", typeof(Tilemap)).GetComponent<Tilemap>();
+        tilemap.transform.SetParent(gridObject.transform);
+        for (int x = 0; x < 6; x++)
+        {
+            tilemap.SetTile(new Vector3Int(x, 0, 0), x == 2 ? eastWest : automatic);
+        }
+
+        for (int y = 2; y < 8; y++)
+        {
+            tilemap.SetTile(new Vector3Int(8, y, 0), automatic);
+        }
+
+        TerrainBlendRenderer renderer = gridObject.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(tilemap, boards));
+        gridObject.SetActive(true);
+
+        Assert.That(renderer.TurnMap.GetCell(new Vector3Int(2, 0, 0)), Is.EqualTo(TerrainTile.Facing.EastWest));
+        Assert.That(renderer.TurnMap.GetCell(new Vector3Int(1, 0, 0)), Is.EqualTo(TerrainTile.Facing.Automatic));
+        Assert.That(renderer.RuntimeMaterial.GetTexture("_TerrainTurns"), Is.SameAs(renderer.TurnMap.Texture));
+        tilemap.SetTile(new Vector3Int(8, 4, 0), northSouth);
+        Assert.That(renderer.ControlMap.HasPendingChanges, Is.False, "a facing changes no bit of the control map");
+        renderer.FlushPendingChanges();
+        Assert.That(renderer.TurnMap.GetCell(new Vector3Int(8, 4, 0)), Is.EqualTo(TerrainTile.Facing.NorthSouth));
+
+        Rect world = new(0f, 0f, 10f, 8f);
+        Color32 first = default;
+        for (int frame = 0; frame < 30 && !IsDrawn(first); frame++)
+        {
+            yield return null;
+            first = RenderedPixel(renderer, world, 2 * 32 + 16, 4);
+        }
+
+        Texture2D pixels = TerrainBlendProbe.Render(renderer, world, 1, false, true, true);
+        Color32 fixedLow = pixels.GetPixel(2 * 32 + 4, 8);
+        Color32 fixedRight = pixels.GetPixel(2 * 32 + 20, 8);
+        Color32 fixedHigh = pixels.GetPixel(2 * 32 + 4, 24);
+        Color32 turnedLeft = pixels.GetPixel(1 * 32 + 4, 8);
+        Color32 turnedRight = pixels.GetPixel(1 * 32 + 20, 8);
+        Color32 upLeft = pixels.GetPixel(8 * 32 + 4, 4 * 32 + 8);
+        Color32 upRight = pixels.GetPixel(8 * 32 + 20, 4 * 32 + 8);
+        Color32 upHigher = pixels.GetPixel(8 * 32 + 4, 4 * 32 + 24);
+        Object.DestroyImmediate(pixels);
+
+        Assert.That(SameStripe(turnedLeft, turnedRight), Is.True, "Beside it, the run across still turns its stripes along x.");
+        Assert.That(SameStripe(fixedLow, fixedRight), Is.False, "East to west, the stripes change going across.");
+        Assert.That(SameStripe(fixedLow, fixedHigh), Is.True, "East to west, the stripes run along y.");
+        Assert.That(SameStripe(upLeft, upRight), Is.True, "North to south, the stripes run along x on the run up.");
+        Assert.That(SameStripe(upLeft, upHigher), Is.False, "North to south, the stripes change going up.");
+    }
+
+    /// <summary>
+    /// A renderer whose layers leave its style's layer order warns once, naming the layers out of place: two layers
+    /// listed the other way up from the order, and a material the order does not list; layers in the order, or a style
+    /// with no order, warn about nothing (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void LayersLeavingTheStylesOrder_AreWarnedAbout()
+    {
+        TerrainMaterial loose = TestTerrainStyle.PlainMaterial("Loose", TerrainMaterial.CellMode.None, createdObjects);
+        style = TestTerrainStyle.Create(createdObjects, new[] { materials[0], materials[1], materials[2] });
+        TerrainBlendRenderer renderer = root.AddComponent<TerrainBlendRenderer>();
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[1]), new TerrainBlendRenderer.Layer(layers[1], materials[0]), new TerrainBlendRenderer.Layer(layers[2], loose));
+
+        LogAssert.Expect(LogType.Warning, new Regex(@"leave TerrainStyle's layer order.*Grass \(layer 1\) is listed above Gravel.*Loose \(layer 2\) is not in it"));
+        root.SetActive(true);
+
+        renderer.Configure(style, new TerrainBlendRenderer.Layer(layers[0], materials[0]), new TerrainBlendRenderer.Layer(layers[1], materials[1]), new TerrainBlendRenderer.Layer(layers[2], materials[2]));
+        renderer.Rebuild();
+        renderer.Configure(TestTerrainStyle.Create(createdObjects), new TerrainBlendRenderer.Layer(layers[0], materials[2]), new TerrainBlendRenderer.Layer(layers[1], materials[0]));
+        renderer.Rebuild();
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    /// <summary>
+    /// In the editor, switching to the soft look while its shader variants are not compiled keeps the crisp look's
+    /// keyword and waits for them, compiling them in the background; once they are, the soft keyword goes on, and back
+    /// to crisp it goes off at once (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void TheSoftLook_WaitsForItsVariantsToCompile()
+    {
+        TerrainBlendRenderer renderer = CreateRenderer();
+        bool compiled = false;
+        renderer.SoftWarmUp.IsCompiled = (material, pass) => compiled;
+
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Soft;
+
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(SoftKeyword(renderer)), Is.False);
+        Assert.That(renderer.SoftWarmUp.IsWaiting, Is.True);
+
+        compiled = true;
+        renderer.SoftWarmUp.Poll();
+
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(SoftKeyword(renderer)), Is.True);
+        Assert.That(renderer.SoftWarmUp.IsWaiting, Is.False);
+        renderer.Mode = TerrainBlendRenderer.BlendMode.Crisp;
+        Assert.That(renderer.RuntimeMaterial.IsKeywordEnabled(SoftKeyword(renderer)), Is.False);
     }
 
     /// <summary>
@@ -2461,6 +2594,19 @@ public class TerrainBlendRendererTests
         Undo.RegisterCompleteObjectUndo(layer, "Paint");
         layer.SetTile(cell, tile);
         Undo.IncrementCurrentGroup();
+    }
+
+    /// <summary>
+    /// A ground tile, made for the test, painting <paramref name="material"/> lying <paramref name="facing"/>.
+    /// </summary>
+    private TerrainTile FacingTile(TerrainMaterial material, TerrainTile.Facing facing)
+    {
+        TerrainTile terrainTile = Track(ScriptableObject.CreateInstance<TerrainTile>());
+        SerializedObject settings = new(terrainTile);
+        settings.FindProperty("material").objectReferenceValue = material;
+        settings.FindProperty("facing").enumValueIndex = (int)facing;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        return terrainTile;
     }
 
     /// <summary>

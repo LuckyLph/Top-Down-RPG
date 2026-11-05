@@ -27,8 +27,7 @@ public static class WorldAuthoring
     public const string WallsPrefabPath = "Assets/Prefabs/World/Walls.prefab";
     public const string WallsName = "CollisionTilemap";
     public const string ExitsRootName = "Exits";
-    public const string GrassLayerName = "GrassTilemap";
-    public const string GrassTilePath = "Assets/Tiles/Ground/Tile_Grass.asset";
+    public const string StaleSource = "stale";
     public const string TerrainSyncPrefabPath = "Assets/Prefabs/Network/AreaTerrainSync.prefab";
     private const float GlobalLightIntensity = 0.85f;
 
@@ -99,12 +98,13 @@ public static class WorldAuthoring
     /// <summary>
     /// Creates the chunk at <paramref name="coords"/> of <paramref name="world"/>: a scene with a
     /// <see cref="ChunkLifetimeScope"/> and a grid at the world's origin with its <see cref="WorldChunk"/> and a terrain
-    /// renderer drawing one empty grass layer (<see cref="SetUpGround"/>), its definition, its entry in the world and its
-    /// place in the build list (none for a dev world). Returns the scene path. Leaves the scenes open as they were, with
-    /// their unsaved changes, but for a clean untitled scene, which it closes. Throws, making nothing, when the chunk
-    /// lies outside the world or already has a scene, or an untitled scene with unsaved changes is open.
+    /// renderer drawing one empty layer of <paramref name="ground"/>, its own ground (grass when null), which its
+    /// <see cref="AreaTerrain"/> lists (<see cref="SetUpGround"/>), its definition, its entry in the world and its place
+    /// in the build list (none for a dev world). Returns the scene path. Leaves the scenes open as they were, with their
+    /// unsaved changes, but for a clean untitled scene, which it closes. Throws, making nothing, when the chunk lies
+    /// outside the world or already has a scene, or an untitled scene with unsaved changes is open.
     /// </summary>
-    public static string CreateChunk(WorldDefinition world, Vector2Int coords)
+    public static string CreateChunk(WorldDefinition world, Vector2Int coords, TerrainMaterial ground = null)
     {
         if (coords.x < 0 || coords.y < 0 || coords.x >= world.SizeInChunks.x || coords.y >= world.SizeInChunks.y)
         {
@@ -128,7 +128,7 @@ public static class WorldAuthoring
             gridObject.transform.position = new Vector3(world.Origin.x, world.Origin.y, 0f);
             gridObject.SetActive(false);
             gridObject.AddComponent<WorldChunk>().Configure(world, coords, null);
-            SetUpGround(gridObject.GetComponent<Grid>());
+            SetUpGround(gridObject.GetComponent<Grid>(), ground);
             gridObject.SetActive(true);
             EditorSceneManager.SaveScene(scene, path);
         }
@@ -200,7 +200,7 @@ public static class WorldAuthoring
     {
         Dictionary<Vector2Int, List<Vector3Int>> byChunk = SplitByChunk(cells);
         int skipped = 0;
-        TileBase tile = AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(material));
+        TileBase tile = TerrainTileWriter.TileOf(material);
         foreach (KeyValuePair<Vector2Int, List<Vector3Int>> part in byChunk)
         {
             Grid grid = OpenChunkGrid(world, part.Key);
@@ -230,8 +230,9 @@ public static class WorldAuthoring
     /// <summary>
     /// Fills (or with <paramref name="filled"/> false, empties) the walls of <paramref name="cells"/> (world-local
     /// cells) in the open chunk scenes of <paramref name="world"/>, each cell through the wall module of the chunk that
-    /// owns it, adding the walls (<see cref="AddWalls"/>) to a chunk that has none. Cells of chunks that are not open
-    /// are skipped and counted in the result.
+    /// owns it, adding the walls (<see cref="AddWalls"/>) to a chunk that has none, and paints the ground of their
+    /// neighbours under walls filled beside ground (<see cref="WallGround.FillUnder"/>). Cells of chunks that are not
+    /// open are skipped and counted in the result.
     /// </summary>
     public static int PaintWalls(WorldDefinition world, IEnumerable<Vector2Int> cells, bool filled = true)
     {
@@ -254,6 +255,7 @@ public static class WorldAuthoring
             if (filled)
             {
                 walls.SetDataTiles(part.Value);
+                WallGround.FillUnder(part.Value, cell => OpenChunkGrid(world, ChunkCoords.ChunkOf(cell)) is Grid owner && owner != null ? owner.GetComponent<TerrainBlendRenderer>() : null);
             }
             else
             {
@@ -333,30 +335,52 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Gives <paramref name="walls"/>, a walls' data tilemap, the Shadow Caster 2D the walls prefab carries
-    /// (Docs/Lighting.md, Phase 7), unless it has one, as one undo step: shaped by the walls' collider through URP's
-    /// collider shape, on every sorting layer, the walls' own cells left lit, without URP's trim so a shadow starts at the
-    /// walls' cells. Returns the caster, or null with an error when URP shapes it from anything but the collider.
+    /// (Docs/Lighting.md, Phase 7), or brings the one it has in line, as one undo step: shaped by the walls' collider
+    /// through URP's collider shape, the walls' own cells left lit, without URP's trim so a shadow starts at the walls'
+    /// cells, casting onto the ground's sorting layers only (<see cref="PropWriter.ShadowedSortingLayerIds"/>), so units
+    /// and props read the walls' shadows at their feet as they read the props' (Docs/KnownGaps.md, Phase 7). Returns the
+    /// caster, or null with an error when URP shapes a new one from anything but the collider.
     /// </summary>
     public static ShadowCaster2D AddWallShadows(GameObject walls)
     {
-        if (walls.TryGetComponent(out ShadowCaster2D caster))
+        if (!walls.TryGetComponent(out ShadowCaster2D caster))
         {
-            return caster;
+            TilemapCollider2D collider = walls.GetComponent<TilemapCollider2D>();
+            caster = Undo.AddComponent<ShadowCaster2D>(walls);
+            SerializedObject added = new(caster);
+            if (collider == null || added.FindProperty("m_ShadowShape2DComponent").objectReferenceValue != collider)
+            {
+                Debug.LogError($"{walls.name}: its shadow caster is not shaped by the walls' collider.", walls);
+                Undo.DestroyObjectImmediate(caster);
+                return null;
+            }
+
+            added.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
+            added.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(walls);
         }
 
-        TilemapCollider2D collider = walls.GetComponent<TilemapCollider2D>();
-        caster = Undo.AddComponent<ShadowCaster2D>(walls);
+        int[] layers = PropWriter.ShadowedSortingLayerIds();
         SerializedObject serialized = new(caster);
-        if (collider == null || serialized.FindProperty("m_ShadowShape2DComponent").objectReferenceValue != collider)
+        SerializedProperty sortingLayers = serialized.FindProperty("m_ApplyToSortingLayers");
+        bool same = sortingLayers.arraySize == layers.Length;
+        for (int i = 0; same && i < layers.Length; i++)
         {
-            Debug.LogError($"{walls.name}: its shadow caster is not shaped by the walls' collider.", walls);
-            Undo.DestroyObjectImmediate(caster);
-            return null;
+            same = sortingLayers.GetArrayElementAtIndex(i).intValue == layers[i];
         }
 
-        serialized.FindProperty("m_ShadowMesh.m_TrimEdge").floatValue = 0f;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        EditorUtility.SetDirty(walls);
+        if (!same)
+        {
+            sortingLayers.arraySize = layers.Length;
+            for (int i = 0; i < layers.Length; i++)
+            {
+                sortingLayers.GetArrayElementAtIndex(i).intValue = layers[i];
+            }
+
+            serialized.ApplyModifiedProperties();
+            EditorUtility.SetDirty(walls);
+        }
+
         return caster;
     }
 
@@ -434,12 +458,12 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Gives <paramref name="grid"/>, a chunk's grid, the <see cref="AreaTerrain"/> its runtime edits go through
-    /// (Docs/WorldStreaming.md: Networking), or brings the one it has in line: it lists the grass layer
-    /// (<see cref="GrassLayerName"/>, filled with <see cref="GrassTilePath"/>'s tile) and the walls
-    /// (<see cref="WallsName"/>) when the chunk has them, adding a missing one after those it lists so a layer keeps its
-    /// index, and replicates through the terrain sync prefab. Returns whether it changed anything.
+    /// (Docs/WorldStreaming.md: Networking), or brings the one it has in line: it lists the layer the grid's renderer
+    /// draws <paramref name="ground"/> on (grass when null), filled with that material's tile, and the walls
+    /// (<see cref="WallsName"/>) when the chunk has them, adding a missing one after those it lists, and replicates
+    /// through the terrain sync prefab. Returns whether it changed anything.
     /// </summary>
-    public static bool SetUpTerrainEdits(Grid grid)
+    public static bool SetUpTerrainEdits(Grid grid, TerrainMaterial ground = null)
     {
         bool changed = false;
         if (!grid.TryGetComponent(out AreaTerrain terrain))
@@ -450,9 +474,9 @@ public static class WorldAuthoring
 
         SerializedObject data = new(terrain);
         SerializedProperty layers = data.FindProperty("layers");
-        Transform grass = grid.transform.Find(GrassLayerName);
+        TerrainMaterial groundMaterial = ground != null ? ground : MaterialNamed("Grass");
         Transform walls = grid.transform.Find(WallsName);
-        changed |= AddTerrainLayer(layers, grass != null ? grass.GetComponent<Tilemap>() : null, AssetDatabase.LoadAssetAtPath<TileBase>(GrassTilePath));
+        changed |= AddTerrainLayer(layers, LayerOf(grid, groundMaterial), TerrainTileWriter.TileOf(groundMaterial));
         changed |= AddTerrainLayer(layers, walls != null ? walls.GetComponent<Tilemap>() : null, null);
         data.ApplyModifiedProperties();
         Undo.RecordObject(terrain, "Set the terrain sync prefab");
@@ -590,9 +614,12 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Adds to each chunk of <paramref name="world"/> a layer for every material its own cells or its neighbours'
-    /// border strips (<see cref="WorldChunk.SkirtCells"/> wide) show that it does not draw yet, at its place in the
-    /// style's order, opening the scenes that are not open, and saves the ones it changed. Returns what it added.
+    /// Brings each chunk's layers of <paramref name="world"/> in line with what it shows: adds a layer for every material
+    /// its own cells or its neighbours' border strips (<see cref="WorldChunk.SkirtCells"/> wide) show that it does not
+    /// draw yet, at its place in the style's order, and removes each empty layer of a material neither shows any more
+    /// (Docs/KnownGaps.md, Phase 5: a material that left a neighbour's strip, the grass a chunk of open sea was made with),
+    /// with its <see cref="AreaTerrain"/> entry, since saved edits name their layer by material. Opens the scenes that are
+    /// not open, and saves the ones it changed. Returns a line per layer added or removed.
     /// </summary>
     public static List<string> SyncLayerLists(WorldDefinition world)
     {
@@ -606,7 +633,8 @@ public static class WorldAuthoring
             {
                 RectInt reach = Grow(ChunkCoords.Bounds(chunk.Key), WorldChunk.SkirtCells);
                 bool changed = false;
-                foreach (TerrainMaterial material in SortedByOrder(cells.MaterialsIn(reach)))
+                List<TerrainMaterial> needed = SortedByOrder(cells.MaterialsIn(reach));
+                foreach (TerrainMaterial material in needed)
                 {
                     if (LayerOf(chunk.Value, material) == null && GroundLayerMigration.AddLayer(chunk.Value, material) != null)
                     {
@@ -615,6 +643,9 @@ public static class WorldAuthoring
                     }
                 }
 
+                List<string> removed = PruneLayers(chunk.Value, needed);
+                added.AddRange(removed);
+                changed |= removed.Count > 0;
                 if (changed)
                 {
                     RefreshLinks(chunk.Value);
@@ -742,11 +773,16 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Whether <paramref name="marker"/>'s coast map is out of date against <paramref name="source"/>, what it would be
-    /// baked from now (<see cref="WorldCoastBake.SourceOf"/>): a chunk showing waves needs a map baked from that
-    /// source, and one showing none needs no map.
+    /// baked from now (<see cref="WorldCoastBake.SourceOf"/>): a chunk the brush marked (<see cref="MarkMapsStale"/>) is
+    /// baked again, a chunk showing waves needs a map baked from that source, and one showing none needs no map.
     /// </summary>
     public static bool IsCoastStale(WorldChunk marker, string source)
     {
+        if (marker.CoastSource == StaleSource)
+        {
+            return true;
+        }
+
         if (source == WorldCoastBake.NoWaves)
         {
             return marker.CoastMap != null;
@@ -873,12 +909,61 @@ public static class WorldAuthoring
     }
 
     /// <summary>
+    /// A problem for each chunk of <paramref name="world"/> whose coast or glow map is out of date
+    /// (<see cref="IsCoastStale"/>, <see cref="IsGlowStale"/>), reading the world's ground once, opening the scenes that
+    /// are not open and closing them again unchanged; validation reports them, so a build stops on a stale map
+    /// (Docs/KnownGaps.md, Phase 5).
+    /// </summary>
+    public static List<string> StaleMapProblems(WorldDefinition world)
+    {
+        List<string> problems = new();
+        List<Scene> opened = new();
+        TerrainStyle style = AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath);
+        try
+        {
+            Dictionary<Vector2Int, Grid> grids = OpenChunks(world, opened);
+            WorldCoastBake.WorldCells cells = ReadWorld(world, grids);
+            foreach (KeyValuePair<Vector2Int, Grid> chunk in grids)
+            {
+                WorldChunk marker = chunk.Value.GetComponent<WorldChunk>();
+                TerrainBlendRenderer renderer = chunk.Value.GetComponent<TerrainBlendRenderer>();
+                if (marker == null || renderer == null)
+                {
+                    continue;
+                }
+
+                List<TerrainMaterial> materials = renderer.Layers.Select(l => l != null ? l.Material : null).ToList();
+                RectInt bounds = ChunkCoords.Bounds(chunk.Key);
+                bool coast = IsCoastStale(marker, WorldCoastBake.SourceOf(cells, style, materials, bounds));
+                bool glow = IsGlowStale(marker, WorldGlowBake.SourceOf(cells, materials, bounds));
+                if (coast || glow)
+                {
+                    string which = coast && glow ? "coast and glow maps are" : coast ? "coast map is" : "glow map is";
+                    problems.Add($"{chunk.Value.gameObject.scene.name}: its {which} out of date; run the World Editor's Bake changed maps.");
+                }
+            }
+        }
+        finally
+        {
+            CloseScenes(opened, false);
+        }
+
+        return problems;
+    }
+
+    /// <summary>
     /// Whether <paramref name="marker"/>'s glow map is out of date against <paramref name="source"/>, what it would be
-    /// baked from now (<see cref="WorldGlowBake.SourceOf"/>): a chunk with something glowing within reach needs a map
-    /// baked from that source, and one with nothing needs no map.
+    /// baked from now (<see cref="WorldGlowBake.SourceOf"/>): a chunk the brush marked (<see cref="MarkMapsStale"/>) is
+    /// baked again, a chunk with something glowing within reach needs a map baked from that source, and one with
+    /// nothing needs no map.
     /// </summary>
     public static bool IsGlowStale(WorldChunk marker, string source)
     {
+        if (marker.GlowSource == StaleSource)
+        {
+            return true;
+        }
+
         if (source == WorldGlowBake.NoGlow)
         {
             return marker.GlowMap != null;
@@ -958,6 +1043,60 @@ public static class WorldAuthoring
         settings.textureCompression = TextureImporterCompression.Uncompressed;
         importer.SetPlatformTextureSettings(settings);
         importer.SaveAndReimport();
+    }
+
+    /// <summary>
+    /// Marks <paramref name="marker"/>'s coast map (<paramref name="coast"/>) or glow map (<paramref name="glow"/>) out of
+    /// date: what it was baked from becomes <see cref="StaleSource"/>, recorded for undo in the current group, so
+    /// <see cref="IsCoastStale"/> and <see cref="IsGlowStale"/> find it stale until the next bake records what it was
+    /// baked from, unless the chunk then shows nothing to bake (no waves, nothing glowing) and has no map. Returns
+    /// whether it marked anything.
+    /// </summary>
+    public static bool MarkMapsStale(WorldChunk marker, bool coast, bool glow)
+    {
+        SerializedObject data = new(marker);
+        SerializedProperty coastSource = data.FindProperty("coastSource");
+        SerializedProperty glowSource = data.FindProperty("glowSource");
+        bool marked = false;
+        if (coast && coastSource.stringValue != StaleSource)
+        {
+            coastSource.stringValue = StaleSource;
+            marked = true;
+        }
+
+        if (glow && glowSource.stringValue != StaleSource)
+        {
+            glowSource.stringValue = StaleSource;
+            marked = true;
+        }
+
+        if (marked)
+        {
+            data.ApplyModifiedProperties();
+            EditorSceneManager.MarkSceneDirty(marker.gameObject.scene);
+        }
+
+        return marked;
+    }
+
+    /// <summary>
+    /// The chunks of <paramref name="world"/> open now whose coast or glow map is marked out of date
+    /// (<see cref="MarkMapsStale"/>). Reads only the open scenes.
+    /// </summary>
+    public static List<Vector2Int> MarkedStale(WorldDefinition world)
+    {
+        List<Vector2Int> marked = new();
+        foreach (WorldDefinition.Chunk chunk in world.Chunks)
+        {
+            Scene scene = chunk != null && chunk.Scene != null && chunk.Scene.IsValid ? SceneManager.GetSceneByPath(chunk.Scene.ScenePath) : default;
+            WorldChunk marker = scene.IsValid() && scene.isLoaded ? SceneQuery.FindFirst<WorldChunk>(scene) : null;
+            if (marker != null && (marker.CoastSource == StaleSource || marker.GlowSource == StaleSource))
+            {
+                marked.Add(chunk.Coords);
+            }
+        }
+
+        return marked;
     }
 
     /// <summary>
@@ -1306,12 +1445,13 @@ public static class WorldAuthoring
     /// Sets where <paramref name="exit"/> leads and how many cells it covers, through its serialized object, recorded
     /// for undo.
     /// </summary>
-    public static void ConfigureExit(WorldExit exit, WorldDefinition target, string entryName, Vector2Int size)
+    public static void ConfigureExit(WorldExit exit, WorldDefinition target, string entryName, Vector2Int size, ExitMarker marker = ExitMarker.Signpost)
     {
         SerializedObject data = new(exit);
         data.FindProperty("targetWorld").objectReferenceValue = target;
         data.FindProperty("targetEntry").stringValue = entryName ?? string.Empty;
         data.FindProperty("sizeInCells").vector2IntValue = Vector2Int.Max(size, Vector2Int.one);
+        data.FindProperty("marker").enumValueIndex = (int)marker;
         data.ApplyModifiedProperties();
     }
 
@@ -1443,6 +1583,87 @@ public static class WorldAuthoring
     }
 
     /// <summary>
+    /// Removes from <paramref name="grid"/>'s terrain renderer each layer holding no tile whose material is not in
+    /// <paramref name="needed"/>, taking it out of the grid's <see cref="AreaTerrain"/> first, then setting the layers
+    /// left up as they were (<see cref="AreaGroundSetup.SetUpLayers"/>, which removes the empty tilemaps no longer drawn
+    /// nor listed). Nothing when a layer left has no tile or terrain type to set it up with. Returns a line per layer
+    /// removed.
+    /// </summary>
+    private static List<string> PruneLayers(Grid grid, ICollection<TerrainMaterial> needed)
+    {
+        List<string> removed = new();
+        if (!grid.TryGetComponent(out TerrainBlendRenderer renderer) || renderer.Style == null)
+        {
+            return removed;
+        }
+
+        List<Tilemap> pruned = new();
+        List<AreaGenerator.TerrainLayer> kept = new();
+        foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
+        {
+            if (layer == null || layer.Tilemap == null || layer.Material == null)
+            {
+                return removed;
+            }
+
+            if (!needed.Contains(layer.Material) && !HasTiles(layer.Tilemap))
+            {
+                pruned.Add(layer.Tilemap);
+                removed.Add($"{grid.gameObject.scene.name}: removed {layer.Material.name}, empty and shown by no cell or border");
+                continue;
+            }
+
+            Tile tile = TerrainTileWriter.TileOf(layer.Material);
+            TerrainType2D terrainType = AssetDatabase.LoadAssetAtPath<TerrainType2D>(GroundLayerMigration.TerrainTypePath(layer.Material));
+            if (tile == null || terrainType == null || layer.Tilemap.transform.parent != grid.transform)
+            {
+                return new List<string>();
+            }
+
+            kept.Add(new AreaGenerator.TerrainLayer(layer.Tilemap.name, tile, terrainType, layer.Material));
+        }
+
+        if (pruned.Count == 0 || AreaGroundSetup.Problem(grid.gameObject.scene.name, renderer.Style, kept) != null)
+        {
+            return new List<string>();
+        }
+
+        if (grid.TryGetComponent(out AreaTerrain terrain))
+        {
+            SerializedObject data = new(terrain);
+            SerializedProperty listed = data.FindProperty("layers");
+            for (int i = listed.arraySize - 1; i >= 0; i--)
+            {
+                if (pruned.Contains(listed.GetArrayElementAtIndex(i).FindPropertyRelative("tilemap").objectReferenceValue as Tilemap))
+                {
+                    listed.DeleteArrayElementAtIndex(i);
+                }
+            }
+
+            data.ApplyModifiedProperties();
+        }
+
+        AreaGroundSetup.SetUpLayers(grid, renderer.Style, kept, "Sync layer lists", new List<string>());
+        return removed;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="tilemap"/> holds a tile anywhere.
+    /// </summary>
+    private static bool HasTiles(Tilemap tilemap)
+    {
+        foreach (Vector3Int cell in tilemap.cellBounds.allPositionsWithin)
+        {
+            if (tilemap.HasTile(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// The tilemap of the layer drawing <paramref name="material"/> on <paramref name="grid"/>'s terrain renderer, or
     /// null.
     /// </summary>
@@ -1523,16 +1744,18 @@ public static class WorldAuthoring
     }
 
     /// <summary>
-    /// Gives a grid, inactive while it is set up, a terrain renderer with the project's style drawing one empty grass
-    /// layer, its <see cref="NavigationGrid2D"/> and its <see cref="AreaTerrain"/>.
+    /// Gives a grid, inactive while it is set up, a terrain renderer with the project's style drawing one empty layer of
+    /// <paramref name="ground"/> (grass when null), its <see cref="NavigationGrid2D"/> and its <see cref="AreaTerrain"/>,
+    /// which lists that layer.
     /// </summary>
-    private static void SetUpGround(Grid grid)
+    internal static void SetUpGround(Grid grid, TerrainMaterial ground = null)
     {
+        TerrainMaterial material = ground != null ? ground : MaterialNamed("Grass");
         TerrainBlendRenderer renderer = grid.gameObject.AddComponent<TerrainBlendRenderer>();
         renderer.Configure(AssetDatabase.LoadAssetAtPath<TerrainStyle>(StylePath));
-        GroundLayerMigration.AddLayer(grid, MaterialNamed("Grass"));
+        GroundLayerMigration.AddLayer(grid, material);
         SetUpNavigation(grid);
-        SetUpTerrainEdits(grid);
+        SetUpTerrainEdits(grid, material);
     }
 
     /// <summary>

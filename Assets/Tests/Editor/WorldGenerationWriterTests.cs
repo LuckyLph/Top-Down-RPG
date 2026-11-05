@@ -20,8 +20,10 @@ using Object = UnityEngine.Object;
 /// style's order, each layer holding exactly its composed cells and tile, with its raised ground, its mobs under its
 /// generated root with derived ids the id watcher keeps and its props under its generated props' root where the
 /// composition puts them, with no sorting order written, and its <see cref="ChunkSky"/> holding the region skies
-/// reaching it (Docs/Lighting.md, Phase 8), a chunk none reaches losing a stale one; its <see cref="AreaTerrain"/> is only
-/// appended to; the written hash follows paint on any layer, the generated spawn points, the generated props and the
+/// reaching it (Docs/Lighting.md, Phase 8), a chunk none reaches losing a stale one; its <see cref="AreaTerrain"/> lists
+/// the base grounds it lays, a ground layer it no longer lays taken out and removed (Docs/KnownGaps.md, Phase 5), and a
+/// chunk created for the writer starts with its own ground, not grass; the written hash follows paint on any layer, the
+/// generated spawn points, the generated props and the
 /// skies' weights, and nothing else; objects outside the generated roots (props
 /// placed by hand among them) and entries made by hand stay, and a rewrite reuses the prop instances, even past a prop
 /// added in the middle of a chunk's list (a region's light, Docs/Lighting.md, Phase 6); a locked chunk is
@@ -88,8 +90,8 @@ public class WorldGenerationWriterTests
 
     /// <summary>
     /// The chunk holding the Coast's plateau (raised ground and ramps), a chunk of the Snowfield's snow, and a corner
-    /// chunk of the shore, each written into a new chunk grid: its layers are its list's materials and the grass layer
-    /// its <see cref="AreaTerrain"/> lists, in the style's order, each a child of the grid at its place with its
+    /// chunk of the shore, each written into a new chunk grid: its layers are its list's materials (the grass layer it
+    /// was made with only when it lays grass), in the style's order, each a child of the grid at its place with its
     /// navigation priority and terrain type, holding exactly its material's composed cells of the chunk with its tile;
     /// its raised tilemap holds the composed raised cells and ramps; its mobs stand under its generated root at their
     /// cells' centres with their prefabs and derived ids, which the id watcher keeps; its props stand under its generated
@@ -123,14 +125,16 @@ public class WorldGenerationWriterTests
 
     /// <summary>
     /// A chunk of the Snowfield whose <see cref="AreaTerrain"/> lists the grass layer, the walls and an empty mud layer
-    /// keeps those three entries at their indices, gains its snow layer after them, keeps drawing the mud layer though
-    /// it is empty, and fills each listed layer with its tile; writing it again appends nothing more.
+    /// keeps the walls' entry, loses the mud's, whose layer, empty and laid nowhere in the chunk, goes, keeps the grass's
+    /// only when the chunk lays grass on its own cells, gains its snow layer, and fills each listed layer with its tile;
+    /// every ground layer it lists is one the chunk lays on its own cells, and writing it again changes nothing.
     /// </summary>
     [Test]
-    public void AreaTerrain_IsOnlyAppendedTo_ABaseGroundLayerIsAppended_AndAListedLayerStaysWhenEmpty()
+    public void AreaTerrain_ListsTheBaseGroundsTheChunkLays_ALayerItNoLongerLaysGoes()
     {
         TerrainMaterial mud = TestWorldGenerators.GroundMaterial("Mud");
         TerrainMaterial snow = TestWorldGenerators.GroundMaterial("Snow");
+        TerrainMaterial grass = TestWorldGenerators.GroundMaterial("Grass");
         Vector2Int coords = ChunkWithOwn(snow);
         Assert.That(overworld.ChunkAt(coords).Materials, Has.No.Member(mud), "the chunk lays no mud");
         Grid grid = perTest.NewChunk(overworldGenerator.World, coords);
@@ -141,16 +145,20 @@ public class WorldGenerationWriterTests
 
         WorldGenerationWriter.WriteChunk(grid, overworld, coords);
         List<Tilemap> after = Listed(grid);
-        Assert.That(after.GetRange(0, before.Count), Is.EqualTo(before), "every entry keeps its index");
-        List<TerrainMaterial> appended = after.GetRange(before.Count, after.Count - before.Count).ConvertAll(tilemap => MaterialOf(grid, tilemap));
-        Assert.That(appended, Has.Member(snow), "the snow layer is appended");
-        foreach (TerrainMaterial material in appended)
+        List<TerrainMaterial> listed = after.ConvertAll(tilemap => MaterialOf(grid, tilemap));
+        Assert.That(after.Exists(tilemap => tilemap.name == WorldAuthoring.WallsName), Is.True, "the walls stay listed");
+        Assert.That(listed, Has.Member(snow), "the snow layer is listed");
+        Assert.That(listed, Has.No.Member(mud), "the mud layer is no longer listed");
+        Assert.That(LayerOf(grid, mud) == null && grid.transform.Find(GroundLayerMigration.TilemapName(mud)) == null, Is.True, "the empty mud layer is removed");
+        Assert.That(listed.Contains(grass), Is.EqualTo(OwnCells(coords, grass)), "grass is listed only when the chunk lays it");
+        foreach (TerrainMaterial material in listed)
         {
-            Assert.That(overworld.Grounds, Has.Member(material), $"{material.name} is a base ground");
+            if (material != null)
+            {
+                Assert.That(OwnCells(coords, material), Is.True, $"{material.name} is laid on the chunk's own cells");
+            }
         }
 
-        Assert.That(LayerOf(grid, mud) == mudLayer, Is.True, "the listed mud layer is still drawn");
-        Assert.That(Filled(mudLayer), Is.Empty, "the listed mud layer is empty");
         SerializedProperty entries = new SerializedObject(grid.GetComponent<AreaTerrain>()).FindProperty("layers");
         for (int i = 0; i < entries.arraySize; i++)
         {
@@ -160,13 +168,40 @@ public class WorldGenerationWriterTests
             Assert.That(fill, Is.EqualTo(material != null ? TileOf(material) : null), $"{tilemap.name}'s fill tile");
         }
 
+        ExpectWritten(grid, coords);
         WorldGenerationWriter.WriteChunk(grid, overworld, coords);
-        Assert.That(Listed(grid), Is.EqualTo(after), "a second write appends nothing");
+        Assert.That(Listed(grid), Is.EqualTo(after), "a second write changes no entry");
     }
 
     /// <summary>
-    /// The hash of a written chunk read back from its grid changes with a cell painted on an empty layer its
-    /// <see cref="AreaTerrain"/> keeps, a cell painted on any ground layer, a raised cell, a generated spawn point moved,
+    /// A chunk created for the writer starts with its own ground (<see cref="WorldGenerationWriter.GroundOf"/>): a chunk
+    /// of open sea the ocean, a chunk of land the base ground on most of its cells; and a chunk created with a ground
+    /// draws and lists that ground for runtime edits, not grass.
+    /// </summary>
+    [Test]
+    public void ANewChunk_StartsWithItsOwnGround()
+    {
+        TerrainMaterial ocean = TestWorldGenerators.GroundMaterial("Ocean");
+        WorldComposition.Chunk sea = overworld.Chunks.Find(chunk => chunk.OwnMask == (1u << overworld.IndexOf(ocean)));
+        if (sea != null)
+        {
+            Assert.That(WorldGenerationWriter.GroundOf(overworld, sea.Coords) == ocean, Is.True, "a chunk of open sea starts with the ocean");
+        }
+
+        Vector2Int land = ChunkWithOwn(TestWorldGenerators.GroundMaterial("Snow"));
+        TerrainMaterial ground = WorldGenerationWriter.GroundOf(overworld, land);
+        Assert.That(overworld.Grounds, Has.Member(ground), "a chunk of land starts with a base ground");
+        Assert.That(OwnCells(land, ground), Is.True);
+
+        Grid grid = perTest.NewChunk(overworldGenerator.World, land, ocean);
+        Assert.That(LayerOf(grid, ocean) != null, Is.True, "the chunk draws its ground");
+        Assert.That(LayerOf(grid, TestWorldGenerators.GroundMaterial("Grass")) == null, Is.True, "and no grass");
+        Assert.That(Listed(grid).ConvertAll(tilemap => MaterialOf(grid, tilemap)), Is.EqualTo(new[] { ocean }), "its runtime edits list its ground");
+    }
+
+    /// <summary>
+    /// The hash of a written chunk read back from its grid changes with a cell painted on an empty layer of its
+    /// neighbours' strips, a cell painted on any ground layer, a raised cell, a generated spawn point moved,
     /// a generated prop moved and a region sky's weight changed, and comes back when each is undone; walls, a decor tilemap, a spawn point outside the
     /// generated root and a prop placed by hand under the scene's Props root change nothing.
     /// </summary>
@@ -177,12 +212,14 @@ public class WorldGenerationWriterTests
         Assert.That(MobsOf(coords), Is.Not.Empty, "the plateau's chunk holds mobs");
         string composed = overworld.ChunkAt(coords).ContentHash;
         Grid grid = perTest.NewChunk(overworldGenerator.World, coords);
-        Tilemap mud = ListLayer(grid, TestWorldGenerators.GroundMaterial("Mud"));
+        TerrainMaterial stripMaterial = overworld.ChunkAt(coords).Materials.Find(material => !OwnCells(coords, material));
+        Assert.That(stripMaterial != null, Is.True, "the plateau's chunk lists a material of its neighbours' strips only");
         WorldGenerationWriter.WriteChunk(grid, overworld, coords);
-        Assert.That(Hash(grid, coords), Is.EqualTo(composed), "read back as composed, its empty listed layer counting for nothing");
+        Assert.That(Hash(grid, coords), Is.EqualTo(composed), "read back as composed, its empty strip layer counting for nothing");
 
+        Tilemap strip = LayerOf(grid, stripMaterial);
         Vector3Int cell = Cell3(ChunkCoords.Bounds(coords).center);
-        ExpectChange(grid, coords, composed, "paint on the empty listed layer", () => mud.SetTile(cell, TileOf(TestWorldGenerators.GroundMaterial("Mud"))), () => mud.SetTile(cell, null));
+        ExpectChange(grid, coords, composed, "paint on the empty strip layer", () => strip.SetTile(cell, TileOf(stripMaterial)), () => strip.SetTile(cell, null));
         Tilemap grass = LayerOf(grid, TestWorldGenerators.GroundMaterial("Grass"));
         Vector3Int bare = FirstCellWithout(coords, grass);
         ExpectChange(grid, coords, composed, "grass painted where none was", () => grass.SetTile(bare, TileOf(TestWorldGenerators.GroundMaterial("Grass"))), () => grass.SetTile(bare, null));
@@ -1106,6 +1143,15 @@ public class WorldGenerationWriterTests
 
         Assert.Fail($"the Overworld has no raised cell of kind {kind}");
         return default;
+    }
+
+    /// <summary>
+    /// Whether the Overworld's chunk at <paramref name="coords"/> lays <paramref name="material"/> on cells of its own.
+    /// </summary>
+    private bool OwnCells(Vector2Int coords, TerrainMaterial material)
+    {
+        int bit = overworld.IndexOf(material);
+        return bit >= 0 && (overworld.ChunkAt(coords).OwnMask & (1u << bit)) != 0;
     }
 
     /// <summary>

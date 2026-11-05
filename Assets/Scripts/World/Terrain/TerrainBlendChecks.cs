@@ -22,7 +22,8 @@ internal static class TerrainBlendChecks
     /// Also logs an error for each layer whose navigation source's priority is not its index, which does not stop the
     /// drawing (the drawing never reads the priority), warns about each layer whose tilemap has an enabled
     /// <see cref="TilemapRenderer"/>, which would draw its tiles' sprites as well, and warns when
-    /// <paramref name="grid"/> is not made of unrotated one-unit cells, which the shader assumes.
+    /// <paramref name="grid"/> is not made of unrotated one-unit cells, which the shader assumes, and when the layers leave
+    /// the style's layer order (<see cref="WarnOffLayerOrder"/>).
     /// </summary>
     public static bool IsUsable(TerrainBlendRenderer renderer, Grid grid, string sortingLayerName, bool wide)
     {
@@ -98,6 +99,7 @@ internal static class TerrainBlendChecks
             }
         }
 
+        WarnOffLayerOrder(renderer, style, layers);
         if (!SortingLayer.IsValid(SortingLayer.NameToID(sortingLayerName)))
         {
             Debug.LogError($"{name}: there is no sorting layer named {sortingLayerName}.", renderer);
@@ -110,6 +112,52 @@ internal static class TerrainBlendChecks
         }
 
         return usable;
+    }
+
+    /// <summary>
+    /// Warns once when <paramref name="layers"/> leave <paramref name="style"/>'s shared draw order
+    /// (<see cref="TerrainStyle.LayerOrder"/>, Docs/KnownGaps.md, Phase 6): a material the order does not list, or a layer
+    /// listed above one whose material the order puts above its own. The renderer draws its layers as listed, so such a
+    /// pair draws the other way up from other areas. A style with no order checks nothing.
+    /// </summary>
+    private static void WarnOffLayerOrder(TerrainBlendRenderer renderer, TerrainStyle style, IReadOnlyList<TerrainBlendRenderer.Layer> layers)
+    {
+        if (style.LayerOrder == null || style.LayerOrder.Count == 0)
+        {
+            return;
+        }
+
+        List<string> problems = null;
+        int highestRank = -1;
+        string highestName = null;
+        for (int i = 0; i < layers.Count; i++)
+        {
+            TerrainMaterial material = layers[i]?.Material;
+            if (material == null)
+            {
+                continue;
+            }
+
+            int rank = style.LayerOrderIndexOf(material);
+            if (rank < 0)
+            {
+                (problems ??= new List<string>()).Add($"{material.name} (layer {i}) is not in it");
+            }
+            else if (rank < highestRank)
+            {
+                (problems ??= new List<string>()).Add($"{material.name} (layer {i}) is listed above {highestName}, which it puts above {material.name}");
+            }
+            else
+            {
+                highestRank = rank;
+                highestName = material.name;
+            }
+        }
+
+        if (problems != null)
+        {
+            Debug.LogWarning($"{renderer.name}: its ground layers leave {style.name}'s layer order, so they draw differently from other areas: {string.Join("; ", problems)}. Reorder the layers in the {nameof(TerrainBlendRenderer)} inspector, or run Convert Ground.", renderer);
+        }
     }
 
     /// <summary>

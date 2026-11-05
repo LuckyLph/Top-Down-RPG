@@ -471,7 +471,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 2, y: 3}
-    writtenHash: 61db25e9d7ceb607
+    writtenHash: 4c8d4ec786befccf
     mobIds:
     - b75fab0fda34ff351671ad23d6fc2988
     - 17225770c7297e0e12d6465ce89638d4
@@ -479,7 +479,7 @@ MonoBehaviour:
     allowWide: 0
     wildsSeed: 0
   - coords: {x: 3, y: 3}
-    writtenHash: 12b97274e5fdc2e6
+    writtenHash: d11ff813fba83ce2
     mobIds:
     - b6045c36c04717fafe3be6a558175667
     - 73d0a4c27aac25d0b99c8906eecd4a34

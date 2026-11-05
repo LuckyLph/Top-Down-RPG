@@ -3,7 +3,9 @@ using UnityEngine;
 /// <summary>
 /// Every weapon a player can equip, in a fixed order (Docs/Animation.md, Phase 4). A weapon is identified on the wire by
 /// its index here (the equipped weapon, and the weapon an attack or a weapon ability was made with), which is safe
-/// because join approval refuses clients on another build version. Append weapons; never reorder them.
+/// because join approval refuses clients on another build version. Append weapons; never reorder them. A save names a
+/// weapon by its id instead (<see cref="PlayerWeapon.WeaponId"/>, its asset's GUID: <see cref="IdOf"/>,
+/// <see cref="FindById"/>), which survives a reordered catalog and a renamed or moved asset.
 /// </summary>
 [CreateAssetMenu(fileName = "WeaponCatalog", menuName = "TopDownRPG/Combat/Weapon Catalog")]
 public sealed class WeaponCatalog : ScriptableObject
@@ -39,6 +41,36 @@ public sealed class WeaponCatalog : ScriptableObject
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// The id a save names <paramref name="weapon"/> by (<see cref="PlayerWeapon.WeaponId"/>); empty for null or a
+    /// weapon not in the catalog, which a save cannot name.
+    /// </summary>
+    public string IdOf(PlayerWeapon weapon)
+    {
+        return IndexOf(weapon) >= 0 ? weapon.WeaponId : string.Empty;
+    }
+
+    /// <summary>
+    /// The catalog's weapon whose id (<see cref="IdOf"/>) is <paramref name="id"/>, or null for an empty or unknown id.
+    /// </summary>
+    public PlayerWeapon FindById(string id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < Count; i++)
+        {
+            if (weapons[i] != null && weapons[i].WeaponId == id)
+            {
+                return weapons[i];
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

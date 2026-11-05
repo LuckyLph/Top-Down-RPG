@@ -14,7 +14,9 @@ using VContainer;
 /// late joiners included. An area has one on its grid, and so does each chunk of a seamless world, whose edits replicate
 /// per chunk (<see cref="ChunkTerrainSync"/>). Navigation follows the tile changes by itself. A chunk's edits are kept
 /// in its world's <see cref="WorldState"/>, which <see cref="ChunkTerrainSync"/> restores them from as the chunk loads
-/// (<see cref="RestoreEdits"/>); an area's last only while its scene is loaded.
+/// (<see cref="RestoreEdits"/>); an area's last only while its scene is loaded. On the wire a layer is its index, which
+/// every machine of a build shares; in saves it is named by what it draws (<see cref="KeyOf"/>), so a chunk's layers can
+/// be reordered or pruned between builds and its saved edits still find theirs (Docs/KnownGaps.md, Phase 5).
 /// </summary>
 [DisallowMultipleComponent]
 public class AreaTerrain : MonoBehaviour
@@ -48,9 +50,12 @@ public class AreaTerrain : MonoBehaviour
         public TileBase FillTile => fillTile;
     }
 
+    public const string WallsKey = "walls";
+    public const string TilemapKeyPrefix = "tilemap:";
+
     private const int MaxLayers = byte.MaxValue + 1;
 
-    [Tooltip("Tilemaps that may change at runtime. The index in this list identifies a layer on every machine.")]
+    [Tooltip("Tilemaps that may change at runtime. The index in this list identifies a layer on every machine of a build; saves name a layer by the material it draws, or the walls.")]
     [SerializeField] private List<Layer> layers = new();
     [Tooltip("Network prefab with a NetworkAreaTerrain that the host spawns to replicate this area's edits.")]
     [SerializeField] private NetworkObject syncPrefab;
@@ -110,6 +115,40 @@ public class AreaTerrain : MonoBehaviour
         layers.AddRange(terrainLayers);
     }
 
+    /// <summary>
+    /// The name saves give the layer at <paramref name="layerIndex"/>: for a ground layer the id of the material the
+    /// grid's <see cref="TerrainBlendRenderer"/> draws on its tilemap (<see cref="TerrainMaterial.MaterialId"/>),
+    /// <see cref="WallsKey"/> for a dual-grid data tilemap, else the tilemap's name after
+    /// <see cref="TilemapKeyPrefix"/>; empty for an index out of range or a layer without a tilemap.
+    /// </summary>
+    public string KeyOf(int layerIndex)
+    {
+        TryGetComponent(out TerrainBlendRenderer renderer);
+        return KeyOf(layerIndex, renderer);
+    }
+
+    /// <summary>
+    /// The index of the layer saves name <paramref name="key"/> (<see cref="KeyOf"/>), or -1 when this terrain has none.
+    /// </summary>
+    public int IndexOfKey(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return -1;
+        }
+
+        TryGetComponent(out TerrainBlendRenderer renderer);
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (KeyOf(i, renderer) == key)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
 #if UNITY_EDITOR
     /// <summary>
     /// Editor only: makes <paramref name="prefab"/>'s <see cref="NetworkObject"/> the sync prefab when none is set, for
@@ -129,9 +168,10 @@ public class AreaTerrain : MonoBehaviour
 
     /// <summary>
     /// Fills or empties <paramref name="cells"/> on <paramref name="layer"/> and records them for clients. Returns
-    /// false, changing nothing, on a machine without authority or for a tilemap that is not one of the layers.
+    /// false, changing nothing, on a machine without authority or for a tilemap that is not one of the layers. Only the
+    /// editor's dev menu and tests edit terrain so far.
     /// </summary>
-    public bool TrySetCells(Tilemap layer, IReadOnlyList<Vector3Int> cells, bool filled)
+    internal bool TrySetCells(Tilemap layer, IReadOnlyList<Vector3Int> cells, bool filled)
     {
         if (authority == null || !authority.IsAuthoritative)
         {
@@ -155,18 +195,24 @@ public class AreaTerrain : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies persisted edits as the terrain loads, on the machine with authority, and records them as if just made,
-    /// so they replicate like any other edit. Edits for a layer this terrain does not have are skipped with a warning.
+    /// Applies saved edits as the terrain loads, on the machine with authority, each on the layer its name finds
+    /// (<see cref="IndexOfKey"/>), and records them as if just made, so they replicate like any other edit. Edits naming
+    /// a layer this terrain does not have are skipped with a warning.
     /// </summary>
-    public void RestoreEdits(IReadOnlyList<TerrainEdit> restored)
+    public void RestoreEdits(IReadOnlyList<GameSaveData.CellEdit> saved)
     {
+        List<TerrainEdit> restored = new(saved.Count);
         int skipped = 0;
-        for (int i = 0; i < restored.Count; i++)
+        for (int i = 0; i < saved.Count; i++)
         {
-            if (restored[i].Layer >= layers.Count)
+            int layerIndex = IndexOfKey(saved[i].Layer);
+            if (layerIndex < 0 || layerIndex >= MaxLayers)
             {
                 skipped++;
+                continue;
             }
+
+            restored.Add(new TerrainEdit(layerIndex, (Vector3Int)saved[i].Cell, saved[i].Filled));
         }
 
         if (skipped > 0)
@@ -177,10 +223,7 @@ public class AreaTerrain : MonoBehaviour
         ApplyReplicated(restored);
         for (int i = 0; i < restored.Count; i++)
         {
-            if (restored[i].Layer < layers.Count)
-            {
-                Record(restored[i]);
-            }
+            Record(restored[i]);
         }
     }
 
@@ -205,6 +248,47 @@ public class AreaTerrain : MonoBehaviour
             Write(layerIndex, filledCells, true);
             Write(layerIndex, emptiedCells, false);
         }
+    }
+
+    /// <summary>
+    /// The name of the layer at <paramref name="layerIndex"/> (<see cref="KeyOf"/>), drawn by <paramref name="renderer"/>.
+    /// </summary>
+    private string KeyOf(int layerIndex, TerrainBlendRenderer renderer)
+    {
+        Tilemap tilemap = layerIndex >= 0 && layerIndex < layers.Count && layers[layerIndex] != null ? layers[layerIndex].Tilemap : null;
+        if (tilemap == null)
+        {
+            return string.Empty;
+        }
+
+        if (tilemap.TryGetComponent(out DualGridTilemapModule _))
+        {
+            return WallsKey;
+        }
+
+        return MaterialKey(renderer, tilemap) ?? TilemapKeyPrefix + tilemap.name;
+    }
+
+    /// <summary>
+    /// The id of the material <paramref name="renderer"/> draws on <paramref name="tilemap"/>; null without a renderer,
+    /// when it does not draw the tilemap or its material has no id.
+    /// </summary>
+    private static string MaterialKey(TerrainBlendRenderer renderer, Tilemap tilemap)
+    {
+        if (renderer == null)
+        {
+            return null;
+        }
+
+        foreach (TerrainBlendRenderer.Layer layer in renderer.Layers)
+        {
+            if (layer != null && layer.Tilemap == tilemap && layer.Material != null && !string.IsNullOrEmpty(layer.Material.MaterialId))
+            {
+                return layer.Material.MaterialId;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

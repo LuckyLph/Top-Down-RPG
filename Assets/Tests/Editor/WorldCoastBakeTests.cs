@@ -28,8 +28,9 @@ public class WorldCoastBakeTests
     }
 
     /// <summary>
-    /// Every chunk, all of them listing the ocean, gets a coast map over its control map whose every texel equals the
-    /// whole renderer's at the same place (its edge texel past its edge, as a clamped sampler reads it), and draws it.
+    /// Every chunk gets a coast map over its control map whose every texel equals the whole renderer's at the same place
+    /// (its edge texel past its edge, as a clamped sampler reads it), and each listing the ocean draws it; one whose own
+    /// cells and skirt hold no ocean lists none (Docs/KnownGaps.md, Phase 6) and has nothing to draw it with.
     /// A northern chunk listing only grass, far from the sea, bakes nothing. The bake's time per chunk is written to
     /// the test's output.
     /// </summary>
@@ -46,8 +47,18 @@ public class WorldCoastBakeTests
         {
             TestContext.Out.WriteLine($"Chunk {chunk.Key}: baked in {ground.BakeMilliseconds[chunk.Key]:F1} ms.");
             Assert.That(chunk.Value.CoastMap, Is.Not.Null, $"Chunk {chunk.Key} has a baked coast map.");
-            Assert.That(chunk.Value.Terrain.IsCoastBaked, Is.True, $"Chunk {chunk.Key} draws its baked map.");
-            Assert.That(chunk.Value.Terrain.CoastTexture, Is.SameAs(chunk.Value.CoastMap));
+            bool listsWaves = false;
+            foreach (TerrainBlendRenderer.Layer layer in chunk.Value.Terrain.Layers)
+            {
+                listsWaves |= layer.Material.HasWaves;
+            }
+
+            Assert.That(chunk.Value.Terrain.IsCoastBaked, Is.EqualTo(listsWaves), $"Chunk {chunk.Key} draws its baked map when it lists the ocean.");
+            if (listsWaves)
+            {
+                Assert.That(chunk.Value.Terrain.CoastTexture, Is.SameAs(chunk.Value.CoastMap));
+            }
+
             RectInt area = TerrainBlendRenderer.ChunkControlArea(chunk.Value.Cells, WorldChunk.SkirtCells);
             ushort[] baked = chunk.Value.CoastMap.GetPixelData<ushort>(0).ToArray();
             int width = area.width * TerrainCoastMap.TexelsPerCell;

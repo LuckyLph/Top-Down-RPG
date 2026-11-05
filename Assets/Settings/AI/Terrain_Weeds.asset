@@ -12,4 +12,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11a1f3db3d2f4ad7bf8f0a1e9b0c1234, type: 3}
   m_Name: Terrain_Weeds
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TerrainType2D
-  terrainId: weeds

@@ -15641,7 +15641,14 @@ MonoBehaviour:
   world: {fileID: 11400000, guid: 0d18aa60fbd5d154d8c334bdf8890f02, type: 2}
   coords: {x: 4, y: 2}
   coastMap: {fileID: 2800000, guid: e3b4f50d47ff100458ff61b4826c373d, type: 3}
-  coastSource: 7e0777b2c6db0586394c4dc2a6141743
+  coastSource: e2955476504f910e15395aa544a1b6bc
+  glowMap: {fileID: 0}
+  glowArea:
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  glowSource: 
 --- !u!156049354 &787219475
 Grid:
   m_ObjectHideFlags: 0

@@ -15,7 +15,8 @@ using UnityEngine;
 /// writes each attack's contact frame and each cast's release frame into the set; the project's animation set holds
 /// every clip's sprites, frame durations, gait, natural speed, contact frame and gait frames; every cast has its release
 /// frame and a weapon only where chosen, the class casts' light shows only in them, and a cast drawn over the run keeps
-/// the run's legs and the cast's arms.
+/// the run's legs and the cast's arms; the recipe inspector's preview plays a cast over the run over one run frame, the
+/// first by default (Docs/KnownGaps.md, Phase 7).
 /// </summary>
 public class CharacterRecipeTests
 {
@@ -487,6 +488,55 @@ public class CharacterRecipeTests
                 Assert.That(Vector3.Distance(pose.LeftHand - shoulders, upper.LeftHand - upperShoulders), Is.LessThan(1e-3f), at);
             }
         }
+    }
+
+    /// <summary>
+    /// The recipe inspector's preview (<see cref="CharacterRecipeEditor"/>) plays a cast drawn over the run as the cast
+    /// over one run frame: over run frame g, Whirl's and Smite's eight frames in turn, columns g * 8 to g * 8 + 7, each
+    /// for the cast's own frame duration, looping, and never another run frame's column; the run frame starts at 0; a
+    /// cast standing plays its eight frames and the run its eight.
+    /// </summary>
+    [Test]
+    public void TheInspectorsPreview_PlaysACastOverTheRun_OverOneRunFrame()
+    {
+        foreach (string name in new[] { "CastWhirlRun", "CastSmiteRun" })
+        {
+            OverGaitMotion motion = (OverGaitMotion)recipe.Clips.First(c => c.Name == name).Motion;
+            int frames = motion.Upper.FrameCount;
+            float loop = Enumerable.Range(0, frames).Sum(i => motion.Upper.FrameSeconds(i));
+            foreach (int gait in new[] { 0, 3, motion.GaitFrames - 1 })
+            {
+                List<int> seen = new();
+                for (float time = 0.005f; time < loop * 2f; time += 0.01f)
+                {
+                    int frame = CharacterRecipeEditor.PlayingFrame(motion, time, gait);
+                    Assert.That(frame, Is.InRange(gait * frames, gait * frames + frames - 1), $"{name} over run frame {gait} at {time} s");
+                    if (seen.Count == 0 || seen[seen.Count - 1] != frame)
+                    {
+                        seen.Add(frame);
+                    }
+                }
+
+                List<int> once = Enumerable.Range(gait * frames, frames).ToList();
+                Assert.That(seen, Is.EqualTo(once.Concat(once).ToList()), $"{name} over run frame {gait} plays the cast's frames in turn, twice in two loops.");
+                Assert.That(CharacterRecipeEditor.PlayingFrame(motion, motion.Upper.FrameSeconds(0) + 0.001f, gait), Is.EqualTo(gait * frames + 1), "Each frame lasts the cast's own frame.");
+            }
+        }
+
+        CharacterRecipeEditor inspector = (CharacterRecipeEditor)Editor.CreateEditor(recipe);
+        try
+        {
+            Assert.That(inspector.GaitFrame, Is.Zero, "The preview starts over the run's first frame.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(inspector);
+        }
+
+        CharacterMotion standing = recipe.Clips.First(c => c.Name == "CastWhirl").Motion;
+        CharacterMotion run = recipe.Clips.First(c => c.Name == "Run").Motion;
+        Assert.That(CharacterRecipeEditor.PlayingFrame(standing, Enumerable.Range(0, 7).Sum(i => standing.FrameSeconds(i)) + 0.001f, 0), Is.EqualTo(7));
+        Assert.That(CharacterRecipeEditor.PlayingFrame(run, Enumerable.Range(0, 7).Sum(i => run.FrameSeconds(i)) + 0.001f, 5), Is.EqualTo(7), "A gait plays its own frames whatever run frame is picked.");
     }
 
     /// <summary>

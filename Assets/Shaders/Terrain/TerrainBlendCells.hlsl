@@ -30,7 +30,7 @@ TBCentre TBCentreAt(TBInputs ins, uint m, float2 pixel, float2 worldPixel, bool 
                 TBAddCentrePair(ins, firstRow + j + 1, weight, below <= -TB_WHOLE_CLEARANCE, centre);
             }
         }
-        up = below;
+        up = below < TB_FAR ? below : up;
     }
     [branch]
     if (remaining > 0.0)

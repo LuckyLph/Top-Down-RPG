@@ -10,8 +10,9 @@ using UnityEngine.TestTools;
 /// what an approved trip does (the arrival held for streaming, the player put in the target world, the approval raised);
 /// <see cref="WorldExits"/>' lookups; <see cref="ExitTriggerGuard"/>'s protection against firing again;
 /// <see cref="TripArrivals"/> streaming an arrival until the player reaches it; the time freeze leaving trips alone;
-/// <see cref="NetworkTripAuthority"/> approving on the host and sending a client's request to it; and the players'
-/// trip counts.
+/// <see cref="NetworkTripAuthority"/> approving on the host and sending a client's request to it; the players'
+/// trip counts; and <see cref="TripProtection"/> keeping a traveller out of play (and out of its world's
+/// <see cref="WorldPlayers"/>) until its machine reports that trip's fade in, or its time limit passes.
 /// </summary>
 public class WorldTripTests
 {
@@ -23,6 +24,9 @@ public class WorldTripTests
     private PlayerWorlds playerWorlds;
     private WorldExits exits;
     private TripArrivals arrivals;
+    private ManualClock clock;
+    private GameplaySettings settings;
+    private TripProtection protection;
     private LocalTripAuthority authority;
     private PlayerHandle player;
 
@@ -48,7 +52,10 @@ public class WorldTripTests
         playerWorlds = new PlayerWorlds(registry);
         exits = new WorldExits(new Worlds());
         arrivals = new TripArrivals();
-        authority = new LocalTripAuthority(exits, playerWorlds, arrivals, gameScenes);
+        clock = new ManualClock();
+        settings = Track(GameplaySettings.Create(tripProtection: 10f));
+        protection = new TripProtection(registry, playerWorlds, clock, settings);
+        authority = new LocalTripAuthority(exits, playerWorlds, arrivals, protection, gameScenes);
         player = new PlayerHandle(Track(new GameObject("Player")).transform, null);
         registry.Add(player);
         playerWorlds.Set(player, home);
@@ -60,6 +67,7 @@ public class WorldTripTests
     [TearDown]
     public void TearDown()
     {
+        protection.Dispose();
         exits.Dispose();
         playerWorlds.Dispose();
         for (int i = created.Count - 1; i >= 0; i--)
@@ -379,6 +387,97 @@ public class WorldTripTests
     }
 
     /// <summary>
+    /// An approved trip protects the traveller: it is out of play (its hits ignored and its statuses held, matched by
+    /// its health) and out of the target world's players that the mobs consider, until its machine reports fading in at
+    /// the end of that trip. A report of an earlier trip ends nothing; the trip's own brings the player back into its
+    /// world's players.
+    /// </summary>
+    [Test]
+    public void AnApprovedTrip_ProtectsTheTraveller_UntilItsMachineReportsThatTripsFadeIn()
+    {
+        GameObject body = Track(new GameObject("Traveller"));
+        Health health = body.AddComponent<Health>();
+        DamageReceiver receiver = body.AddComponent<DamageReceiver>();
+        PlayerHandle traveller = new(body.transform, health);
+        registry.Add(traveller);
+        playerWorlds.Set(traveller, home);
+        WorldPlayers awayPlayers = new(registry, playerWorlds, protection, away);
+        List<PlayerHandle> changes = new();
+        protection.Changed += changes.Add;
+        try
+        {
+            authority.Send(traveller, away, "start");
+
+            Assert.That(protection.IsProtected(traveller), Is.True);
+            Assert.That(protection.IsProtected(receiver), Is.True, "Hits and statuses find the traveller by its health.");
+            Assert.That(protection.IsProtected(player), Is.False);
+            Assert.That(playerWorlds.Get(traveller), Is.SameAs(away));
+            Assert.That(awayPlayers.Contains(traveller), Is.False, "The mobs of the world it travels to do not see it yet.");
+            Assert.That(changes, Is.EqualTo(new[] { traveller }));
+
+            authority.ReportArrived(traveller, 0);
+            Assert.That(protection.IsProtected(traveller), Is.True, "An earlier trip's report ends nothing.");
+
+            authority.ReportArrived(traveller, playerWorlds.TripOf(traveller));
+            Assert.That(protection.IsProtected(traveller), Is.False);
+            Assert.That(protection.IsProtected(receiver), Is.False);
+            Assert.That(awayPlayers.Contains(traveller), Is.True, "Back in play, its world's mobs see it.");
+            Assert.That(changes.Count, Is.EqualTo(2));
+        }
+        finally
+        {
+            awayPlayers.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// A protection its machine never ends runs out at its time limit of game time, with a warning; a second trip
+    /// protects the player for that trip from its approval on; and a player leaving the game leaves its protection.
+    /// </summary>
+    [Test]
+    public void TheProtection_RunsOutAtItsTimeLimit_AndEndsWhenThePlayerLeaves()
+    {
+        authority.Send(player, away, "start");
+        clock.Advance(6f);
+        authority.Send(player, home, "start");
+        clock.Advance(6f);
+        protection.Tick();
+        Assert.That(protection.IsProtected(player), Is.True, "The second trip's protection runs from its own approval.");
+        authority.ReportArrived(player, 1);
+        Assert.That(protection.IsProtected(player), Is.True, "The first trip's report ends nothing once the second began.");
+
+        clock.Advance(4f);
+        LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("ran out before its machine reported fading in"));
+        protection.Tick();
+        Assert.That(protection.IsProtected(player), Is.False);
+
+        authority.Send(player, away, "start");
+        registry.Remove(player);
+        Assert.That(protection.Count, Is.Zero);
+    }
+
+    /// <summary>
+    /// The fade in at a trip's end reaches the authority: on a client it goes to the host through the player's link,
+    /// naming the trip, and changes nothing here; on the host it ends the protection.
+    /// </summary>
+    [Test]
+    public void NetworkAuthority_ReportsTheFadeIn_ThroughTheLinkOnAClient_AndEndsTheProtectionOnTheHost()
+    {
+        NetworkTripAuthority client = new(authority, new FakeSessionStatus { IsActive = true, IsHost = false }, arrivals);
+        NetworkTripAuthority host = new(authority, new FakeSessionStatus { IsActive = true, IsHost = true }, arrivals);
+        FakeTripLink link = new();
+        client.LinkFinder = body => body == player.Transform ? link : null;
+        host.Send(player, away, "start");
+
+        client.ReportArrived(player, 1);
+        Assert.That(link.Arrived, Is.EqualTo(new[] { 1 }));
+        Assert.That(protection.IsProtected(player), Is.True, "The client only tells the host.");
+
+        host.ReportArrived(player, 1);
+        Assert.That(protection.IsProtected(player), Is.False);
+    }
+
+    /// <summary>
     /// The players' worlds count trips: a trip raises the change even back into the same world, applying another
     /// machine's state raises it only when the world or the trip count changes, and leaving every world forgets the
     /// trips.
@@ -408,11 +507,13 @@ public class WorldTripTests
     }
 
     /// <summary>
-    /// An <see cref="ITripLink"/> that records the requests a client would send the host instead of sending an RPC.
+    /// An <see cref="ITripLink"/> that records the requests and fade ins a client would send the host instead of sending
+    /// RPCs.
     /// </summary>
     private sealed class FakeTripLink : ITripLink
     {
         public List<(string ExitId, Vector2 Position)> Sent { get; } = new();
+        public List<int> Arrived { get; } = new();
 
         /// <summary>
         /// Records the request.
@@ -420,6 +521,14 @@ public class WorldTripTests
         public void SendTripRequest(string exitId, Vector2 position)
         {
             Sent.Add((exitId, position));
+        }
+
+        /// <summary>
+        /// Records the trip whose fade in the client reports.
+        /// </summary>
+        public void SendTripArrived(int trip)
+        {
+            Arrived.Add(trip);
         }
     }
 

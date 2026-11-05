@@ -17,4 +17,10 @@ public interface ITripAuthority
     /// Asks for <paramref name="request"/>'s trip. A refused request is logged and changes nothing.
     /// </summary>
     void Request(TripRequest request);
+
+    /// <summary>
+    /// Tells the authority that <paramref name="player"/>'s machine faded in at the end of its trip number
+    /// <paramref name="trip"/>, which ends the protection the trip gave it (<see cref="TripProtection"/>).
+    /// </summary>
+    void ReportArrived(PlayerHandle player, int trip);
 }

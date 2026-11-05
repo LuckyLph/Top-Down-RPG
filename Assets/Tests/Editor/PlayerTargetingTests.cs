@@ -1,29 +1,32 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for picking the unit under the pointer with <see cref="PointerTargetPicker"/>, finding the enemy an attack
-/// move engages with <see cref="PlayerUnitQueries"/>, and turning raw input into commands with
-/// <see cref="LocalPlayerCommandSource"/>.
+/// Tests for picking the unit under the pointer with <see cref="PointerTargetPicker"/> (narrowed by an ability's unit
+/// filter), finding the enemy an attack move engages and an attack's line of sight with <see cref="PlayerUnitQueries"/>,
+/// and turning raw input into commands with <see cref="LocalPlayerCommandSource"/>.
 /// </summary>
 public class PlayerTargetingTests
 {
     private readonly List<Object> createdObjects = new();
     private PlayerControlSettings settings;
     private PlayerRegistry players;
+    private LocalPlayerTracker localPlayer;
     private PointerTargetPicker picker;
 
     /// <summary>
-    /// Builds a picker with a 0.35 pick radius over an empty player registry.
+    /// Builds a picker with a 0.35 pick radius over an empty player registry, and no local player.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
         settings = Track(TestPlayerControlSettings.Create(pickRadius: 0.35f));
         players = new PlayerRegistry();
+        localPlayer = new LocalPlayerTracker();
         picker = new PointerTargetPicker(settings, players);
     }
 
@@ -99,6 +102,25 @@ public class PlayerTargetingTests
         ally.ApplyDamage(ally.MaxHealth);
         Assert.That(picker.Pick(Vector2.zero).Exists, Is.False, "Dead allies are not targetable.");
         Assert.That(stranger, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// An ability's unit filter narrows the pick: an ally-only pick takes a registered ally over a closer enemy, an
+    /// enemy-only pick an enemy over a closer ally, and either team is picked without a filter or with Any.
+    /// </summary>
+    [Test]
+    public void Picker_WithAUnitFilter_TakesTheClosestUnitItAccepts()
+    {
+        Health enemy = CreateMob(new Vector2(0.05f, 0f));
+        Health ally = CreatePlayerBody(new Vector2(0.25f, 0f), register: true);
+        Physics2D.SyncTransforms();
+
+        Assert.That(picker.Pick(Vector2.zero, AbilityUnitFilter.Ally).Health, Is.SameAs(ally), "An ally-only pick skips the closer enemy.");
+        Assert.That(picker.Pick(Vector2.zero, AbilityUnitFilter.Ally).Team, Is.EqualTo(UnitTeam.Ally));
+        Assert.That(picker.Pick(Vector2.zero).Health, Is.SameAs(enemy), "Without a filter the closest unit of either team.");
+        Assert.That(picker.Pick(Vector2.zero, AbilityUnitFilter.Any).Health, Is.SameAs(enemy));
+        Assert.That(picker.Pick(new Vector2(0.3f, 0f), AbilityUnitFilter.Enemy).Health, Is.SameAs(enemy), "An enemy-only pick skips the closer ally.");
+        Assert.That(picker.Pick(new Vector2(0.3f, 0f)).Health, Is.SameAs(ally));
     }
 
     /// <summary>
@@ -200,6 +222,53 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
+    /// An attack's line of sight: a wall collider on the obstacle layers across the line from the player's feet to the
+    /// target's middle blocks it, one just beside the line blocks only a sweep wide enough to touch it, a wall behind
+    /// the target blocks nothing, and without obstacle layers every target is in sight.
+    /// </summary>
+    [Test]
+    public void UnitQueries_InSight_IsBlockedByAWallBetweenThePlayerAndItsTarget()
+    {
+        Collider2D self = CreatePlayerBody(Vector2.zero, register: false).GetComponent<Collider2D>();
+        Health mob = CreateMob(new Vector2(4f, 0f));
+        GameObject behind = Track(new GameObject("WallBehind"));
+        behind.layer = LayerMask.NameToLayer("Obstacles");
+        behind.transform.position = new Vector2(4.7f, 0f);
+        behind.AddComponent<BoxCollider2D>().size = new Vector2(0.5f, 3f);
+        GameObject wall = Track(new GameObject("Wall"));
+        wall.layer = LayerMask.NameToLayer("Obstacles");
+        wall.transform.position = new Vector2(2f, 1.2f);
+        wall.AddComponent<BoxCollider2D>().size = new Vector2(1f, 2f);
+        Physics2D.SyncTransforms();
+        PlayerUnitQueries queries = new(self, LayerMask.GetMask("Enemy"), LayerMask.GetMask("Obstacles"));
+        UnitTarget target = new(mob, mob.GetComponent<Collider2D>(), UnitTeam.Enemy);
+
+        Assert.That(queries.InSight(target, 0f), Is.True, "The wall's edge lies 0.2 beside the line, and the wall behind the target is past it.");
+        Assert.That(queries.InSight(target, 0.1f), Is.True);
+        Assert.That(queries.InSight(target, 0.3f), Is.False, "A sweep of 0.3 touches the wall's edge.");
+
+        wall.transform.position = new Vector2(2f, 0.5f);
+        Physics2D.SyncTransforms();
+        Assert.That(queries.InSight(target, 0f), Is.False, "The wall lies across the line.");
+        Assert.That(new PlayerUnitQueries(self, LayerMask.GetMask("Enemy")).InSight(target, 0f), Is.True, "Nothing blocks sight without obstacle layers.");
+    }
+
+    /// <summary>
+    /// Every player control settings asset blocks an attack's line of sight with the Obstacles layer, the walls'.
+    /// </summary>
+    [Test]
+    public void EveryControlSettingsAsset_BlocksSightWithTheObstaclesLayer()
+    {
+        string[] guids = AssetDatabase.FindAssets($"t:{nameof(PlayerControlSettings)}");
+        Assert.That(guids, Is.Not.Empty);
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            Assert.That(AssetDatabase.LoadAssetAtPath<PlayerControlSettings>(path).ObstacleLayers.value, Is.EqualTo(LayerMask.GetMask("Obstacles")), path);
+        }
+    }
+
+    /// <summary>
     /// The nearest-enemy query allocates no managed memory once warm.
     /// </summary>
     [Test]
@@ -228,7 +297,7 @@ public class PlayerTargetingTests
         Health mob = CreateMob(new Vector2(10f, 20f));
         Physics2D.SyncTransforms();
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), MovePressedThisFrame = true, MoveHeld = true };
-        LocalPlayerCommandSource source = new(input, camera, picker);
+        LocalPlayerCommandSource source = new(input, camera, picker, localPlayer);
 
         PlayerCommand command = source.ReadCommand();
 
@@ -247,7 +316,7 @@ public class PlayerTargetingTests
     public void CommandSource_DropsAPressOverUI_AndTheHoldThatFollowsIt()
     {
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), MovePressedThisFrame = true, MoveHeld = true, IsPointerOverUI = true };
-        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker);
+        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker, localPlayer);
 
         PlayerCommand pressed = source.ReadCommand();
         input.MovePressedThisFrame = false;
@@ -272,7 +341,7 @@ public class PlayerTargetingTests
     public void CommandSource_KeepsAnAcceptedHold_WhenThePointerMovesOverUI()
     {
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), MovePressedThisFrame = true, MoveHeld = true };
-        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker);
+        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker, localPlayer);
         source.ReadCommand();
 
         input.MovePressedThisFrame = false;
@@ -289,7 +358,7 @@ public class PlayerTargetingTests
     public void CommandSource_ForwardsStopAndTheFirstAbilityPressed()
     {
         FakePlayerInput input = new() { StopPressedThisFrame = true, AbilityPressed = 4 };
-        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker);
+        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker, localPlayer);
 
         PlayerCommand command = source.ReadCommand();
 
@@ -308,7 +377,7 @@ public class PlayerTargetingTests
     public void CommandSource_ForwardsAnAttackMove_WithThePointersWorldPoint()
     {
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), AttackMovePressedThisFrame = true, IsPointerOverUI = true };
-        LocalPlayerCommandSource source = new(input, CreateCamera(new Vector2(10f, 20f)), picker);
+        LocalPlayerCommandSource source = new(input, CreateCamera(new Vector2(10f, 20f)), picker, localPlayer);
 
         PlayerCommand command = source.ReadCommand();
 
@@ -320,7 +389,8 @@ public class PlayerTargetingTests
     }
 
     /// <summary>
-    /// An ability press without the move button still picks the unit under the cursor as the command's target.
+    /// An ability press without the move button still picks the unit under the cursor as the ability's target, of
+    /// either team without a local player; the move button's target stays empty.
     /// </summary>
     [Test]
     public void CommandSource_PicksTheUnitUnderTheCursorForAnAbilityPress()
@@ -329,12 +399,41 @@ public class PlayerTargetingTests
         Health mob = CreateMob(new Vector2(10f, 20f));
         Physics2D.SyncTransforms();
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), AbilityPressed = 2 };
-        LocalPlayerCommandSource source = new(input, camera, picker);
+        LocalPlayerCommandSource source = new(input, camera, picker, localPlayer);
 
         PlayerCommand command = source.ReadCommand();
 
         Assert.That(command.AbilitySlot, Is.EqualTo(2));
-        Assert.That(command.Target.Health, Is.SameAs(mob));
+        Assert.That(command.AbilityTarget.Health, Is.SameAs(mob));
+        Assert.That(command.Target.Exists, Is.False, "Only a move press or hold picks the move button's target.");
+    }
+
+    /// <summary>
+    /// An ability press picks with the unit filter of the local player's ability in that slot: an ally-only cast takes
+    /// the ally under the cursor over a closer enemy, an enemy-only cast the enemy, and a move press on the same frame
+    /// keeps the closest unit of either team as its own target.
+    /// </summary>
+    [Test]
+    public void CommandSource_AnAbilityPress_PicksWithItsAbilitysUnitFilter()
+    {
+        Camera camera = CreateCamera(new Vector2(10f, 20f));
+        Health enemy = CreateMob(new Vector2(10f, 20f));
+        Health ally = CreatePlayerBody(new Vector2(10.25f, 20f), register: true);
+        Physics2D.SyncTransforms();
+        AbilityDefinition mend = Track(AbilityDefinition.Create("Mend", targeting: AbilityTargeting.Unit, unitFilter: AbilityUnitFilter.Ally));
+        AbilityDefinition smite = Track(AbilityDefinition.Create("Smite", targeting: AbilityTargeting.Unit, unitFilter: AbilityUnitFilter.Enemy));
+        localPlayer.Assign(new LocalPlayer(CreateCaster(mend, smite)));
+        FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f), AbilityPressed = 0, MovePressedThisFrame = true, MoveHeld = true };
+        LocalPlayerCommandSource source = new(input, camera, picker, localPlayer);
+
+        PlayerCommand mendPress = source.ReadCommand();
+        Assert.That(mendPress.AbilityTarget.Health, Is.SameAs(ally), "The ally-only cast picks the ally over the closer enemy.");
+        Assert.That(mendPress.AbilityTarget.Team, Is.EqualTo(UnitTeam.Ally));
+        Assert.That(mendPress.Target.Health, Is.SameAs(enemy), "The move press picks the closest unit of either team.");
+
+        input.MovePressedThisFrame = false;
+        input.AbilityPressed = 1;
+        Assert.That(source.ReadCommand().AbilityTarget.Health, Is.SameAs(enemy));
     }
 
     /// <summary>
@@ -344,7 +443,7 @@ public class PlayerTargetingTests
     public void CommandSource_GivesNothingWhileGameplayInputIsDisabled()
     {
         FakePlayerInput input = new() { GameplayEnabled = false, MovePressedThisFrame = true, MoveHeld = true, AttackMovePressedThisFrame = true, StopPressedThisFrame = true, AbilityPressed = 0 };
-        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker);
+        LocalPlayerCommandSource source = new(input, CreateCamera(Vector2.zero), picker, localPlayer);
 
         PlayerCommand command = source.ReadCommand();
 
@@ -414,6 +513,19 @@ public class PlayerTargetingTests
         }
 
         return health;
+    }
+
+    /// <summary>
+    /// Creates a tracked player far from every unit, without a collider, whose class holds
+    /// <paramref name="classAbilities"/>, and returns its controller.
+    /// </summary>
+    private PlayerController CreateCaster(params AbilityDefinition[] classAbilities)
+    {
+        GameObject caster = Track(new GameObject("Caster"));
+        caster.transform.position = new Vector2(-50f, -50f);
+        PlayerController controller = caster.AddComponent<PlayerController>();
+        caster.AddComponent<PlayerAbilities>().Configure(Track(PlayerClass.Create("Caster", classAbilities)));
+        return controller;
     }
 
     /// <summary>

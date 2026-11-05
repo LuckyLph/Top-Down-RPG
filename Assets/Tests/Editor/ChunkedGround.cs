@@ -11,9 +11,10 @@ using UnityEngine.Tilemaps;
 /// style and materials, which are only read: grass everywhere but the sea, an ocean coming in from the south-east
 /// across a border behind a sandy beach, a stone road and a gravel trail across borders, a pond with a plank bridge
 /// over the corner where the four chunks meet, tall grass across a border, and a plateau of raised ground with a ramp
-/// across a border. Every grid lists every material of the world in the style's order, as the whole renderer does:
-/// a bridge's end draws differently when a listed layer lies between it and the layer under it (Architecture.md's
-/// Known gaps), so equal lists keep the comparison to the skirt and the coast map.
+/// across a border. The whole renderer lists every material of the world in the style's order, and each chunk only the
+/// materials of its own cells and skirt, as Sync layer lists leaves a world's chunks: the ocean lies between the water
+/// and the planks in some lists and not in others, so the comparison also checks that a bridge's end draws the same
+/// whatever empty layers are listed between it and the layer under it (Docs/KnownGaps.md, Phase 6).
 /// </summary>
 public sealed class ChunkedGround
 {
@@ -240,8 +241,8 @@ public sealed class ChunkedGround
     }
 
     /// <summary>
-    /// An enabled grid at the world's origin with a layer per material of the world, each holding only its cells in
-    /// <paramref name="cells"/>, a raised tilemap of the raised cells in them when there are any, and a terrain renderer
+    /// An enabled grid at the world's origin with a layer per material of the world (of the chunk's cells and skirt for
+    /// a chunk's grid, its name starting with Chunk), each holding only its cells in <paramref name="cells"/>, a raised tilemap of the raised cells in them when there are any, and a terrain renderer
     /// over them in the style's order; <paramref name="beforeRenderer"/> runs on the inactive grid first.
     /// </summary>
     private TerrainBlendRenderer BuildGrid(string gridName, RectInt cells, System.Action<GameObject> beforeRenderer)
@@ -250,7 +251,7 @@ public sealed class ChunkedGround
         gridObject.transform.position = new Vector3(Origin.x, Origin.y, 0f);
         gridObject.SetActive(false);
         List<TerrainBlendRenderer.Layer> layers = new();
-        foreach (TerrainMaterial material in MaterialsIn(World.LocalBounds))
+        foreach (TerrainMaterial material in MaterialsIn(gridName.StartsWith("Chunk") ? TerrainBlendRenderer.ChunkControlArea(cells, WorldChunk.SkirtCells) : World.LocalBounds))
         {
             Tilemap tilemap = new GameObject(material.name, typeof(Tilemap)).GetComponent<Tilemap>();
             tilemap.transform.SetParent(gridObject.transform, false);

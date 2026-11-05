@@ -55,10 +55,11 @@ bool TBOpenOn(TBInputs ins, uint m, float2 pixel, float2 worldPixel)
     TBCorner corner = TBLoadCorner(ins, pixel);
     float4 terms = TBDistanceTerms(ins, corner, worldPixel);
     bool rooted = TBLayerDistance(ins, corner, terms, m) <= -0.5;
+    uint up = TBNextPresent(TBPresentLayers(corner), m);
     [branch]
-    if (rooted && m + 1u < ins.layers)
+    if (rooted && up != m)
     {
-        rooted = TBLayerDistance(ins, corner, terms, m + 1u) >= 0.5;
+        rooted = TBLayerDistance(ins, corner, terms, up) >= 0.5;
     }
     return rooted;
 }

@@ -1683,113 +1683,47 @@ public class TerrainMaterialRecipeTests
     }
 
     /// <summary>
-    /// The ocean's crests travel down the texture: its albedo holds only its three tones, the textures bring the crest
-    /// colour as their glint colour, and a fair share of the pixels carry glint phases, which, between a pixel and the
-    /// one above it on the same crest family, grow by one period over the crest spacing, so the band of pixels lit at a
-    /// time moves down by the spacing each glint period, the same way in every column. Sparkles are few.
+    /// The ocean holds its three tones and a few sparkles, and no glint phases since its material no longer lights them
+    /// (Docs/KnownGaps.md, Phase 6): every pixel's height carries a sparkle phase or nothing, the textures still bring the
+    /// crest colour as their glint colour, and a fade on the crest patches changes neither the albedo nor any sparkle
+    /// outside the patches' ends, only letting more sparkles in there.
     /// </summary>
     [Test]
-    public void OceanWaves_CrestsTravelDownTheTexture()
+    public void OceanWaves_HoldTheirTones_AndOnlySparklePhases()
     {
         OceanWavesRecipe recipe = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
+        OceanWavesRecipe faded = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
         SerializedObject settings = new(recipe);
         Color32 water = settings.FindProperty("water").colorValue;
         Color32 darker = settings.FindProperty("darker").colorValue;
         Color32 lighter = settings.FindProperty("lighter").colorValue;
         Color32 crest = settings.FindProperty("crest").colorValue;
-        int crestsAcross = settings.FindProperty("crestsAcross").intValue;
-
-        TerrainTextures textures = recipe.Generate(Seed);
-
-        int size = textures.Size;
-        double step = (double)crestsAcross / size;
-        Assert.That(textures.GlintColour.HasValue && SameColour(textures.GlintColour.Value, crest), Is.True);
-        int crestPixels = 0;
-        int sparkles = 0;
-        int pairs = 0;
-        int travelling = 0;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                int i = y * size + x;
-                Color32 colour = textures.Albedo[i];
-                Expect(SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), $"({x}, {y}) is none of the tones");
-                int code = textures.Height[i].b;
-                if (code >= 128)
-                {
-                    sparkles++;
-                    continue;
-                }
-
-                if (code == 0)
-                {
-                    continue;
-                }
-
-                crestPixels++;
-                int above = textures.Height[TerrainArt.Wrap(y + 1, size) * size + x].b;
-                if (above == 0 || above >= 128)
-                {
-                    continue;
-                }
-
-                pairs++;
-                double grown = TerrainArt.Wrap((above - code) / 127.0, 1);
-                travelling += Math.Abs(grown - step) <= 1.5 / 127.0 ? 1 : 0;
-            }
-        }
-
-        Assert.That(crestPixels, Is.InRange(size * size / 5, size * size * 4 / 5), "crests cover a fair share of the water");
-        Assert.That(travelling, Is.GreaterThan(pairs * 9 / 10), "a crest's phase grows by the spacing up the texture");
-        Assert.That(sparkles, Is.LessThan(size * size / 100));
-    }
-
-    /// <summary>
-    /// The ocean's arch and fade are off by default and change only its crests: with an arch, the albedo and the set of
-    /// crest pixels stay as they were and some crest phases move (a crest's middle runs ahead); with a fade, the albedo
-    /// stays as it was and fewer pixels carry crests, every one of them a crest pixel without it.
-    /// </summary>
-    [Test]
-    public void OceanWaves_ArchAndFade_ChangeOnlyTheCrests()
-    {
-        OceanWavesRecipe plain = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
-        OceanWavesRecipe arched = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
-        OceanWavesRecipe faded = (OceanWavesRecipe)CreateRecipe(typeof(OceanWavesRecipe));
-        SerializedObject defaults = new(plain);
-        Assert.That(defaults.FindProperty("arch").floatValue, Is.Zero);
-        Assert.That(defaults.FindProperty("fade").floatValue, Is.Zero);
-        SerializedObject archSettings = new(arched);
-        archSettings.FindProperty("arch").floatValue = 8f;
-        archSettings.ApplyModifiedPropertiesWithoutUndo();
         SerializedObject fadeSettings = new(faded);
         fadeSettings.FindProperty("fade").floatValue = 0.3f;
         fadeSettings.ApplyModifiedPropertiesWithoutUndo();
 
-        TerrainTextures before = plain.Generate(Seed);
-        TerrainTextures withArch = arched.Generate(Seed);
+        TerrainTextures textures = recipe.Generate(Seed);
         TerrainTextures withFade = faded.Generate(Seed);
 
-        Assert.That(Differences(before.Albedo, withArch.Albedo), Is.Zero);
-        Assert.That(Differences(before.Albedo, withFade.Albedo), Is.Zero);
-        int moved = 0;
-        int crests = 0;
-        int fadedCrests = 0;
-        for (int i = 0; i < before.Height.Length; i++)
+        int size = textures.Size;
+        Assert.That(textures.GlintColour.HasValue && SameColour(textures.GlintColour.Value, crest), Is.True);
+        Assert.That(Differences(textures.Albedo, withFade.Albedo), Is.Zero);
+        int sparkles = 0;
+        int fadedSparkles = 0;
+        for (int i = 0; i < size * size; i++)
         {
-            bool crest = before.Height[i].b > 0 && before.Height[i].b < 128;
-            bool archedCrest = withArch.Height[i].b > 0 && withArch.Height[i].b < 128;
-            bool fadedCrest = withFade.Height[i].b > 0 && withFade.Height[i].b < 128;
-            Expect(archedCrest == crest, $"pixel {i}");
-            Expect(!fadedCrest || crest, $"pixel {i}");
-            crests += crest ? 1 : 0;
-            fadedCrests += fadedCrest ? 1 : 0;
-            moved += crest && withArch.Height[i].b != before.Height[i].b ? 1 : 0;
+            Color32 colour = textures.Albedo[i];
+            Expect(SameColour(colour, water) || SameColour(colour, darker) || SameColour(colour, lighter), $"pixel {i} is none of the tones");
+            int code = textures.Height[i].b;
+            Expect(code == 0 || code >= 128, $"pixel {i} carries a glint phase");
+            Expect(withFade.Height[i].b == 0 || withFade.Height[i].b >= 128, $"pixel {i} carries a glint phase with a fade");
+            Expect(code == 0 || withFade.Height[i].b == code, $"pixel {i}'s sparkle stays with a fade");
+            sparkles += code >= 128 ? 1 : 0;
+            fadedSparkles += withFade.Height[i].b >= 128 ? 1 : 0;
         }
 
-        Assert.That(moved, Is.GreaterThan(crests / 4), "the arch moves the crests' phases");
-        Assert.That(fadedCrests, Is.LessThan(crests), "the fade breaks up the crests' ends");
-        Assert.That(fadedCrests, Is.GreaterThan(crests / 4));
+        Assert.That(sparkles, Is.InRange(1, size * size / 100));
+        Assert.That(fadedSparkles, Is.GreaterThanOrEqualTo(sparkles));
     }
 
     /// <summary>

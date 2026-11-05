@@ -9,7 +9,8 @@ using VContainer.Unity;
 /// <summary>
 /// Dev-only entry that runs <see cref="StreamingBenchmark"/> in a player (Docs/WorldScale.md, Phase 0). Started with
 /// <c>-streamingBenchmark &lt;file&gt;</c>, and optionally <c>-streamingBenchmarkLabel &lt;label&gt;</c>, it gives the
-/// Main scope in-memory save and settings stores (<see cref="BenchmarkSaveStore"/>), so the run reads and writes no
+/// Main scope an in-memory save folder and settings store (<see cref="BenchmarkSaveFolder"/>,
+/// <see cref="BenchmarkSaveStore"/>), so the run reads and writes no
 /// save. It reads the memory used in the main menu, starts a new game (the starting world's entry, the Overworld's
 /// Clearing), runs the benchmark, appends its line to the file and quits, with exit code 1 when anything failed. It
 /// finds the scopes when it needs them, because they cannot reference this assembly.
@@ -49,7 +50,7 @@ public class StreamingBenchmarkRunner : MonoBehaviour
         runner.label = ArgumentAfter(commandLine, LabelArgument) ?? DefaultLabel;
         runner.installation = LifetimeScope.Enqueue(builder =>
         {
-            builder.RegisterInstance<ISaveStore>(new BenchmarkSaveStore());
+            builder.RegisterInstance<ISaveFolder>(new BenchmarkSaveFolder());
             builder.RegisterInstance<ISaveStore>(new BenchmarkSaveStore()).Keyed(UserSettings.FileName);
         });
     }

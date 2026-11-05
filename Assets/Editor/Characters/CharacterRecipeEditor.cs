@@ -5,11 +5,13 @@ using UnityEngine;
 
 /// <summary>
 /// Inspector of <see cref="CharacterRecipe"/>: its settings, then a preview of one clip, picked by name: its whole
-/// sheet (a row per direction, east at the top) and, beside it, one direction playing at the motion's frame durations.
-/// The preview is baked again whenever the recipe, the clip's motion or its weapon changes (their serialized settings
-/// are compared on each layout, so undo and edits to the motion or weapon assets show too). Below it: the scale, the
-/// standing height, the frames whose drawing reaches their edge, and Generate, which writes every sheet and the
-/// animation set through <see cref="CharacterSheetWriter"/> once the inspector is drawn.
+/// sheet (a row per direction, east at the top) and, beside it, one direction playing at the motion's frame durations;
+/// a cast drawn over a gait plays its frames over one gait frame, picked (the first, the left foot planted, by default;
+/// Docs/KnownGaps.md, Phase 7), rather than every column of the sheet in a row. The preview is baked again whenever
+/// the recipe, the clip's motion or its weapon changes (their serialized settings are compared on each layout, so undo
+/// and edits to the motion or weapon assets show too). Below it: the scale, the standing height, the frames whose
+/// drawing reaches their edge, and Generate, which writes every sheet and the animation set through
+/// <see cref="CharacterSheetWriter"/> once the inspector is drawn.
 /// </summary>
 [CustomEditor(typeof(CharacterRecipe), true)]
 public sealed class CharacterRecipeEditor : Editor
@@ -25,8 +27,14 @@ public sealed class CharacterRecipeEditor : Editor
     private int standingHeight;
     private int clipIndex;
     private int playDirection = 6;
+    private int gaitFrame;
     private int shownFrame = -1;
     private double playStart;
+
+    /// <summary>
+    /// The gait frame a cast drawn over a gait plays over in the preview.
+    /// </summary>
+    internal int GaitFrame => gaitFrame;
 
     /// <summary>
     /// Starts following the editor's updates while the inspector shows, so the playing direction moves.
@@ -51,7 +59,7 @@ public sealed class CharacterRecipeEditor : Editor
     /// </summary>
     private void Animate()
     {
-        if (sheet != null && PlayingFrame(sheet.Clip.Motion) != shownFrame)
+        if (sheet != null && PlayingFrame(sheet.Clip.Motion, PlayTime(), gaitFrame) != shownFrame)
         {
             Repaint();
         }
@@ -76,6 +84,13 @@ public sealed class CharacterRecipeEditor : Editor
         clipIndex = Mathf.Clamp(clipIndex, 0, names.Length - 1);
         clipIndex = EditorGUILayout.Popup("Preview clip", clipIndex, names);
         playDirection = EditorGUILayout.Popup("Play direction", playDirection, Enumerable.Range(0, CharacterDirections.Count).Select(CharacterDirections.Name).ToArray());
+        CharacterMotion motion = recipe.Clips[clipIndex] != null ? recipe.Clips[clipIndex].Motion : null;
+        if (motion != null && motion.GaitFrames > 0)
+        {
+            gaitFrame = Mathf.Clamp(gaitFrame, 0, motion.GaitFrames - 1);
+            gaitFrame = EditorGUILayout.Popup("Gait frame", gaitFrame, Enumerable.Range(0, motion.GaitFrames).Select(frame => frame.ToString()).ToArray());
+        }
+
         if (Event.current.type == EventType.Layout)
         {
             RebuildIfChanged(recipe);
@@ -160,7 +175,7 @@ public sealed class CharacterRecipeEditor : Editor
     {
         CharacterClip clip = sheet.Clip;
         Vector2Int size = clip.FrameSize;
-        int frame = PlayingFrame(clip.Motion);
+        int frame = PlayingFrame(clip.Motion, PlayTime(), gaitFrame);
         shownFrame = frame;
         RectInt frameRect = CharacterSheet.FrameRect(playDirection, frame, size);
         Rect play = GUILayoutUtility.GetRect(size.x * PlayScale, size.y * PlayScale, GUILayout.Width(size.x * PlayScale), GUILayout.Height(size.y * PlayScale));
@@ -181,27 +196,46 @@ public sealed class CharacterRecipeEditor : Editor
     }
 
     /// <summary>
-    /// The frame of <paramref name="motion"/> showing now, looping at its frame durations.
+    /// The seconds since the preview started playing.
     /// </summary>
-    private int PlayingFrame(CharacterMotion motion)
+    private float PlayTime()
     {
+        return (float)(EditorApplication.timeSinceStartup - playStart);
+    }
+
+    /// <summary>
+    /// The sheet column of <paramref name="motion"/> showing <paramref name="time"/> seconds into the preview, looping
+    /// at its frame durations: a motion drawn over a gait (<see cref="CharacterMotion.GaitFrames"/>) loops its own frames
+    /// over gait frame <paramref name="gait"/> alone (columns <c>gait * K</c> to <c>gait * K + K - 1</c> of its K frames),
+    /// any other every frame in turn.
+    /// </summary>
+    internal static int PlayingFrame(CharacterMotion motion, float time, int gait)
+    {
+        int frames = motion.FrameCount;
+        int first = 0;
+        if (motion.GaitFrames > 0 && frames >= motion.GaitFrames)
+        {
+            frames /= motion.GaitFrames;
+            first = Mathf.Clamp(gait, 0, motion.GaitFrames - 1) * frames;
+        }
+
         float total = 0f;
-        for (int i = 0; i < motion.FrameCount; i++)
+        for (int i = first; i < first + frames; i++)
         {
             total += motion.FrameSeconds(i);
         }
 
-        float time = total > 0f ? (float)((EditorApplication.timeSinceStartup - playStart) % total) : 0f;
-        for (int i = 0; i < motion.FrameCount; i++)
+        float left = total > 0f ? Mathf.Repeat(time, total) : 0f;
+        for (int i = first; i < first + frames; i++)
         {
-            time -= motion.FrameSeconds(i);
-            if (time < 0f)
+            left -= motion.FrameSeconds(i);
+            if (left < 0f)
             {
                 return i;
             }
         }
 
-        return 0;
+        return first;
     }
 
     /// <summary>

@@ -11,8 +11,9 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// <summary>
 /// Tests for hit feedback (Docs/Animation.md, Phase 6): <see cref="HitFeedbackPresenter"/> reacting to
 /// <see cref="CombatEvents.DamageApplied"/> (a direct hit flashing, holding and nudging the struck unit away from its
-/// source and playing its type's impact where it came in; an immune hit's grey flash, an immune tick's included, and a
-/// tick's wash with nothing else; the camera kicking only for the local player's hits); the character animator's hold
+/// source and playing its type's impact where it came in, a hit from a point turning all of it from that point; an
+/// immune hit's grey flash, an immune tick's included, and a tick's wash with nothing else; the camera kicking only for
+/// the local player's hits; a client's predicted hit holding its attacker's contact frame); the character animator's hold
 /// (an attacker holding its contact frame and its next attack still showing contact at contact, a hold in the windup
 /// ending at contact, and an attacker held in its windup holding its contact frame when its hit lands);
 /// hit-stop changing nothing in gameplay (attack phases and ready times, health, projectile flight); the flash, nudge,
@@ -144,6 +145,65 @@ public class HitFeedbackTests
         Assert.That(struck.IsHolding, Is.False, "The hold lets go after its time.");
         AssertOffset(struck, 0, 0);
         Assert.That(target.transform.position, Is.EqualTo(new Vector3(0.9f, 0.2f, 0f)), "The body never moves.");
+    }
+
+    /// <summary>
+    /// A hit that carries the point it came from (Docs/KnownGaps.md, Phase 4) turns its nudge, its impact's side and the
+    /// camera kick from that point, not from where its source stands now: a shooter that moved three units after its
+    /// shot still kicks its camera and nudges the target along the shot. A hit replicated to a client with its point and
+    /// no source it knows turns the same way there.
+    /// </summary>
+    [Test]
+    public void AHitFromAPoint_TurnsItsFeedbackFromThatPoint_WhereverItsSourceStandsNow()
+    {
+        DamageReceiver shooter = CreatePlayer("Local", new Vector2(0f, 3f));
+        localPlayer.Assign(new LocalPlayer(shooter.GetComponent<PlayerController>()));
+        DamageReceiver target = CreateUnit("Target", new Vector2(2f, 0f), Faction.Mobs);
+        HitFeedback struck = target.GetComponent<HitFeedback>();
+
+        damage.ApplyDamage(target, 1, DamageType.Physical, shooter.gameObject, DamageFlags.None, Vector2.zero);
+        Assert.That(struck.LastNudgeDirection.x, Is.EqualTo(1f).Within(1e-4f), "Away from where it was shot.");
+        Assert.That(struck.LastNudgeDirection.y, Is.EqualTo(0f).Within(1e-4f), "Not from where the shooter stands now.");
+        Assert.That(cameraKick.LastOffset.x, Is.EqualTo(settings.KickDistance).Within(1e-5f), "The shooter's camera kicks along the shot.");
+        Assert.That(cameraKick.LastOffset.y, Is.EqualTo(0f).Within(1e-5f));
+        Assert.That(played[0].Direction, Is.EqualTo(impactPrefab.Sprites.DirectionOf(Vector2.right)));
+        Vector2 ground = (Vector2)played[0].GetComponentInChildren<SpriteRenderer>().transform.position - Vector2.up * struck.ImpactHeight;
+        Assert.That(ground.x, Is.EqualTo(target.GetComponent<Collider2D>().bounds.min.x).Within(1e-4f), "The impact lands on the face toward the shot.");
+
+        damage.ApplyReplicatedHit(target, 1, DamageType.Physical, DamageFlags.None, null, new Vector2(2f, 2f));
+        Assert.That(struck.NudgeCount, Is.EqualTo(2));
+        Assert.That(struck.LastNudgeDirection.y, Is.EqualTo(-1f).Within(1e-4f), "A replicated hit turns from its point without a source.");
+    }
+
+    /// <summary>
+    /// A client's own melee hit it predicts at its contact (<see cref="CombatEvents.HitPredicted"/>) holds its attacker's
+    /// contact frame there and then, as a landed hit does, and nothing in its windup; nothing else shows until the host's
+    /// hit arrives.
+    /// </summary>
+    [Test]
+    public void APredictedHit_HoldsTheAttackersContactFrame()
+    {
+        DamageReceiver attacker = CreatePlayer("Local", Vector2.zero);
+        HitFeedback feedback = attacker.GetComponent<HitFeedback>();
+        CharacterVisuals visuals = attacker.GetComponentInChildren<CharacterVisuals>();
+        Sprite contact = set.Find("Slash").SpriteAt(CharacterDirections.East, Contact);
+        visuals.Tick();
+        visuals.PlayAction(set.Find("Slash"), Vector2.right, Sword, false);
+        visuals.Tick();
+
+        events.PublishPredicted(attacker.gameObject);
+        Assert.That(feedback.HoldCount, Is.Zero, "Nothing holds in the windup.");
+        clock.Advance(Sword.Windup);
+        events.PublishPredicted(attacker.gameObject);
+        Assert.That(feedback.HoldCount, Is.EqualTo(1), "The predicted hit holds the contact frame.");
+        visuals.Tick();
+        clock.Advance(Sword.Contact + 0.02f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.Sprite, Is.SameAs(contact), "Held past the contact's own time.");
+        Assert.That(feedback.FlashCount, Is.Zero);
+        Assert.That(feedback.NudgeCount, Is.Zero);
+        Assert.That(played, Is.Empty);
+        Assert.That(cameraKick.Count, Is.Zero);
     }
 
     /// <summary>

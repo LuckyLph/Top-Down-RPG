@@ -34890,6 +34890,13 @@ MonoBehaviour:
   coords: {x: 0, y: 2}
   coastMap: {fileID: 2800000, guid: 763d1a86fcbf63b458562f7fe8baad61, type: 3}
   coastSource: 074ed5788645721769442c678a51da59
+  glowMap: {fileID: 0}
+  glowArea:
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  glowSource: 
 --- !u!156049354 &999502352
 Grid:
   m_ObjectHideFlags: 0

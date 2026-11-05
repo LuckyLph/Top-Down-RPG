@@ -8,11 +8,14 @@ using UnityEngine.SceneManagement;
 /// Ownership checks of seamless worlds (Docs/WorldStreaming.md: Ownership): everything placed in a chunk lies inside
 /// its 64 x 64 cells. A mob spawn point, a <see cref="PersistentId"/> or a walk-through prop (a child of the scene's
 /// Props root, placed by hand, or of its grid's <see cref="WorldGenerationWriter.GeneratedPropsName"/>, written by world
-/// generation) stands on one of its cells, and a blocking prop's footprint covers only its cells, by the rule
+/// generation) or a marker (a child of its grid's <see cref="WorldMarkers.RootName"/>, placed by Place markers) stands
+/// on one of its cells, and a blocking prop's footprint covers only its cells, by the rule
 /// <see cref="PropGridSnapping.BlockedCells"/> shares with the navigation. Every mob spawn point has a
 /// <see cref="PersistentId"/>, every id is set, and no two objects of a world share one. A world's chunk scenes name it
 /// and their coordinates, and its origin keeps the layout (<see cref="WorldLayout"/>). Every <see cref="WorldExit"/>
-/// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has. Each
+/// covers only its chunk's cells and leads to a world <see cref="GameScenes"/> lists, at an entry that world has, and
+/// every chunk's waystone and exit markers are those Place markers would write (<see cref="WorldMarkers.Stale"/>), and no
+/// wall cell beside ground lacks ground under it (<see cref="WallGround.BareCells"/>). Each
 /// problem is a line naming the object; the World Editor shows them and <see cref="WorldBuildValidator"/> refuses a
 /// build with any.
 /// </summary>
@@ -68,16 +71,44 @@ public static class WorldValidation
             }
         }
 
-        Transform generated = grid != null ? grid.transform.Find(WorldGenerationWriter.GeneratedPropsName) : null;
-        if (generated != null)
+        foreach (string rootName in new[] { WorldGenerationWriter.GeneratedPropsName, WorldMarkers.RootName })
         {
-            foreach (Transform prop in generated)
+            Transform placed = grid != null ? grid.transform.Find(rootName) : null;
+            if (placed == null)
+            {
+                continue;
+            }
+
+            foreach (Transform prop in placed)
             {
                 CheckProp(problems, prop.gameObject, grid, cells);
             }
         }
 
+        CheckWallGround(problems, chunk);
         return problems;
+    }
+
+    /// <summary>
+    /// Adds a problem naming the chunk's wall cells beside ground with no ground under them
+    /// (<see cref="WallGround.BareCells"/>), whose ground's corner leaves a gap at the wall, reading the neighbours'
+    /// ground across borders in the chunks open beside it (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    private static void CheckWallGround(List<string> problems, WorldChunk chunk)
+    {
+        TerrainBlendRenderer renderer = chunk.Terrain;
+        DualGridTilemapModule walls = chunk.GetComponentInChildren<DualGridTilemapModule>(true);
+        if (renderer == null || walls == null || walls.DataTilemap == null)
+        {
+            return;
+        }
+
+        Dictionary<Vector2Int, WorldChunk> open = chunk.World != null ? WorldBrushStroke.OpenChunks(chunk.World, chunk) : new Dictionary<Vector2Int, WorldChunk>();
+        List<Vector2Int> bare = WallGround.BareCells(renderer, walls.DataTilemap, chunk.Cells, cell => open.TryGetValue(ChunkCoords.ChunkOf(cell), out WorldChunk owner) && owner != null ? owner.Terrain : chunk.Cells.Contains(cell) ? renderer : null);
+        if (bare.Count > 0)
+        {
+            problems.Add($"{chunk.gameObject.scene.name}: {bare.Count} wall cells beside ground have no ground under them (first at {bare[0]}), so the ground's corners leave gaps at the walls; paint the ground under them, as the Terrain Brush does when it paints walls.");
+        }
     }
 
     /// <summary>
@@ -112,8 +143,9 @@ public static class WorldValidation
 
     /// <summary>
     /// Every problem of <paramref name="world"/>: its origin against <paramref name="allWorlds"/>, each chunk scene's
-    /// marker and ownership, and duplicate ids across its chunks. Opens the chunk scenes that are not open beside the
-    /// others and closes them again, unchanged.
+    /// marker and ownership, duplicate ids across its chunks, markers out of date, and coast or glow maps out of date
+    /// (<see cref="WorldAuthoring.StaleMapProblems"/>), so a build stops on a stale map. Opens the chunk scenes that are
+    /// not open beside the others and closes them again, unchanged.
     /// </summary>
     public static List<string> ValidateWorld(WorldDefinition world, IReadOnlyList<WorldDefinition> allWorlds)
     {
@@ -142,6 +174,8 @@ public static class WorldValidation
             }
 
             problems.AddRange(ValidateIds(ids));
+            problems.AddRange(WorldMarkers.Stale(world));
+            problems.AddRange(WorldAuthoring.StaleMapProblems(world));
         }
         finally
         {

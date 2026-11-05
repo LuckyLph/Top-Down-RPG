@@ -1364,6 +1364,34 @@ public class AreaGenerationTests
     }
 
     /// <summary>
+    /// Generating the Snowfield into a scratch scene's grid, set up as the Scene Generator's scratch scene sets it up (a
+    /// grass layer its runtime terrain lists), points that entry at the generator's own ground layer, its lowest, filled
+    /// with its tile, and the empty grass layer goes, with no warning that a layer the generator does not list was kept
+    /// (Docs/KnownGaps.md, Phase 6).
+    /// </summary>
+    [Test]
+    public void AScratchScenesGrassEntry_IsPointedAtTheGeneratorsGround()
+    {
+        Grid grid = Track(new GameObject("Grid")).AddComponent<Grid>();
+        grid.gameObject.SetActive(false);
+        WorldAuthoring.SetUpGround(grid);
+        grid.gameObject.SetActive(true);
+        AreaTerrain terrain = grid.GetComponent<AreaTerrain>();
+        Assert.That(new SerializedObject(terrain).FindProperty("layers").GetArrayElementAtIndex(0).FindPropertyRelative("tilemap").objectReferenceValue.name, Is.EqualTo("GrassTilemap"));
+        Track(new GameObject(PropsRootName));
+
+        Assert.That(AreaLayoutWriter.Write(grid, snowfield, Layout(snowfield, 1)), Is.True);
+
+        AreaGenerator.TerrainLayer ground = snowfield.TerrainLayers[0];
+        SerializedProperty entry = new SerializedObject(terrain).FindProperty("layers").GetArrayElementAtIndex(0);
+        Assert.That(entry.FindPropertyRelative("tilemap").objectReferenceValue, Is.SameAs(grid.transform.Find(ground.TilemapName).GetComponent<Tilemap>()));
+        Assert.That(entry.FindPropertyRelative("fillTile").objectReferenceValue, Is.SameAs(ground.Tile));
+        Assert.That(grid.transform.Find("GrassTilemap"), Is.Null, "the empty grass layer goes");
+        Assert.That(grid.GetComponent<TerrainBlendRenderer>().Layers.Count, Is.EqualTo(snowfield.TerrainLayers.Count));
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    /// <summary>
     /// On the layers the writer sets up for the Snowfield, snow, ice and water reach navigation through their tilemaps'
     /// terrain sources at their draw order's priorities, and the default movement profile's rules: stepping into a snow
     /// cell with no blocked cell around it costs snow's 15 and into such an ice cell grass's 10, every ice cell is joined
@@ -2876,7 +2904,7 @@ public class AreaGenerationTests
 
     /// <summary>
     /// The project's generators (only read) list the ground layers they use, bottom first: each one's tilemap, its
-    /// plain ground tile from Assets/Tiles/Ground, its terrain type and the project's material of the name given, drawn
+    /// automatic ground tile from Assets/Tiles/Ground (a TerrainTile keeping that material), its terrain type and the project's material of the name given, drawn
     /// with the project's terrain style; their materials are a subsequence of the style's layer order, at most 32, so
     /// the writer and Convert Ground take them: each lists only what it lays, the Clearing dirt for its campsite, the
     /// Village Forest the meadow, tall grass, dirt and the plaza, the Lakeside dry grass, the meadow and tall grass among
@@ -2902,7 +2930,7 @@ public class AreaGenerationTests
         {
             Assert.That(layers[i].TilemapName, Is.EqualTo($"{names[i]}Tilemap"));
             Assert.That(layers[i].Tile, Is.Not.Null.And.SameAs(AssetDatabase.LoadAssetAtPath<Tile>($"{TerrainTileWriter.TileFolder}/Tile_{names[i]}.asset")), names[i]);
-            Assert.That(layers[i].Tile.GetType(), Is.EqualTo(typeof(Tile)), $"{names[i]} is a plain tile");
+            Assert.That(layers[i].Tile is TerrainTile ground && ground.Material == layers[i].Material && ground.Direction == TerrainTile.Facing.Automatic, Is.True, $"{names[i]}'s tile is its material's automatic ground tile");
             Assert.That(layers[i].Material, Is.Not.Null.And.SameAs(ProjectMaterial(names[i])), names[i]);
             Assert.That(layers[i].TerrainType, Is.Not.Null.And.SameAs(ProjectTerrainType(names[i])), names[i]);
             int place = style.LayerOrderIndexOf(layers[i].Material);

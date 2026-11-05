@@ -8,9 +8,11 @@ using UnityEngine;
 /// <see cref="PlayerOrders"/> running its casts on a manual clock: the owner's cast shows its release frame on exactly
 /// the tick its orders complete it, at several cast times and instantly; a Continue cast while running shows its clip
 /// over the run; after a look change the attack and the cast play the new set's clips, a cast whose set has no clip over
-/// the run standing; a cancelled cast, a copy's cancelled cast and a disabled player stop the clip at once; ending an
-/// attack leaves a cast playing; and casting plays out the same in gameplay (casts, completions, failures, cooldowns
-/// and effects) with the visuals as without them.
+/// the run standing; a copy's cast releases when the owner's completion arrives; a cancelled cast, a copy's cancelled
+/// cast and a disabled player stop the clip at once; ending an
+/// attack leaves a cast playing; a buffered cast shows the first cast's release for its time before its own gather and
+/// releases on the tick its orders complete it (Docs/KnownGaps.md, Phase 7); and casting, buffered casts too, plays out
+/// the same in gameplay (casts, completions, failures, cooldowns and effects) with the visuals as without them.
 /// </summary>
 public class PlayerCastVisualsTests
 {
@@ -45,7 +47,8 @@ public class PlayerCastVisualsTests
             Clip("Run", CharacterGait.Run, 8, 0, -1, 4f),
             Clip("Slash", CharacterGait.None, 8, 0, 4, 0f),
             Clip("Cast", CharacterGait.None, 8, 0, Release, 0f),
-            Clip("CastRun", CharacterGait.None, 8, 8, Release, 0f)
+            Clip("CastRun", CharacterGait.None, 8, 8, Release, 0f),
+            Clip("Second", CharacterGait.None, 8, 0, Release, 0f)
         }));
     }
 
@@ -140,11 +143,12 @@ public class PlayerCastVisualsTests
     }
 
     /// <summary>
-    /// A copy plays another machine's cast from its message toward its aim, releasing on its own clock after the cast
-    /// time, and stops it at once when the owner's cancel arrives.
+    /// A copy plays another machine's cast from its message toward its aim, holding its gather past the cast time until
+    /// the owner's completion arrives and releasing on that update (Docs/KnownGaps.md, Phase 4); a completion arriving
+    /// before the cast time cuts the gather short; it stops at once when the owner's cancel arrives, never releasing.
     /// </summary>
     [Test]
-    public void ACopy_PlaysTheOwnersCast_AndStopsItOnTheCancel()
+    public void ACopy_ReleasesTheOwnersCastOnItsCompletion_AndStopsItOnTheCancel()
     {
         CharacterAnimationClip cast = set.Find("Cast");
         CreatePlayer(Ability("Bolt", 0.25f), true);
@@ -152,16 +156,25 @@ public class PlayerCastVisualsTests
         visuals.Tick();
         Assert.That(visuals.Animator.IsActing, Is.True);
         Assert.That(visuals.Animator.Direction, Is.EqualTo(CharacterDirections.North));
-        clock.Advance(0.25f);
+        clock.Advance(0.3f);
         visuals.Tick();
-        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "The copy releases on its own clock.");
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release - 1)), "Past the cast time, the copy's gather waits for the completion.");
+        abilities.CompleteRemoteCast();
+        visuals.Tick();
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "The copy releases on the update the completion arrives.");
 
         abilities.PlayRemoteCast(0, new CastAim(Vector2.zero, Vector2.up, default));
-        clock.Advance(0.1f);
+        clock.Advance(0.2f);
+        abilities.CompleteRemoteCast();
+        visuals.Tick();
+        Assert.That(spriteRenderer.sprite, Is.SameAs(cast.SpriteAt(CharacterDirections.North, Release)), "An early completion cuts the gather short.");
+
+        abilities.PlayRemoteCast(0, new CastAim(Vector2.zero, Vector2.up, default));
+        clock.Advance(0.3f);
         visuals.Tick();
         abilities.StopRemoteCast();
         visuals.Tick();
-        Assert.That(visuals.Animator.IsActing, Is.False);
+        Assert.That(visuals.Animator.IsActing, Is.False, "A cancel stops the held gather without a release.");
     }
 
     /// <summary>
@@ -235,6 +248,108 @@ public class PlayerCastVisualsTests
     }
 
     /// <summary>
+    /// A bufferable cast pressed during a 0.25 s cast, driven through the orders at 60 Hz, starts on the tick the first
+    /// completes; the first cast's release shows from that tick for its 60 ms, the buffered cast's gather after it, and
+    /// the buffered cast's release on exactly the tick its orders complete it, its cast time after it started.
+    /// </summary>
+    [Test]
+    public void ABufferedCast_ShowsTheFirstCastsReleaseForItsTime_ThenReleasesOnTheTickItCompletes()
+    {
+        CharacterAnimationClip first = set.Find("Cast");
+        CharacterAnimationClip second = set.Find("Second");
+        CreatePlayer(Ability("Bolt", 0.25f), true, Buffered());
+        int tick = 0;
+        int firstDone = -1;
+        int secondStarted = -1;
+        int secondDone = -1;
+        abilities.CastCompleted += cast =>
+        {
+            if (cast.Slot == 0)
+            {
+                firstDone = tick;
+            }
+            else
+            {
+                secondDone = tick;
+            }
+        };
+        abilities.CastStarted += cast =>
+        {
+            if (cast.Slot == 1)
+            {
+                secondStarted = tick;
+            }
+        };
+        List<Sprite> shown = new();
+        List<CharacterAnimationClip> clips = new();
+        Tick(Press(0));
+        shown.Add(spriteRenderer.sprite);
+        clips.Add(visuals.Animator.Clip);
+        for (tick = 1; tick < 60; tick++)
+        {
+            clock.Advance(Step);
+            Tick(tick == 6 ? Press(1) : default);
+            shown.Add(spriteRenderer.sprite);
+            clips.Add(visuals.Animator.Clip);
+        }
+
+        Assert.That(firstDone, Is.GreaterThan(0));
+        Assert.That(secondStarted, Is.EqualTo(firstDone), "The buffered cast fires on the tick the first completes.");
+        Assert.That(secondDone, Is.InRange(secondStarted + 18, secondStarted + 19), "It completes its 0.3 s later.");
+        for (int i = firstDone; i < firstDone + 4; i++)
+        {
+            Assert.That(shown[i], Is.SameAs(first.SpriteAt(CharacterDirections.East, Release)), $"tick {i}: the first cast's release shows its 60 ms.");
+        }
+
+        Assert.That(clips[firstDone + 4], Is.SameAs(second), "Then the buffered cast's gather.");
+        for (int i = firstDone + 4; i < secondDone; i++)
+        {
+            Assert.That(shown[i], Is.Not.SameAs(second.SpriteAt(CharacterDirections.East, Release)), $"tick {i}: no release before the cast completes.");
+        }
+
+        Assert.That(shown[secondDone], Is.SameAs(second.SpriteAt(CharacterDirections.East, Release)), "Its release shows on the tick it completes.");
+    }
+
+    /// <summary>
+    /// The same presses with buffered casts (a cast, a bufferable one pressed during it, again after both cooldowns)
+    /// start, complete and resolve on the same ticks with the same cooldowns with the cast visuals as without them.
+    /// </summary>
+    [Test]
+    public void BufferedCasts_PlayOutTheSameInGameplay_WithTheVisuals()
+    {
+        List<string> without = PlayBufferedScript(false);
+        List<string> with = PlayBufferedScript(true);
+        Assert.That(with, Is.EqualTo(without));
+        Assert.That(without, Has.Some.StartsWith("completed 1"));
+    }
+
+    /// <summary>
+    /// Runs presses of a 0.25 s cast and a bufferable 0.3 s one pressed during it, twice, on a new player with or
+    /// without its cast visuals, and returns what happened on which tick, the cooldowns at the end and the effects
+    /// resolved.
+    /// </summary>
+    private List<string> PlayBufferedScript(bool withVisuals)
+    {
+        clock.Time = 0f;
+        resolved = 0;
+        CreatePlayer(Ability("Bolt", 0.25f, cooldown: 1f), withVisuals, Buffered());
+        List<string> log = new();
+        int tick = 0;
+        abilities.CastStarted += cast => log.Add($"started {cast.Slot} {tick}");
+        abilities.CastCompleted += cast => log.Add($"completed {cast.Slot} {tick}");
+        abilities.CastFailed += (slot, reason) => log.Add($"failed {slot} {reason} {tick}");
+        for (tick = 0; tick < 180; tick++)
+        {
+            int press = tick == 0 || tick == 90 ? 0 : tick == 8 || tick == 100 ? 1 : -1;
+            Tick(press >= 0 ? Press(press) : default);
+            clock.Advance(Step);
+        }
+
+        log.Add($"cooldowns {abilities.RemainingCooldown(0):0.000} {abilities.RemainingCooldown(1):0.000} resolved {resolved}");
+        return log;
+    }
+
+    /// <summary>
     /// Runs the scripted presses on a new player, with or without its cast visuals, and returns what happened on which
     /// tick, the cooldowns at the end and the effects resolved.
     /// </summary>
@@ -283,11 +398,11 @@ public class PlayerCastVisualsTests
     }
 
     /// <summary>
-    /// Builds an authoritative player with a class of <paramref name="ability"/> alone, a sword whose attack plays the
-    /// set's slash, its visuals on a child (and its cast visuals when <paramref name="withVisuals"/>), and orders
-    /// over its abilities.
+    /// Builds an authoritative player with a class of <paramref name="ability"/> (and <paramref name="second"/> in the
+    /// second slot, when given), a sword whose attack plays the set's slash, its visuals on a child (and its cast visuals
+    /// when <paramref name="withVisuals"/>), and orders over its abilities.
     /// </summary>
-    private void CreatePlayer(AbilityDefinition ability, bool withVisuals)
+    private void CreatePlayer(AbilityDefinition ability, bool withVisuals, AbilityDefinition second = null)
     {
         GameObject player = Track(new GameObject("Player"));
         player.AddComponent<Rigidbody2D>();
@@ -308,7 +423,7 @@ public class PlayerCastVisualsTests
         service.CastResolved += (_, _) => resolved++;
         abilities = player.AddComponent<PlayerAbilities>();
         abilities.Construct(clock, service);
-        abilities.Configure(Track(PlayerClass.Create("Test", ability, null, null, null)));
+        abilities.Configure(Track(PlayerClass.Create("Test", ability, second, null, null)));
         if (withVisuals)
         {
             player.AddComponent<PlayerCastVisuals>().Configure();
@@ -325,6 +440,14 @@ public class PlayerCastVisualsTests
     private AbilityDefinition Ability(string name, float castTime, AbilityTargeting targeting = AbilityTargeting.Direction, CastMovement movement = CastMovement.Stop, string movingClip = null, float cooldown = 0.1f)
     {
         return Track(AbilityDefinition.Create(name, cooldown, castTime, targeting, castMovement: movement, castClip: "Cast", movingCastClip: movingClip));
+    }
+
+    /// <summary>
+    /// A tracked bufferable 0.3 s cast aimed nowhere that plays the set's second cast clip.
+    /// </summary>
+    private AbilityDefinition Buffered()
+    {
+        return Track(AbilityDefinition.Create("Whirl", 1f, 0.3f, AbilityTargeting.None, bufferable: true, castClip: "Second"));
     }
 
     /// <summary>

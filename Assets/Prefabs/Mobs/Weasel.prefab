@@ -557,6 +557,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterVisuals
   animationSet: {fileID: 11400000, guid: a3e2557dee3a3294592a87f0908c7230, type: 2}
   locomotion: {fileID: 11400000, guid: 09dc43fdd79bcaa44b6365ebaf274854, type: 2}
+  castLight: {fileID: 0}
+  castLightIntensity: 1
+  lanternRenderer: {fileID: 0}
+  lanternLight: {fileID: 0}
 --- !u!1 &4037611303412391985
 GameObject:
   m_ObjectHideFlags: 0
@@ -877,8 +881,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdc0285c56989984cac5149676124766, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobMotor2D
-  moveSpeed: 2
-  acceleration: 20
   visuals: {fileID: 5795732450276423472}
 --- !u!114 &2123914094877944818
 MonoBehaviour:
@@ -942,9 +944,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MobController
   config: {fileID: 11400000, guid: 4cdad9c996ec4c742b6bd28d36ae4121, type: 2}
-  onAttackRangeEntered:
-    m_PersistentCalls:
-      m_Calls: []
   drawBrainGizmos: 1
   drawStateLabel: 1
   idleColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.9}
@@ -992,8 +991,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e0c998316335914f8c8d42b226df58a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::MeleeDamageDealer
-  damageAmount: 1
-  attackInterval: 0.75
 --- !u!114 &5288173083386989732
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1157,6 +1154,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::HitFeedback
   body: {fileID: 3812718684653368127}
+  lantern: {fileID: 0}
   visuals: {fileID: 1303857918171226197}
   characterVisuals: {fileID: 5795732450276423472}
   bodyCollider: {fileID: 7645337321817616343}

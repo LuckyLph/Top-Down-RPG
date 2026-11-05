@@ -17,7 +17,9 @@ using Object = UnityEngine.Object;
 /// reaches), its walls (copied where missing) or its raised tilemap (set up where missing), and one undo takes all of
 /// it back. Cells of a chunk that is not open, or outside the world, are skipped with a warning; a tilemap of another
 /// kind is written only inside its chunk. A flood fill spreads across the border. The hover preview shows on each
-/// chunk's renderer it covers. A grid that is no chunk is painted as before. The test reads the project's style,
+/// chunk's renderer it covers; a walls preview across a border sets each cell on its own chunk's module and each render
+/// cell on the module drawing it, reading both chunks' previews; walls painted beside the ground get it under them,
+/// across a border too (Docs/KnownGaps.md, Phase 6). A grid that is no chunk is painted as before. The test reads the project's style,
 /// materials, ground and raised tiles and walls rule tile, and changes none of them.
 /// </summary>
 public class WorldBrushStrokeTests
@@ -169,6 +171,66 @@ public class WorldBrushStrokeTests
         int sandIndex = new List<TerrainMaterial>(west.BuiltMaterials).IndexOf(sand);
         Assert.That(sandIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(west.ControlMap.GetCell(new Vector3Int(65, 10, 0)) & (1u << sandIndex), Is.Not.Zero, "Chunk (0, 0)'s skirt shows the sand.");
+    }
+
+    /// <summary>
+    /// The brush marks a chunk's coast map out of date as it paints the sea or its shore within the map's reach
+    /// (Docs/KnownGaps.md, Phase 5), and its glow map as it paints lava within the glow's reach: sand painted on the
+    /// grass far from any sea marks nothing; ocean painted in chunk (0, 0)'s middle marks its coast map alone, farther
+    /// than the bake reaches into its neighbours; ocean painted by the border with chunk (1, 0) marks that chunk's too;
+    /// erasing the grass of a cell, which leaves a hole the coast reads as sea, marks it; lava marks the glow map of the
+    /// chunk it lies in alone, and no coast map. One undo takes a mark back with the stroke.
+    /// </summary>
+    [Test]
+    public void PaintingTheSeaItsShoreOrLava_MarksTheMapsReachingIt_OutOfDate()
+    {
+        TerrainMaterial ocean = WorldAuthoring.MaterialNamed("Ocean");
+        TerrainMaterial lava = WorldAuthoring.MaterialNamed("Lava");
+        foreach (WorldChunk chunk in chunks.Values)
+        {
+            SerializedObject data = new(chunk);
+            data.FindProperty("coastSource").stringValue = "baked";
+            data.FindProperty("glowSource").stringValue = "baked";
+            data.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        Tilemap sandLayer = Layer(Vector2Int.zero, sand);
+        Stroke(sandLayer, () => brush.Paint(sandLayer.layoutGrid, sandLayer.gameObject, new Vector3Int(10, 10, 0)));
+        AssertMarks("sand on grass", false, false, false, false);
+
+        Tilemap oceanLayer = GroundLayerMigration.AddLayer(chunks[Vector2Int.zero].GetComponent<Grid>(), ocean);
+        brush.SetTile(Vector3Int.zero, AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(ocean)));
+        Stroke(oceanLayer, () => brush.Paint(oceanLayer.layoutGrid, oceanLayer.gameObject, new Vector3Int(10, 10, 0)));
+        AssertMarks("ocean in the middle of chunk (0, 0)", true, false, false, false);
+
+        Undo.PerformUndo();
+        AssertMarks("the stroke undone", false, false, false, false);
+
+        Stroke(oceanLayer, () => brush.Paint(oceanLayer.layoutGrid, oceanLayer.gameObject, new Vector3Int(60, 10, 0)));
+        AssertMarks("ocean by the border with chunk (1, 0)", true, true, false, false);
+
+        Tilemap northGrass = Layer(new Vector2Int(0, 1), grass);
+        Stroke(northGrass, () => brush.Erase(northGrass.layoutGrid, northGrass.gameObject, new Vector3Int(10, 120, 0)));
+        Assert.That(chunks[new Vector2Int(0, 1)].CoastSource, Is.EqualTo(WorldAuthoring.StaleSource), "a hole in the grass is sea to the coast map");
+
+        Tilemap lavaLayer = GroundLayerMigration.AddLayer(chunks[new Vector2Int(1, 0)].GetComponent<Grid>(), lava);
+        brush.SetTile(Vector3Int.zero, AssetDatabase.LoadAssetAtPath<TileBase>(TerrainTileWriter.TilePath(lava)));
+        Stroke(lavaLayer, () => brush.Paint(lavaLayer.layoutGrid, lavaLayer.gameObject, new Vector3Int(100, 30, 0)));
+        Assert.That(chunks[new Vector2Int(1, 0)].GlowSource, Is.EqualTo(WorldAuthoring.StaleSource), "lava marks its chunk's glow map");
+        Assert.That(chunks[Vector2Int.zero].GlowSource, Is.EqualTo("baked"), "lava 36 cells from chunk (0, 0) is beyond the glow's reach");
+        Assert.That(WorldAuthoring.IsGlowStale(chunks[new Vector2Int(1, 0)], "baked"), Is.True, "a marked map is stale whatever it was baked from");
+    }
+
+    /// <summary>
+    /// Asserts which of chunks (0, 0), (1, 0), (0, 1) have their coast map marked out of date after
+    /// <paramref name="what"/>, and that no glow map is (<paramref name="glow"/> for chunk (0, 0)'s).
+    /// </summary>
+    private void AssertMarks(string what, bool origin, bool east, bool north, bool glow)
+    {
+        Assert.That(chunks[Vector2Int.zero].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(origin), $"{what}: chunk (0, 0)'s coast map");
+        Assert.That(chunks[new Vector2Int(1, 0)].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(east), $"{what}: chunk (1, 0)'s coast map");
+        Assert.That(chunks[new Vector2Int(0, 1)].CoastSource == WorldAuthoring.StaleSource, Is.EqualTo(north), $"{what}: chunk (0, 1)'s coast map");
+        Assert.That(chunks[Vector2Int.zero].GlowSource == WorldAuthoring.StaleSource, Is.EqualTo(glow), $"{what}: chunk (0, 0)'s glow map");
     }
 
     /// <summary>
@@ -327,6 +389,64 @@ public class WorldBrushStrokeTests
 
         Assert.That(west.ControlMap.HasPreview, Is.False);
         Assert.That(east.ControlMap.HasPreview, Is.False);
+    }
+
+    /// <summary>
+    /// The hover preview of walls across the border at x = 64, once chunk (1, 0) has walls, sets each cell's preview tile
+    /// on the module of the chunk owning it, and each render cell's on the module drawing it, which reads both chunks'
+    /// previews: the render cell on the border between two filled rows shows the full piece. Clearing it clears both.
+    /// </summary>
+    [Test]
+    public void TheWallsPreviewAcrossABorder_UsesBothChunksModules()
+    {
+        DualGridTilemapModule west = chunks[Vector2Int.zero].GetComponentInChildren<DualGridTilemapModule>();
+        Stroke(west.DataTilemap, () => brush.BoxFill(west.DataTilemap.layoutGrid, west.gameObject, new BoundsInt(70, 10, 0, 1, 1, 1)));
+        DualGridTilemapModule east = WorldBrushStroke.WallsLike(chunks[new Vector2Int(1, 0)], west);
+        Assert.That(east, Is.Not.Null);
+
+        editor.BoxPreview(west.DataTilemap.layoutGrid, west.gameObject, new BoundsInt(62, 30, 0, 4, 2, 1), false);
+
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(63, 30, 0)), Is.Not.Null);
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Null);
+        Assert.That(east.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Not.Null);
+        Vector3Int border = new(64, 31, 0);
+        DualGridTilemapModule drawing = west.OwnsRenderTile(border) ? west : east;
+        DualGridTilemapModule other = drawing == west ? east : west;
+        Assert.That(drawing.RenderTilemap.GetEditorPreviewTile(border), Is.SameAs(drawing.RenderTile));
+        Assert.That(other.RenderTilemap.GetEditorPreviewTile(border), Is.Null);
+        Sprite piece = drawing.RenderTilemap.GetEditorPreviewSprite(border);
+        Assert.That(piece != null && piece.name.EndsWith("_6"), Is.True, $"the border's render cell shows the full piece, not {(piece != null ? piece.name : "none")}");
+
+        editor.ClearPreview();
+
+        Assert.That(west.DataTilemap.GetEditorPreviewTile(new Vector3Int(63, 30, 0)), Is.Null);
+        Assert.That(east.DataTilemap.GetEditorPreviewTile(new Vector3Int(64, 30, 0)), Is.Null);
+        Assert.That(drawing.RenderTilemap.GetEditorPreviewTile(border), Is.Null);
+    }
+
+    /// <summary>
+    /// Walls painted across the border at x = 64 beside the grass, on cells whose grass was erased, get grass under them
+    /// in each chunk, from the tile their neighbours hold, and cells with no ground beside them get none.
+    /// </summary>
+    [Test]
+    public void WallsPaintedBesideTheGround_GetItUnderThem_AcrossABorder()
+    {
+        DualGridTilemapModule walls = chunks[Vector2Int.zero].GetComponentInChildren<DualGridTilemapModule>();
+        Tilemap westGrass = Layer(Vector2Int.zero, grass);
+        Tilemap eastGrass = Layer(new Vector2Int(1, 0), grass);
+        TileBase grassTile = westGrass.GetTile(new Vector3Int(10, 10, 0));
+        foreach (Vector3Int cell in CellsOf(new RectInt(60, 20, 8, 6)))
+        {
+            (cell.x < 64 ? westGrass : eastGrass).SetTile(cell, null);
+        }
+
+        Stroke(walls.DataTilemap, () => brush.BoxFill(walls.DataTilemap.layoutGrid, walls.gameObject, new BoundsInt(60, 20, 0, 8, 1, 1)));
+
+        Assert.That(westGrass.GetTile(new Vector3Int(63, 20, 0)), Is.SameAs(grassTile));
+        Assert.That(eastGrass.GetTile(new Vector3Int(64, 20, 0)), Is.SameAs(grassTile));
+
+        Stroke(walls.DataTilemap, () => brush.BoxFill(walls.DataTilemap.layoutGrid, walls.gameObject, new BoundsInt(62, 23, 0, 4, 1, 1)));
+        Assert.That(westGrass.HasTile(new Vector3Int(63, 23, 0)), Is.False, "no ground beside it");
     }
 
     /// <summary>

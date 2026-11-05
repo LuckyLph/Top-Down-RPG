@@ -21,20 +21,22 @@ public sealed class DamageService
     }
 
     /// <summary>
-    /// Resolves and applies a hostile hit. Rejected (returning <c>default</c>) without authority, for a missing or
-    /// dead target, a non-positive amount, or a source of the target's own faction. An immune target takes nothing
-    /// but the hit still resolves and is reported.
+    /// Resolves and applies a hostile hit, coming from <paramref name="origin"/> when it came from a point (where an
+    /// arrow was shot from, where an attacker or caster stood). Rejected (returning <c>default</c>) without authority,
+    /// for a missing or dead target, a non-positive amount, or a source of the target's own faction. An immune target
+    /// takes nothing but the hit still resolves and is reported.
     /// </summary>
     public DamageResult ApplyDamage(
         DamageReceiver target,
         int amount,
         DamageType type = DamageType.Physical,
         GameObject source = null,
-        DamageFlags flags = DamageFlags.None)
+        DamageFlags flags = DamageFlags.None,
+        Vector2? origin = null)
     {
         DamageReceiver sourceUnit = CombatFactions.UnitOf(source);
         float dealt = sourceUnit != null ? sourceUnit.DamageDealtMultiplier : 1f;
-        return Resolve(target, amount, type, source, sourceUnit, dealt, flags);
+        return Resolve(target, amount, type, source, sourceUnit, dealt, flags, origin);
     }
 
     /// <summary>
@@ -43,21 +45,22 @@ public sealed class DamageService
     /// </summary>
     public DamageResult ApplyPeriodicDamage(DamageReceiver target, int amount, DamageType type, GameObject source, float dealtMultiplier)
     {
-        return Resolve(target, amount, type, source, CombatFactions.UnitOf(source), dealtMultiplier, DamageFlags.Periodic);
+        return Resolve(target, amount, type, source, CombatFactions.UnitOf(source), dealtMultiplier, DamageFlags.Periodic, null);
     }
 
     /// <summary>
     /// Applies and publishes a hit the host already resolved, regardless of authority, with this machine's copy of its
-    /// <paramref name="source"/> (null when the host named none or this machine does not know it). Used by clients.
+    /// <paramref name="source"/> (null when the host named none or this machine does not know it) and the point it came
+    /// from as the host resolved it. Used by clients.
     /// </summary>
-    public DamageResult ApplyReplicatedHit(DamageReceiver target, int amount, DamageType type, DamageFlags flags, GameObject source = null)
+    public DamageResult ApplyReplicatedHit(DamageReceiver target, int amount, DamageType type, DamageFlags flags, GameObject source = null, Vector2? origin = null)
     {
         if (target == null || target.Health == null)
         {
             return default;
         }
 
-        return ApplyAndPublish(target, target.Health, new DamageResult(type, amount, Mathf.Max(0, amount), flags), source);
+        return ApplyAndPublish(target, target.Health, new DamageResult(type, amount, Mathf.Max(0, amount), flags), source, origin);
     }
 
     /// <summary>
@@ -104,7 +107,8 @@ public sealed class DamageService
         GameObject source,
         DamageReceiver sourceUnit,
         float dealtMultiplier,
-        DamageFlags flags)
+        DamageFlags flags,
+        Vector2? origin)
     {
         if (target == null || amount <= 0 || !authority.IsAuthoritative)
         {
@@ -123,24 +127,24 @@ public sealed class DamageService
             target.NotifyImmuneHit(result.Type, result.Flags);
         }
 
-        return ApplyAndPublish(target, health, result, source);
+        return ApplyAndPublish(target, health, result, source, origin);
     }
 
     /// <summary>
     /// Removes the resolved amount from <paramref name="health"/> and publishes a <see cref="DamageReport"/> with the
-    /// HP actually removed. Returns the result with that amount, or <c>default</c> (nothing published) when nothing
-    /// landed and the hit was not immune.
+    /// HP actually removed and the hit's <paramref name="origin"/>. Returns the result with that amount, or
+    /// <c>default</c> (nothing published) when nothing landed and the hit was not immune.
     /// </summary>
-    private DamageResult ApplyAndPublish(DamageReceiver target, Health health, DamageResult result, GameObject source)
+    private DamageResult ApplyAndPublish(DamageReceiver target, Health health, DamageResult result, GameObject source, Vector2? origin)
     {
-        int applied = result.Amount > 0 ? health.ApplyDamage(result.Amount, source, result.Type, result.Flags) : 0;
+        int applied = result.Amount > 0 ? health.ApplyDamage(result.Amount, source, result.Type, result.Flags, origin) : 0;
         DamageResult landed = result.WithAmount(applied);
         if (!landed.Resolved)
         {
             return default;
         }
 
-        combatEvents.Publish(new DamageReport(health, applied, landed.Type, landed.Flags, source, target.PopupWorldPosition));
+        combatEvents.Publish(new DamageReport(health, applied, landed.Type, landed.Flags, source, target.PopupWorldPosition, origin));
         return landed;
     }
 

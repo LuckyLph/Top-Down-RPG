@@ -6,8 +6,9 @@ using VContainer;
 /// Replicates a unit's <see cref="Health"/> from the server: a server-written variable carries the current HP for
 /// late joiners, and RPCs replay each hit (immune ones included), heal and restore on clients through
 /// <see cref="DamageService"/> so their popups, hit feedback and death reactions run, then correct HP to the server's
-/// value. A hit names its source unit when it is a spawned network object, so a client's hit feedback knows which way
-/// it came from and whether its own player landed it.
+/// value. A hit names its source unit when it is a spawned network object, so a client's hit feedback knows whether its
+/// own player landed it, and carries the point it came from as the host resolved it (Docs/KnownGaps.md, Phase 4), so
+/// every machine turns its feedback the same way.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
@@ -80,13 +81,14 @@ public class NetworkHealth : NetworkBehaviour
     }
 
     /// <summary>
-    /// Server: stores the new HP and sends the hit to clients, naming its source unit when it is spawned.
+    /// Server: stores the new HP and sends the hit to clients, naming its source unit when it is spawned and the point
+    /// it came from when it has one.
     /// </summary>
     private void HandleServerDamaged(Health.DamageEvent damage)
     {
         current.Value = damage.CurrentHealth;
         bool hasSource = TryGetSourceObject(damage.Source, out NetworkObject source);
-        HitRpc(damage.Amount, damage.Type, damage.Flags, damage.CurrentHealth, hasSource ? new NetworkObjectReference(source) : default, hasSource);
+        HitRpc(damage.Amount, damage.Type, damage.Flags, damage.CurrentHealth, hasSource ? new NetworkObjectReference(source) : default, hasSource, damage.Origin ?? Vector2.zero, damage.Origin.HasValue);
     }
 
     /// <summary>
@@ -94,7 +96,7 @@ public class NetworkHealth : NetworkBehaviour
     /// </summary>
     private void HandleServerImmuneHit(DamageType type, DamageFlags flags)
     {
-        HitRpc(0, type, flags, health.CurrentHealth, default, false);
+        HitRpc(0, type, flags, health.CurrentHealth, default, false, Vector2.zero, false);
     }
 
     /// <summary>
@@ -117,16 +119,16 @@ public class NetworkHealth : NetworkBehaviour
 
     /// <summary>
     /// Clients: replays the server's hit through <see cref="DamageService.ApplyReplicatedHit"/> (popups, hit feedback,
-    /// death) with this client's copy of its source when it names one this client has, then syncs HP to
-    /// <paramref name="healthAfter"/> if it still differs.
+    /// death) with this client's copy of its source when it names one this client has and the point it came from when it
+    /// has one, then syncs HP to <paramref name="healthAfter"/> if it still differs.
     /// </summary>
     [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
-    private void HitRpc(int amount, DamageType type, DamageFlags flags, int healthAfter, NetworkObjectReference source, bool hasSource)
+    private void HitRpc(int amount, DamageType type, DamageFlags flags, int healthAfter, NetworkObjectReference source, bool hasSource, Vector2 origin, bool hasOrigin)
     {
         if (damageService != null)
         {
             GameObject sourceObject = hasSource && source.TryGet(out NetworkObject sourceNetworkObject, NetworkManager) ? sourceNetworkObject.gameObject : null;
-            damageService.ApplyReplicatedHit(receiver, amount, type, flags, sourceObject);
+            damageService.ApplyReplicatedHit(receiver, amount, type, flags, sourceObject, hasOrigin ? origin : (Vector2?)null);
         }
 
         if (health.CurrentHealth != healthAfter)

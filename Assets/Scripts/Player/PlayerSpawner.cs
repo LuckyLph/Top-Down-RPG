@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -5,9 +6,10 @@ using VContainer;
 using VContainer.Unity;
 
 /// <summary>
-/// Creates player instances from the player prefab through the Gameplay resolver in the players scene. Offline the
-/// local player is bound directly; in a session the host spawns each as the owning client's network player object and
-/// <see cref="PlayerNetworkSync"/> binds it on every machine.
+/// Creates player instances from the player prefab through the Gameplay resolver in the players scene, each holding the
+/// weapon its save names (<see cref="WeaponCatalog.FindById"/>; its starting weapon without one). Offline the local
+/// player is bound directly; in a session the host spawns each as the owning client's network player object and
+/// <see cref="PlayerNetworkSync"/> binds it on every machine, a client's player equipping its saved weapon as it spawns.
 /// </summary>
 public sealed class PlayerSpawner
 {
@@ -48,12 +50,22 @@ public sealed class PlayerSpawner
     public Scene PlayersScene => scene;
 
     /// <summary>
-    /// Creates this machine's player: in a session it is spawned as the local client's network player object,
-    /// offline it is bound as the local player straight away.
+    /// Creates this machine's player holding the weapon whose id is <paramref name="savedWeapon"/> (its starting weapon
+    /// for none): in a session it is spawned as the local client's network player object, offline it is bound as the
+    /// local player straight away.
     /// </summary>
-    public void SpawnLocalPlayer()
+    public void SpawnLocalPlayer(string savedWeapon)
     {
         PlayerController controller = CreateInstance();
+        if (controller.TryGetComponent(out PlayerWeaponController weapon))
+        {
+            PlayerWeapon saved = FindSavedWeapon(weapon, savedWeapon);
+            if (saved != null)
+            {
+                weapon.Equip(saved);
+            }
+        }
+
         if (session.IsActive)
         {
             session.SpawnPlayerObject(controller.GetComponent<NetworkObject>(), session.LocalClientId);
@@ -67,10 +79,11 @@ public sealed class PlayerSpawner
     /// <summary>
     /// Host only: creates the network player object owned by client <paramref name="ownerClientId"/> on a free slot at
     /// <paramref name="position"/> (<see cref="EntrySlots"/>, so players joining at the same entry stand apart), puts
-    /// it in <paramref name="world"/> as it spawns and spawns it, unless that client already has one. Logs an error
-    /// when called anywhere but the host.
+    /// it in <paramref name="world"/>, has its owner equip the weapon whose id is <paramref name="savedWeapon"/> (its
+    /// starting weapon for none) as it spawns and receive the waystones it <paramref name="discovered"/> (none for
+    /// null), and spawns it, unless that client already has one. Logs an error when called anywhere but the host.
     /// </summary>
-    public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position)
+    public void SpawnRemotePlayer(ulong ownerClientId, WorldDefinition world, Vector2 position, string savedWeapon, IReadOnlyList<GameSaveData.Waystone> discovered = null)
     {
         if (!session.IsServer)
         {
@@ -90,9 +103,40 @@ public sealed class PlayerSpawner
         if (controller.TryGetComponent(out PlayerWorldSync worldSync))
         {
             worldSync.SetSpawnWorld(world);
+            worldSync.SetSpawnWaystones(discovered);
+        }
+
+        if (controller.TryGetComponent(out PlayerWeaponController weapon) && controller.TryGetComponent(out PlayerNetworkSync networkSync))
+        {
+            PlayerWeapon saved = FindSavedWeapon(weapon, savedWeapon);
+            if (saved != null)
+            {
+                networkSync.SetSavedWeapon(weapon.Catalog.IndexOf(saved));
+            }
         }
 
         session.SpawnPlayerObject(controller.GetComponent<NetworkObject>(), ownerClientId);
+    }
+
+    /// <summary>
+    /// The weapon of <paramref name="weapon"/>'s catalog whose id is <paramref name="savedWeapon"/>; null for none, and
+    /// for an id the catalog lacks (a removed weapon), with a warning that the player keeps its starting
+    /// weapon.
+    /// </summary>
+    private static PlayerWeapon FindSavedWeapon(PlayerWeaponController weapon, string savedWeapon)
+    {
+        if (string.IsNullOrEmpty(savedWeapon) || weapon.Catalog == null)
+        {
+            return null;
+        }
+
+        PlayerWeapon saved = weapon.Catalog.FindById(savedWeapon);
+        if (saved == null)
+        {
+            Debug.LogWarning($"The saved weapon '{savedWeapon}' is not in the weapon catalog; the player keeps its starting weapon.", weapon);
+        }
+
+        return saved;
     }
 
     /// <summary>

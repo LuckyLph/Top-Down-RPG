@@ -7,7 +7,7 @@ using System.Collections.Generic;
 public sealed class FakeClientReadiness : IClientReadiness
 {
     public HashSet<ChunkId> NotReady { get; } = new();
-    public List<(ulong Client, int Trip)> Trips { get; } = new();
+    public List<(ulong Client, int Trip, string World)> Trips { get; } = new();
 
     /// <summary>
     /// Always true.
@@ -28,8 +28,8 @@ public sealed class FakeClientReadiness : IClientReadiness
     /// <summary>
     /// Records the trip.
     /// </summary>
-    public void BeginTrip(ulong clientId, int trip)
+    public void BeginTrip(ulong clientId, int trip, string worldId)
     {
-        Trips.Add((clientId, trip));
+        Trips.Add((clientId, trip, worldId));
     }
 }

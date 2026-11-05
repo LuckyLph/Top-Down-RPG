@@ -50,3 +50,5 @@ MonoBehaviour:
   - name: walls
     position: {x: 67.5, y: 23.5}
     waystone: 0
+  maxSearchCells: 4096
+  nearestCellSearchRadius: 8

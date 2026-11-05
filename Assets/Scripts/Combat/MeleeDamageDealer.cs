@@ -18,10 +18,9 @@ public class MeleeDamageDealer : MonoBehaviour
 {
     private const int OnlyAttack = 0;
 
-    [SerializeField, Min(0)] private int damageAmount = 1;
-    [SerializeField, Min(0f)] private float attackInterval = 0.75f;
-
-    private IClock clock = UnityClock.Shared;
+    private int damageAmount = 1;
+    private float attackInterval = 0.75f;
+    private IClock clock;
     private AttackService attackService;
     private DamageType damageType = DamageType.Physical;
     private StatusEffectDefinition[] statuses = Array.Empty<StatusEffectDefinition>();
@@ -75,6 +74,17 @@ public class MeleeDamageDealer : MonoBehaviour
     }
 
     /// <summary>
+    /// Fails loudly when no clock was injected: attacks cannot run without one.
+    /// </summary>
+    private void Start()
+    {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(MeleeDamageDealer)} was not injected with an {nameof(IClock)}; its attacks cannot run.", this);
+        }
+    }
+
+    /// <summary>
     /// Cancels the attack when the mob dies.
     /// </summary>
     private void OnEnable()
@@ -99,13 +109,12 @@ public class MeleeDamageDealer : MonoBehaviour
     }
 
     /// <summary>
-    /// Injects the clock attacks run on (falling back to <see cref="UnityClock.Shared"/> when null) and the service
-    /// their hits resolve through.
+    /// Injects the clock attacks run on and the service their hits resolve through.
     /// </summary>
     [Inject]
     public void Construct(IClock gameClock, AttackService attacks)
     {
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         attackService = attacks;
         attack = null;
     }
@@ -222,13 +231,14 @@ public class MeleeDamageDealer : MonoBehaviour
     }
 
     /// <summary>
-    /// Hits every unit in the attack's area toward <paramref name="direction"/>, this mob as the source.
+    /// Hits every unit in the attack's area toward <paramref name="direction"/>, this mob as the source and where it
+    /// stands as the hit's origin.
     /// </summary>
     private void Land(Vector2 direction)
     {
         if (attackService != null)
         {
-            attackService.Resolve(transform, new Hit(damageAmount, damageType, statuses), AreaCentre(direction), area, direction);
+            attackService.Resolve(transform, new Hit(damageAmount, damageType, statuses), AreaCentre(direction), area, direction, transform.position);
         }
     }
 

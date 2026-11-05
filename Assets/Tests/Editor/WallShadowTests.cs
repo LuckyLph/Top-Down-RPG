@@ -10,9 +10,10 @@ using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Tests for the walls' light shadows (Docs/Lighting.md, Phase 7): the walls prefab carries a Shadow Caster 2D shaped by
-/// its collider, casting on every sorting layer without URP's trim; the walls <see cref="WorldAuthoring.AddWalls"/> gives
-/// a grid keep it, shaped by their own collider, and <see cref="WorldAuthoring.AddWallShadows"/> gives walls without one
-/// the same caster; every chunk of the project's worlds with walls has it; and saving a scene leaves the casters' shadow
+/// its collider, casting on the ground's sorting layers only (Docs/KnownGaps.md, Phase 7) without URP's trim; the walls
+/// <see cref="WorldAuthoring.AddWalls"/> gives a grid keep it, shaped by their own collider, and
+/// <see cref="WorldAuthoring.AddWallShadows"/> gives walls without one the same caster and brings one on other sorting
+/// layers in line; every chunk of the project's worlds with walls has it; and saving a scene leaves the casters' shadow
 /// meshes out of it (<see cref="ShadowCasterSceneSaving"/>).
 /// </summary>
 public class WallShadowTests
@@ -41,11 +42,11 @@ public class WallShadowTests
 
     /// <summary>
     /// The walls prefab's data tilemap carries a Shadow Caster 2D, on, shaped through URP's collider shape by the walls'
-    /// own tilemap collider, casting a light's shadow on every sorting layer, leaving the walls' own cells lit, with no
-    /// trim.
+    /// own tilemap collider, casting a light's shadow on the ground's sorting layers only, so units and props read it at
+    /// their feet as they read the props' (Docs/KnownGaps.md, Phase 7), leaving the walls' own cells lit, with no trim.
     /// </summary>
     [Test]
-    public void TheWallsPrefab_CastsALightsShadowFromItsCollider_OnEverySortingLayer()
+    public void TheWallsPrefab_CastsALightsShadowFromItsCollider_OnTheGroundsSortingLayers()
     {
         GameObject walls = AssetDatabase.LoadAssetAtPath<GameObject>(WorldAuthoring.WallsPrefabPath);
         AssertCastsFromItsCollider(walls);
@@ -53,7 +54,8 @@ public class WallShadowTests
 
     /// <summary>
     /// The walls a grid is given are shaped by their own collider, not the prefab's; walls without a caster are given
-    /// one by <see cref="WorldAuthoring.AddWallShadows"/>, which returns the one walls already have.
+    /// one by <see cref="WorldAuthoring.AddWallShadows"/>, which returns the one walls already have, brought onto the
+    /// ground's sorting layers when it cast on every one, as the walls did before Docs/KnownGaps.md's Phase 7.
     /// </summary>
     [Test]
     public void AddedWalls_CastFromTheirOwnCollider_AndWallsWithoutACasterAreGivenOne()
@@ -63,6 +65,18 @@ public class WallShadowTests
         AssertCastsFromItsCollider(module.gameObject);
         ShadowCaster2D caster = module.GetComponent<ShadowCaster2D>();
         Assert.That(WorldAuthoring.AddWallShadows(module.gameObject), Is.SameAs(caster), "Walls with a caster keep it.");
+
+        SerializedObject serialized = new(caster);
+        SerializedProperty layers = serialized.FindProperty("m_ApplyToSortingLayers");
+        layers.arraySize = SortingLayer.layers.Length;
+        for (int i = 0; i < SortingLayer.layers.Length; i++)
+        {
+            layers.GetArrayElementAtIndex(i).intValue = SortingLayer.layers[i].id;
+        }
+
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        Assert.That(WorldAuthoring.AddWallShadows(module.gameObject), Is.SameAs(caster), "Walls casting on every sorting layer keep their caster.");
+        AssertCastsFromItsCollider(module.gameObject);
 
         Object.DestroyImmediate(caster);
         Assert.That(WorldAuthoring.AddWallShadows(module.gameObject), Is.Not.Null);
@@ -128,8 +142,8 @@ public class WallShadowTests
     }
 
     /// <summary>
-    /// Asserts <paramref name="walls"/> carry an enabled Shadow Caster 2D shaped by their own tilemap collider, on every
-    /// sorting layer, casting without self shadows, untrimmed.
+    /// Asserts <paramref name="walls"/> carry an enabled Shadow Caster 2D shaped by their own tilemap collider, on the
+    /// ground's sorting layers, Default and Terrain, alone, casting without self shadows, untrimmed.
     /// </summary>
     private static void AssertCastsFromItsCollider(GameObject walls)
     {
@@ -148,10 +162,7 @@ public class WallShadowTests
             ids.Add(layers.GetArrayElementAtIndex(i).intValue);
         }
 
-        foreach (SortingLayer layer in SortingLayer.layers)
-        {
-            Assert.That(ids, Does.Contain(layer.id), $"{walls.name} shadows the {layer.name} sorting layer.");
-        }
+        Assert.That(ids, Is.EqualTo(new[] { SortingLayer.NameToID("Default"), SortingLayer.NameToID("Terrain") }), $"{walls.name} in {walls.scene.name} shadows the ground's sorting layers alone.");
     }
 
     /// <summary>

@@ -14,8 +14,8 @@ using UnityEngine.UI;
 /// (the hit at contact, the cooldown, the events the owner replicates), switching weapons (the attack cancelled, the
 /// weapon slots rebuilt, cooldowns kept), a ranged attack's projectile leaving at contact toward its target, a contact
 /// naming its target even as it ends its attack, the controller's attack orders under the cancel rules, crowd control
-/// and casts (instant ones included), the hit area <see cref="AttackService"/> resolves, and the Main scope's input
-/// asset.
+/// and casts (instant ones included), the hit area <see cref="AttackService"/> resolves, the Main scope's input asset,
+/// and the ids saves name the catalog's weapons by.
 /// </summary>
 public class PlayerWeaponSystemTests
 {
@@ -70,6 +70,30 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
+    /// A save names a weapon by its id: every weapon of the project's catalog holds its asset's GUID as its id, and the
+    /// catalog finds each by it; an unknown or empty id finds nothing, and a weapon outside the catalog has no id there.
+    /// </summary>
+    [Test]
+    public void EveryCatalogWeapon_IsSavedByItsAssetGuid()
+    {
+        WeaponCatalog catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalog>("Assets/Data/Weapons/WeaponCatalog.asset");
+        Assert.That(catalog, Is.Not.Null);
+        Assert.That(catalog.Count, Is.GreaterThan(0));
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            PlayerWeapon weapon = catalog.Get(i);
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(weapon));
+            Assert.That(weapon.WeaponId, Is.EqualTo(guid), weapon.name);
+            Assert.That(catalog.IdOf(weapon), Is.EqualTo(guid));
+            Assert.That(catalog.FindById(guid), Is.SameAs(weapon));
+        }
+
+        Assert.That(catalog.FindById("no-such-weapon"), Is.Null);
+        Assert.That(catalog.FindById(string.Empty), Is.Null);
+        Assert.That(catalog.IdOf(Track(PlayerWeapon.Create("Elsewhere", 1, 0.35f, 0.55f, new Vector2[4]))), Is.Empty);
+    }
+
+    /// <summary>
     /// Equipping a weapon with an icon sets the weapon name and shows the icon sprite fully opaque on the HUD.
     /// </summary>
     [Test]
@@ -81,7 +105,7 @@ public class PlayerWeaponSystemTests
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
         Image iconImage = CreatePlayerHudCanvas(weaponController).WeaponIcon;
-        Sprite iconSprite = LoadWeaponHudIconSprite();
+        Sprite iconSprite = CreateWeaponHudIconSprite();
 
         weaponController.Equip(CreateTestWeapon("Sword", icon: iconSprite));
 
@@ -514,6 +538,51 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
+    /// An attack's hit comes from where the attacker stood, the position its contact names (Docs/KnownGaps.md, Phase 4).
+    /// Off the authority a client predicts its own melee hit without applying it: a living enemy in its area that is not
+    /// immune to the weapon's damage raises one prediction with the attacker; a teammate, an immune or dead unit, an empty
+    /// area and a bow predict nothing, and neither does the authority, whose hit lands at once.
+    /// </summary>
+    [Test]
+    public void AnAttacksHit_ComesFromWhereTheAttackerStood_AndAClientPredictsItsOwn()
+    {
+        root = new GameObject("CombatRoot");
+        GameObject owner = CreateDamageable("Owner", Vector2.zero, root.transform);
+        DamageReceiver target = CreateSmallDamageable("Target", new Vector2(0.45f, 0f)).GetComponent<DamageReceiver>();
+        owner.GetComponent<DamageReceiver>().SetProfile(Track(CombatProfile.Create(Faction.Players)));
+        target.SetProfile(Track(CombatProfile.Create(Faction.Mobs)));
+        Physics2D.SyncTransforms();
+        PlayerWeapon weapon = Track(CreateTestWeapon("Sword", damage: 2, size: new Vector2(1.2f, 1.2f)));
+        Vector2? origin = null;
+        target.Health.Damaged += hit => origin = hit.Origin;
+        Assert.That(CreateAttackService().Resolve(owner.transform, weapon, Vector2.right, new Vector2(0.1f, 0.05f)), Is.EqualTo(1));
+        Assert.That(origin.HasValue, Is.True);
+        Assert.That(origin.Value, Is.EqualTo(new Vector2(0.1f, 0.05f)), "The hit comes from where the attacker stood.");
+        int health = target.Health.CurrentHealth;
+
+        CombatEvents events = new();
+        List<GameObject> predicted = new();
+        events.HitPredicted += predicted.Add;
+        AttackService client = TestCombat.CreateAttackService(new FixedGameAuthority(false), events);
+        Assert.That(client.Predict(owner.transform, weapon, Vector2.right, Vector2.zero), Is.True);
+        Assert.That(predicted, Is.EqualTo(new[] { owner }));
+        Assert.That(target.Health.CurrentHealth, Is.EqualTo(health), "A prediction applies nothing.");
+        Assert.That(client.Predict(owner.transform, weapon, Vector2.left, Vector2.zero), Is.False, "Nothing in the area behind.");
+        PlayerWeapon bow = Track(PlayerWeapon.Create("Bow", 2, 0.8f, 0.55f, new Vector2[4], size: new Vector2(1.2f, 1.2f), projectile: new ProjectileSpec(18f, 6f, 0.1f, 0.5f, true, null)));
+        Assert.That(client.Predict(owner.transform, bow, Vector2.right, Vector2.zero), Is.False, "An arrow's hit lands long after the contact.");
+        Assert.That(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative, events).Predict(owner.transform, weapon, Vector2.right, Vector2.zero), Is.False, "The authority predicts nothing.");
+
+        target.SetProfile(Track(CombatProfile.Create(Faction.Players)));
+        Assert.That(client.Predict(owner.transform, weapon, Vector2.right, Vector2.zero), Is.False, "A teammate takes no hit.");
+        target.SetProfile(Track(CombatProfile.Create(Faction.Mobs, DamageTypeMask.Physical)));
+        Assert.That(client.Predict(owner.transform, weapon, Vector2.right, Vector2.zero), Is.False, "An immune unit holds no contact.");
+        target.SetProfile(Track(CombatProfile.Create(Faction.Mobs)));
+        target.Health.ApplyDamage(target.Health.MaxHealth);
+        Assert.That(client.Predict(owner.transform, weapon, Vector2.right, Vector2.zero), Is.False, "A dead unit takes no hit.");
+        Assert.That(predicted, Has.Count.EqualTo(1));
+    }
+
+    /// <summary>
     /// An attack that only meets a wall collider with no receiver of its own damages nothing, not even another
     /// receiver that shares the wall's root.
     /// </summary>
@@ -929,21 +998,11 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// Loads the first sprite of the project's static slash texture to use as a weapon icon, failing the test
-    /// when there is none.
+    /// Builds a small sprite over a texture made in code to use as a weapon icon; both are destroyed on teardown.
     /// </summary>
-    private static Sprite LoadWeaponHudIconSprite()
+    private Sprite CreateWeaponHudIconSprite()
     {
-        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Weapons/StaticSlash.png");
-        foreach (Object asset in assets)
-        {
-            if (asset is Sprite sprite)
-            {
-                return sprite;
-            }
-        }
-
-        Assert.Fail("Expected at least one sprite in Assets/Sprites/Weapons/StaticSlash.png.");
-        return null;
+        Texture2D texture = Track(new Texture2D(4, 4));
+        return Track(Sprite.Create(texture, new Rect(0f, 0f, 4f, 4f), new Vector2(0.5f, 0.5f), 32f));
     }
 }

@@ -10,8 +10,12 @@ using VContainer.Unity;
 /// whole pixels, plays the impact effect of its damage type where it came in, and kicks the camera along the
 /// hit when the local player landed or took it. An immune hit, a tick included, only flashes in the immune colour (as
 /// its popup reads Immune), and a damage-over-time tick only washes the unit toward its damage type's colour.
-/// Directions come from where this machine shows the source and the target. Visual only: nothing here changes gameplay
-/// or goes over the network. Allocates nothing once its effects are warm.
+/// Directions come from the point the hit came from as the host resolved it (where an arrow was shot from, where an
+/// attacker or caster stood; Docs/KnownGaps.md, Phase 4), the same on every machine, to where this machine shows the
+/// target; a hit without one comes from where this machine shows its source. A client's own melee hit it predicts
+/// (<see cref="CombatEvents.HitPredicted"/>) holds its attacker's contact frame at once, the rest of the hit waiting for
+/// the host's. Visual only: nothing here changes gameplay or goes over the network. Allocates nothing once its effects
+/// are warm.
 /// </summary>
 public sealed class HitFeedbackPresenter : IStartable, IDisposable
 {
@@ -48,6 +52,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
     public void Start()
     {
         combatEvents.DamageApplied += Show;
+        combatEvents.HitPredicted += ShowPredicted;
     }
 
     /// <summary>
@@ -56,6 +61,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
     public void Dispose()
     {
         combatEvents.DamageApplied -= Show;
+        combatEvents.HitPredicted -= ShowPredicted;
     }
 
     /// <summary>
@@ -93,8 +99,8 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
 
         Transform source = UnitOf(report.Source);
         Vector2 targetPosition = target.transform.position;
-        bool hasSource = source != null;
-        Vector2 sourcePosition = hasSource ? (Vector2)source.position : targetPosition;
+        bool hasSource = source != null || report.Origin.HasValue;
+        Vector2 sourcePosition = report.Origin ?? (source != null ? (Vector2)source.position : targetPosition);
         Vector2 direction = targetPosition - sourcePosition;
         direction = hasSource && direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector2.zero;
         if (struck != null)
@@ -104,7 +110,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
             struck.Nudge(direction, settings.NudgePixels, settings.NudgeStepSeconds, settings.PixelsPerUnit);
         }
 
-        if (hasSource && settings.HoldAttacker && source.TryGetComponent(out HitFeedback attacker))
+        if (source != null && settings.HoldAttacker && source.TryGetComponent(out HitFeedback attacker))
         {
             attacker.HoldContact(settings.HoldSeconds);
         }
@@ -113,6 +119,19 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         if (struck != null)
         {
             PlayImpact(struck, report.Type, direction, sourcePosition, hasSource);
+        }
+    }
+
+    /// <summary>
+    /// Holds the contact frame of <paramref name="attacker"/>, a client's own player whose melee hit it predicts at its
+    /// contact, as a landed hit holds an attacker's.
+    /// </summary>
+    internal void ShowPredicted(GameObject attacker)
+    {
+        Transform unit = UnitOf(attacker);
+        if (unit != null && settings.HoldAttacker && unit.TryGetComponent(out HitFeedback feedback))
+        {
+            feedback.HoldContact(settings.HoldSeconds);
         }
     }
 

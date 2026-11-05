@@ -30,7 +30,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     private AttackService attackService;
     private ProjectileService projectileService;
-    private IClock clock = UnityClock.Shared;
+    private IClock clock;
     private AttackState attack;
     private PlayerWeapon currentWeapon;
     private CharacterAnimationClip attackClip;
@@ -71,7 +71,7 @@ public class PlayerWeaponController : MonoBehaviour
     /// </summary>
     public int WeaponIndex => catalog != null ? catalog.IndexOf(currentWeapon) : -1;
 
-    public string CurrentWeaponName
+    internal string CurrentWeaponName
     {
         get
         {
@@ -123,6 +123,17 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
+    /// Fails loudly when no clock was injected: attacks cannot run without one.
+    /// </summary>
+    private void Start()
+    {
+        if (clock == null)
+        {
+            Debug.LogError($"{name}'s {nameof(PlayerWeaponController)} was not injected with an {nameof(IClock)}; its attacks cannot run.", this);
+        }
+    }
+
+    /// <summary>
     /// Ends a running attack, and any attack a copy is playing, when the player is disabled (death).
     /// </summary>
     private void OnDisable()
@@ -135,15 +146,14 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the services that resolve hits and fly projectiles and the game clock that times attacks; a null clock
-    /// falls back to the shared Unity clock.
+    /// Takes the services that resolve hits and fly projectiles and the game clock that times attacks.
     /// </summary>
     [Inject]
     public void Construct(AttackService attacks, ProjectileService projectiles, IClock gameClock)
     {
         attackService = attacks;
         projectileService = projectiles;
-        clock = gameClock ?? UnityClock.Shared;
+        clock = gameClock;
         attack = null;
     }
 
@@ -176,9 +186,9 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Equips the catalog's weapon at <paramref name="index"/>; false, changing nothing, when there is none.
+    /// Equips the catalog's weapon at <paramref name="index"/>; false, changing nothing, when there is none. For tests.
     /// </summary>
-    public bool EquipFromCatalog(int index)
+    internal bool EquipFromCatalog(int index)
     {
         PlayerWeapon weapon = catalog != null ? catalog.Get(index) : null;
         if (weapon == null)
@@ -198,15 +208,6 @@ public class PlayerWeaponController : MonoBehaviour
     {
         PlayerWeapon listed = catalog != null ? catalog.Get(index) : null;
         return listed != null ? listed : currentWeapon;
-    }
-
-    /// <summary>
-    /// Sets the multiplier the weapon's timeline and cooldown are divided by, from the next attack on (1 by default;
-    /// statuses will scale it).
-    /// </summary>
-    public void SetAttackSpeed(float multiplier)
-    {
-        attackSpeed = multiplier > 0f ? multiplier : 1f;
     }
 
     /// <summary>
@@ -275,8 +276,9 @@ public class PlayerWeaponController : MonoBehaviour
 
     /// <summary>
     /// Moves the running attack on to the clock's time: at contact its hit lands around the player (a melee area, or a
-    /// projectile leaving toward the target) and <see cref="AttackContacted"/> is raised; a recovery an earlier order
-    /// cut short stops showing.
+    /// projectile leaving toward the target), a client predicts its own melee hit there so its contact frame holds at
+    /// once (<see cref="AttackService.Predict"/>), and <see cref="AttackContacted"/> is raised; a recovery an earlier
+    /// order cut short stops showing.
     /// </summary>
     public void Tick()
     {
@@ -291,6 +293,11 @@ public class PlayerWeaponController : MonoBehaviour
             Vector2 position = transform.position;
             Vector2 direction = ContactDirection(currentWeapon, attack.Direction, position, attackTarget);
             Land(currentWeapon, direction, position, attackTarget);
+            if (attackService != null)
+            {
+                attackService.Predict(transform, currentWeapon, direction, position);
+            }
+
             AttackContacted?.Invoke(attack.Attack, direction, position, attackTarget);
         }
 
@@ -303,8 +310,9 @@ public class PlayerWeaponController : MonoBehaviour
     /// <summary>
     /// Plays an attack the owner started on another machine on this copy: the clip of the catalog's weapon at
     /// <paramref name="weaponIndex"/> (this copy's weapon outside the catalog) toward <paramref name="direction"/>
-    /// (down when zero) at <paramref name="speed"/>, its windup holding until the owner's contact arrives. Visual only:
-    /// no cooldown, hit or event.
+    /// (down when zero) at <paramref name="speed"/>, its windup holding until the owner's contact arrives, at most the
+    /// character's contact wait past the windup, after which the copy goes back to its locomotion (a later contact
+    /// still lands its hit). Visual only: no cooldown, hit or event.
     /// </summary>
     public void PlayRemoteAttack(int weaponIndex, int attackIndex, Vector2 direction, float speed)
     {

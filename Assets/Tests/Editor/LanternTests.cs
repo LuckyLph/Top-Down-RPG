@@ -681,7 +681,7 @@ public class LanternTests
         Camera camera = cameraObject.AddComponent<Camera>();
         camera.orthographic = true;
         FakePlayerInput input = new() { GameplayEnabled = true, LanternPressedThisFrame = true };
-        LocalPlayerCommandSource source = new(input, camera, null);
+        LocalPlayerCommandSource source = new(input, camera, null, null);
         Assert.That(source.ReadCommand().LanternPressed, Is.True);
         input.LanternPressedThisFrame = false;
         Assert.That(source.ReadCommand().LanternPressed, Is.False);

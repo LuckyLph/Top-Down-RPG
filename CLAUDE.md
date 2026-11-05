@@ -43,7 +43,7 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/LightingGaps.md` is the plan for closing the known gaps the lighting left, and the ocean's waves along coasts that run north to south: waves measured along the coast, lamps' shadows on units and props, sun shadows across a caster, light shadows at the smallest zoom, the lava glow map and the first caster's wake off the load, the night previewed in the editor, the editor's shader oddities, and a camera on the art grid. Follow it when working on those, and tick off its phase checklist as steps land.
 
-Use only art generated in this project (recipes and editor tools) or drawn by hand in Aseprite for it and imported through an Aseprite recipe (character, effect or projectile; `Docs/AsepriteCharacters.md`); import no third-party art.
+Use only art generated in this project (recipes and editor tools) or drawn in Aseprite for it, by hand or by Claude through the Aseprite MCP server (`Docs/AsepriteCharacters.md`'s Drawing with Claude), and imported through an Aseprite recipe (character, effect or projectile; `Docs/AsepriteCharacters.md`); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
 

@@ -143,43 +143,79 @@ public static class WorldCoastBake
     }
 
     /// <summary>
+    /// What a chunk's coast map is baked from, read from the world's cells (<see cref="ReadSea"/>): whether each cell of
+    /// a window around the chunk is sea, the window, and the chunk's control area, which the map covers.
+    /// </summary>
+    public sealed class ChunkSea
+    {
+        /// <summary>
+        /// The sea flags <paramref name="sea"/> of the cells of <paramref name="window"/>, row by row from the bottom,
+        /// for a map over <paramref name="control"/>.
+        /// </summary>
+        internal ChunkSea(bool[] sea, RectInt window, RectInt control)
+        {
+            Sea = sea;
+            Window = window;
+            Control = control;
+        }
+
+        public RectInt Window { get; }
+        public RectInt Control { get; }
+        public int Width => Control.width * TerrainCoastMap.TexelsPerCell;
+        public int Height => Control.height * TerrainCoastMap.TexelsPerCell;
+        internal bool[] Sea { get; }
+    }
+
+    /// <summary>
     /// The baked coast map of the chunk owning <paramref name="chunkCells"/>, whose renderer draws
     /// <paramref name="chunkMaterials"/> in <paramref name="style"/>'s order: the encoded distances (as
     /// <see cref="TerrainCoastMap"/> encodes them) over its control map, <paramref name="width"/> x
     /// <paramref name="height"/> texels, row by row from the bottom; null when neither its layers nor the ground within
-    /// its skirt show a material with waves.
+    /// its skirt show a material with waves. <see cref="ReadSea"/> then <see cref="Encode"/>.
     /// </summary>
     public static ushort[] BakeChunk(WorldCells world, TerrainStyle style, IEnumerable<TerrainMaterial> chunkMaterials, RectInt chunkCells, out int width, out int height)
     {
         RectInt control = TerrainBlendRenderer.ChunkControlArea(chunkCells, WorldChunk.SkirtCells);
         width = control.width * TerrainCoastMap.TexelsPerCell;
         height = control.height * TerrainCoastMap.TexelsPerCell;
-        if (!TryReadSea(world, style, chunkMaterials, chunkCells, out _, out RectInt window, out bool[] sea))
-        {
-            return null;
-        }
+        ChunkSea sea = ReadSea(world, style, chunkMaterials, chunkCells);
+        return sea != null ? Encode(sea) : null;
+    }
 
+    /// <summary>
+    /// The sea the coast map of the chunk owning <paramref name="chunkCells"/> is baked from (<see cref="BakeChunk"/>),
+    /// read on the main thread, since it reads the materials; null when the chunk shows no waves.
+    /// </summary>
+    public static ChunkSea ReadSea(WorldCells world, TerrainStyle style, IEnumerable<TerrainMaterial> chunkMaterials, RectInt chunkCells)
+    {
+        RectInt control = TerrainBlendRenderer.ChunkControlArea(chunkCells, WorldChunk.SkirtCells);
+        return TryReadSea(world, style, chunkMaterials, chunkCells, out _, out RectInt window, out bool[] sea) ? new ChunkSea(sea, window, control) : null;
+    }
+
+    /// <summary>
+    /// The encoded distances of the coast map baked from <paramref name="sea"/>, over its control area,
+    /// <see cref="ChunkSea.Width"/> x <see cref="ChunkSea.Height"/> texels, row by row from the bottom
+    /// (<see cref="TerrainCoastMap.ComputeFromCells"/>). It touches no Unity object, so the World Editor's bake encodes
+    /// many chunks at once on worker threads.
+    /// </summary>
+    public static ushort[] Encode(ChunkSea sea)
+    {
         TerrainCoastMap map = new("Coast bake");
-        try
+        map.ComputeFromCells(sea.Sea, sea.Window.width, sea.Window.height);
+        int width = sea.Width;
+        int height = sea.Height;
+        ushort[] encoded = new ushort[width * height];
+        int offsetX = (sea.Control.xMin - sea.Window.xMin) * TerrainCoastMap.TexelsPerCell;
+        int offsetY = (sea.Control.yMin - sea.Window.yMin) * TerrainCoastMap.TexelsPerCell;
+        for (int y = 0; y < height; y++)
         {
-            map.BuildFromCells(sea, window.width, window.height);
-            ushort[] encoded = new ushort[width * height];
-            int offsetX = (control.xMin - window.xMin) * TerrainCoastMap.TexelsPerCell;
-            int offsetY = (control.yMin - window.yMin) * TerrainCoastMap.TexelsPerCell;
-            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
             {
-                for (int x = 0; x < width; x++)
-                {
-                    encoded[y * width + x] = map.EncodedAt(offsetX + x, offsetY + y);
-                }
+                encoded[y * width + x] = map.EncodedAt(offsetX + x, offsetY + y);
             }
+        }
 
-            return encoded;
-        }
-        finally
-        {
-            map.Dispose();
-        }
+        return encoded;
     }
 
     /// <summary>

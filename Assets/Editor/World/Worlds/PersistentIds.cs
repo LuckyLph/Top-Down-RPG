@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -193,8 +193,9 @@ public static class PersistentIds
 
     /// <summary>
     /// Gives every mob spawn point of <paramref name="world"/>'s chunks its id and makes every id unique within the
-    /// world (<see cref="MakeUnique"/>), opening the chunk scenes that are not open and saving the scenes it changed.
-    /// Returns a line per object changed.
+    /// world (<see cref="MakeUnique"/>), opening the chunk scenes that are not open and saving the scenes it changed,
+    /// together (<see cref="WorldAuthoring.SaveScenes"/>): a chunk open with changes of its own that it does not change
+    /// stays unsaved. Returns a line per object changed.
     /// </summary>
     public static List<string> Repair(WorldDefinition world)
     {
@@ -209,9 +210,11 @@ public static class PersistentIds
                 roots.AddRange(scene.GetRootGameObjects());
             }
 
+            HashSet<Scene> changedScenes = new();
             foreach (PersistentId added in AddToSpawnPoints(roots))
             {
                 report.Add($"{PathOf(added)}: added a {nameof(PersistentId)}.");
+                changedScenes.Add(added.gameObject.scene);
             }
 
             List<PersistentId> ids = new();
@@ -223,15 +226,10 @@ public static class PersistentIds
             foreach (PersistentId changed in MakeUnique(ids))
             {
                 report.Add($"{PathOf(changed)}: new id {changed.Id}.");
+                changedScenes.Add(changed.gameObject.scene);
             }
 
-            foreach (Scene scene in scenes.Values)
-            {
-                if (scene.isDirty)
-                {
-                    EditorSceneManager.SaveScene(scene);
-                }
-            }
+            WorldAuthoring.SaveScenes(changedScenes.ToList());
         }
         finally
         {

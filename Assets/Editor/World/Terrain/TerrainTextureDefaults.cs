@@ -6,20 +6,40 @@ using UnityEngine;
 /// Import postprocessor for the terrain material textures under Assets/Textures/Terrain, a folder per material (written
 /// by <see cref="TerrainMaterialWriter"/>): plain textures with sRGB off (the terrain shader treats albedo bytes as sRGB
 /// itself and reads the cell fields as raw offsets), point filtering, repeat wrapping, no mipmaps, no NPOT scaling and
-/// uncompressed RGBA32, so <see cref="TerrainBlendRenderer"/> can copy them into its texture arrays as they are.
+/// uncompressed RGBA32, so <see cref="TerrainBlendRenderer"/> can copy them into its texture arrays as they are. It also
+/// gives a chunk's baked coast and glow maps their import settings (<see cref="WorldAuthoring.ApplyCoastImport"/>,
+/// <see cref="WorldAuthoring.ApplyGlowImport"/>) as they first import, so a new map imports once (Docs/WorldGeneration.md,
+/// Phase 6).
 /// </summary>
 public sealed class TerrainTextureDefaults : AssetPostprocessor
 {
     private const string TerrainTexturesRoot = "Assets/Textures/Terrain/";
 
     /// <summary>
-    /// Applies the terrain texture settings to a texture under Assets/Textures/Terrain (in any of its folders) before it
-    /// imports; other textures are left alone.
+    /// Applies the terrain texture settings to a texture under Assets/Textures/Terrain (in any of its folders), and a
+    /// baked map's to a chunk's coast or glow map, before it imports; other textures are left alone.
     /// </summary>
     private void OnPreprocessTexture()
     {
-        if (assetImporter is not TextureImporter importer
-            || !importer.assetPath.Replace('\\', '/').StartsWith(TerrainTexturesRoot, StringComparison.OrdinalIgnoreCase))
+        if (assetImporter is not TextureImporter importer)
+        {
+            return;
+        }
+
+        string path = importer.assetPath.Replace('\\', '/');
+        if (WorldAuthoring.IsCoastMapPath(path))
+        {
+            WorldAuthoring.ApplyCoastImport(importer);
+            return;
+        }
+
+        if (WorldAuthoring.IsGlowMapPath(path))
+        {
+            WorldAuthoring.ApplyGlowImport(importer);
+            return;
+        }
+
+        if (!path.StartsWith(TerrainTexturesRoot, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

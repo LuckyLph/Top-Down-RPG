@@ -119,12 +119,13 @@ public sealed class TerrainCoastMap : IDisposable
     }
 
     /// <summary>
-    /// Builds the map over a window of <paramref name="cellsWide"/> x <paramref name="cellsHigh"/> cells from
-    /// <paramref name="seaCells"/>, a flag per cell, row by row from the bottom, telling whether the cell is the sea's
-    /// (as <see cref="Build"/> decides it from a control map), and uploads it. The editor's coast bake builds a chunk's
-    /// map this way from the cells of the whole world around it.
+    /// Works the map's distances out over a window of <paramref name="cellsWide"/> x <paramref name="cellsHigh"/> cells
+    /// from <paramref name="seaCells"/>, a flag per cell, row by row from the bottom, telling whether the cell is the
+    /// sea's (as <see cref="Build"/> decides it from a control map), without a texture: <see cref="EncodedAt"/> reads
+    /// them. It touches no Unity object, so it runs on any thread: the editor's coast bake works out many chunks' maps at
+    /// once this way, from the cells of the whole world around each.
     /// </summary>
-    public void BuildFromCells(bool[] seaCells, int cellsWide, int cellsHigh)
+    public void ComputeFromCells(bool[] seaCells, int cellsWide, int cellsHigh)
     {
         if (seaCells == null || seaCells.Length != cellsWide * cellsHigh || cellsWide <= 0 || cellsHigh <= 0)
         {
@@ -133,7 +134,7 @@ public sealed class TerrainCoastMap : IDisposable
 
         int width = cellsWide * TexelsPerCell;
         int height = cellsHigh * TexelsPerCell;
-        Prepare(width, height);
+        PrepareBuffers(width, height);
         for (int cy = 0; cy < cellsHigh; cy++)
         {
             for (int cx = 0; cx < cellsWide; cx++)
@@ -151,7 +152,6 @@ public sealed class TerrainCoastMap : IDisposable
         }
 
         Compute(width, height);
-        Upload();
     }
 
     /// <summary>
@@ -319,20 +319,7 @@ public sealed class TerrainCoastMap : IDisposable
     /// </summary>
     private void Prepare(int width, int height)
     {
-        int count = width * height;
-        if (sea.Length != count || width != builtWidth)
-        {
-            built = false;
-            builtWidth = width;
-            sea = new bool[count];
-            toLand = new float[count];
-            toSea = new float[count];
-            signed = new float[count];
-            near = new float[count];
-            far = new float[count];
-            encoded = new ushort[count];
-        }
-
+        PrepareBuffers(width, height);
         if (texture == null)
         {
             texture = new Texture2D(width, height, TextureFormat.R16, false, true)
@@ -346,6 +333,27 @@ public sealed class TerrainCoastMap : IDisposable
         else if (texture.width != width || texture.height != height)
         {
             texture.Reinitialize(width, height);
+        }
+    }
+
+    /// <summary>
+    /// Sizes the buffers for <paramref name="width"/> x <paramref name="height"/> texels, forgetting the last build when
+    /// the size changed.
+    /// </summary>
+    private void PrepareBuffers(int width, int height)
+    {
+        int count = width * height;
+        if (sea.Length != count || width != builtWidth)
+        {
+            built = false;
+            builtWidth = width;
+            sea = new bool[count];
+            toLand = new float[count];
+            toSea = new float[count];
+            signed = new float[count];
+            near = new float[count];
+            far = new float[count];
+            encoded = new ushort[count];
         }
     }
 

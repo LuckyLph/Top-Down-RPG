@@ -80,10 +80,10 @@ internal sealed class ChunkContent
 
     /// <summary>
     /// What the chunk at <paramref name="coords"/> of <paramref name="composition"/> holds: its cells' materials and
-    /// raised ground, and its mobs and props in the composition's order, each prop where the writer stands its root
-    /// (<see cref="RootOf"/>).
+    /// raised ground, and those of <paramref name="mobs"/> and <paramref name="props"/>, in the composition's order,
+    /// that stand in it, each prop where the writer stands its root (<see cref="RootOf"/>).
     /// </summary>
-    public static ChunkContent Of(WorldComposition composition, Vector2Int coords)
+    public static ChunkContent Of(WorldComposition composition, Vector2Int coords, IReadOnlyList<WorldComposition.Mob> mobs, IReadOnlyList<WorldComposition.Prop> props)
     {
         ChunkContent content = new(coords, composition.LayerOrder);
         RectInt bounds = content.bounds;
@@ -95,7 +95,7 @@ internal sealed class ChunkContent
             System.Array.Copy(composition.raised, from, content.raised, y * bounds.width, bounds.width);
         }
 
-        foreach (WorldComposition.Mob mob in composition.Mobs)
+        foreach (WorldComposition.Mob mob in mobs)
         {
             if (bounds.Contains(mob.Cell))
             {
@@ -103,7 +103,7 @@ internal sealed class ChunkContent
             }
         }
 
-        foreach (WorldComposition.Prop prop in composition.Props)
+        foreach (WorldComposition.Prop prop in props)
         {
             if (prop.Chunk == coords)
             {

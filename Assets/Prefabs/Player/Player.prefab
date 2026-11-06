@@ -83,7 +83,7 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -619266322, guid: 44bb417b5df3e4a4091e5bdaa774c43f, type: 3}
+  m_Sprite: {fileID: -163361677, guid: f2bae3c1ab7add84c9eff10b5fba3d51, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4595abe46f241f479526a931647ca80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterVisuals
-  animationSet: {fileID: 11400000, guid: 656e3283d7a07964aba0f7374ac4c8ab, type: 2}
+  animationSet: {fileID: 11400000, guid: d5b69de39a2ec284593e26947b1f2a0b, type: 2}
   locomotion: {fileID: 11400000, guid: 86aaee91046a71447b615c29f8ebb254, type: 2}
   castLight: {fileID: 2376058982685350865}
   castLightIntensity: 1.2
@@ -364,7 +364,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd3c4c24e61eb8f47ab84147146e653b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::DamageReceiver
-  floatingTextOffset: {x: 0, y: 1.75, z: 0}
+  floatingTextOffset: {x: 0, y: 1.56, z: 0}
   profile: {fileID: 11400000, guid: 4527aaea3c0101a488f29fad4d7aa09b, type: 2}
 --- !u!114 &7019887641318625157
 MonoBehaviour:
@@ -591,7 +591,7 @@ MonoBehaviour:
   visuals: {fileID: 4281714967186475612}
   characterVisuals: {fileID: 4451734619522619835}
   bodyCollider: {fileID: 8749192272689423348}
-  impactHeight: 0.7
+  impactHeight: 0.62
 --- !u!114 &3243973846254597510
 MonoBehaviour:
   m_ObjectHideFlags: 0

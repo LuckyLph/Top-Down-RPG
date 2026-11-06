@@ -172,6 +172,22 @@ MonoBehaviour:
   - frame: 5
     kind: 0
     size: 1
+    hands: 0
   - frame: 6
     kind: 0
     size: 1.6
+    hands: 0
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0
+  posedOn: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}

@@ -14,7 +14,7 @@ public class WeaponCatalogTests
 {
     private const string CatalogPath = "Assets/Data/Weapons/WeaponCatalog.asset";
     private const string PlayerPrefabPath = "Assets/Prefabs/Player/Player.prefab";
-    private const string AnimationSetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string AnimationSetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
 
     private readonly List<Object> created = new();
 
@@ -82,10 +82,10 @@ public class WeaponCatalogTests
     }
 
     /// <summary>
-    /// Every catalog weapon plays a clip of the rogue's set that has a contact frame and draws a weapon, has its own
-    /// generated HUD icon and two abilities no other weapon has, and a timeline that fills its cooldown at most. The
-    /// greatsword is melee with a wider and deeper area than the sword; the longbow fires a homing projectile that
-    /// flies past its attack range, with its arrow's visual.
+    /// Every catalog weapon plays a clip of the adventurer's set (the player's default look) that has a contact frame
+    /// and draws a weapon, has its own generated HUD icon and two abilities no other weapon has, and a timeline that
+    /// fills its cooldown at most. The greatsword is melee with a wider and deeper area than the sword; the longbow fires
+    /// a homing projectile that flies past its attack range, with its arrow's visual.
     /// </summary>
     [Test]
     public void EveryCatalogWeapon_HasItsClipIconAbilitiesAndHit()

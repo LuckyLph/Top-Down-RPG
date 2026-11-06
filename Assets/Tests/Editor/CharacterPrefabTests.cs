@@ -7,21 +7,21 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Tests for how the player and the Weasel prefabs are drawn and sorted (Docs/Animation.md, Rules), on the project's
-/// prefabs and assets, which they only read: the player draws the rogue's baked set from its feet with no Mecanim
+/// prefabs and assets, which they only read: the player draws the adventurer's baked set from its feet with no Mecanim
 /// animator, and its weapon plays on those visuals; the sword's hit area is centred half a unit above the feet; the
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
 /// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
-/// casts; its look comes from the project's catalog, whose first look is the rogue it is drawn as and whose every look
-/// holds every clip it plays, standing, walking and running clips included; the player and the Weasel sort as a group at
-/// their feet, the Weasel's bar apart from it over every unit; the Weasels draw the Weasel's baked set from their feet with no
-/// Mecanim animator, their config's attack clip in it.
+/// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
+/// from it, and whose every look holds every clip it plays, standing, walking and running clips included; the player and
+/// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
+/// Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
 /// </summary>
 public class CharacterPrefabTests
 {
     private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
-    private const string SetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string SetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
     private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
@@ -51,10 +51,10 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The player's look draws on its visuals from the project's catalog of looks, whose first, the rogue, is the set and
-    /// locomotion the prefab is drawn with; every look of it holds a complete clip for every clip the player plays (its
-    /// class's and weapons' casts and its weapons' attacks) and complete standing, walking and running clips, at 32
-    /// pixels per unit and pivoted on the feet, with locomotion settings.
+    /// The player's look draws on its visuals from the project's catalog of looks, whose first, the adventurer, is the set
+    /// and locomotion the prefab is drawn with, the rogue no longer one of them; every look of it holds a complete clip
+    /// for every clip the player plays (its class's and weapons' casts and its weapons' attacks) and complete standing,
+    /// walking and running clips, at 32 pixels per unit and pivoted on the feet, with locomotion settings.
     /// </summary>
     [Test]
     public void ThePlayersLooks_HoldEveryClipItPlays()
@@ -68,6 +68,8 @@ public class CharacterPrefabTests
         Assert.That(serialized.FindProperty("catalog").objectReferenceValue, Is.EqualTo(looks));
         Assert.That(serialized.FindProperty("visuals").objectReferenceValue, Is.EqualTo(visuals));
         Assert.That(looks.Count, Is.GreaterThanOrEqualTo(2));
+        Assert.That(looks.Get(0).Name, Is.EqualTo("Adventurer"));
+        Assert.That(looks.IndexOf("Rogue"), Is.EqualTo(-1), "The rogue is retired.");
         Assert.That(looks.Get(0).AnimationSet, Is.EqualTo(visuals.AnimationSet), "The first look is the prefab's own.");
         Assert.That(looks.Get(0).Locomotion, Is.EqualTo(visuals.Locomotion));
 
@@ -98,14 +100,14 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the rogue's set through
+    /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the adventurer's set through
     /// <see cref="CharacterVisuals"/> (which its motor feeds) with a sprite pivoted on the feet; nothing in the prefab
     /// is a Mecanim animator; its sorter sorts by the root, the feet, so a hit's nudge of the sprite never re-sorts it;
     /// the feet collider on the root starts within a pixel of the feet and lies within the sprite's width; and neither
     /// the player nor the arrow it shoots is scaled, so their pixels are the terrain's.
     /// </summary>
     [Test]
-    public void ThePlayer_DrawsTheRogueFromItsFeet()
+    public void ThePlayer_DrawsTheAdventurerFromItsFeet()
     {
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
@@ -146,10 +148,10 @@ public class CharacterPrefabTests
 
     /// <summary>
     /// The player plays its casts on its visuals (<see cref="PlayerCastVisuals"/>, wired to its abilities and visuals),
-    /// and every ability of its class and of every catalog weapon names a cast clip in the rogue's set with a release
-    /// frame, released 60 ms and followed through for 0.24 s (the instant Leap's flourish 0.3 s); the Continue casts
-    /// (Smite and Whirl) also name their clip over the run, eight run frames under the same cast frames and release, and
-    /// the others none; only Smite, the one cast over 0.5 s, channels.
+    /// and every ability of its class and of every catalog weapon names a cast clip in the adventurer's set with a
+    /// release frame, released 60 ms and followed through for 0.24 s (the instant Leap's flourish 0.3 s); the Continue
+    /// casts (Smite and Whirl) also name their clip over the run, eight run frames under the same cast frames and
+    /// release, and the others none; only Smite, the one cast over 0.5 s, channels.
     /// </summary>
     [Test]
     public void ThePlayer_PlaysEveryAbilitysCastClip()
@@ -217,12 +219,11 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The sword's attack is in the rogue's set with the contact frame its motion keys (frame 4, after a windup of frames
-    /// 0 to 3), and the set holds no carried clips: the weapons only show in their attacks and their own casts, never
-    /// standing or moving. The attack's 80 px
-    /// frames pivot on the feet like the 64 px locomotion frames: in every direction the first attack frame and the first
-    /// idle frame put the top of the hood at the same height above the feet and the boots within a pixel of each other
-    /// (the sword's own pixels left out, since its first frame holds it low).
+    /// The sword's attack is in the adventurer's set with the contact frame its motion keys (frame 4, after a windup of
+    /// frames 0 to 3), and the set holds no carried clips: the weapons only show in their attacks and their own casts,
+    /// never standing or moving. The attack's 80 px frames pivot on the feet like the 64 px locomotion frames: in every
+    /// direction the first attack frame and the first idle frame put the top of the head and the boots within a pixel of
+    /// each other above the feet (the sword's own pixels left out, since its first frame holds it low).
     /// </summary>
     [Test]
     public void TheSwordsClips_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
@@ -252,16 +253,16 @@ public class CharacterPrefabTests
             OpaqueRows(attackSheet, attackFrame, swordColours, out int attackBottom, out int attackTop);
             OpaqueRows(idleSheet, idleFrame, swordColours, out int idleBottom, out int idleTop);
             string name = CharacterDirections.Name(direction);
-            Assert.That(attackTop, Is.EqualTo(idleTop), $"{name}: the hood's top.");
+            Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(1), $"{name}: the head's top.");
             Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(1), $"{name}: the boots.");
         }
     }
 
     /// <summary>
     /// The greatsword's and the longbow's attacks (contact frame 5 each) start where the character stands: in every
-    /// direction their first frame (96 and 80 px, pivoted on the feet) puts the top of the hood within a pixel of the
-    /// idle's and the boots within two, the weapon's own pixels left out. The greatsword's first pose bends its knees,
-    /// sitting the hood a pixel lower in most directions.
+    /// direction their first frame (96 and 80 px, pivoted on the feet) puts the top of the head within a pixel of the
+    /// idle's (the greatsword's within two, its first pose bending its knees) and the boots within two, the weapon's own
+    /// pixels left out.
     /// </summary>
     [Test]
     public void TheGreatswordAndBowAttacks_LineUpWithTheLocomotionAtTheFeet()
@@ -272,6 +273,7 @@ public class CharacterPrefabTests
         string[] weapons = { "Greatsword", "Longbow" };
         string[] arts = { "WeaponArt_Greatsword", "WeaponArt_Bow" };
         float[] sizes = { 96f, 80f };
+        int[] headDrops = { 2, 1 };
         for (int w = 0; w < weapons.Length; w++)
         {
             PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
@@ -287,14 +289,14 @@ public class CharacterPrefabTests
                 OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
                 OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
                 string name = $"{weapons[w]} {CharacterDirections.Name(direction)}";
-                Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(1), $"{name}: the hood's top.");
+                Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(headDrops[w]), $"{name}: the head's top.");
                 Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
             }
         }
     }
 
     /// <summary>
-    /// At the player's base move speed, and slowed by Chill, the player's locomotion settings pick the rogue's run and
+    /// At the player's base move speed, and slowed by Chill, the player's locomotion settings pick the adventurer's run and
     /// play it at speed over its natural speed without clamping, so its feet keep up going east or west.
     /// </summary>
     [Test]

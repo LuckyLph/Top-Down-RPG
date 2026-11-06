@@ -6,8 +6,8 @@ using UnityEngine;
 
 /// <summary>
 /// Inspector of every kind of <see cref="PropRecipe"/>: its settings, then every variant baked on a strip of each
-/// preview terrain (its albedo tiled at one texel a pixel, the variants and the rogue's idle frame facing south for
-/// scale, all at the worlds' 0.85 light, without the sun's shadows), each footprint centred on its cells as the placement tool
+/// preview terrain (its albedo tiled at one texel a pixel, the variants and the player's idle frame (the adventurer's)
+/// facing south for scale, all at the worlds' 0.85 light, without the sun's shadows), each footprint centred on its cells as the placement tool
 /// snaps it; at 1x, and at 3x (shrunk to fit) with the cells drawn faintly, the cells each footprint blocks and the
 /// footprint itself. The strips are baked again when the recipe changes (its serialized settings are compared on each
 /// layout). Below them: each variant's size and footprint, the bake time, why the recipe cannot be written if it cannot,
@@ -19,10 +19,10 @@ public sealed class PropRecipeEditor : Editor
     private const float WorldLight = 0.85f;
     private const int Cell = PropBaker.PixelsPerCell;
     private const int Zoom = 3;
-    private const int RogueCells = 2;
-    private const int RogueFeet = 8;
-    private const string RogueSheet = "Assets/Sprites/Characters/Rogue/Rogue_Idle.png";
-    private const string RogueSlice = "Rogue_Idle_S_0";
+    private const int PlayerCells = 2;
+    private const int PlayerFeet = 8;
+    private const string PlayerSheet = "Assets/Sprites/Characters/Adventurer/Adventurer_Idle.png";
+    private const string PlayerSlice = "Adventurer_Idle_S_0";
     private static readonly Color32 BareGround = new(70, 104, 52, 255);
     private static readonly Color GridColour = new(1f, 1f, 1f, 0.2f);
     private static readonly Color CellsColour = new(1f, 0.82f, 0.24f, 0.9f);
@@ -142,7 +142,7 @@ public sealed class PropRecipeEditor : Editor
     }
 
     /// <summary>
-    /// Lays the variants and the rogue on a strip of <paramref name="terrain"/>'s albedo (bare ground without one).
+    /// Lays the variants and the player on a strip of <paramref name="terrain"/>'s albedo (bare ground without one).
     /// </summary>
     private Strip Compose(PropRecipe recipe, TerrainMaterial terrain)
     {
@@ -174,7 +174,7 @@ public sealed class PropRecipeEditor : Editor
             top = Mathf.Max(top, at.y - basePixel.y + frame.y);
         }
 
-        int width = (2 + variants.Count * slot + RogueCells) * Cell;
+        int width = (2 + variants.Count * slot + PlayerCells) * Cell;
         int height = (top + Cell - 1) / Cell * Cell;
         Color32[] pixels = Ground(terrain, width, height);
         for (int i = 0; i < variants.Count; i++)
@@ -182,7 +182,7 @@ public sealed class PropRecipeEditor : Editor
             Blend(pixels, width, height, variants[i].Pixels, frame, bases[i] - basePixel);
         }
 
-        DrawRogue(pixels, width, height, new Vector2Int((1 + variants.Count * slot) * Cell + RogueCells * Cell / 2, Cell + RogueFeet));
+        DrawPlayer(pixels, width, height, new Vector2Int((1 + variants.Count * slot) * Cell + PlayerCells * Cell / 2, Cell + PlayerFeet));
         strip.Texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, hideFlags = HideFlags.HideAndDontSave };
         strip.Texture.SetPixels32(pixels);
         strip.Texture.Apply();
@@ -208,24 +208,24 @@ public sealed class PropRecipeEditor : Editor
     }
 
     /// <summary>
-    /// Draws the rogue's idle frame facing south with its feet on <paramref name="feet"/>.
+    /// Draws the player's idle frame facing south with its feet on <paramref name="feet"/>.
     /// </summary>
-    private void DrawRogue(Color32[] pixels, int width, int height, Vector2Int feet)
+    private void DrawPlayer(Color32[] pixels, int width, int height, Vector2Int feet)
     {
-        if (!SpriteSheetFiles.SpritesByName(RogueSheet).TryGetValue(RogueSlice, out Sprite rogue))
+        if (!SpriteSheetFiles.SpritesByName(PlayerSheet).TryGetValue(PlayerSlice, out Sprite player))
         {
             return;
         }
 
-        Picture sheet = PictureAt(RogueSheet);
-        RectInt rect = new((int)rogue.rect.x, (int)rogue.rect.y, (int)rogue.rect.width, (int)rogue.rect.height);
+        Picture sheet = PictureAt(PlayerSheet);
+        RectInt rect = new((int)player.rect.x, (int)player.rect.y, (int)player.rect.width, (int)player.rect.height);
         Color32[] frame = new Color32[rect.width * rect.height];
         for (int y = 0; y < rect.height; y++)
         {
             System.Array.Copy(sheet.Pixels, (rect.y + y) * sheet.Width + rect.x, frame, y * rect.width, rect.width);
         }
 
-        Vector2Int pivot = new(Mathf.RoundToInt(rogue.pivot.x), Mathf.RoundToInt(rogue.pivot.y));
+        Vector2Int pivot = new(Mathf.RoundToInt(player.pivot.x), Mathf.RoundToInt(player.pivot.y));
         Blend(pixels, width, height, frame, new Vector2Int(rect.width, rect.height), feet - pivot);
     }
 

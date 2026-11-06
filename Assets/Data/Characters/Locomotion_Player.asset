@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Locomotion_Player
   m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterLocomotionSettings
   walkFrom: 0.1
-  runFrom: 2.4
+  runFrom: 1.7
   sprintFrom: 5.6
   gaitHysteresis: 0.08
   minRate: 0.5
-  maxRate: 1.5
+  maxRate: 1.8
   directionMargin: 8
   contactWaitSeconds: 0.25

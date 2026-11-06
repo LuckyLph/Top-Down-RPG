@@ -82,7 +82,7 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// The Look row shows the look the local settings name (the first, the rogue, by default); its button keeps the
+    /// The Look row shows the look the local settings name (the first, the adventurer, by default); its button keeps the
     /// project's next look in the settings, after the last the first again, and its reset the first; the row follows a
     /// change made elsewhere.
     /// </summary>
@@ -91,20 +91,20 @@ public class OptionsMenuControllerTests : InputTestFixture
     {
         KeyBindingRowView row = controller.LookRow;
         Assert.That(row.Label.text, Is.EqualTo(OptionsMenuController.LookLabel));
-        Assert.That(row.BindingText.text, Is.EqualTo("Rogue"));
+        Assert.That(row.BindingText.text, Is.EqualTo("Adventurer"));
 
         controller.Open(null);
         row.BindingButton.onClick.Invoke();
         Assert.That(settings.CharacterLook, Is.EqualTo("Bandit"));
         Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
         row.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterLook, Is.EqualTo("Rogue"), "After the last look, the first.");
+        Assert.That(settings.CharacterLook, Is.EqualTo("Adventurer"), "After the last look, the first.");
 
         settings.SetCharacterLook("Bandit");
         Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
         row.ResetButton.onClick.Invoke();
-        Assert.That(settings.CharacterLook, Is.EqualTo("Rogue"));
-        Assert.That(row.BindingText.text, Is.EqualTo("Rogue"));
+        Assert.That(settings.CharacterLook, Is.EqualTo("Adventurer"));
+        Assert.That(row.BindingText.text, Is.EqualTo("Adventurer"));
     }
 
     /// <summary>

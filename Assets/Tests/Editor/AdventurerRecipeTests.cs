@@ -5,18 +5,18 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phase 0), on the
-/// project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
+/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 and 1), on
+/// the project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
 /// standing adventurer is its target height; its face shows both eyes, their glints, the brows and the mouth from the
 /// front, one eye in profile and nothing from behind; its ears show beside the head; its locks grow the hair past the
-/// head's ball from the front and in profile; and the outfit's options (short sleeves, gloves, the satchel's strap, the skirt) draw as the recipe sets
-/// them.
+/// head's ball from the front and in profile; the outfit's options (short sleeves, gloves, the satchel's strap, the
+/// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the rogue's attacks and
+/// casts fit its body; and the project's sheets and animation set are what the recipe bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Adventurer.asset";
-    private const string IdlePath = "Assets/Settings/Characters/Motions/Motion_Idle.asset";
-    private const string WalkPath = "Assets/Settings/Characters/Motions/Motion_Walk.asset";
+    private const string RoguePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
     private const int East = 0;
     private const int North = 2;
     private const int South = 6;
@@ -26,9 +26,15 @@ public class AdventurerRecipeTests
     private CharacterBaker baker;
     private CharacterClip idle;
     private CharacterClip walk;
+    private Dictionary<string, CharacterSheet> sheets;
 
     /// <summary>
-    /// Loads the project's adventurer recipe and the idle and walk it is drawn with.
+    /// Every clip of the recipe baked once, on first use.
+    /// </summary>
+    private Dictionary<string, CharacterSheet> Sheets => sheets ??= recipe.Clips.ToDictionary(clip => clip.Name, baker.Bake);
+
+    /// <summary>
+    /// Loads the project's adventurer recipe and its idle and walk.
     /// </summary>
     [OneTimeSetUp]
     public void OneTimeSetUp()
@@ -36,8 +42,10 @@ public class AdventurerRecipeTests
         recipe = AssetDatabase.LoadAssetAtPath<AdventurerRecipe>(RecipePath);
         Assert.That(recipe, Is.Not.Null);
         baker = new CharacterBaker(recipe);
-        idle = Clip("Idle", IdlePath);
-        walk = Clip("Walk", WalkPath);
+        idle = recipe.Clips.FirstOrDefault(clip => clip.Name == "Idle");
+        walk = recipe.Clips.FirstOrDefault(clip => clip.Name == "Walk");
+        Assert.That(idle, Is.Not.Null);
+        Assert.That(walk, Is.Not.Null);
     }
 
     /// <summary>
@@ -165,13 +173,87 @@ public class AdventurerRecipeTests
     }
 
     /// <summary>
-    /// A clip of the motion at <paramref name="path"/> in the gaits' 64 px frame with the feet on (32, 12).
+    /// Every clip's sheet has a row per direction of its frames, and no frame is drawn to its edge.
     /// </summary>
-    private static CharacterClip Clip(string name, string path)
+    [Test]
+    public void EveryClip_HasARowPerDirection_AndFitsItsFrames()
     {
-        CharacterMotion motion = AssetDatabase.LoadAssetAtPath<CharacterMotion>(path);
-        Assert.That(motion, Is.Not.Null, path);
-        return new CharacterClip(name, motion, null, new Vector2Int(64, 64), new Vector2Int(32, 12));
+        Assert.That(recipe.CanGenerate(out string problem), Is.True, problem);
+        foreach (CharacterClip clip in recipe.Clips)
+        {
+            CharacterSheet sheet = Sheets[clip.Name];
+            Assert.That(sheet.Height, Is.EqualTo(CharacterDirections.Count * clip.FrameSize.y), clip.Name);
+            Assert.That(sheet.Width, Is.EqualTo(clip.Motion.FrameCount * clip.FrameSize.x), clip.Name);
+            Assert.That(sheet.FramesAtEdge, Is.Empty, clip.Name);
+        }
+    }
+
+    /// <summary>
+    /// The rogue's attacks and casts, keyed on the rogue's body, fit the adventurer's (<see cref="KeyedMotion.FitToBody"/>):
+    /// in every frame the pelvis's height over the ankles and each foot's height over them are the same share of the
+    /// legs' length, so a planted foot stays on the ground, and each hand is as far from its shoulder in arm lengths as on
+    /// the rogue. On a copy of the rogue's body nothing changes.
+    /// </summary>
+    [Test]
+    public void TheRoguesKeyedMotions_FitTheAdventurersBody()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
+        CharacterRecipe rogueCopy = Object.Instantiate(rogue);
+        created.Add(rogueCopy);
+        float legs = (recipe.Thigh + recipe.Shin) / (rogue.Thigh + rogue.Shin);
+        float rogueArm = rogue.UpperArm + rogue.Forearm;
+        float arm = recipe.UpperArm + recipe.Forearm;
+        int motions = 0;
+        foreach (CharacterClip clip in recipe.Clips)
+        {
+            if (clip.Motion is not KeyedMotion motion)
+            {
+                continue;
+            }
+
+            motions++;
+            Assert.That(motion.PosedOn, Is.EqualTo(rogue), clip.Name);
+            for (int frame = 0; frame < motion.FrameCount; frame++)
+            {
+                string name = $"{clip.Name} {frame}";
+                CharacterPose keyed = motion.PoseAt(frame, rogue, clip.Weapon);
+                CharacterPose fitted = motion.PoseAt(frame, recipe, clip.Weapon);
+                CharacterPose onCopy = motion.PoseAt(frame, rogueCopy, clip.Weapon);
+                Assert.That(onCopy.PelvisHeight, Is.EqualTo(keyed.PelvisHeight), name);
+                Assert.That(onCopy.LeftHand, Is.EqualTo(keyed.LeftHand), name);
+                Assert.That(onCopy.RightFoot, Is.EqualTo(keyed.RightFoot), name);
+
+                Assert.That(fitted.PelvisHeight - recipe.Ankle, Is.EqualTo((keyed.PelvisHeight - rogue.Ankle) * legs).Within(1e-4f), name);
+                Assert.That(fitted.LeftFoot.z - recipe.Ankle, Is.EqualTo((keyed.LeftFoot.z - rogue.Ankle) * legs).Within(1e-4f), name);
+                Assert.That(fitted.RightFoot.z - recipe.Ankle, Is.EqualTo((keyed.RightFoot.z - rogue.Ankle) * legs).Within(1e-4f), name);
+                CharacterJoints keyedJoints = CharacterRig.Solve(rogue, keyed, clip.Weapon);
+                CharacterJoints fittedJoints = CharacterRig.Solve(recipe, fitted, clip.Weapon);
+                Assert.That(Vector3.Distance(fitted.LeftHand, fittedJoints.LeftShoulder) / arm, Is.EqualTo(Vector3.Distance(keyed.LeftHand, keyedJoints.LeftShoulder) / rogueArm).Within(1e-4f), name);
+                Assert.That(Vector3.Distance(fitted.RightHand, fittedJoints.RightShoulder) / arm, Is.EqualTo(Vector3.Distance(keyed.RightHand, keyedJoints.RightShoulder) / rogueArm).Within(1e-4f), name);
+            }
+        }
+
+        Assert.That(motions, Is.EqualTo(13), "The weapons' attacks and the standing casts.");
+    }
+
+    /// <summary>
+    /// Each of the project's adventurer sheets is what the recipe bakes, sliced per direction and frame at 32 pixels per
+    /// unit with its pivot on the feet (<see cref="CharacterSheetAssert.SheetsAreWhatTheRecipeBakes"/>).
+    /// </summary>
+    [Test]
+    public void TheProjectsSheets_AreWhatTheRecipeBakes_SlicedPerDirectionAndFrame()
+    {
+        CharacterSheetAssert.SheetsAreWhatTheRecipeBakes(recipe, Sheets);
+    }
+
+    /// <summary>
+    /// The project's adventurer animation set holds every clip the recipe bakes, in order
+    /// (<see cref="CharacterSheetAssert.SetHoldsWhatTheRecipeBakes"/>).
+    /// </summary>
+    [Test]
+    public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
+    {
+        CharacterSheetAssert.SetHoldsWhatTheRecipeBakes(recipe, baker);
     }
 
     /// <summary>

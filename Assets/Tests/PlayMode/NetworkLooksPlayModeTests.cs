@@ -7,14 +7,14 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for players' looks online (Docs/AsepriteCharacters.md, Phase 2) between a host and an in-process
-/// client: a client choosing the Bandit in its settings reaches the host's copy of its player, and back to the rogue;
+/// client: a client choosing the Bandit in its settings reaches the host's copy of its player, and back to the adventurer;
 /// and a client joining after the host chose the Bandit sees the host's player as the Bandit from its spawn, its attacks
 /// playing the Bandit's clip.
 /// </summary>
 public class NetworkLooksPlayModeTests
 {
     private const string Bandit = "Bandit";
-    private const string Rogue = "Rogue";
+    private const string Adventurer = "Adventurer";
 
     private InProcessClient client;
 
@@ -30,7 +30,7 @@ public class NetworkLooksPlayModeTests
 
     /// <summary>
     /// The client's own player draws the Bandit as soon as the client's settings choose it, and the host's copy of it
-    /// follows; choosing the rogue again brings both back.
+    /// follows; choosing the adventurer again brings both back.
     /// </summary>
     [UnityTest]
     public IEnumerator AClientsLook_ReachesTheHostsCopy()
@@ -42,17 +42,17 @@ public class NetworkLooksPlayModeTests
         PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(gameplay.Resolve<PlayerRegistry>(), client.Manager.LocalClientId);
         CharacterVisuals ownVisuals = clientOwned.GetComponentInChildren<CharacterVisuals>();
         CharacterVisuals copyVisuals = hostCopy.GetComponentInChildren<CharacterVisuals>();
-        CharacterAnimationSet rogueSet = SetOf(clientOwned, Rogue);
+        CharacterAnimationSet adventurerSet = SetOf(clientOwned, Adventurer);
         CharacterAnimationSet banditSet = SetOf(clientOwned, Bandit);
-        Assert.That(copyVisuals.AnimationSet, Is.EqualTo(rogueSet));
+        Assert.That(copyVisuals.AnimationSet, Is.EqualTo(adventurerSet));
 
         client.Resolve<UserSettings>().SetCharacterLook(Bandit);
         Assert.That(ownVisuals.AnimationSet, Is.EqualTo(banditSet), "The client's own player changes at once.");
         yield return SceneBootTestHelper.WaitUntil(() => copyVisuals.AnimationSet == banditSet, "the host's copy to draw the client's Bandit");
 
-        client.Resolve<UserSettings>().SetCharacterLook(Rogue);
-        yield return SceneBootTestHelper.WaitUntil(() => copyVisuals.AnimationSet == rogueSet, "the host's copy to draw the rogue again");
-        Assert.That(ownVisuals.AnimationSet, Is.EqualTo(rogueSet));
+        client.Resolve<UserSettings>().SetCharacterLook(Adventurer);
+        yield return SceneBootTestHelper.WaitUntil(() => copyVisuals.AnimationSet == adventurerSet, "the host's copy to draw the adventurer again");
+        Assert.That(ownVisuals.AnimationSet, Is.EqualTo(adventurerSet));
     }
 
     /// <summary>

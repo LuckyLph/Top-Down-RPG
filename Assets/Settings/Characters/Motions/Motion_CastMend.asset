@@ -161,3 +161,4 @@ MonoBehaviour:
     light:
       serializedVersion: 2
       rgba: 4293328895
+  posedOn: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}

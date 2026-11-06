@@ -2,10 +2,11 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Every look a player can be drawn with (Docs/AsepriteCharacters.md, Phase 2), in a fixed order: a name, the animation
-/// set it draws, baked or imported from Aseprite, and the locomotion settings its gaits play at. A look is identified on
-/// the wire by its index here, as a weapon is by its catalog index, and in the local settings by its name. Append
-/// looks; never reorder them.
+/// Every look a player can be drawn with (Docs/AsepriteCharacters.md, Phase 2), in a fixed order, the first the default:
+/// a name, the animation set it draws, baked or imported from Aseprite, and the locomotion settings its gaits play at. A
+/// look is identified on the wire by its index here, as a weapon is by its catalog index, safe since join approval
+/// refuses other build versions, and in the local settings by its name, so a removed look's name falls back to the
+/// first.
 /// </summary>
 [CreateAssetMenu(fileName = "CharacterLooks", menuName = "TopDownRPG/Characters/Look Catalog")]
 public sealed class CharacterLookCatalog : ScriptableObject

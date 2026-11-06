@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: CharacterLooks
   m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterLookCatalog
   looks:
-  - name: Rogue
-    animationSet: {fileID: 11400000, guid: 656e3283d7a07964aba0f7374ac4c8ab, type: 2}
+  - name: Adventurer
+    animationSet: {fileID: 11400000, guid: d5b69de39a2ec284593e26947b1f2a0b, type: 2}
     locomotion: {fileID: 11400000, guid: 86aaee91046a71447b615c29f8ebb254, type: 2}
   - name: Bandit
     animationSet: {fileID: 11400000, guid: 92e325c28b41a9f4ab250f72efb95fd3, type: 2}
-    locomotion: {fileID: 11400000, guid: 86aaee91046a71447b615c29f8ebb254, type: 2}
+    locomotion: {fileID: 11400000, guid: 8aa94afc39fe06f4a8d594de0db6ba1d, type: 2}

@@ -7,7 +7,7 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for the player's character animation in Testlands, driven by scripted commands: its sprite comes
-/// from the rogue's baked set and follows the speed it moves at (idle standing, the run at its base speed and chilled,
+/// from the adventurer's baked set and follows the speed it moves at (idle standing, the run at its base speed and chilled,
 /// the walk under a heavy slow, the sprint under a haste) and the direction it faces; a cast plays its clip and shows
 /// its release frame on the frame its effect resolves; a Continue cast while running keeps the legs running; and a stun
 /// mid-cast stops the cast's clip.

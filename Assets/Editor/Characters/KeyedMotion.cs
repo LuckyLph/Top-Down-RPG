@@ -8,7 +8,8 @@ using UnityEngine;
 /// time, sampled <see cref="smearSamples"/> times) and effects, among them a cast's light in the motion's light colours.
 /// The contact frame is when the attack lands or the cast releases; the runtime pins it to the moment the hit resolves
 /// or the cast completes. Frame durations pace the inspector's preview and keep each phase's proportions: the runtime
-/// stretches each phase to its timeline (a channelling cast plays its gather at their pace).
+/// stretches each phase to its timeline (a channelling cast plays its gather at their pace). The keys are posed on one
+/// body (<see cref="PosedOn"/>); baked on another, each pose is fitted to it (<see cref="FitToBody"/>).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Keyed Motion", fileName = "Motion_Keyed")]
 public sealed class KeyedMotion : CharacterMotion
@@ -33,6 +34,8 @@ public sealed class KeyedMotion : CharacterMotion
     [SerializeField] private List<MotionEffect> effects = new();
     [Tooltip("The colours of a cast's light, darkest first: its outline, rim, glow and core.")]
     [SerializeField] private ColourRamp light;
+    [Tooltip("The body the keys were posed on. Baked on a body of other sizes, each pose is fitted to it: the pelvis and the feet scaled by the legs' length, the hands kept where they were from the shoulders, scaled by the arms' length. None uses the keys as they are.")]
+    [SerializeField] private CharacterRecipe posedOn;
 
     private readonly List<MotionEffect> frameEffects = new();
 
@@ -40,6 +43,7 @@ public sealed class KeyedMotion : CharacterMotion
     public override int ContactFrame => contactFrame;
     public override int SmearSamples => smearSamples;
     public override ColourRamp Light => light;
+    public CharacterRecipe PosedOn => posedOn;
 
     /// <summary>
     /// The preview duration of <paramref name="frame"/>, 0.1 s when none is set.
@@ -87,7 +91,53 @@ public sealed class KeyedMotion : CharacterMotion
             }
         }
 
-        return MotionKey.Blend(from, to, share, hipsFollowKeys, capeFlow);
+        return FitToBody(MotionKey.Blend(from, to, share, hipsFollowKeys, capeFlow), posedOn, recipe, weapon);
+    }
+
+    /// <summary>
+    /// Fits <paramref name="pose"/>, posed on <paramref name="posed"/>'s body, to <paramref name="recipe"/>'s in place
+    /// and returns it: the pelvis's height over the ankles and each foot's place from its hip (its height from the
+    /// ankle's) scaled by the legs' length, and each hand kept where it was from its shoulder, scaled by the arms'
+    /// length, so the feet stay on the ground and the hands where the body can reach. The pose is left as it is without
+    /// a body it was posed on, or on a body of the same sizes.
+    /// </summary>
+    public static CharacterPose FitToBody(CharacterPose pose, CharacterRecipe posed, CharacterRecipe recipe, CharacterWeaponArt weapon)
+    {
+        if (posed == null || recipe == null || SameBody(posed, recipe))
+        {
+            return pose;
+        }
+
+        float legScale = (recipe.Thigh + recipe.Shin) / (posed.Thigh + posed.Shin);
+        float armScale = (recipe.UpperArm + recipe.Forearm) / (posed.UpperArm + posed.Forearm);
+        CharacterJoints before = CharacterRig.Solve(posed, pose, weapon);
+        pose.PelvisHeight = recipe.Ankle + (pose.PelvisHeight - posed.Ankle) * legScale;
+        CharacterJoints after = CharacterRig.Solve(recipe, pose, weapon);
+        pose.LeftFoot = FitFoot(pose.LeftFoot, before.LeftHip, after.LeftHip, posed.Ankle, recipe.Ankle, legScale);
+        pose.RightFoot = FitFoot(pose.RightFoot, before.RightHip, after.RightHip, posed.Ankle, recipe.Ankle, legScale);
+        pose.LeftHand = after.LeftShoulder + (pose.LeftHand - before.LeftShoulder) * armScale;
+        pose.RightHand = after.RightShoulder + (pose.RightHand - before.RightShoulder) * armScale;
+        return pose;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="a"/> and <paramref name="b"/> have the same legs, arms, torso, ankles, shoulders and
+    /// hips, which are all a pose's fitting reads.
+    /// </summary>
+    private static bool SameBody(CharacterRecipe a, CharacterRecipe b)
+    {
+        return a.Thigh == b.Thigh && a.Shin == b.Shin && a.Ankle == b.Ankle && a.UpperArm == b.UpperArm && a.Forearm == b.Forearm
+            && a.Torso == b.Torso && a.ShoulderHalfWidth == b.ShoulderHalfWidth && a.HipHalfWidth == b.HipHalfWidth;
+    }
+
+    /// <summary>
+    /// <paramref name="foot"/>, placed from a hip at <paramref name="hipBefore"/> over ankles
+    /// <paramref name="ankleBefore"/> high, placed as far from <paramref name="hipAfter"/> over ankles
+    /// <paramref name="ankleAfter"/> high, times <paramref name="scale"/>.
+    /// </summary>
+    private static Vector3 FitFoot(Vector3 foot, Vector3 hipBefore, Vector3 hipAfter, float ankleBefore, float ankleAfter, float scale)
+    {
+        return new Vector3(hipAfter.x + (foot.x - hipBefore.x) * scale, hipAfter.y + (foot.y - hipBefore.y) * scale, ankleAfter + (foot.z - ankleBefore) * scale);
     }
 
     /// <summary>

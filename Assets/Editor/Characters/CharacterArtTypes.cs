@@ -35,6 +35,12 @@ public enum CharacterMaterial
     EarInside,
     Wraps,
     WrapsBand,
+    Skin,
+    Hair,
+    Brow,
+    Mouth,
+    Blush,
+    EyeGlint,
     Steel,
     Guard,
     Grip,
@@ -223,6 +229,10 @@ public static class CharacterMaterials
             case CharacterMaterial.Face:
             case CharacterMaterial.FaceShade:
             case CharacterMaterial.Eye:
+            case CharacterMaterial.Brow:
+            case CharacterMaterial.Mouth:
+            case CharacterMaterial.Blush:
+            case CharacterMaterial.EyeGlint:
             case CharacterMaterial.SmearNew:
             case CharacterMaterial.SmearMiddle:
             case CharacterMaterial.SmearOld:
@@ -249,6 +259,10 @@ public static class CharacterMaterials
             case CharacterMaterial.Face:
             case CharacterMaterial.FaceShade:
             case CharacterMaterial.Eye:
+            case CharacterMaterial.Brow:
+            case CharacterMaterial.Mouth:
+            case CharacterMaterial.Blush:
+            case CharacterMaterial.EyeGlint:
             case CharacterMaterial.Bangs:
             case CharacterMaterial.Mask:
             case CharacterMaterial.BowString:
@@ -309,6 +323,36 @@ public sealed class CharacterClip
     public CharacterWeaponArt Weapon => weapon;
     public Vector2Int FrameSize => frameSize;
     public Vector2Int Pivot => pivot;
+}
+
+/// <summary>
+/// A lock of hair standing off a bare head: a tapering capsule from a root on the head's surface to a tip, both placed
+/// in the face's frame (right, up, forward, the head tipped toward the camera), so a hairstyle turns with the head.
+/// </summary>
+[Serializable]
+public struct HairLock
+{
+    [Tooltip("Where the lock grows from, in degrees from the face's middle: across (right positive) and up.")]
+    [SerializeField] private Vector2 root;
+    [Tooltip("Where its tip lies from its root, in head radii: right, up and forward.")]
+    [SerializeField] private Vector3 tip;
+    [Tooltip("Its radius at the root and at the tip, in head radii.")]
+    [SerializeField] private Vector2 radius;
+
+    /// <summary>
+    /// Creates a lock growing from <paramref name="rootDegrees"/> to <paramref name="tipOffset"/>, tapering over
+    /// <paramref name="radii"/>.
+    /// </summary>
+    public HairLock(Vector2 rootDegrees, Vector3 tipOffset, Vector2 radii)
+    {
+        root = rootDegrees;
+        tip = tipOffset;
+        radius = radii;
+    }
+
+    public Vector2 Root => root;
+    public Vector3 Tip => tip;
+    public Vector2 Radius => radius;
 }
 
 /// <summary>

@@ -1,0 +1,259 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dd45fc7aaf5f3a4dbc51b9948825de2, type: 3}
+  m_Name: Recipe_Adventurer
+  m_EditorClassIdentifier: TopDownRPG.Editor::AdventurerRecipe
+  sheetName: Adventurer
+  targetHeight: 40
+  clips: []
+  lantern: {fileID: 0}
+  thigh: 5
+  shin: 5
+  ankle: 1.5
+  upperArm: 4.4
+  forearm: 4
+  torso: 8.5
+  neckToHead: 5.6
+  headRadius: 6.6
+  shoulderHalfWidth: 4.4
+  hipHalfWidth: 2.5
+  torsoRadius: {x: 3.2, y: 3.5}
+  limbThickness: 1
+  handRadius: 1.5
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  bootSize: 1.1
+  bootTop: 0.35
+  skirtLength: 1.4
+  sleeves: 0
+  gloves: 0
+  strap: 0
+  hairSize: 1.1
+  faceTilt: 20
+  locks:
+  - root: {x: 0, y: 75}
+    tip: {x: 0.05, y: 0.42, z: -0.1}
+    radius: {x: 0.3, y: 0.06}
+  - root: {x: 35, y: 65}
+    tip: {x: 0.32, y: 0.32, z: -0.05}
+    radius: {x: 0.28, y: 0.05}
+  - root: {x: -35, y: 65}
+    tip: {x: -0.3, y: 0.36, z: -0.1}
+    radius: {x: 0.28, y: 0.05}
+  - root: {x: 180, y: 40}
+    tip: {x: 0, y: 0.15, z: -0.38}
+    radius: {x: 0.3, y: 0.06}
+  - root: {x: -30, y: 45}
+    tip: {x: 0.5, y: -0.3, z: 0.2}
+    radius: {x: 0.3, y: 0.08}
+  - root: {x: 70, y: 15}
+    tip: {x: 0.05, y: -0.4, z: 0.05}
+    radius: {x: 0.22, y: 0.07}
+  - root: {x: -70, y: 15}
+    tip: {x: -0.05, y: -0.4, z: 0.05}
+    radius: {x: 0.22, y: 0.07}
+  ears: {x: 90, y: -8, z: 0.22}
+  face: {x: 78, y: -6, z: 46}
+  fringe: {x: 18, y: 6, z: 20, w: 0.12}
+  eyes: {x: 18, y: -2}
+  eyeHeight: 2
+  eyeWidth: 2
+  eyeGlint: 1
+  browGap: 2
+  browWidth: 3
+  browTilt: 1
+  mouth: {x: -26, y: 2}
+  mouthCurve: 0
+  blush: {x: 0, y: 0}
+  skin:
+    outline:
+      serializedVersion: 2
+      rgba: 4280824924
+    shadow:
+      serializedVersion: 2
+      rgba: 4285171912
+    middle:
+      serializedVersion: 2
+      rgba: 4287805164
+    light:
+      serializedVersion: 2
+      rgba: 4290303738
+  eye:
+    outline:
+      serializedVersion: 2
+      rgba: 4280423966
+    shadow:
+      serializedVersion: 2
+      rgba: 4280423966
+    middle:
+      serializedVersion: 2
+      rgba: 4280423966
+    light:
+      serializedVersion: 2
+      rgba: 4280423966
+  eyeGlintColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4292267204
+    shadow:
+      serializedVersion: 2
+      rgba: 4292267204
+    middle:
+      serializedVersion: 2
+      rgba: 4292267204
+    light:
+      serializedVersion: 2
+      rgba: 4292267204
+  brow:
+    outline:
+      serializedVersion: 2
+      rgba: 4279377978
+    shadow:
+      serializedVersion: 2
+      rgba: 4279377978
+    middle:
+      serializedVersion: 2
+      rgba: 4279377978
+    light:
+      serializedVersion: 2
+      rgba: 4279377978
+  mouthColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4283457706
+    shadow:
+      serializedVersion: 2
+      rgba: 4283457706
+    middle:
+      serializedVersion: 2
+      rgba: 4283457706
+    light:
+      serializedVersion: 2
+      rgba: 4283457706
+  blushColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4286748398
+    shadow:
+      serializedVersion: 2
+      rgba: 4286748398
+    middle:
+      serializedVersion: 2
+      rgba: 4286748398
+    light:
+      serializedVersion: 2
+      rgba: 4286748398
+  hair:
+    outline:
+      serializedVersion: 2
+      rgba: 4279113770
+    shadow:
+      serializedVersion: 2
+      rgba: 4280170592
+    middle:
+      serializedVersion: 2
+      rgba: 4281095308
+    light:
+      serializedVersion: 2
+      rgba: 4282809528
+  tunic:
+    outline:
+      serializedVersion: 2
+      rgba: 4281212440
+    shadow:
+      serializedVersion: 2
+      rgba: 4287389766
+    middle:
+      serializedVersion: 2
+      rgba: 4289757280
+    light:
+      serializedVersion: 2
+      rgba: 4292258956
+  shirt:
+    outline:
+      serializedVersion: 2
+      rgba: 4280164388
+    shadow:
+      serializedVersion: 2
+      rgba: 4286221462
+    middle:
+      serializedVersion: 2
+      rgba: 4288985796
+    light:
+      serializedVersion: 2
+      rgba: 4291617000
+  trousers:
+    outline:
+      serializedVersion: 2
+      rgba: 4279506972
+    shadow:
+      serializedVersion: 2
+      rgba: 4282009168
+    middle:
+      serializedVersion: 2
+      rgba: 4283589230
+    light:
+      serializedVersion: 2
+      rgba: 4285564050
+  boots:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849046
+    shadow:
+      serializedVersion: 2
+      rgba: 4280299078
+    middle:
+      serializedVersion: 2
+      rgba: 4281090144
+    light:
+      serializedVersion: 2
+      rgba: 4282276482
+  belt:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849562
+    shadow:
+      serializedVersion: 2
+      rgba: 4280169554
+    middle:
+      serializedVersion: 2
+      rgba: 4281092720
+    light:
+      serializedVersion: 2
+      rgba: 4282411158
+  fittings:
+    outline:
+      serializedVersion: 2
+      rgba: 4279118908
+    shadow:
+      serializedVersion: 2
+      rgba: 4280841366
+    middle:
+      serializedVersion: 2
+      rgba: 4282820814
+    light:
+      serializedVersion: 2
+      rgba: 4287421684
+  glovesColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849046
+    shadow:
+      serializedVersion: 2
+      rgba: 4280299078
+    middle:
+      serializedVersion: 2
+      rgba: 4281090144
+    light:
+      serializedVersion: 2
+      rgba: 4282276482

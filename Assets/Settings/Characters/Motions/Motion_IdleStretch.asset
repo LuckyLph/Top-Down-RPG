@@ -1,0 +1,179 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b9a1372f36dc8d4fb5066fa2487f2e3, type: 3}
+  m_Name: Motion_IdleStretch
+  m_EditorClassIdentifier: TopDownRPG.Editor::KeyedMotion
+  keys:
+  - time: 0
+    easing: 0
+    pelvisHeight: 10.785714
+    lean: 2
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -5.4, y: 0, z: 10.125714}
+    rightHand: {x: 5.4, y: 0, z: 10.125714}
+    leftPole: {x: -0.2, y: -1, z: -0.5}
+    rightPole: {x: 0.2, y: -1, z: -0.5}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  - time: 0.2
+    easing: 0
+    pelvisHeight: 10.185715
+    lean: 6
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -2.6, y: 2.4, z: 13.5}
+    rightHand: {x: 2.6, y: 2.4, z: 13.5}
+    leftPole: {x: -1, y: -0.3, z: -0.3}
+    rightPole: {x: 1, y: -0.3, z: -0.3}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  - time: 0.42
+    easing: 1
+    pelvisHeight: 11.185715
+    lean: -10
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -8, y: -0.5, z: 24}
+    rightHand: {x: 8, y: -0.5, z: 24}
+    leftPole: {x: -1, y: -0.2, z: -0.4}
+    rightPole: {x: 1, y: -0.2, z: -0.4}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  - time: 0.62
+    easing: 0
+    pelvisHeight: 11.185715
+    lean: -12
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -8.4, y: -0.9, z: 24.6}
+    rightHand: {x: 8.4, y: -0.9, z: 24.6}
+    leftPole: {x: -1, y: -0.2, z: -0.4}
+    rightPole: {x: 1, y: -0.2, z: -0.4}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  - time: 0.8
+    easing: 0
+    pelvisHeight: 10.285714
+    lean: 4
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -5.4, y: 0, z: 10.125714}
+    rightHand: {x: 5.4, y: 0, z: 10.125714}
+    leftPole: {x: -0.2, y: -1, z: -0.5}
+    rightPole: {x: 0.2, y: -1, z: -0.5}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  - time: 1
+    easing: 0
+    pelvisHeight: 10.785714
+    lean: 2
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -2.857143, y: 0.35714287, z: 1.5}
+    rightFoot: {x: 2.857143, y: -0.35714287, z: 1.5}
+    leftHand: {x: -5.4, y: 0, z: 10.125714}
+    rightHand: {x: 5.4, y: 0, z: 10.125714}
+    leftPole: {x: -0.2, y: -1, z: -0.5}
+    rightPole: {x: 0.2, y: -1, z: -0.5}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+  frameTimes:
+  - 0
+  - 0.1
+  - 0.2
+  - 0.31
+  - 0.42
+  - 0.62
+  - 0.71
+  - 0.8
+  - 0.9
+  frameMilliseconds: 5a0000005a000000a00000005a0000002c0100002c0100005a0000008c00000064000000
+  contactFrame: 0
+  hipsFollowKeys: 0
+  capeFlow: 0.03
+  smears: []
+  smearSamples: 24
+  effects: []
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0
+  posedOn: {fileID: 11400000, guid: ee38d9270d32c9f409c7dfe2b2c948f8, type: 2}
+  idleAnimation: 1

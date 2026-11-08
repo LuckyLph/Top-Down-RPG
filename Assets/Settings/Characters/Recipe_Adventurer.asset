@@ -110,6 +110,31 @@ MonoBehaviour:
     weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
+  - name: IdleLookAround
+    motion: {fileID: 11400000, guid: 17dbb69b2df6dbc4b8417591470c72bf, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleStretch
+    motion: {fileID: 11400000, guid: 4739585cbc6816c48bd23120a35210af, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleScratch
+    motion: {fileID: 11400000, guid: c54ea2a38d4a52c4280e1b181f0a67a6, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleTapFoot
+    motion: {fileID: 11400000, guid: 82f3a6e00e770ec4a97926412e9834a3, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleYawn
+    motion: {fileID: 11400000, guid: def31e7a170d5d14f88acbf16bfb707a, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
   lantern: {fileID: 0}
   thigh: 5
   shin: 5

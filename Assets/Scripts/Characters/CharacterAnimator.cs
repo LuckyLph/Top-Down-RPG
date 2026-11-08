@@ -17,7 +17,9 @@ using UnityEngine;
 /// until that release has shown for its own time (Docs/KnownGaps.md, Phase 7), then plays with its gather shortened by
 /// the wait, so its own release still shows on the update it completes; one completing before it starts (an instant
 /// cast) shows its release as it starts. Each sprite comes with what its clip says about it: a cast's light and, for a
-/// character carrying a lantern, the lantern's layer and light, held with it. Allocates nothing per update, so EditMode
+/// character carrying a lantern, the lantern's layer and light, held with it. Standing still with nothing else to show,
+/// the character plays its set's idle animations (<see cref="CharacterIdleAnimations"/>, Docs/PlayerCharacter.md,
+/// Phase 3); moving, an action or a hold cuts one and starts the wait over. Allocates nothing per update, so EditMode
 /// tests drive it on a manual clock.
 /// </summary>
 public sealed class CharacterAnimator
@@ -27,6 +29,7 @@ public sealed class CharacterAnimator
     private readonly float contactWait;
     private readonly CharacterLocomotionLayer locomotion;
     private readonly CharacterActionLayer action = new();
+    private readonly CharacterIdleAnimations idle;
     private float lastTime;
     private bool started;
     private bool showedAction;
@@ -34,18 +37,20 @@ public sealed class CharacterAnimator
     private bool holdPending;
     private float holdUntil;
     private int shownActionFrame;
+    private bool showedIdle;
     private QueuedCast queued;
 
     /// <summary>
     /// Builds an animator of <paramref name="set"/>'s clips, picked and paced by <paramref name="settings"/>, on
-    /// <paramref name="gameClock"/>.
+    /// <paramref name="gameClock"/>, its idle animations picked by <paramref name="idleRandom"/> (none without one).
     /// </summary>
-    public CharacterAnimator(CharacterAnimationSet set, CharacterLocomotionSettings settings, IClock gameClock)
+    public CharacterAnimator(CharacterAnimationSet set, CharacterLocomotionSettings settings, IClock gameClock, IRandom idleRandom = null)
     {
         clock = gameClock;
         directionMargin = settings != null ? settings.DirectionMargin : 0f;
         contactWait = settings != null ? settings.ContactWaitSeconds : float.PositiveInfinity;
         locomotion = new CharacterLocomotionLayer(set, settings);
+        idle = new CharacterIdleAnimations(set, settings, idleRandom);
     }
 
     public int Direction { get; private set; } = CharacterDirections.South;
@@ -55,7 +60,7 @@ public sealed class CharacterAnimator
     public bool IsActing => action.IsPlaying;
     public CharacterActionKind ActionKind => action.Kind;
     public AttackPhase ActionPhase => action.IsPlaying ? action.Phase : AttackPhase.None;
-    public int Frame => action.IsPlaying ? action.Frame : locomotion.Frame;
+    public int Frame => action.IsPlaying ? action.Frame : showedIdle ? idle.Frame : locomotion.Frame;
     public Sprite Sprite { get; private set; }
     public bool IsHolding { get; private set; }
 
@@ -93,9 +98,15 @@ public sealed class CharacterAnimator
     public bool ShowsMovingCast => action.IsPlaying && actionMovedLegs;
 
     /// <summary>
-    /// The clip the last update showed: the action's (its moving clip while it shows that), else the locomotion's.
+    /// Whether the last update showed an idle animation.
     /// </summary>
-    public CharacterAnimationClip Clip => action.IsPlaying ? (actionMovedLegs ? action.MovingClip : action.Clip) : locomotion.Clip;
+    public bool ShowsIdleAnimation => showedIdle;
+
+    /// <summary>
+    /// The clip the last update showed: the action's (its moving clip while it shows that), else an idle animation's,
+    /// else the locomotion's.
+    /// </summary>
+    public CharacterAnimationClip Clip => action.IsPlaying ? (actionMovedLegs ? action.MovingClip : action.Clip) : showedIdle ? idle.Clip : locomotion.Clip;
 
     /// <summary>
     /// Starts <paramref name="clip"/>, an attack's clip, now, toward <paramref name="direction"/> on
@@ -107,6 +118,7 @@ public sealed class CharacterAnimator
     {
         queued = default;
         IsHolding = false;
+        idle.Stop();
         action.Play(clip, CharacterDirections.Nearest(direction), timeline, clock.Time, holdUntilContact, contactWait);
     }
 
@@ -134,6 +146,7 @@ public sealed class CharacterAnimator
 
         queued = default;
         IsHolding = false;
+        idle.Stop();
         action.PlayCast(clip, movingClip, facing, followsFacing, timeline, now, channelBeat, untilRelease, contactWait);
     }
 
@@ -175,7 +188,7 @@ public sealed class CharacterAnimator
     /// Holds the sprite the next update shows on screen for <paramref name="seconds"/> on the clock (a hit-stop),
     /// longer when a hold already runs that long. The action keeps its time underneath: a hold ends early when the
     /// action reaches its contact, so the contact frame still shows on the update the hit lands, and playing or stopping
-    /// an action ends it. Visual only.
+    /// an action ends it. An idle animation stops, so the hold shows the character standing. Visual only.
     /// </summary>
     public void Hold(float seconds)
     {
@@ -222,6 +235,7 @@ public sealed class CharacterAnimator
         AttackPhase before = action.IsPlaying ? action.Phase : AttackPhase.None;
         bool releaseShown = action.IsPlaying && action.ContactShown;
         showedAction = action.Advance(now);
+        showedIdle = false;
         float speed = velocity.magnitude;
         bool moving = locomotion.WouldMove(speed);
         if (showedAction && moving && releaseShown && action.Kind == CharacterActionKind.Cast && action.MovingClip == null)
@@ -267,6 +281,7 @@ public sealed class CharacterAnimator
         if (showedAction)
         {
             started = true;
+            idle.Stop();
             if (action.FollowsFacing && facing.sqrMagnitude >= 1e-8f)
             {
                 action.Turn(CharacterDirections.Keep(action.Direction, facing, directionMargin));
@@ -298,6 +313,19 @@ public sealed class CharacterAnimator
 
         locomotion.Advance(speed, resuming ? 0f : deltaTime);
         actionMovedLegs = false;
+        if (locomotion.Gait != CharacterGait.Idle)
+        {
+            idle.Stop();
+        }
+        else if (idle.Advance(now))
+        {
+            showedIdle = true;
+            Sprite = idle.Clip.SpriteAt(Direction, idle.Frame);
+            ShowLight(default, null);
+            ShowLantern(idle.Clip, idle.Frame, 0);
+            return Sprite;
+        }
+
         Sprite = locomotion.SpriteFacing(Direction);
         ShowLight(default, null);
         ShowLantern(locomotion.Clip, locomotion.Frame, 0);
@@ -330,6 +358,7 @@ public sealed class CharacterAnimator
             return;
         }
 
+        idle.Stop();
         float until = clock.Time + seconds;
         if (IsHolding)
         {

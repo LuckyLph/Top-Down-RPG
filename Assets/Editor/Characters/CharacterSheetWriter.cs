@@ -271,7 +271,7 @@ public static class CharacterSheetWriter
             CharacterFrameLight[] lights = Lights(sheet, out Color lightColour);
             Sprite[] lantern = sheet.HasLantern ? SheetSprites(recipe.SheetName, clip.Name + LanternSuffix, columns) : null;
             clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames, lightColour, lights,
-                lantern, LanternLights(sheet.LanternCentres)));
+                lantern, LanternLights(sheet.LanternCentres), clip.Motion.IsIdleAnimation));
         }
 
         return CharacterAnimationSet.Create(clips);

@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 2), on the
+/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 3), on the
 /// project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
 /// standing adventurer is its target height; its face shows both eyes, their glints, the brows and the mouth from the
 /// front, one eye in profile and nothing from behind; its ears show beside the head; its locks grow the hair past the
@@ -13,8 +13,9 @@ using UnityEngine;
 /// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the rogue's attacks and
 /// casts fit its body; its gaits are its own, styled, while the rogue's stay plain: the bob's top and bottom on frames,
 /// the head following it late, the torso stretching at its top and squashing at its bottom, the hair's tips moving,
-/// and the hands rising at both ends of their swing; and the project's sheets and animation set are what the recipe
-/// bakes.
+/// and the hands rising at both ends of their swing; its idle animations start and end on the idle's pose, the first
+/// frame the idle's to the pixel, without a contact frame; the yawn shuts the eyes and opens the mouth; and the
+/// project's sheets and animation set are what the recipe bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
@@ -23,6 +24,7 @@ public class AdventurerRecipeTests
     private const int East = 0;
     private const int North = 2;
     private const int South = 6;
+    private static readonly string[] IdleAnimations = { "IdleLookAround", "IdleStretch", "IdleScratch", "IdleTapFoot", "IdleYawn" };
 
     private readonly List<Object> created = new();
     private AdventurerRecipe recipe;
@@ -209,7 +211,7 @@ public class AdventurerRecipeTests
         int motions = 0;
         foreach (CharacterClip clip in recipe.Clips)
         {
-            if (clip.Motion is not KeyedMotion motion)
+            if (clip.Motion is not KeyedMotion motion || motion.IsIdleAnimation)
             {
                 continue;
             }
@@ -372,6 +374,77 @@ public class AdventurerRecipeTests
     }
 
     /// <summary>
+    /// The adventurer's five idle animations are keyed motions posed on its own body, flagged as idle animations, with
+    /// no contact frame; each starts and ends on the idle's pose, and its first frame is the idle's to the pixel in
+    /// every direction, so it starts and ends without a pop.
+    /// </summary>
+    [Test]
+    public void TheIdleAnimations_StartAndEndOnTheIdle_WithoutAContactFrame()
+    {
+        CharacterPose standing = MotionOf(recipe, "Idle").PoseAt(0, recipe, null);
+        CharacterSheet idleSheet = Sheets["Idle"];
+        foreach (string name in IdleAnimations)
+        {
+            KeyedMotion motion = (KeyedMotion)MotionOf(recipe, name);
+            Assert.That(motion.IsIdleAnimation, Is.True, name);
+            Assert.That(motion.ContactFrame, Is.EqualTo(-1), name);
+            Assert.That(motion.PosedOn, Is.EqualTo(recipe), name);
+            foreach (float time in new[] { 0f, 1f })
+            {
+                CharacterPose pose = motion.PoseAtTime(time, recipe, null);
+                Assert.That(pose.PelvisHeight, Is.EqualTo(standing.PelvisHeight).Within(1e-3f), $"{name} at {time}");
+                Assert.That(pose.Lean, Is.EqualTo(standing.Lean).Within(1e-3f), $"{name} at {time}");
+                Assert.That(Vector3.Distance(pose.LeftHand, standing.LeftHand), Is.LessThan(1e-3f), $"{name} at {time}");
+                Assert.That(Vector3.Distance(pose.RightHand, standing.RightHand), Is.LessThan(1e-3f), $"{name} at {time}");
+                Assert.That(Vector3.Distance(pose.LeftFoot, standing.LeftFoot), Is.LessThan(1e-3f), $"{name} at {time}");
+                Assert.That(Vector3.Distance(pose.RightFoot, standing.RightFoot), Is.LessThan(1e-3f), $"{name} at {time}");
+            }
+
+            CharacterSheet sheet = Sheets[name];
+            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            {
+                Assert.That(FramePixels(sheet, direction, 0), Is.EqualTo(FramePixels(idleSheet, direction, 0)), $"{name} {CharacterDirections.Name(direction)}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Facing south, on every frame of the yawn whose pose shuts the eyes each eye is a line without its glint, and on
+    /// every frame whose pose opens the mouth the rows below its line are dark, so a yawn reads at this size.
+    /// </summary>
+    [Test]
+    public void TheYawn_ShutsTheEyes_AndOpensTheMouth()
+    {
+        CharacterClip yawn = recipe.Clips.First(clip => clip.Name == "IdleYawn");
+        CharacterCanvas standing = baker.Render(idle, South, 0);
+        int mouthWidth = Mathf.RoundToInt(recipe.Mouth.y);
+        int shut = 0;
+        int open = 0;
+        for (int frame = 0; frame < yawn.Motion.FrameCount; frame++)
+        {
+            CharacterPose pose = yawn.Motion.PoseAt(frame, recipe, null);
+            CharacterCanvas canvas = baker.Render(yawn, South, frame);
+            if (pose.EyesClosed > 0.5f)
+            {
+                shut++;
+                Assert.That(canvas.Count(CharacterMaterial.Eye), Is.EqualTo(2 * recipe.EyeWidth), $"frame {frame}");
+                Assert.That(canvas.Count(CharacterMaterial.EyeGlint), Is.Zero, $"frame {frame}");
+            }
+
+            int rows = Mathf.RoundToInt(pose.MouthOpen);
+            if (rows > 0)
+            {
+                open++;
+                Assert.That(canvas.Count(CharacterMaterial.Mouth), Is.EqualTo(mouthWidth), $"frame {frame}");
+                Assert.That(canvas.Count(CharacterMaterial.Brow), Is.GreaterThanOrEqualTo(standing.Count(CharacterMaterial.Brow) + mouthWidth), $"frame {frame}");
+            }
+        }
+
+        Assert.That(shut, Is.GreaterThan(0));
+        Assert.That(open, Is.GreaterThan(0));
+    }
+
+    /// <summary>
     /// Each of the project's adventurer sheets is what the recipe bakes, sliced per direction and frame at 32 pixels per
     /// unit with its pivot on the feet (<see cref="CharacterSheetAssert.SheetsAreWhatTheRecipeBakes"/>).
     /// </summary>
@@ -389,6 +462,24 @@ public class AdventurerRecipeTests
     public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
     {
         CharacterSheetAssert.SetHoldsWhatTheRecipeBakes(recipe, baker);
+    }
+
+    /// <summary>
+    /// The pixels of <paramref name="sheet"/>'s frame <paramref name="frame"/> facing <paramref name="direction"/>.
+    /// </summary>
+    private static Color32[] FramePixels(CharacterSheet sheet, int direction, int frame)
+    {
+        RectInt rect = CharacterSheet.FrameRect(direction, frame, sheet.Clip.FrameSize);
+        Color32[] pixels = new Color32[rect.width * rect.height];
+        for (int y = 0; y < rect.height; y++)
+        {
+            for (int x = 0; x < rect.width; x++)
+            {
+                pixels[y * rect.width + x] = sheet.Pixels[(rect.y + y) * sheet.Width + rect.x + x];
+            }
+        }
+
+        return pixels;
     }
 
     /// <summary>

@@ -9,7 +9,8 @@ using UnityEngine;
 /// The contact frame is when the attack lands or the cast releases; the runtime pins it to the moment the hit resolves
 /// or the cast completes. Frame durations pace the inspector's preview and keep each phase's proportions: the runtime
 /// stretches each phase to its timeline (a channelling cast plays its gather at their pace). The keys are posed on one
-/// body (<see cref="PosedOn"/>); baked on another, each pose is fitted to it (<see cref="FitToBody"/>).
+/// body (<see cref="PosedOn"/>); baked on another, each pose is fitted to it (<see cref="FitToBody"/>). An idle
+/// animation (<see cref="IsIdleAnimation"/>) plays at its frames' durations, with no contact frame.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Keyed Motion", fileName = "Motion_Keyed")]
 public sealed class KeyedMotion : CharacterMotion
@@ -36,11 +37,14 @@ public sealed class KeyedMotion : CharacterMotion
     [SerializeField] private ColourRamp light;
     [Tooltip("The body the keys were posed on. Baked on a body of other sizes, each pose is fitted to it: the pelvis and the feet scaled by the legs' length, the hands kept where they were from the shoulders, scaled by the arms' length. None uses the keys as they are.")]
     [SerializeField] private CharacterRecipe posedOn;
+    [Tooltip("An idle animation: plays once on its own after the character has stood still a while, at its frames' durations, without a contact frame. Its first and last poses should be the idle's.")]
+    [SerializeField] private bool idleAnimation;
 
     private readonly List<MotionEffect> frameEffects = new();
 
     public override int FrameCount => frameTimes.Length;
-    public override int ContactFrame => contactFrame;
+    public override int ContactFrame => idleAnimation ? -1 : contactFrame;
+    public override bool IsIdleAnimation => idleAnimation;
     public override int SmearSamples => smearSamples;
     public override ColourRamp Light => light;
     public CharacterRecipe PosedOn => posedOn;

@@ -13,8 +13,9 @@ using UnityEngine;
 /// gait's frames, so the legs keep their stride while the upper body casts. A cast's clip with a light drawn on it has
 /// the light each sprite casts on what is around it, and the light's colour (Docs/Lighting.md, Phase 2). A clip of a
 /// character carrying a lantern has, for each sprite, the lantern's layer drawn over it (null where the body hides the
-/// whole lantern) and the light the lantern casts from where it hangs (Docs/Lighting.md, Phase 9). The character
-/// baker writes it; nothing changes it at runtime.
+/// whole lantern) and the light the lantern casts from where it hangs (Docs/Lighting.md, Phase 9). An idle animation's
+/// clip plays once on its own after the character has stood still a while (Docs/PlayerCharacter.md, Phase 3). The
+/// character baker writes it; nothing changes it at runtime.
 /// </summary>
 [Serializable]
 public sealed class CharacterAnimationClip
@@ -31,6 +32,7 @@ public sealed class CharacterAnimationClip
     [SerializeField] private CharacterFrameLight[] lights = Array.Empty<CharacterFrameLight>();
     [SerializeField] private Sprite[] lanternSprites = Array.Empty<Sprite>();
     [SerializeField] private CharacterFrameLight[] lanternLights = Array.Empty<CharacterFrameLight>();
+    [SerializeField] private bool idleAnimation;
 
     public string Name => name;
     public CharacterGait Gait => gait;
@@ -38,6 +40,11 @@ public sealed class CharacterAnimationClip
     public int FrameCount => frameSeconds.Length;
     public float NaturalSpeed => naturalSpeed;
     public int ContactFrame => contactFrame;
+
+    /// <summary>
+    /// Whether the clip is an idle animation, played once after the character has stood still a while.
+    /// </summary>
+    public bool IsIdleAnimation => idleAnimation;
 
     /// <summary>
     /// The colour of the light the clip's frames cast; clear for a clip without light.
@@ -90,11 +97,11 @@ public sealed class CharacterAnimationClip
     /// counterclockwise; for a clip drawn over <paramref name="clipGaitFrames"/> gait frames, gait frame by gait frame
     /// and within each the clip's frames), the duration of each frame and, for an attack or a cast, its contact
     /// (release) frame (-1 for none), for a clip with a light, its colour and the light of each sprite in the
-    /// sprites' order, and for a clip carrying a lantern, each sprite's lantern layer and lantern light in the same
-    /// order; for the baker and tests.
+    /// sprites' order, for a clip carrying a lantern, each sprite's lantern layer and lantern light in the same order,
+    /// and whether it is an idle animation; for the baker and tests.
     /// </summary>
     public static CharacterAnimationClip Create(string clipName, CharacterGait clipGait, bool drawnArmed, Sprite[] clipSprites, float[] clipFrameSeconds, float clipNaturalSpeed, int clipContactFrame = -1, int clipGaitFrames = 0, Color clipLightColour = default, CharacterFrameLight[] clipLights = null,
-        Sprite[] clipLanternSprites = null, CharacterFrameLight[] clipLanternLights = null)
+        Sprite[] clipLanternSprites = null, CharacterFrameLight[] clipLanternLights = null, bool clipIdleAnimation = false)
     {
         return new CharacterAnimationClip
         {
@@ -109,7 +116,8 @@ public sealed class CharacterAnimationClip
             lightColour = clipLightColour,
             lights = clipLights ?? Array.Empty<CharacterFrameLight>(),
             lanternSprites = clipLanternSprites ?? Array.Empty<Sprite>(),
-            lanternLights = clipLanternLights ?? Array.Empty<CharacterFrameLight>()
+            lanternLights = clipLanternLights ?? Array.Empty<CharacterFrameLight>(),
+            idleAnimation = clipIdleAnimation
         };
     }
 

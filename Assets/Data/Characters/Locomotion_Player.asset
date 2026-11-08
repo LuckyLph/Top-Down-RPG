@@ -20,3 +20,5 @@ MonoBehaviour:
   maxRate: 1.9
   directionMargin: 8
   contactWaitSeconds: 0.25
+  idleAnimationAfter: 8
+  idleAnimationGap: {x: 10, y: 16}

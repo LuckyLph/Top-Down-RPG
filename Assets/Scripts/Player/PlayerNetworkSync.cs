@@ -37,6 +37,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     private PlayerWeaponController weapon;
     private PlayerLook playerLook;
     private PlayerAbilities abilities;
+    private CharacterVisuals visuals;
     private Rigidbody2D body;
     private NetworkTransform networkTransform;
     private PlayerBinder binder;
@@ -58,6 +59,7 @@ public class PlayerNetworkSync : NetworkBehaviour
         weapon = GetComponent<PlayerWeaponController>();
         playerLook = GetComponent<PlayerLook>();
         abilities = GetComponent<PlayerAbilities>();
+        visuals = GetComponentInChildren<CharacterVisuals>(true);
         body = GetComponent<Rigidbody2D>();
         networkTransform = GetComponent<NetworkTransform>();
     }
@@ -94,6 +96,11 @@ public class PlayerNetworkSync : NetworkBehaviour
         {
             Debug.LogError($"{name} was spawned without a {nameof(PlayerBinder)}; register the player prefab with the Gameplay scope's resolver.", this);
             return;
+        }
+
+        if (visuals != null)
+        {
+            visuals.SeedIdleAnimations(unchecked((int)NetworkObjectId));
         }
 
         if (IsServer && pendingSavedWeapon != NoWeapon)

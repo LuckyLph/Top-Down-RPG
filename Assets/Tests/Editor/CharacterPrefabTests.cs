@@ -12,7 +12,7 @@ using UnityEngine.Rendering;
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
 /// runs at an unclamped rate so its feet keep up, and on either side of every boundary between its gaits the gait it
-/// keeps plays unclamped too; it plays every ability's cast clip, over the run for its Continue
+/// keeps plays unclamped too; its set holds its five idle animations, which its settings wait for; it plays every ability's cast clip, over the run for its Continue
 /// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
 /// from it, and whose every look holds every clip it plays, standing, walking and running clips included; the player and
 /// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
@@ -346,6 +346,42 @@ public class CharacterPrefabTests
             Assert.That(up / set.Locomotion(lower).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{lower} at {up} u/s");
             Assert.That(down / set.Locomotion(upper).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{upper} at {down} u/s");
         }
+    }
+
+    /// <summary>
+    /// The player's set holds its five idle animations, complete in every direction in 64 px frames on the feet,
+    /// unarmed and without a contact frame; its locomotion settings wait a few seconds of standing before the first and
+    /// longer between the next (Docs/PlayerCharacter.md, Phase 3).
+    /// </summary>
+    [Test]
+    public void ThePlayersSet_HoldsItsIdleAnimations_AndItsSettingsWaitForThem()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        List<string> names = new();
+        foreach (CharacterAnimationClip clip in visuals.AnimationSet.Clips)
+        {
+            if (!clip.IsIdleAnimation)
+            {
+                continue;
+            }
+
+            names.Add(clip.Name);
+            Assert.That(clip.IsComplete, Is.True, clip.Name);
+            Assert.That(clip.Armed, Is.False, clip.Name);
+            Assert.That(clip.ContactFrame, Is.EqualTo(-1), clip.Name);
+            Assert.That(clip.Duration, Is.InRange(1f, 2.5f), clip.Name);
+            Sprite first = clip.SpriteAt(CharacterDirections.South, 0);
+            Assert.That(first.rect.size, Is.EqualTo(new Vector2(64f, 64f)), clip.Name);
+            Assert.That(first.pixelsPerUnit, Is.EqualTo(32f), clip.Name);
+            Assert.That(first.pivot, Is.EqualTo(visuals.AnimationSet.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0).pivot), clip.Name);
+        }
+
+        Assert.That(names, Is.EqualTo(new[] { "IdleLookAround", "IdleStretch", "IdleScratch", "IdleTapFoot", "IdleYawn" }));
+        CharacterLocomotionSettings locomotion = visuals.Locomotion;
+        Assert.That(locomotion.IdleAnimationAfter, Is.InRange(3f, 20f));
+        Assert.That(locomotion.IdleAnimationGapMin, Is.GreaterThanOrEqualTo(locomotion.IdleAnimationAfter));
+        Assert.That(locomotion.IdleAnimationGapMax, Is.GreaterThan(locomotion.IdleAnimationGapMin));
     }
 
     /// <summary>

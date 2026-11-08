@@ -51,7 +51,7 @@ public static class CharacterRig
         float twist = pose.Twist * Mathf.Deg2Rad;
         float hipTwist = (pose.HipTwist ?? CounterHipShare * pose.Twist) * Mathf.Deg2Rad;
         Vector3 spine = new(0f, Mathf.Sin(lean), Mathf.Cos(lean));
-        Vector3 neck = pelvis + spine * recipe.Torso;
+        Vector3 neck = pelvis + spine * (recipe.Torso * (1f + pose.Stretch));
         Vector3 shoulderAxis = new(Mathf.Cos(twist), -Mathf.Sin(twist), 0f);
         Vector3 hipAxis = new(Mathf.Cos(hipTwist), -Mathf.Sin(hipTwist), 0f);
         CharacterJoints joints = new()
@@ -63,7 +63,7 @@ public static class CharacterRig
             HipAxis = hipAxis,
             TorsoForward = Vector3.Cross(spine, shoulderAxis).normalized,
             HipForward = Vector3.Cross(up, hipAxis).normalized,
-            Head = neck + (spine + new Vector3(0f, 0f, 1.2f)).normalized * recipe.NeckToHead,
+            Head = neck + (spine + new Vector3(0f, 0f, 1.2f)).normalized * recipe.NeckToHead + up * pose.HeadLift,
             LeftShoulder = neck - spine * ShoulderDrop - shoulderAxis * recipe.ShoulderHalfWidth,
             RightShoulder = neck - spine * ShoulderDrop + shoulderAxis * recipe.ShoulderHalfWidth,
             LeftHip = pelvis - hipAxis * recipe.HipHalfWidth,

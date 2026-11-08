@@ -1,6 +1,6 @@
 # The player character
 
-Plan for reworking the player's character: a base character the player makes their own, in place of the hooded rogue. It covers the character's look, stylized gaits, then its attacks and casts, and three kinds of customization. [Animation.md](Animation.md) describes the rig, the baker and the runtime. This plan adds a body plan and the customization on top of them, and changes how the motions look. [Architecture.md](Architecture.md) describes what exists today. Tick off the phase checklist as steps land, and move each settled behaviour into Architecture.md as its code arrives.
+Plan for reworking the player's character: a base character the player makes their own, in place of the hooded rogue. It covers the character's look, stylized gaits, idle animations, then its attacks and casts, and three kinds of customization. [Animation.md](Animation.md) describes the rig, the baker and the runtime. This plan adds a body plan and the customization on top of them, and changes how the motions look. [Architecture.md](Architecture.md) describes what exists today. Tick off the phase checklist as steps land, and move each settled behaviour into Architecture.md as its code arrives.
 
 Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) applies. Each player chooses its look on its own machine, and every other machine shows it, a late joiner's included, as a look's catalog index is sent today.
 
@@ -47,7 +47,8 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Looks | The adventurer is the first look of the `CharacterLookCatalog`, the default; the Bandit stays second. The rogue is retired from the looks: its recipe, motions and sheets stay as the baker's test bed. |
 | Clips and frames | The rogue's 19 clips on the new body, in the rogue's frames (64, 80 and 96 px), which hold the smaller body with room. Every look keeps the same frames and feet. |
 | Attacks and casts on a new body | A keyed motion names the body its keys were posed on and fits each pose to the body it is baked on (Animation.md's Motions): the legs' and arms' lengths scale the pelvis, feet and hands. |
-| Gaits | The walk stays today's on the new proportions. That was preferred over bouncier, springier and swaggering settings of the same stride, whose differences barely showed at this size. Stylizing it is Phase 2. |
+| Gaits | The adventurer's own walk, run and sprint, styled on top of the stride (Phase 2): a bob big enough to read at this size with its top and bottom on frames, a bounce in the run and the sprint, the head a beat and the hair's tips two beats behind the bob, a torso that stretches and squashes with it, hands that rise at both ends of their swing like a pendulum, and longer strides, so the steps come slower. The rogue's gaits stay as they were. |
+| Idle | A still frame, the standing pose, as before. A breathing loop was turned down in favour of idle animations that play once after the player has stood still for a while, as champions' do in League of Legends: looking around, a stretch, a scratch of the head, a tapped foot and a yawn (Phase 3). |
 
 ## Phases
 
@@ -93,29 +94,71 @@ Phase 1 notes:
 
 ### Phase 2: stylized gaits
 
-- [ ] Gait experiments on previews, settled with the user: the idle, walk, run and sprint on the new body, with new motion features if the stride's settings are not enough (squash and stretch, the head and hair a beat behind the body).
-- [ ] The settled gaits baked, with their natural speeds and speed bands kept free of foot slide.
+- [x] Gait experiments on previews, settled with the user: the idle, walk, run and sprint on the new body, with new motion features if the stride's settings are not enough (squash and stretch, the head and hair a beat behind the body).
+- [x] The settled gaits baked, with their natural speeds and speed bands kept free of foot slide.
 
-### Phase 3: attacks and casts
+Phase 2 notes:
+
+- **How it was settled.** On previews baked in memory, each variant playing at the rate it would play in the game (`Recordings/RogueRework/phase2/`): the run first, as the player runs at its base speed, then the walk and the sprint with the run's choices, then the idle.
+  - Run, round 1: today's run beside a bigger bob with a bounce, the head and hair behind it, squash and stretch, a waddle (the hips over the planted foot and the spine tilting toward it), cartoon arms, and longer strides. Round 2 started from the longer strides and tried them without squash, with more time in the air, longer still, with pendulum arms and with more lean. Chosen: the longer strides with the pendulum arms, a wider swing and less twist.
+  - Walk: the run's choices on the walk, beside a bounce against a smooth bob, a bigger bob, a waddle, today's shorter stride and no arm arc. Chosen: the smooth bob.
+  - Sprint: the run's choices on the sprint, beside more lean, a longer stride, more time in the air and no arm arc. Chosen: the longer stride.
+  - Idle: a breath with the head and hair behind it, in 8 and 4 frames, deeper, and with a sway, beside the old breath. None was kept: the idle stays still, and idle animations that play after a while standing still replace a loop (Phase 3).
+- **Why the bob moved onto frames.** With 8 frames a cycle, a bob twice a cycle gets four samples a step, so a change in its shape barely showed until its top and bottom fell on frames and it grew about twice as big.
+- **What the stride gained.** `GaitMotion`'s Style settings, all off by default, so the rogue's sheets did not change by a byte:
+  - `bounce`: the bob's shape, from a smooth wave to a bounce, round at its top and sharp at its bottom;
+  - `bobOffset`: how much later than mid-stance the bob turns, so its top and bottom land on frames;
+  - `headFollow` and `headLag`, `hairFollow` and `hairLag`: the head, and the tips of the hair's locks, following the bob late (`CharacterPose.HeadLift`, which `CharacterRig` adds to the head, and `HairLift`, which `AdventurerPainter` adds to each lock's tip by its length);
+  - `stretch`: the torso's length grows at the bob's top and shrinks at its bottom (`CharacterPose.Stretch`);
+  - `armArc`: the hands rise at both ends of their swing.
+
+  A sway of the hips over the planted foot and a tilt of the spine toward it were tried and dropped with the waddle.
+- **The adventurer's gaits.** `Motion_AdventurerWalk`, `Motion_AdventurerRun` and `Motion_AdventurerSprint`, copies of the rogue's with the chosen settings, and `Motion_AdventurerCastSmiteRun` and `Motion_AdventurerCastWhirlRun` over the new run. The rogue's motions and sheets are untouched. In rig units for 14-unit legs and 10.4-unit arms:
+
+  | Gait | Stride (front, back) | Bob | Style | Arms |
+  |---|---|---|---|---|
+  | Walk | 6.5, -6.5 (was 5.5, -5.5) | 1.2, smooth, a frame earlier | head 1 at 1/8 of the cycle, hair 1.5 at 0.2, stretch 0.1 | swing 5.5, arc 1.5, twist 4 |
+  | Run | 8, -10 (was 6.2, -7.8) | 2.4, a bounce, 0.025 later | the same, stretch 0.15 | swing 7, arc 2, twist 6 |
+  | Sprint | 9.5, -12 (was 6.5, -8) | 2.6, a bounce, 0.035 later | the same, stretch 0.15 | swing 8.5, arc 2, twist 7 |
+
+  The swing curves rose with the strides. The walk plays at 16 frames a second at its natural speed instead of 12: a gait plays at the speed over its natural speed, so the frames a second it shows at a given speed depend on its stride alone, and the higher rate only raises its natural speed so its band fits.
+- **Speeds.** Natural speeds walk 1.11, run 3.76 and sprint 5.76 units per second (0.71, 2.92 and 3.88 before). At the player's 5 the run plays at 1.33 times its rate, where it played at 1.71. `Locomotion_Player`: run from 1.9 (was 1.7), sprint from 5.6, rates 0.45 to 1.9 (were 0.5 to 1.8). With the 8% hysteresis the walk plays up to 2.05 at 1.84 times its rate, the run down to 1.75 at 0.47 and up to 6.05 at 1.61, and the sprint down to 5.15 at 0.89, so no change of gait slides the feet. They slide only walking under 0.5 units per second, a slow of 90%, under the walk's slowest rate.
+- **Checked by eye.** The baked walk, run and sprint sheets are the chosen previews to the pixel.
+- **Tests.**
+  - `AdventurerRecipeTests` adds: the gaits are the adventurer's own and the casts over the run use its run, while the rogue's gaits stay plain; each gait's bob has its top and bottom on frames; the head follows the bob late, the torso stretches at its top and squashes at its bottom, and the hair's tips move; the hands rise at both ends of their swing, and not in the rogue's.
+  - `CharacterPrefabTests` adds: on either side of each boundary between the player's gaits, the gait the hysteresis keeps plays unclamped.
+
+### Phase 3: idle animations
+
+- [ ] The idle animations, settled with the user on previews: looking around, a stretch, a scratch of the head, a tapped foot and a yawn, each starting and ending on the idle's frame; the face's expressions they need (the chin tipped back, the eyes shut, the mouth open).
+- [ ] Baked into the adventurer's set, and played after the player has stood still for a while: one at a time, picked so the same one does not play twice in a row, again after a further wait, and cut at once by moving, an attack, a cast or a hit.
+- [ ] Shown on every machine: each machine plays them on its own copies from the standing it already sees, picked the same everywhere, with nothing new on the wire.
+
+Phase 3 notes so far:
+
+- **Previews.** In `Recordings/RogueRework/phase2/ia1` and `ia2`, keyed on the adventurer's body (each a `KeyedMotion` starting and ending on the idle's pose): looking over one shoulder then the other (1.65 s), gathering the hands then stretching the arms up and back with a lean (1.36 s; the arms do not reach over this head, so its top reads as the hands behind it), scratching the side of the head (1.2 s), the hands on the hips tapping a foot three times with a glance aside (1.62 s), and a yawn: a breath in, the chin up with the eyes shut and the mouth wide, then a hand patting the mouth as it closes (1.47 s). All five liked.
+- **The face's expressions.** `CharacterPose` and `MotionKey` gained `HeadTilt` (the face tipped back past the recipe's tilt, in degrees), `EyesClosed` (above 0.5 each eye is a line, its lowest row, without its glint) and `MouthOpen` (rows the mouth opens below its line, the rows under the lip in the brows' dark brown). `AdventurerPainter` draws them; all are 0 by default, so no sheet changed.
+
+### Phase 4: attacks and casts
 
 - [ ] The sword, greatsword and bow attacks and the casts, restyled to match the gaits on the new body, their contact and release frames kept on the timeline.
 
-### Phase 4: colours
+### Phase 5: colours
 
 - [ ] A player's colours chosen per material ramp (skin, hair, tunic, shirt, trousers, boots, belt, eyes and more), shown on every machine, from one bake.
 
-### Phase 5: swappable parts
+### Phase 6: swappable parts
 
 - [ ] Parts per slot (hair, headwear, top, cape, legs, boots) a player chooses from, shown on every machine, without a bake per combination.
 
-### Phase 6: gear that shows
+### Phase 7: gear that shows
 
 - [ ] Equipment drawn over the body, and weapons carried outside attacks (Animation.md's Open questions).
 
 ## Testing
 
-- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). Customization: a player's choice resolves to the right colours and parts (Phases 4 to 6).
-- PlayMode: a player's look, colours and parts reach the other machines through the in-process host and client, a late joiner's included (Phases 4 to 6).
+- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). The gaits' style shows where it should and the speed bands keep the feet (Phase 2). The idle animations start after the wait, never twice in a row, and stop on anything else (Phase 3). Customization: a player's choice resolves to the right colours and parts (Phases 5 to 7).
+- PlayMode: the idle animations play on the other machines' copies of a standing player (Phase 3). A player's look, colours and parts reach the other machines through the in-process host and client, a late joiner's included (Phases 5 to 7).
 
 ## Open questions
 

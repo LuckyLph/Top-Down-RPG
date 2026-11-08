@@ -229,6 +229,12 @@ public sealed class MotionKey
     [SerializeField] private float arrow;
     [Tooltip("How far the string snaps past rest after a release, 0 to 1.")]
     [SerializeField] private float kick;
+    [Tooltip("How far the face tips back, chin up, in degrees.")]
+    [SerializeField] private float headTilt;
+    [Tooltip("The eyes are shut above 0.5.")]
+    [SerializeField, Range(0f, 1f)] private float eyesClosed;
+    [Tooltip("How many rows the mouth opens below its line.")]
+    [SerializeField, Min(0f)] private float mouthOpen;
 
     public float Time => time;
     public MotionEasing Easing => easing;
@@ -258,6 +264,9 @@ public sealed class MotionKey
             Draw = Mathf.LerpUnclamped(a.draw, b.draw, share),
             Arrow = Mathf.LerpUnclamped(a.arrow, b.arrow, share),
             Kick = Mathf.LerpUnclamped(a.kick, b.kick, share),
+            HeadTilt = Mathf.LerpUnclamped(a.headTilt, b.headTilt, share),
+            EyesClosed = Mathf.LerpUnclamped(a.eyesClosed, b.eyesClosed, share),
+            MouthOpen = Mathf.LerpUnclamped(a.mouthOpen, b.mouthOpen, share),
             CapeFlow = capeFlow
         };
     }

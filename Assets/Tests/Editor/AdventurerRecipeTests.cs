@@ -5,13 +5,16 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 and 1), on
-/// the project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
+/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 2), on the
+/// project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
 /// standing adventurer is its target height; its face shows both eyes, their glints, the brows and the mouth from the
 /// front, one eye in profile and nothing from behind; its ears show beside the head; its locks grow the hair past the
 /// head's ball from the front and in profile; the outfit's options (short sleeves, gloves, the satchel's strap, the
 /// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the rogue's attacks and
-/// casts fit its body; and the project's sheets and animation set are what the recipe bakes.
+/// casts fit its body; its gaits are its own, styled, while the rogue's stay plain: the bob's top and bottom on frames,
+/// the head following it late, the torso stretching at its top and squashing at its bottom, the hair's tips moving,
+/// and the hands rising at both ends of their swing; and the project's sheets and animation set are what the recipe
+/// bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
@@ -237,6 +240,138 @@ public class AdventurerRecipeTests
     }
 
     /// <summary>
+    /// The adventurer's walk, run and sprint, and the casts drawn over its run, are its own motions, not the rogue's, the
+    /// casts over its own run; the rogue's gaits stay plain, the head, the hair and the torso never moved by a style.
+    /// </summary>
+    [Test]
+    public void TheGaits_AreTheAdventurersOwn_AndTheRoguesStayPlain()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
+        foreach (string name in new[] { "Walk", "Run", "Sprint", "CastSmiteRun", "CastWhirlRun" })
+        {
+            Assert.That(MotionOf(recipe, name), Is.Not.EqualTo(MotionOf(rogue, name)), name);
+        }
+
+        foreach (string name in new[] { "CastSmiteRun", "CastWhirlRun" })
+        {
+            Assert.That(((OverGaitMotion)MotionOf(recipe, name)).Legs, Is.EqualTo(MotionOf(recipe, "Run")), name);
+        }
+
+        foreach (GaitMotion gait in GaitsOf(rogue))
+        {
+            for (int frame = 0; frame < gait.FrameCount; frame++)
+            {
+                CharacterPose pose = gait.PoseAt(frame, rogue, null);
+                Assert.That(pose.HeadLift, Is.Zero, $"{gait.name} {frame}");
+                Assert.That(pose.HairLift, Is.Zero, $"{gait.name} {frame}");
+                Assert.That(pose.Stretch, Is.Zero, $"{gait.name} {frame}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Each of the adventurer's gaits bobs with its top and bottom on frames: the highest and lowest the pelvis gets in
+    /// its frames are the highest and lowest it gets anywhere in the cycle.
+    /// </summary>
+    [Test]
+    public void TheAdventurersGaits_BobWithTheirTopAndBottomOnFrames()
+    {
+        foreach (GaitMotion gait in GaitsOf(recipe))
+        {
+            float framesLow = float.MaxValue;
+            float framesHigh = float.MinValue;
+            for (int frame = 0; frame < gait.FrameCount; frame++)
+            {
+                float pelvis = gait.PoseAt(frame, recipe, null).PelvisHeight;
+                framesLow = Mathf.Min(framesLow, pelvis);
+                framesHigh = Mathf.Max(framesHigh, pelvis);
+            }
+
+            float low = float.MaxValue;
+            float high = float.MinValue;
+            for (int sample = 0; sample < 1000; sample++)
+            {
+                float pelvis = gait.PoseAtPhase(sample / 1000f, recipe, null).PelvisHeight;
+                low = Mathf.Min(low, pelvis);
+                high = Mathf.Max(high, pelvis);
+            }
+
+            Assert.That(high - low, Is.GreaterThan(1f), gait.name);
+            Assert.That(framesLow, Is.EqualTo(low).Within(1e-4f), gait.name);
+            Assert.That(framesHigh, Is.EqualTo(high).Within(1e-4f), gait.name);
+        }
+    }
+
+    /// <summary>
+    /// In each of the adventurer's gaits the head follows the bob late, reaching its lowest after the pelvis does; the
+    /// torso is stretched on the frame the pelvis is highest and squashed on the one it is lowest; and the hair's tips
+    /// move.
+    /// </summary>
+    [Test]
+    public void TheAdventurersGaits_HeadFollowsTheBobLate_AndTheTorsoStretchesAtItsTop()
+    {
+        foreach (GaitMotion gait in GaitsOf(recipe))
+        {
+            float pelvisLow = float.MaxValue;
+            float headLow = float.MaxValue;
+            float pelvisLowAt = 0f;
+            float headLowAt = 0f;
+            for (int sample = 0; sample < 1000; sample++)
+            {
+                float phase = sample / 1000f;
+                CharacterPose pose = gait.PoseAtPhase(phase, recipe, null);
+                if (pose.PelvisHeight < pelvisLow)
+                {
+                    pelvisLow = pose.PelvisHeight;
+                    pelvisLowAt = phase;
+                }
+
+                if (pose.PelvisHeight + pose.HeadLift < headLow)
+                {
+                    headLow = pose.PelvisHeight + pose.HeadLift;
+                    headLowAt = phase;
+                }
+            }
+
+            Assert.That(Mathf.Repeat(headLowAt - pelvisLowAt, 0.5f), Is.InRange(0.01f, 0.25f), gait.name);
+
+            int highest = 0;
+            int lowest = 0;
+            bool hairMoves = false;
+            for (int frame = 0; frame < gait.FrameCount; frame++)
+            {
+                CharacterPose pose = gait.PoseAt(frame, recipe, null);
+                highest = pose.PelvisHeight > gait.PoseAt(highest, recipe, null).PelvisHeight ? frame : highest;
+                lowest = pose.PelvisHeight < gait.PoseAt(lowest, recipe, null).PelvisHeight ? frame : lowest;
+                hairMoves |= Mathf.Abs(pose.HairLift) > 0.1f;
+            }
+
+            Assert.That(gait.PoseAt(highest, recipe, null).Stretch, Is.GreaterThan(0f), gait.name);
+            Assert.That(gait.PoseAt(lowest, recipe, null).Stretch, Is.LessThan(0f), gait.name);
+            Assert.That(hairMoves, Is.True, gait.name);
+        }
+    }
+
+    /// <summary>
+    /// In each of the adventurer's gaits a hand at the end of its swing is higher over the pelvis than at its middle, by
+    /// more than half a rig unit, like a pendulum; in the rogue's it is as high.
+    /// </summary>
+    [Test]
+    public void TheAdventurersGaits_LiftTheHandsAtBothEndsOfTheirSwing()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
+        foreach (GaitMotion gait in GaitsOf(recipe))
+        {
+            Assert.That(SwingEndRise(gait, recipe), Is.GreaterThan(0.5f), gait.name);
+        }
+
+        foreach (GaitMotion gait in GaitsOf(rogue))
+        {
+            Assert.That(SwingEndRise(gait, rogue), Is.EqualTo(0f).Within(1e-4f), gait.name);
+        }
+    }
+
+    /// <summary>
     /// Each of the project's adventurer sheets is what the recipe bakes, sliced per direction and frame at 32 pixels per
     /// unit with its pivot on the feet (<see cref="CharacterSheetAssert.SheetsAreWhatTheRecipeBakes"/>).
     /// </summary>
@@ -254,6 +389,35 @@ public class AdventurerRecipeTests
     public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
     {
         CharacterSheetAssert.SetHoldsWhatTheRecipeBakes(recipe, baker);
+    }
+
+    /// <summary>
+    /// The motion of <paramref name="owner"/>'s clip named <paramref name="name"/>.
+    /// </summary>
+    private static CharacterMotion MotionOf(CharacterRecipe owner, string name)
+    {
+        return owner.Clips.First(clip => clip.Name == name).Motion;
+    }
+
+    /// <summary>
+    /// The gaits <paramref name="owner"/>'s clips play without a weapon: its walk, run and sprint.
+    /// </summary>
+    private static IEnumerable<GaitMotion> GaitsOf(CharacterRecipe owner)
+    {
+        GaitMotion[] gaits = owner.Clips.Where(clip => clip.Weapon == null).Select(clip => clip.Motion).OfType<GaitMotion>().Distinct().ToArray();
+        Assert.That(gaits.Length, Is.EqualTo(3), owner.name);
+        return gaits;
+    }
+
+    /// <summary>
+    /// How much higher over the pelvis the left hand is at the back end of its swing (the cycle's start) than at its
+    /// middle (a quarter in), on <paramref name="owner"/>'s body.
+    /// </summary>
+    private static float SwingEndRise(GaitMotion gait, CharacterRecipe owner)
+    {
+        CharacterPose end = gait.PoseAtPhase(0f, owner, null);
+        CharacterPose middle = gait.PoseAtPhase(0.25f, owner, null);
+        return end.LeftHand.z - end.PelvisHeight - (middle.LeftHand.z - middle.PelvisHeight);
     }
 
     /// <summary>

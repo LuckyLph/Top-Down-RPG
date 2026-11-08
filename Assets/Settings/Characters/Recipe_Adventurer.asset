@@ -21,17 +21,17 @@ MonoBehaviour:
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: Walk
-    motion: {fileID: 11400000, guid: 35fe15c7221600b448c3572c0bc61762, type: 2}
+    motion: {fileID: 11400000, guid: ad5be423a6a80ff40a907433628351b5, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: Run
-    motion: {fileID: 11400000, guid: b3b8a3a0f4b23ac408271245c3021bb7, type: 2}
+    motion: {fileID: 11400000, guid: 3255699690179d34a8727bf3c3ca057f, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: Sprint
-    motion: {fileID: 11400000, guid: 0e4c5b5c2cd41a94ea17d05ae95dd3d2, type: 2}
+    motion: {fileID: 11400000, guid: 385f1f9455cf74448b6223d0a86ea6d3, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
@@ -71,7 +71,7 @@ MonoBehaviour:
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: CastSmiteRun
-    motion: {fileID: 11400000, guid: 538a5ccd9a3e84a43b109b86282c3bec, type: 2}
+    motion: {fileID: 11400000, guid: d6eb15a4cb08cf449b2817c2f03656db, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
@@ -81,7 +81,7 @@ MonoBehaviour:
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: CastWhirlRun
-    motion: {fileID: 11400000, guid: 27ff3e0b76b9c81429b9a076cc5c9fba, type: 2}
+    motion: {fileID: 11400000, guid: e014eebdbc0f28d45beba2cb6a2362f9, type: 2}
     weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}

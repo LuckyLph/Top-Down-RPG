@@ -66,4 +66,34 @@ public sealed class CharacterPose
     /// How far a carried lantern swings with the stride, -1 to 1 of its swing: 0 standing and in keyed motions.
     /// </summary>
     public float LanternSwing { get; set; }
+
+    /// <summary>
+    /// The share the torso is stretched by (negative squashes it).
+    /// </summary>
+    public float Stretch { get; set; }
+
+    /// <summary>
+    /// How far the head rises from its place on the neck, in rig units: a gait's head lagging the body's bob.
+    /// </summary>
+    public float HeadLift { get; set; }
+
+    /// <summary>
+    /// How far the tips of the hair rise, in rig units for a lock one head radius long: the hair lagging the head.
+    /// </summary>
+    public float HairLift { get; set; }
+
+    /// <summary>
+    /// How far the face tips back, chin up, past the recipe's face tilt, in degrees.
+    /// </summary>
+    public float HeadTilt { get; set; }
+
+    /// <summary>
+    /// The eyes are shut above 0.5, each drawn as a line.
+    /// </summary>
+    public float EyesClosed { get; set; }
+
+    /// <summary>
+    /// How many rows the mouth opens below its line.
+    /// </summary>
+    public float MouthOpen { get; set; }
 }

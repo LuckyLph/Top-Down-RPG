@@ -11,7 +11,8 @@ using UnityEngine.Rendering;
 /// animator, and its weapon plays on those visuals; the sword's hit area is centred half a unit above the feet; the
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
-/// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
+/// runs at an unclamped rate so its feet keep up, and on either side of every boundary between its gaits the gait it
+/// keeps plays unclamped too; it plays every ability's cast clip, over the run for its Continue
 /// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
 /// from it, and whose every look holds every clip it plays, standing, walking and running clips included; the player and
 /// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
@@ -316,6 +317,34 @@ public class CharacterPrefabTests
             Assert.That(animator.Gait, Is.EqualTo(CharacterGait.Run), $"{speed} u/s");
             Assert.That(animator.PlaybackRate, Is.EqualTo(speed / run.NaturalSpeed).Within(1e-5f), $"{speed} u/s");
             Assert.That(animator.PlaybackRate, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{speed} u/s");
+        }
+    }
+
+    /// <summary>
+    /// Around each boundary between the player's gaits, walk to run and run to sprint, the gait the hysteresis keeps
+    /// plays at its speed over its natural speed without clamping: the lower gait just under the share above the
+    /// boundary where it gives way, the upper one at the share below it where it still holds. So the feet never slide
+    /// changing gaits (Docs/PlayerCharacter.md, Phase 2).
+    /// </summary>
+    [Test]
+    public void ThePlayersGaits_PlayUnclamped_OnEitherSideOfEveryBoundary()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        CharacterLocomotionSettings locomotion = (CharacterLocomotionSettings)new SerializedObject(visuals).FindProperty("locomotion").objectReferenceValue;
+        CharacterAnimationSet set = visuals.AnimationSet;
+        CharacterGait[] gaits = { CharacterGait.Walk, CharacterGait.Run, CharacterGait.Sprint };
+        for (int i = 0; i + 1 < gaits.Length; i++)
+        {
+            CharacterGait lower = gaits[i];
+            CharacterGait upper = gaits[i + 1];
+            float boundary = locomotion.From(upper);
+            float up = boundary * (1f + locomotion.GaitHysteresis) - 0.001f;
+            float down = boundary * (1f - locomotion.GaitHysteresis);
+            Assert.That(CharacterLocomotionLayer.Pick(lower, up, locomotion), Is.EqualTo(lower), $"{lower} at {up} u/s");
+            Assert.That(CharacterLocomotionLayer.Pick(upper, down, locomotion), Is.EqualTo(upper), $"{upper} at {down} u/s");
+            Assert.That(up / set.Locomotion(lower).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{lower} at {up} u/s");
+            Assert.That(down / set.Locomotion(upper).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{upper} at {down} u/s");
         }
     }
 

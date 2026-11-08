@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f5ef9a1d5048f4f9aae04701108b67, type: 3}
+  m_Name: Motion_AdventurerWalk
+  m_EditorClassIdentifier: TopDownRPG.Editor::GaitMotion
+  gait: 2
+  frames: 8
+  framesPerSecond: 16
+  duty: 0.6
+  front: 6.5
+  back: -6.5
+  liftBack: {x: 0, y: 3.5}
+  liftFront: {x: 1, y: 3.8}
+  pelvisHeight: 14.2
+  bob: 1.2
+  bobRisesMidStance: 1
+  lean: 4
+  twist: 4
+  armSwing: 5.5
+  armHeight: -9.6
+  armOut: 1
+  armPump: 0
+  capeFlow: 0.25
+  bounce: 0
+  bobOffset: -0.05
+  headFollow: 1
+  headLag: 0.125
+  hairFollow: 1.5
+  hairLag: 0.2
+  stretch: 0.1
+  armArc: 1.5

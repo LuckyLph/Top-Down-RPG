@@ -141,7 +141,7 @@ public sealed class AdventurerPainter : CharacterPainter
         float turn = j.HeadTurn * Mathf.Deg2Rad;
         Vector3 faceForward = Turn(Forward, turn);
         Vector3 faceRight = Turn(Right, turn);
-        float tilt = recipe.FaceTilt * Mathf.Deg2Rad;
+        float tilt = (recipe.FaceTilt + pose.HeadTilt) * Mathf.Deg2Rad;
         Vector3 tiltedForward = (faceForward * Mathf.Cos(tilt) + Up * Mathf.Sin(tilt)).normalized;
         Vector3 tiltedUp = (Up * Mathf.Cos(tilt) - faceForward * Mathf.Sin(tilt)).normalized;
         Vector3 head = centre + Up * (0.08f * radius) - tiltedForward * (0.06f * radius);
@@ -198,16 +198,17 @@ public sealed class AdventurerPainter : CharacterPainter
             }
 
             Vector2Int eye = canvas.PixelOf(head + eyeDirection * headRadius);
+            bool shut = pose.EyesClosed > 0.5f;
             for (int column = 0; column < recipe.EyeWidth; column++)
             {
                 int ex = eye.x - side * column;
-                for (int row = 0; row < recipe.EyeHeight; row++)
+                for (int row = shut ? recipe.EyeHeight - 1 : 0; row < recipe.EyeHeight; row++)
                 {
                     PaintSkin(ex, eye.y - row, CharacterMaterial.Eye);
                 }
             }
 
-            if (recipe.EyeGlint && recipe.EyeHeight > 1)
+            if (recipe.EyeGlint && recipe.EyeHeight > 1 && !shut)
             {
                 PaintOver(Mathf.Min(eye.x, eye.x - side * (recipe.EyeWidth - 1)), eye.y, CharacterMaterial.Eye, CharacterMaterial.EyeGlint);
             }
@@ -240,9 +241,13 @@ public sealed class AdventurerPainter : CharacterPainter
         {
             Vector2Int mouth = canvas.PixelOf(head + mouthDirection * headRadius);
             int start = mouth.x - mouthWidth / 2;
+            int open = Mathf.RoundToInt(pose.MouthOpen);
             for (int column = 0; column < mouthWidth; column++)
             {
-                PaintSkin(start + column, mouth.y, CharacterMaterial.Mouth);
+                for (int row = 0; row <= open; row++)
+                {
+                    PaintSkin(start + column, mouth.y - row, row == 0 ? CharacterMaterial.Mouth : CharacterMaterial.Brow);
+                }
             }
 
             if (recipe.MouthCurve != 0)
@@ -255,7 +260,7 @@ public sealed class AdventurerPainter : CharacterPainter
         foreach (HairLock hairLock in recipe.Locks)
         {
             Vector3 root = head + Direction(tiltedForward, faceRight, tiltedUp, hairLock.Root.x, hairLock.Root.y) * (headRadius * 0.85f);
-            Vector3 tip = root + (faceRight * hairLock.Tip.x + tiltedUp * hairLock.Tip.y + tiltedForward * hairLock.Tip.z) * headRadius;
+            Vector3 tip = root + (faceRight * hairLock.Tip.x + tiltedUp * hairLock.Tip.y + tiltedForward * hairLock.Tip.z) * headRadius + Up * (pose.HairLift * hairLock.Tip.magnitude);
             canvas.Capsule(root, tip, hairLock.Radius.x * headRadius, hairLock.Radius.y * headRadius, CharacterMaterial.Hair, CharacterPart.Head);
         }
     }
